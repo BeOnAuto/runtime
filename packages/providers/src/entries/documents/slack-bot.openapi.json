@@ -1,0 +1,772 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Slack Web API",
+    "version": "2026-10-18",
+    "description": "Ten Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the token is a bot token sent as Authorization: Bearer."
+  },
+  "externalDocs": {
+    "url": "https://docs.slack.dev/apis/web-api"
+  },
+  "servers": [
+    {
+      "url": "https://slack.com/api"
+    }
+  ],
+  "paths": {
+    "/auth.test": {
+      "get": {
+        "operationId": "auth_test",
+        "description": "Checks authentication & identity.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/auth.test"
+        },
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": []
+          }
+        ]
+      }
+    },
+    "/conversations.list": {
+      "get": {
+        "operationId": "conversations_list",
+        "description": "Lists all channels in a Slack team.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/conversations.list"
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Paginate through collections of data by setting the cursor parameter to a next_cursor attribute returned by a previous request's response_metadata. Default value fetches the first \"page\" of the collection.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "exclude_archived",
+            "in": "query",
+            "description": "Set to true to exclude archived channels from the list.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the list hasn't been reached. Must be an integer under 1000.",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "description": "encoded team id to list channels in, required if token belongs to org-wide app",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "types",
+            "in": "query",
+            "description": "Mix and match channel types by providing a comma-separated list of any combination of public_channel, private_channel, mpim, im",
+            "schema": {
+              "type": "string",
+              "default": "public_channel"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["channels:read"]
+          },
+          {
+            "bot_token": ["groups:read"]
+          },
+          {
+            "bot_token": ["im:read"]
+          },
+          {
+            "bot_token": ["mpim:read"]
+          }
+        ]
+      }
+    },
+    "/conversations.info": {
+      "get": {
+        "operationId": "conversations_info",
+        "description": "Retrieve information about a conversation.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/conversations.info"
+        },
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "query",
+            "required": true,
+            "description": "Conversation ID to learn more about",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_locale",
+            "in": "query",
+            "description": "Set this to true to receive the locale for this conversation. Defaults to false",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "include_num_members",
+            "in": "query",
+            "description": "Set to true to include the member count for the specified conversation. Defaults to false",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["channels:read"]
+          },
+          {
+            "bot_token": ["groups:read"]
+          },
+          {
+            "bot_token": ["im:read"]
+          },
+          {
+            "bot_token": ["mpim:read"]
+          }
+        ]
+      }
+    },
+    "/conversations.history": {
+      "get": {
+        "operationId": "conversations_history",
+        "description": "Fetches a conversation's history of messages and events.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/conversations.history"
+        },
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "query",
+            "required": true,
+            "description": "Conversation ID to fetch history for.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Paginate through collections of data by setting the cursor parameter to a next_cursor attribute returned by a previous request's response_metadata. Default value fetches the first \"page\" of the collection.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_all_metadata",
+            "in": "query",
+            "description": "Return all metadata associated with this message.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "inclusive",
+            "in": "query",
+            "description": "Include messages with oldest or latest timestamps in results. Ignored unless either timestamp is specified.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "latest",
+            "in": "query",
+            "description": "Only messages before this Unix timestamp will be included in results. Default is the current time.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "oldest",
+            "in": "query",
+            "description": "Only messages after this Unix timestamp will be included in results.",
+            "schema": {
+              "type": "string",
+              "default": "0"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the conversation history hasn't been reached. Maximum of 999.",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["channels:history"]
+          },
+          {
+            "bot_token": ["groups:history"]
+          },
+          {
+            "bot_token": ["im:history"]
+          },
+          {
+            "bot_token": ["mpim:history"]
+          }
+        ]
+      }
+    },
+    "/conversations.replies": {
+      "get": {
+        "operationId": "conversations_replies",
+        "description": "Retrieve a thread of messages posted to a conversation",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/conversations.replies"
+        },
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "query",
+            "required": true,
+            "description": "Conversation ID to fetch thread from.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ts",
+            "in": "query",
+            "required": true,
+            "description": "Unique identifier of either a thread's parent message or a message in the thread. ts must be the timestamp of an existing message with 0 or more replies.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Paginate through collections of data by setting the cursor parameter to a next_cursor attribute returned by a previous request's response_metadata. Default value fetches the first \"page\" of the collection.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_all_metadata",
+            "in": "query",
+            "description": "Return all metadata associated with this message.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "inclusive",
+            "in": "query",
+            "description": "Include messages with oldest or latest timestamps in results. Ignored unless either timestamp is specified.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "latest",
+            "in": "query",
+            "description": "Only messages before this Unix timestamp will be included in results. Default is the current time.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "oldest",
+            "in": "query",
+            "description": "Only messages after this Unix timestamp will be included in results.",
+            "schema": {
+              "type": "string",
+              "default": "0"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached.",
+            "schema": {
+              "type": "integer",
+              "default": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["channels:history"]
+          },
+          {
+            "bot_token": ["groups:history"]
+          },
+          {
+            "bot_token": ["im:history"]
+          },
+          {
+            "bot_token": ["mpim:history"]
+          }
+        ]
+      }
+    },
+    "/users.list": {
+      "get": {
+        "operationId": "users_list",
+        "description": "Lists all users in a Slack team.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/users.list"
+        },
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Paginate through collections of data by setting the cursor parameter to a next_cursor attribute returned by a previous request's response_metadata. Default value fetches the first \"page\" of the collection.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_locale",
+            "in": "query",
+            "description": "Set this to true to receive the locale for users. Defaults to false",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached. Providing no limit value will result in Slack attempting to deliver you the entire result set.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "description": "encoded team id to list users in, required if org token is used",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["users:read"]
+          }
+        ]
+      }
+    },
+    "/users.info": {
+      "get": {
+        "operationId": "users_info",
+        "description": "Gets information about a user.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/users.info"
+        },
+        "parameters": [
+          {
+            "name": "include_locale",
+            "in": "query",
+            "description": "Set this to true to receive the locale for this user. Defaults to false",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "description": "User to get info on",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["users:read"]
+          }
+        ]
+      }
+    },
+    "/chat.postMessage": {
+      "post": {
+        "operationId": "chat_postMessage",
+        "description": "Sends a message to a channel.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/chat.postMessage"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "description": "An encoded ID or channel name that represents a channel, private group, or IM channel to send the message to."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "How this field works and whether it is required depends on other fields you use: with blocks it is the fallback string to display in notifications; without them it is the main body text of the message, plain or formatted with mrkdwn. It is not enforced as required when using blocks or attachments."
+                  },
+                  "blocks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "A JSON-based array of structured blocks."
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "A JSON-based array of structured attachments."
+                  },
+                  "markdown_text": {
+                    "type": "string",
+                    "description": "Accepts message text formatted in markdown. This argument should not be used in conjunction with blocks or text. Limit this field to 12,000 characters."
+                  },
+                  "thread_ts": {
+                    "type": "string",
+                    "description": "Provide another message's ts value to make this message a reply. Avoid using a reply's ts value; use its parent instead."
+                  },
+                  "reply_broadcast": {
+                    "type": "boolean",
+                    "description": "Used in conjunction with thread_ts and indicates whether reply should be made visible to everyone in the channel or conversation. Defaults to false."
+                  },
+                  "mrkdwn": {
+                    "type": "boolean",
+                    "description": "Disable Slack markup parsing by setting to false. Enabled by default.",
+                    "default": true
+                  },
+                  "link_names": {
+                    "type": "boolean",
+                    "description": "Find and link user groups."
+                  },
+                  "parse": {
+                    "type": "string",
+                    "description": "Change how messages are treated."
+                  },
+                  "unfurl_links": {
+                    "type": "boolean",
+                    "description": "Pass true to enable unfurling of primarily text-based content."
+                  },
+                  "unfurl_media": {
+                    "type": "boolean",
+                    "description": "Pass false to disable unfurling of media content."
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "properties": {
+                      "event_type": {
+                        "type": "string"
+                      },
+                      "event_payload": {
+                        "type": "object"
+                      }
+                    },
+                    "description": "JSON object with event_type and event_payload fields. Metadata you post to Slack is accessible to any app or user who is a member of that workspace."
+                  }
+                },
+                "required": ["channel"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["chat:write"]
+          }
+        ]
+      }
+    },
+    "/chat.update": {
+      "post": {
+        "operationId": "chat_update",
+        "description": "Updates a message.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/chat.update"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "description": "Channel containing the message to be updated. For direct messages, ensure that this value is a DM ID (starts with D) instead of a User ID (starts with either U or W)."
+                  },
+                  "ts": {
+                    "type": "string",
+                    "description": "Timestamp of the message to be updated."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "How this field works and whether it is required depends on other fields you use: with blocks it is the fallback string to display in notifications; without them it is the main body text of the message, plain or formatted with mrkdwn. It is not enforced as required when using blocks or attachments."
+                  },
+                  "blocks": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "A JSON-based array of structured blocks."
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object"
+                    },
+                    "description": "A JSON-based array of structured attachments."
+                  },
+                  "markdown_text": {
+                    "type": "string",
+                    "description": "Accepts message text formatted in markdown. This argument should not be used in conjunction with blocks or text. Limit this field to 12,000 characters."
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "properties": {
+                      "event_type": {
+                        "type": "string"
+                      },
+                      "event_payload": {
+                        "type": "object"
+                      }
+                    },
+                    "description": "JSON object with event_type and event_payload fields. Metadata you post to Slack is accessible to any app or user who is a member of that workspace. If you don't include this field, the message's previous metadata will be retained. To remove previous metadata, include an empty object for this field."
+                  },
+                  "reply_broadcast": {
+                    "type": "boolean",
+                    "description": "Broadcast an existing thread reply to make it visible to everyone in the channel or conversation."
+                  },
+                  "file_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Array of new file ids that will be sent with this message."
+                  }
+                },
+                "required": ["channel", "ts"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["chat:write"]
+          }
+        ]
+      }
+    },
+    "/reactions.add": {
+      "post": {
+        "operationId": "reactions_add",
+        "description": "Adds a reaction to an item.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/reactions.add"
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "channel": {
+                    "type": "string",
+                    "description": "Channel where the message to add reaction to was posted."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Reaction (emoji) name"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "description": "Timestamp of the message to add reaction to."
+                  }
+                },
+                "required": ["channel", "name", "timestamp"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["reactions:write"]
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Answer": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "Whether the call succeeded."
+          },
+          "error": {
+            "type": "string",
+            "description": "A short machine-readable error code, when ok is false."
+          },
+          "warning": {
+            "type": "string",
+            "description": "A short machine-readable warning code, or a comma-separated list of them."
+          }
+        },
+        "required": ["ok"]
+      }
+    },
+    "securitySchemes": {
+      "bot_token": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "A bot token (xoxb-) of the Slack app installed in the workspace."
+      }
+    }
+  }
+}

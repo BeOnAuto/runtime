@@ -1,0 +1,33 @@
+{
+  "name": "@on.auto/api",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@hono/node-server": "2.1.4",
+    "@modelcontextprotocol/server": "2.3.1",
+    "@on.auto/identity": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "effect": "catalog:",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@on.auto/definitions": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "vitest": "catalog:"
+  }
+}

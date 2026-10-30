@@ -1,0 +1,64 @@
+{
+  "type": "openapi",
+  "sources": [
+    "https://developers.zoom.us/api/zoap/users/methods/",
+    "https://developers.zoom.us/api/zoap/meetings/methods/",
+    "https://developers.zoom.us/api/zoap/chat/methods/"
+  ],
+  "authorization_server": "https://zoom.us/.well-known/oauth-authorization-server",
+  "info": {
+    "title": "Zoom meetings, recordings, users and Team Chat",
+    "version": "2",
+    "description": "Fifteen operations of a user-managed app, translated from Zoom's Users, Meetings and Team Chat API documents, with the user who connected written as me and an oauth2 scheme in place of the vendor's bearer scheme."
+  },
+  "operations": [
+    "user",
+    "meetings",
+    "meeting",
+    "pastMeetingDetails",
+    "pastMeetingParticipants",
+    "recordingsList",
+    "recordingGet",
+    "GetMeetingTranscript",
+    "Getameetingsummary",
+    "getChannels",
+    "getChatMessages",
+    "retrieveThread",
+    "meetingCreate",
+    "meetingUpdate",
+    "sendaChatMessage"
+  ],
+  "path_values": [
+    {
+      "parameter": "userId",
+      "value": "me",
+      "because": "A user-level app passes me for the user who connected, and any other value fails as an invalid token"
+    }
+  ],
+  "left_out_parameters": [
+    {
+      "operation": "recordingGet",
+      "parameters": ["include_fields", "ttl"],
+      "because": "include_fields puts a download access token into the answer, and ttl is that token's life, so no download token reaches an answer"
+    }
+  ],
+  "single_strings": [
+    {
+      "operation": "sendaChatMessage",
+      "at": "/properties/to_contact",
+      "because": "The vendor writes the contact a message is sent to as a oneOf of three plain strings, of which every string matches more than one, so a check of the arguments refuses every value"
+    },
+    {
+      "operation": "sendaChatMessage",
+      "at": "/properties/at_items/items/properties/at_contact",
+      "because": "The vendor writes the contact a message mentions as a oneOf of three plain strings, of which every string matches more than one, so a check of the arguments refuses every value"
+    }
+  ],
+  "scheme": {
+    "name": "zoom_oauth",
+    "scopes_at": ["x-extensions", "x-granular-scopes"],
+    "leaving_out": [":admin", ":master"],
+    "because": "A user-managed app takes the user-level granular scopes alone, which a person grants for themselves, where :admin and :master ask an administrator"
+  },
+  "keeps_responses": true
+}

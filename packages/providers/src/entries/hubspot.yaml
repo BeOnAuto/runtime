@@ -1,0 +1,11 @@
+name: hubspot
+title: HubSpot
+description: Read and change contacts, companies, deals, tickets, line items, products, activities, campaigns, segments and landing pages, and read invoices, owners and conversations, as the person who connects, through HubSpot's MCP server, which gives this runtime no blog or website tools.
+website: https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server
+type: mcp
+url: https://mcp.hubspot.com
+credentials:
+  - kind: authorization
+    issuer: https://mcp.hubspot.com
+    clients: [registered]
+    description: Sign in to HubSpot, choose an account and allow access.

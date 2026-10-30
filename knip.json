@@ -1,0 +1,6 @@
+{
+  "$schema": "./node_modules/knip/schema.json",
+  "vitepress": {
+    "entry": ["docs/.vitepress/config.mjs"]
+  }
+}

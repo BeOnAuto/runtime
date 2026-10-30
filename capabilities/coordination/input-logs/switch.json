@@ -1,0 +1,291 @@
+{
+  "name": "switch",
+  "inputs": [
+    {
+      "kind": "started",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000308",
+      "at": 1790845200000,
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "decide": {
+              "switch": [
+                {
+                  "big": {
+                    "when": "${ false }",
+                    "then": "large"
+                  }
+                },
+                {
+                  "otherwise": {
+                    "then": "small"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "large": {
+              "set": {
+                "size": "large"
+              },
+              "then": "end"
+            }
+          },
+          {
+            "small": {
+              "set": {
+                "size": "small"
+              }
+            }
+          }
+        ]
+      },
+      "input": {},
+      "limits": {
+        "mostDurationMs": 2592000000,
+        "longestCallMs": 600000
+      },
+      "attributes": {
+        "org": "acme",
+        "playbook": "alpha",
+        "run_id": "0199a3c4-7d2e-7c1a-9b3f-000000000308",
+        "definition": {
+          "name": "switch",
+          "version": 1
+        },
+        "caller": {
+          "id": "acme-admin"
+        }
+      },
+      "seed": 7
+    }
+  ],
+  "events": [
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "started",
+        "key": "0199a3c4-7d2e-7c1a-9b3f-000000000308",
+        "at": 1790845200000
+      },
+      "steps": [
+        {
+          "reference": "/do/0/decide",
+          "run": 1,
+          "outcome": "completed",
+          "name": "decide",
+          "times": 1,
+          "caused_by": "input"
+        },
+        {
+          "reference": "/do/2/small",
+          "run": 1,
+          "outcome": "completed",
+          "name": "small",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/decide",
+            "run": 1,
+            "outcome": "completed",
+            "times": 1
+          }
+        }
+      ],
+      "resumed": null,
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/runId",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000308"
+        },
+        {
+          "op": "replace",
+          "path": "/status",
+          "value": "ended"
+        },
+        {
+          "op": "replace",
+          "path": "/workflow",
+          "value": {
+            "document": {
+              "document": {
+                "dsl": "1.0.3",
+                "namespace": "acme",
+                "name": "test",
+                "version": "1.0.0"
+              },
+              "do": [
+                {
+                  "decide": {
+                    "switch": [
+                      {
+                        "big": {
+                          "when": "${ false }",
+                          "then": "large"
+                        }
+                      },
+                      {
+                        "otherwise": {
+                          "then": "small"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "large": {
+                    "set": {
+                      "size": "large"
+                    },
+                    "then": "end"
+                  }
+                },
+                {
+                  "small": {
+                    "set": {
+                      "size": "small"
+                    }
+                  }
+                }
+              ]
+            },
+            "input": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/org",
+          "value": "acme"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/playbook",
+          "value": "alpha"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/run_id",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000308"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/definition",
+          "value": {
+            "name": "switch",
+            "version": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/caller",
+          "value": {
+            "id": "acme-admin"
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/limits/mostDurationMs",
+          "value": 2592000000
+        },
+        {
+          "op": "replace",
+          "path": "/limits/longestCallMs",
+          "value": 600000
+        },
+        {
+          "op": "replace",
+          "path": "/startedAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/random/seed",
+          "value": 7
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1decide",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~12~1small",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 2
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 273
+        },
+        {
+          "op": "replace",
+          "path": "/stepsWithoutWaiting",
+          "value": 2
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/1",
+          "value": {
+            "value": {},
+            "bytes": 2
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 3
+        },
+        {
+          "op": "replace",
+          "path": "/outcome",
+          "value": {
+            "kind": "completed",
+            "output": {
+              "size": "small"
+            }
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 2266
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "settle",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000308",
+          "settlement": {
+            "status": "succeeded",
+            "output": {
+              "size": "small"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

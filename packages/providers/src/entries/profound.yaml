@@ -1,0 +1,20 @@
+name: profound
+title: Profound
+description: Read how your brand appears in AI answers, its visibility, citations, sentiment and prompts, and the traffic AI agents send to your site, through Profound's MCP server.
+website: https://docs.tryprofound.com/mcp/overview
+type: mcp
+url: https://mcp.tryprofound.com/mcp
+credentials:
+  - kind: authorization
+    issuer: https://auth.tryprofound.com
+    scope: openid offline_access
+    says:
+      openid: Read the unique identifier of the Profound account that connects.
+      offline_access: Keep access to Profound when nobody is signed in.
+    clients: [registered, metadata_document, dynamic]
+    description: Sign in to Profound and allow access.
+  - kind: secret
+    in: header
+    name: Authorization
+    scheme: Bearer
+    description: A Profound API key, made under Settings, Account, API Keys, on the Enterprise plan.

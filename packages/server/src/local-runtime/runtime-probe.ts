@@ -1,0 +1,170 @@
+import type { RuntimeAction } from '@on.auto/api';
+import type { KeyCommandConsole } from '@on.auto/identity';
+import { Effect, Function, Option, Schedule, Schema } from 'effect';
+
+import { longestStopMs } from '../lifecycle/shutdown.ts';
+
+interface RuntimeRequest {
+  readonly method: 'GET' | 'POST';
+  readonly timeoutMs: number;
+  readonly signal: Readonly<AbortSignal>;
+  readonly body?: string;
+}
+
+export type RuntimeFetch = (address: string, request: RuntimeRequest) => Promise<Response>;
+
+function sentBody(body: string | undefined): RequestInit {
+  return body === undefined ? {} : { body, headers: { 'content-type': 'application/json' } };
+}
+
+export const overTheNetwork: RuntimeFetch = (address, { method, timeoutMs, signal, body }) =>
+  fetch(address, { method, signal: AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]), ...sentBody(body) });
+
+const RunningStatusSchema = Schema.Struct({
+  version: Schema.String,
+  pid: Schema.Number,
+  instance: Schema.optionalKey(Schema.String),
+  started_at: Schema.String,
+  started_by: Schema.Literals(['terminal', 'agent']),
+  directory: Schema.String,
+  log_file: Schema.optionalKey(Schema.String),
+  runs_in_flight: Schema.Number,
+});
+
+export type RunningStatus = typeof RunningStatusSchema.Type;
+
+const HealthSchema = Schema.Struct({ status: Schema.Literal('ok') });
+
+const isRunningStatus = Schema.is(RunningStatusSchema);
+
+const isHealthy = Schema.is(HealthSchema);
+
+export type Probe =
+  | { readonly state: 'running'; readonly status: RunningStatus }
+  | { readonly state: 'uncontrolled' }
+  | { readonly state: 'foreign' }
+  | { readonly state: 'down' };
+
+const probeTimeoutMs = 2000;
+
+export const probeEveryMs = 100;
+
+export const stopWaitMs = 15_000;
+
+export const startWaitMs = 60_000;
+
+export const restartWaitMs = longestStopMs + startWaitMs;
+
+export interface Patience {
+  readonly waitMs: number;
+}
+
+export const impatient: Patience = { waitMs: 0 };
+
+export const throughARestart: Patience = { waitMs: restartWaitMs };
+
+export function runtimeAddressOf(port: number): string {
+  return `http://127.0.0.1:${port}`;
+}
+
+async function bodyOf(fetch: RuntimeFetch, address: string, signal: Readonly<AbortSignal>): Promise<unknown> {
+  const response = await fetch(address, { method: 'GET', timeoutMs: probeTimeoutMs, signal });
+  return response.ok ? response.json().catch(Function.constVoid) : undefined;
+}
+
+async function answeringProbe(fetch: RuntimeFetch, port: number, signal: Readonly<AbortSignal>): Promise<Probe> {
+  const status = await bodyOf(fetch, `${runtimeAddressOf(port)}/runtime`, signal);
+  if (isRunningStatus(status)) {
+    return { state: 'running', status };
+  }
+  return isHealthy(await bodyOf(fetch, `${runtimeAddressOf(port)}/health`, signal))
+    ? { state: 'uncontrolled' }
+    : { state: 'foreign' };
+}
+
+async function probed(port: number, fetch: RuntimeFetch, signal: Readonly<AbortSignal>): Promise<Probe> {
+  try {
+    return await answeringProbe(fetch, port, signal);
+  } catch {
+    return { state: 'down' };
+  }
+}
+
+export function probeAt(port: number, fetch: RuntimeFetch): Effect.Effect<Probe> {
+  return Effect.promise((signal) => probed(port, fetch, signal));
+}
+
+async function accepted(
+  action: RuntimeAction,
+  port: number,
+  fetch: RuntimeFetch,
+  signal: Readonly<AbortSignal>,
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${runtimeAddressOf(port)}/runtime/${action}`, {
+      method: 'POST',
+      timeoutMs: probeTimeoutMs,
+      signal,
+    });
+    return response.status === 202;
+  } catch {
+    return false;
+  }
+}
+
+export function askedTo(action: RuntimeAction, port: number, fetch: RuntimeFetch): Effect.Effect<boolean> {
+  return Effect.promise((signal) => accepted(action, port, fetch, signal));
+}
+
+export function waitedFor(
+  port: number,
+  fetch: RuntimeFetch,
+  waitMs: number,
+  isWhatWeWait: (probe: Probe) => boolean,
+): Effect.Effect<boolean> {
+  if (waitMs <= 0) {
+    return Effect.succeed(false);
+  }
+  return probeAt(port, fetch).pipe(
+    Effect.repeat({ schedule: Schedule.spaced(probeEveryMs), until: isWhatWeWait }),
+    Effect.timeoutOption(waitMs),
+    Effect.map(Option.isSome),
+  );
+}
+
+function isDown(probe: Probe): boolean {
+  return probe.state === 'down';
+}
+
+export function stoppedWhenAsked(port: number, fetch: RuntimeFetch): Effect.Effect<boolean> {
+  return Effect.gen(function* () {
+    return (yield* askedTo('stop', port, fetch)) && (yield* waitedFor(port, fetch, stopWaitMs, isDown));
+  });
+}
+
+interface Probing {
+  readonly fetch: RuntimeFetch;
+  readonly console: Pick<KeyCommandConsole, 'error'>;
+}
+
+const refusals: Readonly<Record<Exclude<Probe['state'], 'running'>, (port: number) => string>> = {
+  down: (port) => `No Auto Runtime is running on port ${port}`,
+  uncontrolled: (port) =>
+    `The Auto Runtime on port ${port} cannot be controlled from here: only one the auto-runtime command started in local mode can`,
+  foreign: (port) => `Another program answers on port ${port}, not Auto Runtime`,
+};
+
+export function whenRunning(
+  port: number,
+  asking: Probing,
+  answer: (status: RunningStatus) => Effect.Effect<number>,
+): Effect.Effect<number> {
+  return Effect.gen(function* () {
+    const probe = yield* probeAt(port, asking.fetch);
+    if (probe.state !== 'running') {
+      asking.console.error(refusals[probe.state](port));
+      return 1;
+    }
+    return yield* answer(probe.status);
+  });
+}

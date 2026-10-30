@@ -1,0 +1,25 @@
+output:
+  - summary
+  - failure
+
+pre-commit:
+  piped: true
+  jobs:
+    - name: format
+      glob: '*.{ts,mts,cts,js,mjs,cjs,json,jsonc,yml,yaml,md}'
+      run: pnpm exec oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    - name: lint
+      glob: '*.{ts,mts,cts,js,mjs,cjs}'
+      run: pnpm exec oxlint --fix {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+
+pre-push:
+  jobs:
+    - name: affected checks
+      run: pnpm exec turbo run lint typecheck test --affected

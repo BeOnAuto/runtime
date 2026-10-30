@@ -1,0 +1,106 @@
+import { fileSetting, type FileSetting } from '@on.auto/config';
+import { connectionsSortsOfCredential, ConnectionsSettingSchema } from '@on.auto/connections';
+import { ApiKeysSchema } from '@on.auto/identity';
+import { entryProse } from '@on.auto/providers';
+import { AllowedModelsSchema, DeclaredModelsSchema, ModelAliasesSchema, ModelGatewaysSchema } from '@on.auto/reasoning';
+import { ToolServersSchema } from '@on.auto/tool-servers';
+import { Schema } from 'effect';
+
+import { extensionsFileSetting } from '../extensions/extension-settings.ts';
+import { licenseFileSetting } from '../licensing/license-settings.ts';
+import { Origin, StudioOrigin } from '../settings/origin.ts';
+
+function asJson(value: unknown): string {
+  return JSON.stringify(value);
+}
+
+export const fileSettings: readonly FileSetting[] = [
+  fileSetting(
+    'ALLOWED_ORIGINS',
+    Schema.Array(Origin).annotate({
+      description:
+        'The origins a page in a browser may call the API from, such as https://app.example.com. ALLOWED_ORIGINS wins over it',
+    }),
+    (origins) => origins.join(','),
+  ),
+  fileSetting('STUDIO_ORIGIN', StudioOrigin, (origin) => origin),
+  fileSetting(
+    'SERVE_STUDIO',
+    Schema.Boolean.annotate({
+      description:
+        'Whether the runtime serves Studio itself at /studio/ on its own address, fetched from the Studio host and kept, since a page on a public address may not reach an address on the machine. On in local mode and off otherwise when left out. SERVE_STUDIO wins over it',
+    }),
+    String,
+  ),
+  fileSetting(
+    'API_KEYS',
+    ApiKeysSchema.annotate({
+      description: 'The API keys the server accepts, each as the key command prints it. API_KEYS wins over it',
+    }),
+    asJson,
+  ),
+  fileSetting(
+    'ACCESS_MODE',
+    Schema.Literal('local').annotate({
+      description:
+        'local declares local mode, where every request acts as the local developer with no credential, for a runtime whose port only this computer reaches, such as a container whose port is published on 127.0.0.1 alone. It takes no API_KEYS, and a PUBLIC_URL only on localhost, 127.0.0.1 or [::1], which names the address of the runtime and signs no one in; a runtime that listens beyond the loopback needs that PUBLIC_URL. ACCESS_MODE wins over it',
+    }),
+    (mode) => mode,
+  ),
+  fileSetting(
+    'MODEL_GATEWAYS',
+    ModelGatewaysSchema.annotate({
+      description: 'OpenAI-compatible gateways, each a provider prefix of its own. MODEL_GATEWAYS wins over it',
+    }),
+    asJson,
+  ),
+  fileSetting(
+    'MODEL_ALIASES',
+    ModelAliasesSchema.annotate({
+      description:
+        'Model references a reasoning function may give, each sent on as another reference; a trailing * on both sides covers every model of a provider. MODEL_ALIASES wins over it',
+    }),
+    asJson,
+  ),
+  fileSetting(
+    'DECLARED_MODELS',
+    DeclaredModelsSchema.annotate({
+      description:
+        'The models list_models shows for bedrock, bedrock-anthropic, azure, vertex and vertex-anthropic, which do not list their own, and for a gateway whose list cannot be read, keyed by the provider prefix. DECLARED_MODELS wins over it',
+    }),
+    asJson,
+  ),
+  fileSetting(
+    'ALLOWED_MODELS',
+    AllowedModelsSchema.annotate({
+      description:
+        'The only model references a reasoning function may give, by name or through an alias, and list_models shows, each provider/model or provider/* for every model of a provider; every model when left out. ALLOWED_MODELS wins over it',
+    }),
+    asJson,
+  ),
+  fileSetting(
+    'TOOL_SERVERS',
+    ToolServersSchema.annotate({
+      description:
+        'The tool servers whose tools a function may name, each bound to an org and optionally its playbooks: url for a remote MCP server, command for an MCP server run as a process, document for an HTTP API described by an OpenAPI document. Secrets are references such as ${GRAPH_API_KEY}. TOOL_SERVERS wins over it',
+    }),
+    asJson,
+    { references: 'kept', judgedByShape: ['placeholders'] },
+  ),
+  fileSetting('CONNECTIONS', ConnectionsSettingSchema, asJson, {
+    references: 'kept',
+    sortsOfCredential: connectionsSortsOfCredential,
+    prose: entryProse,
+    judgedByShape: ['placeholders'],
+  }),
+  fileSetting(
+    'USAGE_PING',
+    Schema.Boolean.annotate({
+      description:
+        'Whether the runtime sends its anonymous usage ping when it starts: its release, the operating system, the processor, the version of Node.js, how it was installed and a random install id, and nothing of its work. On when left out; DO_NOT_TRACK or SCARF_NO_ANALYTICS in the environment turns it off too. USAGE_PING wins over it',
+    }),
+    String,
+  ),
+  licenseFileSetting,
+  extensionsFileSetting,
+];

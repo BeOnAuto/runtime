@@ -1,0 +1,50 @@
+import { describe, expect, it } from 'vitest';
+
+import { isKindWithType, kindsWithTypes, problemTypeOf, reasonOfKind } from '../index.ts';
+
+describe('the types of problems', () => {
+  it('are URIs under https://on.auto/problems/', () => {
+    expect(problemTypeOf('unavailable')).toBe('https://on.auto/problems/unavailable');
+  });
+
+  it('give tools_unfinished, tools_called, effect_unknown, rebuilding, the meter’s four refusals and cursor_not_held types of their own, and no other kind', () => {
+    expect(kindsWithTypes).toEqual([
+      'tools_unfinished',
+      'tools_called',
+      'effect_unknown',
+      'rebuilding',
+      'credits_exhausted',
+      'license_required',
+      'license_invalid',
+      'account_closed',
+      'cursor_not_held',
+    ]);
+    expect([
+      isKindWithType('tools_unfinished'),
+      isKindWithType('tools_called'),
+      isKindWithType('effect_unknown'),
+      isKindWithType('rebuilding'),
+      isKindWithType('credits_exhausted'),
+      isKindWithType('account_closed'),
+      isKindWithType('cursor_not_held'),
+      isKindWithType('stalled'),
+      isKindWithType('tool_not_offered'),
+      isKindWithType('toString'),
+      isKindWithType(),
+    ]).toEqual([true, true, true, true, true, true, true, false, false, false, false]);
+  });
+
+  it('keep the reason of each kind with a type of its own', () => {
+    expect(kindsWithTypes.map((kind) => reasonOfKind(kind))).toEqual([
+      'unavailable',
+      'conflict',
+      'conflict',
+      'unavailable',
+      'conflict',
+      'conflict',
+      'conflict',
+      'conflict',
+      'invalid_input',
+    ]);
+  });
+});

@@ -1,0 +1,18 @@
+name: google-sheets
+title: Google Sheets
+description: Read spreadsheets and cell values in Google Sheets, update values and formulas, insert rows and columns, and change their sheets, ranges and properties.
+website: https://developers.google.com/workspace/sheets/api/reference/rest
+type: openapi
+document: documents/google-sheets.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/spreadsheets
+    says:
+      https://www.googleapis.com/auth/spreadsheets.readonly: See all Google Sheets spreadsheets.
+      https://www.googleapis.com/auth/spreadsheets: See, change, create and delete all Google Sheets spreadsheets.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Google Sheets.

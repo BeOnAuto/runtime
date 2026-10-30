@@ -1,0 +1,25 @@
+{
+  "type": "baseline_scored",
+  "data": {
+    "baseline": "persistence",
+    "scores": [
+      {
+        "horizon": 4,
+        "pairs": 120,
+        "mase": 0.82,
+        "winkler": 14.5,
+        "quantile": 3.1
+      }
+    ],
+    "coverage": null,
+    "series_walked": 9
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

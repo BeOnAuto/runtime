@@ -1,0 +1,29 @@
+{
+  "name": "@on.auto/meter",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@on.auto/definitions": "workspace:*",
+    "@on.auto/ledger": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/prediction-contract": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "catalog:",
+    "pg": "8.23.1",
+    "vitest": "catalog:"
+  }
+}

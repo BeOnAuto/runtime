@@ -1,0 +1,45 @@
+{
+  "name": "@on.auto/reasoning",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./installed-packages": "./src/providers/installed-packages.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@ai-sdk/amazon-bedrock": "5.0.113",
+    "@ai-sdk/anthropic": "4.0.78",
+    "@ai-sdk/azure": "4.0.99",
+    "@ai-sdk/google": "4.0.93",
+    "@ai-sdk/google-vertex": "5.0.109",
+    "@ai-sdk/openai": "4.0.91",
+    "@ai-sdk/openai-compatible": "3.0.67",
+    "@on.auto/config": "workspace:*",
+    "@on.auto/definitions": "workspace:*",
+    "@on.auto/json-schema": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/outbound": "workspace:*",
+    "@on.auto/tool-servers": "workspace:*",
+    "ai": "7.0.137",
+    "effect": "catalog:",
+    "google-auth-library": "10.9.1",
+    "liquidjs": "10.30.0",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/json-schema": "7.0.15",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  },
+  "optionalDependencies": {
+    "@azure/identity": "4.13.3"
+  }
+}

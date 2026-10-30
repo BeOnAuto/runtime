@@ -1,0 +1,2387 @@
+{
+  "format": 2,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 2,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+          "at": 1790845200000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/race",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/fails",
+            "run": 1,
+            "outcome": "raised"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/1/quick",
+            "run": 1,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/2/pause",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/3/ask",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/4/await",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/5/backing",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/5/backing/try/0/fail",
+            "run": 1,
+            "outcome": "raised"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/6/recovering",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/6/recovering/try/0/fail",
+            "run": 1,
+            "outcome": "raised"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/6/recovering/catch/do/0/rest",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/7/trying",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/7/trying/try/0/slow",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/8/each",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/8/each/do/0/step",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/9/steps",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/9/steps/do/0/first",
+            "run": 1,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/9/steps/do/1/second",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 1,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 2,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 3,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 4,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 5,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 6,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 7,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 8,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 9,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 10,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 11,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 12,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 13,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 14,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 15,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 16,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 17,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 18,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 19,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 20,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 21,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 22,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 23,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 24,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 25,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 26,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 27,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 28,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 29,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 30,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 31,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 32,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 33,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 34,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 35,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 36,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 37,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 38,
+            "outcome": "completed"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/10/counting/do/0/add",
+            "run": 39,
+            "outcome": "completed"
+          }
+        ],
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/executionId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "all": {
+                      "fork": {
+                        "branches": [
+                          {
+                            "race": {
+                              "fork": {
+                                "compete": true,
+                                "branches": [
+                                  {
+                                    "fails": {
+                                      "raise": {
+                                        "error": {
+                                          "type": "https://example.com/lost",
+                                          "status": 409
+                                        }
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "waits": {
+                                      "wait": "PT1H"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "quick": {
+                              "set": {
+                                "quick": true
+                              }
+                            }
+                          },
+                          {
+                            "pause": {
+                              "wait": "PT1H"
+                            }
+                          },
+                          {
+                            "ask": {
+                              "call": "notify",
+                              "with": {
+                                "to": "ada"
+                              }
+                            }
+                          },
+                          {
+                            "await": {
+                              "listen": {
+                                "to": {
+                                  "one": {
+                                    "with": {
+                                      "type": "approved"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "backing": {
+                              "try": [
+                                {
+                                  "fail": {
+                                    "raise": {
+                                      "error": {
+                                        "type": "https://example.com/busy",
+                                        "status": 503
+                                      }
+                                    }
+                                  }
+                                }
+                              ],
+                              "catch": {
+                                "retry": {
+                                  "delay": "PT1H",
+                                  "limit": {
+                                    "attempt": {
+                                      "count": 2
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "recovering": {
+                              "try": [
+                                {
+                                  "fail": {
+                                    "raise": {
+                                      "error": {
+                                        "type": "https://example.com/busy",
+                                        "status": 503
+                                      }
+                                    }
+                                  }
+                                }
+                              ],
+                              "catch": {
+                                "as": "problem",
+                                "do": [
+                                  {
+                                    "rest": {
+                                      "wait": "PT1H"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "trying": {
+                              "try": [
+                                {
+                                  "slow": {
+                                    "wait": "PT1H"
+                                  }
+                                }
+                              ],
+                              "catch": {},
+                              "timeout": {
+                                "after": "PT2H"
+                              }
+                            }
+                          },
+                          {
+                            "each": {
+                              "for": {
+                                "in": "${ [1, 2] }",
+                                "each": "number"
+                              },
+                              "do": [
+                                {
+                                  "step": {
+                                    "wait": "PT1H"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "steps": {
+                              "do": [
+                                {
+                                  "first": {
+                                    "set": {
+                                      "first": true
+                                    }
+                                  }
+                                },
+                                {
+                                  "second": {
+                                    "wait": "PT1H"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "counting": {
+                              "for": {
+                                "in": "${ [range(0; 120)] }"
+                              },
+                              "do": [
+                                {
+                                  "add": {
+                                    "set": "${ { count: ((.count // 0) + 1) } }"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "later": {
+                              "set": {
+                                "later": true
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1race",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1race~1fork~1branches~10~1fails",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1race~1fork~1branches~11~1waits",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~11~1quick",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~12~1pause",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~13~1ask",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~14~1await",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~15~1backing",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~15~1backing~1try~10~1fail",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~16~1recovering",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~16~1recovering~1try~10~1fail",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~16~1recovering~1catch~1do~10~1rest",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~17~1trying",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~17~1trying~1try~10~1slow",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~18~1each",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~18~1each~1do~10~1step",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~19~1steps",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~19~1steps~1do~10~1first",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~19~1steps~1do~11~1second",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~110~1counting",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~110~1counting~1do~10~1add",
+            "value": 39
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 13
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/1",
+            "value": {
+              "purpose": "deadline",
+              "reference": "/",
+              "armedAt": 1790845200000,
+              "dueAt": 1793437200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/2",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/3",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/all/fork/branches/2/pause",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/4",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/0/all/fork/branches/3/ask",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/5",
+            "value": {
+              "purpose": "retry_delay",
+              "reference": "/do/0/all/fork/branches/5/backing",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/6",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/all/fork/branches/6/recovering/catch/do/0/rest",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/7",
+            "value": {
+              "purpose": "timeout",
+              "reference": "/do/0/all/fork/branches/7/trying",
+              "armedAt": 1790845200000,
+              "dueAt": 1790852400000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/8",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/all/fork/branches/7/trying/try/0/slow",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/9",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/all/fork/branches/8/each/do/0/step",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/10",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/all/fork/branches/9/steps/do/1/second",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/11",
+            "value": {
+              "purpose": "yield",
+              "reference": "/do/0/all/fork/branches/10/counting",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/12",
+            "value": {
+              "purpose": "yield",
+              "reference": "/do/0/all/fork/branches/11/later",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~13~1ask\",1]",
+            "value": {
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/3/ask",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 71351
+          },
+          {
+            "op": "replace",
+            "path": "/stepsWithoutWaiting",
+            "value": 40
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {
+                "ticket": 7
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/2",
+            "value": {
+              "value": {
+                "quick": true
+              },
+              "bytes": 14
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/3",
+            "value": {
+              "value": {
+                "to": "ada"
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/4",
+            "value": {
+              "value": {
+                "type": "https://example.com/busy",
+                "status": 503,
+                "instance": "/do/0/all/fork/branches/6/recovering/try/0/fail"
+              },
+              "bytes": 109
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/5",
+            "value": {
+              "value": [1, 2],
+              "bytes": 5
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/6",
+            "value": {
+              "value": 1,
+              "bytes": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/7",
+            "value": {
+              "value": 0,
+              "bytes": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/8",
+            "value": {
+              "value": {
+                "first": true
+              },
+              "bytes": 14
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/9",
+            "value": {
+              "value": [
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
+                28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,
+                54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79,
+                80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104,
+                105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119
+              ],
+              "bytes": 371
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/126",
+            "value": {
+              "value": {
+                "count": 39
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/127",
+            "value": {
+              "value": 39,
+              "bytes": 2
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/128",
+            "value": {
+              "value": 39,
+              "bytes": 2
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 129
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": {
+              "reference": "/",
+              "run": 1,
+              "startedAt": 1790845200000,
+              "context": 0,
+              "rawInput": 1,
+              "input": 1,
+              "variables": {},
+              "timeout": null,
+              "body": {
+                "kind": "list",
+                "list": {
+                  "pointer": "/do",
+                  "position": 0,
+                  "data": 1,
+                  "variables": {},
+                  "current": {
+                    "kind": "running",
+                    "task": {
+                      "reference": "/do/0/all",
+                      "run": 1,
+                      "startedAt": 1790845200000,
+                      "context": 0,
+                      "rawInput": 1,
+                      "input": 1,
+                      "variables": {},
+                      "timeout": null,
+                      "body": {
+                        "kind": "fork",
+                        "compete": false,
+                        "branches": [
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/0/race",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "fork",
+                                "compete": true,
+                                "branches": [
+                                  {
+                                    "state": "failed",
+                                    "error": {
+                                      "type": "https://example.com/lost",
+                                      "status": 409,
+                                      "instance": "/do/0/all/fork/branches/0/race/fork/branches/0/fails"
+                                    },
+                                    "order": 0
+                                  },
+                                  {
+                                    "state": "running",
+                                    "task": {
+                                      "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+                                      "run": 1,
+                                      "startedAt": 1790845200000,
+                                      "context": 0,
+                                      "rawInput": 1,
+                                      "input": 1,
+                                      "variables": {},
+                                      "timeout": null,
+                                      "body": {
+                                        "kind": "wait",
+                                        "timer": "2"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "state": "finished",
+                            "output": 2,
+                            "flow": "continue"
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/2/pause",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "wait",
+                                "timer": "3"
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/3/ask",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "call",
+                                "key": {
+                                  "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                                  "reference": "/do/0/all/fork/branches/3/ask",
+                                  "run": 1
+                                },
+                                "function": "notify",
+                                "arguments": 3,
+                                "label": "the function notify",
+                                "deadline": "4"
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/4/await",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "listen",
+                                "consumed": []
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/5/backing",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "try",
+                                "attempt": 0,
+                                "startedAt": 1790845200000,
+                                "phase": {
+                                  "kind": "backing_off",
+                                  "timer": "5",
+                                  "error": {
+                                    "type": "https://example.com/busy",
+                                    "status": 503,
+                                    "instance": "/do/0/all/fork/branches/5/backing/try/0/fail"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/6/recovering",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "try",
+                                "attempt": 0,
+                                "startedAt": 1790845200000,
+                                "phase": {
+                                  "kind": "recovering",
+                                  "list": {
+                                    "pointer": "/do/0/all/fork/branches/6/recovering/catch/do",
+                                    "position": 0,
+                                    "data": 1,
+                                    "variables": {
+                                      "problem": 4
+                                    },
+                                    "current": {
+                                      "kind": "running",
+                                      "task": {
+                                        "reference": "/do/0/all/fork/branches/6/recovering/catch/do/0/rest",
+                                        "run": 1,
+                                        "startedAt": 1790845200000,
+                                        "context": 0,
+                                        "rawInput": 1,
+                                        "input": 1,
+                                        "variables": {
+                                          "problem": 4
+                                        },
+                                        "timeout": null,
+                                        "body": {
+                                          "kind": "wait",
+                                          "timer": "6"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/7/trying",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": "7",
+                              "body": {
+                                "kind": "try",
+                                "attempt": 0,
+                                "startedAt": 1790845200000,
+                                "phase": {
+                                  "kind": "trying",
+                                  "list": {
+                                    "pointer": "/do/0/all/fork/branches/7/trying/try",
+                                    "position": 0,
+                                    "data": 1,
+                                    "variables": {},
+                                    "current": {
+                                      "kind": "running",
+                                      "task": {
+                                        "reference": "/do/0/all/fork/branches/7/trying/try/0/slow",
+                                        "run": 1,
+                                        "startedAt": 1790845200000,
+                                        "context": 0,
+                                        "rawInput": 1,
+                                        "input": 1,
+                                        "variables": {},
+                                        "timeout": null,
+                                        "body": {
+                                          "kind": "wait",
+                                          "timer": "8"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "attemptLimit": null
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/8/each",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "for",
+                                "items": 5,
+                                "index": 0,
+                                "data": 1,
+                                "list": {
+                                  "pointer": "/do/0/all/fork/branches/8/each/do",
+                                  "position": 0,
+                                  "data": 1,
+                                  "variables": {
+                                    "number": 6,
+                                    "index": 7
+                                  },
+                                  "current": {
+                                    "kind": "running",
+                                    "task": {
+                                      "reference": "/do/0/all/fork/branches/8/each/do/0/step",
+                                      "run": 1,
+                                      "startedAt": 1790845200000,
+                                      "context": 0,
+                                      "rawInput": 1,
+                                      "input": 1,
+                                      "variables": {
+                                        "number": 6,
+                                        "index": 7
+                                      },
+                                      "timeout": null,
+                                      "body": {
+                                        "kind": "wait",
+                                        "timer": "9"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/9/steps",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "list",
+                                "list": {
+                                  "pointer": "/do/0/all/fork/branches/9/steps/do",
+                                  "position": 1,
+                                  "data": 8,
+                                  "variables": {},
+                                  "current": {
+                                    "kind": "running",
+                                    "task": {
+                                      "reference": "/do/0/all/fork/branches/9/steps/do/1/second",
+                                      "run": 1,
+                                      "startedAt": 1790845200000,
+                                      "context": 0,
+                                      "rawInput": 8,
+                                      "input": 8,
+                                      "variables": {},
+                                      "timeout": null,
+                                      "body": {
+                                        "kind": "wait",
+                                        "timer": "10"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/10/counting",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "for",
+                                "items": 9,
+                                "index": 39,
+                                "data": 126,
+                                "list": {
+                                  "pointer": "/do/0/all/fork/branches/10/counting/do",
+                                  "position": 0,
+                                  "data": 126,
+                                  "variables": {
+                                    "item": 127,
+                                    "index": 128
+                                  },
+                                  "current": {
+                                    "kind": "yielding",
+                                    "timer": "11"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "state": "yielding",
+                            "timer": "12"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 20394
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "1",
+            "dueAt": 1793437200000,
+            "purpose": "deadline",
+            "label": "the most the workflow may run"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "2",
+            "dueAt": 1790848800000,
+            "purpose": "wait",
+            "label": "/do/0/all/fork/branches/0/race/fork/branches/1/waits"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "3",
+            "dueAt": 1790848800000,
+            "purpose": "wait",
+            "label": "/do/0/all/fork/branches/2/pause"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/3/ask",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments": {
+              "to": "ada"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "4",
+            "dueAt": 1790845800000,
+            "purpose": "call_deadline",
+            "label": "/do/0/all/fork/branches/3/ask deadline"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "5",
+            "dueAt": 1790848800000,
+            "purpose": "retry_delay",
+            "label": "/do/0/all/fork/branches/5/backing retry 1"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "6",
+            "dueAt": 1790848800000,
+            "purpose": "wait",
+            "label": "/do/0/all/fork/branches/6/recovering/catch/do/0/rest"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "7",
+            "dueAt": 1790852400000,
+            "purpose": "timeout",
+            "label": "/do/0/all/fork/branches/7/trying timeout"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "8",
+            "dueAt": 1790848800000,
+            "purpose": "wait",
+            "label": "/do/0/all/fork/branches/7/trying/try/0/slow"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "9",
+            "dueAt": 1790848800000,
+            "purpose": "wait",
+            "label": "/do/0/all/fork/branches/8/each/do/0/step"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "10",
+            "dueAt": 1790848800000,
+            "purpose": "wait",
+            "label": "/do/0/all/fork/branches/9/steps/do/1/second"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "11",
+            "dueAt": 1790845200000,
+            "purpose": "yield",
+            "label": "/do/0/all/fork/branches/10/counting lets other workflows run"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "12",
+            "dueAt": 1790845200000,
+            "purpose": "yield",
+            "label": "/do/0/all/fork/branches/11/later lets other workflows run"
+          }
+        ]
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 2,
+        "receipt": {
+          "kind": "event_received",
+          "key": "event-1",
+          "at": 1790845200000,
+          "eventType": "declined"
+        },
+        "steps": [],
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "add",
+            "path": "/inbox/waiting/-",
+            "value": {
+              "event": {
+                "id": "event-1",
+                "type": "declined",
+                "data": "no"
+              },
+              "bytes": 46
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/inbox/waitingBytes",
+            "value": 46
+          },
+          {
+            "op": "add",
+            "path": "/inbox/receivedIds/-",
+            "value": "event-1"
+          },
+          {
+            "op": "replace",
+            "path": "/inbox/received",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/inbox/receivedBytes",
+            "value": 46
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 20998
+          }
+        ],
+        "outputs": []
+      }
+    }
+  ],
+  "snapshot": {
+    "chunks": [
+      "{\"format\":2,\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"version\":1,\"historyBytes\":20394,\"state\":{\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"status\":\"running\",\"workflow\":{\"document\":{\"document\":{\"dsl\":\"1.0.3\",\"namespace\":\"acme\",\"name\":\"test\",\"version\":\"1.0.0\"},\"do\":[{\"all\":{\"fork\":{\"branches\":[{\"race\":{\"fork\":{\"compete\":true,\"branches\":[{\"fails\":{\"raise\":{\"error\":{\"type\":\"https://example.com/lost\",\"status\":409}}}},{\"waits\":{\"wait\":\"PT1H\"}}]}}},{\"quick\":{\"set\":{\"quick\":true}}},{\"pause\":{\"wait\":\"PT1H\"}},{\"ask\":{\"call\":\"notify\",\"with\":{\"to\":\"ada\"}}},{\"await\":{\"listen\":{\"to\":{\"one\":{\"with\":{\"type\":\"approved\"}}}}}},{\"backing\":{\"try\":[{\"fail\":{\"raise\":{\"error\":{\"type\":\"https://example.com/busy\",\"status\":503}}}}],\"catch\":{\"retry\":{\"delay\":\"PT1H\",\"limit\":{\"attempt\":{\"count\":2}}}}}},{\"recovering\":{\"try\":[{\"fail\":{\"raise\":{\"error\":{\"type\":\"https://example.com/busy\",\"status\":503}}}}],\"catch\":{\"as\":\"problem\",\"do\":[{\"rest\":{\"wait\":\"PT1H\"}}]}}},{\"trying\":{\"try\":[{\"slow\":{\"wait\":\"PT1H\"}}],\"catch\":{},\"timeout\":{\"after\":\"PT2H\"}}},{\"each\":{\"for\":{\"in\":\"${ [1, 2] }\",\"each\":\"number\"},\"do\":[{\"step\":{\"wait\":\"PT1H\"}}]}},{\"steps\":{\"do\":[{\"first\":{\"set\":{\"first\":true}}},{\"second\":{\"wait\":\"PT1H\"}}]}},{\"counting\":{\"for\":{\"in\":\"${ [range(0; 120)] }\"},\"do\":[{\"add\":{\"set\":\"${ { count: ((.count // 0) + 1) } }\"}}]}},{\"later\":{\"set\":{\"later\":true}}}]}}}]},\"input\":1},\"attributes\":{},\"limits\":{\"mostDurationMs\":2592000000,\"longestCallMs\":600000},\"startedAt\":1790845200000,\"lastInputAt\":1790845200000,\"inputs\":1,\"random\":{\"seed\":7,\"draws\":0},\"runs\":{\"/do/0/all\":1,\"/do/0/all/fork/branches/0/race\":1,\"/do/0/all/fork/branches/0/race/fork/branches/0/fails\":1,\"/do/0/all/fork/branches/0/race/fork/branches/1/waits\":1,\"/do/0/all/fork/branches/1/quick\":1,\"/do/0/all/fork/branches/2/pause\":1,\"/do/0/all/fork/branches/3/ask\":1,\"/do/0/all/fork/branches/4/await\":1,\"/do/0/all/fork/branches/5/backing\":1,\"/do/0/all/fork/branches/5/backing/try/0/fail\":1,\"/do/0/all/fork/branches/6/recovering\":1,\"/do/0/all/fork/branches/6/recovering/try/0/fail\":1,\"/do/0/all/fork/branches/6/recovering/catch/do/0/rest\":1,\"/do/0/all/fork/branches/7/trying\":1,\"/do/0/all/fork/branches/7/trying/try/0/slow\":1,\"/do/0/all/fork/branches/8/each\":1,\"/do/0/all/fork/branches/8/each/do/0/step\":1,\"/do/0/all/fork/branches/9/steps\":1,\"/do/0/all/fork/branches/9/steps/do/0/first\":1,\"/do/0/all/fork/branches/9/steps/do/1/second\":1,\"/do/0/all/fork/branches/10/counting\":1,\"/do/0/all/fork/branches/10/counting/do/0/add\":39},\"timers\":{\"next\":13,\"armed\":{\"1\":{\"purpose\":\"deadline\",\"reference\":\"/\",\"armedAt\":1790845200000,\"dueAt\":1793437200000},\"2\":{\"purpose\":\"wait\",\"reference\":\"/do/0/all/fork/branches/0/race/fork/branches/1/waits\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"3\":{\"purpose\":\"wait\",\"reference\":\"/do/0/all/fork/branches/2/pause\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"4\":{\"purpose\":\"call_deadline\",\"reference\":\"/do/0/all/fork/branches/3/ask\",\"armedAt\":1790845200000,\"dueAt\":1790845800000},\"5\":{\"purpose\":\"retry_delay\",\"reference\":\"/do/0/all/fork/branches/5/backing\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"6\":{\"purpose\":\"wait\",\"reference\":\"/do/0/all/fork/branches/6/recovering/catch/do/0/rest\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"7\":{\"purpose\":\"timeout\",\"reference\":\"/do/0/all/fork/branches/7/trying\",\"armedAt\":1790845200000,\"dueAt\":1790852400000},\"8\":{\"purpose\":\"wait\",\"reference\":\"/do/0/all/fork/branches/7/trying/try/0/slow\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"9\":{\"purpose\":\"wait\",\"reference\":\"/do/0/all/fork/branches/8/each/do/0/step\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"10\":{\"purpose\":\"wait\",\"reference\":\"/do/0/all/fork/branches/9/steps/do/1/second\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"11\":{\"purpose\":\"yield\",\"reference\":\"/do/0/all/fork/branches/10/counting\",\"armedAt\":1790845200000,\"dueAt\":1790845200000},\"12\":{\"purpose\":\"yield\",\"reference\":\"/do/0/all/fork/branches/11/later\",\"armedAt\":1790845200000,\"dueAt\":1790845200000}}},\"calls\":{\"[\\\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\\\",\\\"/do/0/all/fork/branches/3/ask\\\",1]\":{\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"reference\":\"/do/0/all/fork/branches/3/ask\",\"run\":1}},\"inbox\":{\"waiting\":[],\"waitingBytes\":0,\"receivedIds\":[],\"received\":0,\"receivedBytes\":0},\"heldBytes\":71351,\"historyBytes\":20394,\"stepsWithoutWaiting\":40,\"cancelRequested\":false,\"machine\":{\"values\":{\"0\":{\"value\":{},\"bytes\":2},\"1\":{\"value\":{\"ticket\":7},\"bytes\":12},\"2\":{\"value\":{\"quick\":true},\"bytes\":14},\"3\":{\"value\":{\"to\":\"ada\"},\"bytes\":12},\"4\":{\"value\":{\"type\":\"https://example.com/busy\",\"status\":503,\"instance\":\"/do/0/all/fork/branches/6/recovering/try/0/fail\"},\"bytes\":109},\"5\":{\"value\":[1,2],\"bytes\":5},\"6\":{\"value\":1,\"bytes\":1},\"7\":{\"value\":0,\"bytes\":1},\"8\":{\"value\":{\"first\":true},\"bytes\":14},\"9\":{\"value\":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119],\"bytes\":371},\"126\":{\"value\":{\"count\":39},\"bytes\":12},\"127\":{\"value\":39,\"bytes\":2},\"128\":{\"value\":39,\"bytes\":2}},\"nextValue\":129,\"context\":0,\"root\":{\"reference\":\"/\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"list\",\"list\":{\"pointer\":\"/do\",\"position\":0,\"data\":1,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"fork\",\"compete\":false,\"branches\":[{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/0/race\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"fork\",\"compete\":true,\"branches\":[{\"state\":\"failed\",\"error\":{\"type\":\"https://example.com/lost\",\"status\":409,\"instance\":\"/do/0/all/fork/branches/0/race/fork/branches/0/fails\"},\"order\":0},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/0/race/fork/branches/1/waits\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"2\"}}}]}}},{\"state\":\"finished\",\"output\":2,\"flow\":\"continue\"},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/2/pause\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"3\"}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/3/ask\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"call\",\"key\":{\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"reference\":\"/do/0/all/fork/branches/3/ask\",\"run\":1},\"function\":\"notify\",\"arguments\":3,\"label\":\"the function notify\",\"deadline\":\"4\"}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/4/await\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"listen\",\"consumed\":[]}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/5/backing\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"try\",\"attempt\":0,\"startedAt\":1790845200000,\"phase\":{\"kind\":\"backing_off\",\"timer\":\"5\",\"error\":{\"type\":\"https://example.com/busy\",\"status\":503,\"instance\":\"/do/0/all/fork/branches/5/backing/try/0/fail\"}}}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/6/recovering\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"try\",\"attempt\":0,\"startedAt\":1790845200000,\"phase\":{\"kind\":\"recovering\",\"list\":{\"pointer\":\"/do/0/all/fork/branches/6/recovering/catch/do\",\"position\":0,\"data\":1,\"variables\":{\"problem\":4},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/6/recovering/catch/do/0/rest\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{\"problem\":4},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"6\"}}}}}}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/7/trying\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":\"7\",\"body\":{\"kind\":\"try\",\"attempt\":0,\"startedAt\":1790845200000,\"phase\":{\"kind\":\"trying\",\"list\":{\"pointer\":\"/do/0/all/fork/branches/7/trying/try\",\"position\":0,\"data\":1,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/7/trying/try/0/slow\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"8\"}}}},\"attemptLimit\":null}}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/8/each\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"for\",\"items\":5,\"index\":0,\"data\":1,\"list\":{\"pointer\":\"/do/0/all/fork/branches/8/each/do\",\"position\":0,\"data\":1,\"variables\":{\"number\":6,\"index\":7},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/8/each/do/0/step\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{\"number\":6,\"index\":7},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"9\"}}}}}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/9/steps\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"list\",\"list\":{\"pointer\":\"/do/0/all/fork/branches/9/steps/do\",\"position\":1,\"data\":8,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/9/steps/do/1/second\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":8,\"input\":8,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"10\"}}}}}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/10/counting\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"for\",\"items\":9,\"index\":39,\"data\":126,\"list\":{\"pointer\":\"/do/0/all/fork/branches/10/counting/do\",\"position\":0,\"data\":126,\"variables\":{\"item\":127,\"index\":128},\"current\":{\"kind\":\"yielding\",\"timer\":\"11\"}}}}},{\"state\":\"yielding\",\"timer\":\"12\"}]}}}}}}},\"outcome\":null}}"
+    ],
+    "bytes": 10368,
+    "tail": [
+      {
+        "version": 2,
+        "event": {
+          "type": "input_applied",
+          "format": 2,
+          "receipt": {
+            "kind": "event_received",
+            "key": "event-1",
+            "at": 1790845200000,
+            "eventType": "declined"
+          },
+          "steps": [],
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 2
+            },
+            {
+              "op": "add",
+              "path": "/inbox/waiting/-",
+              "value": {
+                "event": {
+                  "id": "event-1",
+                  "type": "declined",
+                  "data": "no"
+                },
+                "bytes": 46
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/inbox/waitingBytes",
+              "value": 46
+            },
+            {
+              "op": "add",
+              "path": "/inbox/receivedIds/-",
+              "value": "event-1"
+            },
+            {
+              "op": "replace",
+              "path": "/inbox/received",
+              "value": 1
+            },
+            {
+              "op": "replace",
+              "path": "/inbox/receivedBytes",
+              "value": 46
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 20998
+            }
+          ],
+          "outputs": []
+        }
+      }
+    ]
+  },
+  "state": {
+    "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "status": "running",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "all": {
+              "fork": {
+                "branches": [
+                  {
+                    "race": {
+                      "fork": {
+                        "compete": true,
+                        "branches": [
+                          {
+                            "fails": {
+                              "raise": {
+                                "error": {
+                                  "type": "https://example.com/lost",
+                                  "status": 409
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "waits": {
+                              "wait": "PT1H"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "quick": {
+                      "set": {
+                        "quick": true
+                      }
+                    }
+                  },
+                  {
+                    "pause": {
+                      "wait": "PT1H"
+                    }
+                  },
+                  {
+                    "ask": {
+                      "call": "notify",
+                      "with": {
+                        "to": "ada"
+                      }
+                    }
+                  },
+                  {
+                    "await": {
+                      "listen": {
+                        "to": {
+                          "one": {
+                            "with": {
+                              "type": "approved"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "backing": {
+                      "try": [
+                        {
+                          "fail": {
+                            "raise": {
+                              "error": {
+                                "type": "https://example.com/busy",
+                                "status": 503
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "catch": {
+                        "retry": {
+                          "delay": "PT1H",
+                          "limit": {
+                            "attempt": {
+                              "count": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "recovering": {
+                      "try": [
+                        {
+                          "fail": {
+                            "raise": {
+                              "error": {
+                                "type": "https://example.com/busy",
+                                "status": 503
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "catch": {
+                        "as": "problem",
+                        "do": [
+                          {
+                            "rest": {
+                              "wait": "PT1H"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "trying": {
+                      "try": [
+                        {
+                          "slow": {
+                            "wait": "PT1H"
+                          }
+                        }
+                      ],
+                      "catch": {},
+                      "timeout": {
+                        "after": "PT2H"
+                      }
+                    }
+                  },
+                  {
+                    "each": {
+                      "for": {
+                        "in": "${ [1, 2] }",
+                        "each": "number"
+                      },
+                      "do": [
+                        {
+                          "step": {
+                            "wait": "PT1H"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "steps": {
+                      "do": [
+                        {
+                          "first": {
+                            "set": {
+                              "first": true
+                            }
+                          }
+                        },
+                        {
+                          "second": {
+                            "wait": "PT1H"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "counting": {
+                      "for": {
+                        "in": "${ [range(0; 120)] }"
+                      },
+                      "do": [
+                        {
+                          "add": {
+                            "set": "${ { count: ((.count // 0) + 1) } }"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "later": {
+                      "set": {
+                        "later": true
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {},
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000
+    },
+    "startedAt": 1790845200000,
+    "lastInputAt": 1790845200000,
+    "inputs": 2,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/all": 1,
+      "/do/0/all/fork/branches/0/race": 1,
+      "/do/0/all/fork/branches/0/race/fork/branches/0/fails": 1,
+      "/do/0/all/fork/branches/0/race/fork/branches/1/waits": 1,
+      "/do/0/all/fork/branches/1/quick": 1,
+      "/do/0/all/fork/branches/2/pause": 1,
+      "/do/0/all/fork/branches/3/ask": 1,
+      "/do/0/all/fork/branches/4/await": 1,
+      "/do/0/all/fork/branches/5/backing": 1,
+      "/do/0/all/fork/branches/5/backing/try/0/fail": 1,
+      "/do/0/all/fork/branches/6/recovering": 1,
+      "/do/0/all/fork/branches/6/recovering/try/0/fail": 1,
+      "/do/0/all/fork/branches/6/recovering/catch/do/0/rest": 1,
+      "/do/0/all/fork/branches/7/trying": 1,
+      "/do/0/all/fork/branches/7/trying/try/0/slow": 1,
+      "/do/0/all/fork/branches/8/each": 1,
+      "/do/0/all/fork/branches/8/each/do/0/step": 1,
+      "/do/0/all/fork/branches/9/steps": 1,
+      "/do/0/all/fork/branches/9/steps/do/0/first": 1,
+      "/do/0/all/fork/branches/9/steps/do/1/second": 1,
+      "/do/0/all/fork/branches/10/counting": 1,
+      "/do/0/all/fork/branches/10/counting/do/0/add": 39
+    },
+    "timers": {
+      "next": 13,
+      "armed": {
+        "1": {
+          "purpose": "deadline",
+          "reference": "/",
+          "armedAt": 1790845200000,
+          "dueAt": 1793437200000
+        },
+        "2": {
+          "purpose": "wait",
+          "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "3": {
+          "purpose": "wait",
+          "reference": "/do/0/all/fork/branches/2/pause",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "4": {
+          "purpose": "call_deadline",
+          "reference": "/do/0/all/fork/branches/3/ask",
+          "armedAt": 1790845200000,
+          "dueAt": 1790845800000
+        },
+        "5": {
+          "purpose": "retry_delay",
+          "reference": "/do/0/all/fork/branches/5/backing",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "6": {
+          "purpose": "wait",
+          "reference": "/do/0/all/fork/branches/6/recovering/catch/do/0/rest",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "7": {
+          "purpose": "timeout",
+          "reference": "/do/0/all/fork/branches/7/trying",
+          "armedAt": 1790845200000,
+          "dueAt": 1790852400000
+        },
+        "8": {
+          "purpose": "wait",
+          "reference": "/do/0/all/fork/branches/7/trying/try/0/slow",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "9": {
+          "purpose": "wait",
+          "reference": "/do/0/all/fork/branches/8/each/do/0/step",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "10": {
+          "purpose": "wait",
+          "reference": "/do/0/all/fork/branches/9/steps/do/1/second",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "11": {
+          "purpose": "yield",
+          "reference": "/do/0/all/fork/branches/10/counting",
+          "armedAt": 1790845200000,
+          "dueAt": 1790845200000
+        },
+        "12": {
+          "purpose": "yield",
+          "reference": "/do/0/all/fork/branches/11/later",
+          "armedAt": 1790845200000,
+          "dueAt": 1790845200000
+        }
+      }
+    },
+    "calls": {
+      "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/0/all/fork/branches/3/ask\",1]": {
+        "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+        "reference": "/do/0/all/fork/branches/3/ask",
+        "run": 1
+      }
+    },
+    "inbox": {
+      "waiting": [
+        {
+          "event": {
+            "id": "event-1",
+            "type": "declined",
+            "data": "no"
+          },
+          "bytes": 46
+        }
+      ],
+      "waitingBytes": 46,
+      "receivedIds": ["event-1"],
+      "received": 1,
+      "receivedBytes": 46
+    },
+    "heldBytes": 71351,
+    "historyBytes": 20998,
+    "stepsWithoutWaiting": 40,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {
+            "ticket": 7
+          },
+          "bytes": 12
+        },
+        "2": {
+          "value": {
+            "quick": true
+          },
+          "bytes": 14
+        },
+        "3": {
+          "value": {
+            "to": "ada"
+          },
+          "bytes": 12
+        },
+        "4": {
+          "value": {
+            "type": "https://example.com/busy",
+            "status": 503,
+            "instance": "/do/0/all/fork/branches/6/recovering/try/0/fail"
+          },
+          "bytes": 109
+        },
+        "5": {
+          "value": [1, 2],
+          "bytes": 5
+        },
+        "6": {
+          "value": 1,
+          "bytes": 1
+        },
+        "7": {
+          "value": 0,
+          "bytes": 1
+        },
+        "8": {
+          "value": {
+            "first": true
+          },
+          "bytes": 14
+        },
+        "9": {
+          "value": [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+            29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+            56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
+            83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107,
+            108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119
+          ],
+          "bytes": 371
+        },
+        "126": {
+          "value": {
+            "count": 39
+          },
+          "bytes": 12
+        },
+        "127": {
+          "value": 39,
+          "bytes": 2
+        },
+        "128": {
+          "value": 39,
+          "bytes": 2
+        }
+      },
+      "nextValue": 129,
+      "context": 0,
+      "root": {
+        "reference": "/",
+        "run": 1,
+        "startedAt": 1790845200000,
+        "context": 0,
+        "rawInput": 1,
+        "input": 1,
+        "variables": {},
+        "timeout": null,
+        "body": {
+          "kind": "list",
+          "list": {
+            "pointer": "/do",
+            "position": 0,
+            "data": 1,
+            "variables": {},
+            "current": {
+              "kind": "running",
+              "task": {
+                "reference": "/do/0/all",
+                "run": 1,
+                "startedAt": 1790845200000,
+                "context": 0,
+                "rawInput": 1,
+                "input": 1,
+                "variables": {},
+                "timeout": null,
+                "body": {
+                  "kind": "fork",
+                  "compete": false,
+                  "branches": [
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/0/race",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "fork",
+                          "compete": true,
+                          "branches": [
+                            {
+                              "state": "failed",
+                              "error": {
+                                "type": "https://example.com/lost",
+                                "status": 409,
+                                "instance": "/do/0/all/fork/branches/0/race/fork/branches/0/fails"
+                              },
+                              "order": 0
+                            },
+                            {
+                              "state": "running",
+                              "task": {
+                                "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+                                "run": 1,
+                                "startedAt": 1790845200000,
+                                "context": 0,
+                                "rawInput": 1,
+                                "input": 1,
+                                "variables": {},
+                                "timeout": null,
+                                "body": {
+                                  "kind": "wait",
+                                  "timer": "2"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "state": "finished",
+                      "output": 2,
+                      "flow": "continue"
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/2/pause",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "wait",
+                          "timer": "3"
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/3/ask",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "call",
+                          "key": {
+                            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                            "reference": "/do/0/all/fork/branches/3/ask",
+                            "run": 1
+                          },
+                          "function": "notify",
+                          "arguments": 3,
+                          "label": "the function notify",
+                          "deadline": "4"
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/4/await",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "listen",
+                          "consumed": []
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/5/backing",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "try",
+                          "attempt": 0,
+                          "startedAt": 1790845200000,
+                          "phase": {
+                            "kind": "backing_off",
+                            "timer": "5",
+                            "error": {
+                              "type": "https://example.com/busy",
+                              "status": 503,
+                              "instance": "/do/0/all/fork/branches/5/backing/try/0/fail"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/6/recovering",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "try",
+                          "attempt": 0,
+                          "startedAt": 1790845200000,
+                          "phase": {
+                            "kind": "recovering",
+                            "list": {
+                              "pointer": "/do/0/all/fork/branches/6/recovering/catch/do",
+                              "position": 0,
+                              "data": 1,
+                              "variables": {
+                                "problem": 4
+                              },
+                              "current": {
+                                "kind": "running",
+                                "task": {
+                                  "reference": "/do/0/all/fork/branches/6/recovering/catch/do/0/rest",
+                                  "run": 1,
+                                  "startedAt": 1790845200000,
+                                  "context": 0,
+                                  "rawInput": 1,
+                                  "input": 1,
+                                  "variables": {
+                                    "problem": 4
+                                  },
+                                  "timeout": null,
+                                  "body": {
+                                    "kind": "wait",
+                                    "timer": "6"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/7/trying",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": "7",
+                        "body": {
+                          "kind": "try",
+                          "attempt": 0,
+                          "startedAt": 1790845200000,
+                          "phase": {
+                            "kind": "trying",
+                            "list": {
+                              "pointer": "/do/0/all/fork/branches/7/trying/try",
+                              "position": 0,
+                              "data": 1,
+                              "variables": {},
+                              "current": {
+                                "kind": "running",
+                                "task": {
+                                  "reference": "/do/0/all/fork/branches/7/trying/try/0/slow",
+                                  "run": 1,
+                                  "startedAt": 1790845200000,
+                                  "context": 0,
+                                  "rawInput": 1,
+                                  "input": 1,
+                                  "variables": {},
+                                  "timeout": null,
+                                  "body": {
+                                    "kind": "wait",
+                                    "timer": "8"
+                                  }
+                                }
+                              }
+                            },
+                            "attemptLimit": null
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/8/each",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "for",
+                          "items": 5,
+                          "index": 0,
+                          "data": 1,
+                          "list": {
+                            "pointer": "/do/0/all/fork/branches/8/each/do",
+                            "position": 0,
+                            "data": 1,
+                            "variables": {
+                              "number": 6,
+                              "index": 7
+                            },
+                            "current": {
+                              "kind": "running",
+                              "task": {
+                                "reference": "/do/0/all/fork/branches/8/each/do/0/step",
+                                "run": 1,
+                                "startedAt": 1790845200000,
+                                "context": 0,
+                                "rawInput": 1,
+                                "input": 1,
+                                "variables": {
+                                  "number": 6,
+                                  "index": 7
+                                },
+                                "timeout": null,
+                                "body": {
+                                  "kind": "wait",
+                                  "timer": "9"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/9/steps",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "list",
+                          "list": {
+                            "pointer": "/do/0/all/fork/branches/9/steps/do",
+                            "position": 1,
+                            "data": 8,
+                            "variables": {},
+                            "current": {
+                              "kind": "running",
+                              "task": {
+                                "reference": "/do/0/all/fork/branches/9/steps/do/1/second",
+                                "run": 1,
+                                "startedAt": 1790845200000,
+                                "context": 0,
+                                "rawInput": 8,
+                                "input": 8,
+                                "variables": {},
+                                "timeout": null,
+                                "body": {
+                                  "kind": "wait",
+                                  "timer": "10"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/10/counting",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "for",
+                          "items": 9,
+                          "index": 39,
+                          "data": 126,
+                          "list": {
+                            "pointer": "/do/0/all/fork/branches/10/counting/do",
+                            "position": 0,
+                            "data": 126,
+                            "variables": {
+                              "item": 127,
+                              "index": 128
+                            },
+                            "current": {
+                              "kind": "yielding",
+                              "timer": "11"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "state": "yielding",
+                      "timer": "12"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "outcome": null
+  }
+}

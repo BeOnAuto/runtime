@@ -1,0 +1,26 @@
+{
+  "type": "discovery",
+  "discovery": "https://dfareporting.googleapis.com/$discovery/rest?version=v5",
+  "revision": "20260721",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "dfareporting.userProfiles.list",
+    "dfareporting.userProfiles.get",
+    "dfareporting.reports.list",
+    "dfareporting.reports.insert",
+    "dfareporting.reports.get",
+    "dfareporting.reports.run",
+    "dfareporting.reports.files.list",
+    "dfareporting.reports.files.get",
+    "dfareporting.files.get",
+    "dfareporting.dimensionValues.query",
+    "dfareporting.reports.compatibleFields.query",
+    "dfareporting.campaigns.list",
+    "dfareporting.campaigns.get",
+    "dfareporting.advertisers.list",
+    "dfareporting.placements.list",
+    "dfareporting.ads.list",
+    "dfareporting.creatives.list",
+    "dfareporting.sites.list"
+  ]
+}

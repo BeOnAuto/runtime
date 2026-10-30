@@ -1,0 +1,33 @@
+{
+  "name": "@on.auto/workflow-engine",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./dsl": "./src/dsl.ts",
+    "./job-loop": "./src/job-loop.ts",
+    "./process-loop": "./src/process-loop.ts",
+    "./worker": "./src/worker.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage",
+    "measure": "node measure.ts"
+  },
+  "dependencies": {
+    "@jitl/quickjs-wasmfile-release-sync": "0.32.0",
+    "@on.auto/ledger": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "effect": "catalog:",
+    "quickjs-emscripten-core": "0.32.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:",
+    "yaml": "2.9.1"
+  }
+}

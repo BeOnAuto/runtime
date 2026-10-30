@@ -1,0 +1,19 @@
+{
+  "type": "connection_connected",
+  "data": {
+    "connection": "connection-1",
+    "secret_id": "secret-3",
+    "algorithm": "ES256",
+    "client_id": "client-1",
+    "client_source": "dynamic",
+    "scope": "contacts.read",
+    "connected_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

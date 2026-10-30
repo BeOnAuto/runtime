@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/turbo/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json"
+      ]
+    },
+    "test:shard": {
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json"
+      ]
+    }
+  }
+}

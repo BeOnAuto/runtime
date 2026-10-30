@@ -1,0 +1,283 @@
+{
+  "format": 1,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 1,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+          "at": 1791100060000
+        },
+        "steps": [],
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/executionId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "triage",
+                  "version": "1.0.0"
+                },
+                "do": []
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {
+                "ticket": 7
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1791100060000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1791100060000
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 755
+          }
+        ],
+        "outputs": []
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 1,
+        "receipt": {
+          "kind": "event_received",
+          "key": "event-1",
+          "at": 1791100060010,
+          "eventType": "com.acme.tick"
+        },
+        "steps": [],
+        "patch": [
+          {
+            "op": "add",
+            "path": "/timers/armed/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a~1timers~11",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0",
+              "dueAt": 1791100061000
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1791100060010
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 1453
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a/timers/1",
+            "dueAt": 1791100061000,
+            "purpose": "wait"
+          }
+        ]
+      }
+    },
+    {
+      "version": 3,
+      "event": {
+        "type": "input_applied",
+        "format": 1,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a/timers/1",
+          "at": 1791100061000
+        },
+        "steps": [],
+        "patch": [
+          {
+            "op": "remove",
+            "path": "/timers/armed/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a~1timers~11"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/context",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1791100061000
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 1926
+          }
+        ],
+        "outputs": []
+      }
+    }
+  ],
+  "snapshot": {
+    "chunks": [
+      "{\"format\":1,\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"version\":2,\"historyBytes\":1453,\"state\":{\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"status\":\"running\",\"workflow\":{\"document\":{\"document\":{\"dsl\":\"1.0.3\",\"namespace\":\"acme\",\"name\":\"triage\",\"version\":\"1.0.0\"},\"do\":[]},\"input\":1},\"attributes\":{},\"limits\":{\"mostDurationMs\":1,\"longestCallMs\":1},\"startedAt\":1791100060000,\"lastInputAt\":1791100060010,\"inputs\":2,\"random\":{\"seed\":0,\"draws\":0},\"runs\":{},\"timers\":{\"next\":2,\"armed\":{\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a/timers/1\":{\"purpose\":\"wait\",\"reference\":\"/do/0\",\"dueAt\":1791100061000}}},\"calls\":{},\"inbox\":{\"waiting\":[],\"waitingBytes\":0,\"receivedIds\":[],\"received\":0,\"receivedBytes\":0,\"overflow\":null},\"heldBytes\":0,\"historyBytes\":1453,\"stepsWithoutWaiting\":0,\"cancelRequested\":false,\"machine\":{\"values\":{\"0\":{\"value\":{},\"bytes\":2},\"1\":{\"value\":{\"ticket\":7},\"bytes\":12}},\"nextValue\":1,\"context\":0,\"root\":null},\"outcome\":null}}"
+    ],
+    "bytes": 949,
+    "tail": [
+      {
+        "version": 3,
+        "event": {
+          "type": "input_applied",
+          "format": 1,
+          "receipt": {
+            "kind": "timer_fired",
+            "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a/timers/1",
+            "at": 1791100061000
+          },
+          "steps": [],
+          "patch": [
+            {
+              "op": "remove",
+              "path": "/timers/armed/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a~1timers~11"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/context",
+              "value": 1
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 3
+            },
+            {
+              "op": "replace",
+              "path": "/lastInputAt",
+              "value": 1791100061000
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 1926
+            }
+          ],
+          "outputs": []
+        }
+      }
+    ]
+  },
+  "state": {
+    "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "status": "running",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "triage",
+          "version": "1.0.0"
+        },
+        "do": []
+      },
+      "input": 1
+    },
+    "attributes": {},
+    "limits": {
+      "mostDurationMs": 1,
+      "longestCallMs": 1
+    },
+    "startedAt": 1791100060000,
+    "lastInputAt": 1791100061000,
+    "inputs": 3,
+    "random": {
+      "seed": 0,
+      "draws": 0
+    },
+    "runs": {},
+    "timers": {
+      "next": 2,
+      "armed": {}
+    },
+    "calls": {},
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "received": 0,
+      "receivedBytes": 0,
+      "overflow": null
+    },
+    "heldBytes": 0,
+    "historyBytes": 1926,
+    "stepsWithoutWaiting": 0,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {
+            "ticket": 7
+          },
+          "bytes": 12
+        }
+      },
+      "nextValue": 1,
+      "context": 1,
+      "root": null
+    },
+    "outcome": null
+  }
+}

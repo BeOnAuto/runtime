@@ -1,0 +1,45 @@
+{
+  "name": "@on.auto/ledger",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./content-measurement": "./measure/content-measurement.ts",
+    "./database-structure": "./src/structure/database-floors.ts",
+    "./dataset": "./measure/dataset.ts",
+    "./postgresql": "./src/postgresql/postgresql-ledger.ts",
+    "./sqlite3": "./src/sqlite3.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "measure": "node measure.ts",
+    "measure:heads": "node measure-heads.ts",
+    "measure:horizon": "node measure-horizon.ts",
+    "measure:run-filters": "node measure-run-filters.ts",
+    "measure:message-index": "node measure/message-index.ts",
+    "measure:content": "node --expose-gc measure/recorded-content.ts",
+    "measure:waits": "node measure/appended-waits.ts",
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@event-driven-io/dumbo": "0.13.0-beta.56",
+    "@event-driven-io/emmett": "0.43.0-beta.50",
+    "@event-driven-io/emmett-postgresql": "0.43.0-beta.50",
+    "@event-driven-io/emmett-sqlite": "0.43.0-beta.50",
+    "@on.auto/operations": "workspace:*",
+    "effect": "catalog:",
+    "pg": "8.23.1",
+    "sqlite3": "6.0.1"
+  },
+  "devDependencies": {
+    "@on.auto/secrets": "workspace:*",
+    "@opentelemetry/sdk-trace-base": "2.9.0",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

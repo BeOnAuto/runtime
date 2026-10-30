@@ -1,0 +1,25 @@
+{
+  "name": "@on.auto/outbound",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./aws": "./src/aws/aws-clients.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@aws-sdk/credential-providers": "3.1149.0",
+    "@aws-sdk/rds-signer": "3.1149.0",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

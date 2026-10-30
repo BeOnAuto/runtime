@@ -1,0 +1,57 @@
+{
+  "name": "@on.auto/prediction-contract",
+  "version": "1.1.0",
+  "description": "The contract between Auto Runtime's prediction capability and the model runtimes that execute the models of prediction functions: the schemas and types a model runtime is built against.",
+  "keywords": [
+    "auto",
+    "contract",
+    "model-runtime",
+    "prediction"
+  ],
+  "homepage": "https://on.auto/docs/reference/model-runtimes",
+  "bugs": {
+    "url": "https://github.com/BeOnAuto/runtime/issues"
+  },
+  "license": "Elastic-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BeOnAuto/runtime.git",
+    "directory": "packages/prediction-contract"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm run build",
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=26.10.0"
+  }
+}

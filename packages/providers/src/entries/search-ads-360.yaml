@@ -1,0 +1,25 @@
+name: search-ads-360
+title: Search Ads 360
+description: Run Search Ads 360 reports with its query language, and list the accounts, report fields and custom columns you can read.
+website: https://developers.google.com/search-ads/reporting/overview
+type: openapi
+document: documents/search-ads-360.openapi.json
+headers:
+  login-customer-id: '{manager_id}'
+placeholders:
+  manager_id:
+    description: The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.
+    pattern: '^[0-9]{10}$'
+    example: '1234567890'
+    required: false
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/doubleclicksearch
+    says:
+      https://www.googleapis.com/auth/doubleclicksearch: Read and manage Search Ads 360 advertising data.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Search Ads 360 reporting.

@@ -1,0 +1,1653 @@
+{
+  "format": 7,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 7,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+          "at": 1790845200000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all",
+            "run": 1,
+            "outcome": "started",
+            "name": "all",
+            "times": 1,
+            "caused_by": "input"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/backing",
+            "run": 1,
+            "outcome": "started",
+            "name": "backing",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "ask",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all/fork/branches/0/backing",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "notify at /do/0/all/fork/branches/0/backing/try/0/ask #1"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/1/both",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "both",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            },
+            "waits_for": "event"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/2/telling",
+            "run": 1,
+            "outcome": "completed",
+            "name": "telling",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/0/all/fork/branches/3/asking",
+            "run": 1,
+            "outcome": "started",
+            "name": "asking",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "ask",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all/fork/branches/3/asking",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "notify at /do/0/all/fork/branches/3/asking/try/0/ask #1"
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/runId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "all": {
+                      "fork": {
+                        "branches": [
+                          {
+                            "backing": {
+                              "try": [
+                                {
+                                  "ask": {
+                                    "call": "notify",
+                                    "with": {
+                                      "to": "bob"
+                                    }
+                                  }
+                                }
+                              ],
+                              "catch": {
+                                "retry": {
+                                  "delay": "PT1H",
+                                  "limit": {
+                                    "attempt": {
+                                      "count": 2
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "both": {
+                              "listen": {
+                                "to": {
+                                  "all": [
+                                    {
+                                      "with": {
+                                        "type": "first"
+                                      }
+                                    },
+                                    {
+                                      "with": {
+                                        "type": "second"
+                                      }
+                                    },
+                                    {
+                                      "with": {
+                                        "type": "third"
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "telling": {
+                              "emit": {
+                                "event": {
+                                  "with": {
+                                    "type": "com.acme.told",
+                                    "source": "/acme",
+                                    "data": {
+                                      "to": "ada"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "asking": {
+                              "try": [
+                                {
+                                  "ask": {
+                                    "call": "notify",
+                                    "with": {
+                                      "to": "ada"
+                                    }
+                                  }
+                                }
+                              ],
+                              "catch": {
+                                "errors": {
+                                  "with": {
+                                    "status": 408
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "add",
+            "path": "/limits/longestCallMsByTask",
+            "value": {
+              "/do/0/all/fork/branches/3/asking/try/0/ask": 90000
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1backing",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1backing~1try~10~1ask",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~11~1both",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~12~1telling",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~13~1asking",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~13~1asking~1try~10~1ask",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 4
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/1",
+            "value": {
+              "purpose": "deadline",
+              "reference": "/",
+              "armedAt": 1790845200000,
+              "dueAt": 1793437200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/2",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/3",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845290000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~10~1backing~1try~10~1ask\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+              "run": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~13~1asking~1try~10~1ask\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+              "run": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/listeners/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~11~1both\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/1/both",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/emitted/count",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/emitted/bytes",
+            "value": 159
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 29280
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": 1,
+              "bytes": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/2",
+            "value": {
+              "value": {
+                "to": "bob"
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/3",
+            "value": {
+              "value": {
+                "to": "ada"
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": {
+              "reference": "/",
+              "run": 1,
+              "startedAt": 1790845200000,
+              "context": 0,
+              "rawInput": 1,
+              "input": 1,
+              "variables": {},
+              "timeout": null,
+              "body": {
+                "kind": "list",
+                "list": {
+                  "pointer": "/do",
+                  "position": 0,
+                  "data": 1,
+                  "variables": {},
+                  "current": {
+                    "kind": "running",
+                    "task": {
+                      "reference": "/do/0/all",
+                      "run": 1,
+                      "startedAt": 1790845200000,
+                      "context": 0,
+                      "rawInput": 1,
+                      "input": 1,
+                      "variables": {},
+                      "timeout": null,
+                      "body": {
+                        "kind": "fork",
+                        "compete": false,
+                        "branches": [
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/0/backing",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "try",
+                                "attempt": 0,
+                                "startedAt": 1790845200000,
+                                "phase": {
+                                  "kind": "trying",
+                                  "list": {
+                                    "pointer": "/do/0/all/fork/branches/0/backing/try",
+                                    "position": 0,
+                                    "data": 1,
+                                    "variables": {},
+                                    "current": {
+                                      "kind": "running",
+                                      "task": {
+                                        "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+                                        "run": 1,
+                                        "startedAt": 1790845200000,
+                                        "context": 0,
+                                        "rawInput": 1,
+                                        "input": 1,
+                                        "variables": {},
+                                        "timeout": null,
+                                        "body": {
+                                          "kind": "call",
+                                          "key": {
+                                            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                                            "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+                                            "run": 1
+                                          },
+                                          "function": "notify",
+                                          "arguments": 2,
+                                          "label": "the function notify",
+                                          "deadline": "2"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "attemptLimit": null
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/1/both",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "listen",
+                                "consumed": [null, null, null],
+                                "waited": 1
+                              }
+                            }
+                          },
+                          {
+                            "state": "finished",
+                            "output": 1,
+                            "flow": "continue"
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/3/asking",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "try",
+                                "attempt": 0,
+                                "startedAt": 1790845200000,
+                                "phase": {
+                                  "kind": "trying",
+                                  "list": {
+                                    "pointer": "/do/0/all/fork/branches/3/asking/try",
+                                    "position": 0,
+                                    "data": 1,
+                                    "variables": {},
+                                    "current": {
+                                      "kind": "running",
+                                      "task": {
+                                        "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+                                        "run": 1,
+                                        "startedAt": 1790845200000,
+                                        "context": 0,
+                                        "rawInput": 1,
+                                        "input": 1,
+                                        "variables": {},
+                                        "timeout": null,
+                                        "body": {
+                                          "kind": "call",
+                                          "key": {
+                                            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                                            "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+                                            "run": 1
+                                          },
+                                          "function": "notify",
+                                          "arguments": 3,
+                                          "label": "the function notify",
+                                          "deadline": "3"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "attemptLimit": null
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 8950
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "1",
+            "dueAt": 1793437200000,
+            "purpose": "deadline",
+            "label": "the most the workflow may run"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments": {
+              "to": "bob"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "2",
+            "dueAt": 1790845800000,
+            "purpose": "call_deadline",
+            "label": "/do/0/all/fork/branches/0/backing/try/0/ask deadline"
+          },
+          {
+            "kind": "arm_listener",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/1/both",
+              "run": 1
+            },
+            "filters": [
+              {
+                "type": "first"
+              },
+              {
+                "type": "second"
+              },
+              {
+                "type": "third"
+              }
+            ]
+          },
+          {
+            "kind": "emit_event",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/2/telling",
+              "run": 1
+            },
+            "event": {
+              "type": "com.acme.told",
+              "source": "/acme",
+              "data": {
+                "to": "ada"
+              },
+              "specversion": "1.0",
+              "id": "716f8618-f183-5b77-936b-31c1e39c7260",
+              "time": "2026-10-01T09:00:00.000Z"
+            }
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments": {
+              "to": "ada"
+            },
+            "longestMs": 90000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "3",
+            "dueAt": 1790845290000,
+            "purpose": "call_deadline",
+            "label": "/do/0/all/fork/branches/3/asking/try/0/ask deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 7,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/0/all/fork/branches/0/backing/try/0/ask\",1]",
+          "at": 1790845200010,
+          "status": "rejected",
+          "rejection": {
+            "kind": "mcp_server_failed",
+            "because": "unreachable"
+          }
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+            "run": 1,
+            "outcome": "raised",
+            "name": "ask",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            },
+            "error": {
+              "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+              "title": "The function notify rejected the run with unavailable"
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200010
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 5
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/2"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/4",
+            "value": {
+              "purpose": "retry_delay",
+              "reference": "/do/0/all/fork/branches/0/backing",
+              "armedAt": 1790845200010,
+              "dueAt": 1790848800010
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~10~1backing~1try~10~1ask\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 25172
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/2"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/phase/list"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/phase/attemptLimit"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/phase/kind",
+            "value": "backing_off"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/phase/timer",
+            "value": "4"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/phase/error",
+            "value": {
+              "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+              "status": 503,
+              "title": "The function notify rejected the run with unavailable",
+              "detail": "The tool server is gone",
+              "instance": "/do/0/all/fork/branches/0/backing/try/0/ask",
+              "kind": "mcp_server_failed",
+              "because": "unreachable"
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/phase/failed",
+            "value": {
+              "reference": "/do/0/all/fork/branches/0/backing/try/0/ask",
+              "run": 1,
+              "outcome": "raised",
+              "times": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 11677
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "2"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "4",
+            "dueAt": 1790848800010,
+            "purpose": "retry_delay",
+            "label": "/do/0/all/fork/branches/0/backing retry 1"
+          }
+        ]
+      }
+    },
+    {
+      "version": 3,
+      "event": {
+        "type": "input_applied",
+        "format": 7,
+        "receipt": {
+          "kind": "event_offered",
+          "key": "record-1",
+          "at": 1790845200010,
+          "eventType": "second"
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all/fork/branches/1/both",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "both",
+            "times": 2,
+            "caused_by": {
+              "reference": "/do/0/all/fork/branches/1/both",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            },
+            "waits_for": "event"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/0/all/fork/branches/1/both",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/inbox/offeredIds/-",
+            "value": "record-1"
+          },
+          {
+            "op": "replace",
+            "path": "/inbox/received",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/inbox/receivedBytes",
+            "value": 33
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 25205
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/4",
+            "value": {
+              "value": {
+                "id": "e-second",
+                "type": "second"
+              },
+              "bytes": 33
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 5
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task/body/consumed/1",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task/body/waited",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 12822
+          }
+        ],
+        "outputs": []
+      }
+    },
+    {
+      "version": 4,
+      "event": {
+        "type": "input_applied",
+        "format": 7,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "3",
+          "at": 1790845290000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+            "run": 1,
+            "outcome": "raised",
+            "name": "ask",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            },
+            "error": {
+              "type": "https://open-workflow-specification.org/spec/1.0.0/errors/timeout",
+              "title": "The function notify did not finish within 90000 ms, the most it may take"
+            }
+          },
+          {
+            "reference": "/do/0/all/fork/branches/3/asking",
+            "run": 1,
+            "outcome": "completed",
+            "name": "asking",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/all/fork/branches/3/asking",
+              "run": 1,
+              "outcome": "started",
+              "times": 1
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845290000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 4
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/3"
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~13~1asking~1try~10~1ask\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 17001
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/3"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/3/task"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/3/state",
+            "value": "finished"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/3/output",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/3/flow",
+            "value": "continue"
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 14597
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+              "run": 1
+            },
+            "reason": "deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 5,
+      "event": {
+        "type": "input_applied",
+        "format": 7,
+        "receipt": {
+          "kind": "cancel_requested",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+          "at": 1790845290005,
+          "cancel": {
+            "by": "acme-admin",
+            "kind": "requested"
+          }
+        },
+        "steps": [],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "ended"
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845290005
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 5
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/1"
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/4"
+          },
+          {
+            "op": "remove",
+            "path": "/listeners/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~11~1both\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 584
+          },
+          {
+            "op": "replace",
+            "path": "/cancelRequested",
+            "value": true
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/4"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": null
+          },
+          {
+            "op": "replace",
+            "path": "/outcome",
+            "value": {
+              "kind": "cancelled",
+              "cancel": {
+                "by": "acme-admin",
+                "kind": "requested",
+                "reason": "Not needed any more"
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 16082
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_listener",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/1/both",
+              "run": 1
+            }
+          },
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "1"
+          },
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "4"
+          },
+          {
+            "kind": "settle",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "settlement": {
+              "status": "rejected",
+              "detail": "Not needed any more",
+              "by": "acme-admin",
+              "reason": "cancelled",
+              "kind": "requested"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "snapshot": {
+    "chunks": [
+      "{\"format\":7,\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"version\":2,\"historyBytes\":11677,\"state\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"status\":\"running\",\"workflow\":{\"document\":{\"document\":{\"dsl\":\"1.0.3\",\"namespace\":\"acme\",\"name\":\"test\",\"version\":\"1.0.0\"},\"do\":[{\"all\":{\"fork\":{\"branches\":[{\"backing\":{\"try\":[{\"ask\":{\"call\":\"notify\",\"with\":{\"to\":\"bob\"}}}],\"catch\":{\"retry\":{\"delay\":\"PT1H\",\"limit\":{\"attempt\":{\"count\":2}}}}}},{\"both\":{\"listen\":{\"to\":{\"all\":[{\"with\":{\"type\":\"first\"}},{\"with\":{\"type\":\"second\"}},{\"with\":{\"type\":\"third\"}}]}}}},{\"telling\":{\"emit\":{\"event\":{\"with\":{\"type\":\"com.acme.told\",\"source\":\"/acme\",\"data\":{\"to\":\"ada\"}}}}}},{\"asking\":{\"try\":[{\"ask\":{\"call\":\"notify\",\"with\":{\"to\":\"ada\"}}}],\"catch\":{\"errors\":{\"with\":{\"status\":408}}}}}]}}}]},\"input\":1},\"attributes\":{},\"limits\":{\"mostDurationMs\":2592000000,\"longestCallMs\":600000,\"longestCallMsByTask\":{\"/do/0/all/fork/branches/3/asking/try/0/ask\":90000}},\"startedAt\":1790845200000,\"lastInputAt\":1790845200010,\"inputs\":2,\"random\":{\"seed\":7,\"draws\":0},\"runs\":{\"/do/0/all\":1,\"/do/0/all/fork/branches/0/backing\":1,\"/do/0/all/fork/branches/0/backing/try/0/ask\":1,\"/do/0/all/fork/branches/1/both\":1,\"/do/0/all/fork/branches/2/telling\":1,\"/do/0/all/fork/branches/3/asking\":1,\"/do/0/all/fork/branches/3/asking/try/0/ask\":1},\"timers\":{\"next\":5,\"armed\":{\"1\":{\"purpose\":\"deadline\",\"reference\":\"/\",\"armedAt\":1790845200000,\"dueAt\":1793437200000},\"3\":{\"purpose\":\"call_deadline\",\"reference\":\"/do/0/all/fork/branches/3/asking/try/0/ask\",\"armedAt\":1790845200000,\"dueAt\":1790845290000},\"4\":{\"purpose\":\"retry_delay\",\"reference\":\"/do/0/all/fork/branches/0/backing\",\"armedAt\":1790845200010,\"dueAt\":1790848800010}}},\"calls\":{\"[\\\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\\\",\\\"/do/0/all/fork/branches/3/asking/try/0/ask\\\",1]\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"reference\":\"/do/0/all/fork/branches/3/asking/try/0/ask\",\"run\":1}},\"listeners\":{\"[\\\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\\\",\\\"/do/0/all/fork/branches/1/both\\\",1]\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"reference\":\"/do/0/all/fork/branches/1/both\",\"run\":1}},\"emitted\":{\"count\":1,\"bytes\":159},\"inbox\":{\"waiting\":[],\"waitingBytes\":0,\"receivedIds\":[],\"offeredIds\":[],\"received\":0,\"receivedBytes\":0},\"heldBytes\":25172,\"historyBytes\":11677,\"stepsWithoutWaiting\":0,\"cancelRequested\":false,\"machine\":{\"values\":{\"0\":{\"value\":{},\"bytes\":2},\"1\":{\"value\":1,\"bytes\":1},\"3\":{\"value\":{\"to\":\"ada\"},\"bytes\":12}},\"nextValue\":4,\"context\":0,\"root\":{\"reference\":\"/\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"list\",\"list\":{\"pointer\":\"/do\",\"position\":0,\"data\":1,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"fork\",\"compete\":false,\"branches\":[{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/0/backing\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"try\",\"attempt\":0,\"startedAt\":1790845200000,\"phase\":{\"kind\":\"backing_off\",\"timer\":\"4\",\"error\":{\"type\":\"https://open-workflow-specification.org/spec/1.0.0/errors/communication\",\"status\":503,\"instance\":\"/do/0/all/fork/branches/0/backing/try/0/ask\",\"title\":\"The function notify rejected the run with unavailable\",\"detail\":\"The tool server is gone\",\"kind\":\"mcp_server_failed\",\"because\":\"unreachable\"},\"failed\":{\"reference\":\"/do/0/all/fork/branches/0/backing/try/0/ask\",\"run\":1,\"outcome\":\"raised\",\"times\":1}}}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/1/both\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"listen\",\"consumed\":[null,null,null],\"waited\":1}}},{\"state\":\"finished\",\"output\":1,\"flow\":\"continue\"},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/3/asking\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"try\",\"attempt\":0,\"startedAt\":1790845200000,\"phase\":{\"kind\":\"trying\",\"list\":{\"pointer\":\"/do/0/all/fork/branches/3/asking/try\",\"position\":0,\"data\":1,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/3/asking/try/0/ask\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"call\",\"key\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"reference\":\"/do/0/all/fork/branches/3/asking/try/0/ask\",\"run\":1},\"function\":\"notify\",\"arguments\":3,\"label\":\"the function notify\",\"deadline\":\"3\"}}}},\"attemptLimit\":null}}}}]}}}}}}},\"outcome\":null}}"
+    ],
+    "bytes": 4669,
+    "tail": [
+      {
+        "version": 3,
+        "event": {
+          "type": "input_applied",
+          "format": 7,
+          "receipt": {
+            "kind": "event_offered",
+            "key": "record-1",
+            "at": 1790845200010,
+            "eventType": "second"
+          },
+          "steps": [
+            {
+              "reference": "/do/0/all/fork/branches/1/both",
+              "run": 1,
+              "outcome": "waiting",
+              "name": "both",
+              "times": 2,
+              "caused_by": {
+                "reference": "/do/0/all/fork/branches/1/both",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 1
+              },
+              "waits_for": "event"
+            }
+          ],
+          "resumed": {
+            "reference": "/do/0/all/fork/branches/1/both",
+            "run": 1,
+            "times": 1
+          },
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 3
+            },
+            {
+              "op": "add",
+              "path": "/inbox/offeredIds/-",
+              "value": "record-1"
+            },
+            {
+              "op": "replace",
+              "path": "/inbox/received",
+              "value": 1
+            },
+            {
+              "op": "replace",
+              "path": "/inbox/receivedBytes",
+              "value": 33
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 25205
+            },
+            {
+              "op": "add",
+              "path": "/machine/values/4",
+              "value": {
+                "value": {
+                  "id": "e-second",
+                  "type": "second"
+                },
+                "bytes": 33
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/machine/nextValue",
+              "value": 5
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task/body/consumed/1",
+              "value": 4
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task/body/waited",
+              "value": 2
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 12822
+            }
+          ],
+          "outputs": []
+        }
+      },
+      {
+        "version": 4,
+        "event": {
+          "type": "input_applied",
+          "format": 7,
+          "receipt": {
+            "kind": "timer_fired",
+            "key": "3",
+            "at": 1790845290000
+          },
+          "steps": [
+            {
+              "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+              "run": 1,
+              "outcome": "raised",
+              "name": "ask",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 1
+              },
+              "error": {
+                "type": "https://open-workflow-specification.org/spec/1.0.0/errors/timeout",
+                "title": "The function notify did not finish within 90000 ms, the most it may take"
+              }
+            },
+            {
+              "reference": "/do/0/all/fork/branches/3/asking",
+              "run": 1,
+              "outcome": "completed",
+              "name": "asking",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/0/all/fork/branches/3/asking",
+                "run": 1,
+                "outcome": "started",
+                "times": 1
+              }
+            }
+          ],
+          "resumed": {
+            "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+            "run": 1,
+            "times": 1
+          },
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/lastInputAt",
+              "value": 1790845290000
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 4
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/3"
+            },
+            {
+              "op": "remove",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~13~1asking~1try~10~1ask\",1]"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 17001
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/3"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/root/body/list/current/task/body/branches/3/task"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/body/branches/3/state",
+              "value": "finished"
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/3/output",
+              "value": 1
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/3/flow",
+              "value": "continue"
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 14597
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_call",
+              "key": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/0/all/fork/branches/3/asking/try/0/ask",
+                "run": 1
+              },
+              "reason": "deadline"
+            }
+          ]
+        }
+      },
+      {
+        "version": 5,
+        "event": {
+          "type": "input_applied",
+          "format": 7,
+          "receipt": {
+            "kind": "cancel_requested",
+            "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "at": 1790845290005,
+            "cancel": {
+              "by": "acme-admin",
+              "kind": "requested"
+            }
+          },
+          "steps": [],
+          "resumed": null,
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/status",
+              "value": "ended"
+            },
+            {
+              "op": "replace",
+              "path": "/lastInputAt",
+              "value": 1790845290005
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 5
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/1"
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/4"
+            },
+            {
+              "op": "remove",
+              "path": "/listeners/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~11~1both\",1]"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 584
+            },
+            {
+              "op": "replace",
+              "path": "/cancelRequested",
+              "value": true
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/4"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root",
+              "value": null
+            },
+            {
+              "op": "replace",
+              "path": "/outcome",
+              "value": {
+                "kind": "cancelled",
+                "cancel": {
+                  "by": "acme-admin",
+                  "kind": "requested",
+                  "reason": "Not needed any more"
+                }
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 16082
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_listener",
+              "key": {
+                "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                "reference": "/do/0/all/fork/branches/1/both",
+                "run": 1
+              }
+            },
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "1"
+            },
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "4"
+            },
+            {
+              "kind": "settle",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "settlement": {
+                "status": "rejected",
+                "detail": "Not needed any more",
+                "by": "acme-admin",
+                "reason": "cancelled",
+                "kind": "requested"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "state": {
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "status": "ended",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "all": {
+              "fork": {
+                "branches": [
+                  {
+                    "backing": {
+                      "try": [
+                        {
+                          "ask": {
+                            "call": "notify",
+                            "with": {
+                              "to": "bob"
+                            }
+                          }
+                        }
+                      ],
+                      "catch": {
+                        "retry": {
+                          "delay": "PT1H",
+                          "limit": {
+                            "attempt": {
+                              "count": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "both": {
+                      "listen": {
+                        "to": {
+                          "all": [
+                            {
+                              "with": {
+                                "type": "first"
+                              }
+                            },
+                            {
+                              "with": {
+                                "type": "second"
+                              }
+                            },
+                            {
+                              "with": {
+                                "type": "third"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "telling": {
+                      "emit": {
+                        "event": {
+                          "with": {
+                            "type": "com.acme.told",
+                            "source": "/acme",
+                            "data": {
+                              "to": "ada"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "asking": {
+                      "try": [
+                        {
+                          "ask": {
+                            "call": "notify",
+                            "with": {
+                              "to": "ada"
+                            }
+                          }
+                        }
+                      ],
+                      "catch": {
+                        "errors": {
+                          "with": {
+                            "status": 408
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {},
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000,
+      "longestCallMsByTask": {
+        "/do/0/all/fork/branches/3/asking/try/0/ask": 90000
+      }
+    },
+    "startedAt": 1790845200000,
+    "lastInputAt": 1790845290005,
+    "inputs": 5,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/all": 1,
+      "/do/0/all/fork/branches/0/backing": 1,
+      "/do/0/all/fork/branches/0/backing/try/0/ask": 1,
+      "/do/0/all/fork/branches/1/both": 1,
+      "/do/0/all/fork/branches/2/telling": 1,
+      "/do/0/all/fork/branches/3/asking": 1,
+      "/do/0/all/fork/branches/3/asking/try/0/ask": 1
+    },
+    "timers": {
+      "next": 5,
+      "armed": {}
+    },
+    "calls": {},
+    "listeners": {},
+    "emitted": {
+      "count": 1,
+      "bytes": 159
+    },
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "offeredIds": ["record-1"],
+      "received": 1,
+      "receivedBytes": 33
+    },
+    "heldBytes": 584,
+    "historyBytes": 16082,
+    "stepsWithoutWaiting": 0,
+    "cancelRequested": true,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": 1,
+          "bytes": 1
+        }
+      },
+      "nextValue": 5,
+      "context": 0,
+      "root": null
+    },
+    "outcome": {
+      "kind": "cancelled",
+      "cancel": {
+        "by": "acme-admin",
+        "kind": "requested",
+        "reason": "Not needed any more"
+      }
+    }
+  }
+}

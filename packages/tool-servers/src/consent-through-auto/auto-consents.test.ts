@@ -1,0 +1,180 @@
+import { createHash } from 'node:crypto';
+
+import { Effect, Redacted } from 'effect';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import type { ConsentClient, StartAsked } from '../consent/consent-client.ts';
+import {
+  autoClientsOf,
+  consentClientWith,
+  cuttingTimeouts,
+  returnAddress,
+  startAskedAt,
+  studioBase,
+  type ClientRegistration,
+} from '../testing/index.ts';
+import { servedThroughAuto, type FakeConsentService, type ThroughAuto } from '../testing/served-fakes.ts';
+
+const closing: (() => Promise<void>)[] = [];
+
+afterEach(async () => {
+  await Promise.all(closing.splice(0).map((close) => close()));
+});
+
+async function throughAuto(changes: Partial<ClientRegistration> = {}): Promise<ThroughAuto> {
+  const serving = await servedThroughAuto(changes);
+  closing.push(serving.close);
+  return serving;
+}
+
+function started(client: ConsentClient, asked: StartAsked) {
+  return Effect.runPromise(client.start(asked));
+}
+
+function refused(client: ConsentClient, asked: StartAsked) {
+  return Effect.runPromise(Effect.flip(client.start(asked)));
+}
+
+function challengeOf(verifier: Redacted.Redacted): string {
+  return createHash('sha256').update(Redacted.value(verifier)).digest('base64url');
+}
+
+function pathsHeardBy(service: FakeConsentService): readonly string[] {
+  return service.calls().map(({ path }) => path);
+}
+
+const rule = 'The rules of whoever runs Auto do not allow the host 127.0.0.1';
+
+function refusingEveryHostBut(origin: string) {
+  return (url: string): string | undefined => (new URL(url).origin === origin ? undefined : rule);
+}
+
+function refusingTheHostOf(origin: string) {
+  return (url: string): string | undefined => (new URL(url).origin === origin ? rule : undefined);
+}
+
+const loopbackBase = 'http://127.0.0.1:5555/studio/';
+
+interface Asking {
+  readonly asked: StartAsked;
+  readonly client: ConsentClient;
+}
+
+describe('the start of a consent through Auto’s consent service', () => {
+  it('asks the service with the issuer, the scope, the parameters, the resource, the loopback base and the challenge of its own verifier', async () => {
+    const { fake, service } = await throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'loopback') });
+    const asked = { ...startAskedAt(fake, { parameters: { access_type: 'offline' } }), studioBase: loopbackBase };
+
+    const start = await started(client, asked);
+
+    expect(service.calls().at(-1)?.body).toEqual({
+      issuer: fake.origin,
+      scope: 'files.read',
+      parameters: { access_type: 'offline' },
+      resource: `${fake.origin}/mcp`,
+      return: { kind: 'loopback', base: loopbackBase },
+      challenge: challengeOf(start.verifier),
+      challenge_method: 'S256',
+    });
+    expect(pathsHeardBy(service)).toEqual(['/clients', '/consents']);
+  });
+
+  it('answers the page and the state the service made, and Auto’s client at the issuer', async () => {
+    const { fake, service } = await throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'loopback') });
+
+    const start = await started(client, { ...startAskedAt(fake), studioBase: loopbackBase });
+    const page = new URL(start.url);
+
+    expect(start.client).toEqual({ client_id: 'auto-runtime', client_source: 'auto' });
+    expect([page.origin, page.searchParams.get('state'), page.searchParams.get('redirect_uri')]).toEqual([
+      fake.origin,
+      start.state,
+      returnAddress,
+    ]);
+    expect(start.state).not.toBe('state-1');
+  });
+});
+
+describe('the start of a consent through Auto’s consent service from the hosted Studio', () => {
+  it('asks to return to the Studio host, and reaches the service whatever the rules say of its host', async () => {
+    const { fake, service } = await throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'hosted') });
+
+    const start = await started(client, { ...startAskedAt(fake), reaches: refusingTheHostOf(service.url) });
+
+    expect(service.calls().at(-1)?.body).toMatchObject({ return: { kind: 'hosted', base: studioBase } });
+    expect(start.client.client_source).toBe('auto');
+  });
+
+  it('is refused by the service, as a start it will not make, where the Studio host is not its own', async () => {
+    const { fake, service } = await throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'hosted') });
+
+    expect(await refused(client, { ...startAskedAt(fake), studioBase: 'https://studio.example.org/' })).toEqual({
+      refused: 'start_refused',
+    });
+  });
+
+  it('is refused in the rule’s words where the rules refuse the host of the authorization server', async () => {
+    const { fake, service } = await throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service) });
+
+    expect(await refused(client, { ...startAskedAt(fake), reaches: refusingEveryHostBut(service.url) })).toEqual({
+      refused: 'host',
+      rule,
+    });
+    expect(pathsHeardBy(service)).toEqual(['/clients']);
+  });
+});
+
+describe('a start for a Studio neither hosted nor on this computer', () => {
+  it('is refused before anything is sent where no other source the way takes remains', async () => {
+    const { fake, service } = await throughAuto();
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'elsewhere') });
+
+    expect(await refused(client, startAskedAt(fake))).toEqual({ refused: 'studio_elsewhere' });
+    expect([pathsHeardBy(service), fake.heard()]).toEqual([['/clients'], []]);
+  });
+
+  it('is made with a later source the way takes, leaving Auto’s client out and asking the service nothing', async () => {
+    const { fake, service } = await throughAuto({ dynamicRegistration: true });
+    const client = consentClientWith({ autoClients: autoClientsOf(service, 'elsewhere') });
+
+    const start = await started(client, startAskedAt(fake, { clients: ['registered', 'dynamic'] }));
+
+    expect(start.client.client_source).toBe('dynamic');
+    expect(pathsHeardBy(service)).toEqual([]);
+  });
+});
+
+describe('a start the consent service refuses or does not answer', () => {
+  it('is refused as a start the service will not make where it refuses it, and unanswered where it is gone', async () => {
+    const [refusing, gone] = await Promise.all([throughAuto(), throughAuto()]);
+    const asking = [refusing, gone].map((serving): Asking => ({
+      asked: startAskedAt(serving.fake),
+      client: consentClientWith({ autoClients: autoClientsOf(serving.service) }),
+    }));
+    await Effect.runPromise(Effect.all(asking.map(({ client }) => client.hadSources(studioBase))));
+    refusing.service.refuseNext('start');
+    await gone.service.close();
+
+    const answers = await Promise.all(asking.map(({ client, asked }) => refused(client, asked)));
+
+    expect(answers).toEqual([{ refused: 'start_refused' }, { refused: 'unanswered' }]);
+  });
+
+  it('is unanswered where the service stalls, once the bound of its request ends', async () => {
+    const stalling = await throughAuto();
+    const { requestTimeout, cutWhen } = cuttingTimeouts();
+    const client = consentClientWith({ autoClients: autoClientsOf(stalling.service), requestTimeout });
+    await Effect.runPromise(client.hadSources(studioBase));
+    stalling.service.stall();
+
+    const starting = refused(client, startAskedAt(stalling.fake));
+    await cutWhen(() => pathsHeardBy(stalling.service).includes('/consents'));
+
+    expect(await starting).toEqual({ refused: 'unanswered' });
+  });
+});

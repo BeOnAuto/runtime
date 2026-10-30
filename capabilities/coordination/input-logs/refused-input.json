@@ -1,0 +1,1036 @@
+{
+  "name": "refused-input",
+  "inputs": [
+    {
+      "kind": "started",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+      "at": 1790845200000,
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "race": {
+              "fork": {
+                "compete": true,
+                "branches": [
+                  {
+                    "first": {
+                      "call": "run_definition",
+                      "with": {
+                        "type": "computation",
+                        "name": "hold-seats",
+                        "input": {
+                          "seats": 0
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "later": {
+                      "do": [
+                        {
+                          "pause": {
+                            "wait": {
+                              "milliseconds": 200
+                            }
+                          }
+                        },
+                        {
+                          "again": {
+                            "call": "run_definition",
+                            "with": {
+                              "type": "computation",
+                              "name": "hold-seats"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "input": {},
+      "limits": {
+        "mostDurationMs": 2592000000,
+        "longestCallMs": 600000
+      },
+      "attributes": {
+        "org": "acme",
+        "playbook": "alpha",
+        "run_id": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+        "definition": {
+          "name": "refused-input",
+          "version": 1
+        },
+        "caller": {
+          "id": "acme-admin"
+        }
+      },
+      "seed": 7
+    },
+    {
+      "kind": "call_answered",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+      "at": 1790845200050,
+      "key": {
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+        "reference": "/do/0/race/fork/branches/0/first",
+        "run": 1
+      },
+      "result": {
+        "status": "rejected",
+        "reason": "invalid_input",
+        "detail": "seats, How many seats to hold: expected at least 1.",
+        "issues": [
+          {
+            "detail": "seats, How many seats to hold: expected at least 1.",
+            "pointer": "/input/seats"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "timer_fired",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+      "at": 1790845200200,
+      "timerId": "3"
+    },
+    {
+      "kind": "call_answered",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+      "at": 1790845200250,
+      "key": {
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+        "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+        "run": 1
+      },
+      "result": {
+        "status": "rejected",
+        "reason": "invalid_input",
+        "detail": "seats, How many seats to hold: expected at least 1.",
+        "issues": [
+          {
+            "detail": "seats, How many seats to hold: expected at least 1.",
+            "pointer": "/input/seats"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "started",
+        "key": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+        "at": 1790845200000
+      },
+      "steps": [
+        {
+          "reference": "/do/0/race",
+          "run": 1,
+          "outcome": "started",
+          "name": "race",
+          "times": 1,
+          "caused_by": "input"
+        },
+        {
+          "reference": "/do/0/race/fork/branches/0/first",
+          "run": 1,
+          "outcome": "waiting",
+          "name": "first",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race",
+            "run": 1,
+            "outcome": "started",
+            "times": 1
+          },
+          "waits_for": "call",
+          "child": "676e4b31-e401-5fe7-adbb-0dc9c66db0f2"
+        },
+        {
+          "reference": "/do/0/race/fork/branches/1/later",
+          "run": 1,
+          "outcome": "started",
+          "name": "later",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race",
+            "run": 1,
+            "outcome": "started",
+            "times": 1
+          }
+        },
+        {
+          "reference": "/do/0/race/fork/branches/1/later/do/0/pause",
+          "run": 1,
+          "outcome": "waiting",
+          "name": "pause",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race/fork/branches/1/later",
+            "run": 1,
+            "outcome": "started",
+            "times": 1
+          },
+          "waits_for": "timer"
+        }
+      ],
+      "resumed": null,
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/runId",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000315"
+        },
+        {
+          "op": "replace",
+          "path": "/status",
+          "value": "running"
+        },
+        {
+          "op": "replace",
+          "path": "/workflow",
+          "value": {
+            "document": {
+              "document": {
+                "dsl": "1.0.3",
+                "namespace": "acme",
+                "name": "test",
+                "version": "1.0.0"
+              },
+              "do": [
+                {
+                  "race": {
+                    "fork": {
+                      "compete": true,
+                      "branches": [
+                        {
+                          "first": {
+                            "call": "run_definition",
+                            "with": {
+                              "type": "computation",
+                              "name": "hold-seats",
+                              "input": {
+                                "seats": 0
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "later": {
+                            "do": [
+                              {
+                                "pause": {
+                                  "wait": {
+                                    "milliseconds": 200
+                                  }
+                                }
+                              },
+                              {
+                                "again": {
+                                  "call": "run_definition",
+                                  "with": {
+                                    "type": "computation",
+                                    "name": "hold-seats"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "input": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/org",
+          "value": "acme"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/playbook",
+          "value": "alpha"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/run_id",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000315"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/definition",
+          "value": {
+            "name": "refused-input",
+            "version": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/caller",
+          "value": {
+            "id": "acme-admin"
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/limits/mostDurationMs",
+          "value": 2592000000
+        },
+        {
+          "op": "replace",
+          "path": "/limits/longestCallMs",
+          "value": 600000
+        },
+        {
+          "op": "replace",
+          "path": "/startedAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/random/seed",
+          "value": 7
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1race",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1race~1fork~1branches~10~1first",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1race~1fork~1branches~11~1later",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1race~1fork~1branches~11~1later~1do~10~1pause",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 4
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/1",
+          "value": {
+            "purpose": "deadline",
+            "reference": "/",
+            "armedAt": 1790845200000,
+            "dueAt": 1793437200000
+          }
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/2",
+          "value": {
+            "purpose": "call_deadline",
+            "reference": "/do/0/race/fork/branches/0/first",
+            "armedAt": 1790845200000,
+            "dueAt": 1790845800000
+          }
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/3",
+          "value": {
+            "purpose": "wait",
+            "reference": "/do/0/race/fork/branches/1/later/do/0/pause",
+            "armedAt": 1790845200000,
+            "dueAt": 1790845200200
+          }
+        },
+        {
+          "op": "add",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"~1do~10~1race~1fork~1branches~10~1first\",1]",
+          "value": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+            "reference": "/do/0/race/fork/branches/0/first",
+            "run": 1
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 20931
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/1",
+          "value": {
+            "value": {},
+            "bytes": 2
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/2",
+          "value": {
+            "value": {
+              "type": "computation",
+              "name": "hold-seats",
+              "input": {
+                "seats": 0
+              }
+            },
+            "bytes": 62
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 3
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root",
+          "value": {
+            "reference": "/",
+            "run": 1,
+            "startedAt": 1790845200000,
+            "context": 0,
+            "rawInput": 1,
+            "input": 1,
+            "variables": {},
+            "timeout": null,
+            "body": {
+              "kind": "list",
+              "list": {
+                "pointer": "/do",
+                "position": 0,
+                "data": 1,
+                "variables": {},
+                "current": {
+                  "kind": "running",
+                  "task": {
+                    "reference": "/do/0/race",
+                    "run": 1,
+                    "startedAt": 1790845200000,
+                    "context": 0,
+                    "rawInput": 1,
+                    "input": 1,
+                    "variables": {},
+                    "timeout": null,
+                    "body": {
+                      "kind": "fork",
+                      "compete": true,
+                      "branches": [
+                        {
+                          "state": "running",
+                          "task": {
+                            "reference": "/do/0/race/fork/branches/0/first",
+                            "run": 1,
+                            "startedAt": 1790845200000,
+                            "context": 0,
+                            "rawInput": 1,
+                            "input": 1,
+                            "variables": {},
+                            "timeout": null,
+                            "body": {
+                              "kind": "call",
+                              "key": {
+                                "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+                                "reference": "/do/0/race/fork/branches/0/first",
+                                "run": 1
+                              },
+                              "function": "run_definition",
+                              "arguments": 2,
+                              "label": "the computation function hold-seats",
+                              "deadline": "2"
+                            }
+                          }
+                        },
+                        {
+                          "state": "running",
+                          "task": {
+                            "reference": "/do/0/race/fork/branches/1/later",
+                            "run": 1,
+                            "startedAt": 1790845200000,
+                            "context": 0,
+                            "rawInput": 1,
+                            "input": 1,
+                            "variables": {},
+                            "timeout": null,
+                            "body": {
+                              "kind": "list",
+                              "list": {
+                                "pointer": "/do/0/race/fork/branches/1/later/do",
+                                "position": 0,
+                                "data": 1,
+                                "variables": {},
+                                "current": {
+                                  "kind": "running",
+                                  "task": {
+                                    "reference": "/do/0/race/fork/branches/1/later/do/0/pause",
+                                    "run": 1,
+                                    "startedAt": 1790845200000,
+                                    "context": 0,
+                                    "rawInput": 1,
+                                    "input": 1,
+                                    "variables": {},
+                                    "timeout": null,
+                                    "body": {
+                                      "kind": "wait",
+                                      "timer": "3"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 5799
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "timerId": "1",
+          "dueAt": 1793437200000,
+          "purpose": "deadline",
+          "label": "the most the workflow may run"
+        },
+        {
+          "kind": "start_call",
+          "key": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+            "reference": "/do/0/race/fork/branches/0/first",
+            "run": 1
+          },
+          "function": "run_definition",
+          "arguments": {
+            "type": "computation",
+            "name": "hold-seats",
+            "input": {
+              "seats": 0
+            }
+          },
+          "longestMs": 600000
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "timerId": "2",
+          "dueAt": 1790845800000,
+          "purpose": "call_deadline",
+          "label": "/do/0/race/fork/branches/0/first deadline"
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "timerId": "3",
+          "dueAt": 1790845200200,
+          "purpose": "wait",
+          "label": "/do/0/race/fork/branches/1/later/do/0/pause"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "call_answered",
+        "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"/do/0/race/fork/branches/0/first\",1]",
+        "at": 1790845200050,
+        "status": "rejected"
+      },
+      "steps": [
+        {
+          "reference": "/do/0/race/fork/branches/0/first",
+          "run": 1,
+          "outcome": "raised",
+          "name": "first",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race/fork/branches/0/first",
+            "run": 1,
+            "outcome": "waiting",
+            "times": 1
+          },
+          "error": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/validation",
+            "title": "The computation function hold-seats refused its input"
+          }
+        }
+      ],
+      "resumed": {
+        "reference": "/do/0/race/fork/branches/0/first",
+        "run": 1,
+        "times": 1
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200050
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 2
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/2"
+        },
+        {
+          "op": "remove",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"~1do~10~1race~1fork~1branches~10~1first\",1]"
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 16773
+        },
+        {
+          "op": "remove",
+          "path": "/machine/values/2"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/branches/0/task"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/branches/0/state",
+          "value": "failed"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/branches/0/error",
+          "value": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/validation",
+            "status": 400,
+            "title": "The computation function hold-seats refused its input",
+            "detail": "seats, How many seats to hold: expected at least 1.",
+            "instance": "/do/0/race/fork/branches/0/first",
+            "issues": [
+              {
+                "pointer": "/input/seats",
+                "detail": "seats, How many seats to hold: expected at least 1."
+              }
+            ]
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/branches/0/order",
+          "value": 0
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 7691
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "timerId": "2"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "timer_fired",
+        "key": "3",
+        "at": 1790845200200
+      },
+      "steps": [
+        {
+          "reference": "/do/0/race/fork/branches/1/later/do/0/pause",
+          "run": 1,
+          "outcome": "completed",
+          "name": "pause",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race/fork/branches/1/later/do/0/pause",
+            "run": 1,
+            "outcome": "waiting",
+            "times": 1
+          }
+        },
+        {
+          "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+          "run": 1,
+          "outcome": "waiting",
+          "name": "again",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race/fork/branches/1/later/do/0/pause",
+            "run": 1,
+            "outcome": "completed",
+            "times": 1
+          },
+          "waits_for": "call",
+          "child": "591333de-4027-5881-a467-5b6f58a0fe9c"
+        }
+      ],
+      "resumed": {
+        "reference": "/do/0/race/fork/branches/1/later/do/0/pause",
+        "run": 1,
+        "times": 1
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200200
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 3
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1race~1fork~1branches~11~1later~1do~11~1again",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 5
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/3"
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/4",
+          "value": {
+            "purpose": "call_deadline",
+            "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+            "armedAt": 1790845200200,
+            "dueAt": 1790845800200
+          }
+        },
+        {
+          "op": "add",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"~1do~10~1race~1fork~1branches~11~1later~1do~11~1again\",1]",
+          "value": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+            "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+            "run": 1
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 16815
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/3",
+          "value": {
+            "value": {
+              "type": "computation",
+              "name": "hold-seats"
+            },
+            "bytes": 42
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 4
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/position",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/reference",
+          "value": "/do/0/race/fork/branches/1/later/do/1/again"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/startedAt",
+          "value": 1790845200200
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/body/timer"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/body/kind",
+          "value": "call"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/body/key",
+          "value": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+            "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+            "run": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/body/function",
+          "value": "run_definition"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/body/arguments",
+          "value": 3
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/body/label",
+          "value": "the computation function hold-seats"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/branches/1/task/body/list/current/task/body/deadline",
+          "value": "4"
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 11321
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "start_call",
+          "key": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+            "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+            "run": 1
+          },
+          "function": "run_definition",
+          "arguments": {
+            "type": "computation",
+            "name": "hold-seats"
+          },
+          "longestMs": 600000
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "timerId": "4",
+          "dueAt": 1790845800200,
+          "purpose": "call_deadline",
+          "label": "/do/0/race/fork/branches/1/later/do/1/again deadline"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "call_answered",
+        "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"/do/0/race/fork/branches/1/later/do/1/again\",1]",
+        "at": 1790845200250,
+        "status": "rejected"
+      },
+      "steps": [
+        {
+          "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+          "run": 1,
+          "outcome": "raised",
+          "name": "again",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+            "run": 1,
+            "outcome": "waiting",
+            "times": 1
+          },
+          "error": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/validation",
+            "title": "The computation function hold-seats refused its input"
+          }
+        },
+        {
+          "reference": "/do/0/race/fork/branches/1/later",
+          "run": 1,
+          "outcome": "raised",
+          "name": "later",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race/fork/branches/1/later",
+            "run": 1,
+            "outcome": "started",
+            "times": 1
+          },
+          "error": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/validation",
+            "title": "The computation function hold-seats refused its input"
+          }
+        },
+        {
+          "reference": "/do/0/race",
+          "run": 1,
+          "outcome": "raised",
+          "name": "race",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/race",
+            "run": 1,
+            "outcome": "started",
+            "times": 1
+          },
+          "error": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/validation",
+            "title": "The computation function hold-seats refused its input"
+          }
+        }
+      ],
+      "resumed": {
+        "reference": "/do/0/race/fork/branches/1/later/do/1/again",
+        "run": 1,
+        "times": 1
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/status",
+          "value": "ended"
+        },
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200250
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 4
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/1"
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/4"
+        },
+        {
+          "op": "remove",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"~1do~10~1race~1fork~1branches~11~1later~1do~11~1again\",1]"
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 389
+        },
+        {
+          "op": "remove",
+          "path": "/machine/values/3"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root",
+          "value": null
+        },
+        {
+          "op": "replace",
+          "path": "/outcome",
+          "value": {
+            "kind": "raised",
+            "error": {
+              "type": "https://open-workflow-specification.org/spec/1.0.0/errors/validation",
+              "status": 400,
+              "instance": "/do/0/race/fork/branches/0/first",
+              "title": "The computation function hold-seats refused its input",
+              "detail": "seats, How many seats to hold: expected at least 1.",
+              "issues": [
+                {
+                  "detail": "seats, How many seats to hold: expected at least 1.",
+                  "pointer": "/input/seats"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 14225
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "timerId": "4"
+        },
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "timerId": "1"
+        },
+        {
+          "kind": "settle",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
+          "settlement": {
+            "status": "rejected",
+            "detail": "The computation function hold-seats refused its input, at the step first: seats, How many seats to hold: expected at least 1.",
+            "reason": "invalid_input",
+            "issues": [
+              {
+                "detail": "seats, How many seats to hold: expected at least 1.",
+                "pointer": "/input/seats"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

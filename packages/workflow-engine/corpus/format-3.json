@@ -1,0 +1,1111 @@
+{
+  "format": 3,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 3,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+          "at": 1790845200000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/race",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+            "run": 1,
+            "outcome": "waiting"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/1/backing",
+            "run": 1,
+            "outcome": "started"
+          },
+          {
+            "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+            "run": 1,
+            "outcome": "waiting"
+          }
+        ],
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/executionId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "all": {
+                      "fork": {
+                        "branches": [
+                          {
+                            "race": {
+                              "fork": {
+                                "compete": true,
+                                "branches": [
+                                  {
+                                    "refused": {
+                                      "call": "notify",
+                                      "with": {
+                                        "to": "ada"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "waits": {
+                                      "wait": "PT1H"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "backing": {
+                              "try": [
+                                {
+                                  "ask": {
+                                    "call": "notify",
+                                    "with": {
+                                      "to": "bob"
+                                    }
+                                  }
+                                }
+                              ],
+                              "catch": {
+                                "retry": {
+                                  "delay": "PT1H",
+                                  "limit": {
+                                    "attempt": {
+                                      "count": 2
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1race",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1race~1fork~1branches~10~1refused",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~10~1race~1fork~1branches~11~1waits",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~11~1backing",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1all~1fork~1branches~11~1backing~1try~10~1ask",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 5
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/1",
+            "value": {
+              "purpose": "deadline",
+              "reference": "/",
+              "armedAt": 1790845200000,
+              "dueAt": 1793437200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/2",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/3",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+              "armedAt": 1790845200000,
+              "dueAt": 1790848800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/4",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~10~1race~1fork~1branches~10~1refused\",1]",
+            "value": {
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+              "run": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~11~1backing~1try~10~1ask\",1]",
+            "value": {
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 29077
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {},
+              "bytes": 2
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/2",
+            "value": {
+              "value": {
+                "to": "ada"
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/3",
+            "value": {
+              "value": {
+                "to": "bob"
+              },
+              "bytes": 12
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": {
+              "reference": "/",
+              "run": 1,
+              "startedAt": 1790845200000,
+              "context": 0,
+              "rawInput": 1,
+              "input": 1,
+              "variables": {},
+              "timeout": null,
+              "body": {
+                "kind": "list",
+                "list": {
+                  "pointer": "/do",
+                  "position": 0,
+                  "data": 1,
+                  "variables": {},
+                  "current": {
+                    "kind": "running",
+                    "task": {
+                      "reference": "/do/0/all",
+                      "run": 1,
+                      "startedAt": 1790845200000,
+                      "context": 0,
+                      "rawInput": 1,
+                      "input": 1,
+                      "variables": {},
+                      "timeout": null,
+                      "body": {
+                        "kind": "fork",
+                        "compete": false,
+                        "branches": [
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/0/race",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "fork",
+                                "compete": true,
+                                "branches": [
+                                  {
+                                    "state": "running",
+                                    "task": {
+                                      "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+                                      "run": 1,
+                                      "startedAt": 1790845200000,
+                                      "context": 0,
+                                      "rawInput": 1,
+                                      "input": 1,
+                                      "variables": {},
+                                      "timeout": null,
+                                      "body": {
+                                        "kind": "call",
+                                        "key": {
+                                          "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                                          "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+                                          "run": 1
+                                        },
+                                        "function": "notify",
+                                        "arguments": 2,
+                                        "label": "the function notify",
+                                        "deadline": "2"
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "state": "running",
+                                    "task": {
+                                      "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+                                      "run": 1,
+                                      "startedAt": 1790845200000,
+                                      "context": 0,
+                                      "rawInput": 1,
+                                      "input": 1,
+                                      "variables": {},
+                                      "timeout": null,
+                                      "body": {
+                                        "kind": "wait",
+                                        "timer": "3"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "state": "running",
+                            "task": {
+                              "reference": "/do/0/all/fork/branches/1/backing",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "try",
+                                "attempt": 0,
+                                "startedAt": 1790845200000,
+                                "phase": {
+                                  "kind": "trying",
+                                  "list": {
+                                    "pointer": "/do/0/all/fork/branches/1/backing/try",
+                                    "position": 0,
+                                    "data": 1,
+                                    "variables": {},
+                                    "current": {
+                                      "kind": "running",
+                                      "task": {
+                                        "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+                                        "run": 1,
+                                        "startedAt": 1790845200000,
+                                        "context": 0,
+                                        "rawInput": 1,
+                                        "input": 1,
+                                        "variables": {},
+                                        "timeout": null,
+                                        "body": {
+                                          "kind": "call",
+                                          "key": {
+                                            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+                                            "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+                                            "run": 1
+                                          },
+                                          "function": "notify",
+                                          "arguments": 3,
+                                          "label": "the function notify",
+                                          "deadline": "4"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "attemptLimit": null
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 7109
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "1",
+            "dueAt": 1793437200000,
+            "purpose": "deadline",
+            "label": "the most the workflow may run"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments": {
+              "to": "ada"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "2",
+            "dueAt": 1790845800000,
+            "purpose": "call_deadline",
+            "label": "/do/0/all/fork/branches/0/race/fork/branches/0/refused deadline"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "3",
+            "dueAt": 1790848800000,
+            "purpose": "wait",
+            "label": "/do/0/all/fork/branches/0/race/fork/branches/1/waits"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments": {
+              "to": "bob"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "4",
+            "dueAt": 1790845800000,
+            "purpose": "call_deadline",
+            "label": "/do/0/all/fork/branches/1/backing/try/0/ask deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 3,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/0/all/fork/branches/0/race/fork/branches/0/refused\",1]",
+          "at": 1790845201000,
+          "status": "rejected",
+          "rejection": {
+            "kind": "tools_unfinished",
+            "because": "server_failed"
+          }
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+            "run": 1,
+            "outcome": "raised"
+          }
+        ],
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845201000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/2"
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~10~1race~1fork~1branches~10~1refused\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 24969
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/2"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/branches/0/task"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/branches/0/state",
+            "value": "failed"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/branches/0/error",
+            "value": {
+              "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+              "status": 503,
+              "title": "The function notify rejected the execution with unavailable",
+              "detail": "A tool server kept failing, after the run called the search tool of graph",
+              "instance": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+              "kind": "tools_unfinished",
+              "because": "server_failed"
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/0/task/body/branches/0/order",
+            "value": 0
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 8877
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "2"
+          }
+        ]
+      }
+    },
+    {
+      "version": 3,
+      "event": {
+        "type": "input_applied",
+        "format": 3,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/0/all/fork/branches/1/backing/try/0/ask\",1]",
+          "at": 1790845202000,
+          "status": "rejected",
+          "rejection": {
+            "kind": "mcp_server_failed",
+            "because": "unreachable"
+          }
+        },
+        "steps": [
+          {
+            "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+            "run": 1,
+            "outcome": "raised"
+          }
+        ],
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845202000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 6
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/4"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/5",
+            "value": {
+              "purpose": "retry_delay",
+              "reference": "/do/0/all/fork/branches/1/backing",
+              "armedAt": 1790845202000,
+              "dueAt": 1790848802000
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~11~1backing~1try~10~1ask\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 20861
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/3"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/list"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/attemptLimit"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/kind",
+            "value": "backing_off"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/timer",
+            "value": "5"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/error",
+            "value": {
+              "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+              "status": 503,
+              "title": "The function notify rejected the execution with unavailable",
+              "detail": "The MCP server graph could not be reached",
+              "instance": "/do/0/all/fork/branches/1/backing/try/0/ask",
+              "kind": "mcp_server_failed",
+              "because": "unreachable"
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 11061
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "4"
+          },
+          {
+            "kind": "arm_timer",
+            "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+            "timerId": "5",
+            "dueAt": 1790848802000,
+            "purpose": "retry_delay",
+            "label": "/do/0/all/fork/branches/1/backing retry 1"
+          }
+        ]
+      }
+    }
+  ],
+  "snapshot": {
+    "chunks": [
+      "{\"format\":3,\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"version\":2,\"historyBytes\":8877,\"state\":{\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"status\":\"running\",\"workflow\":{\"document\":{\"document\":{\"dsl\":\"1.0.3\",\"namespace\":\"acme\",\"name\":\"test\",\"version\":\"1.0.0\"},\"do\":[{\"all\":{\"fork\":{\"branches\":[{\"race\":{\"fork\":{\"compete\":true,\"branches\":[{\"refused\":{\"call\":\"notify\",\"with\":{\"to\":\"ada\"}}},{\"waits\":{\"wait\":\"PT1H\"}}]}}},{\"backing\":{\"try\":[{\"ask\":{\"call\":\"notify\",\"with\":{\"to\":\"bob\"}}}],\"catch\":{\"retry\":{\"delay\":\"PT1H\",\"limit\":{\"attempt\":{\"count\":2}}}}}}]}}}]},\"input\":1},\"attributes\":{},\"limits\":{\"mostDurationMs\":2592000000,\"longestCallMs\":600000},\"startedAt\":1790845200000,\"lastInputAt\":1790845201000,\"inputs\":2,\"random\":{\"seed\":7,\"draws\":0},\"runs\":{\"/do/0/all\":1,\"/do/0/all/fork/branches/0/race\":1,\"/do/0/all/fork/branches/0/race/fork/branches/0/refused\":1,\"/do/0/all/fork/branches/0/race/fork/branches/1/waits\":1,\"/do/0/all/fork/branches/1/backing\":1,\"/do/0/all/fork/branches/1/backing/try/0/ask\":1},\"timers\":{\"next\":5,\"armed\":{\"1\":{\"purpose\":\"deadline\",\"reference\":\"/\",\"armedAt\":1790845200000,\"dueAt\":1793437200000},\"3\":{\"purpose\":\"wait\",\"reference\":\"/do/0/all/fork/branches/0/race/fork/branches/1/waits\",\"armedAt\":1790845200000,\"dueAt\":1790848800000},\"4\":{\"purpose\":\"call_deadline\",\"reference\":\"/do/0/all/fork/branches/1/backing/try/0/ask\",\"armedAt\":1790845200000,\"dueAt\":1790845800000}}},\"calls\":{\"[\\\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\\\",\\\"/do/0/all/fork/branches/1/backing/try/0/ask\\\",1]\":{\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"reference\":\"/do/0/all/fork/branches/1/backing/try/0/ask\",\"run\":1}},\"inbox\":{\"waiting\":[],\"waitingBytes\":0,\"receivedIds\":[],\"received\":0,\"receivedBytes\":0},\"heldBytes\":24969,\"historyBytes\":8877,\"stepsWithoutWaiting\":0,\"cancelRequested\":false,\"machine\":{\"values\":{\"0\":{\"value\":{},\"bytes\":2},\"1\":{\"value\":{},\"bytes\":2},\"3\":{\"value\":{\"to\":\"bob\"},\"bytes\":12}},\"nextValue\":4,\"context\":0,\"root\":{\"reference\":\"/\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"list\",\"list\":{\"pointer\":\"/do\",\"position\":0,\"data\":1,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"fork\",\"compete\":false,\"branches\":[{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/0/race\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"fork\",\"compete\":true,\"branches\":[{\"state\":\"failed\",\"error\":{\"type\":\"https://open-workflow-specification.org/spec/1.0.0/errors/communication\",\"status\":503,\"instance\":\"/do/0/all/fork/branches/0/race/fork/branches/0/refused\",\"title\":\"The function notify rejected the execution with unavailable\",\"detail\":\"A tool server kept failing, after the run called the search tool of graph\",\"kind\":\"tools_unfinished\",\"because\":\"server_failed\"},\"order\":0},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/0/race/fork/branches/1/waits\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"wait\",\"timer\":\"3\"}}}]}}},{\"state\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/1/backing\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"try\",\"attempt\":0,\"startedAt\":1790845200000,\"phase\":{\"kind\":\"trying\",\"list\":{\"pointer\":\"/do/0/all/fork/branches/1/backing/try\",\"position\":0,\"data\":1,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/0/all/fork/branches/1/backing/try/0/ask\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"call\",\"key\":{\"executionId\":\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"reference\":\"/do/0/all/fork/branches/1/backing/try/0/ask\",\"run\":1},\"function\":\"notify\",\"arguments\":3,\"label\":\"the function notify\",\"deadline\":\"4\"}}}},\"attemptLimit\":null}}}}]}}}}}}},\"outcome\":null}}"
+    ],
+    "bytes": 4057,
+    "tail": [
+      {
+        "version": 3,
+        "event": {
+          "type": "input_applied",
+          "format": 3,
+          "receipt": {
+            "kind": "call_answered",
+            "key": "[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"/do/0/all/fork/branches/1/backing/try/0/ask\",1]",
+            "at": 1790845202000,
+            "status": "rejected",
+            "rejection": {
+              "kind": "mcp_server_failed",
+              "because": "unreachable"
+            }
+          },
+          "steps": [
+            {
+              "reference": "/do/0/all/fork/branches/1/backing/try/0/ask",
+              "run": 1,
+              "outcome": "raised"
+            }
+          ],
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/lastInputAt",
+              "value": 1790845202000
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 3
+            },
+            {
+              "op": "replace",
+              "path": "/timers/next",
+              "value": 6
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/4"
+            },
+            {
+              "op": "add",
+              "path": "/timers/armed/5",
+              "value": {
+                "purpose": "retry_delay",
+                "reference": "/do/0/all/fork/branches/1/backing",
+                "armedAt": 1790845202000,
+                "dueAt": 1790848802000
+              }
+            },
+            {
+              "op": "remove",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a\",\"~1do~10~1all~1fork~1branches~11~1backing~1try~10~1ask\",1]"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 20861
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/3"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/list"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/attemptLimit"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/kind",
+              "value": "backing_off"
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/timer",
+              "value": "5"
+            },
+            {
+              "op": "add",
+              "path": "/machine/root/body/list/current/task/body/branches/1/task/body/phase/error",
+              "value": {
+                "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+                "status": 503,
+                "title": "The function notify rejected the execution with unavailable",
+                "detail": "The MCP server graph could not be reached",
+                "instance": "/do/0/all/fork/branches/1/backing/try/0/ask",
+                "kind": "mcp_server_failed",
+                "because": "unreachable"
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 11061
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_timer",
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "4"
+            },
+            {
+              "kind": "arm_timer",
+              "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+              "timerId": "5",
+              "dueAt": 1790848802000,
+              "purpose": "retry_delay",
+              "label": "/do/0/all/fork/branches/1/backing retry 1"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "state": {
+    "executionId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "status": "running",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "all": {
+              "fork": {
+                "branches": [
+                  {
+                    "race": {
+                      "fork": {
+                        "compete": true,
+                        "branches": [
+                          {
+                            "refused": {
+                              "call": "notify",
+                              "with": {
+                                "to": "ada"
+                              }
+                            }
+                          },
+                          {
+                            "waits": {
+                              "wait": "PT1H"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "backing": {
+                      "try": [
+                        {
+                          "ask": {
+                            "call": "notify",
+                            "with": {
+                              "to": "bob"
+                            }
+                          }
+                        }
+                      ],
+                      "catch": {
+                        "retry": {
+                          "delay": "PT1H",
+                          "limit": {
+                            "attempt": {
+                              "count": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {},
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000
+    },
+    "startedAt": 1790845200000,
+    "lastInputAt": 1790845202000,
+    "inputs": 3,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/all": 1,
+      "/do/0/all/fork/branches/0/race": 1,
+      "/do/0/all/fork/branches/0/race/fork/branches/0/refused": 1,
+      "/do/0/all/fork/branches/0/race/fork/branches/1/waits": 1,
+      "/do/0/all/fork/branches/1/backing": 1,
+      "/do/0/all/fork/branches/1/backing/try/0/ask": 1
+    },
+    "timers": {
+      "next": 6,
+      "armed": {
+        "1": {
+          "purpose": "deadline",
+          "reference": "/",
+          "armedAt": 1790845200000,
+          "dueAt": 1793437200000
+        },
+        "3": {
+          "purpose": "wait",
+          "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+          "armedAt": 1790845200000,
+          "dueAt": 1790848800000
+        },
+        "5": {
+          "purpose": "retry_delay",
+          "reference": "/do/0/all/fork/branches/1/backing",
+          "armedAt": 1790845202000,
+          "dueAt": 1790848802000
+        }
+      }
+    },
+    "calls": {},
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "received": 0,
+      "receivedBytes": 0
+    },
+    "heldBytes": 20861,
+    "historyBytes": 11061,
+    "stepsWithoutWaiting": 0,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {},
+          "bytes": 2
+        }
+      },
+      "nextValue": 4,
+      "context": 0,
+      "root": {
+        "reference": "/",
+        "run": 1,
+        "startedAt": 1790845200000,
+        "context": 0,
+        "rawInput": 1,
+        "input": 1,
+        "variables": {},
+        "timeout": null,
+        "body": {
+          "kind": "list",
+          "list": {
+            "pointer": "/do",
+            "position": 0,
+            "data": 1,
+            "variables": {},
+            "current": {
+              "kind": "running",
+              "task": {
+                "reference": "/do/0/all",
+                "run": 1,
+                "startedAt": 1790845200000,
+                "context": 0,
+                "rawInput": 1,
+                "input": 1,
+                "variables": {},
+                "timeout": null,
+                "body": {
+                  "kind": "fork",
+                  "compete": false,
+                  "branches": [
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/0/race",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "fork",
+                          "compete": true,
+                          "branches": [
+                            {
+                              "state": "failed",
+                              "error": {
+                                "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+                                "status": 503,
+                                "instance": "/do/0/all/fork/branches/0/race/fork/branches/0/refused",
+                                "title": "The function notify rejected the execution with unavailable",
+                                "detail": "A tool server kept failing, after the run called the search tool of graph",
+                                "kind": "tools_unfinished",
+                                "because": "server_failed"
+                              },
+                              "order": 0
+                            },
+                            {
+                              "state": "running",
+                              "task": {
+                                "reference": "/do/0/all/fork/branches/0/race/fork/branches/1/waits",
+                                "run": 1,
+                                "startedAt": 1790845200000,
+                                "context": 0,
+                                "rawInput": 1,
+                                "input": 1,
+                                "variables": {},
+                                "timeout": null,
+                                "body": {
+                                  "kind": "wait",
+                                  "timer": "3"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "state": "running",
+                      "task": {
+                        "reference": "/do/0/all/fork/branches/1/backing",
+                        "run": 1,
+                        "startedAt": 1790845200000,
+                        "context": 0,
+                        "rawInput": 1,
+                        "input": 1,
+                        "variables": {},
+                        "timeout": null,
+                        "body": {
+                          "kind": "try",
+                          "attempt": 0,
+                          "startedAt": 1790845200000,
+                          "phase": {
+                            "kind": "backing_off",
+                            "timer": "5",
+                            "error": {
+                              "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+                              "status": 503,
+                              "instance": "/do/0/all/fork/branches/1/backing/try/0/ask",
+                              "title": "The function notify rejected the execution with unavailable",
+                              "detail": "The MCP server graph could not be reached",
+                              "kind": "mcp_server_failed",
+                              "because": "unreachable"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "outcome": null
+  }
+}

@@ -1,0 +1,2746 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Adobe Analytics 2.0 API",
+    "version": "2.0",
+    "description": "Twelve operations of the Adobe Analytics 2.0 API, converted from the vendor's Swagger 2.0 and report-suites OpenAPI documents, which name no scheme, with an oauth2 scheme at the endpoints of Adobe's authorization server. Every path is relative to https://analytics.adobe.io/api/{globalCompanyId}, which the entry gives as base_url; every call also carries x-api-key with the client id, which the entry sends."
+  },
+  "security": [
+    {
+      "oauth2": []
+    }
+  ],
+  "paths": {
+    "/calculatedmetrics": {
+      "get": {
+        "operationId": "findCalculatedMetrics",
+        "tags": ["Calculated Metrics"],
+        "summary": "Retrieve multiple calculated metrics",
+        "description": "A calculated metric response will always include these default items: *id, name, description, rsid, owner, polarity, precision, type* \n\nOther attributes can be optionally requested through the 'expansion' field:\n\n* *modified*: Date that the metric was last modified (ISO 8601)\n* *definition*: Calculated metric definition as JSON object\n* *compatibility*: Products that the metric is compatible with\n* *reportSuiteName*: Also return the friendly report suite name for the RSID\n* *tags*: Gives all existing tags associated with the calculated metric\n\nFor more information, see the [Calculated Metrics API endpoint guide](https://developer.adobe.com/analytics-apis/docs/2.0/guides/endpoints/calculatedmetrics/)\n\n",
+        "parameters": [
+          {
+            "name": "rsids",
+            "in": "query",
+            "description": "Filter list to only include calculated metrics tied to specified RSID list (comma-delimited)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ownerId",
+            "in": "query",
+            "description": "Filter list to only include calculated metrics owned by the specified loginId",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "filterByIds",
+            "in": "query",
+            "description": "Filter list to only include calculated metrics in the specified list (comma-delimited list of IDs) (this is the same as calculatedMetricFilter, and is overwritten by calculatedMetricFilter",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "toBeUsedInRsid",
+            "in": "query",
+            "description": "The report suite where the calculated metric intended to be used.  This report suite will be used to determine things like compatibility and permissions.  If it is not specified then the permissions will be calculated based on the union of all metrics authorized in all groups the user belongs to.  If the compatibility expansion is specified and toBeUsedInRsid is not then the compatibility returned is based off the compatibility from the last time the calculated metric was saved.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Filter list to only include calculated metrics that contains the Name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tagNames",
+            "in": "query",
+            "description": "Filter list to only include calculated metrics that contains one of the tags",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "favorite",
+            "in": "query",
+            "description": "Filter list to only include calculated metrics that are favorites",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "approved",
+            "in": "query",
+            "description": "Filter list to only include calculated metrics that are approved",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (base 0 - first page is \"0\")",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "description": "Sort direction (ASC or DESC)",
+            "schema": {
+              "type": "string",
+              "default": "ASC"
+            }
+          },
+          {
+            "name": "sortProperty",
+            "in": "query",
+            "description": "Property to sort by (name, modified_date, id is currently allowed)",
+            "schema": {
+              "type": "string",
+              "default": "id"
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Comma-delimited list of additional calculated metric metadata fields to include on response. Comma-separated; the values: reportSuiteName, ownerFullName, modified, tags, definition, compatibility, categories.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeType",
+            "in": "query",
+            "description": "Include additional calculated metrics not owned by user. The \"all\" option takes precedence over \"shared\". Comma-separated; the values: all, shared, templates.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnalyticsCalculatedMetric"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unable to retrieve list of calculated metrics shared with user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculatedMetricErrorStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Owner filter error; user specified is not in the same company as the requesting user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculatedMetricErrorStatus"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requesting non-shared calculated metrics for other users is restricted to admin users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculatedMetricErrorStatus"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "External API error; Calculated metric retrieval failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalculatedMetricErrorStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dateranges": {
+      "get": {
+        "operationId": "getDateRanges_1",
+        "tags": ["Date Ranges"],
+        "summary": "Retrieve user's date ranges",
+        "description": "This API allows users to store commonly used date ranges so that they can be reused throughout the product.",
+        "parameters": [
+          {
+            "name": "includeType",
+            "in": "query",
+            "description": "Include additional dateranges not owned by user. The \"all\" option takes precedence over \"shared\". Comma-separated; the values: all, shared, templates, curatedItem.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Comma-delimited list of additional date range metadata fields to include on response. Comma-separated; the values: definition, ownerFullName, modified, approved, favorite, shares, tags, sharesFullName, usageSummary, usageSummaryWithRelevancyScore.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "filterByIds",
+            "in": "query",
+            "description": "Filter list to only include date ranges in the specified list (comma-delimited list of IDs)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "newDefinition",
+            "in": "query",
+            "description": "Use the new JSON def",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "filterByModifiedAfter",
+            "in": "query",
+            "description": "Filter list to only include date ranges modified since this date (ISO8601 format)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "curatedRsid",
+            "in": "query",
+            "description": "Include the curatedItem status for given Rsid",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (base 0 - first page is \"0\")",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpandedDateRange"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dimensions": {
+      "get": {
+        "operationId": "dimensions_getDimensions",
+        "tags": ["Dimensions"],
+        "summary": "Retrieve dimensions for a report suite",
+        "description": "",
+        "parameters": [
+          {
+            "name": "rsid",
+            "in": "query",
+            "required": true,
+            "description": "A report suite ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "segmentable",
+            "in": "query",
+            "description": "Only include dimensions that are valid within a segment.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "reportable",
+            "in": "query",
+            "description": "Only include dimensions that are valid within a report.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "classifiable",
+            "in": "query",
+            "description": "Only include classifiable dimensions.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Add extra metadata to items (comma-delimited list). Comma-separated; the values: tags, allowedForReporting, attributionModel, categories, allocationType, expirationType, expirationCustomDays, dataType, bindingEvents, merchandisingSyntax.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnalyticsDimension"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON input"
+          },
+          "401": {
+            "description": "User does not have access to this report suite"
+          },
+          "500": {
+            "description": "Unexpected internal server error"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "operationId": "getMetrics",
+        "tags": ["Metrics"],
+        "summary": "Retrieve metrics for a report suite",
+        "description": "This returns the metrics list primarily for the Analytics product. The platform identity API Returns a list of all possible metrics for the supported systems.",
+        "parameters": [
+          {
+            "name": "rsid",
+            "in": "query",
+            "required": true,
+            "description": "ID of desired report suite",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale that system named metrics should be returned in",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "segmentable",
+            "in": "query",
+            "description": "Filter the metrics by if they are valid in a segment.",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Add extra metadata to items (comma-delimited list). Comma-separated; the values: tags, allowedForReporting, categories.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsMetric"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON input"
+          },
+          "403": {
+            "description": "Insufficient access to perform operation"
+          },
+          "500": {
+            "description": "Unexpected internal server error"
+          }
+        }
+      }
+    },
+    "/projects": {
+      "get": {
+        "operationId": "projects_getProjects",
+        "tags": ["Projects"],
+        "summary": "Retrieve user's projects",
+        "description": "This Returns the projects list primarily for the Analytics product. ",
+        "parameters": [
+          {
+            "name": "includeType",
+            "in": "query",
+            "description": "Include additional projects not owned by user. The \"all\" option takes precedence over \"shared\". If neither guided, or project is included, both types are returned. Comma-separated; the values: all, shared.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Comma-delimited list of additional project metadata fields to include on response. Comma-separated; the values: reportSuiteName, shares, tags, accessLevel, modified, externalReferences, definition.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filterByIds",
+            "in": "query",
+            "description": "Filter list to only include projects in the specified list (comma-delimited list of IDs)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "pagination",
+            "in": "query",
+            "description": "return paginated results",
+            "schema": {
+              "type": "string",
+              "default": "false",
+              "enum": ["true", "false"]
+            }
+          },
+          {
+            "name": "ownerId",
+            "in": "query",
+            "description": "Filter list to only include projects owned by the specified loginId",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (base 0 - first page is \"0\")",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnalyticsProject"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports": {
+      "post": {
+        "operationId": "runReport",
+        "tags": ["Reports"],
+        "summary": "Create a report",
+        "description": "For more information, see the [Reporting API guide](https://developer.adobe.com/analytics-apis/docs/2.0/guides/endpoints/reports/).",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RankedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankedReportData"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partially successful operation.  Some response columns contain errors.  See the [Partial Responses](https://github.com/AdobeDocs/analytics-2.0-apis/blob/master/reporting-guide.md#partial-responses-206-status-code) for details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankedReportData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; name, rsid, and definition are all required. Definition must be formatted as a JSON Object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportErrorStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/topItems": {
+      "get": {
+        "operationId": "runTopItemReport",
+        "tags": ["Reports"],
+        "summary": "Retrieve top items report",
+        "description": "Get the top X items (based on paging restriction) for the specified dimension and rsid. Defaults to last 90 days.",
+        "parameters": [
+          {
+            "name": "rsid",
+            "in": "query",
+            "required": true,
+            "description": "ID of desired report suite ie. myrsid",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dimension",
+            "in": "query",
+            "required": true,
+            "description": "Dimension to run the report against. Example: 'variables/page'",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale that system named metrics should be returned in",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "dateRange",
+            "in": "query",
+            "description": "Format: YYYY-MM-DD/YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search-clause",
+            "in": "query",
+            "description": "General search string; wrap with single quotes. Example: 'PageABC'",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "Format: YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "Format: YYYY-MM-DD",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchAnd",
+            "in": "query",
+            "description": "Search terms that will be AND-ed together. Space delimited.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchOr",
+            "in": "query",
+            "description": "Search terms that will be OR-ed together. Space delimited.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchNot",
+            "in": "query",
+            "description": "Search terms that will be treated as NOT including. Space delimited.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "searchPhrase",
+            "in": "query",
+            "description": "A full search phrase that will be searched for.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lookupNoneValues",
+            "in": "query",
+            "description": "Controls None values to be included",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (base 0 - first page is \"0\")",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnhashReportData"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Partially successful operation.  Some response columns contain errors.  See the [Partial Responses](https://github.com/AdobeDocs/analytics-2.0-apis/blob/master/reporting-guide.md#partial-responses-206-status-code) for details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnhashReportData"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; name, rsid, and definition are all required. Definition must be formatted as a JSON Object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportErrorStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/segments": {
+      "get": {
+        "operationId": "segments_getSegments",
+        "tags": ["Segments"],
+        "summary": "Retrieve all segments",
+        "description": "",
+        "parameters": [
+          {
+            "name": "rsids",
+            "in": "query",
+            "description": "Filter list to only include segments tied to specified RSID list (comma-delimited)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "segmentFilter",
+            "in": "query",
+            "description": "Filter list to only include segments in the specified list (comma-delimited list of IDs)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Filter list to only include segments that contains the Name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tagNames",
+            "in": "query",
+            "description": "Filter list to only include segments that contains one of the tags",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filterByPublishedSegments",
+            "in": "query",
+            "description": "Filter list to only include segments where the published field is set to one of the allowable values (all, true, false).",
+            "schema": {
+              "type": "string",
+              "default": "all",
+              "enum": ["all", "true", "false"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (base 0 - first page is \"0\")",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "description": "Sort direction (ASC or DESC",
+            "schema": {
+              "type": "string",
+              "default": "ASC"
+            }
+          },
+          {
+            "name": "sortProperty",
+            "in": "query",
+            "description": "Property to sort by (name, modified_date, id is currently allowed)",
+            "schema": {
+              "type": "string",
+              "default": "id"
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Comma-delimited list of additional segment metadata fields to include on response. Comma-separated; the values: reportSuiteName, ownerFullName, modified, tags, compatibility, definition, publishingStatus, definitionLastModified, categories.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeType",
+            "in": "query",
+            "description": "Include additional segments not owned by user. The \"all\" option takes precedence over \"shared\". Comma-separated; the values: shared, all, templates.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSegmentResponseItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unable to retrieve list of segments shared with user"
+          },
+          "401": {
+            "description": "Owner filter error; user specified is not in the same company as the requesting user"
+          },
+          "403": {
+            "description": "Requesting non-shared segments for other users is restricted to admin users"
+          },
+          "500": {
+            "description": "External API error; Segment retrieval failed"
+          }
+        }
+      },
+      "post": {
+        "operationId": "segments_createSegment",
+        "tags": ["Segments"],
+        "summary": "Create a segment",
+        "description": "",
+        "parameters": [
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale. Valid values include 'en_US', 'fr_FR', 'ja_JP', 'de_DE', 'es_ES', 'ko_KR', 'pt_BR', 'zh_CN', and 'zh_TW'.",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Comma-delimited list of additional segment metadata fields to include on response. Comma-separated; the values: reportSuiteName, ownerFullName, modified, tags, compatibility, definition, publishingStatus, definitionLastModified, categories.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "JSON-formatted Object containing key/value pairs for segment creation.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsSegment"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSegmentResponseItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; name, rsid, and definition are all required. Definition must be formatted as a JSON Object."
+          },
+          "500": {
+            "description": "External API error; Segment create or retrieval failed"
+          }
+        }
+      }
+    },
+    "/segments/{id}": {
+      "get": {
+        "operationId": "segments_getSegment",
+        "tags": ["Segments"],
+        "summary": "Retrieve a segment by ID",
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The segment ID to retrieve",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locale",
+            "in": "query",
+            "description": "Locale. Valid values include 'en_US', 'fr_FR', 'ja_JP', 'de_DE', 'es_ES', 'ko_KR', 'pt_BR', 'zh_CN', and 'zh_TW'.",
+            "schema": {
+              "type": "string",
+              "default": "en_US"
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Comma-delimited list of additional segment metadata fields to include on response. Comma-separated; the values: reportSuiteName, ownerFullName, modified, tags, compatibility, definition, publishingStatus, definitionLastModified, categories.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSegmentResponseItem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Requesting non-shared segments for other users is restricted to admin users"
+          },
+          "500": {
+            "description": "External API error; segment retrieval failed"
+          }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "operationId": "getCurrentUser",
+        "tags": ["Users"],
+        "summary": "Retrieve current user",
+        "description": "",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsUser"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reportsuites/collections/suites": {
+      "get": {
+        "operationId": "getSuites_1",
+        "tags": ["Collections Suites"],
+        "summary": "Retrieves many report suites using the given search criteria",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Number of results per page",
+            "schema": {
+              "type": "string",
+              "default": "10"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number (base 0 - first page is \"0\")",
+            "schema": {
+              "type": "string",
+              "default": "0"
+            }
+          },
+          {
+            "name": "expansion",
+            "in": "query",
+            "description": "Comma-delimited list of additional suite metadata fields to include on response. Comma-separated; the values: name, parentRsid, currency, calendarType, timezoneZoneinfo.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rsids",
+            "in": "query",
+            "description": "Filter list to only include suites in this RSID list (comma-delimited)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rsidContains",
+            "in": "query",
+            "description": "Filter list to only include suites whose rsid contains rsidContains.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HTTP 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suite"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error; report suite retrieval failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsAsrErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlternateVariableNames": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "baseName": {
+            "type": "string"
+          },
+          "curatedName": {
+            "type": "string"
+          }
+        }
+      },
+      "AnalyticsAsrErrorResponse": {
+        "properties": {
+          "errorDescription": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string"
+          },
+          "errorId": {
+            "type": "string"
+          }
+        }
+      },
+      "AnalyticsCalculatedMetric": {
+        "type": "object",
+        "required": ["definition"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "System generated id",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "rsid": {
+            "type": "string",
+            "description": "The report suite id for which the component was created/updated"
+          },
+          "reportSuiteName": {
+            "type": "string",
+            "description": "The report suite name for which the component was created/updated",
+            "readOnly": true
+          },
+          "owner": {
+            "$ref": "#/components/schemas/Owner"
+          },
+          "polarity": {
+            "type": "string",
+            "description": "Set metric polarity, which indicates whether it's good or bad if a given metric goes up. Default=positive",
+            "enum": ["positive", "negative"]
+          },
+          "precision": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of decimal places to include in calculated metric result"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["CURRENCY", "TIME", "DECIMAL", "PERCENT"]
+          },
+          "definition": {
+            "description": "Calculated metric definition object",
+            "$ref": "#/components/schemas/CalculatedMetricDef"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "siteTitle": {
+            "type": "string"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Calculated metric creation date",
+            "readOnly": true
+          }
+        }
+      },
+      "AnalyticsDimension": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["STRING", "INT", "DECIMAL", "CURRENCY", "PERCENT", "TIME", "ENUM", "ORDERED_ENUM"]
+          },
+          "category": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "support": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pathable": {
+            "type": "boolean"
+          },
+          "parent": {
+            "type": "string"
+          },
+          "extraTitleInfo": {
+            "type": "string"
+          },
+          "segmentable": {
+            "type": "boolean"
+          },
+          "reportable": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          },
+          "allowedForReporting": {
+            "type": "boolean"
+          },
+          "attributionModel": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
+          "allocationType": {
+            "type": "string",
+            "description": "The configured allocation type for the eVar. Preserves distinctions collapsed by attributionModel.func.",
+            "enum": [
+              "most_recent_last",
+              "original_value_first",
+              "linear",
+              "linear_to_items",
+              "merchandising_first",
+              "merchandising_last"
+            ],
+            "examples": ["linear"]
+          },
+          "expirationType": {
+            "type": "string",
+            "description": "The configured expiration type for the eVar, determining how long the value persists across hits.",
+            "enum": [
+              "visit",
+              "page_view",
+              "never",
+              "minute",
+              "hour",
+              "day",
+              "week",
+              "month",
+              "quarter",
+              "year",
+              "purchase",
+              "product_view",
+              "cart_open",
+              "cart_checkout",
+              "cart_add",
+              "cart_remove",
+              "cart_view",
+              "event"
+            ],
+            "examples": ["visit"]
+          },
+          "expirationCustomDays": {
+            "type": "integer",
+            "description": "Number of days in the expiration window. Semantically meaningful when expirationType is 'day'.",
+            "examples": [30]
+          },
+          "dataType": {
+            "type": "string",
+            "description": "The eVar storage type.",
+            "enum": ["text", "counter"],
+            "examples": ["text"]
+          },
+          "bindingEvents": {
+            "type": "array",
+            "description": "Metric IDs that trigger merchandising binding. Populated only for merchandising eVars configured with event triggers.",
+            "items": {
+              "type": "string"
+            },
+            "examples": [["event1", "event2"]]
+          },
+          "merchandisingSyntax": {
+            "type": "string",
+            "description": "Merchandising binding style. Populated only for merchandising eVars.",
+            "enum": ["product", "conversion_variable"],
+            "examples": ["conversion_variable"]
+          },
+          "ecomAllocationType": {
+            "type": "string",
+            "description": "High-level allocation bucket. Returned automatically when expansion=attributionModel is requested; does not have its own expansion flag.",
+            "enum": ["first", "last", "merchandising"],
+            "examples": ["last"]
+          },
+          "noneSettings": {
+            "$ref": "#/components/schemas/NoneSettings"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          }
+        }
+      },
+      "AnalyticsMetric": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["STRING", "INT", "DECIMAL", "CURRENCY", "PERCENT", "TIME", "ENUM", "ORDERED_ENUM"]
+          },
+          "extraTitleInfo": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "support": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "allocation": {
+            "type": "boolean"
+          },
+          "precision": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "calculated": {
+            "type": "boolean"
+          },
+          "segmentable": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "polarity": {
+            "type": "string",
+            "enum": ["positive", "negative"]
+          },
+          "helpLink": {
+            "type": "string"
+          },
+          "allowedForReporting": {
+            "type": "boolean"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          }
+        }
+      },
+      "AnalyticsProject": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "System generated id",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "rsid": {
+            "type": "string",
+            "description": "The report suite id for which the component was created/updated"
+          },
+          "reportSuiteName": {
+            "type": "string",
+            "description": "The report suite name for which the component was created/updated",
+            "readOnly": true
+          },
+          "migratedIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "companyTemplate": {
+            "type": "boolean"
+          },
+          "template": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["project", "mobileScorecard"]
+          },
+          "definition": {
+            "$ref": "#/components/schemas/JsonNode"
+          },
+          "externalReferences": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "accessLevel": {
+            "type": "string"
+          },
+          "versionNotes": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "favorite": {
+            "type": "boolean"
+          },
+          "usageSummary": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
+          "complexity": {
+            "type": "object"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/Owner"
+          },
+          "siteTitle": {
+            "type": "string"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AnalyticsSegment": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "A name for the segment."
+          },
+          "description": {
+            "type": "string",
+            "description": "A description of the segment."
+          },
+          "rsid": {
+            "type": "string",
+            "description": "The report suite id."
+          },
+          "reportSuiteName": {
+            "type": "string",
+            "description": "The friendly name for the report suite id."
+          },
+          "owner": {
+            "description": "The owner of the segment as an Owner object.",
+            "$ref": "#/components/schemas/Owner"
+          },
+          "definition": {
+            "type": "object",
+            "description": "The segment definition as a JSON object",
+            "$ref": "#/components/schemas/AnalyticsSegmentDefinition"
+          },
+          "compatibility": {
+            "type": "object",
+            "description": "Analytics products that the segment is compatible with",
+            "$ref": "#/components/schemas/SegmentCompatibility"
+          },
+          "definitionLastModified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "siteTitle": {
+            "type": "string",
+            "description": "A name for the report suite.  This is deprecated and should use the report suite name instead."
+          },
+          "tags": {
+            "type": "array",
+            "description": "All existing tags associated with the segment.",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AnalyticsSegmentDefinition": {
+        "type": "object",
+        "properties": {
+          "container": {
+            "type": "object",
+            "properties": {
+              "context": {
+                "type": "string"
+              },
+              "func": {
+                "type": "string"
+              },
+              "pred": {
+                "type": "object",
+                "properties": {
+                  "val": {
+                    "type": "object",
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "func": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "str": {
+                    "type": "string"
+                  },
+                  "func": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "func": {
+            "type": "string"
+          },
+          "version": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "AnalyticsSegmentResponseItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Id of the segment."
+          },
+          "name": {
+            "type": "string",
+            "description": "A name for the segment."
+          },
+          "description": {
+            "type": "string",
+            "description": "A description of the segment."
+          },
+          "rsid": {
+            "type": "string",
+            "description": "The report suite id."
+          },
+          "reportSuiteName": {
+            "type": "string",
+            "description": "The friendly name for the report suite id."
+          },
+          "owner": {
+            "description": "The owner of the segment as an Owner object.",
+            "$ref": "#/components/schemas/Owner"
+          },
+          "definition": {
+            "type": "object",
+            "description": "The segment definition as a JSON object",
+            "$ref": "#/components/schemas/AnalyticsSegmentDefinition"
+          },
+          "compatibility": {
+            "type": "object",
+            "description": "Analytics products that the segment is compatible with",
+            "$ref": "#/components/schemas/SegmentCompatibility"
+          },
+          "definitionLastModified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "siteTitle": {
+            "type": "string",
+            "description": "A name for the report suite.  This is deprecated and should use the report suite name instead."
+          },
+          "tags": {
+            "type": "array",
+            "description": "All existing tags associated with the segment.",
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            }
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AnalyticsUser": {
+        "type": "object",
+        "properties": {
+          "companyid": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "loginId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "login": {
+            "type": "string"
+          },
+          "changePassword": {
+            "type": "boolean"
+          },
+          "createDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "disabled": {
+            "type": "boolean"
+          },
+          "email": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "fullName": {
+            "type": "string"
+          },
+          "imsUserId": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "lastAccess": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "tempLoginEnd": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "CalculatedMetricDef": {
+        "type": "object"
+      },
+      "CalculatedMetricErrorStatus": {
+        "type": "object",
+        "properties": {
+          "errorCode": {
+            "type": "string",
+            "enum": [
+              "no_feature_access_to_advanced_calculated_metrics",
+              "invalid_metric_access",
+              "method_not_allowed",
+              "resource_conflict",
+              "invalid_access",
+              "resource_temporarily_unavailable",
+              "external_api_failure",
+              "aam_failure",
+              "resource_already_exists",
+              "invalid_state",
+              "invalid_json_input",
+              "invalid_parameters",
+              "invalid_dimension_access",
+              "unsupported_data_type",
+              "resource_not_found",
+              "insufficient_access",
+              "health_check_error",
+              "invalid_data",
+              "unexpected_error",
+              "external_api_error",
+              "unsupported_resource",
+              "io_error",
+              "invalid_request",
+              "invalid_client_id",
+              "unauthorized",
+              "authorization_error",
+              "invalid_token",
+              "insufficient_scope",
+              "bluecoat_unauthorized"
+            ]
+          },
+          "errorDescription": {
+            "type": "string"
+          },
+          "errorId": {
+            "type": "string"
+          },
+          "errorDetails": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
+          "rootCauseService": {
+            "type": "string"
+          }
+        }
+      },
+      "CalendarSettings": {
+        "properties": {
+          "rsid": {
+            "type": "string"
+          },
+          "anchorDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["GREGORIAN", "NRF", "QRS", "CUSTOM_454", "CUSTOM_445", "MODIFIED_GREGORIAN", "CUSTOM_544"]
+          }
+        }
+      },
+      "ExpandedDateRange": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "modified": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "companyId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "owner": {
+            "type": "object"
+          },
+          "definition": {
+            "type": "object"
+          },
+          "template": {
+            "type": "boolean"
+          },
+          "createDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "disabledDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "alternateVariableNames": {
+            "$ref": "#/components/schemas/AlternateVariableNames"
+          },
+          "curatedItem": {
+            "type": "boolean"
+          },
+          "imsOrgId": {
+            "type": "string"
+          },
+          "systemUserOwned": {
+            "type": "boolean"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object"
+              }
+            }
+          },
+          "approved": {
+            "type": "boolean"
+          },
+          "favorite": {
+            "type": "boolean"
+          },
+          "usageSummary": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "JsonNode": {
+        "type": "object",
+        "properties": {
+          "valueNode": {
+            "type": "boolean"
+          },
+          "floatingPointNumber": {
+            "type": "boolean"
+          },
+          "containerNode": {
+            "type": "boolean"
+          },
+          "missingNode": {
+            "type": "boolean"
+          },
+          "pojo": {
+            "type": "boolean"
+          },
+          "integralNumber": {
+            "type": "boolean"
+          },
+          "short": {
+            "type": "boolean"
+          },
+          "int": {
+            "type": "boolean"
+          },
+          "long": {
+            "type": "boolean"
+          },
+          "double": {
+            "type": "boolean"
+          },
+          "bigDecimal": {
+            "type": "boolean"
+          },
+          "bigInteger": {
+            "type": "boolean"
+          },
+          "textual": {
+            "type": "boolean"
+          },
+          "binary": {
+            "type": "boolean"
+          },
+          "float": {
+            "type": "boolean"
+          },
+          "nodeType": {
+            "type": "string",
+            "enum": ["ARRAY", "BINARY", "BOOLEAN", "MISSING", "NULL", "NUMBER", "OBJECT", "POJO", "STRING"]
+          },
+          "boolean": {
+            "type": "boolean"
+          },
+          "number": {
+            "type": "boolean"
+          },
+          "object": {
+            "type": "boolean"
+          },
+          "array": {
+            "type": "boolean"
+          },
+          "null": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Locale": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string"
+          },
+          "script": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string"
+          },
+          "extensionKeys": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "unicodeLocaleAttributes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "unicodeLocaleKeys": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "iso3Language": {
+            "type": "string"
+          },
+          "iso3Country": {
+            "type": "string"
+          },
+          "displayLanguage": {
+            "type": "string"
+          },
+          "displayScript": {
+            "type": "string"
+          },
+          "displayCountry": {
+            "type": "string"
+          },
+          "displayVariant": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        }
+      },
+      "NoneSettings": {
+        "type": "object",
+        "properties": {
+          "includeNoneByDefault": {
+            "type": "boolean"
+          },
+          "noneChangeable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Owner": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "the login id of the owner"
+          },
+          "name": {
+            "type": "string",
+            "description": "the friendly full login name of the owner, included when the expansion parameter ownerFullName is true"
+          },
+          "login": {
+            "type": "string",
+            "description": "the friendly full login name of the owner, included when the expansion parameter ownerFullName is true"
+          }
+        }
+      },
+      "RankedColumnError": {
+        "type": "object",
+        "properties": {
+          "columnId": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": "string",
+            "enum": [
+              "unauthorized_metric",
+              "unauthorized_dimension",
+              "unauthorized_dimension_global",
+              "anomaly_detection_failure_unexpected_item_count",
+              "anomaly_detection_failure_tsa_service",
+              "not_enabled_metric",
+              "not_enabled_dimension",
+              "not_enabled_dimension_global"
+            ]
+          },
+          "errorId": {
+            "type": "string"
+          },
+          "errorDescription": {
+            "type": "string"
+          }
+        }
+      },
+      "RankedColumnMetaData": {
+        "type": "object",
+        "properties": {
+          "dimension": {
+            "$ref": "#/components/schemas/ReportDimension"
+          },
+          "columnIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "columnErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RankedColumnError"
+            }
+          }
+        }
+      },
+      "RankedReportData": {
+        "type": "object",
+        "properties": {
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "firstPage": {
+            "type": "boolean"
+          },
+          "lastPage": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "request": {
+            "$ref": "#/components/schemas/RankedRequest"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "columns": {
+            "$ref": "#/components/schemas/RankedColumnMetaData"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Row"
+            }
+          },
+          "summaryData": {
+            "$ref": "#/components/schemas/RankedSummaryData"
+          }
+        }
+      },
+      "RankedRequest": {
+        "type": "object",
+        "properties": {
+          "rsid": {
+            "type": "string"
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "locale": {
+            "$ref": "#/components/schemas/Locale"
+          },
+          "globalFilters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportFilter"
+            }
+          },
+          "search": {
+            "$ref": "#/components/schemas/ReportSearch"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/RankedSettings"
+          },
+          "statistics": {
+            "$ref": "#/components/schemas/RankedStatistics"
+          },
+          "metricContainer": {
+            "$ref": "#/components/schemas/ReportMetrics"
+          },
+          "rowContainer": {
+            "$ref": "#/components/schemas/ReportRows"
+          },
+          "anchorDate": {
+            "type": "string"
+          }
+        }
+      },
+      "RankedSettings": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dimensionSort": {
+            "type": "string"
+          },
+          "countRepeatInstances": {
+            "type": "boolean"
+          },
+          "reflectRequest": {
+            "type": "boolean"
+          },
+          "includeAnomalyDetection": {
+            "type": "boolean"
+          },
+          "includeForecasting": {
+            "type": "boolean"
+          },
+          "includePercentChange": {
+            "type": "boolean"
+          },
+          "includeLatLong": {
+            "type": "boolean"
+          },
+          "nonesBehavior": {
+            "type": "string"
+          }
+        }
+      },
+      "RankedStatistics": {
+        "type": "object",
+        "properties": {
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ignoreZeroes": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RankedSummaryData": {
+        "type": "object"
+      },
+      "ReportDimension": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["STRING", "INT", "DECIMAL", "CURRENCY", "PERCENT", "TIME", "ENUM", "ORDERED_ENUM"]
+          }
+        }
+      },
+      "ReportErrorStatus": {
+        "type": "object",
+        "properties": {
+          "errorCode": {
+            "type": "string",
+            "enum": [
+              "invalid_segment_ids_found",
+              "invalid_metric_access",
+              "method_not_allowed",
+              "resource_conflict",
+              "invalid_access",
+              "resource_temporarily_unavailable",
+              "external_api_failure",
+              "aam_failure",
+              "resource_already_exists",
+              "invalid_state",
+              "invalid_json_input",
+              "invalid_parameters",
+              "invalid_dimension_access",
+              "unsupported_data_type",
+              "resource_not_found",
+              "insufficient_access",
+              "health_check_error",
+              "invalid_data",
+              "unexpected_error",
+              "external_api_error",
+              "unsupported_resource",
+              "io_error",
+              "invalid_request",
+              "invalid_client_id",
+              "unauthorized",
+              "authorization_error",
+              "invalid_token",
+              "insufficient_scope",
+              "bluecoat_unauthorized"
+            ]
+          },
+          "errorDescription": {
+            "type": "string"
+          },
+          "errorId": {
+            "type": "string"
+          },
+          "errorDetails": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
+          "rootCauseService": {
+            "type": "string"
+          }
+        }
+      },
+      "ReportFilter": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["dateRange", "breakdown", "segment", "excludeItemIds"]
+          },
+          "dimension": {
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "segmentId": {
+            "type": "string"
+          },
+          "segmentDefinition": {
+            "type": "object",
+            "$ref": "#/components/schemas/AnalyticsSegmentDefinition"
+          },
+          "dateRange": {
+            "type": "string"
+          },
+          "dateRangeRelative": {
+            "type": "string"
+          },
+          "excludeItemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ReportMetric": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "columnId": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sort": {
+            "type": "string"
+          },
+          "metricDefinition": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object"
+            }
+          },
+          "predictive": {
+            "$ref": "#/components/schemas/ReportMetricPredictiveSettings"
+          }
+        }
+      },
+      "ReportMetricPredictiveSettings": {
+        "type": "object",
+        "properties": {
+          "anomalyConfidence": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ReportMetrics": {
+        "type": "object",
+        "properties": {
+          "metricFilters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportFilter"
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportMetric"
+            }
+          }
+        }
+      },
+      "ReportRow": {
+        "type": "object",
+        "properties": {
+          "rowId": {
+            "type": "string"
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ReportRows": {
+        "type": "object",
+        "properties": {
+          "rowFilters": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportFilter"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReportRow"
+            }
+          }
+        }
+      },
+      "ReportSearch": {
+        "type": "object",
+        "properties": {
+          "clause": {
+            "type": "string"
+          },
+          "excludeItemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "includeSearchTotal": {
+            "type": "boolean"
+          },
+          "empty": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Row": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "rowId": {
+            "type": "string"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "dataExpected": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "dataUpperBound": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "dataLowerBound": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "dataAnomalyDetected": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          "percentChange": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "latitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "longitude": {
+            "type": "number",
+            "format": "double"
+          },
+          "dataForecasted": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "dataForecastedUpperBound": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "dataForecastedLowerBound": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "double"
+            }
+          }
+        }
+      },
+      "RowItem": {
+        "type": "object",
+        "properties": {
+          "itemId": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "SegmentCompatibility": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          },
+          "validator_version": {
+            "type": "string"
+          },
+          "supported_products": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supported_schema": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "supported_features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Suite": {
+        "properties": {
+          "calendarType": {
+            "$ref": "#/components/schemas/CalendarSettings"
+          },
+          "rsid": {
+            "title": "Report suite ID",
+            "type": "string"
+          },
+          "parentRsid": {
+            "title": "Parent report suite ID for virtual report suite",
+            "type": "string"
+          },
+          "name": {
+            "title": "Suite name",
+            "type": "string"
+          },
+          "timezoneZoneinfo": {
+            "title": "Suite friendly timezone name",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Suite currency",
+            "type": "string"
+          },
+          "id": {
+            "title": "Suite id",
+            "type": "string"
+          }
+        }
+      },
+      "Tag": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "description": "the tag id"
+          },
+          "name": {
+            "type": "string",
+            "description": "the tag name "
+          },
+          "description": {
+            "type": "string",
+            "description": "the tag description"
+          },
+          "components": {
+            "type": "array",
+            "description": "the list of components that have been tagged with this tag",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/TaggedComponent"
+            }
+          }
+        },
+        "description": "Tag Model"
+      },
+      "TaggedComponent": {
+        "type": "object",
+        "properties": {
+          "componentType": {
+            "type": "string"
+          },
+          "componentId": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "UnhashReportData": {
+        "type": "object",
+        "properties": {
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "firstPage": {
+            "type": "boolean"
+          },
+          "lastPage": {
+            "type": "boolean"
+          },
+          "numberOfElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "number": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "reportId": {
+            "type": "string"
+          },
+          "searchAnd": {
+            "type": "string"
+          },
+          "searchOr": {
+            "type": "string"
+          },
+          "searchNot": {
+            "type": "string"
+          },
+          "searchPhrase": {
+            "type": "string"
+          },
+          "oberonRequestXML": {
+            "type": "string"
+          },
+          "oberonResponseXML": {
+            "type": "string"
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RowItem"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://ims-na1.adobelogin.com/ims/authorize/v2",
+            "tokenUrl": "https://ims-na1.adobelogin.com/ims/token/v3",
+            "scopes": {}
+          }
+        }
+      }
+    }
+  }
+}

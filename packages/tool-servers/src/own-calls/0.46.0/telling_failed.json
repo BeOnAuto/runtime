@@ -1,0 +1,21 @@
+{
+  "type": "telling_failed",
+  "data": {
+    "call_id": "call-1",
+    "detail": "The server failed the call",
+    "duration_ms": 120,
+    "jsonrpc_id": 4,
+    "server_request_id": null,
+    "because": "server_failure",
+    "result_bytes": 32,
+    "result_sha256": "a7b8c9"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "interaction",
+    "definitionName": "confirm-order",
+    "definitionVersion": 2
+  }
+}

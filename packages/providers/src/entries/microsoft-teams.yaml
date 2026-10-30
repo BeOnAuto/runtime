@@ -1,0 +1,22 @@
+name: microsoft-teams
+title: Microsoft Teams
+description: List the Microsoft Teams teams the person is in and their channels, send channel messages, list chats, and read and send chat messages, as the person who connects, through Microsoft Graph. It reads no channel's messages, whose scope always needs an administrator's consent.
+website: https://learn.microsoft.com/en-us/graph/auth-v2-user
+type: openapi
+document: documents/microsoft-teams.openapi.json
+request_id: request-id
+credentials:
+  - kind: authorization
+    issuer: https://login.microsoftonline.com/organizations/v2.0
+    authorization_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize
+    token_endpoint: https://login.microsoftonline.com/organizations/oauth2/v2.0/token
+    scope: Team.ReadBasic.All Channel.ReadBasic.All ChannelMessage.Send Chat.Read ChatMessage.Send offline_access
+    says:
+      Team.ReadBasic.All: Read the names and descriptions of teams in Microsoft Teams.
+      Channel.ReadBasic.All: Read the names and descriptions of channels in Microsoft Teams.
+      ChannelMessage.Send: Send channel messages in Microsoft Teams.
+      Chat.Read: Read the one-to-one and group chat messages of the person who connects in Microsoft Teams.
+      ChatMessage.Send: Send one-to-one and group chat messages in Microsoft Teams.
+      offline_access: Keep access to Microsoft Teams when nobody is signed in.
+    clients: [registered]
+    description: Sign in with your work account and allow access to your teams, channels and chats. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for chats.

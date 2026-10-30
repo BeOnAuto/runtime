@@ -1,0 +1,195 @@
+import { required } from '@on.auto/operations';
+import {
+  keptTokensIn,
+  type ConnectionServer,
+  type ConnectionTokens,
+  type ConnectionUnready,
+  type ConsentAuth,
+  type HeldTokens,
+  type KeptRow,
+  type SecretReadingFailure,
+  type TokensEnded,
+} from '@on.auto/tool-servers';
+import { DateTime, Effect, Option, type Context } from 'effect';
+
+import { consentAskedOf } from '../page/consent-asking.ts';
+import { placesNoValue, type Credential } from '../registry/credential.ts';
+import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
+import type { KeptConnection } from '../registry/registry.ts';
+import type { GivenValue } from './placed-credentials.ts';
+import type { LoggedCauses, Serving } from './serving-services.ts';
+import { servingWords } from './serving-words.ts';
+
+export type Given = Effect.Effect<GivenValue | undefined, ConnectionUnready>;
+
+type BrokenKind = NonNullable<KeptConnection['connection']['broken']>['kind'];
+
+const endedWords: Readonly<Record<TokensEnded, (name: string) => string>> = {
+  consent_ended: servingWords.consentEnded,
+  client_gone: servingWords.clientGone,
+  key_unknown: servingWords.keyUnknown,
+};
+
+export function notAllowed(detail: string): ConnectionUnready {
+  return { because: 'connection_not_allowed', detail };
+}
+
+export function connectedAtOf({ connected_at: connectedAt }: KeptConnection['connection']): string {
+  return Option.getOrThrow(Option.fromNullishOr(connectedAt));
+}
+
+function recordedBreak({ org, kept, services }: Serving, kind: BrokenKind, reason: string): Effect.Effect<void> {
+  const { id, name } = kept.connection;
+  const connectedAt = connectedAtOf(kept.connection);
+  return Effect.gen(function* () {
+    const at = DateTime.formatIso(yield* DateTime.now);
+    const breaking = {
+      type: 'break',
+      connection: id,
+      connected_at: connectedAt,
+      kind,
+      reason,
+      by: byTheRuntime,
+      at,
+    } as const;
+    yield* services.registry.execute(connectionsStreamOfOrg(org), registryDecider, breaking).pipe(
+      Effect.orDie,
+      Effect.catchCause((cause) => Effect.logError(servingWords.unrecorded(name), cause)),
+    );
+  });
+}
+
+function brokenWith(serving: Serving, kind: BrokenKind, reason: string): Effect.Effect<never, ConnectionUnready> {
+  const unready: ConnectionUnready = { because: 'connection_broken', detail: reason };
+  return Effect.andThen(recordedBreak(serving, kind, reason), Effect.fail(unready));
+}
+
+function refusedWordsOf({ kind, variable }: Credential): string {
+  if (kind === 'none') {
+    return servingWords.noneRefused;
+  }
+  return kind === 'reference' ? servingWords.referenceRefused(required(variable)) : servingWords.keyRefused;
+}
+
+export function credentialRefusedOf(serving: Serving, context: Context.Context<never>): ConnectionServer['refused'] {
+  const { credential } = serving.kept.connection;
+  const reason = refusedWordsOf(credential);
+  const kind = credential.kind === 'none' ? 'credential_wanted' : 'credential_refused';
+  return Effect.provideContext(Effect.as(recordedBreak(serving, kind, reason), reason), context);
+}
+
+export function loggedCauses(): LoggedCauses {
+  const lastLogged = new Map<string, string>();
+  return {
+    isNew: (connection, cause) => {
+      const isNew = lastLogged.get(connection) !== cause;
+      lastLogged.set(connection, cause);
+      return isNew;
+    },
+    forget: (connection) => {
+      lastLogged.delete(connection);
+    },
+  };
+}
+
+function causeOf({ _tag, kid = '' }: SecretReadingFailure): string {
+  return `${_tag} ${kid}`;
+}
+
+function unavailableNow(
+  { org, kept, unreadable }: Serving,
+  failure: SecretReadingFailure,
+): Effect.Effect<never, ConnectionUnready> {
+  const { id, name } = kept.connection;
+  const unready: ConnectionUnready = {
+    because: 'connection_unavailable',
+    detail: servingWords.unreadableNow(name, failure.detail),
+  };
+  const loggedOnce = Effect.suspend(() =>
+    unreadable.isNew(id, causeOf(failure))
+      ? Effect.logWarning(unready.detail).pipe(Effect.annotateLogs({ org, connection: id }))
+      : Effect.void,
+  );
+  return Effect.andThen(loggedOnce, Effect.fail(unready));
+}
+
+function readNow({ kept, unreadable }: Serving, stored: KeptRow): Effect.Effect<KeptRow> {
+  return Effect.sync(() => {
+    unreadable.forget(kept.connection.id);
+    return stored;
+  });
+}
+
+function keptSecretOf(serving: Serving): Effect.Effect<KeptRow, ConnectionUnready> {
+  const { name } = serving.kept.connection;
+  return serving.services.secrets.read(required(serving.kept.secretId)).pipe(
+    Effect.matchEffect({
+      onFailure: (failure) => unavailableNow(serving, failure),
+      onSuccess: (stored) =>
+        stored === undefined
+          ? brokenWith(serving, 'credential_gone', servingWords.gone(name))
+          : readNow(serving, stored),
+    }),
+  );
+}
+
+function referencedOf({ kept, services }: Serving): Given {
+  const { credential, name } = kept.connection;
+  const variable = required(credential.variable);
+  const value = services.variables.get(variable);
+  return value === undefined
+    ? Effect.fail(notAllowed(servingWords.unset(name, variable)))
+    : Effect.succeed({ value, algorithm: undefined });
+}
+
+export function givenOf(serving: Serving): Given {
+  const { kind } = serving.kept.connection.credential;
+  if (placesNoValue(kind)) {
+    return Effect.undefined;
+  }
+  return kind === 'reference'
+    ? referencedOf(serving)
+    : Effect.map(keptSecretOf(serving), ({ value }) => ({ value, algorithm: serving.kept.algorithm }));
+}
+
+function heldTokensOf(serving: Serving): Effect.Effect<HeldTokens, ConnectionUnready> {
+  const { name } = serving.kept.connection;
+  return Effect.flatMap(keptSecretOf(serving), ({ value, version, claimedUntil }) =>
+    Option.match(keptTokensIn(value), {
+      onNone: () => brokenWith(serving, 'credential_not_tokens', servingWords.notTokens(name)),
+      onSome: (tokens) => Effect.succeed({ tokens, version, claimedUntil }),
+    }),
+  );
+}
+
+function tokensOfTheRow(serving: Serving, context: Context.Context<never>): ConnectionTokens {
+  const secretId = required(serving.kept.secretId);
+  const { secrets } = serving.services;
+  const { name } = serving.kept.connection;
+  return {
+    read: Effect.provideContext(heldTokensOf(serving), context),
+    replace: (version, value) => Effect.provideContext(secrets.replace(secretId, version, value), context),
+    claim: (version, lastingMs) => Effect.provideContext(secrets.claim(secretId, version, lastingMs), context),
+    broken: (ended) => Effect.provideContext(brokenWith(serving, ended, endedWords[ended](name)), context),
+  };
+}
+
+export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | undefined, ConnectionUnready> {
+  const { connection } = serving.kept;
+  const { credential } = connection;
+  if (credential.kind !== 'authorization') {
+    return Effect.undefined;
+  }
+  return Effect.gen(function* () {
+    const held = yield* heldTokensOf(serving);
+    const context = yield* Effect.context();
+    const asked = consentAskedOf(connection, serving.services);
+    const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+    return {
+      issuer: asked.way.issuer,
+      client_id: client.client_id,
+      scope: connection.granted_scope,
+      credential: { kind: 'consent', ...asked, client, held, tokens: tokensOfTheRow(serving, context) },
+    };
+  });
+}

@@ -1,0 +1,17 @@
+name: gmail
+title: Gmail
+description: Search and read Gmail threads and their messages, and list drafts and labels. It drafts, labels and sends no mail, since it asks the scope that reads alone. Google classifies its scope, gmail.readonly, as restricted.
+website: https://developers.google.com/workspace/gmail/api/reference/rest
+type: openapi
+document: documents/gmail.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/gmail.readonly
+    says:
+      https://www.googleapis.com/auth/gmail.readonly: Read Gmail messages, threads, drafts, labels and settings.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Gmail.

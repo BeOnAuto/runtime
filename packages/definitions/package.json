@@ -1,0 +1,44 @@
+{
+  "name": "@on.auto/definitions",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./check": "./src/check.ts",
+    "./check-handler": "./src/program-check/handed-checks.ts",
+    "./document": "./src/document.ts",
+    "./template": "./src/template.ts",
+    "./testing": "./src/testing/index.ts",
+    "./value-checks": "./src/checking/value-checks.ts"
+  },
+  "scripts": {
+    "measure:checks": "node measure/measure-checks.ts",
+    "measure:loads": "node measure/measure-loads.ts",
+    "measure:outcomes": "node measure/measure-outcomes.ts",
+    "sandbox-lib": "node write-sandbox-lib.ts",
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@on.auto/json-schema": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/tool-servers": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
+    "effect": "catalog:",
+    "liquidjs": "10.30.0",
+    "ts-blank-space": "0.9.0",
+    "typescript6": "npm:typescript@6.0.3",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@on.auto/ledger": "workspace:*",
+    "@on.auto/playbooks": "workspace:*",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "catalog:",
+    "pg": "8.23.1",
+    "vitest": "catalog:"
+  }
+}

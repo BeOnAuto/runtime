@@ -1,0 +1,15 @@
+{
+  "type": "tool_call_failed",
+  "data": {
+    "because": "timed_out",
+    "detail": "The server did not answer within 30 s",
+    "duration_ms": 30000,
+    "jsonrpc_id": "request-2",
+    "server_request_id": null,
+    "rate_limited": true
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

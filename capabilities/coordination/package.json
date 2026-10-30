@@ -1,0 +1,37 @@
+{
+  "name": "@on.auto/coordination",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@hyperjump/json-schema": "1.18.0",
+    "@hyperjump/json-schema-formats": "1.1.0",
+    "@on.auto/config": "workspace:*",
+    "@on.auto/definitions": "workspace:*",
+    "@on.auto/json-schema": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
+    "@on.auto/workflow-host": "workspace:*",
+    "@openworkflowspec/sdk": "1.0.3-alpha8",
+    "effect": "catalog:",
+    "semver": "7.8.5",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@on.auto/prediction": "workspace:*",
+    "@on.auto/reasoning": "workspace:*",
+    "@on.auto/tool-servers": "workspace:*",
+    "@types/semver": "7.8.0",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

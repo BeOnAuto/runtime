@@ -1,0 +1,30 @@
+{
+  "name": "@on.auto/interaction",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@on.auto/definitions": "workspace:*",
+    "@on.auto/json-schema": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/tool-servers": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
+    "effect": "catalog:",
+    "liquidjs": "10.30.0"
+  },
+  "devDependencies": {
+    "@on.auto/ledger": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

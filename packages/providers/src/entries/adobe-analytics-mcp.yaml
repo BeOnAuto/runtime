@@ -1,0 +1,16 @@
+name: adobe-analytics-mcp
+title: Adobe Analytics MCP
+description: Ask Adobe Analytics about report suites, dimensions, metrics and reports through Adobe's Analytics MCP server, with the access the product profile of the person who connects gives. The connection ends with its sign-in, which issues no refresh token.
+website: https://developer.adobe.com/analytics-mcp/docs/guides/
+type: mcp
+url: https://aa-mcp.adobe.io/mcp
+credentials:
+  - kind: authorization
+    issuer: https://aa-mcp.adobe.io
+    scope: openid AdobeID additional_info.projectedProductContext
+    says:
+      openid: Read the unique identifier of the Adobe account the connection signs in as.
+      AdobeID: Act as the Adobe ID of the account in calls to Adobe APIs.
+      additional_info.projectedProductContext: Read the Adobe product profiles and Adobe Analytics permissions of the account.
+    clients: [registered, dynamic]
+    description: Sign in with your Adobe ID and allow the Analytics MCP server.

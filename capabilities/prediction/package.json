@@ -1,0 +1,36 @@
+{
+  "name": "@on.auto/prediction",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage",
+    "measure": "node measure.ts",
+    "measure:models": "node measure-models.ts"
+  },
+  "dependencies": {
+    "@on.auto/definitions": "workspace:*",
+    "@on.auto/json-schema": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/prediction-contract": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
+    "@on.auto/workflow-host": "workspace:*",
+    "effect": "catalog:",
+    "liquidjs": "10.30.0"
+  },
+  "devDependencies": {
+    "@on.auto/interaction": "workspace:*",
+    "@on.auto/ledger": "workspace:*",
+    "@types/pg": "8.23.1",
+    "@vitest/coverage-v8": "catalog:",
+    "pg": "8.23.1",
+    "vitest": "catalog:"
+  }
+}

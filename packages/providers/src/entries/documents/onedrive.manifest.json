@@ -1,0 +1,29 @@
+{
+  "type": "openapi",
+  "sources": ["https://raw.githubusercontent.com/microsoftgraph/msgraph-metadata/master/openapi/v1.0/openapi.yaml"],
+  "authorization_server": "https://login.microsoftonline.com/organizations/v2.0/.well-known/openid-configuration",
+  "info": {
+    "title": "OneDrive, SharePoint and Excel over Microsoft Graph",
+    "version": "v1.0",
+    "description": "Twelve operations of Microsoft Graph v1.0 on the drives, the files, the Excel workbooks and the SharePoint sites the person who connected reaches, translated from Microsoft's OpenAPI description, which names no permission for any operation, with an oauth2 scheme at the endpoints of Microsoft's authorization server for work accounts. Each operation says only that it answers, since Microsoft's answers reach most of the schemas of Microsoft Graph."
+  },
+  "operations": [
+    "me.GetDrive",
+    "drives.drive.search",
+    "drives.items.ListChildren",
+    "drives.GetItems",
+    "drives.items.workbook.ListWorksheets",
+    "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.range-b0fa",
+    "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.usedRange-5ff6",
+    "drives.items.workbook.ListTables",
+    "drives.items.workbook.tables.ListRows",
+    "sites.ListDrives",
+    "drives.drive.items.driveItem.workbook.worksheets.add",
+    "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add"
+  ],
+  "scheme": {
+    "name": "microsoft_graph_oauth",
+    "lists_no_scopes": "Microsoft's OpenAPI description names no permission for any operation, and its permissions reference names those of each, which the entry's way of consent asks"
+  },
+  "keeps_responses": false
+}

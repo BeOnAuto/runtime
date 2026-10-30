@@ -1,0 +1,84 @@
+{
+  "type": "input_applied",
+  "data": {
+    "type": "input_applied",
+    "format": 10,
+    "receipt": {
+      "kind": "call_answered",
+      "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000316\",\"/do/1/second\",3]",
+      "at": 1790845380200,
+      "status": "succeeded"
+    },
+    "steps": [
+      {
+        "reference": "/do/1/second",
+        "run": 1,
+        "outcome": "completed",
+        "name": "second",
+        "times": 1,
+        "caused_by": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "outcome": "waiting",
+          "times": 5
+        }
+      }
+    ],
+    "resumed": {
+      "reference": "/do/1/second",
+      "run": 1,
+      "times": 5
+    },
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/status",
+        "value": "ended"
+      },
+      {
+        "op": "replace",
+        "path": "/inputs",
+        "value": 7
+      },
+      {
+        "op": "remove",
+        "path": "/timers/armed/1"
+      },
+      {
+        "op": "replace",
+        "path": "/outcome",
+        "value": {
+          "kind": "completed",
+          "output": {
+            "summary": "tally of {}"
+          }
+        }
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "cancel_timer",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000316",
+        "timerId": "1"
+      },
+      {
+        "kind": "settle",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000316",
+        "settlement": {
+          "status": "succeeded",
+          "output": {
+            "summary": "tally of {}"
+          }
+        }
+      }
+    ]
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000316",
+    "definitionType": "workflow",
+    "definitionName": "tally",
+    "definitionVersion": 1
+  }
+}

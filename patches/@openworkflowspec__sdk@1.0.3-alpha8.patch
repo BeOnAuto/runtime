@@ -1,0 +1,168 @@
+diff --git a/index.cjs b/index.cjs
+index eb819cf54dc60177b8b9e3900df9386b4fe82338..31bdbac58cb481f7115ee0178b09ad7f30a7f166 100644
+--- a/index.cjs
++++ b/index.cjs
+@@ -4470,20 +4470,32 @@ var DslValidationError = class DslValidationError extends WorkflowValidationErro
+ };
+ //#endregion
+ //#region src/lib/validation.ts
+-const ajv = new ajv_dist_2020_js.default({
+-	schemas: [workflow_default],
+-	strict: false
+-});
+-(0, ajv_formats.default)(ajv);
++let ajv;
++const getAjv = () => {
++	if (!ajv) {
++		ajv = new ajv_dist_2020_js.default({
++			schemas: [workflow_default],
++			strict: false
++		});
++		(0, ajv_formats.default)(ajv);
++	}
++	return ajv;
++};
+ /**
+ * A Map of validation functions, where the key is the name of the schema to validate with
+ */
+-const validators = new Map(Object.entries(validationPointers).map(([typeName, jsonPointer]) => {
++const validators = new Map();
++const getValidator = (typeName) => {
++	const compiled = validators.get(typeName);
++	if (compiled) return compiled;
++	if (!Object.hasOwn(validationPointers, typeName)) throw new Error(`Unable to find a validation function for '${typeName}'`);
++	const jsonPointer = validationPointers[typeName];
+ 	if (!jsonPointer) throw new Error(`No JSON pointer provided for type '${typeName}'`);
+-	const validate = ajv.getSchema(jsonPointer);
++	const validate = getAjv().getSchema(jsonPointer);
+ 	if (!validate) throw new Error(`Unable to find schema '${jsonPointer}' for type '${typeName}'`);
+-	return [typeName, validate];
+-}));
++	validators.set(typeName, validate);
++	return validate;
++};
+ /**
+ * Renders a JSON Pointer for display in an error message, labelling the root explicitly.
+ * @param path The RFC 6901 JSON Pointer ('' for the root)
+@@ -4498,8 +4510,7 @@ const displayPath = (path) => path === "" ? "<root>" : path;
+ * @param data The data to validate
+ */
+ const validateSchema = (typeName, data) => {
+-	const validateFn = validators.get(typeName);
+-	if (!validateFn) throw new Error(`Unable to find a validation function for '${typeName}'`);
++	const validateFn = getValidator(typeName);
+ 	if (!validateFn(deepCopy(data))) {
+ 		const schemaErrors = validateFn.errors ?? [];
+ 		throw new SchemaValidationError(`'${typeName}' is invalid:
+diff --git a/index.mjs b/index.mjs
+index 1a8d0ffc3126c1d2e2bc05916fa0ce297020647b..73b0ea5803fdd2f45f022502044422365ccd112c 100644
+--- a/index.mjs
++++ b/index.mjs
+@@ -4435,20 +4435,32 @@ var DslValidationError = class DslValidationError extends WorkflowValidationErro
+ };
+ //#endregion
+ //#region src/lib/validation.ts
+-const ajv = new Ajv({
+-	schemas: [workflow_default],
+-	strict: false
+-});
+-addFormats(ajv);
++let ajv;
++const getAjv = () => {
++	if (!ajv) {
++		ajv = new Ajv({
++			schemas: [workflow_default],
++			strict: false
++		});
++		addFormats(ajv);
++	}
++	return ajv;
++};
+ /**
+ * A Map of validation functions, where the key is the name of the schema to validate with
+ */
+-const validators = new Map(Object.entries(validationPointers).map(([typeName, jsonPointer]) => {
++const validators = new Map();
++const getValidator = (typeName) => {
++	const compiled = validators.get(typeName);
++	if (compiled) return compiled;
++	if (!Object.hasOwn(validationPointers, typeName)) throw new Error(`Unable to find a validation function for '${typeName}'`);
++	const jsonPointer = validationPointers[typeName];
+ 	if (!jsonPointer) throw new Error(`No JSON pointer provided for type '${typeName}'`);
+-	const validate = ajv.getSchema(jsonPointer);
++	const validate = getAjv().getSchema(jsonPointer);
+ 	if (!validate) throw new Error(`Unable to find schema '${jsonPointer}' for type '${typeName}'`);
+-	return [typeName, validate];
+-}));
++	validators.set(typeName, validate);
++	return validate;
++};
+ /**
+ * Renders a JSON Pointer for display in an error message, labelling the root explicitly.
+ * @param path The RFC 6901 JSON Pointer ('' for the root)
+@@ -4463,8 +4475,7 @@ const displayPath = (path) => path === "" ? "<root>" : path;
+ * @param data The data to validate
+ */
+ const validateSchema = (typeName, data) => {
+-	const validateFn = validators.get(typeName);
+-	if (!validateFn) throw new Error(`Unable to find a validation function for '${typeName}'`);
++	const validateFn = getValidator(typeName);
+ 	if (!validateFn(deepCopy(data))) {
+ 		const schemaErrors = validateFn.errors ?? [];
+ 		throw new SchemaValidationError(`'${typeName}' is invalid:
+diff --git a/index.umd.js b/index.umd.js
+index 296a78e6a456684bfbaa90aa2da241619587806c..5a1ac55812616ff2e43fdffc643a72797bc1bd7c 100644
+--- a/index.umd.js
++++ b/index.umd.js
+@@ -12240,20 +12240,32 @@
+ 	//#region src/lib/validation.ts
+ 	var import__2020 = /* @__PURE__ */ __toESM(require__2020());
+ 	var import_dist = /* @__PURE__ */ __toESM(require_dist());
+-	const ajv = new import__2020.default({
+-		schemas: [workflow_default],
+-		strict: false
+-	});
+-	(0, import_dist.default)(ajv);
++	let ajv;
++	const getAjv = () => {
++		if (!ajv) {
++			ajv = new import__2020.default({
++				schemas: [workflow_default],
++				strict: false
++			});
++			(0, import_dist.default)(ajv);
++		}
++		return ajv;
++	};
+ 	/**
+ 	* A Map of validation functions, where the key is the name of the schema to validate with
+ 	*/
+-	const validators = new Map(Object.entries(validationPointers).map(([typeName, jsonPointer]) => {
++	const validators = new Map();
++	const getValidator = (typeName) => {
++		const compiled = validators.get(typeName);
++		if (compiled) return compiled;
++		if (!Object.hasOwn(validationPointers, typeName)) throw new Error(`Unable to find a validation function for '${typeName}'`);
++		const jsonPointer = validationPointers[typeName];
+ 		if (!jsonPointer) throw new Error(`No JSON pointer provided for type '${typeName}'`);
+-		const validate = ajv.getSchema(jsonPointer);
++		const validate = getAjv().getSchema(jsonPointer);
+ 		if (!validate) throw new Error(`Unable to find schema '${jsonPointer}' for type '${typeName}'`);
+-		return [typeName, validate];
+-	}));
++		validators.set(typeName, validate);
++		return validate;
++	};
+ 	/**
+ 	* Renders a JSON Pointer for display in an error message, labelling the root explicitly.
+ 	* @param path The RFC 6901 JSON Pointer ('' for the root)
+@@ -12268,8 +12280,7 @@
+ 	* @param data The data to validate
+ 	*/
+ 	const validateSchema = (typeName, data) => {
+-		const validateFn = validators.get(typeName);
+-		if (!validateFn) throw new Error(`Unable to find a validation function for '${typeName}'`);
++		const validateFn = getValidator(typeName);
+ 		if (!validateFn(deepCopy(data))) {
+ 			const schemaErrors = validateFn.errors ?? [];
+ 			throw new SchemaValidationError(`'${typeName}' is invalid:

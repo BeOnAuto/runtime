@@ -1,0 +1,17 @@
+name: display-video-360
+title: Display & Video 360
+description: Read Display & Video 360 partners, advertisers, campaigns, insertion orders, line items, ad groups and creatives, and change campaigns, insertion orders and line items.
+website: https://developers.google.com/display-video/api/guides/quickstart/overview
+type: openapi
+document: documents/display-video-360.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/display-video
+    says:
+      https://www.googleapis.com/auth/display-video: See, create, change and permanently delete Display & Video 360 entities and reports.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Display & Video 360.

@@ -1,0 +1,19 @@
+{
+  "type": "candidates_fitted",
+  "data": {
+    "runtime": {
+      "name": "onnx",
+      "version": "1.23.0"
+    },
+    "candidates": ["b1c2d3"],
+    "detail": "One candidate was fitted"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

@@ -1,0 +1,3 @@
+openapi-3.1-schema-2022-10-07.json is the published schema of OpenAPI 3.1 documents, fetched on 2026-10-13
+from https://spec.openapis.org/oas/3.1/schema/2022-10-07 and kept byte for byte: 33,992 bytes, SHA-256
+da01ba28852cac0de53893797cb8d1942bc3b05084f526dcc216717dec314ed0. The formatter leaves it as published.

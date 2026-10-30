@@ -1,0 +1,25 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/BeOnAuto/runtime/blob/main/packages/server/container.vex.json",
+  "author": "BeOnAuto/runtime",
+  "timestamp": "2026-10-13T16:13:18Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": { "name": "CVE-2026-85091" },
+      "timestamp": "2026-10-13T16:13:18Z",
+      "products": [{ "@id": "pkg:docker/onauto/runtime" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "The overflow is in gz_vacate(), which zlib added in 1.3.1.2. The image's zlib1g is Debian 13's zlib 1.3.1, which has no gz_vacate(). Node links its own zlib, not the system one."
+    },
+    {
+      "vulnerability": { "name": "CVE-2025-45582" },
+      "timestamp": "2026-10-13T16:13:18Z",
+      "products": [{ "@id": "pkg:docker/onauto/runtime" }],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The overwrite needs tar to extract two archives into the same directory. The runtime never runs tar; the image keeps it because Debian marks it essential."
+    }
+  ]
+}

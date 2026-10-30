@@ -1,0 +1,20 @@
+{
+  "type": "allocation_received",
+  "data": {
+    "id": "allocation-1",
+    "installation": "installation-1",
+    "credits": 200,
+    "issued_at": "2026-10-29T10:00:00.000Z",
+    "refresh_by": "2026-10-30T10:00:00.000Z",
+    "actions": 140,
+    "allocation": {
+      "payload": "eyJ2IjoyfQ",
+      "signature": "c2lnbmVk",
+      "kid": "auto-2026-10"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

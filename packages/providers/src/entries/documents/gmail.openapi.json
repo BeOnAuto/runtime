@@ -1,0 +1,911 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Gmail API",
+    "version": "v1",
+    "description": "The Gmail API lets you view and manage Gmail mailbox data like threads, messages, and labels."
+  },
+  "externalDocs": {
+    "url": "https://developers.google.com/workspace/gmail/api/"
+  },
+  "servers": [
+    {
+      "url": "https://gmail.googleapis.com"
+    }
+  ],
+  "security": [
+    {
+      "oauth2": []
+    }
+  ],
+  "paths": {
+    "/gmail/v1/users/{userId}/threads": {
+      "get": {
+        "operationId": "gmail.users.threads.list",
+        "description": "Lists the threads in the user's mailbox. For more information, see [Manage threads](https://developers.google.com/workspace/gmail/api/guides/threads).",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "The user's email address. The special value `me` can be used to indicate the authenticated user.",
+            "schema": {
+              "default": "me",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeSpamTrash",
+            "in": "query",
+            "description": "Include threads from `SPAM` and `TRASH` in the results.",
+            "schema": {
+              "default": "false",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "labelIds",
+            "in": "query",
+            "description": "Only return threads with labels that match all of the specified label IDs.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "maxResults",
+            "in": "query",
+            "description": "Maximum number of threads to return. This field defaults to 100. The maximum allowed value for this field is 500.",
+            "schema": {
+              "default": "100",
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "description": "Page token to retrieve a specific page of results in the list.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Only return threads matching the specified query. Supports the same query format as the Gmail search box. For example, `\"from:someuser@example.com rfc822msgid: is:unread\"`. Parameter cannot be used when accessing the api using the gmail.metadata scope.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ListThreadsResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListThreadsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://mail.google.com/"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.metadata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.modify"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.readonly"]
+          }
+        ]
+      }
+    },
+    "/gmail/v1/users/{userId}/threads/{id}": {
+      "get": {
+        "operationId": "gmail.users.threads.get",
+        "description": "Gets the specified thread. For more information, see [Manage threads](https://developers.google.com/workspace/gmail/api/guides/threads).",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "The user's email address. The special value `me` can be used to indicate the authenticated user.",
+            "schema": {
+              "default": "me",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the thread to retrieve.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "The format to return the messages in.",
+            "schema": {
+              "default": "full",
+              "enum": ["full", "metadata", "minimal"],
+              "type": "string"
+            }
+          },
+          {
+            "name": "metadataHeaders",
+            "in": "query",
+            "description": "When given and format is METADATA, only include headers specified.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "Thread",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Thread"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://mail.google.com/"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.addons.current.message.action"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.addons.current.message.metadata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.addons.current.message.readonly"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.metadata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.modify"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.readonly"]
+          }
+        ]
+      }
+    },
+    "/gmail/v1/users/{userId}/messages": {
+      "get": {
+        "operationId": "gmail.users.messages.list",
+        "description": "Lists the messages in the user's mailbox. For more information, see [List Gmail messages](https://developers.google.com/workspace/gmail/api/guides/list-messages).",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "The user's email address. The special value `me` can be used to indicate the authenticated user.",
+            "schema": {
+              "default": "me",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeSpamTrash",
+            "in": "query",
+            "description": "Include messages from `SPAM` and `TRASH` in the results.",
+            "schema": {
+              "default": "false",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "labelIds",
+            "in": "query",
+            "description": "Only return messages with labels that match all of the specified label IDs. Messages in a thread might have labels that other messages in the same thread don't have. To learn more, see [Manage labels on messages and threads](https://developers.google.com/workspace/gmail/api/guides/labels#manage_labels_on_messages_threads).",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "maxResults",
+            "in": "query",
+            "description": "Maximum number of messages to return. This field defaults to 100. The maximum allowed value for this field is 500.",
+            "schema": {
+              "default": "100",
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "description": "Page token to retrieve a specific page of results in the list.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Only return messages matching the specified query. Supports the same query format as the Gmail search box. For example, `\"from:someuser@example.com rfc822msgid: is:unread\"`. Parameter cannot be used when accessing the api using the gmail.metadata scope.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ListMessagesResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListMessagesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://mail.google.com/"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.metadata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.modify"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.readonly"]
+          }
+        ]
+      }
+    },
+    "/gmail/v1/users/{userId}/messages/{id}": {
+      "get": {
+        "operationId": "gmail.users.messages.get",
+        "description": "Gets the specified message.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "The user's email address. The special value `me` can be used to indicate the authenticated user.",
+            "schema": {
+              "default": "me",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The ID of the message to retrieve. This ID is usually retrieved using `messages.list`. The ID is also contained in the result when a message is inserted (`messages.insert`) or imported (`messages.import`).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "The format to return the message in.",
+            "schema": {
+              "default": "full",
+              "enum": ["minimal", "full", "raw", "metadata"],
+              "type": "string"
+            }
+          },
+          {
+            "name": "metadataHeaders",
+            "in": "query",
+            "description": "When given and format is `METADATA`, only include headers specified.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "Message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://mail.google.com/"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.addons.current.message.action"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.addons.current.message.metadata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.addons.current.message.readonly"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.metadata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.modify"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.readonly"]
+          }
+        ]
+      }
+    },
+    "/gmail/v1/users/{userId}/drafts": {
+      "get": {
+        "operationId": "gmail.users.drafts.list",
+        "description": "Lists the drafts in the user's mailbox. For more information, see [Create and send draft emails](https://developers.google.com/workspace/gmail/api/guides/drafts).",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "The user's email address. The special value `me` can be used to indicate the authenticated user.",
+            "schema": {
+              "default": "me",
+              "type": "string"
+            }
+          },
+          {
+            "name": "includeSpamTrash",
+            "in": "query",
+            "description": "Include drafts from `SPAM` and `TRASH` in the results.",
+            "schema": {
+              "default": "false",
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "maxResults",
+            "in": "query",
+            "description": "Maximum number of drafts to return. This field defaults to 100. The maximum allowed value for this field is 500.",
+            "schema": {
+              "default": "100",
+              "format": "uint32",
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "description": "Page token to retrieve a specific page of results in the list.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Only return draft messages matching the specified query. Supports the same query format as the Gmail search box. For example, `\"from:someuser@example.com rfc822msgid: is:unread\"`.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ListDraftsResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListDraftsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://mail.google.com/"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.compose"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.modify"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.readonly"]
+          }
+        ]
+      }
+    },
+    "/gmail/v1/users/{userId}/labels": {
+      "get": {
+        "operationId": "gmail.users.labels.list",
+        "description": "Lists all labels in the user's mailbox. For more information, see [Manage labels](https://developers.google.com/workspace/gmail/api/guides/labels).",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "description": "The user's email address. The special value `me` can be used to indicate the authenticated user.",
+            "schema": {
+              "default": "me",
+              "type": "string"
+            }
+          },
+          {
+            "name": "fields",
+            "in": "query",
+            "description": "Selector specifying which fields to include in a partial response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "2XX": {
+            "description": "ListLabelsResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListLabelsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "oauth2": ["https://mail.google.com/"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.labels"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.metadata"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.modify"]
+          },
+          {
+            "oauth2": ["https://www.googleapis.com/auth/gmail.readonly"]
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClassificationLabelFieldValue": {
+        "description": "Field values for a classification label.",
+        "properties": {
+          "fieldId": {
+            "description": "Required. The field ID for the Classification Label Value. Maps to the ID field of the Google Drive `Label.Field` object.",
+            "type": "string"
+          },
+          "selection": {
+            "description": "Selection choice ID for the selection option. Should only be set if the field type is `SELECTION` in the Google Drive `Label.Field` object. Maps to the id field of the Google Drive `Label.Field.SelectionOptions` resource.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ClassificationLabelValue": {
+        "description": "Classification Labels applied to the email message. Classification Labels are different from Gmail inbox labels. Only used for Google Workspace accounts. [Learn more about classification labels](https://support.google.com/a/answer/9292382).",
+        "properties": {
+          "fields": {
+            "description": "Field values for the given classification label ID.",
+            "items": {
+              "$ref": "#/components/schemas/ClassificationLabelFieldValue"
+            },
+            "type": "array"
+          },
+          "labelId": {
+            "description": "Required. The canonical or raw alphanumeric classification label ID. Maps to the ID field of the Google Drive Label resource.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Draft": {
+        "description": "A draft email in the user's mailbox.",
+        "properties": {
+          "id": {
+            "description": "The immutable ID of the draft.",
+            "type": "string"
+          },
+          "message": {
+            "$ref": "#/components/schemas/Message",
+            "description": "The message content of the draft."
+          }
+        },
+        "type": "object"
+      },
+      "Label": {
+        "description": "Labels are used to categorize messages and threads within the user's mailbox. The maximum number of labels supported for a user's mailbox is 10,000.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/LabelColor",
+            "description": "The color to assign to the label. Color is only available for labels that have their `type` set to `user`."
+          },
+          "id": {
+            "description": "The immutable ID of the label.",
+            "type": "string"
+          },
+          "labelListVisibility": {
+            "description": "The visibility of the label in the label list in the Gmail web interface.",
+            "enum": ["labelShow", "labelShowIfUnread", "labelHide"],
+            "type": "string"
+          },
+          "messageListVisibility": {
+            "description": "The visibility of messages with this label in the message list in the Gmail web interface.",
+            "enum": ["show", "hide"],
+            "type": "string"
+          },
+          "messagesTotal": {
+            "description": "The total number of messages with the label.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "messagesUnread": {
+            "description": "The number of unread messages with the label.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The display name of the label.",
+            "type": "string"
+          },
+          "threadsTotal": {
+            "description": "The total number of threads with the label.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "threadsUnread": {
+            "description": "The number of unread threads with the label.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "type": {
+            "description": "The owner type for the label. User labels are created by the user and can be modified and deleted by the user and can be applied to any message or thread. System labels are internally created and cannot be added, modified, or deleted. System labels may be able to be applied to or removed from messages and threads under some circumstances but this is not guaranteed. For example, users can apply and remove the `INBOX` and `UNREAD` labels from messages and threads, but cannot apply or remove the `DRAFTS` or `SENT` labels from messages or threads.",
+            "enum": ["system", "user"],
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "LabelColor": {
+        "properties": {
+          "backgroundColor": {
+            "description": "The background color represented as hex string #RRGGBB (ex #000000). This field is required in order to set the color of a label. Only the following predefined set of color values are allowed: \\#000000, #434343, #666666, #999999, #cccccc, #efefef, #f3f3f3, #ffffff, \\#fb4c2f, #ffad47, #fad165, #16a766, #43d692, #4a86e8, #a479e2, #f691b3, \\#f6c5be, #ffe6c7, #fef1d1, #b9e4d0, #c6f3de, #c9daf8, #e4d7f5, #fcdee8, \\#efa093, #ffd6a2, #fce8b3, #89d3b2, #a0eac9, #a4c2f4, #d0bcf1, #fbc8d9, \\#e66550, #ffbc6b, #fcda83, #44b984, #68dfa9, #6d9eeb, #b694e8, #f7a7c0, \\#cc3a21, #eaa041, #f2c960, #149e60, #3dc789, #3c78d8, #8e63ce, #e07798, \\#ac2b16, #cf8933, #d5ae49, #0b804b, #2a9c68, #285bac, #653e9b, #b65775, \\#822111, #a46a21, #aa8831, #076239, #1a764d, #1c4587, #41236d, #83334c, \\#464646, #e7e7e7, #0d3472, #b6cff5, #0d3b44, #98d7e4, #3d188e, #e3d7ff, \\#711a36, #fbd3e0, #8a1c0a, #f2b2a8, #7a2e0b, #ffc8af, #7a4706, #ffdeb5, \\#594c05, #fbe983, #684e07, #fdedc1, #0b4f30, #b3efd3, #04502e, #a2dcc1, \\#c2c2c2, #4986e7, #2da2bb, #b99aff, #994a64, #f691b2, #ff7537, #ffad46, \\#662e37, #ebdbde, #cca6ac, #094228, #42d692, #16a765, #757575, #1e53b8, \\#007286, #7858c3, #c2185b, #d93025, #54240e, #633e04, #521d28, #202124, \\#083018",
+            "type": "string"
+          },
+          "textColor": {
+            "description": "The text color of the label, represented as hex string. This field is required in order to set the color of a label. Only the following predefined set of color values are allowed: \\#000000, #434343, #666666, #999999, #cccccc, #efefef, #f3f3f3, #ffffff, \\#fb4c2f, #ffad47, #fad165, #16a766, #43d692, #4a86e8, #a479e2, #f691b3, \\#f6c5be, #ffe6c7, #fef1d1, #b9e4d0, #c6f3de, #c9daf8, #e4d7f5, #fcdee8, \\#efa093, #ffd6a2, #fce8b3, #89d3b2, #a0eac9, #a4c2f4, #d0bcf1, #fbc8d9, \\#e66550, #ffbc6b, #fcda83, #44b984, #68dfa9, #6d9eeb, #b694e8, #f7a7c0, \\#cc3a21, #eaa041, #f2c960, #149e60, #3dc789, #3c78d8, #8e63ce, #e07798, \\#ac2b16, #cf8933, #d5ae49, #0b804b, #2a9c68, #285bac, #653e9b, #b65775, \\#822111, #a46a21, #aa8831, #076239, #1a764d, #1c4587, #41236d, #83334c, \\#464646, #e7e7e7, #0d3472, #b6cff5, #0d3b44, #98d7e4, #3d188e, #e3d7ff, \\#711a36, #fbd3e0, #8a1c0a, #f2b2a8, #7a2e0b, #ffc8af, #7a4706, #ffdeb5, \\#594c05, #fbe983, #684e07, #fdedc1, #0b4f30, #b3efd3, #04502e, #a2dcc1, \\#c2c2c2, #4986e7, #2da2bb, #b99aff, #994a64, #f691b2, #ff7537, #ffad46, \\#662e37, #ebdbde, #cca6ac, #094228, #42d692, #16a765, #757575, #1e53b8, \\#007286, #7858c3, #c2185b, #d93025, #54240e, #633e04, #521d28, #202124, \\#083018",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ListDraftsResponse": {
+        "properties": {
+          "drafts": {
+            "description": "List of drafts. Note that the `Message` property in each `Draft` resource only contains an `id` and a `threadId`. The [`messages.get`](https://developers.google.com/workspace/gmail/api/v1/reference/users/messages/get) method can fetch additional message details.",
+            "items": {
+              "$ref": "#/components/schemas/Draft"
+            },
+            "type": "array"
+          },
+          "nextPageToken": {
+            "description": "Token to retrieve the next page of results in the list.",
+            "type": "string"
+          },
+          "resultSizeEstimate": {
+            "description": "Estimated total number of results.",
+            "format": "uint32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ListLabelsResponse": {
+        "properties": {
+          "labels": {
+            "description": "List of labels. Note that each label resource only contains an `id`, `name`, `messageListVisibility`, `labelListVisibility`, and `type`. The [`labels.get`](https://developers.google.com/workspace/gmail/api/v1/reference/users/labels/get) method can fetch additional label details.",
+            "items": {
+              "$ref": "#/components/schemas/Label"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "ListMessagesResponse": {
+        "properties": {
+          "messages": {
+            "description": "List of messages. Note that each message resource contains only an `id` and a `threadId`. Additional message details can be fetched using the messages.get method.",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "type": "array"
+          },
+          "nextPageToken": {
+            "description": "Token to retrieve the next page of results in the list.",
+            "type": "string"
+          },
+          "resultSizeEstimate": {
+            "description": "Estimated total number of results.",
+            "format": "uint32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "ListThreadsResponse": {
+        "properties": {
+          "nextPageToken": {
+            "description": "Page token to retrieve the next page of results in the list.",
+            "type": "string"
+          },
+          "resultSizeEstimate": {
+            "description": "Estimated total number of results.",
+            "format": "uint32",
+            "type": "integer"
+          },
+          "threads": {
+            "description": "List of threads. Note that each thread resource does not contain a list of `messages`. The list of `messages` for a given thread can be fetched using the [`threads.get`](https://developers.google.com/workspace/gmail/api/v1/reference/users/threads/get) method.",
+            "items": {
+              "$ref": "#/components/schemas/Thread"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "Message": {
+        "description": "An email message.",
+        "properties": {
+          "classificationLabelValues": {
+            "description": "Classification Label values on the message. Available Classification Label schemas can be queried using the Google Drive Labels API. Each classification label ID must be unique. If duplicate IDs are provided, only one will be retained, and the selection is arbitrary. Only used for Google Workspace accounts. There's a limit of 20 Classification Label values per request. If the Classification Label values exceeds the maximum allowed number, the request fails.",
+            "items": {
+              "$ref": "#/components/schemas/ClassificationLabelValue"
+            },
+            "type": "array"
+          },
+          "historyId": {
+            "description": "The ID of the last history record that modified this message.",
+            "format": "uint64",
+            "type": "string"
+          },
+          "id": {
+            "description": "The immutable ID of the message.",
+            "type": "string"
+          },
+          "internalDate": {
+            "description": "The internal message creation timestamp (epoch ms), which determines ordering in the inbox. For normal SMTP-received email, this represents the time the message was originally accepted by Google, which is more reliable than the `Date` header. However, for API-migrated mail, it can be configured by client to be based on the `Date` header.",
+            "format": "int64",
+            "type": "string"
+          },
+          "labelIds": {
+            "description": "List of IDs of labels applied to this message.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/MessagePart",
+            "description": "The parsed email structure in the message parts."
+          },
+          "raw": {
+            "description": "The entire email message in an RFC 2822 formatted and base64url encoded string. Returned in `messages.get` and `drafts.get` responses when the `format=RAW` parameter is supplied. @required gmail.users.drafts.create gmail.users.drafts.update",
+            "format": "byte",
+            "type": "string"
+          },
+          "sizeEstimate": {
+            "description": "Estimated size in bytes of the message.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "snippet": {
+            "description": "A short part of the message text.",
+            "type": "string"
+          },
+          "threadId": {
+            "description": "The ID of the thread the message belongs to. To add a message or draft to a thread, the following criteria must be met: 1. The requested `threadId` must be specified on the `Message` or `Draft.Message` you supply with your request. 2. The `References` and `In-Reply-To` headers must be set in compliance with the [RFC 2822](https://tools.ietf.org/html/rfc2822) standard. 3. The `Subject` headers must match. ",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "MessagePart": {
+        "description": "A single MIME message part.",
+        "properties": {
+          "body": {
+            "$ref": "#/components/schemas/MessagePartBody",
+            "description": "The message part body for this part, which may be empty for container MIME message parts."
+          },
+          "filename": {
+            "description": "The filename of the attachment. Only present if this message part represents an attachment.",
+            "type": "string"
+          },
+          "headers": {
+            "description": "List of headers on this message part. For the top-level message part, representing the entire message payload, it will contain the standard RFC 2822 email headers such as `To`, `From`, and `Subject`.",
+            "items": {
+              "$ref": "#/components/schemas/MessagePartHeader"
+            },
+            "type": "array"
+          },
+          "mimeType": {
+            "description": "The MIME type of the message part.",
+            "type": "string"
+          },
+          "partId": {
+            "description": "The immutable ID of the message part.",
+            "type": "string"
+          },
+          "parts": {
+            "description": "The child MIME message parts of this part. This only applies to container MIME message parts, for example `multipart/*`. For non- container MIME message part types, such as `text/plain`, this field is empty. For more information, see RFC 1521.",
+            "items": {
+              "$ref": "#/components/schemas/MessagePart"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "MessagePartBody": {
+        "description": "The body of a single MIME message part.",
+        "properties": {
+          "attachmentId": {
+            "description": "When present, contains the ID of an external attachment that can be retrieved in a separate `messages.attachments.get` request. When not present, the entire content of the message part body is contained in the data field.",
+            "type": "string"
+          },
+          "data": {
+            "description": "The body data of a MIME message part as a base64url encoded string. May be empty for MIME container types that have no message body or when the body data is sent as a separate attachment. An attachment ID is present if the body data is contained in a separate attachment.",
+            "format": "byte",
+            "type": "string"
+          },
+          "size": {
+            "description": "Number of bytes for the message part data (encoding notwithstanding).",
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MessagePartHeader": {
+        "properties": {
+          "name": {
+            "description": "The name of the header before the `:` separator. For example, `To`.",
+            "type": "string"
+          },
+          "value": {
+            "description": "The value of the header after the `:` separator. For example, `someuser@example.com`.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Thread": {
+        "description": "A collection of messages representing a conversation.",
+        "properties": {
+          "historyId": {
+            "description": "The ID of the last history record that modified this thread.",
+            "format": "uint64",
+            "type": "string"
+          },
+          "id": {
+            "description": "The unique ID of the thread.",
+            "type": "string"
+          },
+          "messages": {
+            "description": "The list of messages in the thread.",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "type": "array"
+          },
+          "snippet": {
+            "description": "A short part of the message text.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://accounts.google.com/o/oauth2/v2/auth",
+            "tokenUrl": "https://oauth2.googleapis.com/token",
+            "scopes": {
+              "https://mail.google.com/": "Read, compose, send, and permanently delete all your email from Gmail",
+              "https://www.googleapis.com/auth/gmail.addons.current.action.compose": "Manage drafts and send emails when you interact with the add-on",
+              "https://www.googleapis.com/auth/gmail.addons.current.message.action": "View your email messages when you interact with the add-on",
+              "https://www.googleapis.com/auth/gmail.addons.current.message.metadata": "View your email message metadata when the add-on is running",
+              "https://www.googleapis.com/auth/gmail.addons.current.message.readonly": "View your email messages when the add-on is running",
+              "https://www.googleapis.com/auth/gmail.compose": "Manage drafts and send emails",
+              "https://www.googleapis.com/auth/gmail.insert": "Add emails into your Gmail mailbox",
+              "https://www.googleapis.com/auth/gmail.labels": "See and edit your email labels",
+              "https://www.googleapis.com/auth/gmail.metadata": "View your email message metadata such as labels and headers, but not the email body",
+              "https://www.googleapis.com/auth/gmail.modify": "Read, compose, and send emails from your Gmail account",
+              "https://www.googleapis.com/auth/gmail.readonly": "View your email messages and settings",
+              "https://www.googleapis.com/auth/gmail.send": "Send email on your behalf",
+              "https://www.googleapis.com/auth/gmail.settings.basic": "See, edit, create, or change your email settings and filters in Gmail",
+              "https://www.googleapis.com/auth/gmail.settings.sharing": "Manage your sensitive mail settings, including who can manage your mail"
+            }
+          }
+        }
+      }
+    }
+  }
+}

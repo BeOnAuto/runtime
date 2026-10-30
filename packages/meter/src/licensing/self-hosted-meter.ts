@@ -1,0 +1,58 @@
+import { RunMeter, type Meter } from '@on.auto/definitions';
+import { Ledger } from '@on.auto/operations';
+import { Context, Effect, Layer, Ref } from 'effect';
+
+import { AccountService, type AccountPorts } from '../accounts/account-service.ts';
+import { meterAdmitting, type MeteredLedger } from '../admission/admitting.ts';
+import { meterDefaults, type MeterOptions } from '../admission/metering.ts';
+import { heldFeaturesOf, LicensedFeatures, type LicensedFeaturesPorts } from '../standing/licensed-features.ts';
+import type { KeyInHand, Licensing } from './licensing.ts';
+import { licensePortsOf, RuntimeLicense, unlicensed, type LicenseGiven, type LicensePorts } from './runtime-license.ts';
+import { admittedSelfHosted } from './self-hosted-admission.ts';
+
+export interface SelfHostedMeter {
+  readonly meter: Meter;
+  readonly license: LicensePorts;
+  readonly features: LicensedFeaturesPorts;
+}
+
+function activatedKey(key: string): KeyInHand {
+  return { key, source: 'activated' };
+}
+
+export function selfHostedMeterOver(
+  ledgered: MeteredLedger & { readonly account: AccountPorts },
+  options: MeterOptions,
+  { key, signers }: LicenseGiven,
+): Effect.Effect<SelfHostedMeter> {
+  return Effect.gen(function* () {
+    const inForce = yield* Ref.make<KeyInHand | undefined>(key);
+    const licensing: Licensing = {
+      ledger: ledgered.ledger,
+      options,
+      account: ledgered.account,
+      signers,
+      keyInForce: Ref.get(inForce),
+      keyInHand: Effect.map(Ref.get(inForce), (held) => held?.key),
+      keyHeld: (held) => Ref.update(inForce, (current) => (current?.key === held ? current : activatedKey(held))),
+    };
+    const meter = meterAdmitting(ledgered, (run) => admittedSelfHosted(licensing, run));
+    return { meter, license: licensePortsOf(licensing), features: heldFeaturesOf(licensing) };
+  });
+}
+
+export function ledgerMeter(
+  options: MeterOptions = meterDefaults,
+  given: LicenseGiven = unlicensed,
+): Layer.Layer<RunMeter | RuntimeLicense | LicensedFeatures, never, Ledger | AccountService> {
+  return Layer.effectContext(
+    Effect.gen(function* () {
+      const ledgered = { ledger: yield* Ledger, account: yield* AccountService };
+      const { meter, license, features } = yield* selfHostedMeterOver(ledgered, options, given);
+      return Context.make(RunMeter, meter).pipe(
+        Context.add(RuntimeLicense, license),
+        Context.add(LicensedFeatures, features),
+      );
+    }),
+  );
+}

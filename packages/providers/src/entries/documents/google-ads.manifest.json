@@ -1,0 +1,106 @@
+{
+  "type": "discovery",
+  "discovery": "https://googleads.googleapis.com/$discovery/rest?version=v26",
+  "revision": "20261014",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "googleads.customers.listAccessibleCustomers",
+    "googleads.customers.googleAds.search",
+    "googleads.customers.googleAds.searchStream",
+    "googleads.googleAdsFields.search",
+    "googleads.googleAdsFields.get",
+    "googleads.customers.googleAds.mutate",
+    "googleads.customers.campaigns.mutate",
+    "googleads.customers.campaignBudgets.mutate",
+    "googleads.customers.adGroups.mutate",
+    "googleads.customers.adGroupCriteria.mutate"
+  ],
+  "cuts": [
+    {
+      "schema": "GoogleAdsGoogleadsV26Resources__Campaign",
+      "writable_in": {
+        "GoogleAdsGoogleadsV26Services__CampaignOperation": ["create", "update"]
+      },
+      "leaves_out": [
+        "videoCampaignSettings",
+        "thirdPartyIntegrationPartners",
+        "shoppingSetting",
+        "pmaxCampaignSettings",
+        "assetAutomationSettings",
+        "textGuidelines",
+        "brandGuidelines",
+        "brandGuidelinesEnabled",
+        "aiMaxSetting",
+        "localServicesCampaignSettings",
+        "appCampaignSetting",
+        "vanityPharma",
+        "hotelSetting",
+        "hotelPropertyAssetSet",
+        "travelCampaignSettings",
+        "demandGenCampaignSettings",
+        "localCampaignSetting",
+        "listingType",
+        "commission",
+        "percentCpc",
+        "targetCpv",
+        "manualCpv",
+        "fixedCpm",
+        "excludedParentAssetSetTypes",
+        "excludedParentAssetFieldTypes",
+        "realTimeBiddingSetting"
+      ],
+      "because": "the settings of video, Shopping, Performance Max, app, hotel, travel, local, local services and Demand Gen campaigns and their hotel property asset set, the AI Max and text guidelines settings of Search, Shopping and Performance Max, the brand guidelines, asset automation, unbranded pharma ad, third-party integration partner, listing type, excluded parent asset and real-time bidding settings, and the commission, percent CPC, CPV and fixed CPM bidding strategies"
+    },
+    {
+      "schema": "GoogleAdsGoogleadsV26Resources__AdGroup",
+      "writable_in": {
+        "GoogleAdsGoogleadsV26Services__AdGroupOperation": ["create", "update"]
+      },
+      "leaves_out": [
+        "demandGenAdGroupSettings",
+        "videoAdGroupSettings",
+        "verticalAdsFormatSetting",
+        "aiMaxAdGroupSetting",
+        "excludedParentAssetSetTypes",
+        "excludedParentAssetFieldTypes",
+        "targetCpvMicros",
+        "cpvBidMicros",
+        "fixedCpmMicros",
+        "percentCpcBidMicros"
+      ],
+      "because": "the settings of Demand Gen and video ad groups, the AI Max and vertical ads format settings of Search ad groups, the excluded parent asset settings, and the target CPV, CPV, fixed CPM and percent CPC bids"
+    },
+    {
+      "schema": "GoogleAdsGoogleadsV26Resources__AdGroupCriterion",
+      "writable_in": {
+        "GoogleAdsGoogleadsV26Services__AdGroupCriterionOperation": ["create", "update"]
+      },
+      "leaves_out": [
+        "listingGroup",
+        "verticalAdsItemGroupRuleList",
+        "retailFilterBundle",
+        "videoLineup",
+        "youtubeVideo",
+        "youtubeChannel",
+        "mobileApplication",
+        "mobileAppCategory",
+        "appPaymentModel",
+        "percentCpcBidMicros",
+        "cpvBidMicros"
+      ],
+      "because": "the listing group, retail filter bundle and vertical ads item group criteria, the video lineup, YouTube video and YouTube channel criteria, the mobile application, mobile app category and app payment model criteria, and the percent CPC and CPV bids"
+    },
+    {
+      "schema": "GoogleAdsGoogleadsV26Resources__CampaignBudget",
+      "writable_in": {
+        "GoogleAdsGoogleadsV26Services__CampaignBudgetOperation": ["create", "update"]
+      },
+      "leaves_out": []
+    },
+    {
+      "schema": "GoogleAdsGoogleadsV26Services__MutateOperation",
+      "keeps": ["campaignBudgetOperation", "campaignOperation", "adGroupOperation", "adGroupCriterionOperation"],
+      "holds": "the operations on campaign budgets, campaigns, ad groups and ad group criteria"
+    }
+  ]
+}

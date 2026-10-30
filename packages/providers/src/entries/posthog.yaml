@@ -1,0 +1,39 @@
+name: posthog
+title: PostHog
+description: Query PostHog's product and web analytics, session replays, error tracking, logs and data warehouse, and create and change insights, dashboards, feature flags, experiments and surveys, in the projects the person who connects reaches, as that person, through PostHog's MCP server.
+website: https://posthog.com/docs/model-context-protocol
+type: mcp
+url: https://mcp.posthog.com/mcp?mode=tools
+credentials:
+  - kind: authorization
+    issuer: https://oauth.posthog.com
+    scope: organization:read project:read user:read query:read action:read event_definition:read property_definition:read person:read activity_log:read web_analytics:read heatmap:read session_recording:read session_recording_playlist:read error_tracking:read logs:read warehouse_table:read warehouse_view:read external_data_source:read dashboard_template:read insight:write dashboard:write feature_flag:write experiment:write experiment_holdout:write experiment_saved_metric:write survey:write
+    says:
+      organization:read: Read PostHog organizations.
+      project:read: Read PostHog projects and their settings.
+      user:read: Read PostHog user profiles.
+      query:read: Run queries over PostHog data.
+      action:read: Read PostHog actions.
+      event_definition:read: Read PostHog event definitions.
+      property_definition:read: Read PostHog property definitions.
+      person:read: Read PostHog persons and their properties.
+      activity_log:read: Read the PostHog activity log.
+      web_analytics:read: Read PostHog web analytics.
+      heatmap:read: Read PostHog heatmaps.
+      session_recording:read: Read PostHog session recordings.
+      session_recording_playlist:read: Read PostHog session recording playlists.
+      error_tracking:read: Read PostHog error tracking issues and settings.
+      logs:read: Read PostHog logs.
+      warehouse_table:read: Read the tables of the PostHog data warehouse.
+      warehouse_view:read: Read the views of the PostHog data warehouse.
+      external_data_source:read: Read the external data sources of the PostHog data warehouse.
+      dashboard_template:read: Read PostHog dashboard templates.
+      insight:write: Read, create, change and delete PostHog insights.
+      dashboard:write: Read, create, change and delete PostHog dashboards.
+      feature_flag:write: Read, create, change and delete PostHog feature flags.
+      experiment:write: Read, create, change and delete PostHog experiments.
+      experiment_holdout:write: Read, create, change and delete the holdouts of PostHog experiments.
+      experiment_saved_metric:write: Read, create, change and delete the saved metrics of PostHog experiments.
+      survey:write: Read, create, change and delete PostHog surveys.
+    clients: [registered, metadata_document, dynamic]
+    description: Sign in to PostHog and allow access to your organizations and projects.

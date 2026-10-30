@@ -1,0 +1,660 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Auto Runtime configuration file",
+  "description": "The settings of Auto Runtime that are lists or maps, where Studio comes from, a declared local mode, the usage ping and the license, read from the file that CONFIG_FILE names. Each key stands for the environment variable of the same name in upper case, which wins over it, and license for AUTO_RUNTIME_LICENSE, whose key and allocation AUTO_RUNTIME_LICENSE_KEY and AUTO_RUNTIME_ALLOCATION win over. Secrets are written as references such as ${GATEWAY_API_KEY}.",
+  "type": "object",
+  "properties": {
+    "allowed_origins": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The origins a page in a browser may call the API from, such as https://app.example.com. ALLOWED_ORIGINS wins over it"
+    },
+    "studio_origin": {
+      "type": "string",
+      "description": "The origin Studio is served from, an https URL, or an http URL on localhost, 127.0.0.1 or [::1], with no path; a page there may call the API, and the runtime fetches Studio from it when it serves Studio. https://studio.on.auto when left out. STUDIO_ORIGIN wins over it"
+    },
+    "serve_studio": {
+      "type": "boolean",
+      "description": "Whether the runtime serves Studio itself at /studio/ on its own address, fetched from the Studio host and kept, since a page on a public address may not reach an address on the machine. On in local mode and off otherwise when left out. SERVE_STUDIO wins over it"
+    },
+    "api_keys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]{1,32}$"
+          },
+          "org": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["org:read", "org:write", "playbook:read", "playbook:write"]
+            }
+          },
+          "playbooks": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["*"]
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                }
+              }
+            ]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": ["id", "org", "permissions", "playbooks", "sha256"],
+        "additionalProperties": false
+      }
+    },
+    "access_mode": {
+      "type": "string",
+      "enum": ["local"],
+      "description": "local declares local mode, where every request acts as the local developer with no credential, for a runtime whose port only this computer reaches, such as a container whose port is published on 127.0.0.1 alone. It takes no API_KEYS, and a PUBLIC_URL only on localhost, 127.0.0.1 or [::1], which names the address of the runtime and signs no one in; a runtime that listens beyond the loopback needs that PUBLIC_URL. ACCESS_MODE wins over it"
+    },
+    "model_gateways": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The provider prefix, such as gateway in gateway/llama-3.3-70b: 1 to 32 lowercase letters, digits and hyphens, starting with a letter, unique, and not a built-in prefix"
+          },
+          "base_url": {
+            "type": "string",
+            "description": "The http or https URL that /chat/completions is appended to, such as https://gateway.example.com/v1"
+          },
+          "api_key": {
+            "type": "string",
+            "description": "The key, sent as Authorization: Bearer <key>; in the configuration file a reference such as ${GATEWAY_API_KEY}"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Headers sent with every request, their values treated as secrets; in the configuration file a credential is a reference"
+          },
+          "query_params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Query parameters added to every request, their values treated as secrets"
+          },
+          "structured_outputs": {
+            "type": "boolean",
+            "description": "true when the endpoint accepts response_format json_schema; otherwise JSON is asked for as json_object and the schema is only checked here. Default false"
+          },
+          "include_usage": {
+            "type": "boolean",
+            "description": "Asks for usage in streamed responses. Default false"
+          },
+          "expose_provider_messages": {
+            "type": "boolean",
+            "description": "true when the gateway's error messages are safe to show to callers of a reasoning function. Default false"
+          },
+          "allowed_provider_options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The top-level request body fields a reasoning function may set for this gateway through provider_options, such as user and metadata. Default none"
+          },
+          "cost_header": {
+            "type": "string",
+            "description": "A gateway entry names the header its gateway answers the call's cost in, in US dollars, or names none and no cost is kept. A run keeps the cost as cost_usd"
+          }
+        },
+        "required": ["name", "base_url"],
+        "additionalProperties": false
+      },
+      "description": "OpenAI-compatible gateways, each a provider prefix of its own. MODEL_GATEWAYS wins over it"
+    },
+    "model_aliases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Model references a reasoning function may give, each sent on as another reference; a trailing * on both sides covers every model of a provider. MODEL_ALIASES wins over it"
+    },
+    "declared_models": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "description": "A model id as the provider receives it, such as eu.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        }
+      },
+      "description": "The models list_models shows for bedrock, bedrock-anthropic, azure, vertex and vertex-anthropic, which do not list their own, and for a gateway whose list cannot be read, keyed by the provider prefix. DECLARED_MODELS wins over it"
+    },
+    "allowed_models": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "A model reference a reasoning function may give, written provider/model, or provider/* for every model of a provider"
+      },
+      "description": "The only model references a reasoning function may give, by name or through an alias, and list_models shows, each provider/model or provider/* for every model of a provider; every model when left out. ALLOWED_MODELS wins over it"
+    },
+    "tool_servers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["mcp", "stdio", "openapi"],
+            "description": "mcp for a remote MCP server, given url; stdio for an MCP server this server starts as a process, given command; openapi for an HTTP API, given document. Taken from url, command or document when left out"
+          },
+          "url": {
+            "type": "string",
+            "description": "The http or https URL of a remote MCP server, spoken to over Streamable HTTP"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Headers sent to a remote MCP server, or to an HTTP API outside its document's security schemes, with every request; the value of a reference such as ${GRAPH_API_KEY} is a secret, scrubbed from everything a call records, and a value written out is not"
+          },
+          "auth": {
+            "type": "object",
+            "properties": {
+              "issuer": {
+                "type": "string",
+                "description": "The issuer of the authorization server the credential was registered with, pinned: it is sent to no other. An https URL, or an http URL on a loopback address"
+              },
+              "client_id": {
+                "type": "string",
+                "description": "The client id registered with that authorization server"
+              },
+              "client_secret": {
+                "type": "string",
+                "description": "The client secret, as a reference such as ${GRAPH_CLIENT_SECRET}"
+              },
+              "private_key": {
+                "type": "string",
+                "description": "A private key in PEM that signs the client assertion, as a reference such as ${GRAPH_PRIVATE_KEY}"
+              },
+              "algorithm": {
+                "type": "string",
+                "description": "The signing algorithm of private_key, such as RS256 or ES256"
+              },
+              "scope": {
+                "type": "string",
+                "description": "The scopes to ask for, separated by spaces"
+              }
+            },
+            "required": ["issuer", "client_id"],
+            "additionalProperties": false,
+            "description": "OAuth client credentials, for a server whose authorization server issues tokens to clients: client_secret, or private_key with its algorithm. An mcp server's authorization server is found from the server's own metadata, an openapi server's from the issuer's"
+          },
+          "command": {
+            "type": "string",
+            "description": "The command of a stdio server: an installed, pinned program, never a package downloaded at start such as npx -y"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The arguments of the command of a stdio server"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The whole environment of the process of a stdio server, which inherits nothing else; the value of a reference such as ${GRAPH_API_KEY} is a secret, scrubbed from everything a call records, and a value written out is not"
+          },
+          "document": {
+            "type": "string",
+            "description": "The OpenAPI document of an HTTP API, version 3.0 or 3.1, read once at start: an https URL, an http URL on a loopback address, or a path relative to the directory of the configuration file"
+          },
+          "base_url": {
+            "type": "string",
+            "description": "The URL the calls of an HTTP API go to, in place of the first server its document names; required when it names none. An https URL, or an http URL on a loopback address"
+          },
+          "query_params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Query parameters sent to an HTTP API with every call, outside its document's security schemes, such as a tenant; the value of a reference such as ${GRAPH_API_KEY} is a secret, scrubbed from everything a call records, and a value written out is not"
+          },
+          "security": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The credential of each security scheme of an HTTP API's document the entry gives, by the scheme's name, placed as the scheme says: an apiKey in its header or query parameter, a bearer as Authorization: Bearer, a basic as user:password; an oauth2 or openIdConnect scheme takes the auth block instead; each value is a reference such as ${BILLING_API_KEY} or ada:${BILLING_PASSWORD}, a secret, and one written out is refused"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ],
+            "description": "The org this server serves, a list of orgs, or * for every org of this server, required; one entry serves each org it names under one name, with one credential and one connection"
+          },
+          "playbooks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The playbooks this server serves within each org it names, by id; every playbook of each org when left out, and refused beside * for every org"
+          },
+          "allowed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The tools of this server a function may name, each named as the server lists it; every tool of the server when left out"
+          },
+          "record_content": {
+            "type": "boolean",
+            "description": "Whether the arguments and the answers of this server's calls are kept whole, scrubbed of secrets, in the playbook's ledger, where anyone who may read the playbook reads them; false keeps their sizes alone. Default true"
+          },
+          "request_id": {
+            "type": "string",
+            "description": "The response header, or for an MCP server the key of the metadata of a result, in which the server carries its own id of a request, recorded with each call"
+          },
+          "provider": {
+            "type": "string",
+            "description": "A provider the runtime knows, by its name, which gives the server and where its credential goes: the entry then gives placeholders, credential, org, playbooks, allowed and record_content, and no field of the server"
+          },
+          "placeholders": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "With provider, the value of each of the provider's placeholders, by name, never a reference"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "type": "string",
+                "description": "For a secret, a reference such as ${TRACKER_TOKEN}"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "description": "The way of the provider the credential takes, when not its first"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "For a secret, a reference such as ${TRACKER_TOKEN}"
+                  },
+                  "client_id": {
+                    "type": "string",
+                    "description": "For client credentials, the client id, written out"
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "description": "For client credentials, a reference such as ${LEDGERS_CLIENT_SECRET}"
+                  },
+                  "private_key": {
+                    "type": "string",
+                    "description": "For client credentials, a private key in PEM as a reference such as ${LEDGERS_PRIVATE_KEY}"
+                  },
+                  "algorithm": {
+                    "type": "string",
+                    "description": "The signing algorithm of private_key, such as RS256 or ES256"
+                  }
+                },
+                "additionalProperties": false
+              }
+            ],
+            "description": "With provider, the credential of the way kind names, or else of its first way but authorization, a consent a person gives on Studio's page alone: a secret as a reference such as ${TRACKER_TOKEN}, or client credentials as the client id written out with client_secret, or with private_key and its algorithm, each key a reference; nothing for a way that takes none"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "The tool servers whose tools a function may name, each bound to an org and optionally its playbooks: url for a remote MCP server, command for an MCP server run as a process, document for an HTTP API described by an OpenAPI document. Secrets are references such as ${GRAPH_API_KEY}. TOOL_SERVERS wins over it"
+    },
+    "connections": {
+      "type": "object",
+      "properties": {
+        "people_may_add": {
+          "type": "boolean",
+          "description": "Whether people may add connections through their agents; true when left out"
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(?:\\*\\.)?[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*$"
+          },
+          "description": "The hosts a connection may reach, each a host or *. and a host for every host under it; a loopback, private or link-local address is reached only where it is named here by itself, and a name that resolves to one never is; every host that is none of those addresses when left out"
+        },
+        "credential_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["none", "reference", "secret", "client_credentials", "authorization"]
+          },
+          "description": "The kinds of credential a connection may take, of none, reference, secret, client_credentials and authorization; every kind when left out"
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "description": "The variables of the runtime a reference credential may name, never one the runtime reads for itself; none when left out, so no connection takes a reference"
+        },
+        "registered_clients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "issuers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "description": "The issuers of the authorization servers the client is registered at, each an https URL, or an http URL on a loopback address; one written with a placeholder, such as https://login.example.com/{tenant}, is kept as it is written"
+              },
+              "client_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The client id the authorization servers issued"
+              },
+              "client_secret": {
+                "type": "string",
+                "description": "The client secret, as a reference such as ${EXAMPLE_CLIENT_SECRET}"
+              },
+              "private_key": {
+                "type": "string",
+                "description": "A private key in PEM that signs the client assertion, as a reference such as ${EXAMPLE_PRIVATE_KEY}"
+              },
+              "algorithm": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The signing algorithm of private_key, such as RS256 or ES256"
+              },
+              "token_endpoint_auth_method": {
+                "type": "string",
+                "enum": ["client_secret_basic", "client_secret_post", "private_key_jwt", "none"],
+                "description": "How the client authenticates at the token endpoint where the metadata of the authorization server leaves the choice; chosen from the client and the metadata when left out"
+              },
+              "scopes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "description": "The scopes the client may ask at its issuers, each as a provider's way writes it: a way takes the first client at its issuer that names every scope the way asks. Named for each client where several clients serve one issuer, and left out for a client that may ask any"
+              }
+            },
+            "required": ["issuers", "client_id"],
+            "additionalProperties": false
+          },
+          "description": "The clients whoever runs the runtime registered at authorization servers, each with the issuers it is registered at, its client_id, and its client_secret, or its private_key with its algorithm, as a reference, or neither for a public client, and the scopes it may ask, which each client names where several serve one issuer"
+        },
+        "auto_clients": {
+          "type": "boolean",
+          "description": "Whether a provider whose way takes a registered client takes Auto's client too, through Auto's consent service, where no client registered at its issuer covers the scope the way asks; true in local mode and false otherwise when left out. AUTO_CLIENTS wins over it"
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "The name of the provider and of a connection to it by default: 1 to 32 lowercase letters, digits and hyphens, starting with a letter"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "description": "What a person reads as its name"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300,
+                "description": "What a function may do through it, in one or two sentences of at most 300 characters"
+              },
+              "website": {
+                "type": "string",
+                "description": "The https page where a person reads about the server and makes a credential"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["mcp", "openapi"],
+                "description": "mcp for an MCP server, given url; openapi for an HTTP API"
+              },
+              "url": {
+                "type": "string",
+                "description": "For mcp, the https URL of the server, {name} standing for the placeholder name"
+              },
+              "document": {
+                "type": "string",
+                "description": "For openapi, the https URL of its OpenAPI document, {name} standing for the placeholder name"
+              },
+              "base_url": {
+                "type": "string",
+                "description": "For openapi, the https URL its calls go to where the document names no server, {name} standing for the placeholder name"
+              },
+              "headers": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Headers sent with every request, never a credential; a reference such as ${ADS_DEVELOPER_TOKEN} stands for a value of whoever runs the runtime"
+              },
+              "query_params": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "For openapi, query parameters sent with every call, never a credential; a reference such as ${ADS_DEVELOPER_TOKEN} stands for a value of whoever runs the runtime"
+              },
+              "request_id": {
+                "type": "string",
+                "description": "The response header, or for an MCP server the key of the metadata of a result, in which the server carries its own id of a request, recorded with each call"
+              },
+              "placeholders": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "pattern": {
+                      "type": "string"
+                    },
+                    "example": {
+                      "type": "string"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "choices": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "value": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "sets": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          }
+                        },
+                        "required": ["value", "title"],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    }
+                  },
+                  "required": ["description"],
+                  "additionalProperties": false
+                },
+                "description": "The values that differ from one connection to the next, by name: each a description with a pattern and an example, or with choices"
+              },
+              "credentials": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": ["secret", "client_credentials", "none", "authorization"]
+                    },
+                    "in": {
+                      "type": "string",
+                      "enum": ["header", "query", "security"]
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "scheme": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "issuer": {
+                      "type": "string"
+                    },
+                    "scope": {
+                      "type": "string"
+                    },
+                    "parameters": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "authorization_endpoint": {
+                      "type": "string"
+                    },
+                    "token_endpoint": {
+                      "type": "string"
+                    },
+                    "revocation_endpoint": {
+                      "type": "string"
+                    },
+                    "pkce": {
+                      "type": "string",
+                      "enum": ["none"]
+                    },
+                    "clients": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["registered", "metadata_document", "dynamic"]
+                      }
+                    },
+                    "says": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string",
+                        "maxLength": 120,
+                        "pattern": "^[A-Z][^.]*(?:\\.[^.\\s][^.]*)*\\.$"
+                      }
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": ["kind"],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default: secret, client_credentials, none or authorization, two of one kind told apart by the scope each asks; a way that asks a scope says, beside it, what a connection can do through each scope"
+              }
+            },
+            "required": ["name", "title", "description", "website", "type", "credentials"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers, and whether Auto's clients serve as well; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it"
+    },
+    "usage_ping": {
+      "type": "boolean",
+      "description": "Whether the runtime sends its anonymous usage ping when it starts: its release, the operating system, the processor, the version of Node.js, how it was installed and a random install id, and nothing of its work. On when left out; DO_NOT_TRACK or SCARF_NO_ANALYTICS in the environment turns it off too. USAGE_PING wins over it"
+    },
+    "license": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "The key Studio gave as an owner registered this runtime, written as a reference to the variable that holds it, such as ${LICENSE_KEY}. AUTO_RUNTIME_LICENSE_KEY wins over it"
+        },
+        "allocation": {
+          "type": "string",
+          "description": "The offline credits an operator of Auto signed for a runtime that does not reach Auto, the JSON of their payload, signature and kid, written as a reference to the variable that holds it, such as ${ALLOCATION}. AUTO_RUNTIME_ALLOCATION wins over it"
+        }
+      },
+      "additionalProperties": false,
+      "description": "The license of this runtime, which runs it on its org's credits past the 100 free runs and the free rate of 15 runs a UTC day and 75 a UTC month it runs without one: its key, and the offline credits of a runtime that does not reach Auto. AUTO_RUNTIME_LICENSE wins over it"
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "package": {
+            "type": "string",
+            "maxLength": 214,
+            "pattern": "^(?:@[a-z0-9][a-z0-9._~-]*\\/)?[a-z0-9][a-z0-9._~-]*$",
+            "description": "The package of the extension, which the server imports by its name"
+          },
+          "integrity": {
+            "type": "string",
+            "pattern": "^sha512-[A-Za-z0-9+/]{86}==$",
+            "description": "The integrity of the installed package, sha512- and the base64 of the SHA-512 of its files; a package whose files differ stops the start"
+          }
+        },
+        "required": ["package"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {}
+}

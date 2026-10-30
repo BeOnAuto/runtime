@@ -1,0 +1,19 @@
+{
+  "type": "discovery",
+  "discovery": "https://analyticsdata.googleapis.com/$discovery/rest?version=v1beta",
+  "revision": "20261017",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "analyticsdata.properties.runReport",
+    "analyticsdata.properties.runPivotReport",
+    "analyticsdata.properties.batchRunReports",
+    "analyticsdata.properties.batchRunPivotReports",
+    "analyticsdata.properties.runRealtimeReport",
+    "analyticsdata.properties.checkCompatibility",
+    "analyticsdata.properties.getMetadata",
+    "analyticsdata.properties.audienceExports.list",
+    "analyticsdata.properties.audienceExports.get",
+    "analyticsdata.properties.audienceExports.create",
+    "analyticsdata.properties.audienceExports.query"
+  ]
+}

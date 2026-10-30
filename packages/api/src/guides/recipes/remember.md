@@ -1,0 +1,11 @@
+# Make the playbook remember something
+
+A recall function answers from what it keeps of the playbook's own history, its view: every run's start and end, with its result when it succeeded, the definitions saved and every event published to the playbook. A view holds what a run answered, never what it was given or the tools it called. Read the recall-function guide with get_guide before you write one.
+
+1. Ask the person what the playbook should remember, and where it comes from: what a function's runs answer, such as what one function posted today, or what the person tells you, such as a figure for each month.
+2. For a function's runs, find that function with list_definitions. Tell the person that a view holds what a run answered, never what it was given or the tools it called, so a function whose job is to post must answer what it posted. When the function does not answer it, offer to change the function so that it does, and show the change before you save it with update_definition. When no function holds it yet, write that function first and save it with create_definition once the person agrees.
+3. For what the person tells you, publish it to the playbook with publish_event once they agree, one event for each fact, such as each month's figure: a `type` that names what happened, the same for each of them, a `source` that names where it came from, and the fact itself in `data`.
+4. Write a recall function whose view folds those events, with a filter of the type `run_succeeded` and the subject `<type>/<name>` of the function, or of the `type` of the events you published, and whose `answer` gives what the person asked for. The second example of the recall-function guide keeps what one function answered.
+5. Show the person the document, and save it with create_definition, `type` recall, once they agree.
+6. Run it with run_definition once it answers. While its view is still being built, the run says so: try again in a moment, since a new version builds its view from the playbook's whole history.
+7. Tell the person that the playbook now remembers from its whole history on, for anyone who asks it and for its workflows: every run of that function whoever started it, or every event of that type. It sees nothing done outside the playbook, so a later fact joins it once it is published the same way.

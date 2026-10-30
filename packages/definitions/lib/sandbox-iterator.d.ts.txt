@@ -1,0 +1,46 @@
+/*! *****************************************************************************
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0
+
+THIS CODE IS PROVIDED ON AN *AS IS* BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, EITHER EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION ANY IMPLIED
+WARRANTIES OR CONDITIONS OF TITLE, FITNESS FOR A PARTICULAR PURPOSE,
+MERCHANTABILITY OR NON-INFRINGEMENT.
+
+See the Apache Version 2.0 License for specific language governing permissions
+and limitations under the License.
+***************************************************************************** */
+export {};
+declare abstract class Iterator<T, TResult = undefined, TNext = unknown> {
+    abstract next(value?: TNext): IteratorResult<T, TResult>;
+}
+interface Iterator<T, TResult, TNext> extends globalThis.IteratorObject<T, TResult, TNext> {
+}
+type IteratorObjectConstructor = typeof Iterator;
+declare global {
+    interface IteratorObject<T, TReturn, TNext> {
+        [Symbol.iterator](): IteratorObject<T, TReturn, TNext>;
+        map<U>(callbackfn: (value: T, index: number) => U): IteratorObject<U, undefined, unknown>;
+        filter<S extends T>(predicate: (value: T, index: number) => value is S): IteratorObject<S, undefined, unknown>;
+        filter(predicate: (value: T, index: number) => unknown): IteratorObject<T, undefined, unknown>;
+        take(limit: number): IteratorObject<T, undefined, unknown>;
+        drop(count: number): IteratorObject<T, undefined, unknown>;
+        flatMap<U>(callback: (value: T, index: number) => Iterator<U, unknown, undefined> | Iterable<U, unknown, undefined>): IteratorObject<U, undefined, unknown>;
+        reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number) => T): T;
+        reduce(callbackfn: (previousValue: T, currentValue: T, currentIndex: number) => T, initialValue: T): T;
+        reduce<U>(callbackfn: (previousValue: U, currentValue: T, currentIndex: number) => U, initialValue: U): U;
+        toArray(): T[];
+        forEach(callbackfn: (value: T, index: number) => void): void;
+        some(predicate: (value: T, index: number) => unknown): boolean;
+        every(predicate: (value: T, index: number) => unknown): boolean;
+        find<S extends T>(predicate: (value: T, index: number) => value is S): S | undefined;
+        find(predicate: (value: T, index: number) => unknown): T | undefined;
+        readonly [Symbol.toStringTag]: string;
+    }
+    interface IteratorConstructor extends IteratorObjectConstructor {
+        from<T>(value: Iterator<T, unknown, undefined> | Iterable<T, unknown, undefined>): IteratorObject<T, undefined, unknown>;
+    }
+    var Iterator: IteratorConstructor;
+}

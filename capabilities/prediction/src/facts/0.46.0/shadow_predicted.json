@@ -1,0 +1,24 @@
+{
+  "type": "shadow_predicted",
+  "data": {
+    "version": 2,
+    "of": 1,
+    "build": "build-2",
+    "runtime": {
+      "name": "onnx",
+      "version": "1.23.0"
+    },
+    "origin": "2026-10-26",
+    "count": 40,
+    "missing": 0,
+    "predictions_sha256": "e1f2a3",
+    "predictions_bytes": 4096
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime",
+    "definitionType": "prediction",
+    "definitionName": "weekly-orders",
+    "definitionVersion": 3
+  }
+}

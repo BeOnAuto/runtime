@@ -1,0 +1,26 @@
+packages:
+  - packages/*
+  - capabilities/*
+  - scripts
+
+catalog:
+  vitest: 5.0.3
+  '@vitest/coverage-v8': 5.0.3
+  effect: 4.0.0
+  hono: 4.13.13
+  jose: 6.2.12
+
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: false
+minimumReleaseAgeExclude:
+  - effect@4.0.0
+trustPolicy: no-downgrade
+
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  protobufjs: false
+  sqlite3: true
+
+patchedDependencies:
+  '@openworkflowspec/sdk@1.0.3-alpha8': patches/@openworkflowspec__sdk@1.0.3-alpha8.patch

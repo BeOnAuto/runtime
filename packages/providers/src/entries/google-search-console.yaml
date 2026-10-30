@@ -1,0 +1,17 @@
+name: google-search-console
+title: Google Search Console
+description: Query clicks, impressions, click-through rates and positions, inspect how Google indexes a URL, list sitemaps, and add or remove properties. It reaches domain properties, named sc-domain:example.com, and URL-prefix properties, named with their scheme and trailing slash, https://www.example.com/.
+website: https://developers.google.com/webmaster-tools
+type: openapi
+document: documents/google-search-console.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/webmasters
+    says:
+      https://www.googleapis.com/auth/webmasters: Read and manage Search Console data of verified sites.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Search Console.

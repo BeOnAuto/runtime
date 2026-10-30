@@ -1,0 +1,16 @@
+{
+  "type": "definition_updated",
+  "data": {
+    "content": {
+      "source": "document:\n  dsl: 1.0.3\n  namespace: sales\n  name: follow-up-leads\n  version: 1.0.0\ndo: []\n",
+      "description": "Follows up the leads of the day"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "definitionType": "workflow",
+    "definitionName": "follow-up-leads",
+    "definitionVersion": 2
+  }
+}

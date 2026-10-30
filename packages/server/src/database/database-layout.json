@@ -1,0 +1,277 @@
+{
+  "layout": 6,
+  "catalog": [
+    {
+      "name": "conversations_3",
+      "sql": "CREATE TABLE conversations_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, server TEXT, tool TEXT, conversation TEXT, since TEXT, last_fact TEXT, joined_by TEXT, open INTEGER, active_at INTEGER, reads INTEGER, next_read_at INTEGER, due_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "conversations_3_due",
+      "sql": "CREATE INDEX conversations_3_due ON conversations_3 (due_at) WHERE due_at IS NOT NULL"
+    },
+    {
+      "name": "kept_secrets",
+      "sql": "CREATE TABLE kept_secrets (id TEXT PRIMARY KEY, version INTEGER NOT NULL, kept_at TEXT NOT NULL, claimed_until TEXT, ends_with TEXT, kept_by TEXT NOT NULL, held TEXT NOT NULL, wrapped_key TEXT, kid TEXT)"
+    },
+    {
+      "name": "ledger_definition_streams",
+      "sql": "CREATE INDEX ledger_definition_streams ON emt_streams (CASE WHEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 1, 12) = 'definitions/' THEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 13) END) WHERE CASE WHEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 1, 12) = 'definitions/' THEN substr(stream_id, length(substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/'))) + 13) END IS NOT NULL"
+    },
+    {
+      "name": "ledger_first_messages_by_kind",
+      "sql": "CREATE INDEX ledger_first_messages_by_kind ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/') + 1), '/')), global_position) WHERE stream_position = 1"
+    },
+    {
+      "name": "ledger_layout",
+      "sql": "CREATE TABLE ledger_layout (one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL)"
+    },
+    {
+      "name": "ledger_messages_by_id",
+      "sql": "CREATE INDEX ledger_messages_by_id ON emt_messages (message_id)"
+    },
+    {
+      "name": "ledger_messages_by_playbook",
+      "sql": "CREATE INDEX ledger_messages_by_playbook ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), global_position)"
+    },
+    {
+      "name": "ledger_messages_by_playbook_and_correlation",
+      "sql": "CREATE INDEX ledger_messages_by_playbook_and_correlation ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), json_extract(message_metadata, '$.correlationId'), global_position)"
+    },
+    {
+      "name": "ledger_messages_by_playbook_and_time",
+      "sql": "CREATE INDEX ledger_messages_by_playbook_and_time ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), created)"
+    },
+    {
+      "name": "ledger_messages_by_stream",
+      "sql": "CREATE INDEX ledger_messages_by_stream ON emt_messages (stream_id, global_position)"
+    },
+    {
+      "name": "open_requests_7",
+      "sql": "CREATE TABLE open_requests_7 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, sent_conversation TEXT, sent_id TEXT, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "open_requests_7_attempts_due",
+      "sql": "CREATE INDEX open_requests_7_attempts_due ON open_requests_7 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
+    },
+    {
+      "name": "open_requests_7_by_conversation",
+      "sql": "CREATE INDEX open_requests_7_by_conversation ON open_requests_7 (playbook_key, open, conversation, requested_at, row_key)"
+    },
+    {
+      "name": "open_requests_7_by_function",
+      "sql": "CREATE INDEX open_requests_7_by_function ON open_requests_7 (playbook_key, open, function, requested_at, row_key)"
+    },
+    {
+      "name": "open_requests_7_by_open",
+      "sql": "CREATE INDEX open_requests_7_by_open ON open_requests_7 (playbook_key, open, requested_at, row_key)"
+    },
+    {
+      "name": "open_requests_7_by_party",
+      "sql": "CREATE INDEX open_requests_7_by_party ON open_requests_7 (playbook_key, open, party, requested_at, row_key)"
+    },
+    {
+      "name": "open_requests_7_by_type",
+      "sql": "CREATE INDEX open_requests_7_by_type ON open_requests_7 (playbook_key, open, type, requested_at, row_key)"
+    },
+    {
+      "name": "open_requests_7_endings_due",
+      "sql": "CREATE INDEX open_requests_7_endings_due ON open_requests_7 (ending_due_at) WHERE ending_due_at IS NOT NULL"
+    },
+    {
+      "name": "prediction_builds_1",
+      "sql": "CREATE TABLE prediction_builds_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, function TEXT, definition_version INTEGER, standing TEXT, through TEXT, requested_at INTEGER, expires_at INTEGER, uploaded INTEGER, scored INTEGER, winner TEXT, version INTEGER, rule TEXT, shadow_origins INTEGER, next_due_at INTEGER, open INTEGER, scoring_since INTEGER, ended TEXT, staged INTEGER, cause TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "prediction_builds_1_builds_due",
+      "sql": "CREATE INDEX prediction_builds_1_builds_due ON prediction_builds_1 (next_due_at) WHERE next_due_at IS NOT NULL"
+    },
+    {
+      "name": "prediction_builds_1_builds_scoring",
+      "sql": "CREATE INDEX prediction_builds_1_builds_scoring ON prediction_builds_1 (scoring_since) WHERE scoring_since IS NOT NULL"
+    },
+    {
+      "name": "prediction_builds_1_by_open",
+      "sql": "CREATE INDEX prediction_builds_1_by_open ON prediction_builds_1 (playbook_key, function, open, requested_at, row_key)"
+    },
+    {
+      "name": "prediction_datasets",
+      "sql": "CREATE TABLE prediction_datasets (playbook_key TEXT NOT NULL, data_sha256 TEXT NOT NULL, saved BIGINT NOT NULL, phase TEXT NOT NULL, checkpoint TEXT NOT NULL, checkpoint_at TEXT, rows BIGINT NOT NULL, series BIGINT NOT NULL, first_period TEXT, last_period TEXT, events_folded BIGINT NOT NULL, passed_over BIGINT NOT NULL, tries BIGINT NOT NULL, stalled_record TEXT, stalled_detail TEXT, data TEXT NOT NULL, PRIMARY KEY (playbook_key, data_sha256))"
+    },
+    {
+      "name": "prediction_models_1",
+      "sql": "CREATE TABLE prediction_models_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, active INTEGER, active_data_sha256 TEXT, active_file_sha256 TEXT, active_file_format TEXT, active_definition_version INTEGER, latest INTEGER, versions INTEGER, challenger INTEGER, challenger_build TEXT, shadow_predicted INTEGER, shadow_graded INTEGER, shadow TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "prediction_rows",
+      "sql": "CREATE TABLE prediction_rows (playbook_key TEXT NOT NULL, data_sha256 TEXT NOT NULL, series TEXT NOT NULL, period_index BIGINT NOT NULL, period TEXT NOT NULL, target DOUBLE PRECISION, target_count BIGINT NOT NULL, target_at BIGINT, events BIGINT NOT NULL, features TEXT NOT NULL, PRIMARY KEY (playbook_key, data_sha256, series, period_index))"
+    },
+    {
+      "name": "recall_views",
+      "sql": "CREATE TABLE recall_views (playbook_key TEXT NOT NULL, name TEXT NOT NULL, version BIGINT NOT NULL, saved BIGINT NOT NULL, details TEXT NOT NULL, phase TEXT NOT NULL, view TEXT NOT NULL, checkpoint TEXT NOT NULL, checkpoint_at TEXT, last_event_id TEXT, last_event_at TEXT, folded BIGINT NOT NULL, overtimes INTEGER NOT NULL, stalled_event_id TEXT, stalled_event_type TEXT, stalled_event_at TEXT, stalled_kind TEXT, stalled_message TEXT, stalled_line INTEGER, PRIMARY KEY (playbook_key, name))"
+    },
+    {
+      "name": "recorded_content_chunks",
+      "sql": "CREATE TABLE recorded_content_chunks (playbook_key TEXT NOT NULL, upload_id TEXT NOT NULL, chunk INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (playbook_key, upload_id, chunk))"
+    },
+    {
+      "name": "recorded_content_heads",
+      "sql": "CREATE TABLE recorded_content_heads (playbook_key TEXT NOT NULL, sha256 TEXT NOT NULL, upload_id TEXT NOT NULL, bytes BIGINT NOT NULL, chunks INTEGER NOT NULL, media_type TEXT NOT NULL, PRIMARY KEY (playbook_key, sha256))"
+    },
+    {
+      "name": "recorded_content_heads_by_upload",
+      "sql": "CREATE INDEX recorded_content_heads_by_upload ON recorded_content_heads (playbook_key, upload_id)"
+    },
+    {
+      "name": "run_outcomes_4",
+      "sql": "CREATE TABLE run_outcomes_4 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, started_day TEXT, started_at TEXT, last_started_at TEXT, definition_type TEXT, name TEXT, status TEXT, duration_ms INTEGER, input_tokens INTEGER, output_tokens INTEGER, cached_tokens INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "run_outcomes_4_by_playbook_and_day",
+      "sql": "CREATE INDEX run_outcomes_4_by_playbook_and_day ON run_outcomes_4 (playbook_key, started_day)"
+    },
+    {
+      "name": "staged_content",
+      "sql": "CREATE TABLE staged_content (playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, sha256 TEXT NOT NULL, upload_id TEXT NOT NULL, bytes BIGINT NOT NULL, chunks INTEGER NOT NULL, media_type TEXT NOT NULL, PRIMARY KEY (playbook_key, run_id, sha256))"
+    },
+    {
+      "name": "staged_content_by_upload",
+      "sql": "CREATE INDEX staged_content_by_upload ON staged_content (playbook_key, run_id, upload_id)"
+    },
+    {
+      "name": "staged_content_chunks",
+      "sql": "CREATE TABLE staged_content_chunks (playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, upload_id TEXT NOT NULL, chunk INTEGER NOT NULL, data BLOB NOT NULL, PRIMARY KEY (playbook_key, run_id, upload_id, chunk))"
+    },
+    {
+      "name": "unstaged_runs",
+      "sql": "CREATE TABLE unstaged_runs (playbook_key TEXT NOT NULL, run_id TEXT NOT NULL, PRIMARY KEY (playbook_key, run_id))"
+    },
+    {
+      "name": "workflow_calls",
+      "sql": "CREATE TABLE workflow_calls (call_key TEXT NOT NULL PRIMARY KEY, run_key TEXT NOT NULL, state TEXT NOT NULL, call TEXT, attributes TEXT, result TEXT, delivered INTEGER NOT NULL DEFAULT 0, child TEXT, root_id TEXT, started_by BIGINT, resumes_after_ms BIGINT, due_again_at BIGINT)"
+    },
+    {
+      "name": "workflow_calls_due_again",
+      "sql": "CREATE INDEX workflow_calls_due_again ON workflow_calls (due_again_at) WHERE state = 'waiting'"
+    },
+    {
+      "name": "workflow_calls_open_by_root",
+      "sql": "CREATE INDEX workflow_calls_open_by_root ON workflow_calls (root_id) WHERE state IN ('running', 'waiting')"
+    },
+    {
+      "name": "workflow_calls_unfinished",
+      "sql": "CREATE INDEX workflow_calls_unfinished ON workflow_calls (call_key) WHERE state = 'running' OR (state = 'answered' AND delivered = 0)"
+    },
+    {
+      "name": "workflow_calls_waiting_by_run",
+      "sql": "CREATE INDEX workflow_calls_waiting_by_run ON workflow_calls (run_key) WHERE state = 'waiting'"
+    },
+    {
+      "name": "workflow_due",
+      "sql": "CREATE TABLE workflow_due (run_key TEXT NOT NULL PRIMARY KEY, version BIGINT NOT NULL, next_due_at BIGINT)"
+    },
+    {
+      "name": "workflow_due_by_time",
+      "sql": "CREATE INDEX workflow_due_by_time ON workflow_due (next_due_at) WHERE next_due_at IS NOT NULL"
+    },
+    {
+      "name": "workflow_followed_orgs",
+      "sql": "CREATE TABLE workflow_followed_orgs (stream_id TEXT NOT NULL PRIMARY KEY, position BIGINT NOT NULL)"
+    },
+    {
+      "name": "workflow_followed_playbooks",
+      "sql": "CREATE TABLE workflow_followed_playbooks (playbook_key TEXT NOT NULL PRIMARY KEY, cursor TEXT, delivered TEXT, attempts INTEGER NOT NULL DEFAULT 0, waiting INTEGER NOT NULL DEFAULT 0, checked BIGINT NOT NULL DEFAULT 0)"
+    },
+    {
+      "name": "workflow_followed_playbooks_by_check",
+      "sql": "CREATE INDEX workflow_followed_playbooks_by_check ON workflow_followed_playbooks (waiting, checked)"
+    },
+    {
+      "name": "workflow_followed_scans",
+      "sql": "CREATE TABLE workflow_followed_scans (name TEXT NOT NULL PRIMARY KEY)"
+    },
+    {
+      "name": "workflow_leases",
+      "sql": "CREATE TABLE workflow_leases (name TEXT NOT NULL PRIMARY KEY, holder TEXT NOT NULL, expires_at BIGINT NOT NULL)"
+    },
+    {
+      "name": "workflow_listener_types",
+      "sql": "CREATE TABLE workflow_listener_types (playbook_key TEXT NOT NULL, type TEXT NOT NULL, run_key TEXT NOT NULL, listener TEXT NOT NULL, PRIMARY KEY (playbook_key, type, run_key, listener))"
+    },
+    {
+      "name": "workflow_listeners",
+      "sql": "CREATE TABLE workflow_listeners (run_key TEXT NOT NULL, listener TEXT NOT NULL, playbook_key TEXT NOT NULL, stream_id TEXT NOT NULL, armed_by BIGINT NOT NULL, filters TEXT NOT NULL, workflow TEXT NOT NULL, version BIGINT NOT NULL, passed INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (run_key, listener))"
+    },
+    {
+      "name": "workflow_listeners_by_playbook",
+      "sql": "CREATE INDEX workflow_listeners_by_playbook ON workflow_listeners (playbook_key)"
+    },
+    {
+      "name": "workflow_listeners_by_stream",
+      "sql": "CREATE INDEX workflow_listeners_by_stream ON workflow_listeners (stream_id, passed)"
+    },
+    {
+      "name": "workflow_passed_runs",
+      "sql": "CREATE TABLE workflow_passed_runs (run_key TEXT NOT NULL PRIMARY KEY, passed_through BIGINT NOT NULL)"
+    },
+    {
+      "name": "workflow_pending_cancels",
+      "sql": "CREATE TABLE workflow_pending_cancels (run_key TEXT NOT NULL PRIMARY KEY, cause TEXT NOT NULL, cancelled_by TEXT NOT NULL, kind TEXT NOT NULL, reason TEXT NOT NULL)"
+    },
+    {
+      "name": "workflow_reaction_backlog",
+      "sql": "CREATE TABLE workflow_reaction_backlog (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, run_id TEXT NOT NULL, start TEXT NOT NULL, due BIGINT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (playbook_key, run_id))"
+    },
+    {
+      "name": "workflow_reaction_backlog_due",
+      "sql": "CREATE INDEX workflow_reaction_backlog_due ON workflow_reaction_backlog (due)"
+    },
+    {
+      "name": "workflow_reaction_rates",
+      "sql": "CREATE TABLE workflow_reaction_rates (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, minute BIGINT NOT NULL, starts INTEGER NOT NULL, PRIMARY KEY (playbook_key, workflow))"
+    },
+    {
+      "name": "workflow_reaction_refusals",
+      "sql": "CREATE TABLE workflow_reaction_refusals (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, version INTEGER NOT NULL, minute BIGINT NOT NULL, count INTEGER NOT NULL, reason TEXT NOT NULL, recorded INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (playbook_key, workflow))"
+    },
+    {
+      "name": "workflow_runs",
+      "sql": "CREATE TABLE workflow_runs (run_key TEXT NOT NULL PRIMARY KEY, stream_id TEXT NOT NULL, dispatched_through BIGINT NOT NULL DEFAULT 0, ended_at BIGINT, taken BIGINT NOT NULL DEFAULT 0)"
+    },
+    {
+      "name": "workflow_runs_live",
+      "sql": "CREATE INDEX workflow_runs_live ON workflow_runs (taken, run_key) WHERE ended_at IS NULL OR dispatched_through < ended_at"
+    },
+    {
+      "name": "workflow_settlements",
+      "sql": "CREATE TABLE workflow_settlements (run_key TEXT NOT NULL PRIMARY KEY, settlement TEXT, attempts INTEGER NOT NULL DEFAULT 0, last_attempt_at BIGINT)"
+    },
+    {
+      "name": "workflow_snapshot_chunks",
+      "sql": "CREATE TABLE workflow_snapshot_chunks (run_key TEXT NOT NULL, version BIGINT NOT NULL, chunk INTEGER NOT NULL, chunks INTEGER NOT NULL, bytes INTEGER NOT NULL, text TEXT NOT NULL, PRIMARY KEY (run_key, version, chunk))"
+    },
+    {
+      "name": "workflow_subscription_types",
+      "sql": "CREATE TABLE workflow_subscription_types (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, type TEXT NOT NULL, PRIMARY KEY (playbook_key, workflow, type))"
+    },
+    {
+      "name": "workflow_subscription_types_by_type",
+      "sql": "CREATE INDEX workflow_subscription_types_by_type ON workflow_subscription_types (playbook_key, type, workflow)"
+    },
+    {
+      "name": "workflow_subscriptions",
+      "sql": "CREATE TABLE workflow_subscriptions (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, reference TEXT NOT NULL, version BIGINT NOT NULL, kind TEXT NOT NULL, rule TEXT NOT NULL, activated_by TEXT NOT NULL, activated_at BIGINT NOT NULL, next_due BIGINT, running TEXT, PRIMARY KEY (playbook_key, workflow, reference))"
+    },
+    {
+      "name": "workflow_subscriptions_due",
+      "sql": "CREATE INDEX workflow_subscriptions_due ON workflow_subscriptions (next_due) WHERE next_due IS NOT NULL"
+    },
+    {
+      "name": "workflow_timers",
+      "sql": "CREATE TABLE workflow_timers (run_key TEXT NOT NULL, timer_id TEXT NOT NULL, state TEXT NOT NULL, due_at BIGINT, armed_by BIGINT, PRIMARY KEY (run_key, timer_id))"
+    },
+    {
+      "name": "workflow_timers_due",
+      "sql": "CREATE INDEX workflow_timers_due ON workflow_timers (due_at) WHERE state = 'armed'"
+    }
+  ]
+}

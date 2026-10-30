@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "bootstrap-sha": "e50f420f9618343a59bce02244ec19954a70442a",
+  "include-component-in-tag": false,
+  "bump-minor-pre-major": true,
+  "pull-request-title-pattern": "chore(release): release ${version}",
+  "group-pull-request-title-pattern": "chore(release): release ${version}",
+  "packages": {
+    ".": {
+      "package-name": "",
+      "changelog-path": "CHANGELOG.md",
+      "initial-version": "0.1.0",
+      "extra-files": [
+        { "type": "json", "path": "docs/assets/openapi.json", "jsonpath": "$.info.version" },
+        { "type": "generic", "path": "docs/get-started/local.md" },
+        { "type": "generic", "path": "packages/server/npm/README.md" }
+      ]
+    },
+    "packages/prediction-contract": {
+      "package-name": "@on.auto/prediction-contract",
+      "component": "prediction-contract",
+      "include-component-in-tag": true,
+      "changelog-path": "CHANGELOG.md",
+      "initial-version": "1.0.0"
+    }
+  }
+}

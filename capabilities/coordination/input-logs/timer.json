@@ -1,0 +1,381 @@
+{
+  "name": "timer",
+  "inputs": [
+    {
+      "kind": "started",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+      "at": 1790845200000,
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "pause": {
+              "wait": {
+                "milliseconds": 1200
+              }
+            }
+          }
+        ]
+      },
+      "input": {
+        "waited": true
+      },
+      "limits": {
+        "mostDurationMs": 2592000000,
+        "longestCallMs": 600000
+      },
+      "attributes": {
+        "org": "acme",
+        "playbook": "alpha",
+        "run_id": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+        "definition": {
+          "name": "timer",
+          "version": 1
+        },
+        "caller": {
+          "id": "acme-admin"
+        }
+      },
+      "seed": 7
+    },
+    {
+      "kind": "timer_fired",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+      "at": 1790845201200,
+      "timerId": "2"
+    }
+  ],
+  "events": [
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "started",
+        "key": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+        "at": 1790845200000
+      },
+      "steps": [
+        {
+          "reference": "/do/0/pause",
+          "run": 1,
+          "outcome": "waiting",
+          "name": "pause",
+          "times": 1,
+          "caused_by": "input",
+          "waits_for": "timer"
+        }
+      ],
+      "resumed": null,
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/runId",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000312"
+        },
+        {
+          "op": "replace",
+          "path": "/status",
+          "value": "running"
+        },
+        {
+          "op": "replace",
+          "path": "/workflow",
+          "value": {
+            "document": {
+              "document": {
+                "dsl": "1.0.3",
+                "namespace": "acme",
+                "name": "test",
+                "version": "1.0.0"
+              },
+              "do": [
+                {
+                  "pause": {
+                    "wait": {
+                      "milliseconds": 1200
+                    }
+                  }
+                }
+              ]
+            },
+            "input": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/org",
+          "value": "acme"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/playbook",
+          "value": "alpha"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/run_id",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000312"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/definition",
+          "value": {
+            "name": "timer",
+            "version": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/caller",
+          "value": {
+            "id": "acme-admin"
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/limits/mostDurationMs",
+          "value": 2592000000
+        },
+        {
+          "op": "replace",
+          "path": "/limits/longestCallMs",
+          "value": 600000
+        },
+        {
+          "op": "replace",
+          "path": "/startedAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/random/seed",
+          "value": 7
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1pause",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 3
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/1",
+          "value": {
+            "purpose": "deadline",
+            "reference": "/",
+            "armedAt": 1790845200000,
+            "dueAt": 1793437200000
+          }
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/2",
+          "value": {
+            "purpose": "wait",
+            "reference": "/do/0/pause",
+            "armedAt": 1790845200000,
+            "dueAt": 1790845201200
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 8336
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/1",
+          "value": {
+            "value": {
+              "waited": true
+            },
+            "bytes": 15
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 2
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root",
+          "value": {
+            "reference": "/",
+            "run": 1,
+            "startedAt": 1790845200000,
+            "context": 0,
+            "rawInput": 1,
+            "input": 1,
+            "variables": {},
+            "timeout": null,
+            "body": {
+              "kind": "list",
+              "list": {
+                "pointer": "/do",
+                "position": 0,
+                "data": 1,
+                "variables": {},
+                "current": {
+                  "kind": "running",
+                  "task": {
+                    "reference": "/do/0/pause",
+                    "run": 1,
+                    "startedAt": 1790845200000,
+                    "context": 0,
+                    "rawInput": 1,
+                    "input": 1,
+                    "variables": {},
+                    "timeout": null,
+                    "body": {
+                      "kind": "wait",
+                      "timer": "2"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 2688
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+          "timerId": "1",
+          "dueAt": 1793437200000,
+          "purpose": "deadline",
+          "label": "the most the workflow may run"
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+          "timerId": "2",
+          "dueAt": 1790845201200,
+          "purpose": "wait",
+          "label": "/do/0/pause"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "timer_fired",
+        "key": "2",
+        "at": 1790845201200
+      },
+      "steps": [
+        {
+          "reference": "/do/0/pause",
+          "run": 1,
+          "outcome": "completed",
+          "name": "pause",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/pause",
+            "run": 1,
+            "outcome": "waiting",
+            "times": 1
+          }
+        }
+      ],
+      "resumed": {
+        "reference": "/do/0/pause",
+        "run": 1,
+        "times": 1
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/status",
+          "value": "ended"
+        },
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845201200
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 2
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/1"
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/2"
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 144
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root",
+          "value": null
+        },
+        {
+          "op": "replace",
+          "path": "/outcome",
+          "value": {
+            "kind": "completed",
+            "output": {
+              "waited": true
+            }
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 3727
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+          "timerId": "1"
+        },
+        {
+          "kind": "settle",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000312",
+          "settlement": {
+            "status": "succeeded",
+            "output": {
+              "waited": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

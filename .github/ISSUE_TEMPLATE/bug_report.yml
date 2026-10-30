@@ -1,0 +1,43 @@
+name: Bug report
+description: Something in Auto Runtime doesn't work the way it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: The smallest set of steps, config or requests that shows the problem.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release, image tag or digest, or commit you ran.
+      placeholder: onauto/runtime:0.6.0
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Where it runs
+      options:
+        - Docker image, self-hosted
+        - From source (pnpm dev)
+        - Auto Studio (on.auto)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant server output. Remove secrets and personal data first.
+      render: shell

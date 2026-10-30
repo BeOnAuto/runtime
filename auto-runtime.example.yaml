@@ -1,0 +1,191 @@
+# yaml-language-server: $schema=./auto-runtime.schema.json
+#
+# The settings of Auto Runtime that are lists or maps, where Studio comes from,
+# local mode and the usage ping. Copy this file to auto-runtime.yaml at the root
+# of the repository, which git ignores, and pnpm dev passes it to the server. In
+# a container, mount it and set CONFIG_FILE to its path inside the container.
+#
+# Each key stands for the environment variable of the same name in upper case,
+# which wins over the key when both are set. Secrets never go in this file:
+# write ${NAME} where one belongs and set NAME in .env or in the container.
+# DATABASE_URL, the PostgreSQL database of the ledger, holds a password, and
+# SECRETS_KEY is the key the secrets kept in the ledger are sealed under, so both
+# are read from the environment only and have no key here. SECRETS_KEY_FILE and
+# SECRETS_KEY_KMS are environment variables too, which name a file that holds that
+# key and a key in AWS KMS that wraps the key of each secret instead.
+
+# OpenAI-compatible gateways; a reasoning function then names gateway/<model id>.
+model_gateways:
+  - name: gateway
+    base_url: https://gateway.example.com/v1
+    api_key: ${GATEWAY_API_KEY}
+
+# Send every anthropic/<model id> a reasoning function names through the gateway.
+model_aliases:
+  anthropic/*: gateway/anthropic/*
+
+# The models list_models shows for a provider that does not list its own
+# (bedrock, bedrock-anthropic, azure, vertex, vertex-anthropic), and for a
+# gateway whose list of models cannot be read.
+# declared_models:
+#   bedrock:
+#     - eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+#   gateway:
+#     - anthropic/claude-haiku-4-5
+
+# The only models a reasoning function may name and list_models shows; every
+# model when left out. A trailing * stands for any model id.
+# allowed_models:
+#   - anthropic/*
+#   - gateway/anthropic/claude-haiku-4-5
+
+# The tool servers whose tools a function may name, a reasoning function in its
+# tools key and an interaction function in deliver, each bound to an org and,
+# optionally, to some of its playbooks. Each is one of three types, taken from
+# the field that names it when type is left out: mcp, a remote MCP server at a
+# url; stdio, an MCP server run as a process, a command installed and pinned,
+# which inherits nothing from the server's environment but its env; openapi, an
+# HTTP API whose OpenAPI document, 3.0 or 3.1, is read once at start from an
+# https URL or from a path relative to the directory of this file, each
+# operation one tool.
+#
+# allowed names the tools of a server a function may name, as the server lists
+# them; every tool of the server when left out. It is the one list of the tools
+# of a server, for the runs of functions and for a call made by hand with
+# execute alike; search shows whether the server marks each one read-only, and
+# an HTTP API marks the tools of its GET and HEAD operations read-only.
+#
+# An openapi entry gives its credential under security, by the name of the
+# security scheme its document declares, and the server places it as the scheme
+# says; headers and query_params hold what the schemes do not, such as a tenant.
+# org names one org, a list of orgs, or * for every org; one entry serves each
+# under one name, with one credential.
+#
+# An entry may name a provider, one the runtime ships or one connections adds
+# below, in place of its server: provider gives the server and where the
+# credential goes, placeholders the values the provider asks for, and
+# credential a reference, or for client credentials the client id written out
+# with client_secret, or with private_key and its algorithm, each key a
+# reference.
+# tool_servers:
+#   graph:
+#     url: https://gateway.example.com/mcp
+#     headers:
+#       Authorization: Bearer ${GRAPH_API_KEY}
+#     org: acme
+#     playbooks: [sales]
+#     allowed: [search, introspect, validate, dry_run, execute, post_message]
+#   notes:
+#     command: /usr/local/bin/notes-mcp-server
+#     args: [--read-only]
+#     env:
+#       NOTES_API_KEY: ${NOTES_API_KEY}
+#     org: acme
+#   billing:
+#     document: https://billing.example.com/openapi.json
+#     base_url: https://billing.example.com/v2
+#     security:
+#       apiKeyAuth: ${BILLING_API_KEY}
+#     org: [acme, globex]
+#     allowed: [listInvoices, getInvoice]
+#   accounts:
+#     provider: crm
+#     placeholders:
+#       tenant: acme
+#     credential: ${CRM_API_TOKEN}
+#     org: acme
+#     allowed: [search_accounts]
+
+# What people may add as connections, the tool servers they add to an org
+# through their agents and approve in Studio. Every rule has a default, so
+# leaving the section out lets people add any connection to a public host.
+# A connection to a loopback, private, link-local or cloud metadata address,
+# such as localhost, 10.0.0.5 or 169.254.169.254, or to a name that resolves to
+# one, is refused. Only an address allowed_hosts names by itself, such as
+# 10.0.0.5, may be reached, and loopback needs no naming in local mode.
+# providers adds providers of your own beside those the runtime ships, which a
+# person connects by name and an entry of tool_servers may name; one named as a
+# shipped provider takes its place. auto_clients lets a provider take Auto's
+# client, through Auto's consent service, where you register none at its vendor:
+# on in local mode and off otherwise when left out.
+# connections:
+#   people_may_add: true
+#   auto_clients: true
+#   allowed_hosts: ['*.example.com', 'crm.example.com']
+#   credential_kinds: [none, reference, secret, client_credentials, authorization]
+#   providers:
+#     - name: crm
+#       title: CRM
+#       description: Read and change the accounts and contacts of your CRM.
+#       website: https://developer.crm.example.com
+#       type: mcp
+#       url: https://{tenant}.crm.example.com/mcp
+#       placeholders:
+#         tenant:
+#           description: The tenant of your CRM, as in https://<tenant>.crm.example.com
+#           pattern: '^[a-z0-9-]{1,63}$'
+#           example: acme
+#       credentials:
+#         - kind: secret
+#           in: header
+#           name: Authorization
+#           scheme: Bearer
+#           description: An API token from the settings of your CRM.
+
+# The origins a page in a browser may call the API from.
+allowed_origins:
+  - http://localhost:5173
+
+# Where Studio comes from. A page on a public address may not reach an address
+# on this machine, so a runtime in local mode serves Studio itself at /studio/
+# on its own address, fetched from studio_origin and kept beside the ledger.
+# Elsewhere it serves none unless serve_studio is true, and the Studio it serves
+# there signs no one in yet, so it works in local mode alone.
+# studio_origin: https://studio.on.auto
+# serve_studio: true
+
+# Local mode, declared for a runtime whose port only this computer reaches,
+# such as a container whose port Docker publishes on 127.0.0.1 alone; never
+# with a wider publish. It takes no api_keys, and a runtime that listens beyond
+# the loopback needs PUBLIC_URL=http://localhost:5555 beside it.
+# access_mode: local
+
+# The API keys the server accepts, each as pnpm key prints it. With the list
+# set, even empty, local mode is off and every request needs a key, or, where
+# PUBLIC_URL is set, an access token of the Auto identity service.
+# api_keys:
+#   - id: ci
+#     org: acme
+#     permissions: [org:read, org:write, playbook:read, playbook:write]
+#     playbooks: '*'
+#     sha256: <the digest pnpm key prints>
+
+# The anonymous usage ping Auto Runtime sends when it starts: its release, the
+# operating system, the processor, the version of Node.js, how it was installed
+# and a random install id, never anything of its work. On when left out;
+# DO_NOT_TRACK=1 in the environment turns it off as well. See
+# https://on.auto/docs/self-host/configuration#usage-ping
+# usage_ping: false
+
+# The license of this runtime, which runs it on its org's credits: without one
+# it runs 100 free runs, then 15 a UTC day and 75 a UTC month. The key Studio
+# gives as an owner of the org registers the runtime, written as a reference to
+# the variable that holds it, since this file never holds a secret.
+# AUTO_RUNTIME_LICENSE_KEY wins over it. See https://on.auto/docs/self-host/licenses
+# A runtime that never reaches Auto also takes the offline credits an operator
+# of Auto signs for it, the JSON of their payload, signature and kid.
+# license:
+#   key: ${ACME_LICENSE_KEY}
+#   allocation: ${ACME_ALLOCATION}
+
+# The packages Auto Runtime loads as extensions as it starts, each installed
+# beside it and named here in order of precedence: a package that fills a point
+# a capability declares, such as prediction/model-runtime, the model runtime
+# that executes a format of candidate. The extension of the release, the
+# runtime of its own models, stands after these. integrity pins the installed files of a
+# package, and a package whose files differ stops the start, naming the
+# integrity of the one installed. AUTO_RUNTIME_EXTENSIONS wins over it. See
+# https://on.auto/docs/reference/model-runtimes
+# extensions:
+#   - package: '@acme/prediction-models'
+#     integrity: sha512-<the base64 a refused start names>

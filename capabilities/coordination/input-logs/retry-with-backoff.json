@@ -1,0 +1,1272 @@
+{
+  "name": "retry-with-backoff",
+  "inputs": [
+    {
+      "kind": "started",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+      "at": 1790845200000,
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "guarded": {
+              "try": [
+                {
+                  "fetch": {
+                    "call": "run_definition",
+                    "with": {
+                      "type": "reasoning",
+                      "name": "flaky",
+                      "input": {
+                        "key": "backoff"
+                      }
+                    }
+                  }
+                }
+              ],
+              "catch": {
+                "errors": {
+                  "with": {
+                    "status": 503
+                  }
+                },
+                "retry": {
+                  "delay": {
+                    "milliseconds": 500
+                  },
+                  "backoff": {
+                    "exponential": {}
+                  },
+                  "limit": {
+                    "attempt": {
+                      "count": 3
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "input": {},
+      "limits": {
+        "mostDurationMs": 2592000000,
+        "longestCallMs": 600000
+      },
+      "attributes": {
+        "org": "acme",
+        "playbook": "alpha",
+        "run_id": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+        "definition": {
+          "name": "retry-with-backoff",
+          "version": 1
+        },
+        "caller": {
+          "id": "acme-admin"
+        }
+      },
+      "seed": 7
+    },
+    {
+      "kind": "call_answered",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+      "at": 1790845200050,
+      "key": {
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+        "reference": "/do/0/guarded/try/0/fetch",
+        "run": 1
+      },
+      "result": {
+        "status": "rejected",
+        "reason": "unavailable",
+        "detail": "busy on call 1"
+      }
+    },
+    {
+      "kind": "timer_fired",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+      "at": 1790845200550,
+      "timerId": "3"
+    },
+    {
+      "kind": "call_answered",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+      "at": 1790845200600,
+      "key": {
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+        "reference": "/do/0/guarded/try/0/fetch",
+        "run": 2
+      },
+      "result": {
+        "status": "rejected",
+        "reason": "unavailable",
+        "detail": "busy on call 2"
+      }
+    },
+    {
+      "kind": "timer_fired",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+      "at": 1790845201600,
+      "timerId": "5"
+    },
+    {
+      "kind": "call_answered",
+      "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+      "at": 1790845201650,
+      "key": {
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+        "reference": "/do/0/guarded/try/0/fetch",
+        "run": 3
+      },
+      "result": {
+        "status": "succeeded",
+        "output": {
+          "calls": 3
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "started",
+        "key": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+        "at": 1790845200000
+      },
+      "steps": [
+        {
+          "reference": "/do/0/guarded",
+          "run": 1,
+          "outcome": "started",
+          "name": "guarded",
+          "times": 1,
+          "caused_by": "input"
+        },
+        {
+          "reference": "/do/0/guarded/try/0/fetch",
+          "run": 1,
+          "outcome": "waiting",
+          "name": "fetch",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/guarded",
+            "run": 1,
+            "outcome": "started",
+            "times": 1
+          },
+          "waits_for": "call",
+          "child": "5f2def8d-0781-5202-bfc8-b4dad2e6308c"
+        }
+      ],
+      "resumed": null,
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/runId",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000307"
+        },
+        {
+          "op": "replace",
+          "path": "/status",
+          "value": "running"
+        },
+        {
+          "op": "replace",
+          "path": "/workflow",
+          "value": {
+            "document": {
+              "document": {
+                "dsl": "1.0.3",
+                "namespace": "acme",
+                "name": "test",
+                "version": "1.0.0"
+              },
+              "do": [
+                {
+                  "guarded": {
+                    "try": [
+                      {
+                        "fetch": {
+                          "call": "run_definition",
+                          "with": {
+                            "type": "reasoning",
+                            "name": "flaky",
+                            "input": {
+                              "key": "backoff"
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "catch": {
+                      "errors": {
+                        "with": {
+                          "status": 503
+                        }
+                      },
+                      "retry": {
+                        "delay": {
+                          "milliseconds": 500
+                        },
+                        "backoff": {
+                          "exponential": {}
+                        },
+                        "limit": {
+                          "attempt": {
+                            "count": 3
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "input": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/org",
+          "value": "acme"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/playbook",
+          "value": "alpha"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/run_id",
+          "value": "0199a3c4-7d2e-7c1a-9b3f-000000000307"
+        },
+        {
+          "op": "add",
+          "path": "/attributes/definition",
+          "value": {
+            "name": "retry-with-backoff",
+            "version": 1
+          }
+        },
+        {
+          "op": "add",
+          "path": "/attributes/caller",
+          "value": {
+            "id": "acme-admin"
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/limits/mostDurationMs",
+          "value": 2592000000
+        },
+        {
+          "op": "replace",
+          "path": "/limits/longestCallMs",
+          "value": 600000
+        },
+        {
+          "op": "replace",
+          "path": "/startedAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200000
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/random/seed",
+          "value": 7
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1guarded",
+          "value": 1
+        },
+        {
+          "op": "add",
+          "path": "/runs/~1do~10~1guarded~1try~10~1fetch",
+          "value": 1
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 3
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/1",
+          "value": {
+            "purpose": "deadline",
+            "reference": "/",
+            "armedAt": 1790845200000,
+            "dueAt": 1793437200000
+          }
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/2",
+          "value": {
+            "purpose": "call_deadline",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "armedAt": 1790845200000,
+            "dueAt": 1790845800000
+          }
+        },
+        {
+          "op": "add",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"~1do~10~1guarded~1try~10~1fetch\",1]",
+          "value": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 1
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 12709
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/1",
+          "value": {
+            "value": {},
+            "bytes": 2
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/2",
+          "value": {
+            "value": {
+              "type": "reasoning",
+              "name": "flaky",
+              "input": {
+                "key": "backoff"
+              }
+            },
+            "bytes": 61
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 3
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root",
+          "value": {
+            "reference": "/",
+            "run": 1,
+            "startedAt": 1790845200000,
+            "context": 0,
+            "rawInput": 1,
+            "input": 1,
+            "variables": {},
+            "timeout": null,
+            "body": {
+              "kind": "list",
+              "list": {
+                "pointer": "/do",
+                "position": 0,
+                "data": 1,
+                "variables": {},
+                "current": {
+                  "kind": "running",
+                  "task": {
+                    "reference": "/do/0/guarded",
+                    "run": 1,
+                    "startedAt": 1790845200000,
+                    "context": 0,
+                    "rawInput": 1,
+                    "input": 1,
+                    "variables": {},
+                    "timeout": null,
+                    "body": {
+                      "kind": "try",
+                      "attempt": 0,
+                      "startedAt": 1790845200000,
+                      "phase": {
+                        "kind": "trying",
+                        "list": {
+                          "pointer": "/do/0/guarded/try",
+                          "position": 0,
+                          "data": 1,
+                          "variables": {},
+                          "current": {
+                            "kind": "running",
+                            "task": {
+                              "reference": "/do/0/guarded/try/0/fetch",
+                              "run": 1,
+                              "startedAt": 1790845200000,
+                              "context": 0,
+                              "rawInput": 1,
+                              "input": 1,
+                              "variables": {},
+                              "timeout": null,
+                              "body": {
+                                "kind": "call",
+                                "key": {
+                                  "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+                                  "reference": "/do/0/guarded/try/0/fetch",
+                                  "run": 1
+                                },
+                                "function": "run_definition",
+                                "arguments": 2,
+                                "label": "the reasoning function flaky",
+                                "deadline": "2"
+                              }
+                            }
+                          }
+                        },
+                        "attemptLimit": null
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 4409
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "1",
+          "dueAt": 1793437200000,
+          "purpose": "deadline",
+          "label": "the most the workflow may run"
+        },
+        {
+          "kind": "start_call",
+          "key": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 1
+          },
+          "function": "run_definition",
+          "arguments": {
+            "type": "reasoning",
+            "name": "flaky",
+            "input": {
+              "key": "backoff"
+            }
+          },
+          "longestMs": 600000
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "2",
+          "dueAt": 1790845800000,
+          "purpose": "call_deadline",
+          "label": "/do/0/guarded/try/0/fetch deadline"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "call_answered",
+        "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",1]",
+        "at": 1790845200050,
+        "status": "rejected"
+      },
+      "steps": [
+        {
+          "reference": "/do/0/guarded/try/0/fetch",
+          "run": 1,
+          "outcome": "raised",
+          "name": "fetch",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 1,
+            "outcome": "waiting",
+            "times": 1
+          },
+          "error": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+            "title": "The reasoning function flaky was not available"
+          }
+        }
+      ],
+      "resumed": {
+        "reference": "/do/0/guarded/try/0/fetch",
+        "run": 1,
+        "times": 1
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200050
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 2
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 4
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/2"
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/3",
+          "value": {
+            "purpose": "retry_delay",
+            "reference": "/do/0/guarded",
+            "armedAt": 1790845200050,
+            "dueAt": 1790845200550
+          }
+        },
+        {
+          "op": "remove",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"~1do~10~1guarded~1try~10~1fetch\",1]"
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 8552
+        },
+        {
+          "op": "remove",
+          "path": "/machine/values/2"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/list"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/attemptLimit"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/phase/kind",
+          "value": "backing_off"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/timer",
+          "value": "3"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/error",
+          "value": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+            "status": 503,
+            "title": "The reasoning function flaky was not available",
+            "detail": "busy on call 1",
+            "instance": "/do/0/guarded/try/0/fetch"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/failed",
+          "value": {
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 1,
+            "outcome": "raised",
+            "times": 1
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 6702
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "2"
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "3",
+          "dueAt": 1790845200550,
+          "purpose": "retry_delay",
+          "label": "/do/0/guarded retry 1"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "timer_fired",
+        "key": "3",
+        "at": 1790845200550
+      },
+      "steps": [
+        {
+          "reference": "/do/0/guarded/try/0/fetch",
+          "run": 2,
+          "outcome": "waiting",
+          "name": "fetch",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 1,
+            "outcome": "raised",
+            "times": 1
+          },
+          "waits_for": "call",
+          "child": "3344f00b-b573-55f3-8d07-7258d35891c9"
+        }
+      ],
+      "resumed": null,
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200550
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 3
+        },
+        {
+          "op": "replace",
+          "path": "/runs/~1do~10~1guarded~1try~10~1fetch",
+          "value": 2
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 5
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/3"
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/4",
+          "value": {
+            "purpose": "call_deadline",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "armedAt": 1790845200550,
+            "dueAt": 1790845800550
+          }
+        },
+        {
+          "op": "add",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"~1do~10~1guarded~1try~10~1fetch\",2]",
+          "value": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 2
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 12709
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/3",
+          "value": {
+            "value": {
+              "type": "reasoning",
+              "name": "flaky",
+              "input": {
+                "key": "backoff"
+              }
+            },
+            "bytes": 61
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 4
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/attempt",
+          "value": 1
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/timer"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/error"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/failed"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/phase/kind",
+          "value": "trying"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/list",
+          "value": {
+            "pointer": "/do/0/guarded/try",
+            "position": 0,
+            "data": 1,
+            "variables": {},
+            "current": {
+              "kind": "running",
+              "task": {
+                "reference": "/do/0/guarded/try/0/fetch",
+                "run": 2,
+                "startedAt": 1790845200550,
+                "context": 0,
+                "rawInput": 1,
+                "input": 1,
+                "variables": {},
+                "timeout": null,
+                "body": {
+                  "kind": "call",
+                  "key": {
+                    "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+                    "reference": "/do/0/guarded/try/0/fetch",
+                    "run": 2
+                  },
+                  "function": "run_definition",
+                  "arguments": 3,
+                  "label": "the reasoning function flaky",
+                  "deadline": "4"
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/attemptLimit",
+          "value": null
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 9521
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "start_call",
+          "key": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 2
+          },
+          "function": "run_definition",
+          "arguments": {
+            "type": "reasoning",
+            "name": "flaky",
+            "input": {
+              "key": "backoff"
+            }
+          },
+          "longestMs": 600000
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "4",
+          "dueAt": 1790845800550,
+          "purpose": "call_deadline",
+          "label": "/do/0/guarded/try/0/fetch deadline"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "call_answered",
+        "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",2]",
+        "at": 1790845200600,
+        "status": "rejected"
+      },
+      "steps": [
+        {
+          "reference": "/do/0/guarded/try/0/fetch",
+          "run": 2,
+          "outcome": "raised",
+          "name": "fetch",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 2,
+            "outcome": "waiting",
+            "times": 1
+          },
+          "error": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+            "title": "The reasoning function flaky was not available"
+          }
+        }
+      ],
+      "resumed": {
+        "reference": "/do/0/guarded/try/0/fetch",
+        "run": 2,
+        "times": 1
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845200600
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 4
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 6
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/4"
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/5",
+          "value": {
+            "purpose": "retry_delay",
+            "reference": "/do/0/guarded",
+            "armedAt": 1790845200600,
+            "dueAt": 1790845201600
+          }
+        },
+        {
+          "op": "remove",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"~1do~10~1guarded~1try~10~1fetch\",2]"
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 8552
+        },
+        {
+          "op": "remove",
+          "path": "/machine/values/3"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/list"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/attemptLimit"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/phase/kind",
+          "value": "backing_off"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/timer",
+          "value": "5"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/error",
+          "value": {
+            "type": "https://open-workflow-specification.org/spec/1.0.0/errors/communication",
+            "status": 503,
+            "title": "The reasoning function flaky was not available",
+            "detail": "busy on call 2",
+            "instance": "/do/0/guarded/try/0/fetch"
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/failed",
+          "value": {
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 2,
+            "outcome": "raised",
+            "times": 1
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 11815
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "4"
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "5",
+          "dueAt": 1790845201600,
+          "purpose": "retry_delay",
+          "label": "/do/0/guarded retry 2"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "timer_fired",
+        "key": "5",
+        "at": 1790845201600
+      },
+      "steps": [
+        {
+          "reference": "/do/0/guarded/try/0/fetch",
+          "run": 3,
+          "outcome": "waiting",
+          "name": "fetch",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 2,
+            "outcome": "raised",
+            "times": 1
+          },
+          "waits_for": "call",
+          "child": "6c763b08-28e9-5af9-b73a-00bb2cf72c93"
+        }
+      ],
+      "resumed": null,
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845201600
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 5
+        },
+        {
+          "op": "replace",
+          "path": "/runs/~1do~10~1guarded~1try~10~1fetch",
+          "value": 3
+        },
+        {
+          "op": "replace",
+          "path": "/timers/next",
+          "value": 7
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/5"
+        },
+        {
+          "op": "add",
+          "path": "/timers/armed/6",
+          "value": {
+            "purpose": "call_deadline",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "armedAt": 1790845201600,
+            "dueAt": 1790845801600
+          }
+        },
+        {
+          "op": "add",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"~1do~10~1guarded~1try~10~1fetch\",3]",
+          "value": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 3
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 12709
+        },
+        {
+          "op": "add",
+          "path": "/machine/values/4",
+          "value": {
+            "value": {
+              "type": "reasoning",
+              "name": "flaky",
+              "input": {
+                "key": "backoff"
+              }
+            },
+            "bytes": 61
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 5
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/attempt",
+          "value": 2
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/timer"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/error"
+        },
+        {
+          "op": "remove",
+          "path": "/machine/root/body/list/current/task/body/phase/failed"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root/body/list/current/task/body/phase/kind",
+          "value": "trying"
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/list",
+          "value": {
+            "pointer": "/do/0/guarded/try",
+            "position": 0,
+            "data": 1,
+            "variables": {},
+            "current": {
+              "kind": "running",
+              "task": {
+                "reference": "/do/0/guarded/try/0/fetch",
+                "run": 3,
+                "startedAt": 1790845201600,
+                "context": 0,
+                "rawInput": 1,
+                "input": 1,
+                "variables": {},
+                "timeout": null,
+                "body": {
+                  "kind": "call",
+                  "key": {
+                    "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+                    "reference": "/do/0/guarded/try/0/fetch",
+                    "run": 3
+                  },
+                  "function": "run_definition",
+                  "arguments": 4,
+                  "label": "the reasoning function flaky",
+                  "deadline": "6"
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "add",
+          "path": "/machine/root/body/list/current/task/body/phase/attemptLimit",
+          "value": null
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 14635
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "start_call",
+          "key": {
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 3
+          },
+          "function": "run_definition",
+          "arguments": {
+            "type": "reasoning",
+            "name": "flaky",
+            "input": {
+              "key": "backoff"
+            }
+          },
+          "longestMs": 600000
+        },
+        {
+          "kind": "arm_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "6",
+          "dueAt": 1790845801600,
+          "purpose": "call_deadline",
+          "label": "/do/0/guarded/try/0/fetch deadline"
+        }
+      ]
+    },
+    {
+      "type": "input_applied",
+      "format": 10,
+      "receipt": {
+        "kind": "call_answered",
+        "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",3]",
+        "at": 1790845201650,
+        "status": "succeeded"
+      },
+      "steps": [
+        {
+          "reference": "/do/0/guarded/try/0/fetch",
+          "run": 3,
+          "outcome": "completed",
+          "name": "fetch",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/guarded/try/0/fetch",
+            "run": 3,
+            "outcome": "waiting",
+            "times": 1
+          }
+        },
+        {
+          "reference": "/do/0/guarded",
+          "run": 1,
+          "outcome": "completed",
+          "name": "guarded",
+          "times": 1,
+          "caused_by": {
+            "reference": "/do/0/guarded",
+            "run": 1,
+            "outcome": "started",
+            "times": 1
+          }
+        }
+      ],
+      "resumed": {
+        "reference": "/do/0/guarded/try/0/fetch",
+        "run": 3,
+        "times": 1
+      },
+      "patch": [
+        {
+          "op": "replace",
+          "path": "/status",
+          "value": "ended"
+        },
+        {
+          "op": "replace",
+          "path": "/lastInputAt",
+          "value": 1790845201650
+        },
+        {
+          "op": "replace",
+          "path": "/inputs",
+          "value": 6
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/1"
+        },
+        {
+          "op": "remove",
+          "path": "/timers/armed/6"
+        },
+        {
+          "op": "remove",
+          "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"~1do~10~1guarded~1try~10~1fetch\",3]"
+        },
+        {
+          "op": "replace",
+          "path": "/heldBytes",
+          "value": 360
+        },
+        {
+          "op": "remove",
+          "path": "/machine/values/4"
+        },
+        {
+          "op": "replace",
+          "path": "/machine/nextValue",
+          "value": 6
+        },
+        {
+          "op": "replace",
+          "path": "/machine/root",
+          "value": null
+        },
+        {
+          "op": "replace",
+          "path": "/outcome",
+          "value": {
+            "kind": "completed",
+            "output": {
+              "calls": 3
+            }
+          }
+        },
+        {
+          "op": "replace",
+          "path": "/historyBytes",
+          "value": 16268
+        }
+      ],
+      "outputs": [
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "6"
+        },
+        {
+          "kind": "cancel_timer",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "timerId": "1"
+        },
+        {
+          "kind": "settle",
+          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
+          "settlement": {
+            "status": "succeeded",
+            "output": {
+              "calls": 3
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

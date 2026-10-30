@@ -1,0 +1,176 @@
+[
+  {
+    "text": "Get started",
+    "items": [
+      {
+        "text": "Quick start",
+        "link": "/get-started/cloud"
+      }
+    ]
+  },
+  {
+    "text": "Tutorials",
+    "items": [
+      {
+        "text": "Build your first playbook",
+        "link": "/tutorials/first-playbook"
+      },
+      {
+        "text": "Build your first workflow",
+        "link": "/tutorials/first-workflow"
+      }
+    ]
+  },
+  {
+    "text": "Concepts",
+    "items": [
+      {
+        "text": "Playbooks and methods",
+        "link": "/concepts/playbooks"
+      },
+      {
+        "text": "Functions",
+        "link": "/concepts/functions"
+      },
+      {
+        "text": "Workflows and runs",
+        "link": "/concepts/workflows"
+      },
+      {
+        "text": "History and events",
+        "link": "/concepts/history-and-dream"
+      }
+    ]
+  },
+  {
+    "text": "Guides",
+    "items": [
+      {
+        "text": "Build functions",
+        "items": [
+          {
+            "text": "Give a function tools",
+            "link": "/guides/tools"
+          },
+          {
+            "text": "Make a playbook remember",
+            "link": "/guides/remember"
+          },
+          {
+            "text": "Calculate with a computation function",
+            "link": "/guides/computation"
+          },
+          {
+            "text": "Forecast with a prediction function",
+            "link": "/guides/forecast"
+          },
+          {
+            "text": "Developer example: forecast sign-ups",
+            "link": "/tutorials/first-forecast"
+          }
+        ]
+      },
+      {
+        "text": "Run and inspect",
+        "items": [
+          {
+            "text": "Run a workflow on a schedule or event",
+            "link": "/guides/triggers"
+          }
+        ]
+      },
+      {
+        "text": "Connect data",
+        "items": [
+          {
+            "text": "Use Auto with Apollo",
+            "link": "/integrations/apollo"
+          },
+          {
+            "text": "Connect Zoom",
+            "link": "/integrations/zoom"
+          },
+          {
+            "text": "Connect Slack",
+            "link": "/integrations/slack"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "text": "Self-hosting",
+    "items": [
+      {
+        "text": "Discuss a deployment",
+        "link": "/self-host"
+      }
+    ]
+  },
+  {
+    "text": "Reference",
+    "items": [
+      {
+        "text": "Terminology",
+        "link": "/concepts/terminology"
+      },
+      {
+        "text": "MCP reference",
+        "link": "/reference/mcp"
+      },
+      {
+        "text": "HTTP API",
+        "link": "/reference/http"
+      },
+      {
+        "text": "Sign-in and token reference",
+        "link": "/reference/authentication"
+      },
+      {
+        "text": "Reasoning function format",
+        "link": "/reference/reasoning-format"
+      },
+      {
+        "text": "Interaction function format",
+        "link": "/reference/interaction-format"
+      },
+      {
+        "text": "Prediction function format",
+        "link": "/reference/prediction-format"
+      },
+      {
+        "text": "Model runtimes",
+        "link": "/reference/model-runtimes"
+      },
+      {
+        "text": "Recall function format",
+        "link": "/reference/recall-format"
+      },
+      {
+        "text": "Computation function format",
+        "link": "/reference/computation-format"
+      },
+      {
+        "text": "Workflow format",
+        "link": "/reference/workflow-format"
+      },
+      {
+        "text": "Output shapes",
+        "link": "/reference/output-shapes"
+      },
+      {
+        "text": "Templates",
+        "link": "/reference/template"
+      }
+    ]
+  },
+  {
+    "text": "Contributing",
+    "items": [
+      {
+        "text": "Documentation contributions",
+        "link": "/contributing/documentation"
+      }
+    ]
+  }
+]

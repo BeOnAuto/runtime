@@ -1,0 +1,25 @@
+node_modules
+dist
+coverage
+.turbo
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.DS_Store
+.idea
+.claude/worktrees/
+/.codex/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.log
+/data/
+/packages/server/.data/
+/packages/server/data/
+/auto-runtime.yaml
+/docs/.vitepress/cache/
+.vitest/
+
+# engineering notes kept out of the repository
+.engineering/

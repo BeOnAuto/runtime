@@ -1,0 +1,25 @@
+name: google-ads
+title: Google Ads
+description: Query Google Ads accounts with its query language, list the customers and report fields you can reach, and create or change campaign budgets, campaigns, ad groups and ad group criteria such as keywords.
+website: https://developers.google.com/google-ads/api/docs/get-started/introduction
+type: openapi
+document: documents/google-ads.openapi.json
+headers:
+  login-customer-id: '{manager_id}'
+placeholders:
+  manager_id:
+    description: The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.
+    pattern: '^[0-9]{10}$'
+    example: '1234567890'
+    required: false
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/adwords
+    says:
+      https://www.googleapis.com/auth/adwords: See, create, change and delete Google Ads accounts and data.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Google Ads.

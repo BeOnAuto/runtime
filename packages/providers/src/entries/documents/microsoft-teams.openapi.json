@@ -1,0 +1,1289 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "Microsoft Teams teams, channels and chats over Microsoft Graph",
+    "version": "v1.0",
+    "description": "Six operations of Microsoft Graph v1.0 on the teams, the channels and the chats of the person who connected, translated from Microsoft's OpenAPI description, which names no permission for any operation, with an oauth2 scheme at the endpoints of Microsoft's authorization server for work accounts. Each operation says only that it answers, since Microsoft's answers reach most of the schemas of Microsoft Graph."
+  },
+  "servers": [
+    {
+      "url": "https://graph.microsoft.com/v1.0"
+    }
+  ],
+  "security": [
+    {
+      "microsoft_graph_oauth": []
+    }
+  ],
+  "paths": {
+    "/me/joinedTeams": {
+      "get": {
+        "tags": ["me.team"],
+        "summary": "List joinedTeams",
+        "description": "Get the teams in Microsoft Teams that the user is a direct member of.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/user-list-joinedteams?view=graph-rest-1.0"
+        },
+        "operationId": "me.ListJoinedTeams",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/teams/{team-id}/channels": {
+      "get": {
+        "tags": ["teams.channel"],
+        "summary": "List channels",
+        "description": "Retrieve the list of channels in this team.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/channel-list?view=graph-rest-1.0"
+        },
+        "operationId": "teams.ListChannels",
+        "parameters": [
+          {
+            "name": "team-id",
+            "in": "path",
+            "description": "The unique identifier of team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "team"
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/me/chats": {
+      "get": {
+        "tags": ["me.chat"],
+        "summary": "Get chats from me",
+        "operationId": "me.ListChats",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      }
+    },
+    "/chats/{chat-id}/messages": {
+      "get": {
+        "tags": ["chats.chatMessage"],
+        "summary": "List messages in a chat",
+        "description": "Retrieve the list of messages in a chat. This method supports federation. To list chat messages in application context, the request must be made from the tenant that the channel owner belongs to (represented by the tenantId property on the channel).",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/chat-list-messages?view=graph-rest-1.0"
+        },
+        "operationId": "chats.ListMessages",
+        "parameters": [
+          {
+            "name": "chat-id",
+            "in": "path",
+            "description": "The unique identifier of chat",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "chat"
+          },
+          {
+            "$ref": "#/components/parameters/top"
+          },
+          {
+            "$ref": "#/components/parameters/skip"
+          },
+          {
+            "$ref": "#/components/parameters/search"
+          },
+          {
+            "$ref": "#/components/parameters/filter"
+          },
+          {
+            "$ref": "#/components/parameters/count"
+          },
+          {
+            "name": "$orderby",
+            "in": "query",
+            "description": "Order items by property values",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$select",
+            "in": "query",
+            "description": "Select properties to be returned",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "$expand",
+            "in": "query",
+            "description": "Expand related entities",
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "uniqueItems": true,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        }
+      },
+      "post": {
+        "tags": ["chats.chatMessage"],
+        "summary": "Send message in a chat",
+        "description": "Send a new chatMessage in the specified chat. This API can't create a new chat; you must use the list chats method to retrieve the ID of an existing chat before you can create a chat message.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/chat-post-messages?view=graph-rest-1.0"
+        },
+        "operationId": "chats.CreateMessages",
+        "requestBody": {
+          "description": "New navigation property",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        },
+        "parameters": [
+          {
+            "name": "chat-id",
+            "in": "path",
+            "description": "The unique identifier of chat",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "chat"
+          }
+        ]
+      }
+    },
+    "/teams/{team-id}/channels/{channel-id}/messages": {
+      "post": {
+        "tags": ["teams.channel"],
+        "summary": "Send chatMessage in channel",
+        "description": "Send a new chatMessage in the specified channel.",
+        "externalDocs": {
+          "description": "Find more info here",
+          "url": "https://learn.microsoft.com/graph/api/channel-post-messages?view=graph-rest-1.0"
+        },
+        "operationId": "teams.channels.CreateMessages",
+        "requestBody": {
+          "description": "New navigation property",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "An answer this document does not describe"
+          }
+        },
+        "parameters": [
+          {
+            "name": "team-id",
+            "in": "path",
+            "description": "The unique identifier of team",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "team"
+          },
+          {
+            "name": "channel-id",
+            "in": "path",
+            "description": "The unique identifier of channel",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "x-ms-docs-key-type": "channel"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "count": {
+        "name": "$count",
+        "in": "query",
+        "description": "Include count of items",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      "filter": {
+        "name": "$filter",
+        "in": "query",
+        "description": "Filter items by property values",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "search": {
+        "name": "$search",
+        "in": "query",
+        "description": "Search items by search phrases",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "skip": {
+        "name": "$skip",
+        "in": "query",
+        "description": "Skip the first n items",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "top": {
+        "name": "$top",
+        "in": "query",
+        "description": "Show only the first n items",
+        "style": "form",
+        "explode": false,
+        "schema": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "example": 50
+      }
+    },
+    "schemas": {
+      "microsoft.graph.bodyType": {
+        "title": "bodyType",
+        "enum": ["text", "html"],
+        "type": "string"
+      },
+      "microsoft.graph.channelIdentity": {
+        "title": "channelIdentity",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "channelId": {
+            "type": "string",
+            "description": "The identity of the channel in which the message was posted.",
+            "nullable": true
+          },
+          "teamId": {
+            "type": "string",
+            "description": "The identity of the team in which the message was posted.",
+            "nullable": true
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.chatMessage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/microsoft.graph.entity"
+          },
+          {
+            "title": "chatMessage",
+            "required": ["@odata.type"],
+            "type": "object",
+            "properties": {
+              "attachments": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/microsoft.graph.chatMessageAttachment"
+                },
+                "description": "References to attached objects like files, tabs, meetings etc."
+              },
+              "body": {
+                "$ref": "#/components/schemas/microsoft.graph.itemBody"
+              },
+              "channelIdentity": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/microsoft.graph.channelIdentity"
+                  },
+                  {
+                    "type": "object",
+                    "nullable": true
+                  }
+                ],
+                "description": "If the message was sent in a channel, represents identity of the channel."
+              },
+              "chatId": {
+                "type": "string",
+                "description": "If the message was sent in a chat, represents the identity of the chat.",
+                "nullable": true
+              },
+              "createdDateTime": {
+                "pattern": "^[0-9]{4,}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,12})?(Z|[+-][0-9][0-9]:[0-9][0-9])$",
+                "type": "string",
+                "description": "Timestamp of when the chat message was created.",
+                "format": "date-time",
+                "nullable": true
+              },
+              "deletedDateTime": {
+                "pattern": "^[0-9]{4,}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,12})?(Z|[+-][0-9][0-9]:[0-9][0-9])$",
+                "type": "string",
+                "description": "Read-only. Timestamp at which the chat message was deleted, or null if not deleted.",
+                "format": "date-time",
+                "nullable": true
+              },
+              "etag": {
+                "type": "string",
+                "description": "Read-only. Version number of the chat message.",
+                "nullable": true
+              },
+              "eventDetail": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/microsoft.graph.eventMessageDetail"
+                  },
+                  {
+                    "type": "object",
+                    "nullable": true
+                  }
+                ],
+                "description": "Read-only. If present, represents details of an event that happened in a chat, a channel, or a team, for example, adding new members. For event messages, the messageType property will be set to systemEventMessage."
+              },
+              "from": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/microsoft.graph.chatMessageFromIdentitySet"
+                  },
+                  {
+                    "type": "object",
+                    "nullable": true
+                  }
+                ],
+                "description": "Details of the sender of the chat message. Can only be set during migration."
+              },
+              "importance": {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessageImportance"
+              },
+              "lastEditedDateTime": {
+                "pattern": "^[0-9]{4,}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,12})?(Z|[+-][0-9][0-9]:[0-9][0-9])$",
+                "type": "string",
+                "description": "Read-only. Timestamp when edits to the chat message were made. Triggers an 'Edited' flag in the Teams UI. If no edits are made the value is null.",
+                "format": "date-time",
+                "nullable": true
+              },
+              "lastModifiedDateTime": {
+                "pattern": "^[0-9]{4,}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,12})?(Z|[+-][0-9][0-9]:[0-9][0-9])$",
+                "type": "string",
+                "description": "Read-only. Timestamp when the chat message is created (initial setting) or modified, including when a reaction is added or removed.",
+                "format": "date-time",
+                "nullable": true
+              },
+              "locale": {
+                "type": "string",
+                "description": "Locale of the chat message set by the client. Always set to en-us."
+              },
+              "mentions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/microsoft.graph.chatMessageMention"
+                },
+                "description": "List of entities mentioned in the chat message. Supported entities are: user, bot, team, channel, chat, and tag."
+              },
+              "messageHistory": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/microsoft.graph.chatMessageHistoryItem"
+                },
+                "description": "List of activity history of a message item, including modification time and actions, such as reactionAdded, reactionRemoved, or reaction changes, on the message."
+              },
+              "messageType": {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessageType"
+              },
+              "policyViolation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/microsoft.graph.chatMessagePolicyViolation"
+                  },
+                  {
+                    "type": "object",
+                    "nullable": true
+                  }
+                ],
+                "description": "Defines the properties of a policy violation set by a data loss prevention (DLP) application."
+              },
+              "reactions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/microsoft.graph.chatMessageReaction"
+                },
+                "description": "Reactions for this chat message (for example, Like)."
+              },
+              "replyToId": {
+                "type": "string",
+                "description": "Read-only. ID of the parent chat message or root chat message of the thread. (Only applies to chat messages in channels, not chats.)",
+                "nullable": true
+              },
+              "subject": {
+                "type": "string",
+                "description": "The subject of the chat message, in plaintext.",
+                "nullable": true
+              },
+              "summary": {
+                "type": "string",
+                "description": "Summary text of the chat message that could be used for push notifications and summary views or fall back views. Only applies to channel chat messages, not chat messages in a chat.",
+                "nullable": true
+              },
+              "webUrl": {
+                "type": "string",
+                "description": "Read-only. Link to the message in Microsoft Teams.",
+                "nullable": true
+              },
+              "hostedContents": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/microsoft.graph.chatMessageHostedContent"
+                },
+                "description": "Content in a message hosted by Microsoft Teams - for example, images or code snippets.",
+                "x-ms-navigationProperty": true
+              },
+              "replies": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/microsoft.graph.chatMessage"
+                },
+                "description": "Replies for a specified message. Supports $expand for channel messages.",
+                "x-ms-navigationProperty": true
+              },
+              "@odata.type": {
+                "type": "string"
+              }
+            },
+            "discriminator": {
+              "propertyName": "@odata.type",
+              "mapping": {}
+            }
+          }
+        ]
+      },
+      "microsoft.graph.chatMessageActions": {
+        "title": "chatMessageActions",
+        "enum": ["reactionAdded", "reactionRemoved", "actionUndefined", "unknownFutureValue"],
+        "type": "string",
+        "x-ms-enum-flags": {
+          "isFlags": true
+        }
+      },
+      "microsoft.graph.chatMessageAttachment": {
+        "title": "chatMessageAttachment",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The content of the attachment. If the attachment is a rich card, set the property to the rich card object. This property and contentUrl are mutually exclusive.",
+            "nullable": true
+          },
+          "contentType": {
+            "type": "string",
+            "description": "The media type of the content attachment. The possible values are: reference: The attachment is a link to another file. Populate the contentURL with the link to the object.forwardedMessageReference: The attachment is a reference to a forwarded message. Populate the content with the original message context.Any contentType that is supported by the Bot Framework's Attachment object.application/vnd.microsoft.card.codesnippet: A code snippet. application/vnd.microsoft.card.announcement: An announcement header.",
+            "nullable": true
+          },
+          "contentUrl": {
+            "type": "string",
+            "description": "The URL for the content of the attachment.",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "Read-only. The unique ID of the attachment.",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "description": "The name of the attachment.",
+            "nullable": true
+          },
+          "teamsAppId": {
+            "type": "string",
+            "description": "The ID of the Teams app that is associated with the attachment. The property is used to attribute a Teams message card to the specified app.",
+            "nullable": true
+          },
+          "thumbnailUrl": {
+            "type": "string",
+            "description": "The URL to a thumbnail image that the channel can use if it supports using an alternative, smaller form of content or contentUrl. For example, if you set contentType to application/word and set contentUrl to the location of the Word document, you might include a thumbnail image that represents the document. The channel could display the thumbnail image instead of the document. When the user selects the image, the channel would open the document.",
+            "nullable": true
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.chatMessageFromIdentitySet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/microsoft.graph.identitySet"
+          },
+          {
+            "title": "chatMessageFromIdentitySet",
+            "required": ["@odata.type"],
+            "type": "object",
+            "properties": {
+              "@odata.type": {
+                "type": "string",
+                "default": "#microsoft.graph.chatMessageFromIdentitySet"
+              }
+            }
+          }
+        ],
+        "x-ms-discriminator-value": "#microsoft.graph.chatMessageFromIdentitySet"
+      },
+      "microsoft.graph.chatMessageHistoryItem": {
+        "title": "chatMessageHistoryItem",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "actions": {
+            "$ref": "#/components/schemas/microsoft.graph.chatMessageActions"
+          },
+          "modifiedDateTime": {
+            "pattern": "^[0-9]{4,}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,12})?(Z|[+-][0-9][0-9]:[0-9][0-9])$",
+            "type": "string",
+            "description": "The date and time when the message was modified.",
+            "format": "date-time"
+          },
+          "reaction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessageReaction"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "The reaction in the modified message."
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.chatMessageHostedContent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/microsoft.graph.teamworkHostedContent"
+          },
+          {
+            "title": "chatMessageHostedContent",
+            "required": ["@odata.type"],
+            "type": "object",
+            "properties": {
+              "@odata.type": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "x-ms-discriminator-value": "#microsoft.graph.chatMessageHostedContent"
+      },
+      "microsoft.graph.chatMessageImportance": {
+        "title": "chatMessageImportance",
+        "enum": ["normal", "high", "urgent", "unknownFutureValue"],
+        "type": "string"
+      },
+      "microsoft.graph.chatMessageMention": {
+        "title": "chatMessageMention",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "maximum": 2147483647,
+            "minimum": -2147483648,
+            "type": "number",
+            "description": "Index of an entity being mentioned in the specified chatMessage. Matches the {index} value in the corresponding <at id='{index}'> tag in the message body.",
+            "format": "int32",
+            "nullable": true
+          },
+          "mentioned": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessageMentionedIdentitySet"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "The entity (user, application, team, channel, or chat) that was @mentioned."
+          },
+          "mentionText": {
+            "type": "string",
+            "description": "String used to represent the mention. For example, a user's display name, a team name.",
+            "nullable": true
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.chatMessageMentionedIdentitySet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/microsoft.graph.identitySet"
+          },
+          {
+            "title": "chatMessageMentionedIdentitySet",
+            "required": ["@odata.type"],
+            "type": "object",
+            "properties": {
+              "conversation": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/microsoft.graph.teamworkConversationIdentity"
+                  },
+                  {
+                    "type": "object",
+                    "nullable": true
+                  }
+                ],
+                "description": "If present, represents a conversation (for example, team, channel, or chat) @mentioned in a message."
+              },
+              "@odata.type": {
+                "type": "string",
+                "default": "#microsoft.graph.chatMessageMentionedIdentitySet"
+              }
+            }
+          }
+        ],
+        "x-ms-discriminator-value": "#microsoft.graph.chatMessageMentionedIdentitySet"
+      },
+      "microsoft.graph.chatMessagePolicyViolation": {
+        "title": "chatMessagePolicyViolation",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "dlpAction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessagePolicyViolationDlpActionTypes"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "The action taken by the DLP provider on the message with sensitive content. Supported values are: NoneNotifySender -- Inform the sender of the violation but allow readers to read the message.BlockAccess -- Block readers from reading the message.BlockAccessExternal -- Block users outside the organization from reading the message, while allowing users within the organization to read the message."
+          },
+          "justificationText": {
+            "type": "string",
+            "description": "Justification text provided by the sender of the message when overriding a policy violation.",
+            "nullable": true
+          },
+          "policyTip": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessagePolicyViolationPolicyTip"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "Information to display to the message sender about why the message was flagged as a violation."
+          },
+          "userAction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessagePolicyViolationUserActionTypes"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "Indicates the action taken by the user on a message blocked by the DLP provider. Supported values are: NoneOverrideReportFalsePositiveWhen the DLP provider is updating the message for blocking sensitive content, userAction isn't required."
+          },
+          "verdictDetails": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.chatMessagePolicyViolationVerdictDetailsTypes"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "Indicates what actions the sender may take in response to the policy violation. Supported values are: NoneAllowFalsePositiveOverride -- Allows the sender to declare the policyViolation to be an error in the DLP app and its rules, and allow readers to see the message again if the dlpAction hides it.AllowOverrideWithoutJustification -- Allows the sender to override the DLP violation and allow readers to see the message again if the dlpAction hides it, without needing to provide an explanation for doing so. AllowOverrideWithJustification -- Allows the sender to override the DLP violation and allow readers to see the message again if the dlpAction hides it, after providing an explanation for doing so.AllowOverrideWithoutJustification and AllowOverrideWithJustification are mutually exclusive."
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.chatMessagePolicyViolationDlpActionTypes": {
+        "title": "chatMessagePolicyViolationDlpActionTypes",
+        "enum": ["none", "notifySender", "blockAccess", "blockAccessExternal"],
+        "type": "string",
+        "x-ms-enum-flags": {
+          "isFlags": true
+        }
+      },
+      "microsoft.graph.chatMessagePolicyViolationPolicyTip": {
+        "title": "chatMessagePolicyViolationPolicyTip",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "complianceUrl": {
+            "type": "string",
+            "description": "The URL a user can visit to read about the data loss prevention policies for the organization. (ie, policies about what users shouldn't say in chats)",
+            "nullable": true
+          },
+          "generalText": {
+            "type": "string",
+            "description": "Explanatory text shown to the sender of the message.",
+            "nullable": true
+          },
+          "matchedConditionDescriptions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "The list of improper data in the message that was detected by the data loss prevention app. Each DLP app defines its own conditions, examples include 'Credit Card Number' and 'Social Security Number'."
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.chatMessagePolicyViolationUserActionTypes": {
+        "title": "chatMessagePolicyViolationUserActionTypes",
+        "enum": ["none", "override", "reportFalsePositive"],
+        "type": "string",
+        "x-ms-enum-flags": {
+          "isFlags": true
+        }
+      },
+      "microsoft.graph.chatMessagePolicyViolationVerdictDetailsTypes": {
+        "title": "chatMessagePolicyViolationVerdictDetailsTypes",
+        "enum": [
+          "none",
+          "allowFalsePositiveOverride",
+          "allowOverrideWithoutJustification",
+          "allowOverrideWithJustification"
+        ],
+        "type": "string",
+        "x-ms-enum-flags": {
+          "isFlags": true
+        }
+      },
+      "microsoft.graph.chatMessageReaction": {
+        "title": "chatMessageReaction",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "createdDateTime": {
+            "pattern": "^[0-9]{4,}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]([.][0-9]{1,12})?(Z|[+-][0-9][0-9]:[0-9][0-9])$",
+            "type": "string",
+            "description": "The timestamp type represents date and time information using ISO 8601 format and is always in UTC. For example, midnight UTC on Jan 1, 2014 is 2014-01-01T00:00:00Z.",
+            "format": "date-time"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "The name of the reaction.",
+            "nullable": true
+          },
+          "reactionContentUrl": {
+            "type": "string",
+            "description": "The hosted content URL for the custom reaction type.",
+            "nullable": true
+          },
+          "reactionType": {
+            "type": "string",
+            "description": "The reaction type. Supported values include Unicode characters, custom, and some backward-compatible reaction types, such as like, angry, sad, laugh, heart, and surprised."
+          },
+          "user": {
+            "$ref": "#/components/schemas/microsoft.graph.chatMessageReactionIdentitySet"
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.chatMessageReactionIdentitySet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/microsoft.graph.identitySet"
+          },
+          {
+            "title": "chatMessageReactionIdentitySet",
+            "required": ["@odata.type"],
+            "type": "object",
+            "properties": {
+              "@odata.type": {
+                "type": "string",
+                "default": "#microsoft.graph.chatMessageReactionIdentitySet"
+              }
+            }
+          }
+        ],
+        "x-ms-discriminator-value": "#microsoft.graph.chatMessageReactionIdentitySet"
+      },
+      "microsoft.graph.chatMessageType": {
+        "title": "chatMessageType",
+        "enum": ["message", "chatEvent", "typing", "unknownFutureValue", "systemEventMessage"],
+        "type": "string"
+      },
+      "microsoft.graph.entity": {
+        "title": "entity",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique identifier for an entity. Read-only."
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "@odata.type",
+          "mapping": {
+            "#microsoft.graph.chatMessage": "#/components/schemas/microsoft.graph.chatMessage",
+            "#microsoft.graph.teamworkHostedContent": "#/components/schemas/microsoft.graph.teamworkHostedContent",
+            "#microsoft.graph.chatMessageHostedContent": "#/components/schemas/microsoft.graph.chatMessageHostedContent"
+          }
+        }
+      },
+      "microsoft.graph.eventMessageDetail": {
+        "title": "eventMessageDetail",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "@odata.type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "@odata.type",
+          "mapping": {}
+        }
+      },
+      "microsoft.graph.identity": {
+        "title": "identity",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "description": "The display name of the identity.For drive items, the display name might not always be available or up to date. For example, if a user changes their display name the API might show the new value in a future response, but the items associated with the user don't show up as changed when using delta.",
+            "nullable": true
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier for the identity or actor. For example, in the access reviews decisions API, this property might record the id of the principal, that is, the group, user, or application that's subject to review.",
+            "nullable": true
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "@odata.type",
+          "mapping": {
+            "#microsoft.graph.teamworkConversationIdentity": "#/components/schemas/microsoft.graph.teamworkConversationIdentity"
+          }
+        }
+      },
+      "microsoft.graph.identitySet": {
+        "title": "identitySet",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "application": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.identity"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "Optional. The application associated with this action."
+          },
+          "device": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.identity"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "Optional. The device associated with this action."
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.identity"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "Optional. The user associated with this action."
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        },
+        "discriminator": {
+          "propertyName": "@odata.type",
+          "mapping": {
+            "#microsoft.graph.chatMessageFromIdentitySet": "#/components/schemas/microsoft.graph.chatMessageFromIdentitySet",
+            "#microsoft.graph.chatMessageMentionedIdentitySet": "#/components/schemas/microsoft.graph.chatMessageMentionedIdentitySet",
+            "#microsoft.graph.chatMessageReactionIdentitySet": "#/components/schemas/microsoft.graph.chatMessageReactionIdentitySet"
+          }
+        }
+      },
+      "microsoft.graph.itemBody": {
+        "title": "itemBody",
+        "required": ["@odata.type"],
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The content of the item.",
+            "nullable": true
+          },
+          "contentType": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/microsoft.graph.bodyType"
+              },
+              {
+                "type": "object",
+                "nullable": true
+              }
+            ],
+            "description": "The type of the content. Possible values are text and html."
+          },
+          "@odata.type": {
+            "type": "string"
+          }
+        }
+      },
+      "microsoft.graph.teamworkConversationIdentity": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/microsoft.graph.identity"
+          },
+          {
+            "title": "teamworkConversationIdentity",
+            "required": ["@odata.type"],
+            "type": "object",
+            "properties": {
+              "conversationIdentityType": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/microsoft.graph.teamworkConversationIdentityType"
+                  },
+                  {
+                    "type": "object",
+                    "nullable": true
+                  }
+                ],
+                "description": "Type of conversation. The possible values are: team, channel, chat, and unknownFutureValue."
+              },
+              "@odata.type": {
+                "type": "string",
+                "default": "#microsoft.graph.teamworkConversationIdentity"
+              }
+            }
+          }
+        ],
+        "x-ms-discriminator-value": "#microsoft.graph.teamworkConversationIdentity"
+      },
+      "microsoft.graph.teamworkConversationIdentityType": {
+        "title": "teamworkConversationIdentityType",
+        "enum": ["team", "channel", "chat", "unknownFutureValue"],
+        "type": "string"
+      },
+      "microsoft.graph.teamworkHostedContent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/microsoft.graph.entity"
+          },
+          {
+            "title": "teamworkHostedContent",
+            "required": ["@odata.type"],
+            "type": "object",
+            "properties": {
+              "contentBytes": {
+                "type": "string",
+                "description": "Write only. Bytes for the hosted content (such as images).",
+                "format": "base64url",
+                "nullable": true
+              },
+              "contentType": {
+                "type": "string",
+                "description": "Write only. Content type. such as image/png, image/jpg.",
+                "nullable": true
+              },
+              "@odata.type": {
+                "type": "string"
+              }
+            },
+            "discriminator": {
+              "propertyName": "@odata.type",
+              "mapping": {
+                "#microsoft.graph.chatMessageHostedContent": "#/components/schemas/microsoft.graph.chatMessageHostedContent"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "microsoft_graph_oauth": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize",
+            "tokenUrl": "https://login.microsoftonline.com/organizations/oauth2/v2.0/token",
+            "scopes": {}
+          }
+        }
+      }
+    }
+  }
+}

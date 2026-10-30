@@ -1,0 +1,125 @@
+import { AccountClosedBecauseSchema, Conflict, Unavailable } from '@on.auto/operations';
+import { Clock, Effect, Schema } from 'effect';
+
+import type { AccountRefusal } from '../accounts/account-failure.ts';
+import type { AccountPorts, Usage } from '../accounts/account-service.ts';
+import { executed, licensesPageOf, nowIso, type MeterOptions, type Metering } from '../admission/metering.ts';
+import { isLicenseInvalidBecause, type Invalidity } from '../meter-stream/license-events.ts';
+import type { MeterState } from '../meter-stream/meter-events.ts';
+import { dayOf } from '../standing/utc-periods.ts';
+import { keyDigestOf } from './license-key.ts';
+import type { Signers } from './signed-answers.ts';
+
+export type KeySource = 'environment' | 'configuration' | 'activated';
+
+export interface KeyInHand {
+  readonly key: string;
+  readonly source: KeySource;
+}
+
+export interface Licensing extends Metering {
+  readonly account: AccountPorts;
+  readonly signers: Signers;
+  readonly keyInForce: Effect.Effect<KeyInHand | undefined>;
+  readonly keyInHand: Effect.Effect<string | undefined>;
+  readonly keyHeld: (key: string) => Effect.Effect<void>;
+}
+
+export const activationUnavailable = new Unavailable({
+  detail: 'The license could not be activated because the runtime could not contact Auto. Try again shortly.',
+  kind: 'meter_unavailable',
+});
+
+const isAccountClosedBecause = Schema.is(AccountClosedBecauseSchema);
+
+export function accountClosed({ detail, because, resolve_at: resolveAt }: AccountRefusal): Conflict {
+  return new Conflict({
+    detail,
+    kind: 'account_closed',
+    ...(isAccountClosedBecause(because) ? { because } : {}),
+    ...(resolveAt !== undefined && URL.canParse(resolveAt) ? { resolve_at: resolveAt } : {}),
+  });
+}
+
+function invalidDetailOf({ detail, because }: Invalidity, page: string): string {
+  if (because === 'key_rotated') {
+    return `This runtime's key was replaced. Activate the new key an owner was shown when they rotated it, then run this again. If the key is lost, an owner can rotate it again at ${page}.`;
+  }
+  if (because === 'installation_revoked') {
+    return `This runtime was removed from its org. To use it again, an owner can register it again at ${page}, then activate the new key and run this again.`;
+  }
+  return `This runtime's license is invalid: ${detail}. Activate a license key for this runtime. The account holder or an organization admin can register it at ${page}.`;
+}
+
+function refusedLicense(
+  options: MeterOptions,
+  installation: string | undefined,
+  detailAt: (page: string) => string,
+  because?: Invalidity['because'],
+): Conflict {
+  const page = licensesPageOf(options, installation);
+  return new Conflict({
+    detail: detailAt(page),
+    kind: 'license_invalid',
+    ...(because === 'key_rotated' || because === 'installation_revoked' ? { because } : {}),
+    resolve_at: page,
+    ...(installation === undefined ? {} : { runtime_id: installation }),
+  });
+}
+
+export function licenseInvalidated(
+  options: MeterOptions,
+  installation: string | undefined,
+  invalidity: Invalidity,
+): Conflict {
+  return refusedLicense(options, installation, (page) => invalidDetailOf(invalidity, page), invalidity.because);
+}
+
+export function licenseInvalid(options: MeterOptions, installation: string | undefined, why: string): Conflict {
+  return licenseInvalidated(options, installation, { detail: why });
+}
+
+export function offlineCreditsStopped(options: MeterOptions, installation: string, refreshBy: string): Conflict {
+  return refusedLicense(
+    options,
+    installation,
+    (page) =>
+      `This runtime's offline credits expired on ${dayOf(refreshBy)}, so it can't start runs. The account holder or an organization admin can request new offline credits at ${page}.`,
+  );
+}
+
+export function featureUnlicensed(
+  options: Pick<MeterOptions, 'studio'>,
+  installation: string | undefined,
+  { feature, which }: { readonly feature: string; readonly which: string },
+): Conflict {
+  const page = licensesPageOf(options, installation);
+  return new Conflict({
+    detail: `This runtime's license does not include ${feature}, which ${which}. The account holder or an organization admin can add it at ${page}.`,
+    kind: 'feature_unlicensed',
+    resolve_at: page,
+    ...(installation === undefined ? {} : { runtime_id: installation }),
+  });
+}
+
+export function invalidityOf({ detail, because }: AccountRefusal): Invalidity {
+  return isLicenseInvalidBecause(because) ? { detail, because } : { detail };
+}
+
+export function usageFrom({ admitted }: MeterState): Usage {
+  return { actions: admitted.actions, licensed: admitted.licensed };
+}
+
+export const nowMs = Clock.currentTimeMillis;
+
+export function isLiveAt(expiresAt: string, now: number): boolean {
+  return Date.parse(expiresAt) > now;
+}
+
+export function invalidated(licensing: Licensing, key: string, invalidity: Invalidity): Effect.Effect<void> {
+  return Effect.ignore(
+    Effect.flatMap(nowIso, (at) =>
+      executed(licensing, { type: 'invalidate', key_sha256: keyDigestOf(key), invalidity, at }),
+    ),
+  );
+}

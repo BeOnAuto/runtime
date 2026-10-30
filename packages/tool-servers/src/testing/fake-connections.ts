@@ -1,0 +1,227 @@
+import { Array as Arr, Effect, Option } from 'effect';
+
+import {
+  isConnectionServerSettings,
+  type ConnectionServer,
+  type ConnectionServerSettings,
+  type ConnectionSource,
+  type ConnectionUnready,
+  type OrgConnection,
+} from '../org-servers/connection-source.ts';
+import type { AuthSettings } from '../settings/server-settings.ts';
+import { readToolServerSettings, type Environment } from '../settings/settings-reading.ts';
+
+export interface FakeConnection {
+  readonly id: string;
+  readonly name: string;
+  readonly provider?: string;
+  readonly entry: Readonly<Record<string, unknown>>;
+  readonly environment?: Environment;
+  readonly reaches?: ConnectionServer['reaches'];
+  readonly auth?: AuthSettings;
+}
+
+type Standing =
+  | { readonly status: 'connected' }
+  | { readonly status: 'pending' }
+  | { readonly status: 'broken'; readonly reason: string }
+  | { readonly status: 'unreadable'; readonly reason: string }
+  | { readonly status: 'unrecorded'; readonly reason: string }
+  | { readonly status: 'withheld'; readonly reason: string }
+  | { readonly status: 'not_allowed'; readonly rule: string }
+  | { readonly status: 'dying'; readonly reason: string };
+
+interface Kept {
+  readonly org: string;
+  readonly connection: FakeConnection;
+  readonly settings: ConnectionServerSettings;
+  readonly connectedAt: string;
+}
+
+export interface FakeConnections extends ConnectionSource {
+  readonly connect: (org: string, connection: FakeConnection) => void;
+  readonly pend: (org: string, connection: FakeConnection) => void;
+  readonly breakOff: (id: string, reason: string) => void;
+  readonly loseTheCredentialOf: (id: string, reason: string) => void;
+  readonly loseTheCredentialUnrecordedOf: (id: string, reason: string) => void;
+  readonly withholdTheCredentialOf: (id: string, reason: string) => void;
+  readonly disallow: (id: string, rule: string) => void;
+  readonly dieOnceWhilePreparing: (id: string, reason: string) => void;
+  readonly remove: (id: string) => void;
+  readonly credentialReads: () => number;
+  readonly orgReads: () => number;
+  readonly refusalsTold: () => readonly string[];
+}
+
+interface Held {
+  readonly kept: Map<string, Kept>;
+  readonly standings: Map<string, Standing>;
+  readonly credentialRead: () => void;
+  readonly refusalTold: (id: string) => void;
+}
+
+const firstConnecting = Date.parse('2026-10-15T14:00:00.000Z');
+
+const oneSecond = 1000;
+
+export function refusedWords(name: string): string {
+  return `The server of the connection ${name} refused its credential`;
+}
+
+export function pendingWords(name: string): string {
+  return `Nobody has approved the connection ${name} yet; the person who added it opens its link, or reconnects it for a new link`;
+}
+
+function settingsOf(org: string, { name, entry, environment = {}, auth }: FakeConnection): ConnectionServerSettings {
+  const read = Effect.runSync(
+    readToolServerSettings(
+      { ...environment, TOOL_SERVERS: JSON.stringify({ [name]: { ...entry, org } }) },
+      { modelProviders: [] },
+    ),
+  );
+  const settings = Option.getOrThrow(Arr.head(read.servers.filter((server) => isConnectionServerSettings(server))));
+  return auth === undefined ? settings : { ...settings, auth };
+}
+
+function unreadyOf(name: string, standing: Standing): ConnectionUnready | undefined {
+  if (standing.status === 'pending') {
+    return { because: 'connection_pending', detail: pendingWords(name) };
+  }
+  return standing.status === 'broken' ? { because: 'connection_broken', detail: standing.reason } : undefined;
+}
+
+function everyAddress(): string | undefined {
+  return undefined;
+}
+
+function standingOf({ standings }: Held, id: string): Standing {
+  return Option.getOrThrow(Option.fromNullishOr(standings.get(id)));
+}
+
+function refusalAtUseOf(standing: Standing): ConnectionUnready | undefined {
+  if (standing.status === 'unreadable' || standing.status === 'unrecorded') {
+    return { because: 'connection_broken', detail: standing.reason };
+  }
+  if (standing.status === 'withheld') {
+    return { because: 'connection_unavailable', detail: standing.reason };
+  }
+  return standing.status === 'not_allowed' ? { because: 'connection_not_allowed', detail: standing.rule } : undefined;
+}
+
+function preparedOf(held: Held, { connection, settings }: Kept): Effect.Effect<ConnectionServer, ConnectionUnready> {
+  return Effect.suspend((): Effect.Effect<ConnectionServer, ConnectionUnready> => {
+    held.credentialRead();
+    const standing = standingOf(held, connection.id);
+    if (standing.status === 'dying') {
+      held.standings.set(connection.id, { status: 'connected' });
+      return Effect.die(standing.reason);
+    }
+    if (standing.status === 'unreadable') {
+      held.standings.set(connection.id, { status: 'broken', reason: standing.reason });
+    }
+    const refusal = refusalAtUseOf(standing);
+    return refusal === undefined
+      ? Effect.succeed({
+          settings,
+          reaches: connection.reaches ?? everyAddress,
+          refused: brokenByItsServer(held, connection),
+        })
+      : Effect.fail(refusal);
+  });
+}
+
+function brokenByItsServer(held: Held, { id, name }: FakeConnection): Effect.Effect<string> {
+  return Effect.sync(() => {
+    const reason = refusedWords(name);
+    held.refusalTold(id);
+    held.standings.set(id, { status: 'broken', reason });
+    return reason;
+  });
+}
+
+function listedOf(held: Held, kept: Kept): OrgConnection {
+  const { id, name, provider = null } = kept.connection;
+  const { type, orgs, playbooks, allowed, record_content, request_id } = kept.settings;
+  const serving = { name, type, provider, orgs, playbooks, allowed, record_content, request_id };
+  const unready = unreadyOf(name, standingOf(held, id));
+  return unready === undefined
+    ? { id, serving, state: { status: 'connected', connectedAt: kept.connectedAt, server: preparedOf(held, kept) } }
+    : { id, serving, state: { status: 'unready', unready } };
+}
+
+type StandingsSet = Pick<
+  FakeConnections,
+  | 'breakOff'
+  | 'loseTheCredentialOf'
+  | 'loseTheCredentialUnrecordedOf'
+  | 'withholdTheCredentialOf'
+  | 'disallow'
+  | 'dieOnceWhilePreparing'
+>;
+
+function standingsSetIn({ standings }: Held): StandingsSet {
+  return {
+    breakOff: (id, reason) => {
+      standings.set(id, { status: 'broken', reason });
+    },
+    loseTheCredentialOf: (id, reason) => {
+      standings.set(id, { status: 'unreadable', reason });
+    },
+    loseTheCredentialUnrecordedOf: (id, reason) => {
+      standings.set(id, { status: 'unrecorded', reason });
+    },
+    withholdTheCredentialOf: (id, reason) => {
+      standings.set(id, { status: 'withheld', reason });
+    },
+    disallow: (id, rule) => {
+      standings.set(id, { status: 'not_allowed', rule });
+    },
+    dieOnceWhilePreparing: (id, reason) => {
+      standings.set(id, { status: 'dying', reason });
+    },
+  };
+}
+
+export function fakeConnections(): FakeConnections {
+  let credentialReads = 0;
+  let orgReads = 0;
+  let keeps = 0;
+  const refusals: string[] = [];
+  const held: Held = {
+    kept: new Map(),
+    standings: new Map(),
+    credentialRead: () => {
+      credentialReads += 1;
+    },
+    refusalTold: (id) => {
+      refusals.push(id);
+    },
+  };
+  const keep = (org: string, connection: FakeConnection, standing: Standing): void => {
+    keeps += 1;
+    const connectedAt = new Date(firstConnecting + keeps * oneSecond).toISOString();
+    held.kept.set(connection.id, { org, connection, settings: settingsOf(org, connection), connectedAt });
+    held.standings.set(connection.id, standing);
+  };
+  return {
+    takesConnections: true,
+    connectionsOf: (org) =>
+      Effect.sync(() => {
+        orgReads += 1;
+        return [...held.kept.values()].filter((kept) => kept.org === org).map((kept) => listedOf(held, kept));
+      }),
+    connect: (org, connection) => {
+      keep(org, connection, { status: 'connected' });
+    },
+    pend: (org, connection) => {
+      keep(org, connection, { status: 'pending' });
+    },
+    ...standingsSetIn(held),
+    remove: (id) => {
+      held.kept.delete(id);
+    },
+    credentialReads: () => credentialReads,
+    orgReads: () => orgReads,
+    refusalsTold: () => [...refusals],
+  };
+}

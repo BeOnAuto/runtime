@@ -1,0 +1,17 @@
+name: google-analytics-admin
+title: Google Analytics Admin
+description: Read Google Analytics accounts, properties, data streams, custom dimensions, custom metrics and key events, and run data access reports.
+website: https://developers.google.com/analytics/devguides/config/admin/v1
+type: openapi
+document: documents/google-analytics-admin.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/analytics.readonly
+    says:
+      https://www.googleapis.com/auth/analytics.readonly: See and download Google Analytics data.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Google Analytics administration.

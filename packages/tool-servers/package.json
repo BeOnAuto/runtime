@@ -1,0 +1,37 @@
+{
+  "name": "@on.auto/tool-servers",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Elastic-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./policy": "./src/policy.ts",
+    "./served-fakes": "./src/testing/served-fakes.ts",
+    "./testing": "./src/testing/index.ts"
+  },
+  "scripts": {
+    "measure": "node measure/bridge-overhead.ts",
+    "measure:search": "node measure/search-over-a-document.ts",
+    "lint": "oxlint -c ../../.oxlintrc.json",
+    "typecheck": "tsc",
+    "test": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@on.auto/config": "workspace:*",
+    "@on.auto/documents": "workspace:*",
+    "@on.auto/json-schema": "workspace:*",
+    "@on.auto/operations": "workspace:*",
+    "@on.auto/outbound": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/server": "2.3.1",
+    "@on.auto/ledger": "workspace:*",
+    "@on.auto/secrets": "workspace:*",
+    "@on.auto/workflow-engine": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

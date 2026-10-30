@@ -1,0 +1,17 @@
+name: display-video-360-reports
+title: Display & Video 360 Reports
+description: Create, run, list and remove Display & Video 360 report queries, and read their reports and status, through the Bid Manager API. A report's file sits in Cloud Storage, which a call does not fetch.
+website: https://developers.google.com/bid-manager/guides/get-started/overview
+type: openapi
+document: documents/display-video-360-reports.openapi.json
+credentials:
+  - kind: authorization
+    issuer: https://accounts.google.com
+    scope: https://www.googleapis.com/auth/doubleclickbidmanager
+    says:
+      https://www.googleapis.com/auth/doubleclickbidmanager: Read and manage Display & Video 360 reports in Bid Manager.
+    parameters:
+      access_type: offline
+      prompt: consent
+    clients: [registered]
+    description: Sign in to Google and allow Display & Video 360 reporting.

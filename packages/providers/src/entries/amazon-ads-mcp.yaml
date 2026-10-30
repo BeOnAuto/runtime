@@ -1,0 +1,32 @@
+name: amazon-ads-mcp
+title: Amazon Ads MCP
+description: Read and manage Amazon Ads campaigns, ad groups, ads, targets and reports through Amazon's Ads MCP server, in the region of your advertiser account.
+website: https://advertising.amazon.com/API/docs/en-us/mcp/get-started
+type: mcp
+url: https://{mcp_host}/mcp
+headers:
+  Amazon-Ads-ClientId: '{client_id}'
+placeholders:
+  region:
+    description: The region of your advertiser account, which sets the host of the Amazon Ads MCP server.
+    choices:
+      - value: na
+        title: North America
+        sets:
+          mcp_host: advertising-ai.amazon.com
+      - value: eu
+        title: Europe
+        sets:
+          mcp_host: advertising-ai-eu.amazon.com
+      - value: fe
+        title: Far East
+        sets:
+          mcp_host: advertising-ai-fe.amazon.com
+credentials:
+  - kind: authorization
+    issuer: https://lwa.amazon.com
+    scope: advertising::campaign_management
+    says:
+      advertising::campaign_management: Read and manage the campaigns, ad groups, ads, targets and reports of Amazon Ads advertiser accounts.
+    clients: [registered]
+    description: Sign in with Amazon and allow Amazon Ads campaign management.

@@ -1,0 +1,1197 @@
+name: CI
+
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Restore the tasks turbo cached on the last run of this job under the same lockfile and turbo configuration
+        id: turbo-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-verify-${{ hashFiles('pnpm-lock.yaml', '**/turbo.json') }}-${{ github.sha }}
+          restore-keys: turbo-verify-${{ hashFiles('pnpm-lock.yaml', '**/turbo.json') }}-
+      - run: pnpm install --frozen-lockfile
+      - name: Check the format, the lint rules and the types, and run knip and sherif
+        run: pnpm exec turbo run format:check lint typecheck knip sherif
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          TURBO_RUN_SUMMARY: true
+      - name: Check the documentation
+        run: pnpm docs:check
+      - name: Show the inputs of turbo's global hash and, for each task, its hash, its cache status and its time
+        if: ${{ !cancelled() }}
+        run: .github/turbo/show-run-summary.sh
+      - name: Keep in turbo's cache only the tasks of this run, so the cache it saves holds one run and does not grow
+        if: ${{ !cancelled() && steps.turbo-cache.outputs.cache-hit != 'true' }}
+        run: .github/turbo/keep-only-this-run.sh
+      - name: Save turbo's cache for the next run of this job
+        if: ${{ !cancelled() && steps.turbo-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: ${{ steps.turbo-cache.outputs.cache-primary-key }}
+
+  test:
+    name: Test (${{ join(matrix.packages, ', ') }}${{ matrix.shard && format(', shard {0} of {1}', matrix.shard.index, matrix.shard.count) || '' }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - packages: [server]
+            shard: { index: 1, count: 4 }
+            services: true
+          - packages: [server]
+            shard: { index: 2, count: 4 }
+            services: true
+          - packages: [server]
+            shard: { index: 3, count: 4 }
+            services: true
+          - packages: [server]
+            shard: { index: 4, count: 4 }
+            services: true
+          - packages: [ledger, meter, workflow-host, prediction, object-storage, workflow-engine]
+            services: true
+          - packages:
+              - api
+              - computation
+              - config
+              - connections
+              - coordination
+              - definitions
+              - documents
+              - identity
+              - interaction
+              - json-schema
+              - operations
+              - outbound
+              - playbooks
+              - prediction-contract
+              - prediction-series
+              - providers
+              - reasoning
+              - recall
+              - secrets
+              - tool-servers
+            services: false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - name: Start PostgreSQL and the object store, after the runner is hardened, so no restart of Docker stops them
+        if: matrix.services
+        run: |
+          docker run --detach --name postgresql --publish 5432:5432 --env POSTGRES_PASSWORD=ledger-ci \
+            postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+          docker run --detach --name object-store --publish 9000:9000 \
+            --env RUSTFS_ACCESS_KEY=content-ci --env RUSTFS_SECRET_KEY=content-ci-secret \
+            rustfs/rustfs:1.0.1@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Restore the tasks turbo cached on the last run of this group under the same lockfile and turbo configuration
+        id: turbo-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: turbo-test-${{ join(matrix.packages, '-') }}${{ matrix.shard && format('-shard-{0}', matrix.shard.index) || '' }}-${{ hashFiles('pnpm-lock.yaml', '**/turbo.json') }}-${{ github.sha }}
+          restore-keys: turbo-test-${{ join(matrix.packages, '-') }}${{ matrix.shard && format('-shard-{0}', matrix.shard.index) || '' }}-${{ hashFiles('pnpm-lock.yaml', '**/turbo.json') }}-
+      - run: pnpm install --frozen-lockfile
+      - name: Wait until PostgreSQL and the object store answer on their ports
+        if: matrix.services
+        run: |
+          for attempt in $(seq 1 30); do
+            docker exec postgresql pg_isready --host 127.0.0.1 --username postgres && break
+            sleep 1
+          done
+          docker exec postgresql pg_isready --host 127.0.0.1 --username postgres
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:9000/health && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:9000/health
+      - name: Run the tests of the group's packages two at a time, each with 100% coverage per file, or the shard's tests into a blob report the coverage job merges and checks
+        run: |
+          filters=()
+          for name in $PACKAGES; do
+            filters+=("--filter=@on.auto/$name")
+          done
+          pnpm exec turbo run "$TASK" --concurrency=2 "${filters[@]}"
+        env:
+          PACKAGES: ${{ join(matrix.packages, ' ') }}
+          TASK: ${{ matrix.shard && 'test:shard' || 'test' }}
+          VITEST_SHARD: ${{ matrix.shard && format('{0}/{1}', matrix.shard.index, matrix.shard.count) || '' }}
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+          TURBO_RUN_SUMMARY: true
+          LEDGER_TEST_POSTGRESQL_URL: ${{ matrix.services && 'postgresql://postgres:ledger-ci@127.0.0.1:5432/postgres' || '' }}
+          CONTENT_TEST_OBJECT_STORE_URL: ${{ matrix.services && 'http://content-ci:content-ci-secret@127.0.0.1:9000/content-ci' || '' }}
+      - name: Upload the shard's blob report, with its coverage, for the coverage job
+        if: matrix.shard
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: server-blob-report-${{ matrix.shard.index }}
+          path: packages/server/.vitest/blob/
+          if-no-files-found: error
+          retention-days: 1
+          overwrite: true
+      - name: Show the inputs of turbo's global hash and, for each task, its hash, its cache status and its time
+        if: ${{ !cancelled() }}
+        run: .github/turbo/show-run-summary.sh
+      - name: Keep in turbo's cache only the tasks of this run, so the cache it saves holds one run and does not grow
+        if: ${{ !cancelled() && steps.turbo-cache.outputs.cache-hit != 'true' }}
+        run: .github/turbo/keep-only-this-run.sh
+      - name: Save turbo's cache for the next run of this group
+        if: ${{ !cancelled() && steps.turbo-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo/cache
+          key: ${{ steps.turbo-cache.outputs.cache-primary-key }}
+      - name: Show the logs of PostgreSQL and the object store when the tests failed
+        if: failure() && matrix.services
+        run: |
+          docker logs postgresql
+          docker logs object-store
+
+  secrets-aws:
+    name: Secrets under AWS, in KMS and in Parameter Store
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - name: Start moto's server mode, which answers the KMS and Parameter Store APIs, once the runner is hardened, as the test job starts PostgreSQL and the object store
+        run: |
+          docker run --detach --name moto --publish 19760:5000 \
+            motoserver/moto:5.2.4@sha256:120b1589c6df7e35d2092935f6ff724486bb2c4189d0e36ce795baba1400ffd2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Wait until moto answers on its port, and make through the KMS API the key the runtime starts under
+        run: |
+          for attempt in $(seq 1 30); do
+            curl --fail --silent --output /dev/null http://127.0.0.1:19760/moto-api/ && break
+            sleep 1
+          done
+          curl --fail --silent --output "$RUNNER_TEMP/created-key.json" http://127.0.0.1:19760/ \
+            --header 'x-amz-target: TrentService.CreateKey' --header 'content-type: application/x-amz-json-1.1' \
+            --header "authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/20260101/us-east-1/kms/aws4_request, SignedHeaders=host, Signature=0" \
+            --data '{"Description":"The key the runtime of this job keeps its secrets under"}'
+          jq --raw-output .KeyMetadata.Arn "$RUNNER_TEMP/created-key.json" > "$RUNNER_TEMP/kms-key-arn"
+          grep --quiet --extended-regexp '^arn:aws:kms:us-east-1:[0-9]{12}:key/[0-9a-f-]{36}$' "$RUNNER_TEMP/kms-key-arn"
+        env:
+          AWS_ACCESS_KEY_ID: aws-ci
+      - name: Run the tests of the secrets package with SECRETS_TEST_AWS_URL, so its suites against a server of the KMS and Parameter Store APIs run on moto and are skipped nowhere, and no key reaches their output
+        run: |
+          pnpm --filter @on.auto/secrets test --reporter=verbose > "$RUNNER_TEMP/aws-tests.log" 2>&1 || { cat "$RUNNER_TEMP/aws-tests.log"; exit 1; }
+          cat "$RUNNER_TEMP/aws-tests.log"
+          test "$(grep --count --fixed-strings ' > The secret store over keys in a server that answers the KMS API > ' "$RUNNER_TEMP/aws-tests.log")" -gt 0
+          test "$(grep --count --fixed-strings ' > The secret store over values kept in a server that answers the Parameter Store API > ' "$RUNNER_TEMP/aws-tests.log")" -gt 0
+          test "$(grep --count --extended-regexp '^ +(Test Files|Tests) ' "$RUNNER_TEMP/aws-tests.log")" = 2
+          test "$(grep --extended-regexp '^ +(Test Files|Tests) ' "$RUNNER_TEMP/aws-tests.log" | grep --count skipped)" = 0
+          test "$(grep --count --fixed-strings aws-ci-secret "$RUNNER_TEMP/aws-tests.log")" = 0
+        env:
+          NO_COLOR: '1'
+          SECRETS_TEST_AWS_URL: http://aws-ci:aws-ci-secret@127.0.0.1:19760
+      - name: Keep the runtime's own key under the key in KMS across a restart, logging that key and nothing of a credential or of a data key
+        timeout-minutes: 3
+        run: |
+          arn="$(cat "$RUNNER_TEMP/kms-key-arn")"
+          secrets_line="\"message\":\"Secrets are kept in the ledger's database, sealed under the key ${arn##*/} that the KMS key $arn holds, and 0 sealed under the previous key"
+          export SECRETS_KEY_KMS="$arn" LEDGER_FILE="$RUNNER_TEMP/kms/ledger.db" HOST=127.0.0.1 PORT=19761 DO_NOT_TRACK=1
+          started=''
+          shown_on_failure() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              if [ -n "$started" ]; then
+                kill -TERM "$started" 2> /dev/null || true
+              fi
+              for start in first second; do
+                echo "::group::The log of the runtime's $start start"
+                cat "$RUNNER_TEMP/runtime-$start.log" 2> /dev/null || true
+                echo '::endgroup::'
+              done
+            fi
+            exit "$status"
+          }
+          trap shown_on_failure EXIT
+          started_and_stopped() {
+            node packages/server/src/main.ts > "$RUNNER_TEMP/runtime-$1.log" 2>&1 &
+            started=$!
+            for attempt in $(seq 1 60); do
+              curl --silent --fail --max-time 5 --output /dev/null http://127.0.0.1:19761/health && break
+              sleep 1
+            done
+            test "$(curl --silent --fail --max-time 5 http://127.0.0.1:19761/health)" = '{"status":"ok"}'
+            kill -TERM "$started"
+            wait "$started"
+            started=''
+          }
+          started_and_stopped first
+          started_and_stopped second
+          log="$RUNNER_TEMP/runtime.log"
+          cat "$RUNNER_TEMP/runtime-first.log" "$RUNNER_TEMP/runtime-second.log" > "$log"
+          test "$(grep --count --fixed-strings "$secrets_line" "$log")" = 2
+          test "$(grep --count --fixed-strings "$AWS_SECRET_ACCESS_KEY" "$log")" = 0
+          node --input-type=module --eval "
+            import { DatabaseSync } from 'node:sqlite';
+            const kept = new DatabaseSync(process.env.LEDGER_FILE, { readOnly: true });
+            for (const { wrapped_key } of kept.prepare('SELECT wrapped_key FROM kept_secrets').all()) console.log(wrapped_key);
+          " > "$RUNNER_TEMP/wrapped-keys"
+          test "$(wc --lines < "$RUNNER_TEMP/wrapped-keys")" -gt 0
+          while read -r wrapped; do
+            curl --fail --silent --output "$RUNNER_TEMP/unwrapped.json" http://127.0.0.1:19760/ \
+              --header 'x-amz-target: TrentService.Decrypt' --header 'content-type: application/x-amz-json-1.1' \
+              --header "authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/20260101/us-east-1/kms/aws4_request, SignedHeaders=host, Signature=0" \
+              --data "$(jq --null-input --compact-output --arg blob "$wrapped" '{CiphertextBlob: $blob, EncryptionContext: {"on.auto/runtime": "secret data key"}}')"
+            data_key="$(jq --raw-output .Plaintext "$RUNNER_TEMP/unwrapped.json")"
+            echo "::add-mask::$data_key"
+            data_key_hex="$(printf '%s' "$data_key" | base64 --decode | od --address-radix=n --format=x1 --output-duplicates | tr --delete ' \n')"
+            echo "::add-mask::$data_key_hex"
+            test "${#data_key_hex}" = 64
+            test "$(grep --count --fixed-strings --regexp="$data_key" --regexp="$data_key_hex" "$log")" = 0
+          done < "$RUNNER_TEMP/wrapped-keys"
+        env:
+          AWS_ENDPOINT_URL_KMS: http://127.0.0.1:19760
+          AWS_ACCESS_KEY_ID: aws-ci
+          AWS_SECRET_ACCESS_KEY: aws-ci-secret
+      - name: Keep every secret in Parameter Store across a restart with no key and no key file, keep a connection's value there through the API and forget it, then move a secret the ledger seals there, logging the prefix and the region and nothing of a value, a key or a credential
+        timeout-minutes: 4
+        run: |
+          prefix=/auto-runtime/secrets
+          connections=http://127.0.0.1:19762/v1/orgs/local/connections
+          in_the_manager="\"message\":\"Secrets are kept in AWS Parameter Store under $prefix in $AWS_REGION, and"
+          own_key_read="\"message\":\"The runtime read the key it keeps for retry_state in AWS Parameter Store under $prefix in $AWS_REGION\""
+          export SECRETS_KEEPER="aws-parameter-store:$prefix" LEDGER_FILE="$RUNNER_TEMP/ssm/ledger.db" HOST=127.0.0.1 PORT=19762 DO_NOT_TRACK=1
+          moved_ledger="$RUNNER_TEMP/moved/ledger.db"
+          value="ci-pasted-key-$(openssl rand -hex 12)"
+          echo "::add-mask::$value"
+          key="$(openssl rand -base64 32)"
+          echo "::add-mask::$key"
+          started=''
+          shown_on_failure() {
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              if [ -n "$started" ]; then
+                kill -TERM "$started" 2> /dev/null || true
+              fi
+              for start in first second sealed moving; do
+                echo "::group::The log of the runtime's $start start"
+                cat "$RUNNER_TEMP/ssm-runtime-$start.log" 2> /dev/null || true
+                echo '::endgroup::'
+              done
+            fi
+            exit "$status"
+          }
+          trap shown_on_failure EXIT
+          started_as() {
+            env "${@:2}" node packages/server/src/main.ts > "$RUNNER_TEMP/ssm-runtime-$1.log" 2>&1 &
+            started=$!
+            for attempt in $(seq 1 60); do
+              curl --silent --fail --max-time 5 --output /dev/null http://127.0.0.1:19762/health && break
+              sleep 1
+            done
+            test "$(curl --silent --fail --max-time 5 http://127.0.0.1:19762/health)" = '{"status":"ok"}'
+          }
+          stopped() {
+            kill -TERM "$started"
+            wait "$started"
+            started=''
+          }
+          asked() {
+            curl --fail --silent --max-time 5 --header 'content-type: application/json' "$@"
+          }
+          parameters() {
+            curl --fail --silent http://127.0.0.1:19760/ \
+              --header 'x-amz-target: AmazonSSM.GetParametersByPath' --header 'content-type: application/x-amz-json-1.1' \
+              --header "authorization: AWS4-HMAC-SHA256 Credential=$AWS_ACCESS_KEY_ID/20260101/$AWS_REGION/ssm/aws4_request, SignedHeaders=host, Signature=0" \
+              --data "{\"Path\":\"$prefix\",\"Recursive\":true,\"WithDecryption\":true}" > "$RUNNER_TEMP/parameters.json"
+            for kept in $(jq --raw-output '.Parameters[].Value' "$RUNNER_TEMP/parameters.json"); do
+              echo "::add-mask::$kept"
+            done
+          }
+          rows_in() {
+            node --input-type=module --eval "
+              import { DatabaseSync } from 'node:sqlite';
+              const kept = new DatabaseSync(process.argv[1], { readOnly: true });
+              for (const row of kept.prepare('SELECT kept_by, held, wrapped_key, kid FROM kept_secrets').all()) console.log(JSON.stringify(row));
+            " "$1"
+          }
+          started_as first
+          added="$(asked --request POST --data '{"name":"crm","type":"openapi","entry":{"document":"https://crm.example.com/openapi.json"},"credential":{"kind":"secret","name":"X-Api-Key","in":"header"}}' "$connections")"
+          id="$(printf '%s' "$added" | jq --raw-output .id)"
+          given="$(asked --request POST --data "$(printf '%s' "$added" | jq --compact-output --arg value "$value" '{token: (.connect.url | capture("[?&]token=(?<token>[^&]+)").token), value: $value}')" "$connections/$id/credential")"
+          test "$(printf '%s' "$given" | jq --raw-output .status)" = connected
+          stopped
+          started_as second
+          test "$(asked "$connections/$id" | jq --raw-output .credential_ends_with)" = "${value: -4}"
+          parameters
+          test "$(jq '.Parameters | length' "$RUNNER_TEMP/parameters.json")" = 2
+          test "$(jq --arg value "$value" '[.Parameters[] | select(.Value == $value)] | length' "$RUNNER_TEMP/parameters.json")" = 1
+          jq --raw-output '.Parameters[].Value' "$RUNNER_TEMP/parameters.json" > "$RUNNER_TEMP/values-kept"
+          rows_in "$LEDGER_FILE" > "$RUNNER_TEMP/rows.json"
+          test "$(wc --lines < "$RUNNER_TEMP/rows.json")" = 2
+          test "$(jq --slurp '[.[] | select(.kept_by == "aws-parameter-store" and .wrapped_key == null and .kid == null)] | length' "$RUNNER_TEMP/rows.json")" = 2
+          test "$(jq --slurp --raw-output '.[].held' "$RUNNER_TEMP/rows.json" | grep --count --extended-regexp "^$prefix/[0-9a-f-]{36}:[0-9]+\$")" = 2
+          test "$(grep --count --fixed-strings "$value" "$RUNNER_TEMP/rows.json")" = 0
+          test ! -e "$RUNNER_TEMP/ssm/secrets.key"
+          test "$(asked --request DELETE "$connections/$id" | jq --raw-output .status)" = removed
+          parameters
+          test "$(jq '.Parameters | length' "$RUNNER_TEMP/parameters.json")" = 1
+          stopped
+          started_as sealed SECRETS_KEEPER=ledger SECRETS_KEY="$key" LEDGER_FILE="$moved_ledger"
+          stopped
+          started_as moving SECRETS_KEEPER_PREVIOUS=ledger SECRETS_KEY="$key" LEDGER_FILE="$moved_ledger"
+          stopped
+          rows_in "$moved_ledger" > "$RUNNER_TEMP/moved-rows.json"
+          test "$(jq --slurp '[.[] | select(.kept_by == "aws-parameter-store")] | length' "$RUNNER_TEMP/moved-rows.json")" = 1
+          test "$(wc --lines < "$RUNNER_TEMP/moved-rows.json")" = 1
+          parameters
+          jq --raw-output '.Parameters[].Value' "$RUNNER_TEMP/parameters.json" >> "$RUNNER_TEMP/values-kept"
+          log="$RUNNER_TEMP/ssm-runtime.log"
+          cat "$RUNNER_TEMP"/ssm-runtime-*.log > "$log"
+          test "$(grep --count --fixed-strings "$in_the_manager 0 kept by the previous keeper were moved there\"" "$RUNNER_TEMP/ssm-runtime-first.log" "$RUNNER_TEMP/ssm-runtime-second.log" | grep --count ':1$')" = 2
+          test "$(grep --count --fixed-strings "$own_key_read" "$RUNNER_TEMP/ssm-runtime-first.log" "$RUNNER_TEMP/ssm-runtime-second.log" | grep --count ':1$')" = 2
+          test "$(grep --count --fixed-strings "\"message\":\"Secrets are kept in the ledger's database, sealed under the key " "$RUNNER_TEMP/ssm-runtime-sealed.log")" = 1
+          test "$(grep --count --fixed-strings "$in_the_manager 1 kept by the previous keeper were moved there\"" "$RUNNER_TEMP/ssm-runtime-moving.log")" = 1
+          test "$(grep --count --fixed-strings --regexp="$value" --regexp="$key" --regexp="$AWS_SECRET_ACCESS_KEY" --file="$RUNNER_TEMP/values-kept" "$log")" = 0
+        env:
+          AWS_ENDPOINT_URL_SSM: http://127.0.0.1:19760
+          AWS_ACCESS_KEY_ID: aws-ci
+          AWS_SECRET_ACCESS_KEY: aws-ci-secret
+          AWS_REGION: us-east-1
+      - name: Show the log of moto when a step failed
+        if: failure()
+        run: docker logs moto
+
+  coverage:
+    name: Coverage (server)
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Download the blob reports of the server's shards into the server package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: packages/server/.vitest/blob
+          pattern: server-blob-report-*
+          merge-multiple: true
+      - name: Merge the shards' reports and check 100% coverage per file over the server's whole suite
+        run: pnpm --filter @on.auto/server test:merge
+
+  container:
+    name: Container (linux/${{ matrix.architecture }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: amd64
+            runner: ubuntu-latest
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: packages/server/Dockerfile
+          platforms: linux/${{ matrix.architecture }}
+          load: true
+          tags: onauto/runtime:ci
+      - name: Smoke test the image
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure smoke
+          test "$(docker run --rm onauto/runtime:ci 2>&1 | grep --count '^Auto Runtime could not start: ReachableWithoutCredentialsError: ')" = 1
+          docker run --detach --name smoke --publish 5555:5555 --env DO_NOT_TRACK=1 --env 'API_KEYS=[]' onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail http://127.0.0.1:5555/health && break
+            sleep 1
+          done
+          test "$(curl --silent --fail http://127.0.0.1:5555/health)" = '{"status":"ok"}'
+          test "$(docker exec smoke id -un)" = node
+          test "$(answered refused.json http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 401
+          test "$(curl --silent --include http://127.0.0.1:5555/v1/orgs/demo/playbooks | grep --ignore-case --count '^www-authenticate: Bearer')" = 1
+          test "$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo | grep --count --extended-regexp '^API key, shown only this once: abk_[0-9a-f]{8}_[A-Za-z0-9_-]{43}$')" = 1
+          docker stop smoke
+          test "$(docker inspect smoke --format '{{.State.ExitCode}}')" = 0
+      - name: Start the image with telemetry sent to a collector that is not there
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure telemetry
+          docker run --detach --name telemetry --publish 5556:5555 --env DO_NOT_TRACK=1 --env 'API_KEYS=[]' \
+            --env OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:9 onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail http://127.0.0.1:5556/health && break
+            sleep 1
+          done
+          test "$(curl --silent --fail http://127.0.0.1:5556/health)" = '{"status":"ok"}'
+          test "$(docker logs telemetry 2>&1 | grep --count 'Telemetry is on, exported over OTLP')" = 1
+          docker stop telemetry
+          test "$(docker inspect telemetry --format '{{.State.ExitCode}}')" = 0
+      - name: Measure the image
+        timeout-minutes: 2
+        run: |
+          image="$(docker image inspect onauto/runtime:ci --format '{{.Size}}')"
+          {
+            echo "### The image on linux/${{ matrix.architecture }}"
+            echo "| Part | MiB |"
+            echo "| --- | --- |"
+            echo "| The whole image | $((image / 1048576)) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep a playbook on a volume across a restart
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure first second
+          wait_for_health() {
+            for attempt in $(seq 1 30); do
+              curl --silent --fail http://127.0.0.1:5555/health > /dev/null && return 0
+              sleep 1
+            done
+            return 1
+          }
+          start_server() {
+            docker run --detach --name "$1" --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume playbooks:/data onauto/runtime:ci
+            wait_for_health
+          }
+          stop_server() {
+            docker stop "$1"
+            test "$(docker inspect "$1" --format '{{.State.ExitCode}}')" = 0
+          }
+          read_playbook() {
+            test "$(answered "$1" --header "authorization: Bearer $key" http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke)" = 200
+          }
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker volume create playbooks
+          start_server first
+          test "$(answered created.json \
+            --header "authorization: Bearer $key" --header 'content-type: application/json' \
+            --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          read_playbook before-restart.json
+          grep --quiet '"id":"smoke"' before-restart.json
+          cmp created.json before-restart.json
+          stop_server first
+          start_server second
+          read_playbook after-restart.json
+          cmp before-restart.json after-restart.json
+          stop_server second
+      - name: Keep a playbook in PostgreSQL across a restart
+        timeout-minutes: 2
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure ledger postgresql
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          password=ledger-smoke
+          DATABASE_URL="postgresql://postgres:$password@postgresql:5432/postgres"
+          SECRETS_KEY="$(openssl rand -base64 32)"
+          echo "::add-mask::$SECRETS_KEY"
+          export API_KEYS DATABASE_URL SECRETS_KEY
+          ledger_line='"message":"The ledger is kept in PostgreSQL, in the database postgres on postgresql:5432"'
+          kid="$(printf '%s' "$SECRETS_KEY" | base64 --decode | sha256sum | cut --characters=1-16)"
+          secrets_line="\"message\":\"Secrets are kept in the ledger's database, sealed under the key $kid that SECRETS_KEY holds, and 0 sealed under the previous key"
+          docker network create ledger
+          docker run --detach --name postgresql --network ledger --env POSTGRES_PASSWORD="$password" \
+            postgres:18.6-alpine@sha256:77f585114c32fbca283dc835b0596f4e52b51b4c6662d7810b2f4084f60a1873
+          for attempt in $(seq 1 30); do
+            docker exec postgresql pg_isready --host 127.0.0.1 --username postgres --quiet && break
+            sleep 1
+          done
+          wait_for_health() {
+            for attempt in $(seq 1 30); do
+              curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && return 0
+              sleep 1
+            done
+            return 1
+          }
+          read_playbook() {
+            test "$(answered "$1" --max-time 10 --header "authorization: Bearer $key" \
+              http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke)" = 200
+          }
+          docker run --detach --name ledger --network ledger --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --env DATABASE_URL \
+            --env SECRETS_KEY onauto/runtime:ci
+          wait_for_health
+          test "$(answered created.json --max-time 10 \
+            --header "authorization: Bearer $key" --header 'content-type: application/json' \
+            --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          read_playbook before-restart.json
+          cmp created.json before-restart.json
+          docker stop ledger
+          test "$(docker inspect ledger --format '{{.State.ExitCode}}')" = 0
+          docker start ledger
+          wait_for_health
+          read_playbook after-restart.json
+          cmp before-restart.json after-restart.json
+          docker stop ledger
+          test "$(docker inspect ledger --format '{{.State.ExitCode}}')" = 0
+          test "$(docker logs ledger 2>&1 | grep --count --fixed-strings "$ledger_line")" = 2
+          test "$(docker logs ledger 2>&1 | grep --count --fixed-strings "$password")" = 0
+          test "$(docker logs ledger 2>&1 | grep --count --fixed-strings "$secrets_line")" = 2
+          test "$(docker logs ledger 2>&1 | grep --count --fixed-strings "$SECRETS_KEY")" = 0
+          docker stop postgresql
+      - name: Serve the tools over MCP
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure mcp
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          reading="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo --permissions org:read,playbook:read)"
+          read_key="$(printf '%s\n' "$reading" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$read_key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p'),$(printf '%s\n' "$reading" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name mcp --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call_mcp_as() {
+            test "$(answered "$4" --header "authorization: Bearer $1" \
+              --header 'content-type: application/json' --header 'accept: application/json, text/event-stream' \
+              --header 'mcp-protocol-version: 2025-11-25' --data "$3" "http://127.0.0.1:5555$2")" = 200
+          }
+          call_mcp() {
+            call_mcp_as "$key" "$1" "$2" "$3"
+          }
+          call_mcp /orgs/demo/mcp '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' tools.txt
+          for tool in create_playbook list_playbooks update_playbook retire_playbook add_connection list_connections remove_connection; do
+            grep --quiet "\"name\":\"$tool\"" tools.txt
+          done
+          call_mcp /orgs/demo/mcp '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_playbook","arguments":{"playbook":"smoke","name":"Smoke test"}}}' created.txt
+          grep --quiet '"structuredContent":{"id":"smoke","name":"Smoke test"' created.txt
+          call_mcp /orgs/demo/mcp '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_playbooks","arguments":{}}}' listed.txt
+          grep --quiet '"id":"smoke","name":"Smoke test"' listed.txt
+          test "$(answered read.json --header "authorization: Bearer $key" http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke)" = 200
+          grep --quiet '"id":"smoke","name":"Smoke test"' read.json
+          call_mcp /mcp '{"jsonrpc":"2.0","id":4,"method":"tools/list"}' all-tools.txt
+          test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 31
+          for tool in list_models list_runs get_event list_playbook_events publish_event search introspect dry_run execute list_connection_tools list_interactions answer_interaction send_run_event cancel_run get_guide; do
+            grep --quiet "\"name\":\"$tool\"" all-tools.txt
+          done
+          call_mcp /mcp '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"list_definitions","arguments":{"playbook":"smoke","type":"reasoning"}}}' definitions.txt
+          grep --quiet '"structuredContent":{"definitions":\[\]}' definitions.txt
+          call_mcp /mcp '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"list_runs","arguments":{"playbook":"smoke"}}}' runs.txt
+          grep --quiet '"structuredContent":{"runs":\[\],"has_more":false,"next_cursor":null}' runs.txt
+          call_mcp /mcp '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"search","arguments":{"playbook":"smoke"}}}' tool-servers.txt
+          grep --quiet '"structuredContent":{"servers":\[\],"tools":\[\],"scopes":\[\]}' tool-servers.txt
+          call_mcp /mcp '{"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"search","arguments":{}}}' org-tool-servers.txt
+          grep --quiet '"structuredContent":{"servers":\[\],"tools":\[\],"scopes":\[\]}' org-tool-servers.txt
+          test "$(answered org-servers.json --header "authorization: Bearer $read_key" http://127.0.0.1:5555/v1/orgs/demo/tool-servers/search)" = 200
+          test "$(cat org-servers.json)" = '{"servers":[],"tools":[],"scopes":[]}'
+          call_mcp /mcp '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"execute","arguments":{"playbook":"smoke","server":"graph","tool":"search"}}}' executed.txt
+          grep --quiet '"isError":true' executed.txt
+          grep --quiet 'tool_server_not_configured' executed.txt
+          call_mcp_as "$read_key" /mcp '{"jsonrpc":"2.0","id":14,"method":"tools/list"}' read-tools.txt
+          grep --quiet '"name":"search"' read-tools.txt
+          grep --quiet '"name":"dry_run"' read-tools.txt
+          test "$(grep --count '"name":"execute"' read-tools.txt)" = 0
+          test "$(answered refused.json \
+            --header "authorization: Bearer $read_key" --header 'content-type: application/json' --data '{"arguments":{}}' \
+            http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke/tool-servers/graph/tools/search/execute)" = 403
+          grep --quiet '"reason":"forbidden"' refused.json
+          for read in validate dry-run; do
+            test "$(answered "$read.json" \
+              --header "authorization: Bearer $read_key" --header 'content-type: application/json' --data '{"arguments":{}}' \
+              "http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke/tool-servers/graph/tools/search/$read")" = 503
+            grep --quiet '"reason":"unavailable"' "$read.json"
+            grep --quiet '"because":"tool_server_not_configured"' "$read.json"
+          done
+          call_mcp_as "$read_key" /mcp '{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"introspect","arguments":{"playbook":"smoke","server":"graph","tool":"search"}}}' introspected.txt
+          grep --quiet '"isError":true' introspected.txt
+          grep --quiet 'tool_server_not_configured' introspected.txt
+          call_mcp /mcp '{"jsonrpc":"2.0","id":8,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' initialized.txt
+          grep --quiet 'Studio manages them; your agent is a separate client' initialized.txt
+          call_mcp /mcp '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"get_guide","arguments":{"guide":"reasoning-function"}}}' guide.txt
+          grep --quiet '# Reasoning function format' guide.txt
+          grep --quiet 'On this server, ' guide.txt
+          call_mcp /mcp '{"jsonrpc":"2.0","id":10,"method":"resources/list"}' resources.txt
+          test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 12
+          call_mcp /mcp '{"jsonrpc":"2.0","id":11,"method":"prompts/list"}' prompts.txt
+          for prompt in first-playbook remember give-tools schedule; do
+            grep --quiet "\"name\":\"$prompt\"" prompts.txt
+          done
+          call_mcp /mcp '{"jsonrpc":"2.0","id":12,"method":"prompts/get","params":{"name":"first-playbook"}}' first-playbook.txt
+          grep --quiet 'Create my first playbook.' first-playbook.txt
+          docker stop mcp
+          test "$(docker inspect mcp --format '{{.State.ExitCode}}')" = 0
+      - name: Run a reasoning function without model settings
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure reasoning
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name reasoning --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call() {
+            answered "$1" --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          source="$(printf '%s\n' '---' 'model: anthropic/claude-sonnet-4-5' '---' 'Say hello to {{ input.name }}.')"
+          definition="$(jq --null-input --arg source "$source" '{name: "hello", source: $source}')"
+          test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          test "$(call created.json --data "$definition" "$playbook/definitions/reasoning")" = 201
+          test "$(call read.json "$playbook/definitions/reasoning/hello")" = 200
+          test "$(jq --raw-output .source read.json)" = "$source"
+          test "$(call ran.json --data '{"input":{"name":"CI"}}' "$playbook/definitions/reasoning/hello/run")" = 503
+          test "$(jq --raw-output .reason ran.json)" = unavailable
+          test "$(jq --raw-output .detail ran.json)" = \
+            'anthropic is not configured. No model provider is configured'
+          docker stop reasoning
+          test "$(docker inspect reasoning --format '{{.State.ExitCode}}')" = 0
+      - name: Run a computation function
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure computation
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name computation --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call() {
+            answered "$1" --max-time 30 \
+              --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          total="$(printf '%s\n' '---' 'language: typescript' 'input:' '  schema: {type: object, required: [rows]}' '---' \
+            'export default function (input: any): Output {' \
+            '  const total_cents = input.rows.reduce((sum: number, row: any) => sum + row.cost_cents, 0);' \
+            '  return { total_cents, rows: input.rows.length };' '}')"
+          raising="$(printf '%s\n' '---' 'language: typescript' '---' 'export default function (input: Input): Output {' \
+            "  throw new Error('no rows');" '}')"
+          test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          for name in total raising; do
+            definition="$(jq --null-input --arg name "$name" --arg source "${!name}" '{name: $name, source: $source}')"
+            test "$(call created.json --data "$definition" "$playbook/definitions/computation")" = 201
+          done
+          test "$(call totalled.json --data '{"input":{"rows":[{"cost_cents":1050},{"cost_cents":2075}]}}' \
+            "$playbook/definitions/computation/total/run")" = 200
+          test "$(jq --compact-output '[.status, .output]' totalled.json)" = '["succeeded",{"total_cents":3125,"rows":2}]'
+          test "$(call raised.json --data '{"input":{}}' "$playbook/definitions/computation/raising/run")" = 409
+          test "$(jq --compact-output '[.reason, .kind, .detail]' raised.json)" = \
+            '["conflict","unworkable","The program raised an error on line 5: Error: no rows"]'
+          docker stop computation
+          test "$(docker inspect computation --format '{{.State.ExitCode}}')" = 0
+      - name: Ask through the inbox and answer over HTTP
+        timeout-minutes: 2
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure interaction
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name interaction --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call() {
+            answered "$1" --max-time 30 \
+              --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          source="$(printf '%s\n' '---' "to: '{{ input.owner }}'" 'expires: P1D' 'output:' \
+            '  schema: {type: object, required: [choice], properties: {choice: {type: string, enum: [approve, reject]}}}' \
+            '---' 'Approve the brief for {{ input.campaign }}?')"
+          definition="$(jq --null-input --arg source "$source" '{name: "approve-brief", source: $source}')"
+          test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          test "$(call created.json --data "$definition" "$playbook/definitions/interaction")" = 201
+          test "$(call asked.json --data '{"input":{"owner":"ada","campaign":"Spring"}}' \
+            "$playbook/definitions/interaction/approve-brief/run")" = 200
+          test "$(jq --raw-output .status asked.json)" = started
+          asked="$(jq --raw-output .run_id asked.json)"
+          test "$(call inbox.json "$playbook/interactions?to=ada")" = 200
+          test "$(jq --compact-output '[.interactions[] | [.run_id, .message]]' inbox.json)" = \
+            "[[\"$asked\",\"Approve the brief for Spring?\"]]"
+          test "$(call answered.json --data '{"answer":{"choice":"approve"}}' "$playbook/runs/$asked/answer")" = 200
+          for attempt in $(seq 1 20); do
+            test "$(call run.json "$playbook/runs/$asked")" = 200
+            test "$(jq --raw-output .status run.json)" != started && break
+            sleep 0.5
+          done
+          test "$(jq --compact-output '[.status, .output]' run.json)" = '["succeeded",{"choice":"approve"}]'
+          test "$(call again.json --data '{"answer":{"choice":"reject"}}' "$playbook/runs/$asked/answer")" = 409
+          docker stop interaction
+          test "$(docker inspect interaction --format '{{.State.ExitCode}}')" = 0
+      - name: Build a prediction function and ask it a question
+        timeout-minutes: 5
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure prediction
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name prediction --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call() {
+            answered "$1" --max-time 60 --header "authorization: Bearer $key" "${@:2}"
+          }
+          json=(--header 'content-type: application/json')
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          printf 'series,period,visits\n' > rows.csv
+          for store in north south; do
+            level=$([ "$store" = north ] && echo 10 || echo 20)
+            for day in $(seq 0 39); do
+              printf '%s,%s,%s\n' "$store" "$(date --utc --date "2026-08-31 +$day days" +%F)" "$((level + day % 3))" >> rows.csv
+            done
+          done
+          dataset="$(sha256sum rows.csv | cut --delimiter ' ' --fields 1)"
+          source="$(printf '%s\n' '---' 'predicts:' '  target: visits' '  period: day' '  horizons: [1, 2]' \
+            '  unit: visits' 'data:' "  dataset: $dataset" '  window: 24' 'evaluation:' '  holdout: 8' \
+            '  activate: automatic' 'source:' '  expires: P1D' '---' \
+            'Fit a model of the daily {{ function.target }} of each of {{ dataset.series }} stores.')"
+          definition="$(jq --null-input --arg source "$source" '{name: "daily-visits", source: $source}')"
+          test "$(call playbook.json "${json[@]}" --data '{"playbook":"smoke","name":"Smoke test"}' \
+            http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          test "$(call kept.json --request PUT --header 'content-type: text/csv' --data-binary @rows.csv \
+            "$playbook/datasets/$dataset")" = 200
+          test "$(call created.json "${json[@]}" --data "$definition" "$playbook/definitions/prediction")" = 201
+          test "$(call asked.json "${json[@]}" --data '{"input":{"build":{}}}' \
+            "$playbook/definitions/prediction/daily-visits/run")" = 200
+          test "$(jq --raw-output .status asked.json)" = started
+          build="$(jq --raw-output .run_id asked.json)"
+          test "$(call brief.md "$playbook/runs/$build/build/brief")" = 200
+          grep --quiet 'Fit a model of the daily visits of each of 2 stores.' brief.md
+          test "$(call training.csv "$playbook/runs/$build/build/rows")" = 200
+          test "$(head --lines 1 training.csv | tr --delete '\r')" = series,period,visits
+          printf '%s' '{"recipe":"mean","attributes":{"answers":{"steps":2},"interval":{"method":"residual"}}}' > visits-mean.series
+          test "$(call visits-mean.json --header 'content-type: application/octet-stream' \
+            --data-binary @visits-mean.series "$playbook/runs/$build/build/candidates?format=series")" = 200
+          candidate="$(jq --raw-output .candidate visits-mean.json)"
+          test "$candidate" = "$(sha256sum visits-mean.series | cut --delimiter ' ' --fields 1)"
+          test "$(jq --raw-output '[.format, .signature.recipe] | join(" ")' visits-mean.json)" = 'series mean'
+          answer="$(jq --null-input --arg candidate "$candidate" '{answer: {candidates: [$candidate]}}')"
+          test "$(call answered.json "${json[@]}" --data "$answer" "$playbook/runs/$build/answer")" = 200
+          for attempt in $(seq 1 60); do
+            test "$(call built.json "$playbook/runs/$build")" = 200
+            test "$(jq --raw-output .status built.json)" != started && break
+            sleep 1
+          done
+          test "$(jq --compact-output '[.status, .output.version, .output.winner]' built.json)" = \
+            "[\"succeeded\",1,\"$candidate\"]"
+          for attempt in $(seq 1 30); do
+            test "$(call function.json "$playbook/definitions/prediction/daily-visits")" = 200
+            test "$(jq --raw-output '.standing.models.active.version // empty' function.json)" = 1 && break
+            sleep 1
+          done
+          test "$(jq --raw-output .standing.models.active.version function.json)" = 1
+          test "$(call question.json "${json[@]}" --data '{"input":{"series":"north","horizon":1}}' \
+            "$playbook/definitions/prediction/daily-visits/run")" = 200
+          test "$(jq --compact-output '[.status, (.output.lines[] | select(.name == "predicted") | .points[0] | .value, (.low | floor), (.high | ceil)), .record.version, .record.runtime.name, .output_shape]' question.json)" = \
+            '["succeeded",11,9,13,1,"series","series"]'
+          docker stop prediction
+          test "$(docker inspect prediction --format '{{.State.ExitCode}}')" = 0
+      - name: Run workflows across a restart, and read the steps of a run and their causes
+        timeout-minutes: 5
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure workflows-first workflows-second
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          wait_for_health() {
+            for attempt in $(seq 1 30); do
+              curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && return 0
+              sleep 1
+            done
+            return 1
+          }
+          start_server() {
+            docker run --detach --name "$1" --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume workflows:/data onauto/runtime:ci
+            wait_for_health
+          }
+          stop_server() {
+            docker stop "$1"
+            test "$(docker inspect "$1" --format '{{.State.ExitCode}}')" = 0
+          }
+          call() {
+            answered "$1" --max-time 30 \
+              --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          settled() {
+            for attempt in $(seq 1 30); do
+              test "$(call "$1" "$playbook/runs/$2")" = 200
+              test "$(jq --raw-output .status "$1")" != started && return 0
+              sleep 1
+            done
+            return 1
+          }
+          greet="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: greet, version: '1.0.0' }" 'do:' \
+            "  - greet: { set: { greeting: '\${ \"Hello, \" + \$data.name }' } }")"
+          approval="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: approval, version: '1.0.0' }" 'do:' \
+            '  - decide: { listen: { to: { one: { with: { type: com.example.approval.decided } } } } }')"
+          docker volume create workflows
+          start_server workflows-first
+          test "$(docker logs workflows-first 2>&1 | grep --count '"message":"Workflows run in this server: ')" = 1
+          test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          for name in greet approval; do
+            definition="$(jq --null-input --arg name "$name" --arg source "${!name}" '{name: $name, source: $source}')"
+            test "$(call created.json --data "$definition" "$playbook/definitions/workflow")" = 201
+          done
+          test "$(call greeting.json --data '{"input":{"name":"CI"}}' "$playbook/definitions/workflow/greet/run")" = 200
+          settled greeted.json "$(jq --raw-output .run_id greeting.json)"
+          test "$(jq --compact-output '[.status, .output]' greeted.json)" = '["succeeded",{"greeting":"Hello, CI"}]'
+          test "$(call waiting.json --data '{}' "$playbook/definitions/workflow/approval/run")" = 200
+          waiting="$(jq --raw-output .run_id waiting.json)"
+          stop_server workflows-first
+          start_server workflows-second
+          test "$(call sent.json --data '{"event":{"type":"com.example.approval.decided","data":{"approved":true}}}' \
+            "$playbook/runs/$waiting/events")" = 200
+          settled approved.json "$waiting"
+          test "$(jq --compact-output '[.status, .output]' approved.json)" = '["succeeded",[{"approved":true}]]'
+          test "$(call history.json "$playbook/runs/$waiting/history")" = 200
+          jq --exit-status '(.events | INDEX(.id) as $by
+            | [.[] | [.type, (if .type == "run_started" then .metadata.definition.name else .data.name // .data.input.kind end),
+              $by[.metadata.causation_id // ""].type]] | sort) == [
+              ["run_started", "approval", null], ["run_succeeded", null, "workflow_input_applied"],
+              ["step_finished", "decide", "workflow_input_applied"], ["step_waiting", "decide", "workflow_input_applied"],
+              ["workflow_input_applied", "event_received", "workflow_input_applied"],
+              ["workflow_input_applied", "started", "run_started"]]' history.json
+          stop_server workflows-second
+      - name: Read the analytics of a playbook
+        timeout-minutes: 2
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure analytics
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name analytics --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume workflows:/data onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call() {
+            answered "$1" --max-time 30 \
+              --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          source="$(printf '%s\n' '---' 'model: anthropic/claude-sonnet-4-5' '---' 'Say hello to {{ input.name }}.')"
+          definition="$(jq --null-input --arg source "$source" '{name: "hello", source: $source}')"
+          test "$(call created.json --data "$definition" "$playbook/definitions/reasoning")" = 201
+          test "$(call ran.json --data '{"input":{"name":"CI"}}' "$playbook/definitions/reasoning/hello/run")" = 503
+          test "$(call analytics.json "$playbook/analytics")" = 200
+          test "$(jq --compact-output '[.days, .runs.succeeded, .runs.rejected, .by_day[-1].day, .by_day[-1].runs.total]' \
+            analytics.json)" = "[7,2,1,\"$(date --utc +%F)\",3]"
+          test "$(jq --compact-output '[.by_function[] | [.type, .name, .runs]]' analytics.json)" = \
+            '[["reasoning","hello",1],["workflow","approval",1],["workflow","greet",1]]'
+          docker stop analytics
+          test "$(docker inspect analytics --format '{{.State.ExitCode}}')" = 0
+      - name: Recall what the smoke workflows answered
+        timeout-minutes: 2
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure recall
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name recall --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS --volume workflows:/data onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call() {
+            answered "$1" --max-time 30 \
+              --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          source="$(printf '%s\n' '---' 'language: typescript' 'source:' '  events:' '    - type: run_succeeded' \
+            '      subject: workflow/greet' 'view:' '  initial: []' '---' 'export function fold(view: any, event: any): any {' \
+            '  return [...view, event.data.output?.greeting ?? "none"];' '}')"
+          definition="$(jq --null-input --arg source "$source" '{name: "greetings", source: $source}')"
+          test "$(call created.json --data "$definition" "$playbook/definitions/recall")" = 201
+          for attempt in $(seq 1 30); do
+            test "$(call standing.json "$playbook/definitions/recall/greetings")" = 200
+            test "$(jq --compact-output '[.standing.state, .standing.folded]' standing.json)" = '["live",1]' && break
+            sleep 1
+          done
+          test "$(jq --compact-output '[.standing.state, .standing.folded]' standing.json)" = '["live",1]'
+          test "$(call recalled.json --data '{}' "$playbook/definitions/recall/greetings/run")" = 200
+          test "$(jq --compact-output '[.status, .output]' recalled.json)" = '["succeeded",["Hello, CI"]]'
+          test "$(call run.json "$playbook/runs/$(jq --raw-output .run_id recalled.json)")" = 200
+          test "$(jq --compact-output '[.record.view.version, .record.view.folded]' run.json)" = '[1,1]'
+          docker stop recall
+          test "$(docker inspect recall --format '{{.State.ExitCode}}')" = 0
+
+      - name: Start a workflow by its event trigger and by its schedule
+        timeout-minutes: 5
+        run: |
+          . .github/smoke/calls.sh
+          show_logs_on_failure reactions
+          issued="$(docker run --rm onauto/runtime:ci node packages/identity/src/key-command.ts --org demo)"
+          key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
+          echo "::add-mask::$key"
+          API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
+          export API_KEYS
+          docker run --detach --name reactions --publish 5555:5555 --env DO_NOT_TRACK=1 --env API_KEYS onauto/runtime:ci
+          for attempt in $(seq 1 30); do
+            curl --silent --fail --max-time 5 http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          call() {
+            answered "$1" --max-time 30 \
+              --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
+          ended_runs() {
+            for attempt in $(seq 1 "$3"); do
+              test "$(call runs.json "$playbook/runs?type=workflow&name=$1")" = 200
+              jq --exit-status --argjson count "$2" '[.runs[] | select(.status != "started")] | length >= $count' \
+                runs.json > /dev/null && return 0
+              sleep 1
+            done
+            return 1
+          }
+          closing="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: closing, version: '1.0.0' }" \
+            'schedule: { on: { one: { with: { type: com.example.ledger.closed } } }, every: PT1M }' 'do:' \
+            "  - total: { set: { input: '\${ \$data }' } }")"
+          test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
+          definition="$(jq --null-input --arg source "$closing" '{name: "closing", source: $source}')"
+          test "$(call created.json --data "$definition" "$playbook/definitions/workflow")" = 201
+          test "$(jq --compact-output '[.triggers[] | [.kind, .reference]]' created.json)" = \
+            '[["event","/schedule/on"],["every","/schedule/every"]]'
+          test "$(call published.json \
+            --data '{"event":{"source":"/ledger","type":"com.example.ledger.closed","data":{"month":"september"}}}' \
+            "$playbook/events")" = 200
+          ended_runs closing 2 150
+          test "$(jq --compact-output '[.runs[] | [.status, .started_by]]' runs.json)" = \
+            '[["succeeded",{"id":"playbook:smoke","name":"smoke"}],["succeeded",{"id":"playbook:smoke","name":"smoke"}]]'
+          for run in $(jq --raw-output '.runs[].run_id' runs.json); do
+            test "$(call "history-$run.json" "$playbook/runs/$run/history")" = 200
+            test "$(call "run-$run.json" "$playbook/runs/$run")" = 200
+            case "$(jq --raw-output '.events[0].metadata.trigger.kind' "history-$run.json")" in
+              event) test "$(jq --raw-output '.output.input[0].data.month' "run-$run.json")" = september ;;
+              every) jq --exit-status '.output.input.schedule.due | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T")' \
+                "run-$run.json" > /dev/null ;;
+            esac
+          done
+          test "$(jq --slurp --compact-output 'map(.events[0] | [.metadata.trigger.kind, .summary]) | sort' history-*.json)" = \
+            '[["event","A run of the workflow “closing” was started by its event trigger."],["every","A run of the workflow “closing” was started by its every schedule."]]'
+          docker stop reactions
+          test "$(docker inspect reactions --format '{{.State.ExitCode}}')" = 0
+
+  package:
+    name: npm package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @on.auto/server npm:pack
+      - name: Run the packed runtime with npx, outside the repository
+        timeout-minutes: 5
+        working-directory: ${{ runner.temp }}
+        run: |
+          tarball="$(ls "$GITHUB_WORKSPACE"/dist/on.auto-runtime-*.tgz)"
+          export XDG_CACHE_HOME="$RUNNER_TEMP/cache" LEDGER_FILE="$RUNNER_TEMP/ledger.db" DO_NOT_TRACK=1
+          runtime() {
+            npx --yes --package="$tarball" auto-runtime "$@"
+          }
+          test "$(runtime --version)" = "$(jq --raw-output .version "$GITHUB_WORKSPACE/package.json")"
+          test "$(runtime key --org demo | grep --count --extended-regexp '^API key, shown only this once: abk_[0-9a-f]{8}_[A-Za-z0-9_-]{43}$')" = 1
+          runtime > runtime.log 2>&1 &
+          started=$!
+          for attempt in $(seq 1 60); do
+            curl --silent --fail http://127.0.0.1:5555/health > /dev/null && break
+            sleep 1
+          done
+          test "$(curl --silent --fail http://127.0.0.1:5555/health)" = '{"status":"ok"}'
+          test "$(grep --count 'Ready in' runtime.log)" = 1
+          call() {
+            curl --silent --max-time 30 --output "$1" --write-out '%{http_code}' --header 'content-type: application/json' "${@:2}"
+          }
+          playbook=http://127.0.0.1:5555/v1/orgs/local/playbooks/smoke
+          test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/local/playbooks)" = 201
+          total="$(printf '%s\n' '---' 'language: typescript' 'input:' '  schema: {type: object, required: [rows]}' '---' \
+            'export default function (input: any): Output {' \
+            '  const total_cents = input.rows.reduce((sum: number, row: any) => sum + row.cost_cents, 0);' \
+            '  return { total_cents, rows: input.rows.length };' '}')"
+          test "$(call created.json --data "$(jq --null-input --arg source "$total" '{name: "total", source: $source}')" \
+            "$playbook/definitions/computation")" = 201
+          test "$(call totalled.json --data '{"input":{"rows":[{"cost_cents":1050},{"cost_cents":2075}]}}' \
+            "$playbook/definitions/computation/total/run")" = 200
+          test "$(jq --compact-output '[.status, .output]' totalled.json)" = '["succeeded",{"total_cents":3125,"rows":2}]'
+          greet="$(printf '%s\n' "document: { dsl: '1.0.3', namespace: smoke, name: greet, version: '1.0.0' }" 'do:' \
+            "  - greet: { set: { greeting: '\${ \"Hello, \" + \$data.name }' } }")"
+          test "$(call created.json --data "$(jq --null-input --arg source "$greet" '{name: "greet", source: $source}')" \
+            "$playbook/definitions/workflow")" = 201
+          test "$(call greeting.json --data '{"input":{"name":"npx"}}' "$playbook/definitions/workflow/greet/run")" = 200
+          run_id="$(jq --raw-output .run_id greeting.json)"
+          for attempt in $(seq 1 30); do
+            test "$(call greeted.json "$playbook/runs/$run_id")" = 200
+            test "$(jq --raw-output .status greeted.json)" != started && break
+            sleep 1
+          done
+          test "$(jq --compact-output '[.status, .output]' greeted.json)" = '["succeeded",{"greeting":"Hello, npx"}]'
+          pkill -TERM -f "$XDG_CACHE_HOME/auto-runtime/.*/packages/server/auto-runtime.ts"
+          wait "$started"
+          cat runtime.log
+
+  pull-request-title:
+    name: Pull request title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The squash commit title must be a conventional commit
+        run: printf '%s\n' "$TITLE" | pnpm exec commitlint
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+
+  workflows:
+    name: Workflow security
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          advanced-security: false
+
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [verify, test, secrets-aws, coverage, container, package, pull-request-title, workflows]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        with:
+          egress-policy: audit
+      - name: Every required job succeeded or was skipped
+        run: |
+          for result in $RESULTS; do
+            case "$result" in
+              success | skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}

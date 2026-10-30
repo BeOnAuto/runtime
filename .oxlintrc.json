@@ -1,0 +1,115 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "import", "node", "promise", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "error",
+    "perf": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "denyWarnings": true,
+    "reportUnusedDisableDirectives": "error"
+  },
+  "ignorePatterns": ["**/node_modules/**", "**/coverage/**", "**/dist/**"],
+  "rules": {
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/strict-boolean-expressions": [
+      "error",
+      {
+        "allowString": false,
+        "allowNumber": false,
+        "allowNullableObject": false
+      }
+    ],
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error",
+    "typescript/restrict-template-expressions": [
+      "error",
+      {
+        "allowAny": false,
+        "allowBoolean": false,
+        "allowNullish": false,
+        "allowNumber": true,
+        "allowRegExp": false,
+        "allowNever": false
+      }
+    ],
+    "typescript/unbound-method": "error",
+    "typescript/no-explicit-any": "error",
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-assertions": [
+      "error",
+      {
+        "assertionStyle": "never"
+      }
+    ],
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/ban-ts-comment": "error",
+    "eslint/no-warning-comments": [
+      "error",
+      {
+        "terms": ["v8 ignore", "istanbul ignore", "c8 ignore", "oxlint-disable", "eslint-disable"],
+        "location": "anywhere"
+      }
+    ],
+    "eslint/complexity": [
+      "error",
+      {
+        "max": 10
+      }
+    ],
+    "eslint/max-depth": ["error", 3],
+    "eslint/max-params": ["error", 4],
+    "import/no-cycle": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "node:worker_threads",
+            "message": "Worker threads belong to the program pool of @on.auto/workflow-engine; a worker module serves its jobs with @on.auto/workflow-engine/job-loop."
+          }
+        ]
+      }
+    ],
+    "typescript/prefer-readonly-parameter-types": [
+      "error",
+      {
+        "treatMethodsAsReadonly": true,
+        "allow": [
+          {
+            "from": "package",
+            "package": "node:http",
+            "name": ["Server", "IncomingMessage", "ServerResponse"]
+          },
+          {
+            "from": "package",
+            "package": "effect",
+            "name": ["Effect", "Layer"]
+          },
+          {
+            "from": "package",
+            "package": "hono",
+            "name": ["Context"]
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["packages/workflow-engine/src/program-pool/**", "capabilities/computation/measure/**"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
+}

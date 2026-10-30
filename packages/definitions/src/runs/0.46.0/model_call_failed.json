@@ -1,0 +1,42 @@
+{
+  "type": "model_call_failed",
+  "data": {
+    "number": 2,
+    "because": "output_invalid",
+    "provider": "example",
+    "detail": "The answer does not match the output schema",
+    "duration_ms": 1900,
+    "usage": {
+      "input": {
+        "total": 1200,
+        "uncached": 200,
+        "cache_read": 1000,
+        "cache_write": 0
+      },
+      "output": {
+        "total": 300,
+        "text": 250,
+        "reasoning": 50
+      },
+      "total": 1500
+    },
+    "cost_usd": 0.01,
+    "finish_reason": "stop",
+    "retry_after_ms": 1000,
+    "provider_message": "Overloaded",
+    "issues": [
+      {
+        "pointer": "/score",
+        "detail": "Expected a number"
+      }
+    ]
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "reasoning",
+    "definitionName": "qualify-lead",
+    "definitionVersion": 2
+  }
+}

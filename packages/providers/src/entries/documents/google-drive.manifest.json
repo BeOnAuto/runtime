@@ -1,0 +1,29 @@
+{
+  "type": "discovery",
+  "discovery": "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
+  "revision": "20261023",
+  "authorization_server": "https://accounts.google.com/.well-known/oauth-authorization-server",
+  "methods": [
+    "drive.files.list",
+    "drive.files.get",
+    "drive.permissions.list",
+    "drive.files.export",
+    "drive.files.create",
+    "drive.files.copy"
+  ],
+  "left_out_parameters": [
+    {
+      "method": "drive.files.get",
+      "parameters": ["acknowledgeAbuse"],
+      "because": "It acknowledges the risk of downloading a file flagged as malware or abuse, which a call never does for the person who connected"
+    }
+  ],
+  "global_parameters": [
+    {
+      "method": "drive.files.get",
+      "parameter": "alt",
+      "values": ["media"],
+      "says": "With `alt=media`, the call answers the text of the file where the runtime reads its type, a text file, a PDF or a Word document, and otherwise its type and its size."
+    }
+  ]
+}

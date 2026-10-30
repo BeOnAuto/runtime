@@ -1,0 +1,24 @@
+name: linkedin
+title: LinkedIn
+description: Read who you are at LinkedIn, create posts of text alone or with an article, delete them, and comment on and react to posts, as yourself, through the LinkedIn API; no post is read, since LinkedIn grants reading posts to the apps it approves alone.
+website: https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin
+type: openapi
+document: documents/linkedin.openapi.json
+headers:
+  LinkedIn-Version: '202610'
+  X-Restli-Protocol-Version: 2.0.0
+request_id: x-li-uuid
+credentials:
+  - kind: authorization
+    issuer: https://www.linkedin.com/oauth
+    authorization_endpoint: https://www.linkedin.com/oauth/v2/authorization
+    token_endpoint: https://www.linkedin.com/oauth/v2/accessToken
+    pkce: none
+    scope: openid profile email w_member_social
+    says:
+      openid: Read the member id that confirms the LinkedIn member who connects.
+      profile: Read the name and photo of the LinkedIn member who connects.
+      email: Read the primary email address of the LinkedIn account of the member who connects.
+      w_member_social: Create, change and delete posts, comments and reactions as the LinkedIn member who connects.
+    clients: [registered]
+    description: Sign in to LinkedIn and allow posting as you.

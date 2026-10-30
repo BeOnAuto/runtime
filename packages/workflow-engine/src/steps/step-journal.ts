@@ -1,0 +1,154 @@
+import { taskNameOf } from '../dsl/tasks.ts';
+import type { DslError } from '../machine/dsl-error.ts';
+import type { TaskFrame } from '../machine/run-state.ts';
+import { textCutAt } from '../programs/byte-sizes.ts';
+import {
+  keyOf,
+  mostNameBytes,
+  mostTitleBytes,
+  type Resumed,
+  type Step,
+  type StepCause,
+  type StepKey,
+  type StepOutcome,
+  type StepRefusal,
+  type WaitsFor,
+} from './step-entry.ts';
+
+interface StepEntry {
+  readonly reference: string;
+  readonly run: number;
+  readonly outcome: StepOutcome;
+  readonly error?: DslError;
+  readonly waitsFor?: WaitsFor;
+  readonly child?: string;
+  readonly refusal?: StepRefusal;
+  readonly times?: number;
+}
+
+export interface StepJournal {
+  readonly record: (entry: StepEntry) => StepKey;
+  readonly continues: (frame: TaskFrame) => void;
+  readonly cause: () => StepCause;
+  readonly causedBy: (cause: StepCause) => void;
+  readonly resumedFrom: (waiting: Resumed) => void;
+  readonly steps: () => readonly Step[];
+  readonly resumed: () => Resumed | null;
+}
+
+interface Course {
+  cause: StepCause;
+  resumed: Resumed | null;
+}
+
+interface Place {
+  step: Step;
+}
+
+function errorShown(error: DslError | undefined): Pick<Step, 'error'> {
+  if (error === undefined) {
+    return {};
+  }
+  const { type, title } = error;
+  return { error: { type, ...(title === undefined ? {} : { title: textCutAt(title, mostTitleBytes) }) } };
+}
+
+function refusalShown(refusal: StepRefusal | undefined): Pick<Step, 'refusal'> {
+  if (refusal === undefined) {
+    return {};
+  }
+  const { kind, because, detail, resolve_at: resolveAt, lifts_at: liftsAt, retry_at, until } = refusal;
+  const { limited_because: limitedBecause } = refusal;
+  return {
+    refusal: {
+      ...(kind === undefined ? {} : { kind: textCutAt(kind, mostNameBytes) }),
+      ...(because === undefined ? {} : { because: textCutAt(because, mostNameBytes) }),
+      detail: textCutAt(detail, mostTitleBytes),
+      ...(resolveAt === undefined || textCutAt(resolveAt, mostTitleBytes) !== resolveAt
+        ? {}
+        : { resolve_at: resolveAt }),
+      ...(liftsAt === undefined || textCutAt(liftsAt, mostNameBytes) !== liftsAt ? {} : { lifts_at: liftsAt }),
+      ...(limitedBecause === undefined ? {} : { limited_because: textCutAt(limitedBecause, mostNameBytes) }),
+      retry_at,
+      until,
+    },
+  };
+}
+
+function stepOf({ reference, run }: Pick<StepKey, 'reference' | 'run'>): string {
+  return JSON.stringify([reference, run]);
+}
+
+function textOf({ reference, run, outcome, times }: StepKey): string {
+  return JSON.stringify([reference, run, outcome, times]);
+}
+
+function causedAnew(step: Step, cause: StepCause): Step {
+  return { ...step, caused_by: cause };
+}
+
+function waitedOf(body: TaskFrame['body']): number {
+  if (body.kind === 'listen') {
+    return body.waited;
+  }
+  if (body.kind === 'admission') {
+    return body.refused.waited;
+  }
+  return body.kind === 'call' ? (body.refused?.waited ?? 1) : 1;
+}
+
+function latestEntryOf({ reference, run, body }: TaskFrame): StepKey {
+  const waits = body.kind === 'listen' || body.kind === 'admission' || body.kind === 'call' || body.kind === 'wait';
+  return { reference, run, outcome: waits ? 'waiting' : 'started', times: waitedOf(body) };
+}
+
+export function stepJournalOf(): StepJournal {
+  const places: Place[] = [];
+  const placeOfStep = new Map<string, Place>();
+  const placeOfKey = new Map<string, Place>();
+  const earlier = new Map<string, StepKey>();
+  const course: Course = { cause: 'input', resumed: null };
+  const settledCause = (cause: StepCause): StepCause => {
+    const place = cause === 'input' ? undefined : placeOfKey.get(textOf(cause));
+    return place === undefined ? cause : keyOf(place.step);
+  };
+  return {
+    record: (entry) => {
+      const { reference, run, outcome, waitsFor, child, refusal } = entry;
+      const key = { reference, run, outcome, times: entry.times ?? 1 };
+      const place = placeOfStep.get(stepOf(key));
+      const step = {
+        ...key,
+        name: textCutAt(taskNameOf(reference), mostNameBytes),
+        caused_by: place?.step.caused_by ?? earlier.get(stepOf(key)) ?? course.cause,
+        ...errorShown(entry.error),
+        ...(waitsFor === undefined ? {} : { waits_for: waitsFor }),
+        ...(child === undefined ? {} : { child }),
+        ...refusalShown(refusal),
+      };
+      const placed = place ?? { step };
+      placed.step = step;
+      if (place === undefined) {
+        places.push(placed);
+        placeOfStep.set(stepOf(key), placed);
+      }
+      placeOfKey.set(textOf(key), placed);
+      if (outcome !== 'cancelled') {
+        course.cause = key;
+      }
+      return key;
+    },
+    continues: (frame) => {
+      earlier.set(stepOf(frame), latestEntryOf(frame));
+    },
+    cause: () => course.cause,
+    causedBy: (cause) => {
+      course.cause = cause;
+    },
+    resumedFrom: (waiting) => {
+      course.resumed ??= waiting;
+    },
+    steps: () => places.map((place: Readonly<Place>) => causedAnew(place.step, settledCause(place.step.caused_by))),
+    resumed: () => course.resumed,
+  };
+}
