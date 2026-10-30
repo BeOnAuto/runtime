@@ -120,6 +120,7 @@ const addressesOfTheShipped = [
   ['slack-bot', 'https://slack.com/api'],
   ['stripe', 'https://mcp.stripe.com'],
   ['work-iq', 'https://workiq.svc.cloud.microsoft/mcp'],
+  ['x', 'https://api.x.com'],
   ['youtube', 'https://youtube.googleapis.com'],
   ['youtube-analytics', 'https://youtubeanalytics.googleapis.com'],
   ['youtube-management', 'https://youtube.googleapis.com'],
@@ -131,7 +132,7 @@ describe('the shipped providers', () => {
     const names = shipped.providers.map(({ entry }) => entry.name);
 
     expect(names).toEqual(addressesOfTheShipped.map(([name]: readonly string[]) => name));
-    expect(names).toHaveLength(38);
+    expect(names).toHaveLength(39);
     expect(
       readdirSync(entriesFolder)
         .filter((file) => file.endsWith('.yaml'))
@@ -148,6 +149,48 @@ describe('the shipped providers', () => {
   });
 });
 
+const waysOfTheShipped = [
+  ['adobe-analytics', ['client_credentials', 'authorization'], []],
+  ['adobe-analytics-mcp', ['authorization'], []],
+  ['amazon-ads', ['authorization'], []],
+  ['amazon-ads-mcp', ['authorization'], []],
+  ['atlassian', ['authorization'], []],
+  ['buffer', ['secret'], []],
+  ['campaign-manager-360', ['authorization'], []],
+  ['display-video-360', ['authorization'], []],
+  ['display-video-360-reports', ['authorization'], []],
+  ['github', ['authorization', 'secret'], []],
+  ['gmail', ['authorization'], []],
+  ['google-ads', ['authorization'], []],
+  ['google-analytics', ['authorization'], []],
+  ['google-analytics-admin', ['authorization'], []],
+  ['google-docs', ['authorization'], []],
+  ['google-drive', ['authorization'], []],
+  ['google-search-console', ['authorization'], []],
+  ['google-sheets', ['authorization'], []],
+  ['google-slides', ['authorization'], []],
+  ['hubspot', ['authorization'], []],
+  ['linear', ['authorization'], []],
+  ['linkedin', ['authorization'], []],
+  ['microsoft-advertising', ['authorization'], []],
+  ['microsoft-teams', ['authorization'], []],
+  ['notion', ['authorization'], []],
+  ['onedrive', ['authorization'], []],
+  ['outlook', ['authorization'], []],
+  ['posthog', ['authorization'], []],
+  ['profound', ['authorization', 'secret'], []],
+  ['search-ads-360', ['authorization'], []],
+  ['slack', ['authorization'], []],
+  ['slack-bot', ['secret'], []],
+  ['stripe', ['authorization'], []],
+  ['work-iq', ['authorization'], []],
+  ['x', ['authorization'], []],
+  ['youtube', ['authorization'], []],
+  ['youtube-analytics', ['authorization'], []],
+  ['youtube-management', ['authorization'], []],
+  ['zoom', ['authorization'], []],
+];
+
 describe('the ways of the shipped providers', () => {
   it('take only the ways the runtime takes and refer to no value whoever runs the runtime sets', () => {
     expect(
@@ -156,46 +199,7 @@ describe('the ways of the shipped providers', () => {
         entry.credentials.map(({ kind }) => kind),
         operatorVariablesOf(entry),
       ]),
-    ).toEqual([
-      ['adobe-analytics', ['client_credentials', 'authorization'], []],
-      ['adobe-analytics-mcp', ['authorization'], []],
-      ['amazon-ads', ['authorization'], []],
-      ['amazon-ads-mcp', ['authorization'], []],
-      ['atlassian', ['authorization'], []],
-      ['buffer', ['secret'], []],
-      ['campaign-manager-360', ['authorization'], []],
-      ['display-video-360', ['authorization'], []],
-      ['display-video-360-reports', ['authorization'], []],
-      ['github', ['authorization', 'secret'], []],
-      ['gmail', ['authorization'], []],
-      ['google-ads', ['authorization'], []],
-      ['google-analytics', ['authorization'], []],
-      ['google-analytics-admin', ['authorization'], []],
-      ['google-docs', ['authorization'], []],
-      ['google-drive', ['authorization'], []],
-      ['google-search-console', ['authorization'], []],
-      ['google-sheets', ['authorization'], []],
-      ['google-slides', ['authorization'], []],
-      ['hubspot', ['authorization'], []],
-      ['linear', ['authorization'], []],
-      ['linkedin', ['authorization'], []],
-      ['microsoft-advertising', ['authorization'], []],
-      ['microsoft-teams', ['authorization'], []],
-      ['notion', ['authorization'], []],
-      ['onedrive', ['authorization'], []],
-      ['outlook', ['authorization'], []],
-      ['posthog', ['authorization'], []],
-      ['profound', ['authorization', 'secret'], []],
-      ['search-ads-360', ['authorization'], []],
-      ['slack', ['authorization'], []],
-      ['slack-bot', ['secret'], []],
-      ['stripe', ['authorization'], []],
-      ['work-iq', ['authorization'], []],
-      ['youtube', ['authorization'], []],
-      ['youtube-analytics', ['authorization'], []],
-      ['youtube-management', ['authorization'], []],
-      ['zoom', ['authorization'], []],
-    ]);
+    ).toEqual(waysOfTheShipped);
   });
 });
 

@@ -172,6 +172,7 @@ const waysWithoutAClient = {
   slack: [underTheOrgsAppAlone],
   'slack-bot': ['secret offered'],
   stripe: ['authorization offered'],
+  x: [underTheOrgsAppAlone],
   zoom: [underTheOrgsAppAlone],
 };
 
@@ -193,6 +194,7 @@ const waysWithAClient = {
   slack: ['authorization offered'],
   'slack-bot': ['secret offered'],
   stripe: ['authorization offered'],
+  x: [underTheOrgsAppAlone],
   zoom: ['authorization offered'],
 };
 
@@ -256,5 +258,38 @@ describe('a connection added by a provider', () => {
         errors: [{ pointer: '/provider', detail: refusedName }],
       },
     });
+  });
+});
+
+describe('a connection added by a provider whose way requires the org’s own app, as x’s does', () => {
+  it('is added over HTTP by its name alone under the org’s own app, whether or not a client is registered at its issuer', async () => {
+    const withClients = await servingReasoning([], registeredAtTheIssuers);
+    onTestFinished(() => withClients.stop());
+    const added = await Promise.all(
+      [server, withClients].map((served) =>
+        served.call('POST', '/v1/orgs/local/connections', { body: { provider: 'x' } }),
+      ),
+    );
+    const underTheOrgsApp = {
+      status: 201,
+      body: {
+        name: 'x',
+        provider: 'x',
+        status: 'pending',
+        credential: {
+          kind: 'authorization',
+          issuer: 'https://api.x.com',
+          authorization_endpoint: 'https://x.com/i/oauth2/authorize',
+          token_endpoint: 'https://api.x.com/2/oauth2/token',
+          revocation_endpoint: 'https://api.x.com/2/oauth2/revoke',
+          scope: 'tweet.read tweet.write users.read offline.access',
+          client_source: 'own',
+        },
+      },
+    };
+
+    expect(added).toMatchObject([underTheOrgsApp, underTheOrgsApp]);
+    expect(added[0]).not.toHaveProperty('body.credential.client_id');
+    expect(added[1]).not.toHaveProperty('body.credential.client_id');
   });
 });

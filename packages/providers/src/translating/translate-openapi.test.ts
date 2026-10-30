@@ -250,3 +250,33 @@ describe('the scopes of a translation read from the requirement of a scheme of t
     );
   });
 });
+
+function campaignsListing(listed: string) {
+  const post = { operationId: 'campaigns', security: [{ OAuth2: listed.split(' ') }], responses: answeredWithAll };
+  return { ...campaignsSource, paths: { '/campaigns': { post } } };
+}
+
+function campaignsTranslatedListing(listed: string) {
+  const translation = {
+    ...aboutManifest,
+    operations: ['campaigns'],
+    scheme: fromTheVendorsScheme,
+    keeps_responses: true,
+  };
+  return curatedOpenApiOf([campaignsListing(listed)], decodeTranslation(translation), server);
+}
+
+describe('the order of the scopes of a translation read from the requirement of a scheme of the vendor', () => {
+  it('is the order of their names, whatever order the vendor lists them in, so a document made again is the same', () => {
+    const translated = campaignsTranslatedListing('campaigns:write campaigns:read');
+
+    expect(translated).toEqual(campaignsTranslatedListing('campaigns:read campaigns:write'));
+    expect(translated).toMatchObject({
+      paths: {
+        '/campaigns': {
+          post: { security: [{ campaigns_oauth: ['campaigns:read'] }, { campaigns_oauth: ['campaigns:write'] }] },
+        },
+      },
+    });
+  });
+});

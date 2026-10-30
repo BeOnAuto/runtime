@@ -1,0 +1,18 @@
+{
+  "type": "openapi",
+  "sources": ["https://api.x.com/2/openapi.json"],
+  "authorization_server": "https://api.x.com/.well-known/oauth-authorization-server",
+  "info": {
+    "title": "X posts, mentions and recent search",
+    "version": "2.173",
+    "description": "Six operations of the X API v2 a person's token calls, kept whole from X's published OpenAPI document, version 2.173, read on 2026-10-30: who the person is, creating, editing and deleting a post as them, a user's posts and mentions, and the search of the last seven days, with an oauth2 scheme in place of the vendor's."
+  },
+  "operations": ["getUsersMe", "createPosts", "deletePosts", "getUsersPosts", "getUsersMentions", "searchPostsRecent"],
+  "scheme": {
+    "name": "x_oauth",
+    "scopes_from_scheme": "OAuth2UserToken",
+    "leaving_out": [],
+    "because": "Each operation's own requirement of the vendor's OAuth2UserToken scheme lists the scopes it needs, which the entry's way of consent asks for"
+  },
+  "keeps_responses": true
+}

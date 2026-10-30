@@ -196,7 +196,7 @@ export function scopesOf({ id, operation }: Kept, scheme: OpenApiScheme): readon
   if (kept.length === 0) {
     throw new Error(`The operation ${id} lists no scope ${whereListed(scheme)} that the translation keeps`);
   }
-  return kept;
+  return kept.toSorted();
 }
 
 export function writtenPathOf(path: string, { path_values: pathValues = [] }: OpenApiTranslation): string {

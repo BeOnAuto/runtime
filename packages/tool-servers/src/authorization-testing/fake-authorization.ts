@@ -40,13 +40,19 @@ function endpointsOriginOf(origin: string, { endpointHost }: ClientRegistration)
   return moved.origin;
 }
 
-function methodsOf({ takesBasicSecrets, takesPublicClientsAlone }: ClientRegistration): readonly string[] {
+function methodsOf({
+  takesBasicSecrets,
+  takesPostedSecrets,
+  takesPublicClientsAlone,
+}: ClientRegistration): readonly string[] {
   if (takesPublicClientsAlone === true) {
     return [publicMethod];
   }
-  return takesBasicSecrets === false
-    ? methodsOfAuthentication.filter((method) => method !== 'client_secret_basic')
-    : methodsOfAuthentication;
+  const refused: ReadonlySet<string> = new Set([
+    ...(takesBasicSecrets === false ? ['client_secret_basic'] : []),
+    ...(takesPostedSecrets === false ? ['client_secret_post'] : []),
+  ]);
+  return methodsOfAuthentication.filter((method) => !refused.has(method));
 }
 
 function metadataOf(origin: string, registration: ClientRegistration) {

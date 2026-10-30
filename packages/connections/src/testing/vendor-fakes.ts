@@ -2,10 +2,11 @@ import type { Outcome } from '@on.auto/operations';
 import type { Placeholder, ProviderEntry } from '@on.auto/providers';
 import type { ConsentClientOptions, RegisteredClient } from '@on.auto/tool-servers';
 import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
+import { Function } from 'effect';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { added } from './additions.ts';
-import { consentFake, consentHarnessAt, finishing, startedAt } from './consents.ts';
+import { consentFake, consentHarnessAt, finishing, givingTheClient, startedAt } from './consents.ts';
 import type { Harness, HarnessOptions } from './harness.ts';
 
 interface EndpointsAt {
@@ -49,11 +50,13 @@ export function examplesOf({ placeholders = {} }: ProviderEntry): Readonly<Recor
 export interface AtTheVendor {
   readonly providers: NonNullable<HarnessOptions['providers']>;
   readonly registeredIssuer: string | undefined;
+  readonly asking?: (address: string) => void;
 }
 
 export interface ProviderAsked {
   readonly provider: string;
   readonly placeholders: Readonly<Record<string, string>>;
+  readonly orgsApp?: Readonly<Record<string, string>>;
 }
 
 export interface ConsentedAtTheVendor {
@@ -98,11 +101,16 @@ function challengeNaming(resourceMetadata: string): Response {
   });
 }
 
-function answeredAsTheVendor(fake: FakeMcpServer, vendor: Vendor): ConsentClientOptions['fetch'] {
+function answeredAsTheVendor(
+  fake: FakeMcpServer,
+  vendor: Vendor,
+  asking: (address: string) => void,
+): ConsentClientOptions['fetch'] {
   const pathsAtTheFake = pathsAtTheFakeOf(vendor);
   const challenges = challengesOf(vendor);
   return (...[address, init]: readonly [unknown, unknown?]) => {
     const asked = new URL(String(address));
+    asking(asked.href);
     if (asked.origin === fake.origin) {
       return globalThis.fetch(asked, Object.assign({}, init));
     }
@@ -142,13 +150,13 @@ function hostsAtTheVendor(fakeOrigin: string, written: string): string[] {
 export function harnessAtTheVendor(
   fake: FakeMcpServer,
   vendor: Vendor,
-  { providers, registeredIssuer }: AtTheVendor,
+  { providers, registeredIssuer, asking = Function.constVoid }: AtTheVendor,
 ): Harness {
   return consentHarnessAt(fake, {
     providers,
     policy: connectionPolicyOf({ allowed_hosts: hostsAtTheVendor(fake.origin, JSON.stringify([vendor, providers])) }),
     consenting: {
-      fetch: answeredAsTheVendor(fake, vendor),
+      fetch: answeredAsTheVendor(fake, vendor, asking),
       registeredClients: registeredIssuer === undefined ? [] : [registeredAtTheVendor(registeredIssuer, vendor)],
     },
   });
@@ -162,10 +170,13 @@ function authorizedAtTheFake(asked: Readonly<URL>, { fake, vendor }: TheVendor):
 
 export async function consentedAtTheVendor(
   h: Harness,
-  { provider, placeholders }: ProviderAsked,
+  { provider, placeholders, orgsApp }: ProviderAsked,
   theVendor: TheVendor,
 ): Promise<ConsentedAtTheVendor> {
   const link = await added(h, { provider, placeholders, credential: { kind: 'authorization' } });
+  if (orgsApp !== undefined) {
+    await givingTheClient(h, link, orgsApp);
+  }
   const asked = new URL((await startedAt(h, link)).url);
   const finished = await finishing(h, link, await consentedAt(authorizedAtTheFake(asked, theVendor)));
   return { asked, finished };

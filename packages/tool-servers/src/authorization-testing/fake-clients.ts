@@ -27,6 +27,7 @@ export interface ClientRegistration {
   readonly publishesMetadata?: boolean;
   readonly endpointHost?: string;
   readonly takesBasicSecrets?: boolean;
+  readonly takesPostedSecrets?: boolean;
   readonly takesPublicClientsAlone?: boolean;
   readonly listsRevocationMethods?: boolean;
   readonly scopesSupported?: readonly string[];
@@ -150,7 +151,7 @@ async function namedIn(registry: Registry, form: Readonly<URLSearchParams>): Pro
   const client = await knownIn(registry, form.get('client_id') ?? '');
   const secret = form.get('client_secret');
   if (secret !== null) {
-    return withSecret(client, secret);
+    return registry.registration.takesPostedSecrets === false ? undefined : withSecret(client, secret);
   }
   return client !== undefined && isPublic(client) ? client : undefined;
 }

@@ -63,7 +63,7 @@ const groupsSaid = shipped.providers.flatMap(({ entry }) => entry.credentials.fl
 describe('the words of the scopes the shipped providers ask', () => {
   it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
     expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
-    expect(saidScopes).toHaveLength(122);
+    expect(saidScopes).toHaveLength(126);
   });
 
   it('say what each group a later consent may add is for in the words of the person, opening with a bare verb', () => {

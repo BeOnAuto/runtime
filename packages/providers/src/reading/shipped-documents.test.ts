@@ -96,8 +96,8 @@ describe('the manifests beside the entries', () => {
       manifests.flatMap(({ manifest }) => addressesOf(manifest)).filter((address) => !address.startsWith('https://')),
     ).toEqual([]);
     expect(manifests.map(({ manifest }) => manifest.type).toSorted()).toEqual([
-      ...Array.from({ length: manifests.length - 6 }, () => 'discovery'),
-      ...Array.from({ length: 5 }, () => 'openapi'),
+      ...Array.from({ length: manifests.length - 7 }, () => 'discovery'),
+      ...Array.from({ length: 6 }, () => 'openapi'),
       'swagger',
     ]);
   });

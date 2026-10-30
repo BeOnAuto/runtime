@@ -1,3 +1,4 @@
+import { appSecret, theOrgsApp } from './consents.ts';
 import { googleApi } from './google-vendors.ts';
 import { microsoftAdvertising, microsoftGraph, workIq } from './microsoft-vendors.ts';
 import type { VendorOfTheWay } from './vendor-fakes.ts';
@@ -48,6 +49,10 @@ const linkedInIssuer = 'https://www.linkedin.com/oauth';
 
 const sixtyDays = 5_184_000;
 
+const twoHours = 7_200;
+
+export const xMetadata = 'https://api.x.com/.well-known/oauth-authorization-server';
+
 function registeringServerAt(server: string, issuer: string): VendorOfTheWay {
   const { origin, pathname } = new URL(server);
   const resource = `${origin}${pathname}`;
@@ -65,6 +70,24 @@ function registeringServerAt(server: string, issuer: string): VendorOfTheWay {
     resource,
   };
 }
+
+export const xApi: VendorOfTheWay = {
+  metadata: {
+    issuer: 'https://api.x.com',
+    clientId: theOrgsApp.client_id,
+    clientSecret: appSecret,
+    takesPostedSecrets: false,
+    rotatesRefreshTokens: true,
+    expiresInSeconds: twoHours,
+  },
+  authorizationServerAt: xMetadata,
+  endpointsAt: {
+    authorization: 'https://x.com/i/oauth2/authorize',
+    token: 'https://api.x.com/2/oauth2/token',
+    revocation: 'https://api.x.com/2/oauth2/revoke',
+  },
+  resource: null,
+};
 
 export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> = {
   'adobe-analytics': {
@@ -230,4 +253,5 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     },
     resource: null,
   },
+  x: xApi,
 };

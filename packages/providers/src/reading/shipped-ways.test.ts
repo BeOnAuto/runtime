@@ -67,6 +67,7 @@ const hostsOfTheWays = [
   [[['slack.com']]],
   [[['mcp.stripe.com', 'access.stripe.com']]],
   [[['workiq.svc.cloud.microsoft', microsoft, microsoft, microsoft]]],
+  [[['api.x.com', 'api.x.com', 'x.com', 'api.x.com', 'api.x.com']]],
   [[['youtube.googleapis.com', google]]],
   [[['youtubeanalytics.googleapis.com', google]]],
   [[['youtube.googleapis.com', google]]],

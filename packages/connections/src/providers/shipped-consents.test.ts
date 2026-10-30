@@ -5,7 +5,7 @@ import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { reconnectionStartedAt } from '../testing/consents.ts';
+import { reconnectionStartedAt, theOrgsApp } from '../testing/consents.ts';
 import { consentServedAs, servedAs, sourceOver } from '../testing/served-connections.ts';
 import { vendorsOfTheShippedWays } from '../testing/shipped-vendors.ts';
 import {
@@ -32,11 +32,12 @@ interface WayOfConsent {
   readonly issuer: string;
   readonly scope: string | undefined;
   readonly clients: readonly string[];
+  readonly ownApp: boolean;
   readonly vendor: VendorOfTheWay | undefined;
 }
 
 const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entry }) =>
-  entry.credentials.flatMap(({ kind, issuer, scope, clients = ['registered'] }) =>
+  entry.credentials.flatMap(({ kind, issuer, scope, clients = ['registered'], own_app: ownApp }) =>
     kind === 'authorization' && issuer !== undefined
       ? [
           {
@@ -45,6 +46,7 @@ const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entr
             issuer,
             scope,
             clients,
+            ownApp: ownApp === 'required',
             vendor: vendorsOfTheShippedWays[entry.name],
           },
         ]
@@ -77,7 +79,7 @@ function parametersAsked(
   return Object.fromEntries(Object.keys(parameters).map((name) => [name, asked.searchParams.get(name)]));
 }
 
-async function consentOf({ name, placeholders, issuer, vendor }: WayOfConsent, registered: boolean) {
+async function consentOf({ name, placeholders, issuer, ownApp, vendor }: WayOfConsent, registered: boolean) {
   const theVendor = required(vendor);
   const fake = await servedAsTheVendor(theVendor);
   closing.push(fake.close);
@@ -87,7 +89,7 @@ async function consentOf({ name, placeholders, issuer, vendor }: WayOfConsent, r
   });
   const { asked, finished } = await consentedAtTheVendor(
     h,
-    { provider: name, placeholders },
+    { provider: name, placeholders, ...(ownApp ? { orgsApp: theOrgsApp } : {}) },
     { fake, vendor: theVendor },
   );
   const facts = await h.facts();
@@ -123,7 +125,10 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
   };
 }
 
-function sourceTakenBesideARegisteredClient({ clients }: WayOfConsent): string {
+function sourceTakenBesideARegisteredClient({ clients, ownApp }: WayOfConsent): string {
+  if (ownApp) {
+    return 'own';
+  }
   return clients.includes('registered') ? 'registered' : 'dynamic';
 }
 
@@ -160,6 +165,7 @@ const providersTakingConsent = [
   'slack',
   'stripe',
   'work-iq',
+  'x',
   'youtube',
   'youtube-analytics',
   'youtube-management',
@@ -167,7 +173,7 @@ const providersTakingConsent = [
 ];
 
 describe('every way of consent of a shipped provider, against the fake authorization server at its vendor’s addresses', () => {
-  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, or the one it registers itself where the way takes none registered, and finishes connected with that scope', async () => {
+  it('starts at the issuer its server names, with its scope, what the metadata adds and the parameters it sets, by the client whoever runs Auto registered there, the one it registers itself where the way takes none registered, or the org’s own where the way requires it, and finishes connected with that scope', async () => {
     const consents = await Promise.all(waysOfConsent.map((consenting) => consentOf(consenting, true)));
 
     expect(consents).toEqual(
