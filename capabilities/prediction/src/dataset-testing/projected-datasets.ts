@@ -1,5 +1,11 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
+import {
+  filterSandboxOf,
+  freshInstances,
+  pageFiltersOn,
+  sandboxModuleIn,
+  sandboxShippedRoots,
+} from '@on.auto/workflow-engine/dsl';
 import { someFolder } from '@on.auto/workflow-host';
 import { projectedFolders, type DatabaseSettings, type ProjectedFolders } from '@on.auto/workflow-host/testing';
 import { Effect, Option, Result, type Schema } from 'effect';
@@ -93,11 +99,11 @@ function readingOf(folders: ProjectedFolders): Pick<ProjectedDatasets, 'datasets
   };
 }
 
-type Folding = Partial<Omit<DatasetFolding, 'filters'>>;
+type Folding = Partial<DatasetFolding>;
 
 export function testDatasetFolder(folding: Folding = {}): ReturnType<typeof datasetFolder> {
   return datasetFolder({
-    filters: filterSandboxOf(freshInstances(sandboxModule)),
+    filters: pageFiltersOn(filterSandboxOf(freshInstances(sandboxModule))),
     triesBeforeStall: Number.POSITIVE_INFINITY,
     ...folding,
   });

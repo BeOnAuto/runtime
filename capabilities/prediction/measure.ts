@@ -1,4 +1,5 @@
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { pageFiltersOn } from '@on.auto/workflow-engine';
 import { handedWorkersOf, programPool, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 
 import { rebuiltOn, type Folding, type History } from './measure/dataset-rebuild.ts';
@@ -65,7 +66,7 @@ async function measuredOn(measured: MeasuredStore): Promise<void> {
     workers: 1,
     heapMegabytes: 256,
   });
-  const history = { days, liveDays, filters: pool.evaluations.filters };
+  const history = { days, liveDays, filters: pageFiltersOn(pool.evaluations.filters) };
   try {
     await untestedOn(measured, history);
     await testedOn(measured, history);

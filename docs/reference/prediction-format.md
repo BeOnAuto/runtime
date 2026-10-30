@@ -155,9 +155,9 @@ The dataset passes over an event, counts it and notes it in the server's log, wh
 
 Such an event adds to no row.
 
-A data test can also run out of time or memory. No event causes that, so the event is never passed over. Instead:
+A data test can also run out of time or memory, and the work that judges a page's data tests can be stopped at a limit of the server's. No event causes that, so the event is never passed over. Instead:
 
-- The dataset stops before that event. It tries the event again at the server's next sweep, its regular pass over pending work, every second by default.
+- The dataset stops before that event. It tries the event again at the server's next wake-up that sweeps its pending work.
 - After twenty tries without folding a whole page, the dataset stalls. Its phase becomes `stalled`, the server's log notes it, and it folds nothing more.
 - A data part that changes starts a dataset of its own.
 

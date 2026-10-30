@@ -1,3 +1,4 @@
+import { pageFiltersOn } from '@on.auto/workflow-engine';
 import type { CapabilityPorts, Statement } from '@on.auto/workflow-host';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -23,6 +24,7 @@ function portsReading(): Reading {
       read.push(statement);
       return [];
     });
+  const pool = poolOf();
   const ports: CapabilityPorts = {
     database: {
       read: noRows,
@@ -30,7 +32,8 @@ function portsReading(): Reading {
       transaction: () => Effect.succeed([]),
       readConsistently: (reads) => reads(noRows),
     },
-    pool: poolOf(),
+    pool,
+    filters: pageFiltersOn(pool.evaluations.filters),
     features: { includes: () => Effect.succeed(false), refusal: () => Effect.die('No feature is asked') },
     settings: new Map(),
     mostFunctions: 5,

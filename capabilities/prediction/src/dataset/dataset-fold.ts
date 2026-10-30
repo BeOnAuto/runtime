@@ -1,4 +1,4 @@
-import type { FilterSandbox } from '@on.auto/workflow-engine';
+import type { PageFilters } from '@on.auto/workflow-engine';
 import {
   comparePoints,
   isAfter,
@@ -11,10 +11,10 @@ import {
 import { Effect } from 'effect';
 
 import { periodForm, periodOfForm } from '../periods/grains.ts';
-import { datasetMatchingOf, type DatasetMatching } from './dataset-matching.ts';
+import { datasetMatchingOf, type MatchedEvent } from './dataset-matching.ts';
 import { mergedRows, type MergedRow } from './dataset-merging.ts';
 import { standingOf, type DatasetRow, type DatasetStanding } from './dataset-rows.ts';
-import { eventReadingOf, type Contribution } from './event-values.ts';
+import { eventReadingOf, type Contribution, type EventReading } from './event-values.ts';
 
 interface PassedOverEvent {
   readonly record: string;
@@ -40,43 +40,35 @@ interface Read {
   readonly lastRead: PageEvent | undefined;
 }
 
-const nothingRead: Read = { contributions: [], passedOver: [], stop: undefined, lastRead: undefined };
-
-function passedOver(read: Read, placed: PageEvent, detail: string): Read {
-  return { ...read, passedOver: [...read.passedOver, { record: placed.record, detail }], lastRead: placed };
+function readingOf(row: DatasetRow, { placed, match }: MatchedEvent): EventReading | undefined {
+  if (match.kind === 'refused') {
+    return { refusal: match.detail };
+  }
+  return match.kind === 'taken' ? eventReadingOf(row.data, placed) : undefined;
 }
 
-function readWith(matching: DatasetMatching, row: DatasetRow, events: readonly PageEvent[]): Effect.Effect<Read> {
-  return Effect.reduce(
-    events,
-    () => nothingRead,
-    (read: Read, placed: PageEvent) =>
-      read.stop === undefined
-        ? Effect.map(matching.matchOf(placed), (match): Read => {
-            if (match.kind === 'stopped') {
-              return { ...read, stop: { placed, detail: match.detail } };
-            }
-            if (match.kind === 'refused') {
-              return passedOver(read, placed, match.detail);
-            }
-            if (match.kind === 'not_taken') {
-              return { ...read, lastRead: placed };
-            }
-            const reading = eventReadingOf(row.data, placed);
-            return 'refusal' in reading
-              ? passedOver(read, placed, reading.refusal)
-              : { ...read, contributions: [...read.contributions, reading.contribution], lastRead: placed };
-          })
-        : Effect.succeed(read),
-  );
+function readWith(row: DatasetRow, matched: readonly MatchedEvent[]): Read {
+  const contributions: Contribution[] = [];
+  const passedOver: PassedOverEvent[] = [];
+  let lastRead: PageEvent | undefined;
+  for (const event of matched) {
+    const { placed, match } = event;
+    if (match.kind === 'stopped') {
+      return { contributions, passedOver, stop: { placed, detail: match.detail }, lastRead };
+    }
+    const reading = readingOf(row, event);
+    if (reading !== undefined && 'refusal' in reading) {
+      passedOver.push({ record: placed.record, detail: reading.refusal });
+    } else if (reading !== undefined) {
+      contributions.push(reading.contribution);
+    }
+    lastRead = placed;
+  }
+  return { contributions, passedOver, stop: undefined, lastRead };
 }
 
-function readFrom(row: DatasetRow, events: readonly PageEvent[], sandbox: FilterSandbox): Effect.Effect<Read> {
-  return Effect.acquireUseRelease(
-    Effect.sync(() => datasetMatchingOf(row.data, sandbox)),
-    (matching) => readWith(matching, row, events),
-    (matching) => Effect.promise(() => matching.close()),
-  );
+function readFrom(row: DatasetRow, events: readonly PageEvent[], filters: PageFilters): Effect.Effect<Read> {
+  return Effect.map(datasetMatchingOf(row.data, filters).matchesOf(events), (matched) => readWith(row, matched));
 }
 
 function reachedOf(page: ReadPage, { stop, lastRead }: Read): ReadPage['lastExamined'] {
@@ -112,7 +104,7 @@ function periodsOf(
 }
 
 interface Folding {
-  readonly sandbox: FilterSandbox;
+  readonly filters: PageFilters;
   readonly triesBeforeStall: number;
 }
 
@@ -136,7 +128,7 @@ function changeOf(row: DatasetRow, page: ReadPage, database: HostDatabase, foldi
   const considered = new Set(row.data.events.map(({ type }) => type));
   const events = page.events.filter(({ point, event }) => isAfter(point, row.checkpoint) && considered.has(event.type));
   return Effect.gen(function* () {
-    const read = yield* readFrom(row, events, folding.sandbox);
+    const read = yield* readFrom(row, events, folding.filters);
     const merged = yield* mergedRows(database, row, read.contributions);
     const next: DatasetStanding = {
       ...standingOf(row),

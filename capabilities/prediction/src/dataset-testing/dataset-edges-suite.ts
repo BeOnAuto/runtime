@@ -1,3 +1,4 @@
+import type { PageFilters } from '@on.auto/workflow-engine';
 import { describe, expect, it } from 'vitest';
 
 import { weeklyOrders, weeklyOrdersWith } from '../testing/weekly-orders.ts';
@@ -54,6 +55,17 @@ const notReadyWords: unknown = expect.stringMatching(
   /^The dataset stopped at an event its data test could not get through/u,
 );
 
+const stoppedByTheHost = 'The host stopped the job that judged the page at its limit of time';
+
+const stoppedByTheHostWords: unknown = expect.stringContaining(stoppedByTheHost);
+
+const hostStoppedEveryPage: PageFilters = {
+  verdictsOf: () =>
+    Promise.resolve([
+      [{ error: { type: 'about:blank', status: 500, instance: '', detail: stoppedByTheHost }, stopped: true }],
+    ]),
+};
+
 const runsOutOfMemoryOnItsSecond = [
   orderPlaced({ region: 'north', at: '2026-10-06T10:00:00Z', total: 1 }),
   orderPlaced({ region: 'north', at: '2026-10-06T11:00:00Z', total: -1 }),
@@ -86,6 +98,26 @@ function stoppedTest(settingsOf: SettingsOf): void {
       kind: 'dataset_not_ready',
       because: 'stalled',
       detail: notReadyWords,
+    });
+  });
+}
+
+function stoppedPageTest(settingsOf: SettingsOf): void {
+  it('counts a page the host’s filters were stopped at as a try of the dataset, folding none of it, and stalls after the tries it may have', async () => {
+    const datasets = await projectedDatasets(await settingsOf(), {
+      filters: hostStoppedEveryPage,
+      triesBeforeStall: 3,
+    });
+    const { dataSha256 } = await datasets.saved('orders', outOfMemory);
+    await datasets.published(runsOutOfMemoryOnItsSecond);
+    datasets.start();
+    const row = await datasets.until(dataSha256, isStalled);
+
+    expect(row).toMatchObject({
+      eventsFolded: 0,
+      passedOver: 0,
+      tries: 3,
+      stall: { record: anyText, detail: stoppedByTheHostWords },
     });
   });
 }
@@ -162,6 +194,7 @@ function detailsTest(settingsOf: SettingsOf): void {
 export function datasetEdgesSuite(settingsOf: SettingsOf): void {
   describe('the datasets of prediction functions at their edges', () => {
     stoppedTest(settingsOf);
+    stoppedPageTest(settingsOf);
     stalledTest(settingsOf);
     attributeTest(settingsOf);
     timeTest(settingsOf);

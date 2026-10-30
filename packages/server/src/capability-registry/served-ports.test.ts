@@ -6,10 +6,10 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { PortsOfTheServer } from '../extensions/capability-points.ts';
-import { sharedWorkerPool } from '../testing/servers/worker-pools.ts';
+import { sharedPooledPorts } from '../testing/servers/worker-pools.ts';
 import { providedOnceServed } from './served-ports.ts';
 
-const pool = sharedWorkerPool();
+const pooled = sharedPooledPorts();
 
 const capability = defineCapability({
   type: 'prediction',
@@ -40,7 +40,7 @@ describe('the ports the server hands a capability it makes before its database o
         resolve(ports);
         return { capability, operations, dueWork: [dueWork] };
       },
-      { pool, mostFunctions: 3, triesBeforeStall: 2 },
+      { ...pooled, mostFunctions: 3, triesBeforeStall: 2 },
     );
     const { database, features, mostFunctions } = await handed;
     const answers = Effect.all([

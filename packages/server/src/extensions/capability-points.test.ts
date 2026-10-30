@@ -6,7 +6,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { configured } from '../testing/extensions/scratch-packages.ts';
-import { sharedWorkerPool } from '../testing/servers/worker-pools.ts';
+import { sharedPooledPorts } from '../testing/servers/worker-pools.ts';
 import {
   predictionCapabilityFilled,
   predictionCapabilityOf,
@@ -15,13 +15,11 @@ import {
 } from './capability-points.ts';
 import { loadedExtensions, type InstalledPackages } from './extension-loading.ts';
 
-const pool = sharedWorkerPool();
-
 const noRows = () => Effect.succeed([]);
 
 const ports: PortsOfTheServer = {
   database: { read: noRows, write: noRows, transaction: noRows, readConsistently: (reads) => reads(noRows) },
-  pool,
+  ...sharedPooledPorts(),
   features: { includes: () => Effect.succeed(false), refusal: () => Effect.die('No feature is asked') },
   mostFunctions: 7,
   triesBeforeStall: 3,

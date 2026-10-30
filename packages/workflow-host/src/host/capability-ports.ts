@@ -1,6 +1,6 @@
 import type { Capability, PlaybookOperation } from '@on.auto/definitions';
 import type { LicensedFeaturesPorts } from '@on.auto/meter';
-import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
+import type { PageFilters, ProgramPool } from '@on.auto/workflow-engine/dsl';
 
 import type { HostDatabase } from '../database/host-database.ts';
 import type { DueWork } from '../due-work/due-work.ts';
@@ -15,6 +15,7 @@ export type OwnSettings = ReadonlyMap<string, string>;
 export interface CapabilityPorts {
   readonly database: CapabilityDatabase;
   readonly pool: CapabilityPool;
+  readonly filters: PageFilters;
   readonly features: LicensedFeaturesPorts;
   readonly settings: OwnSettings;
   readonly mostFunctions: number;

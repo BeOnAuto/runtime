@@ -81,6 +81,13 @@ export {
   type FilterTesting,
   type MatchedFilter,
 } from './filters/filter-verdicts.ts';
+export {
+  pageFiltersOn,
+  pageVerdictsOf,
+  type JudgedEvent,
+  type PageFilters,
+  type PageVerdicts,
+} from './filters/page-verdicts.ts';
 export type { CallCancelReceipt, Executor, StartReceipt } from './executor/executor.ts';
 export { ReceivedEventSchema, type ReceivedEvent } from './inbox/received-event.ts';
 export {

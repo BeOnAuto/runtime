@@ -1,9 +1,9 @@
 import {
   enclosedBody,
-  filterTestingOf,
-  type FilterSandbox,
   type FilterVerdict,
   type MatchedFilter,
+  type PageFilters,
+  type PageVerdicts,
 } from '@on.auto/workflow-engine';
 import type { PageEvent } from '@on.auto/workflow-host';
 import { Effect, type Schema } from 'effect';
@@ -17,9 +17,13 @@ type EventMatch =
   | { readonly kind: 'refused'; readonly detail: string }
   | { readonly kind: 'stopped'; readonly detail: string };
 
+export interface MatchedEvent {
+  readonly placed: PageEvent;
+  readonly match: EventMatch;
+}
+
 export interface DatasetMatching {
-  readonly matchOf: (placed: PageEvent) => Effect.Effect<EventMatch>;
-  readonly close: () => Promise<void>;
+  readonly matchesOf: (events: readonly PageEvent[]) => Effect.Effect<readonly MatchedEvent[]>;
 }
 
 type Filter = DatasetData['events'][number];
@@ -27,6 +31,11 @@ type Filter = DatasetData['events'][number];
 const taken: EventMatch = { kind: 'taken' };
 
 const notTaken: EventMatch = { kind: 'not_taken' };
+
+const unjudged: EventMatch = {
+  kind: 'stopped',
+  detail: 'The filters that test the page were stopped before they judged this event',
+};
 
 function isTested(filter: Filter): boolean {
   return Object.values(filter).some((expected) => enclosedBody(expected) !== undefined);
@@ -62,23 +71,52 @@ function typeFirst({ type, ...attributes }: Filter, index: number): MatchedFilte
   return { reference: `/data/events/${index}`, attributes: { type, ...attributes } };
 }
 
-export function datasetMatchingOf(data: DatasetData, sandbox: FilterSandbox): DatasetMatching {
+type Literal = EventMatch | 'tested';
+
+interface Placed {
+  readonly placed: PageEvent;
+  readonly literal: Literal;
+}
+
+function literalMatchOf(data: DatasetData, { event }: PageEvent): Literal {
+  const typed = data.events.filter(({ type }) => type === event.type);
+  if (typed.some((filter) => !isTested(filter) && holdsLiterally(filter, event))) {
+    return taken;
+  }
+  return typed.some((filter) => isTested(filter)) ? 'tested' : notTaken;
+}
+
+function verdictMatchOf(verdicts: readonly FilterVerdict[] | undefined): EventMatch {
+  return verdicts === undefined ? unjudged : matchOfVerdicts(verdicts);
+}
+
+function matchesUntilStopped(placings: readonly Placed[], verdicts: PageVerdicts): readonly MatchedEvent[] {
+  const matched: MatchedEvent[] = [];
+  let judged = 0;
+  for (const { placed, literal } of placings) {
+    const match = literal === 'tested' ? verdictMatchOf(verdicts[judged]) : literal;
+    judged += literal === 'tested' ? 1 : 0;
+    matched.push({ placed, match });
+    if (match.kind === 'stopped') {
+      break;
+    }
+  }
+  return matched;
+}
+
+export function datasetMatchingOf(data: DatasetData, filters: PageFilters): DatasetMatching {
   const tested = data.events.flatMap((filter, index) => (isTested(filter) ? [typeFirst(filter, index)] : []));
-  const testing = filterTestingOf(tested, sandbox);
   return {
-    matchOf: ({ event, recordedAt }) => {
-      const typed = data.events.filter(({ type }) => type === event.type);
-      if (typed.some((filter) => !isTested(filter) && holdsLiterally(filter, event))) {
-        return Effect.succeed(taken);
-      }
-      if (!typed.some((filter) => isTested(filter))) {
-        return Effect.succeed(notTaken);
-      }
-      return Effect.map(
-        Effect.promise(() => testing.verdictsOf(event, Date.parse(recordedAt))),
-        matchOfVerdicts,
-      );
+    matchesOf: (events) => {
+      const placings = events.map((placed): Placed => ({ placed, literal: literalMatchOf(data, placed) }));
+      const judged = placings
+        .filter(({ literal }) => literal === 'tested')
+        .map(({ placed: { event, recordedAt } }) => ({ event, now: Date.parse(recordedAt) }));
+      const verdicts =
+        judged.length === 0
+          ? Effect.succeed<PageVerdicts>([])
+          : Effect.promise(() => filters.verdictsOf(tested, judged));
+      return Effect.map(verdicts, (answered) => matchesUntilStopped(placings, answered));
     },
-    close: testing.close,
   };
 }

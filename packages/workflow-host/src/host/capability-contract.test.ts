@@ -28,7 +28,7 @@ import type {
   TriggerLink,
   Unavailable,
 } from '@on.auto/operations';
-import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
+import type { JudgedEvent, MatchedFilter, PageVerdicts, ProgramPool } from '@on.auto/workflow-engine/dsl';
 import type { Effect, Schema } from 'effect';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
@@ -119,6 +119,9 @@ interface ContractOne {
   readonly ports: {
     readonly database: CapabilityDatabase;
     readonly pool: Omit<ProgramPool, 'close'>;
+    readonly filters: {
+      readonly verdictsOf: (filters: readonly MatchedFilter[], events: readonly JudgedEvent[]) => Promise<PageVerdicts>;
+    };
     readonly features: {
       readonly includes: (asked: FeatureAsked) => Effect.Effect<boolean, Unavailable>;
       readonly refusal: (use: FeatureUse) => Effect.Effect<Conflict, Unavailable>;

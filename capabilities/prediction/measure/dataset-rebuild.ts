@@ -1,6 +1,6 @@
 import { setTimeout } from 'node:timers/promises';
 
-import type { FilterSandbox } from '@on.auto/workflow-engine';
+import type { PageFilters } from '@on.auto/workflow-engine';
 import { someFolder, type HostDatabase } from '@on.auto/workflow-host';
 import { projectedFolders, type DatabaseSettings, type ProjectedFolders } from '@on.auto/workflow-host/testing';
 import { Effect } from 'effect';
@@ -19,7 +19,7 @@ export interface Folding {
 export interface History {
   readonly days: number;
   readonly liveDays: number;
-  readonly filters: FilterSandbox;
+  readonly filters: PageFilters;
 }
 
 export interface Rebuilt {

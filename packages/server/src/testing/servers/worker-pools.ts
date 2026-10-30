@@ -1,5 +1,5 @@
 import { checkingWithin, measuredPoolSettings } from '@on.auto/definitions/testing';
-import { programPool, type ProgramPool } from '@on.auto/workflow-engine/dsl';
+import { pageFiltersOn, programPool, type PageFilters, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { decidingWithin, scriptedPool, type PoolOutcome } from '@on.auto/workflow-engine/testing';
 import { afterAll } from 'vitest';
 
@@ -19,8 +19,13 @@ export function scriptedWorkerPool(...outcomes: readonly PoolOutcome[]): Program
   return (settings, handed) => scriptedPool(outcomes, patientWorkerPool(settings, handed));
 }
 
-export function sharedWorkerPool(): ProgramPool {
+interface PooledPorts {
+  readonly pool: ProgramPool;
+  readonly filters: PageFilters;
+}
+
+export function sharedPooledPorts(): PooledPorts {
   const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
   afterAll(() => pool.close());
-  return pool;
+  return { pool, filters: pageFiltersOn(pool.evaluations.filters) };
 }

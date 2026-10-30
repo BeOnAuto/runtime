@@ -1,5 +1,6 @@
 import type { ShippedFiles } from '@on.auto/operations';
 import { recallBounds } from '@on.auto/recall';
+import { pageFiltersOn } from '@on.auto/workflow-engine';
 
 import { computationServedBy, type ProgramPoolOf, type ServedComputation } from '../composition/served-computation.ts';
 import type { InstalledPackages } from '../extensions/extension-loading.ts';
@@ -30,6 +31,7 @@ export async function madeAtStart(
   const prediction = await computation.closedIfRefused(() =>
     providedOnceServed(extensions.makePrediction, {
       pool: computation.pool,
+      filters: pageFiltersOn(computation.pool.evaluations.filters),
       mostFunctions: settings.prediction.mostFunctions,
       triesBeforeStall: recallBounds.overtimesBeforeStall,
     }),

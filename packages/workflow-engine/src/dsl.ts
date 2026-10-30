@@ -67,4 +67,12 @@ export type { InstanceSource, SandboxModule } from './instances/instance-source.
 export type { InstanceSourceName } from './instances/instance-sources.ts';
 export { keptInstances } from './instances/kept-instances.ts';
 export { filterSandboxOf, hostClock, machineSandboxOf } from './instances/host-sandboxes.ts';
+export type { MatchedFilter } from './filters/filter-verdicts.ts';
+export {
+  pageFiltersOn,
+  pageVerdictsOf,
+  type JudgedEvent,
+  type PageFilters,
+  type PageVerdicts,
+} from './filters/page-verdicts.ts';
 export { sandboxAnswers } from './instances/sandbox-probes.ts';

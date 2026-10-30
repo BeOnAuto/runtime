@@ -1,4 +1,4 @@
-import type { FilterSandbox } from '@on.auto/workflow-engine';
+import type { PageFilters } from '@on.auto/workflow-engine';
 import {
   rowsOf,
   someFolder,
@@ -31,7 +31,7 @@ import {
 import { datasetWritten } from './dataset-writing.ts';
 
 export interface DatasetFolding {
-  readonly filters: FilterSandbox;
+  readonly filters: PageFilters;
   readonly triesBeforeStall: number;
   readonly rebuildsAtOnce?: number;
 }
@@ -100,7 +100,7 @@ export function datasetFolder({
     reconcile: plannedDatasets,
     dropped: ({ playbookKey, dataSha256 }) => datasetDropped(playbookKey, dataSha256),
     phased: ({ playbookKey, dataSha256 }, phase: RowPhase) => datasetPhased(playbookKey, dataSha256, phase),
-    fold: (rows, page, database) => foldedDatasets(rows, page, database, { sandbox: filters, triesBeforeStall }),
+    fold: (rows, page, database) => foldedDatasets(rows, page, database, { filters, triesBeforeStall }),
     write: datasetWritten,
     unchanged: (row) => ({ row, next: standingOf(row), upserts: [], passedOver: [] }),
     joinedLive: (change) => ({ ...change, next: { ...change.next, phase: 'live' } }),
@@ -109,10 +109,8 @@ export function datasetFolder({
 }
 
 export function datasetsProvidedOn({
-  pool,
+  filters,
   triesBeforeStall,
-}: Pick<CapabilityPorts, 'pool' | 'triesBeforeStall'>): Required<Pick<ProvidedCapability, 'folders'>> {
-  return {
-    folders: [someFolder(datasetFolder({ filters: pool.evaluations.filters, triesBeforeStall }))],
-  };
+}: Pick<CapabilityPorts, 'filters' | 'triesBeforeStall'>): Required<Pick<ProvidedCapability, 'folders'>> {
+  return { folders: [someFolder(datasetFolder({ filters, triesBeforeStall }))] };
 }
