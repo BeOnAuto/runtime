@@ -3,7 +3,7 @@ import { Effect, Redacted } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
+import { actedNow, loadRegistry, recordChangeInRegistry, recordedCaller } from '../operations/registry-access.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
@@ -45,16 +45,16 @@ export function defineGiveCredential(services: GivingServices) {
         .pipe(Effect.mapError((failure) => unkeptRefusalOf(kept.connection.name, given.pointer, failure)));
       const algorithm = given.algorithm === undefined ? {} : { algorithm: given.algorithm };
       const client = given.clientId === undefined ? {} : { client_id: given.clientId };
-      const connected = yield* recordInRegistry({
+      const { before, after } = yield* recordChangeInRegistry({
         type: 'give',
         ...use,
         connected_by: yield* recordedCaller,
         secret_id: secretId,
         ...algorithm,
         ...client,
-      }).pipe(Effect.tapError(() => secrets.forget(secretId)));
-      yield* forgottenCredentialOf(kept, services);
-      return connectionShown(connected.connection, given.endsWith ?? null);
+      }).pipe(Effect.onError(() => secrets.forget(secretId)));
+      yield* forgottenCredentialOf(before, services);
+      return connectionShown(after.connection, given.endsWith ?? null);
     }),
   });
 }

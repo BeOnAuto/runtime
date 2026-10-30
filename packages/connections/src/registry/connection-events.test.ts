@@ -125,11 +125,46 @@ const askingMore: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
+const underTheOrgsApp: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_added',
+    data: {
+      ...ofTheConnection,
+      name: 'files',
+      server_type: 'mcp',
+      provider: 'files',
+      placeholders: {},
+      entry: { url: 'https://mcp.files.example.com/mcp' },
+      credential: { kind: 'authorization', issuer, scope: 'files.read', client_source: 'own' },
+      says: { 'files.read': 'Read the files of the account.' },
+      added_by: caller,
+    },
+    context: acted,
+  },
+  {
+    type: 'connection_client_given',
+    data: { ...ofTheConnection, client_id: 'org-app', secret_id: 'secret-4' },
+    context: acted,
+  },
+  {
+    type: 'connection_connected',
+    data: {
+      ...ofTheConnection,
+      secret_id: 'secret-5',
+      client_id: 'org-app',
+      client_source: 'own',
+      scope: 'files.read',
+      connected_by: caller,
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the registry of connections', () => {
   recordedFactsBehaviour({
     schema: ConnectionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.49.0': askingMore },
+    releases: { '0.46.0': baseline, '0.49.0': [...askingMore, ...underTheOrgsApp] },
   });
 });
 

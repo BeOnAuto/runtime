@@ -101,7 +101,10 @@ function credentialOf(auth: AuthSettings | null): readonly Redacted.Redacted[] {
   if (credential?.kind === 'client_secret') {
     return [credential.client_secret];
   }
-  return credential?.kind === 'private_key' ? [credential.private_key] : [];
+  if (credential?.kind === 'private_key') {
+    return [credential.private_key];
+  }
+  return credential?.ownClient === undefined ? [] : [credential.ownClient.clientSecret];
 }
 
 export function secretsOfServer(server: ServerSettings): readonly Redacted.Redacted[] {

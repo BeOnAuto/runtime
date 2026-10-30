@@ -19,6 +19,7 @@ export const wayFields = {
   revocation_endpoint: Schema.String,
   pkce: WayPkceSchema,
   clients: Schema.Array(WayClientSourceSchema),
+  own_app: Schema.Literal('required'),
   says: ScopeWordsSchema,
   more: Schema.Array(ScopeGroupSchema).check(Schema.isMinLength(1)),
 };
@@ -50,6 +51,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   revocation_endpoint: Schema.optionalKey(wayFields.revocation_endpoint),
   pkce: Schema.optionalKey(wayFields.pkce),
   clients: Schema.optionalKey(wayFields.clients),
+  own_app: Schema.optionalKey(wayFields.own_app),
   says: Schema.optionalKey(wayFields.says),
   more: Schema.optionalKey(wayFields.more),
   description: Schema.optionalKey(NamedSchema),
@@ -80,6 +82,7 @@ const everyField: readonly Field[] = [
   ...consentEndpoints,
   'pkce',
   'clients',
+  'own_app',
   'says',
   'more',
 ];
@@ -90,7 +93,7 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   none: { required: [], optional: [] },
   authorization: {
     required: ['issuer'],
-    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'more'],
+    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'own_app', 'more'],
   },
 };
 
@@ -215,11 +218,24 @@ export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
   ];
 }
 
-function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
-  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says)];
-  return way.kind === 'authorization' ? [...issues, ...consentIssuesOf(way), ...groupIssuesOf(way)] : issues;
+function ownAppIssuesOf({ own_app: ownApp, clients }: CredentialWayFields): readonly WayIssue[] {
+  return ownApp === undefined || clients === undefined
+    ? []
+    : [
+        {
+          path: ['clients'],
+          issue:
+            "Expected no clients beside own_app: a way that requires the org's own app takes consent under that app alone",
+        },
+      ];
 }
 
+function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
+  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says)];
+  return way.kind === 'authorization'
+    ? [...issues, ...consentIssuesOf(way), ...ownAppIssuesOf(way), ...groupIssuesOf(way)]
+    : issues;
+}
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));
 
 export type CredentialWay = typeof CredentialWaySchema.Type;

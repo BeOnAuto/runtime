@@ -45,8 +45,8 @@ export function tokensKeptBy({ tokens }: FinishedConsent) {
 export async function finishAskedOf(client: ConsentClient, asked: StartAsked): Promise<FinishAsked> {
   const start = await Effect.runPromise(client.start(asked));
   const { code, iss } = await consentedAt(start.url);
-  const { server, way, returnAddress, reaches } = asked;
-  return { server, way, returnAddress, reaches, client: start.client, code, iss, verifier: start.verifier };
+  const { server, way, returnAddress, reaches, ownClient } = asked;
+  return { server, way, returnAddress, reaches, ownClient, client: start.client, code, iss, verifier: start.verifier };
 }
 
 export function memoryRegistrations(custodian: RecordingCustodian = recordingCustodian()): MemoryRegistrations {

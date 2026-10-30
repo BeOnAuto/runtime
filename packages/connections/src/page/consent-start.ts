@@ -4,10 +4,10 @@ import { Effect, Schema } from 'effect';
 import { studioBaseFor } from '../links/connect-page.ts';
 import { issuedToken, tenMinutesOn, tokenSha256Of } from '../links/link-token.ts';
 import { ClientSourceField, ExpiresAtField } from '../operations/connection-fields.ts';
-import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
-import { startableConnectionOf } from '../registry/registry-decisions.ts';
-import { consentAskedOf, forgottenVerifierOf, namedOf, sourcesFor, type ConsentServices } from './consent-asking.ts';
-import { consentRefusalOf, verifierUnkeptOf } from './consent-refusals.ts';
+import { actedNow, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
+import { startableConnectionOf } from '../registry/consent-decisions.ts';
+import { forgottenVerifierOf, namedOf, sourcesFor, type ConsentServices } from './consent-asking.ts';
+import { askedForASignIn, consentRefusalOf, verifierUnkeptOf } from './consent-refusals.ts';
 import { LinkSchema, askedOfTheLink } from './link-operations.ts';
 
 const StartedSchema = Schema.Struct({
@@ -21,7 +21,7 @@ const StartedSchema = Schema.Struct({
   }),
   client_source: ClientSourceField.annotate({
     description:
-      "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code",
+      "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code, and own where it began under the org's own app",
   }),
 }).annotate({
   identifier: 'StartedConsent',
@@ -36,6 +36,7 @@ export function defineStartConsent(services: ConsentServices) {
     description: [
       "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to.",
       "A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before.",
+      "A connection under the org's own app starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given.",
       'The consent is finished within ten minutes, and a second start replaces the first.',
       'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',
       'On a runtime that signs people in, only the person who added the connection may start it.',
@@ -51,7 +52,7 @@ export function defineStartConsent(services: ConsentServices) {
       const kept = yield* Effect.fromResult(startableConnectionOf(yield* loadRegistry, use, yield* actedNow));
       const sources = yield* sourcesFor(kept.connection, services);
       const { scope, says } = yield* Effect.fromResult(askedOfTheLink(kept, services.providers, sources));
-      const asked = consentAskedOf(kept.connection, services, scope);
+      const asked = yield* askedForASignIn(kept, services, scope);
       const named = namedOf(kept.connection);
       const state = issuedToken();
       const started = yield* consent
@@ -61,7 +62,7 @@ export function defineStartConsent(services: ConsentServices) {
         .keep(started.verifier)
         .pipe(Effect.mapError(({ detail }) => verifierUnkeptOf(named, detail)));
       const expiresAt = yield* tenMinutesOn;
-      yield* recordInRegistry({
+      const { before } = yield* recordChangeInRegistry({
         type: 'start',
         ...use,
         state_sha256: tokenSha256Of(started.state),
@@ -71,7 +72,7 @@ export function defineStartConsent(services: ConsentServices) {
         scope,
         says,
       }).pipe(Effect.onError(() => secrets.forget(verifierSecretId)));
-      yield* forgottenVerifierOf(kept, services);
+      yield* forgottenVerifierOf(before, services);
       return { authorize: { url: started.url, expires_at: expiresAt }, client_source: started.client.client_source };
     }),
   });

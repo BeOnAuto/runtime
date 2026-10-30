@@ -1,4 +1,4 @@
-import { ClientSourceSchema, givenByTheProvider } from '@on.auto/tool-servers';
+import { ClientSourceSchema, WayAppSchema, givenByTheProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from '../registry/connection-entry.ts';
@@ -66,6 +66,12 @@ const AddedCredentialSchema = Schema.Struct({
       description: 'For client_credentials, the scopes, separated by spaces, none when left out',
     }),
   ),
+  app: Schema.optionalKey(
+    WayAppSchema.annotate({
+      description:
+        "For a provider's authorization, own to connect under the org's own app there, its client id and secret given on the page; own by default where the way takes no other client here",
+    }),
+  ),
 }).annotate({ description: credentialDescription });
 
 const AdditionFieldsSchema = Schema.Struct({
@@ -113,13 +119,25 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
             issue: 'Expected no client_id: the person gives the client id on the page',
           },
         ]),
+    ...appIssuesOf(credential),
   ];
+}
+
+const appOfConsentAlone = "Expected no app: only an authorization credential's consent runs under an app";
+
+function appIssuesOf(credential: AdditionGiven['credential']): readonly ModeIssue[] {
+  return credential?.app === undefined || credential.kind === 'authorization'
+    ? []
+    : [{ path: ['credential', 'app'], issue: appOfConsentAlone }];
 }
 
 const consentOfAnApiByHand =
   'Expected another kind: an HTTP API given by hand takes no consent, since its document names no authorization server; name a provider, as search lists it, in provider';
 
 const givenBesideTheKind = [...placedByTheProvider, 'client_id'] as const;
+
+const appOfAProvider =
+  "Expected no app without provider: consent runs under the org's own app at a provider, whose way says where to register it";
 
 type AddedCredential = NonNullable<AdditionGiven['credential']>;
 
@@ -158,6 +176,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
     ...(placeholders === undefined
       ? []
       : [{ path: ['placeholders'], issue: 'Expected no placeholders without provider' }]),
+    ...(given.credential?.app === undefined ? [] : [{ path: ['credential', 'app'], issue: appOfAProvider }]),
     ...credentialIssuesOf(given),
   ];
 }
@@ -175,3 +194,10 @@ export const ConnectionIdField = Schema.String.check(Schema.isMinLength(1)).anno
 export const TokenField = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128)).annotate({
   description: 'The token of the link add_connection or reconnect_connection gave',
 });
+
+export const NextClientIdField = Schema.optionalKey(
+  Schema.String.annotate({
+    description:
+      "For a connection under the org's own app, the client id given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it",
+  }),
+);

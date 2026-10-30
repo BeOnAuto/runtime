@@ -1,4 +1,5 @@
 import { alternatives, type Issue } from '@on.auto/operations';
+import type { WayApp } from '@on.auto/tool-servers';
 import { Option, Result } from 'effect';
 
 import type { CredentialWay, WayKind } from '../entry/credential-ways.ts';
@@ -11,6 +12,7 @@ export interface GivenToProvider {
   readonly name?: string | undefined;
   readonly placeholders?: Readonly<Record<string, string>> | undefined;
   readonly kind?: string | undefined;
+  readonly appFor?: ((way: CredentialWay) => WayApp | undefined) | undefined;
   readonly canBeGiven?: ((way: CredentialWay) => boolean) | undefined;
   readonly playbooks?: readonly string[] | undefined;
   readonly allowed?: readonly string[] | undefined;
@@ -26,6 +28,7 @@ export interface ProviderCredential extends WayAddresses {
   readonly parameters?: Readonly<Record<string, string>>;
   readonly pkce?: NonNullable<CredentialWay['pkce']>;
   readonly clients?: NonNullable<CredentialWay['clients']>;
+  readonly client_source?: WayApp;
 }
 
 export interface ProviderConnectionEntry {
@@ -88,10 +91,17 @@ function placedAddressesOf(way: CredentialWay, values: Values): Partial<Record<W
   );
 }
 
-function credentialOf(way: CredentialWay, values: Values): ProviderCredential {
+const underTheOrgsApp: Pick<ProviderCredential, 'client_source'> = { client_source: 'own' };
+
+function clientSourceOf({ kind, own_app: ownApp }: CredentialWay, app: WayApp | undefined) {
+  return kind === 'authorization' && (app !== undefined || ownApp !== undefined) ? underTheOrgsApp : {};
+}
+
+function credentialOf(way: CredentialWay, values: Values, app: WayApp | undefined): ProviderCredential {
   const { kind, in: placement, name, scheme, scope, parameters, pkce, clients } = way;
   return {
     kind,
+    ...clientSourceOf(way, app),
     ...(placement === undefined ? {} : { in: placement }),
     ...(name === undefined ? {} : { name }),
     ...(scheme === undefined ? {} : { scheme }),
@@ -156,7 +166,7 @@ export function additionOfProvider(
         name: given.name ?? provider.name,
         type: provider.type,
         entry: { ...serverOf(provider, values), ...perConnectionOf(given) },
-        credential: credentialOf(chosen, values),
+        credential: credentialOf(chosen, values, given.appFor?.(chosen)),
         provider: provider.name,
         placeholders,
         ...(chosen.says === undefined ? {} : { says: chosen.says }),

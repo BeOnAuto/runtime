@@ -15,7 +15,10 @@ type Environment = Readonly<Record<string, string>>;
 
 const ListedSchema = Schema.Struct({
   providers: Schema.Array(
-    Schema.Struct({ name: Schema.String, credentials: Schema.Array(Schema.Struct({ offered: Schema.Boolean })) }),
+    Schema.Struct({
+      name: Schema.String,
+      credentials: Schema.Array(Schema.Struct({ offered: Schema.Boolean, own_app: Schema.String })),
+    }),
   ),
 });
 
@@ -57,12 +60,10 @@ async function servedWith(environment: Environment): Promise<ReasoningServer> {
   return served;
 }
 
-async function filesOfferedBy(served: ReasoningServer): Promise<readonly boolean[]> {
+async function filesOfferedBy(served: ReasoningServer) {
   const { body } = await served.call('GET', '/v1/orgs/local/providers');
   const { providers } = Schema.decodeUnknownSync(ListedSchema)(body);
-  return providers
-    .filter(({ name }) => name === 'files')
-    .flatMap(({ credentials }) => credentials.map(({ offered }) => offered));
+  return providers.filter(({ name }) => name === 'files').flatMap(({ credentials }) => credentials);
 }
 
 function throughTheService(serving: ThroughAuto): Environment {
@@ -70,13 +71,16 @@ function throughTheService(serving: ThroughAuto): Environment {
 }
 
 describe('a provider of consent on a runtime in local mode', () => {
-  it('is offered through Auto’s consent service where AUTO_CLIENTS is on, and set up first where it is off', async () => {
+  it('is offered through Auto’s consent service where AUTO_CLIENTS is on, and under the org’s own app alone where it is off', async () => {
     const serving = await throughAuto();
 
     const on = await servedWith(throughTheService(serving));
     const off = await servedWith({ ...throughTheService(serving), AUTO_CLIENTS: 'false' });
 
-    expect([await filesOfferedBy(on), await filesOfferedBy(off)]).toEqual([[true], [false]]);
+    expect([await filesOfferedBy(on), await filesOfferedBy(off)]).toEqual([
+      [{ offered: true, own_app: 'optional' }],
+      [{ offered: true, own_app: 'required' }],
+    ]);
   });
 });
 

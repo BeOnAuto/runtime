@@ -11,6 +11,7 @@ import type {
   ClientSource,
   ClientsHad,
   HadSources,
+  OwnClient,
   ServiceClient,
   WayClientSource,
   WayOfClients,
@@ -33,6 +34,7 @@ export interface ConsentAsked {
   readonly way: ConsentWay;
   readonly returnAddress: string;
   readonly reaches: Reaches;
+  readonly ownClient?: OwnClient | undefined;
 }
 
 export interface StartAsked extends ConsentAsked {

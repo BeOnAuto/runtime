@@ -17,7 +17,7 @@ import type {
   RecordedSelection,
 } from '../reading/recorded-read.ts';
 import type { RunOutcomeGroup, RunOutcomeSelection, RunOutcomeWindow } from '../run-outcomes/run-outcomes.ts';
-import type { Decider, Fold, Recorded, StreamState } from './decider.ts';
+import type { DecidedState, Decider, Fold, Recorded, StreamState } from './decider.ts';
 import type { Lineage } from './message-lineage.ts';
 
 export interface StreamReader {
@@ -37,7 +37,7 @@ export interface StreamWriter {
     decider: Decider<State, Command, Event, R>,
     command: Command,
     lineage?: Lineage,
-  ) => Effect.Effect<StreamState<State>, Rejection<R> | Conflict>;
+  ) => Effect.Effect<DecidedState<State>, Rejection<R> | Conflict>;
 }
 
 export interface RecordedReader {

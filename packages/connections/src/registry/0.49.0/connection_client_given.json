@@ -1,0 +1,12 @@
+{
+  "type": "connection_client_given",
+  "data": {
+    "connection": "connection-1",
+    "client_id": "org-app",
+    "secret_id": "secret-4"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

@@ -1,7 +1,7 @@
 import { placeholdersIn, placeholdersReplaced } from '@on.auto/config';
 import { Schema, type Redacted } from 'effect';
 
-const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic'] as const;
+const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic', 'own'] as const;
 
 export const ClientSourceSchema = Schema.Literals(clientSources);
 
@@ -17,9 +17,15 @@ export const WayPkceSchema = Schema.Literal('none');
 
 export type WayPkce = typeof WayPkceSchema.Type;
 
+export const WayAppSchema = Schema.Literal('own');
+
+export type WayApp = typeof WayAppSchema.Type;
+
 export const ClientIdSchema = Schema.String.check(Schema.isMinLength(1));
 
 const defaultClientSources: readonly WayClientSource[] = ['registered'];
+
+const theOrgsAppAlone: readonly ClientSource[] = ['own'];
 
 export type RegisteredCredential =
   | { readonly kind: 'client_secret'; readonly clientSecret: Redacted.Redacted }
@@ -34,6 +40,11 @@ export interface RegisteredClient {
   readonly credential: RegisteredCredential;
   readonly tokenEndpointAuthMethod: TokenEndpointAuthMethod | null;
   readonly scopes?: readonly string[];
+}
+
+export interface OwnClient {
+  readonly clientId: string;
+  readonly clientSecret: Redacted.Redacted;
 }
 
 export const ServiceClientSchema = Schema.Struct({
@@ -55,6 +66,7 @@ export interface WayOfClients {
   readonly scope?: string | undefined;
   readonly clients?: readonly WayClientSource[] | undefined;
   readonly pkce?: WayPkce | undefined;
+  readonly app?: WayApp | undefined;
 }
 
 export interface HadSources {
@@ -121,6 +133,10 @@ function covers({ scopes }: { readonly scopes?: readonly string[] }, { scope }: 
 
 export function takesNoPkce({ pkce }: WayOfClients): boolean {
   return pkce === WayPkceSchema.literal;
+}
+
+export function runsUnderTheOrgsApp({ app }: WayOfClients): boolean {
+  return app === WayAppSchema.literal;
 }
 
 function bindsItsCodeAt({ credential }: RegisteredClient, way: WayOfClients): boolean {
@@ -202,11 +218,14 @@ function isHad(source: ClientSource, way: WayOfClients, had: ClientsHad): boolea
   if (source === 'auto') {
     return serviceClientFor(had.serviceClients, way) !== undefined;
   }
-  return source === 'dynamic' || metadataDocumentOf(had.publicUrl) !== undefined;
+  return source !== 'metadata_document' || metadataDocumentOf(had.publicUrl) !== undefined;
 }
 
-function clientSourcesOf({ clients }: WayOfClients): readonly ClientSource[] {
-  const listed = clients ?? defaultClientSources;
+function clientSourcesOf(way: WayOfClients): readonly ClientSource[] {
+  if (runsUnderTheOrgsApp(way)) {
+    return theOrgsAppAlone;
+  }
+  const listed = way.clients ?? defaultClientSources;
   return listed.includes('registered') ? [...listed, 'auto'] : listed;
 }
 

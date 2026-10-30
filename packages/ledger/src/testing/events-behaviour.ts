@@ -123,7 +123,7 @@ function streamNames(entry: LedgerEntry): void {
       const loaded = await Effect.runPromise(Effect.forEach(names, (name) => ledger.load(name, tally)));
 
       const expected = Array.from(names.keys(), (index) => ({ state: index + 1, version: 1 }));
-      expect(written).toEqual(expected);
+      expect(written).toEqual(Array.from(names.keys(), (index) => ({ state: index + 1, version: 1, decidedOn: 0 })));
       expect(loaded).toEqual(expected);
     });
   });
@@ -182,12 +182,12 @@ async function loadAskedForBeforeAWrite(ledger: Ledger['Service']): Promise<unkn
 
 const talliedThroughBoth = {
   executed: [
-    Result.succeed({ state: 3, version: 2 }),
-    Result.succeed({ state: 3, version: 2 }),
+    Result.succeed({ state: 3, version: 2, decidedOn: 0 }),
+    Result.succeed({ state: 3, version: 2, decidedOn: 3 }),
     Result.fail(new Conflict({ detail: 'A tally of 3 cannot fall to -7' })),
-    Result.succeed({ state: 7, version: 3 }),
-    Result.succeed({ state: 0, version: 4 }),
-    Result.succeed({ state: 0, version: 4 }),
+    Result.succeed({ state: 7, version: 3, decidedOn: 3 }),
+    Result.succeed({ state: 0, version: 4, decidedOn: 7 }),
+    Result.succeed({ state: 0, version: 4, decidedOn: 0 }),
   ],
   loaded: { state: 0, version: 4 },
 };

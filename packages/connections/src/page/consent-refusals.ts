@@ -1,6 +1,15 @@
 import { Conflict, Forbidden, Unavailable, type InvalidInput } from '@on.auto/operations';
 import type { ConsentRefusal, SecretKeepingFailure } from '@on.auto/tool-servers';
+import { Effect } from 'effect';
 
+import type { KeptConnection } from '../registry/registry.ts';
+import {
+  consentAskedForASignIn,
+  namedOf,
+  type ConsentAsked,
+  type ConsentServices,
+  type OwnClientUnheld,
+} from './consent-asking.ts';
 import { detailOf, refusedAt, unavailableWords, type ConsentNamed } from './consent-words.ts';
 import { unansweredWordsOf } from './unanswered-words.ts';
 
@@ -86,6 +95,25 @@ export function tokensUnkeptOf(named: ConsentNamed, { _tag, detail }: SecretKeep
 
 export function verifierUnreadOf(named: ConsentNamed, detail: string): ConsentRefused {
   return refusedFor(named, { refusing: unavailable, detail: unavailableWords.verifierUnread(named.name, detail) });
+}
+
+function ownClientRefusalOf(named: ConsentNamed, unheld: OwnClientUnheld): ConsentRefused {
+  return 'detail' in unheld
+    ? refusedFor(named, { refusing: unavailable, detail: unavailableWords.ownClientUnread(named.name, unheld.detail) })
+    : refusedFor(named, {
+        refusing: conflict,
+        detail: `The client secret of the org's own app for the connection ${named.name} is no longer in the secret store, so the person gives the app's client id and client secret again on its page`,
+      });
+}
+
+export function askedForASignIn(
+  kept: KeptConnection,
+  services: ConsentServices,
+  scope: string | undefined,
+): Effect.Effect<ConsentAsked, ConsentRefused> {
+  return consentAskedForASignIn(kept, services, scope).pipe(
+    Effect.mapError((unheld) => ownClientRefusalOf(namedOf(kept.connection), unheld)),
+  );
 }
 
 const throughAuto = (name: string) =>

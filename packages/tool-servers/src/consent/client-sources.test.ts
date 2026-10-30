@@ -162,6 +162,27 @@ describe('the client of Auto’s consent service among the sources a runtime has
   });
 });
 
+describe('the client sources of a way under the org’s own app', () => {
+  const issuer = 'https://accounts.example.com';
+
+  it('are the org’s app alone, whatever clients the runtime and Auto’s consent service have at the issuer, and whatever scope it asks', () => {
+    const had = {
+      registeredClients: [{ ...accounts, scopes: ['files.read'] }],
+      publicUrl: 'https://runtime.example.com',
+      serviceClients: [{ issuer, client_id: 'auto' }],
+    };
+    const underTheOrgsApp: WayOfClients = {
+      issuer,
+      scope: 'files.write',
+      clients: ['registered', 'dynamic'],
+      app: 'own',
+    };
+
+    expect([sourcesHad(underTheOrgsApp, had), sourceTakenOf(underTheOrgsApp, had)]).toEqual([['own'], 'own']);
+    expect(sourcesHad({ ...underTheOrgsApp, app: undefined }, had)).toEqual(['auto', 'dynamic']);
+  });
+});
+
 describe('the client of Auto’s consent service a way takes by its scope', () => {
   const issuer = 'https://accounts.example.com';
 

@@ -41,6 +41,12 @@ export interface CredentialGiving extends Connecting {
   readonly client_id?: string;
 }
 
+export interface ClientGiving extends LinkUse {
+  readonly type: 'give_client';
+  readonly client_id: string;
+  readonly secret_id: string;
+}
+
 export interface ConsentStart extends LinkUse {
   readonly type: 'start';
   readonly state_sha256: string;
@@ -87,6 +93,7 @@ export type ConnectionCommandData =
   | ConnectionAddition
   | ConnectionApproval
   | CredentialGiving
+  | ClientGiving
   | ConsentStart
   | ConsentFinish
   | ConnectionRemoval

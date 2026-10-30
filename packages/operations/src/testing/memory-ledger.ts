@@ -130,14 +130,14 @@ function executedOn(kept: Kept): Ledger['Service']['execute'] {
         );
       }
       if (decided.success.length === 0) {
-        return { state, version };
+        return { state, version, decidedOn: state };
       }
       const context = yield* Effect.sync(() => checkedContext(decider.context(command, state)));
       const recorded = recordingOf(decider.eventSchema);
       const events = yield* Effect.sync(() => decided.success.map((event) => recorded(event, context)));
       const stored = yield* Effect.forEach(events, encodedWith(decider.eventSchema, context));
       appendedTo(kept, { stream, stored, lineage }, yield* Clock.currentTimeMillis);
-      return { state: foldedOver(decider, state, events), version: version + events.length };
+      return { state: foldedOver(decider, state, events), version: version + events.length, decidedOn: state };
     });
 }
 

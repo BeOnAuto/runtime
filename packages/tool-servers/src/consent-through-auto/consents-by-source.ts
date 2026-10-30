@@ -2,8 +2,14 @@ import { Effect } from 'effect';
 
 import { requestBoundsOf } from '../bounds/call-bounds.ts';
 import { tokenRequestsOf, type TokenRequests } from '../consent-tokens/token-requests.ts';
-import { isServerSource, requestsOf, type Requests } from '../consent/acting-clients.ts';
-import { serviceClientTakenOf, sourcesHad, sourceTakenOf, type ServiceClient } from '../consent/client-sources.ts';
+import { isServerSource, requestsOf, type Requests, type ServerSource } from '../consent/acting-clients.ts';
+import {
+  runsUnderTheOrgsApp,
+  serviceClientTakenOf,
+  sourcesHad,
+  sourceTakenOf,
+  type ServiceClient,
+} from '../consent/client-sources.ts';
 import type {
   ConsentRefusal,
   FinishAsked,
@@ -36,6 +42,8 @@ const studioElsewhere: ConsentRefusal = { refused: 'studio_elsewhere' };
 
 const noServiceClients: readonly ServiceClient[] = [];
 
+const theOrgsApp: readonly ServerSource[] = ['own'];
+
 function takenThroughAutoAlone(asked: StartAsked, options: LoadedOptions): Effect.Effect<boolean> {
   return Effect.map(
     options.serviceClients,
@@ -43,7 +51,7 @@ function takenThroughAutoAlone(asked: StartAsked, options: LoadedOptions): Effec
   );
 }
 
-function started(asked: StartAsked, { options, requests, server }: Consenting) {
+function startedWithTheClientsHere(asked: StartAsked, { options, requests, server }: Consenting) {
   return Effect.gen(function* () {
     const { auto } = options;
     const kind = servedKindOf(auto, asked.studioBase);
@@ -62,6 +70,12 @@ function started(asked: StartAsked, { options, requests, server }: Consenting) {
       sources.filter((source) => isServerSource(source)),
     );
   });
+}
+
+function started(asked: StartAsked, consenting: Consenting): Effect.Effect<StartedConsent, ConsentRefusal> {
+  return runsUnderTheOrgsApp(asked.way)
+    ? consenting.server.start(asked, theOrgsApp)
+    : startedWithTheClientsHere(asked, consenting);
 }
 
 function finished(asked: FinishAsked, { options, requests, server }: Consenting) {

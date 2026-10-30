@@ -3,12 +3,11 @@ import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
-import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
+import { actedNow, loadRegistry, recordChangeInRegistry, recordedCaller } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
-import { finishedConnectionOf } from '../registry/registry-decisions.ts';
+import { finishedConnectionOf } from '../registry/consent-decisions.ts';
 import { noOpenConsent, type KeptWithConsent } from '../registry/registry-lookup.ts';
 import {
-  consentAskedOf,
   namedOf,
   openConsentOf,
   replacedCredentialOf,
@@ -16,6 +15,7 @@ import {
   type FinishedConsent,
 } from './consent-asking.ts';
 import {
+  askedForASignIn,
   finishRefusalOf,
   tokensUnkeptOf,
   verifierUnreadOf,
@@ -85,7 +85,7 @@ function redeemedOf(
     if (verifier === undefined) {
       return yield* Effect.fail(noOpenConsent(kept.connection.name));
     }
-    const asked = consentAskedOf(kept.connection, services, kept.consent.scope);
+    const asked = yield* askedForASignIn(kept, services, kept.consent.scope);
     const client = { client_id: clientId, client_source: clientSource };
     return yield* consent
       .finish({ ...asked, client, ...returnedFieldsOf(finishing), verifier: verifier.value })
@@ -100,7 +100,7 @@ const recordedWith = Effect.fnUntraced(function* (
 ) {
   const { client_id: clientId, client_source: clientSource } = finished.client;
   const granted = finished.scope === undefined ? {} : { scope: finished.scope };
-  return yield* recordInRegistry({
+  return yield* recordChangeInRegistry({
     type: 'finish',
     ...use,
     connected_by: yield* recordedCaller,
@@ -152,9 +152,9 @@ export function defineFinishConsent(services: ConsentServices) {
         return yield* Effect.fail(wrongShape);
       }
       const finished = yield* redeemedOf(kept, finishing, services);
-      const connected = yield* connectedWith(finished, { use, stateSha256, kept }, services);
-      yield* replacedCredentialOf(kept, connected.connection, services);
-      return connectionShown(connected.connection, null);
+      const { before, after } = yield* connectedWith(finished, { use, stateSha256, kept }, services);
+      yield* replacedCredentialOf(before, after, services);
+      return connectionShown(after.connection, null);
     }),
   });
 }

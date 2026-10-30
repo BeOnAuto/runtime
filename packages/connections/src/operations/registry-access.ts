@@ -12,7 +12,14 @@ import { DateTime, Effect } from 'effect';
 
 import { tokenSha256OfPage } from '../links/link-token.ts';
 import type { GivenAddition } from '../providers/provider-additions.ts';
-import type { ConnectionAddition, ConnectionCommandData } from '../registry/connection-commands.ts';
+import type {
+  ClientGiving,
+  ConnectionAddition,
+  ConnectionCommandData,
+  ConsentFinish,
+  ConsentStart,
+  CredentialGiving,
+} from '../registry/connection-commands.ts';
 import { connectionsStream, registryDecider } from '../registry/registry-decider.ts';
 import { findConnection } from '../registry/registry-lookup.ts';
 import type { KeptConnection, OpenLink, Registry } from '../registry/registry.ts';
@@ -82,8 +89,22 @@ export function additionOf(
   };
 }
 
-export const recordInRegistry = Effect.fnUntraced(function* (data: ConnectionCommandData) {
+const executedInRegistry = Effect.fnUntraced(function* (data: ConnectionCommandData) {
   const acted = yield* actedNow;
-  const { state } = yield* (yield* OrgWriter).execute(connectionsStream, registryDecider, { ...data, ...acted });
+  return yield* (yield* OrgWriter).execute(connectionsStream, registryDecider, { ...data, ...acted });
+});
+
+export const recordInRegistry = Effect.fnUntraced(function* (data: ConnectionCommandData) {
+  const { state } = yield* executedInRegistry(data);
   return yield* Effect.orDie(findConnection(state, data.connection));
+});
+
+type Replacing = CredentialGiving | ClientGiving | ConsentStart | ConsentFinish;
+
+export const recordChangeInRegistry = Effect.fnUntraced(function* (data: Replacing) {
+  const { state, decidedOn } = yield* executedInRegistry(data);
+  return {
+    before: yield* Effect.orDie(findConnection(decidedOn, data.connection)),
+    after: yield* Effect.orDie(findConnection(state, data.connection)),
+  };
 });

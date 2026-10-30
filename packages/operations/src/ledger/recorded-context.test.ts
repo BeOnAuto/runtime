@@ -88,6 +88,7 @@ describe('the in-memory context of a decision', () => {
     expect(await Effect.runPromise(ledger.service.execute('playbook/acme/alpha/notes/n1', silent, 'x'))).toEqual({
       state: [],
       version: 0,
+      decidedOn: [],
     });
   });
 

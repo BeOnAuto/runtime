@@ -7,6 +7,7 @@ import {
   ConnectionIdField,
   ExpiresAtField,
   GroupOfMoreSchema,
+  NextClientIdField,
   TokenField,
 } from '../operations/connection-fields.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
@@ -14,7 +15,14 @@ import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../ope
 import { keptAskedOf, moreAskedOf, noLongerNamed, type AskedMore } from '../providers/asking-more.ts';
 import { ConnectionSchema, connectionShown, scopesAddedTo } from '../registry/connection.ts';
 import { isOpenConsent, linkedConnectionOf, type KeptWithLink } from '../registry/registry-lookup.ts';
-import { isCoveredHere, sourceOfAStartOf, sourcesFor, type Sources } from './consent-asking.ts';
+import {
+  isCoveredHere,
+  nextClientOf,
+  returnAddressFor,
+  sourceOfAStartOf,
+  sourcesFor,
+  type Sources,
+} from './consent-asking.ts';
 
 export const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
@@ -41,9 +49,16 @@ const LinkedSchema = Schema.Struct({
   client_source: Schema.optionalKey(
     ClientSourceField.annotate({
       description:
-        "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service. Left out where the runtime has no client the way takes",
+        "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service, own where it runs under the org's own app. Left out where the runtime has no client the way takes",
     }),
   ),
+  return_address: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "For a connection under the org's own app, the address the runtime sends its authorization server as redirect_uri, which the app registers as its callback",
+    }),
+  ),
+  next_client_id: NextClientIdField,
 }).annotate({
   identifier: 'LinkedConnection',
   description: 'The connection an open link names, and when the link expires',
@@ -97,6 +112,7 @@ export function defineReadLink(reading: LinkReading) {
       "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
       'A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it.',
       "A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
+      "A connection under the org's own app, its credential's client_source own, holds its credential's client_id once give_client gave the app's client, and until then the page asks for the client before the sign-in, showing return_address, the address its app registers as its callback, and answers next_client_id while it keeps a client given as its next.",
       'A token that is unknown, used up, expired or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
@@ -125,6 +141,8 @@ export function defineReadLink(reading: LinkReading) {
         link: { expires_at: kept.link.expires_at, ...moreOfTheLink(asked) },
         ...started,
         ...source,
+        ...returnAddressFor(kept.connection, reading),
+        ...nextClientOf(kept),
       };
     }),
   });

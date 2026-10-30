@@ -10,12 +10,22 @@ const ListedScopesSchema = Schema.Array(
   }),
 );
 
+const OwnAppSchema = Schema.Literals(['optional', 'required']);
+
+export type OwnAppChoice = typeof OwnAppSchema.Type;
+
 const ListedWaySchema = Schema.Struct({
   kind: WayKindSchema,
   in: Schema.optionalKey(wayFields.in),
   name: Schema.optionalKey(wayFields.name),
   scheme: Schema.optionalKey(wayFields.scheme),
   issuer: Schema.optionalKey(wayFields.issuer),
+  own_app: Schema.optionalKey(
+    OwnAppSchema.annotate({
+      description:
+        "For authorization, whether the person may connect under the org's own app, an app the org registers with the provider and gives the client id and client secret of on the page: optional, beside the client Auto or whoever runs it has there, or required, where the way connects under the org's own app alone, as it says or since no client here covers it",
+    }),
+  ),
   scopes: ListedScopesSchema.annotate({
     description: 'The scopes its first consent asks, in its order, each with its words; empty where it asks none',
   }),
@@ -31,7 +41,9 @@ const ListedWaySchema = Schema.Struct({
   }),
   description: Schema.optionalKey(Schema.String),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),
-  because: Schema.optionalKey(Schema.String.annotate({ description: 'Why the way is not offered, where it is not' })),
+  because: Schema.optionalKey(
+    Schema.String.annotate({ description: "Why the way is not offered, or why only under the org's own app" }),
+  ),
 }).annotate({ description: 'A way a credential reaches the server, the first the default' });
 
 export type ListedWay = typeof ListedWaySchema.Type;

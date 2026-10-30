@@ -16,6 +16,7 @@ import {
   type ClientMetadataDocument,
   type ClientSource,
   type ClientsHad,
+  type OwnClient,
   type RegisteredClient,
   type WayClientSource,
 } from './client-sources.ts';
@@ -55,7 +56,9 @@ interface ClientChoosing extends Omit<ClientsHad, 'serviceClients'>, Registratio
 
 export type ServerSource = Exclude<ClientSource, 'auto'>;
 
-export type OwnSource = Exclude<WayClientSource, 'registered'>;
+export type MadeSource = Exclude<WayClientSource, 'registered'>;
+
+type RegisteredSource = Extract<ClientSource, 'registered' | 'own'>;
 
 interface Taking {
   readonly asked: ConsentAsked;
@@ -64,7 +67,7 @@ interface Taking {
   readonly sources: readonly ServerSource[];
 }
 
-type RecordedClient = Pick<FinishAsked, 'way' | 'client' | 'returnAddress'>;
+type RecordedClient = Pick<FinishAsked, 'way' | 'client' | 'returnAddress' | 'ownClient'>;
 
 interface ClientChoice {
   readonly chosenAt: (taking: Taking) => Effect.Effect<ActingClient, ConsentRefusal>;
@@ -85,11 +88,12 @@ export function libraryClientOf({
 function registeredActing(
   { clientId, credential, tokenEndpointAuthMethod }: RegisteredClient,
   returnAddress: string,
+  source: RegisteredSource = 'registered',
 ): ActingClient {
   const secret = credential.kind === 'client_secret' ? { client_secret: Redacted.value(credential.clientSecret) } : {};
   const method = tokenEndpointAuthMethod === null ? {} : { token_endpoint_auth_method: tokenEndpointAuthMethod };
   return {
-    chosen: { client_id: clientId, client_source: 'registered' },
+    chosen: { client_id: clientId, client_source: source },
     identity: { client_id: clientId, redirect_uris: [returnAddress], ...secret, ...method },
     authentication:
       credential.kind === 'private_key'
@@ -101,6 +105,20 @@ function registeredActing(
           })
         : undefined,
   };
+}
+
+function ownActing({ clientId, clientSecret }: OwnClient, returnAddress: string): ActingClient {
+  const registered: RegisteredClient = {
+    issuers: [],
+    clientId,
+    credential: { kind: 'client_secret', clientSecret },
+    tokenEndpointAuthMethod: null,
+  };
+  return registeredActing(registered, returnAddress, 'own');
+}
+
+function ownActingOf({ ownClient, returnAddress }: ConsentAsked): ActingClient | undefined {
+  return ownClient === undefined ? undefined : ownActing(ownClient, returnAddress);
 }
 
 function documentedActing({ document }: ClientMetadataDocument): ActingClient {
@@ -121,7 +139,11 @@ function dynamicActing(kept: KeptRegistration, returnAddress: string): ActingCli
   };
 }
 
-export function takesOwnSource(server: AuthorizationServer, source: OwnSource, publicUrl: string | undefined): boolean {
+export function takesMadeSource(
+  server: AuthorizationServer,
+  source: MadeSource,
+  publicUrl: string | undefined,
+): boolean {
   return source === 'dynamic'
     ? server.registration_endpoint !== undefined
     : server.client_id_metadata_document_supported === true && metadataDocumentOf(publicUrl) !== undefined;
@@ -147,13 +169,13 @@ function dynamicallyRegistered(
   return Effect.map(registrationFor(registration, choosing), (kept) => dynamicActing(kept, returnAddress));
 }
 
-function ownTakenFrom(
-  source: OwnSource,
+function madeTakenFrom(
+  source: MadeSource,
   taking: Taking,
   choosing: ClientChoosing,
 ): Effect.Effect<ActingClient | undefined, ConsentRefusal> {
   const { asked, server } = taking;
-  if (!takesOwnSource(server, source, choosing.publicUrl)) {
+  if (!takesMadeSource(server, source, choosing.publicUrl)) {
     return Effect.undefined;
   }
   return source === 'dynamic'
@@ -167,11 +189,12 @@ function takenFrom(
   choosing: ClientChoosing,
 ): Effect.Effect<ActingClient | undefined, ConsentRefusal> {
   const { asked } = taking;
-  return source === 'registered'
-    ? Effect.succeed(
-        registeredActing(required(registeredClientFor(choosing.registeredClients, asked.way)), asked.returnAddress),
-      )
-    : ownTakenFrom(source, taking, choosing);
+  if (source === 'registered') {
+    return Effect.succeed(
+      registeredActing(required(registeredClientFor(choosing.registeredClients, asked.way)), asked.returnAddress),
+    );
+  }
+  return source === 'own' ? Effect.succeed(ownActingOf(asked)) : madeTakenFrom(source, taking, choosing);
 }
 
 function chosenAt(taking: Taking, choosing: ClientChoosing): Effect.Effect<ActingClient, ConsentRefusal> {
@@ -187,12 +210,15 @@ function chosenAt(taking: Taking, choosing: ClientChoosing): Effect.Effect<Actin
 }
 
 function recordedOf(
-  { way, client, returnAddress }: RecordedClient,
+  { way, client, returnAddress, ownClient }: RecordedClient,
   choosing: ClientChoosing,
 ): ActingClient | undefined {
   if (client.client_source === 'registered') {
     const registered = registeredClientNamed(choosing.registeredClients, way.issuer, client.client_id);
     return registered === undefined ? undefined : registeredActing(registered, returnAddress);
+  }
+  if (client.client_source === 'own') {
+    return ownClient?.clientId === client.client_id ? ownActing(ownClient, returnAddress) : undefined;
   }
   const documented = clientMetadataDocumentOf(choosing.publicUrl, returnAddress);
   return documented?.address === client.client_id ? documentedActing(documented) : undefined;

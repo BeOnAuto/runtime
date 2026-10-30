@@ -100,7 +100,9 @@ export function streamPortsOf(streams: Streams): StreamReader & StreamWriter {
             ...(lineage === undefined ? {} : { lineage }),
           }),
         decider,
-      )(stream, command).pipe(Effect.map(({ state, version }) => ({ state, version }))),
+      )(stream, command).pipe(
+        Effect.map(({ state, version, loaded }) => ({ state, version, decidedOn: loaded.state })),
+      ),
   };
 }
 

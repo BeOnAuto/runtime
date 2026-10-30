@@ -183,7 +183,7 @@ function closedAndOpenedAgain(entry: LedgerEntry): void {
         { state: 5, version: 2 },
         { state: [{ type: 'entry_struck', data: { reason: 'Duplicate' }, context: stamped }], version: 1 },
       ]);
-      expect(continued).toEqual({ state: 9, version: 3 });
+      expect(continued).toEqual({ state: 9, version: 3, decidedOn: 5 });
     });
   });
 }

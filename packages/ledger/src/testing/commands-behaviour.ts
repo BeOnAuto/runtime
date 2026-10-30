@@ -24,11 +24,19 @@ function loadingAStream(entry: LedgerEntry): void {
 
 function executingACommand(entry: LedgerEntry): void {
   describe('executing a command', () => {
-    it('appends the decided events and answers with the folded state and the version after them', async () => {
+    it('appends the decided events and answers with the folded state, the version after them and the state it decided on', async () => {
       const ledger = await aLedger(entry);
 
-      expect(await Effect.runPromise(ledger.execute(tallies, tally, [2, 3]))).toEqual({ state: 5, version: 2 });
-      expect(await Effect.runPromise(ledger.execute(tallies, tally, [4]))).toEqual({ state: 9, version: 3 });
+      expect(await Effect.runPromise(ledger.execute(tallies, tally, [2, 3]))).toEqual({
+        state: 5,
+        version: 2,
+        decidedOn: 0,
+      });
+      expect(await Effect.runPromise(ledger.execute(tallies, tally, [4]))).toEqual({
+        state: 9,
+        version: 3,
+        decidedOn: 5,
+      });
       expect(await Effect.runPromise(ledger.load(tallies, tally))).toEqual({ state: 9, version: 3 });
     });
 
@@ -46,14 +54,20 @@ function executingACommand(entry: LedgerEntry): void {
       const ledger = await aLedger(entry);
       await Effect.runPromise(ledger.execute(tallies, tally, [1]));
 
-      expect(await Effect.runPromise(ledger.execute(tallies, tally, []))).toEqual({ state: 1, version: 1 });
+      expect(await Effect.runPromise(ledger.execute(tallies, tally, []))).toEqual({
+        state: 1,
+        version: 1,
+        decidedOn: 1,
+      });
       expect(await Effect.runPromise(ledger.execute('org/acme/untouched', tally, []))).toEqual({
         state: 0,
         version: 0,
+        decidedOn: 0,
       });
       expect(await Effect.runPromise(ledger.execute('org/acme/untouched', tally, [7]))).toEqual({
         state: 7,
         version: 1,
+        decidedOn: 0,
       });
     });
   });
@@ -69,6 +83,7 @@ function theSizeOfADecision(entry: LedgerEntry): void {
       expect(await Effect.runPromise(ledger.execute(tallies, tally, ones(most)))).toEqual({
         state: most,
         version: most,
+        decidedOn: 0,
       });
     });
 
@@ -115,7 +130,7 @@ function writersRacing(entry: LedgerEntry): void {
 
 function aWriterAnotherGotAheadOf(entry: LedgerEntry): void {
   describe('a writer that another writer got ahead of', () => {
-    it('decides again against the stream as it now is', async () => {
+    it('decides again against the stream as it now is, and answers the state it decided on then', async () => {
       const ledger = await aLedger(entry);
       await Effect.runPromise(ledger.execute(tallies, tally, [1]));
       const takeOneFirst = Effect.orDie(ledger.execute(tallies, tally, [-1]));
@@ -123,6 +138,7 @@ function aWriterAnotherGotAheadOf(entry: LedgerEntry): void {
       expect(await Effect.runPromise(ledger.execute(tallies, tallyInterruptedBy(takeOneFirst, 1), [5]))).toEqual({
         state: 5,
         version: 3,
+        decidedOn: 0,
       });
     });
 

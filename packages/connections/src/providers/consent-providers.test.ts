@@ -167,17 +167,16 @@ const unsetUp =
   'The provider drive takes consent through a client whoever runs Auto registers, which is not set up here';
 
 describe('a provider whose way is consent where whoever runs Auto registered no client the way takes', () => {
-  it('is refused an addition at the kind of its credential', async () => {
+  it('is added under the org’s own app, the one app its way then takes', async () => {
     const h = harness({ providers: consentProviders });
 
     expect(await adding(h, { provider: 'drive' })).toMatchObject({
-      status: 'rejected',
-      reason: 'invalid_input',
-      issues: [{ pointer: '/credential/kind', detail: unsetUp }],
+      status: 'succeeded',
+      output: { status: 'pending', credential: { kind: 'authorization', client_source: 'own' } },
     });
   });
 
-  it('is listed with the way not offered, because whoever runs Auto sets it up, and a way that registers dynamically offered', async () => {
+  it('is listed with the way offered under the org’s own app alone, because whoever runs Auto sets up no client it takes, and a way that registers dynamically offered beside it', async () => {
     const h = harness({ providers: consentProviders });
 
     const listed = await h.call(operationNamed(h.operations, 'list_providers'), ada);
@@ -188,11 +187,14 @@ describe('a provider whose way is consent where whoever runs Auto registered no 
           {
             name: 'adverts',
             credentials: [
-              { kind: 'authorization', offered: true },
+              { kind: 'authorization', offered: true, own_app: 'optional' },
               { kind: 'secret', offered: true },
             ],
           },
-          { name: 'drive', credentials: [{ kind: 'authorization', offered: false, because: unsetUp }] },
+          {
+            name: 'drive',
+            credentials: [{ kind: 'authorization', offered: true, own_app: 'required', because: unsetUp }],
+          },
         ],
       },
     });
@@ -215,8 +217,8 @@ function offeredWith(consenting: Partial<ConsentClientOptions>) {
 const driveOffered = { name: 'drive', title: 'Drive', description: 'Read and change the files of an account.' };
 
 describe('the providers search offers a caller who may add', () => {
-  it('leave out a provider whose way of consent takes no client the runtime has, and take it in once one is registered', async () => {
-    expect([await offeredWith({}), await offeredWith({ registeredClients })]).toEqual([[], [driveOffered]]);
+  it('take in a provider whose way of consent takes no client the runtime has, under the org’s own app, as one whose way takes a client registered here', async () => {
+    expect([await offeredWith({}), await offeredWith({ registeredClients })]).toEqual([[driveOffered], [driveOffered]]);
   });
 });
 
@@ -254,24 +256,30 @@ describe('a provider whose way is consent where Auto’s consent service serves 
     ]);
   });
 
-  it.each(unservedBy)('is set up first, and the service asked nothing, where %s', async (_, enabled, kind) => {
-    const service = await serviceOfDrive();
-    const consenting = switchedOf(service, enabled, kind);
-    const h = harness({ providers: consentProviders, consenting });
+  it.each(unservedBy)(
+    'is added under the org’s own app alone, and the service asked nothing, where %s',
+    async (_, enabled, kind) => {
+      const service = await serviceOfDrive();
+      const consenting = switchedOf(service, enabled, kind);
+      const h = harness({ providers: consentProviders, consenting });
 
-    expect([
-      await h.call(operationNamed(h.operations, 'list_providers'), ada),
-      await adding(h, { provider: 'drive' }),
-      await offeredWith(consenting),
-    ]).toMatchObject([
-      {
-        output: {
-          providers: [{ name: 'adverts' }, { name: 'drive', credentials: [{ offered: false, because: unsetUp }] }],
+      expect([
+        await h.call(operationNamed(h.operations, 'list_providers'), ada),
+        await adding(h, { provider: 'drive' }),
+        await offeredWith(consenting),
+      ]).toMatchObject([
+        {
+          output: {
+            providers: [
+              { name: 'adverts' },
+              { name: 'drive', credentials: [{ offered: true, own_app: 'required', because: unsetUp }] },
+            ],
+          },
         },
-      },
-      { status: 'rejected', issues: [{ pointer: '/credential/kind', detail: unsetUp }] },
-      [],
-    ]);
-    expect(service.calls()).toEqual([]);
-  });
+        { status: 'succeeded', output: { credential: { client_source: 'own' } } },
+        [driveOffered],
+      ]);
+      expect(service.calls()).toEqual([]);
+    },
+  );
 });

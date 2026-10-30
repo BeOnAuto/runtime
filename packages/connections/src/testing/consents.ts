@@ -23,6 +23,25 @@ export function consentFake(changes: Partial<ClientRegistration> = {}): Promise<
   return servedForConsent({ redirectUris: [studioReturn], ...changes });
 }
 
+export const appSecret = 'the-org-app-client-secret-91d0';
+
+export const theOrgsApp = { client_id: 'org-app', client_secret: appSecret };
+
+export const underTheOrgsApp = { provider: 'files', credential: { kind: 'authorization', app: 'own' } };
+
+export function orgsAppFake(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
+  return consentFake({ clientId: theOrgsApp.client_id, clientSecret: appSecret, ...changes });
+}
+
+export function givingTheClient(
+  h: Harness,
+  { id, token }: Pick<Added, 'id' | 'token'>,
+  given: Readonly<Record<string, string>> = theOrgsApp,
+  caller = ada,
+): Promise<Outcome> {
+  return h.call(operationNamed(h.operations, 'give_client'), caller, { id, token, ...given });
+}
+
 export const filesWay = { scope: 'files.read', parameters: { access_type: 'offline' } };
 
 const filesWords: Readonly<Record<string, string>> = {

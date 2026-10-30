@@ -37,6 +37,7 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'read_link',
   'approve',
   'give_credential',
+  'give_client',
   'start',
   'finish',
   'list_providers',
@@ -86,7 +87,7 @@ describe('the operations of the document and the tools of the endpoints', () => 
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(16);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(17);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

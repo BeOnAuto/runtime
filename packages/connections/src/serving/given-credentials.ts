@@ -12,7 +12,7 @@ import {
 } from '@on.auto/tool-servers';
 import { DateTime, Effect, Option, type Context } from 'effect';
 
-import { consentAskedOf } from '../page/consent-asking.ts';
+import { consentAskedUnderItsClient, type OwnClientUnheld } from '../page/consent-asking.ts';
 import { placesNoValue, type Credential } from '../registry/credential.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
 import type { KeptConnection } from '../registry/registry.ts';
@@ -182,8 +182,10 @@ export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | und
   }
   return Effect.gen(function* () {
     const held = yield* heldTokensOf(serving);
+    const asked = yield* consentAskedUnderItsClient(serving.kept, serving.services).pipe(
+      Effect.catch((unheld) => ownClientUnservedOf(serving, unheld)),
+    );
     const context = yield* Effect.context();
-    const asked = consentAskedOf(connection, serving.services);
     const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
     return {
       issuer: asked.way.issuer,
@@ -192,4 +194,10 @@ export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | und
       credential: { kind: 'consent', ...asked, client, held, tokens: tokensOfTheRow(serving, context) },
     };
   });
+}
+
+function ownClientUnservedOf(serving: Serving, unheld: OwnClientUnheld): Effect.Effect<never, ConnectionUnready> {
+  return 'detail' in unheld
+    ? unavailableNow(serving, unheld)
+    : brokenWith(serving, 'credential_gone', servingWords.ownClientGone(serving.kept.connection.name));
 }

@@ -21,8 +21,7 @@ import { policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Credential } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
-import { consentUnsetUpOf } from './consent-offered.ts';
-import { isOfferedWay, type Listing } from './provider-listing.ts';
+import { appForOf, isOfferedWay, waysInOrderOf, type Listing } from './provider-listing.ts';
 
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
@@ -63,15 +62,19 @@ function givenToProvider(
 ): Result.Result<GivenAddition, readonly Issue[]> {
   const { name, placeholders, entry = {}, credential } = given;
   return Result.flatMap(namedHere(listing.providers, provider), (named) =>
-    additionOfProvider(named.entry, {
-      name,
-      placeholders,
-      kind: credential?.kind,
-      canBeGiven: (way) => isOfferedWay(named, way, listing),
-      playbooks: entry.playbooks,
-      allowed: entry.allowed,
-      record_content: entry.record_content,
-    }),
+    additionOfProvider(
+      { ...named.entry, credentials: waysInOrderOf(named, listing) },
+      {
+        name,
+        placeholders,
+        kind: credential?.kind,
+        appFor: appForOf(named, listing, credential?.app),
+        canBeGiven: (way) => isOfferedWay(named, way, listing),
+        playbooks: entry.playbooks,
+        allowed: entry.allowed,
+        record_content: entry.record_content,
+      },
+    ),
   );
 }
 
@@ -124,24 +127,14 @@ function placedIssuesOf(issues: readonly Issue[], given: AdditionGiven): readonl
 interface Checked {
   readonly given: AdditionGiven;
   readonly checking: EntryChecking;
-  readonly consent: Consent;
 }
 
-function consentIssuesOf({ provider, credential }: GivenAddition, consent: Consent): readonly Issue[] {
-  const unsetUp = consentUnsetUpOf(String(provider), credential, consent);
-  return unsetUp === undefined ? [] : [{ pointer: '/credential/kind', detail: unsetUp }];
-}
-
-function providerIssuesOf(addition: GivenAddition, { given, checking, consent }: Checked): readonly Issue[] {
+function providerIssuesOf(addition: GivenAddition, { given, checking }: Checked): readonly Issue[] {
   const credential = credentialFieldIssuesOf(addition.credential).map(({ path, issue }): Issue => ({
     pointer: `/credential/${path.join('/')}`,
     detail: issue,
   }));
-  if (credential.length > 0) {
-    return placedIssuesOf(credential, given);
-  }
-  const unsetUp = consentIssuesOf(addition, consent);
-  return unsetUp.length > 0 ? unsetUp : placedIssuesOf(additionIssuesOf(addition, checking), given);
+  return placedIssuesOf(credential.length > 0 ? credential : additionIssuesOf(addition, checking), given);
 }
 
 function issuesOf(addition: GivenAddition, checked: Checked): readonly Issue[] {
@@ -161,7 +154,7 @@ function additionCheckedWith(
       : givenToProvider(given.provider, given, services);
   return Result.flatMap(Result.mapError(resolved, invalidAddition), (addition) => {
     const providing = providingOf(addition, services);
-    const issues = issuesOf(addition, { given, checking: { ...checking, providing }, consent: services.consent });
+    const issues = issuesOf(addition, { given, checking: { ...checking, providing } });
     return issues.length > 0 ? Result.fail(invalidAddition(issues)) : Result.succeed(addition);
   });
 }

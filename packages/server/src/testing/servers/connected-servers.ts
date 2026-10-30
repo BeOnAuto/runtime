@@ -1,4 +1,4 @@
-import type { CredentialWay } from '@on.auto/providers';
+import { operatorVariablesOf } from '@on.auto/providers';
 import type { OfferedProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -11,12 +11,8 @@ export const shippedList = shippedSettings.providers;
 
 export const shippedProviders = shippedList.providers;
 
-function isOfferedWithoutAClient({ kind, clients = [] }: CredentialWay): boolean {
-  return kind !== 'authorization' || clients.includes('dynamic');
-}
-
 export const offeredByTheServer: readonly OfferedProvider[] = shippedProviders
-  .filter(({ entry }) => entry.credentials.some((way) => isOfferedWithoutAClient(way)))
+  .filter(({ entry }) => operatorVariablesOf(entry).length === 0)
   .map(({ entry }) => ({ name: entry.name, title: entry.title, description: entry.description }));
 
 const AnswerSchema = Schema.Record(Schema.String, Schema.Unknown);

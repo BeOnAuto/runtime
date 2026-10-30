@@ -207,15 +207,15 @@ describe('the stream reader and writer over any streams', () => {
     const loaded = await Effect.runPromise(load('tally/1', tally));
 
     expect([executed, loaded]).toEqual([
-      { state: 5, version: 2 },
+      { state: 5, version: 2, decidedOn: 0 },
       { state: 5, version: 2 },
     ]);
   });
 
-  it('decide again on the stream another writer appended to meanwhile', async () => {
+  it('decide again on the stream another writer appended to meanwhile, and answer the state they decided on then', async () => {
     const { execute } = streamPortsOf(aheadOnce(await lentStreams()));
 
-    expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 101, version: 2 });
+    expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 101, version: 2, decidedOn: 100 });
   });
 
   it.each([
@@ -227,7 +227,8 @@ describe('the stream reader and writer over any streams', () => {
       const lent = await lentStreams();
       const { execute } = streamPortsOf(inConflictOnce(lent, conflict));
 
-      expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 1, version: 1 });
+      expect(await Effect.runPromise(execute('tally/1', tally, [1]))).toEqual({ state: 1, version: 1, decidedOn: 0 });
+
       expect([(await lent.read('tally/1')).version, isVersionConflict(conflict())]).toEqual([1, true]);
     },
   );

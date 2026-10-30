@@ -7,6 +7,9 @@
   "src/registry/0.46.0/connection_consent_started.json": "3c1e4efac4994e5cf202770e1a48858744d19d547f56d671d9692a3210cf37ec",
   "src/registry/0.46.0/connection_link_issued.json": "b97fc069c5840f456bde0e905aef451e5dcc6ae0e4dc2c66bcbd362f4b80812e",
   "src/registry/0.46.0/connection_removed.json": "6a93501e68ec3fc4188b2c8fd73668d4cb8d3f526a84177f66110b478d532e19",
+  "src/registry/0.49.0/connection_added.json": "806b26f076c0e303a27d1b49d6f266b793ec7c4ec136fbf0cf0ea40d435a9f5c",
+  "src/registry/0.49.0/connection_client_given.json": "94b008147d89debf569dd8ef20a9999b4cd9ad95638afc44d63155ce26933324",
+  "src/registry/0.49.0/connection_connected.json": "5d3adaa86a2d780f97cdf4f2145000708c26abd7f6c744ba6a3995a663a7860e",
   "src/registry/0.49.0/connection_consent_started.json": "bf966e478e7328b7e790e21ecaab9594b159ce6fb112a00ff09296fe0767c228",
   "src/registry/0.49.0/connection_link_issued.json": "74e9015fdca7c2ee892cfaa276f1bffe4af2a923effd826b9ba7d7cbd65d8f88"
 }

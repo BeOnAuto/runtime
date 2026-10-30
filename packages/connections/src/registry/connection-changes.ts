@@ -11,7 +11,7 @@ import { connectionsStream } from './registry-decider.ts';
 
 const connectionChanged = changeKindOf(
   'connection',
-  'A connection added, connected, broken or removed, or asked for more',
+  "A connection added, connected, broken or removed, asked for more, or given the client of the org's own app",
   { connection: 'The id of the connection' },
   { permittedBy: ['org:read'] },
 );
@@ -34,6 +34,7 @@ const named: Readonly<
 > = {
   connection_added: connectionChangedBy,
   connection_link_issued: null,
+  connection_client_given: connectionChangedBy,
   connection_consent_started: scopesAddedBy,
   connection_approved: null,
   connection_connected: connectionChangedBy,

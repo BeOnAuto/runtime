@@ -1,7 +1,7 @@
 import type { FetchLike } from '@modelcontextprotocol/client';
 import { Effect, Result } from 'effect';
 
-import { noClient, takesOwnSource, type OwnSource } from './acting-clients.ts';
+import { noClient, takesMadeSource, type MadeSource } from './acting-clients.ts';
 import type { WayClientSource } from './client-sources.ts';
 import type { IssuerRefusal, NamedWay, Refused, WayAsked, WayRefusal } from './consent-client.ts';
 import { answeredAClientError } from './consent-failures.ts';
@@ -28,7 +28,7 @@ const noAuthorizationServer: WayRefusal = { refused: 'no_authorization_server' }
 
 const malformedScope: Refused<'malformed_scope'> = { refused: 'malformed_scope' };
 
-const sourcesOfAServerGivenByHand: readonly OwnSource[] = ['dynamic', 'metadata_document'];
+const sourcesOfAServerGivenByHand: readonly MadeSource[] = ['dynamic', 'metadata_document'];
 
 function orNoAuthorizationServer<A>(found: A | undefined): Effect.Effect<A, WayRefusal> {
   return found === undefined ? Effect.fail(noAuthorizationServer) : Effect.succeed(found);
@@ -60,7 +60,7 @@ function clientsAt(
   { issuer, server }: ReadServer,
   publicUrl: string | undefined,
 ): Effect.Effect<readonly WayClientSource[], WayRefusal> {
-  const taken = sourcesOfAServerGivenByHand.find((source) => takesOwnSource(server, source, publicUrl));
+  const taken = sourcesOfAServerGivenByHand.find((source) => takesMadeSource(server, source, publicUrl));
   return taken === undefined ? Effect.fail(atTheIssuer(issuer, noClient)) : Effect.succeed([taken]);
 }
 

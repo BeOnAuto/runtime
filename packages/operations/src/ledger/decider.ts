@@ -33,6 +33,10 @@ export interface StreamState<State> {
   readonly version: number;
 }
 
+export interface DecidedState<State> extends StreamState<State> {
+  readonly decidedOn: State;
+}
+
 export function factOf<const Type extends string, Data extends Schema.Top, EventContext extends Schema.Top>(
   type: Type,
   data: Data,

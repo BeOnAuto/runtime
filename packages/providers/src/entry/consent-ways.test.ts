@@ -128,6 +128,36 @@ describe('the addresses of a way of consent', () => {
   });
 });
 
+describe('the org’s own app a way of consent requires', () => {
+  it('is required alone, on a way of consent that names no clients, since consent runs under that app', () => {
+    const secretUnderAnApp = { kind: 'secret', in: 'header', name: 'Authorization', own_app: 'required' };
+
+    expect([
+      consentAs({ own_app: 'required' }),
+      consentAs({
+        own_app: 'required',
+        pkce: 'none',
+        authorization_endpoint: 'https://accounts.drive.example.com/authorize',
+        token_endpoint: 'https://accounts.drive.example.com/token',
+      }),
+    ]).toEqual([[], []]);
+    expect([
+      consentAs({ own_app: 'required', clients: ['registered'] }),
+      consentAs({ own_app: 'optional' }),
+      problemsOf({ ...tracker, credentials: [secretUnderAnApp] }),
+    ]).toEqual([
+      [
+        [
+          '/credentials/0/clients',
+          "Expected no clients beside own_app: a way that requires the org's own app takes consent under that app alone",
+        ],
+      ],
+      [['/credentials/0/own_app', 'Expected "required"']],
+      [['/credentials/0/own_app', 'Expected no own_app: a secret way takes in, name, and scheme']],
+    ]);
+  });
+});
+
 describe('the fields of a way of consent', () => {
   it('is the way of its kind alone', () => {
     const secretWithClients = { kind: 'secret', in: 'header', name: 'Authorization', clients: ['dynamic'] };

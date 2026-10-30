@@ -1,22 +1,46 @@
 import { required } from '@on.auto/operations';
-import { keptTokensIn, type ConsentServer, type HadSources, type StartAsked } from '@on.auto/tool-servers';
+import {
+  keptTokensIn,
+  type ConsentServer,
+  type HadSources,
+  type KeptTokens,
+  type OwnClient,
+  type SecretReadingFailure,
+  type StartAsked,
+} from '@on.auto/tool-servers';
 import { Effect, Function, Option } from 'effect';
 
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
-import type { RecordedConnection } from '../registry/connection.ts';
+import { runsUnderTheOrgsApp, type RecordedConnection } from '../registry/connection.ts';
 import {
+  clientChangedOf,
   isOpenConsent,
   noOpenConsent,
   stateIssueOf,
   type KeptWithConsent,
   type KeptWithLink,
 } from '../registry/registry-lookup.ts';
-import type { KeptConnection } from '../registry/registry.ts';
+import {
+  clientSecretsHeldBy,
+  clientSecretsReleasedOf,
+  heldClientOf,
+  signingInClientOf,
+  type GivenClient,
+  type KeptConnection,
+} from '../registry/registry.ts';
 import { unavailableWords, unrevokedWordsOf, type ConsentNamed } from './consent-words.ts';
 
 export type ConsentAsked = Omit<StartAsked, 'state' | 'studioBase'>;
+
+const ownClientGone = { gone: 'own_client' } as const;
+
+export type OwnClientUnheld = SecretReadingFailure | typeof ownClientGone;
+
+type ClientAsking = Pick<ConnectionServices, 'policy' | 'pages' | 'resolve'> & {
+  readonly secrets: Pick<ConnectionServices['secrets'], 'read'>;
+};
 
 export type ConsentServices = Pick<
   ConnectionServices,
@@ -47,16 +71,22 @@ function wayOf({ credential }: Pick<RecordedConnection, 'credential'>, scope: st
     revocation_endpoint: credential.revocation_endpoint,
     pkce: credential.pkce,
     clients: credential.clients,
+    app: credential.client_source === 'own' ? credential.client_source : undefined,
   };
 }
 
 const noSources: Sources = { sourceOf: Function.constUndefined };
 
+const theOrgsAppAlone: Sources = { sourceOf: Function.constant('own') };
+
 export function sourcesFor(
-  { credential }: Pick<RecordedConnection, 'credential'>,
+  connection: Pick<RecordedConnection, 'credential'>,
   { consent, pages }: Pick<ConnectionServices, 'consent' | 'pages'>,
 ): Effect.Effect<Sources> {
-  return credential.kind === 'authorization' ? consent.hadSources(studioBaseFor(pages)) : Effect.succeed(noSources);
+  if (connection.credential.kind !== 'authorization') {
+    return Effect.succeed(noSources);
+  }
+  return runsUnderTheOrgsApp(connection) ? Effect.succeed(theOrgsAppAlone) : consent.hadSources(studioBaseFor(pages));
 }
 
 export function isCoveredHere(
@@ -79,7 +109,18 @@ export function sourceOfAStartOf(
   return source === undefined ? {} : { client_source: source };
 }
 
-export function consentAskedOf(
+export function nextClientOf({ nextClient }: KeptConnection): { readonly next_client_id?: string } {
+  return nextClient === undefined ? {} : { next_client_id: nextClient.client_id };
+}
+
+export function returnAddressFor(
+  connection: Pick<RecordedConnection, 'credential'>,
+  { pages }: Pick<ConnectionServices, 'pages'>,
+): { readonly return_address?: string } {
+  return runsUnderTheOrgsApp(connection) ? { return_address: returnAddressOf(pages) } : {};
+}
+
+function consentAskedOf(
   connection: RecordedConnection,
   services: Pick<ConnectionServices, 'policy' | 'pages' | 'resolve'>,
   scope: string | undefined = connection.credential.scope,
@@ -104,31 +145,86 @@ export function openConsentOf(
   if (!isOpenConsent(kept, at)) {
     return Effect.andThen(forgottenVerifierOf(kept, services), Effect.fail(noOpenConsent(kept.connection.name)));
   }
-  const stateIssue = stateIssueOf(kept, stateSha256);
-  return stateIssue === undefined ? Effect.succeed<KeptWithConsent>(kept) : Effect.fail(stateIssue);
+  const issue = stateIssueOf(kept, stateSha256) ?? clientChangedOf(kept, kept.consent.client_id);
+  return issue === undefined ? Effect.succeed<KeptWithConsent>(kept) : Effect.fail(issue);
 }
 
 type Forgetting = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages'>;
 
-function tokensRevokedOf({ connection, secretId }: KeptConnection, services: Forgetting): Effect.Effect<void> {
+function ownClientOf(
+  given: GivenClient | undefined,
+  { secrets }: Pick<ClientAsking, 'secrets'>,
+): Effect.Effect<OwnClient | undefined, SecretReadingFailure> {
+  if (given === undefined) {
+    return Effect.undefined;
+  }
+  return Effect.map(secrets.read(given.secret_id), (row) =>
+    row === undefined ? undefined : { clientId: given.client_id, clientSecret: row.value },
+  );
+}
+
+function consentAskedUnder(
+  given: GivenClient | undefined,
+  kept: KeptConnection,
+  services: ClientAsking,
+  scope: string | undefined,
+): Effect.Effect<ConsentAsked, OwnClientUnheld> {
+  const asked = consentAskedOf(kept.connection, services, scope);
+  if (!runsUnderTheOrgsApp(kept.connection)) {
+    return Effect.succeed(asked);
+  }
+  return Effect.flatMap(ownClientOf(given, services), (ownClient) =>
+    ownClient === undefined ? Effect.fail(ownClientGone) : Effect.succeed({ ...asked, ownClient }),
+  );
+}
+
+export function consentAskedUnderItsClient(
+  kept: KeptConnection,
+  services: ClientAsking,
+): Effect.Effect<ConsentAsked, OwnClientUnheld> {
+  return consentAskedUnder(heldClientOf(kept), kept, services, kept.connection.credential.scope);
+}
+
+export function consentAskedForASignIn(
+  kept: KeptConnection,
+  services: ClientAsking,
+  scope: string | undefined,
+): Effect.Effect<ConsentAsked, OwnClientUnheld> {
+  return consentAskedUnder(signingInClientOf(kept), kept, services, scope);
+}
+
+function revokedWith(kept: KeptConnection, tokens: KeptTokens, services: Forgetting): Effect.Effect<void> {
+  const { connection } = kept;
   const { credential } = connection;
-  if (credential.kind !== 'authorization' || secretId === undefined) {
+  const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+  return ownClientOf(heldClientOf(kept), services).pipe(
+    Effect.flatMap((ownClient) =>
+      services.consent
+        .revoke({ ...consentAskedOf(connection, services), ownClient, client, tokens })
+        .pipe(
+          Effect.catch((failure) =>
+            Effect.logWarning(unrevokedWordsOf(namedOf(connection), failure, client.client_source)),
+          ),
+        ),
+    ),
+    Effect.catch(({ detail }) => Effect.logWarning(unavailableWords.ownClientUnrevoked(connection.name, detail))),
+  );
+}
+
+function tokensRevokedOf(kept: KeptConnection, services: Forgetting): Effect.Effect<void> {
+  const { connection, secretId } = kept;
+  if (connection.credential.kind !== 'authorization' || secretId === undefined) {
     return Effect.void;
   }
-  const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
-  const named = namedOf(connection);
   return services.secrets.read(secretId).pipe(
     Effect.map((row) => Option.flatMap(Option.fromNullishOr(row), ({ value }) => keptTokensIn(value))),
     Effect.flatMap(
       Option.match({
         onNone: () => Effect.void,
-        onSome: (tokens) =>
-          services.consent
-            .revoke({ ...consentAskedOf(connection, services), client, tokens })
-            .pipe(Effect.catch((failure) => Effect.logWarning(unrevokedWordsOf(named, failure, client.client_source)))),
+        onSome: (tokens) => revokedWith(kept, tokens, services),
       }),
     ),
-    Effect.catch(({ detail }) => Effect.logWarning(unavailableWords.tokensUnread(named.name, detail))),
+    Effect.catch(({ detail }) => Effect.logWarning(unavailableWords.tokensUnread(connection.name, detail))),
   );
 }
 
@@ -143,6 +239,22 @@ export function forgottenCredentialOf(kept: KeptConnection, services: Forgetting
   return Effect.andThen(tokensRevokedOf(kept, services), secretForgottenOf(kept, services));
 }
 
+function forgottenEach(secretIds: readonly string[], { secrets }: Pick<Forgetting, 'secrets'>): Effect.Effect<void> {
+  return Effect.forEach(secretIds, (secretId) => secrets.forget(secretId), { discard: true });
+}
+
+export function forgottenClientsOf(kept: KeptConnection, services: Pick<Forgetting, 'secrets'>): Effect.Effect<void> {
+  return forgottenEach(clientSecretsHeldBy(kept), services);
+}
+
+export function releasedClientsForgottenOf(
+  before: KeptConnection,
+  after: KeptConnection,
+  services: Pick<Forgetting, 'secrets'>,
+): Effect.Effect<void> {
+  return forgottenEach(clientSecretsReleasedOf(before, after), services);
+}
+
 function isTheSameClient(before: RecordedConnection, after: RecordedConnection): boolean {
   const [was, is] = [before.credential, after.credential];
   return was.issuer === is.issuer && was.client_id === is.client_id && was.client_source === is.client_source;
@@ -150,10 +262,11 @@ function isTheSameClient(before: RecordedConnection, after: RecordedConnection):
 
 export function replacedCredentialOf(
   before: KeptConnection,
-  after: RecordedConnection,
+  after: KeptConnection,
   services: Forgetting,
 ): Effect.Effect<void> {
-  return isTheSameClient(before.connection, after)
+  const tokensReplaced = isTheSameClient(before.connection, after.connection)
     ? secretForgottenOf(before, services)
     : forgottenCredentialOf(before, services);
+  return Effect.andThen(tokensReplaced, releasedClientsForgottenOf(before, after, services));
 }

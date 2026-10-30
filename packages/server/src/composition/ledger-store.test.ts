@@ -42,6 +42,6 @@ describe('the fact types the server gives the ledger to read', () => {
     const kept = [...new Set([...fixtureTypesUnder('packages'), ...fixtureTypesUnder('capabilities')])].toSorted();
 
     expect(factTypes).toEqual(kept);
-    expect(factTypes).toHaveLength(53);
+    expect(factTypes).toHaveLength(54);
   });
 });

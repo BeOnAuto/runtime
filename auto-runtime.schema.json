@@ -586,6 +586,10 @@
                         "enum": ["registered", "metadata_document", "dynamic"]
                       }
                     },
+                    "own_app": {
+                      "type": "string",
+                      "enum": ["required"]
+                    },
                     "says": {
                       "type": "object",
                       "additionalProperties": {

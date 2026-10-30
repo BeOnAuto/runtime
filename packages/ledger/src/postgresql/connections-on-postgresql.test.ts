@@ -164,6 +164,7 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database another server is f
     expect(await Effect.runPromise(opened.ledger.execute('org/acme/tallies', tally, [1]))).toEqual({
       state: 1,
       version: 1,
+      decidedOn: 0,
     });
   });
 });
@@ -198,7 +199,12 @@ describe.skipIf(skipped)(`A ledger whose PostgreSQL database ends its connection
     });
 
     expect(await Effect.runPromise(ledger.load('org/acme/tallies', tally))).toEqual({ state: 1, version: 1 });
-    expect(await Effect.runPromise(ledger.execute('org/acme/tallies', tally, [2]))).toEqual({ state: 3, version: 2 });
+    expect(await Effect.runPromise(ledger.execute('org/acme/tallies', tally, [2]))).toEqual({
+      state: 3,
+      version: 2,
+      decidedOn: 1,
+    });
+
     expect(ended.length).toBeGreaterThan(0);
     expect(logged.filter((line) => !line.includes(lostConnection))).toEqual([]);
   });

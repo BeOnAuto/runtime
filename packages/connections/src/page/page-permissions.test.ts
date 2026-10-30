@@ -3,7 +3,7 @@ import type { FakeMcpServer } from '@on.auto/tool-servers/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, crm, notes } from '../testing/additions.ts';
-import { consentedOf, consentFake, consentHarnessAt } from '../testing/consents.ts';
+import { consentedOf, consentFake, consentHarnessAt, theOrgsApp, underTheOrgsApp } from '../testing/consents.ts';
 import {
   acmePlaybookWriter,
   acmeReader,
@@ -47,6 +47,11 @@ const openLinks: Readonly<Record<string, () => Promise<Calling>>> = {
     const h = harness({ access: 'local' });
     const { id, token } = await added(h, crm);
     return callingOn(h, 'give_credential', { id, token, value: 'Bearer crm-0f3c' });
+  },
+  give_client: async () => {
+    const h = consentHarnessAt(await consentServed(), { access: 'local' });
+    const { id, token } = await added(h, underTheOrgsApp);
+    return callingOn(h, 'give_client', { id, token, ...theOrgsApp });
   },
   start: async () => {
     const h = consentHarnessAt(await consentServed(), { access: 'local' });

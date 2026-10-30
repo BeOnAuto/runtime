@@ -1,4 +1,5 @@
 import type { LinkToOpen, Outcome, RegisteredPlainLanguage } from '@on.auto/operations';
+import { drive, providersOf } from '@on.auto/providers/testing';
 import { Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -87,6 +88,21 @@ describe('the words of adding an MCP server given by hand that signs people in i
     );
     expect(linkingOf(h).toOpen(output)?.message).toBe(
       `Open this page to approve the connection “files”, and sign in at ${host}, within 24 hours.`,
+    );
+  });
+});
+
+describe('the words of adding a connection under the org’s own app', () => {
+  it('say the person gives the client of the org’s app before signing in, and ask an agent to have them open the page to do so', async () => {
+    const h = harness({ providers: providersOf(drive) });
+    const underTheOrgsApp = { provider: 'drive', credential: { kind: 'authorization', app: 'own' } };
+    const output = outputOf(await h.call(operationNamed(h.operations, 'add_connection'), ada, underTheOrgsApp));
+
+    expect(wordsOf(h, 'add_connection').outcome(output, underTheOrgsApp)).toBe(
+      "Added the connection “drive”. The person who added it approves it, and gives the client id and the client secret of the org's own app, registered with the provider, then signs in, on the page its link opens, within 24 hours; shown to them as a link named “Approve the Drive connection”, never as its address.",
+    );
+    expect(linkingOf(h).toOpen(output)?.message).toBe(
+      "Open this page to approve the connection “drive”, and give the client id and the client secret of the org's own app, registered with the provider, then sign in, within 24 hours.",
     );
   });
 });

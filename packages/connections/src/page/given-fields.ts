@@ -1,11 +1,11 @@
 import { InvalidInput, Unavailable, type Conflict, type Issue } from '@on.auto/operations';
-import type { SecretKeepingFailure } from '@on.auto/tool-servers';
+import { ClientIdSchema, type SecretKeepingFailure } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
 import { clientIdReadingIssuesOf, type EntryChecking } from '../entries/entry-checks.ts';
 import { givenFieldsOf, wordsOfThePage, type Given } from '../entries/given-values.ts';
-import { ConnectionIdField, TokenField } from '../operations/connection-fields.ts';
-import type { RecordedConnection } from '../registry/connection.ts';
+import { ConnectionIdField, NextClientIdField, TokenField } from '../operations/connection-fields.ts';
+import { ConnectionSchema, type RecordedConnection } from '../registry/connection.ts';
 import { connectedByConsent, takesNoCredential } from '../registry/registry-decisions.ts';
 import { unavailableWords } from './consent-words.ts';
 
@@ -33,6 +33,23 @@ export const GivingSchema = Schema.Struct({
 
 type Giving = typeof GivingSchema.Type;
 
+export const GivingTheClientSchema = Schema.Struct({
+  id: ConnectionIdField,
+  token: TokenField,
+  client_id: ClientIdSchema.annotate({
+    description: "The client id of the org's own app, as the provider issued it when the org registered the app",
+  }),
+  client_secret: GivenField.annotate({ description: "The client secret of the org's own app" }),
+});
+
+export const ClientGivenSchema = Schema.Struct({
+  ...ConnectionSchema.fields,
+  next_client_id: NextClientIdField,
+}).annotate({
+  identifier: 'ClientGivenConnection',
+  description: "The connection the client of the org's own app was given to, with its next client where it keeps one",
+});
+
 function refused(issues: readonly Issue[]): InvalidInput {
   return new InvalidInput({ detail: 'The credential cannot be taken as it is given', issues });
 }
@@ -45,6 +62,15 @@ export function unkeptRefusalOf(
   return _tag === 'secret_refused'
     ? refused([{ pointer, detail }])
     : new Unavailable({ detail: unavailableWords.credentialUnkept(name, detail) });
+}
+
+export function clientUnkeptOf(name: string, { _tag, detail }: SecretKeepingFailure): InvalidInput | Unavailable {
+  return _tag === 'secret_refused'
+    ? new InvalidInput({
+        detail: 'The client cannot be taken as it is given',
+        issues: [{ pointer: '/client_secret', detail }],
+      })
+    : new Unavailable({ detail: unavailableWords.clientUnkept(name, detail) });
 }
 
 function withAReadableClientId(

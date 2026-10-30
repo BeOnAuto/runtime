@@ -90,9 +90,9 @@ function driveOfferedWith(scopes: readonly string[]) {
 }
 
 describe('the providers of consent offered to a caller', () => {
-  it('take in a provider once a client registered at its issuer names every scope its way asks', () => {
+  it('take in a provider whether or not a client registered at its issuer names every scope its way asks, since the org’s own app covers it where none does', () => {
     expect([driveOfferedWith(['files.read']), driveOfferedWith(['files.write', 'files.read'])]).toEqual([
-      [],
+      ['drive'],
       ['drive'],
     ]);
   });

@@ -975,7 +975,7 @@
                               "connection"
                             ],
                             "additionalProperties": false,
-                            "description": "A connection added, connected, broken or removed, or asked for more"
+                            "description": "A connection added, connected, broken or removed, asked for more, or given the client of the org's own app"
                           }
                         ]
                       },
@@ -1881,6 +1881,13 @@
                       "scope": {
                         "type": "string",
                         "description": "For client_credentials, the scopes, separated by spaces, none when left out"
+                      },
+                      "app": {
+                        "type": "string",
+                        "enum": [
+                          "own"
+                        ],
+                        "description": "For a provider's authorization, own to connect under the org's own app there, its client id and secret given on the page; own by default where the way takes no other client here"
                       }
                     },
                     "required": [
@@ -2044,7 +2051,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -2094,9 +2101,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -2592,7 +2600,7 @@
                             "client_id": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                             },
                             "scope": {
                               "type": "string",
@@ -2642,9 +2650,10 @@
                                 "registered",
                                 "auto",
                                 "metadata_document",
-                                "dynamic"
+                                "dynamic",
+                                "own"
                               ],
-                              "description": "For authorization, the source of the client the connection was made with, once connected"
+                              "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                             }
                           },
                           "required": [
@@ -3118,7 +3127,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -3168,9 +3177,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -3640,7 +3650,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -3690,9 +3700,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -4162,7 +4173,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -4212,9 +4223,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -4529,7 +4541,7 @@
       "get": {
         "operationId": "read_link",
         "summary": "Read link",
-        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A token that is unknown, used up, expired or replaced is answered as not found.",
+        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A connection under the org's own app, its credential's client_source own, holds its credential's client_id once give_client gave the app's client, and until then the page asks for the client before the sign-in, showing return_address, the address its app registers as its callback, and answers next_client_id while it keeps a client given as its next. A token that is unknown, used up, expired or replaced is answered as not found.",
         "tags": [
           "connections"
         ],
@@ -4709,7 +4721,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -4759,9 +4771,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -5024,9 +5037,18 @@
                         "registered",
                         "auto",
                         "metadata_document",
-                        "dynamic"
+                        "dynamic",
+                        "own"
                       ],
-                      "description": "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service. Left out where the runtime has no client the way takes"
+                      "description": "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service, own where it runs under the org's own app. Left out where the runtime has no client the way takes"
+                    },
+                    "return_address": {
+                      "type": "string",
+                      "description": "For a connection under the org's own app, the address the runtime sends its authorization server as redirect_uri, which the app registers as its callback"
+                    },
+                    "next_client_id": {
+                      "type": "string",
+                      "description": "For a connection under the org's own app, the client id given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
                     }
                   },
                   "required": [
@@ -5298,7 +5320,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -5348,9 +5370,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -5849,7 +5872,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -5899,9 +5922,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -6179,11 +6203,555 @@
         ]
       }
     },
+    "/orgs/{org}/connections/{id}/client": {
+      "post": {
+        "operationId": "give_client",
+        "summary": "Give client",
+        "description": "Gives the client id and the client secret of the org's own app, an app the org registered with the provider, for a connection under that app, through its open link, before the person signs in. The runtime keeps the client secret sealed in its secret store, and no answer, record or history of the org ever holds it; the record keeps the client id. The link stays open, and its consent then starts with this client. A connection that holds no tokens yet, or is given the client id it runs under, takes the client at once, its secret replacing the one before; another client id given while it holds tokens is kept as its next client, which its next sign-in takes and which replaces its client once that sign-in finishes, so the record shows the client it runs under until then and next_client_id the client given. Where the secret store cannot keep the secret just now, it answers unavailable in the words of the store and keeps nothing. On a runtime that signs people in, only the person who added the connection may give it.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/give_client/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "description": "The token of the link add_connection or reconnect_connection gave"
+                  },
+                  "client_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The client id of the org's own app, as the provider issued it when the org registered the app"
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The client secret of the org's own app"
+                  }
+                },
+                "required": [
+                  "token",
+                  "client_id",
+                  "client_secret"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/give_client/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name a function gives the connection in server/tool"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mcp",
+                        "openapi"
+                      ],
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL of the MCP server"
+                        },
+                        "document": {
+                          "type": "string",
+                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                        },
+                        "base_url": {
+                          "type": "string",
+                          "description": "The https URL the API's calls go to, in place of its document's"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Headers sent with each request, never a secret or a reference"
+                        },
+                        "query_params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Query parameters sent with each call, never a secret or a reference"
+                        },
+                        "allowed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The tools a function may name; every tool when left out"
+                        },
+                        "playbooks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The playbooks that may use it, by id; every one when left out"
+                        },
+                        "record_content": {
+                          "type": "boolean",
+                          "description": "Whether calls are kept whole in the playbook's history; true when left out"
+                        },
+                        "request_id": {
+                          "type": "string",
+                          "description": "The header or result metadata key of the server's id of a call"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The tool server, without its credential"
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "reference",
+                            "secret",
+                            "client_credentials",
+                            "authorization"
+                          ]
+                        },
+                        "variable": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For secret and reference, the header, query parameter or security scheme the value is sent as"
+                        },
+                        "in": {
+                          "type": "string",
+                          "enum": [
+                            "header",
+                            "query",
+                            "security"
+                          ],
+                          "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
+                        },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                        },
+                        "client_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
+                        },
+                        "pkce": {
+                          "type": "string",
+                          "enum": [
+                            "none"
+                          ],
+                          "description": "For authorization, none where the server, its endpoints written out, takes no PKCE challenge, so a registered client that authenticates redeems the code without a verifier"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "auto",
+                            "metadata_document",
+                            "dynamic",
+                            "own"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false,
+                      "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "connected",
+                        "broken",
+                        "removed"
+                      ],
+                      "description": "pending until it is approved and its credential given, connected, broken or removed"
+                    },
+                    "added_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
+                    },
+                    "added_at": {
+                      "type": "string",
+                      "description": "When it was added, in ISO 8601 UTC"
+                    },
+                    "connected_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was connected, in ISO 8601 UTC"
+                    },
+                    "connected_by": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
+                    },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
+                    },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
+                    },
+                    "credential_ends_with": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value"
+                    },
+                    "broken": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why and since when it is broken, while it is"
+                    },
+                    "next_client_id": {
+                      "type": "string",
+                      "description": "For a connection under the org's own app, the client id given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "type",
+                    "provider",
+                    "placeholders",
+                    "entry",
+                    "credential",
+                    "status",
+                    "added_by",
+                    "added_at",
+                    "connected_at",
+                    "connected_by",
+                    "asked_scopes",
+                    "granted_scope",
+                    "granted_scopes",
+                    "credential_ends_with",
+                    "broken"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The connection the client of the org's own app was given to, with its next client where it keeps one"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/connections/{id}/consent": {
       "post": {
         "operationId": "start",
         "summary": "Start consent",
-        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
+        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before. A connection under the org's own app starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
         "tags": [
           "connections"
         ],
@@ -6260,9 +6828,10 @@
                         "registered",
                         "auto",
                         "metadata_document",
-                        "dynamic"
+                        "dynamic",
+                        "own"
                       ],
-                      "description": "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code"
+                      "description": "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code, and own where it began under the org's own app"
                     }
                   },
                   "required": [
@@ -6569,7 +7138,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -6619,9 +7188,10 @@
                             "registered",
                             "auto",
                             "metadata_document",
-                            "dynamic"
+                            "dynamic",
+                            "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
                         }
                       },
                       "required": [
@@ -7010,6 +7580,14 @@
                               "issuer": {
                                 "type": "string"
                               },
+                              "own_app": {
+                                "type": "string",
+                                "enum": [
+                                  "optional",
+                                  "required"
+                                ],
+                                "description": "For authorization, whether the person may connect under the org's own app, an app the org registers with the provider and gives the client id and client secret of on the page: optional, beside the client Auto or whoever runs it has there, or required, where the way connects under the org's own app alone, as it says or since no client here covers it"
+                              },
                               "scopes": {
                                 "type": "array",
                                 "items": {
@@ -7086,7 +7664,7 @@
                               },
                               "because": {
                                 "type": "string",
-                                "description": "Why the way is not offered, where it is not"
+                                "description": "Why the way is not offered, or why only under the org's own app"
                               }
                             },
                             "required": [

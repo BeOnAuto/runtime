@@ -41,6 +41,7 @@ describe('the changes the facts of the connections of an org make', () => {
       ['connections'],
       [
         'connection_added',
+        'connection_client_given',
         'connection_consent_started',
         'connection_connected',
         'connection_broken',
@@ -48,6 +49,20 @@ describe('the changes the facts of the connections of an org make', () => {
       ],
       false,
     ]);
+  });
+});
+
+describe('the change a client of the org’s own app makes', () => {
+  it('names the connection given it by its id, since its record holds the client id', () => {
+    expect(
+      catalog.changesOf({
+        id: 'm1',
+        stream: 'connections',
+        type: 'connection_client_given',
+        data: { connection: 'c3', client_id: 'org-app', secret_id: 'secret-4' },
+        context,
+      }),
+    ).toEqual([{ kind: 'connection', connection: 'c3' }]);
   });
 });
 

@@ -86,6 +86,10 @@ export function connectionShown(connection: RecordedConnection, endsWith: string
   return { ...connection, credential_ends_with: endsWith };
 }
 
+export function runsUnderTheOrgsApp({ credential }: Pick<RecordedConnection, 'credential'>): boolean {
+  return credential.client_source === 'own';
+}
+
 export function scopesSaid(scope: string | undefined, says: Readonly<Record<string, string>>): readonly SaidScope[] {
   return scopesIn(scope).map((name) => ({ name, says: says[name] ?? null }));
 }

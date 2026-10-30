@@ -1,6 +1,7 @@
 import type { ClientSource } from '@on.auto/tool-servers';
 
 import type {
+  ClientGiven,
   ConnectionAdded,
   ConnectionBroken,
   ConnectionConnected,
@@ -27,6 +28,11 @@ export interface StartedConsent {
   readonly expires_at: string;
 }
 
+export interface GivenClient {
+  readonly client_id: string;
+  readonly secret_id: string;
+}
+
 export interface KeptConnection {
   readonly connection: RecordedConnection;
   readonly link: OpenLink | undefined;
@@ -34,6 +40,8 @@ export interface KeptConnection {
   readonly consent: StartedConsent | undefined;
   readonly secretId: string | undefined;
   readonly algorithm: string | undefined;
+  readonly clientSecretId: string | undefined;
+  readonly nextClient: GivenClient | undefined;
 }
 
 export type Registry = ReadonlyMap<string, KeptConnection>;
@@ -66,6 +74,26 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     consent: undefined,
     secretId: undefined,
     algorithm: undefined,
+    clientSecretId: undefined,
+    nextClient: undefined,
+  };
+}
+
+function isTheNextClient({ connection, secretId }: KeptConnection, given: GivenClient): boolean {
+  return secretId !== undefined && given.client_id !== connection.credential.client_id;
+}
+
+function withClient(kept: KeptConnection, { data }: ClientGiven): KeptConnection {
+  const given = { client_id: data.client_id, secret_id: data.secret_id };
+  if (isTheNextClient(kept, given)) {
+    return { ...kept, nextClient: given };
+  }
+  const { connection } = kept;
+  return {
+    ...kept,
+    connection: { ...connection, credential: { ...connection.credential, client_id: given.client_id } },
+    clientSecretId: given.secret_id,
+    nextClient: undefined,
   };
 }
 
@@ -101,8 +129,13 @@ function credentialOf({ connection }: KeptConnection, { data }: ConnectionConnec
   };
 }
 
+function promotedOf({ nextClient }: KeptConnection, { data }: ConnectionConnected): GivenClient | undefined {
+  return nextClient?.client_id === data.client_id ? nextClient : undefined;
+}
+
 function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnection {
   const { data, context } = event;
+  const promoted = promotedOf(kept, event);
   return {
     connection: {
       ...kept.connection,
@@ -119,6 +152,8 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     consent: undefined,
     secretId: data.secret_id,
     algorithm: data.algorithm,
+    clientSecretId: promoted === undefined ? kept.clientSecretId : promoted.secret_id,
+    nextClient: promoted === undefined ? kept.nextClient : undefined,
   };
 }
 
@@ -140,6 +175,9 @@ function evolvedConnection(
 ): KeptConnection {
   if (event.type === 'connection_link_issued') {
     return withLink(kept, event);
+  }
+  if (event.type === 'connection_client_given') {
+    return withClient(kept, event);
   }
   if (event.type === 'connection_consent_started') {
     return withConsent(kept, event);
@@ -163,6 +201,26 @@ export function evolveRegistry(registry: Registry, event: RecordedConnectionEven
   }
   const kept = registry.get(event.data.connection);
   return kept === undefined ? registry : withConnection(registry, evolvedConnection(kept, event));
+}
+
+export function heldClientOf({ connection, clientSecretId }: KeptConnection): GivenClient | undefined {
+  const clientId = connection.credential.client_id;
+  return clientId === undefined || clientSecretId === undefined
+    ? undefined
+    : { client_id: clientId, secret_id: clientSecretId };
+}
+
+export function signingInClientOf(kept: KeptConnection): GivenClient | undefined {
+  return kept.nextClient ?? heldClientOf(kept);
+}
+
+export function clientSecretsHeldBy({ clientSecretId, nextClient }: KeptConnection): readonly string[] {
+  return [clientSecretId, nextClient?.secret_id].filter((secretId) => secretId !== undefined);
+}
+
+export function clientSecretsReleasedOf(before: KeptConnection, after: KeptConnection): readonly string[] {
+  const held = new Set(clientSecretsHeldBy(after));
+  return clientSecretsHeldBy(before).filter((secretId) => !held.has(secretId));
 }
 
 export function newestFirst(registry: Registry): readonly KeptConnection[] {

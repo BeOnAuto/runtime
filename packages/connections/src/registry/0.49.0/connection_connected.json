@@ -1,0 +1,18 @@
+{
+  "type": "connection_connected",
+  "data": {
+    "connection": "connection-1",
+    "secret_id": "secret-5",
+    "client_id": "org-app",
+    "client_source": "own",
+    "scope": "files.read",
+    "connected_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

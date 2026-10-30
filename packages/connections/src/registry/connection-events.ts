@@ -93,6 +93,11 @@ export const ConnectionEventSchema = Schema.Union([
     }),
     ActedContextSchema,
   ),
+  factOf(
+    'connection_client_given',
+    Schema.Struct({ ...ofTheConnection, client_id: Schema.String, secret_id: Schema.String }),
+    ActedContextSchema,
+  ),
   ConsentStartedSchema,
   factOf('connection_approved', Schema.Struct(ofTheConnection), ActedContextSchema),
   factOf(
@@ -123,6 +128,8 @@ export type ConnectionEvent = Decided<RecordedConnectionEvent>;
 export type ConnectionAdded = Extract<RecordedConnectionEvent, { readonly type: 'connection_added' }>;
 
 export type LinkIssued = Extract<RecordedConnectionEvent, { readonly type: 'connection_link_issued' }>;
+
+export type ClientGiven = Extract<RecordedConnectionEvent, { readonly type: 'connection_client_given' }>;
 
 export type ConsentStarted = Extract<RecordedConnectionEvent, { readonly type: 'connection_consent_started' }>;
 
