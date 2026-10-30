@@ -60,7 +60,7 @@ const RegisteredClientFieldsSchema = Schema.Struct({
       )
       .annotate({
         description:
-          "The scopes the client may ask at its issuers, each as a provider's way writes it: a way takes the first client at its issuer that names every scope the way asks. Named for each client where several clients serve one issuer, and left out for a client that may ask any",
+          "The scopes the client may ask at its issuers, each as a provider's way writes it: a consent takes the first client at its issuer that names every scope it asks, the scope of the way at a first consent, and with a group of the way's more the scopes the connection holds and the group's. Named for each client where several clients serve one issuer, and left out for a client that may ask any",
       }),
   ),
 });

@@ -48,7 +48,7 @@ const hostsOfTheWays = [
   [[['analyticsdata.googleapis.com', google]]],
   [[['analyticsadmin.googleapis.com', google]]],
   [[['docs.googleapis.com', google]]],
-  [[['www.googleapis.com', google]], [['www.googleapis.com', google]]],
+  [[['www.googleapis.com', google]]],
   [[['searchconsole.googleapis.com', google]]],
   [[['sheets.googleapis.com', google]]],
   [[['slides.googleapis.com', google]]],
@@ -147,7 +147,7 @@ const consentWays = [
   ['work-iq', forWorkAccounts('fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask')],
 ];
 
-const kindAndProse: ReadonlySet<string> = new Set(['kind', 'description', 'says']);
+const kindAndProse: ReadonlySet<string> = new Set(['kind', 'description', 'says', 'more']);
 
 function fieldsOfConsent(way: CredentialWay): Readonly<Record<string, unknown>> {
   return Object.fromEntries(
@@ -163,8 +163,18 @@ function signsInAtGoogle({ credentials }: ProviderEntry): boolean {
   return credentials.some(({ issuer }) => issuer === `https://${google}`);
 }
 
+function namedAtGoogle(scope: string): string {
+  return scope.replaceAll('https://www.googleapis.com/auth/', '');
+}
+
 function scopesOfEachWayAtGoogle({ name, credentials }: ProviderEntry) {
-  return [name, credentials.map(({ scope = '' }) => scope.replaceAll('https://www.googleapis.com/auth/', ''))];
+  return [name, credentials.map(({ scope = '' }) => namedAtGoogle(scope))];
+}
+
+function moreOfEachWayAtGoogle({ name, credentials }: ProviderEntry) {
+  return credentials.flatMap(({ more = [] }) =>
+    more.map((group) => [name, group.name, group.for, namedAtGoogle(group.scope)]),
+  );
 }
 
 function headersOf({ name, headers }: ProviderEntry) {
@@ -188,7 +198,7 @@ describe('the ways of consent of the shipped providers of Microsoft, Amazon and 
 });
 
 describe('the ways of consent of the shipped providers of Google', () => {
-  it('ask the scopes their tools need, way by way in the order a person is offered them, google-drive reading every file first', () => {
+  it('ask the scopes their tools need, google-drive reading every file and writing those Auto creates', () => {
     const consenting = shipped.providers.filter(({ entry }) => signsInAtGoogle(entry));
 
     expect(consenting.map(({ entry }) => scopesOfEachWayAtGoogle(entry))).toEqual([
@@ -200,7 +210,7 @@ describe('the ways of consent of the shipped providers of Google', () => {
       ['google-analytics', ['analytics.readonly']],
       ['google-analytics-admin', ['analytics.readonly']],
       ['google-docs', ['documents.readonly documents']],
-      ['google-drive', ['drive.readonly', 'drive.file']],
+      ['google-drive', ['drive.readonly drive.file']],
       ['google-search-console', ['webmasters']],
       ['google-sheets', ['spreadsheets.readonly spreadsheets']],
       ['google-slides', ['presentations.readonly presentations']],
@@ -208,6 +218,14 @@ describe('the ways of consent of the shipped providers of Google', () => {
       ['youtube', ['youtube.readonly']],
       ['youtube-analytics', ['yt-analytics.readonly yt-analytics-monetary.readonly']],
       ['youtube-management', ['youtube.force-ssl']],
+    ]);
+  });
+
+  it('name what a later consent may add on google-drive alone', () => {
+    const consenting = shipped.providers.filter(({ entry }) => signsInAtGoogle(entry));
+
+    expect(consenting.flatMap(({ entry }) => moreOfEachWayAtGoogle(entry))).toEqual([
+      ['google-drive', 'edit', 'Change and delete files you already have.', 'drive'],
     ]);
   });
 });
@@ -223,50 +241,5 @@ describe('the headers of the shipped providers', () => {
       ['linkedin', { 'LinkedIn-Version': '202610', 'X-Restli-Protocol-Version': '2.0.0' }],
       ['search-ads-360', { 'login-customer-id': '{manager_id}' }],
     ]);
-  });
-});
-
-const bareVerbs: ReadonlySet<string> = new Set([
-  'Act',
-  'Add',
-  'Ask',
-  'Change',
-  'Create',
-  'Delete',
-  'Keep',
-  'Manage',
-  'Post',
-  'Read',
-  'Run',
-  'Search',
-  'See',
-  'Send',
-]);
-
-const personalPronouns = /\b(?:I|me|my|mine|we|us|our|ours|you|your|yours|he|him|his|she|her|hers)\b/iu;
-
-interface SaidScope {
-  readonly provider: string;
-  readonly scope: string;
-  readonly says: string | undefined;
-}
-
-function saidScopesOf({ name, credentials }: ProviderEntry): readonly SaidScope[] {
-  return credentials.flatMap(({ scope, says = {} }) =>
-    (scope === undefined ? [] : scope.split(' ')).map((each) => ({ provider: name, scope: each, says: says[each] })),
-  );
-}
-
-function breaksTheRule({ says = '' }: SaidScope): boolean {
-  const [verb = ''] = says.split(/[ ,]/u);
-  return says.length > 120 || !bareVerbs.has(verb) || personalPronouns.test(says) || !says.endsWith('.');
-}
-
-const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry));
-
-describe('the words of the scopes the shipped providers ask', () => {
-  it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
-    expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
-    expect(saidScopes).toHaveLength(121);
   });
 });

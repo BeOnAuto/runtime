@@ -1,4 +1,5 @@
 import type { Outcome, Succeeded } from '@on.auto/operations';
+import type { Placeholder, ProviderEntry } from '@on.auto/providers';
 import type { ConsentClientOptions, RegisteredClient } from '@on.auto/tool-servers';
 import { consentedAt, registeredAt, type ClientRegistration, type FakeMcpServer } from '@on.auto/tool-servers/testing';
 
@@ -33,6 +34,18 @@ export interface TheVendor {
   readonly vendor: Vendor;
 }
 
+function firstValueOf({ example, choices = [] }: Placeholder): readonly string[] {
+  return [...(example === undefined ? [] : [example]), ...choices.map(({ value }) => value)].slice(0, 1);
+}
+
+export function examplesOf({ placeholders = {} }: ProviderEntry): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    Object.entries(placeholders).flatMap(([name, placeholder]: readonly [string, Placeholder]) =>
+      firstValueOf(placeholder).map((value) => [name, value]),
+    ),
+  );
+}
+
 export interface AtTheVendor {
   readonly providers: NonNullable<HarnessOptions['providers']>;
   readonly registeredIssuer: string | undefined;
@@ -41,7 +54,6 @@ export interface AtTheVendor {
 export interface ProviderAsked {
   readonly provider: string;
   readonly placeholders: Readonly<Record<string, string>>;
-  readonly scope: string | undefined;
 }
 
 export interface ConsentedAtTheVendor {
@@ -150,11 +162,10 @@ function authorizedAtTheFake(asked: Readonly<URL>, { fake, vendor }: TheVendor):
 
 export async function consentedAtTheVendor(
   h: Harness,
-  { provider, placeholders, scope }: ProviderAsked,
+  { provider, placeholders }: ProviderAsked,
   theVendor: TheVendor,
 ): Promise<ConsentedAtTheVendor> {
-  const credential = { kind: 'authorization', ...(scope === undefined ? {} : { scope }) };
-  const link = await added(h, { provider, placeholders, credential });
+  const link = await added(h, { provider, placeholders, credential: { kind: 'authorization' } });
   const asked = new URL((await startedAt(h, link)).url);
   const finished = await finishing(h, link, await consentedAt(authorizedAtTheFake(asked, theVendor)));
   return { asked, finished };

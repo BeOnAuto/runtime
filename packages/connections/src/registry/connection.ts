@@ -61,11 +61,11 @@ export const ConnectionSchema = Schema.Struct({
   }),
   asked_scopes: Schema.Array(SaidScopeSchema).annotate({
     description:
-      'The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none',
+      'The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none',
   }),
   granted_scope: Schema.NullOr(Schema.String).annotate({
     description:
-      'For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null',
+      'For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null',
   }),
   granted_scopes: Schema.NullOr(Schema.Array(SaidScopeSchema)).annotate({
     description:
@@ -88,6 +88,15 @@ export function connectionShown(connection: RecordedConnection, endsWith: string
 
 export function scopesSaid(scope: string | undefined, says: Readonly<Record<string, string>>): readonly SaidScope[] {
   return scopesIn(scope).map((name) => ({ name, says: says[name] ?? null }));
+}
+
+export function scopesAddedTo(
+  asked: readonly SaidScope[],
+  scope: string | undefined,
+  says: Readonly<Record<string, string>>,
+): readonly SaidScope[] {
+  const named = new Set(asked.map(({ name }) => name));
+  return [...asked, ...scopesSaid(scope, says).filter(({ name }) => !named.has(name))];
 }
 
 export function wordsOf(scopes: readonly SaidScope[]): Readonly<Record<string, string>> {

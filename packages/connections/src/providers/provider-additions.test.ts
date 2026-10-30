@@ -100,26 +100,21 @@ describe('a connection added by hand', () => {
 });
 
 describe('the input of a connection added by a provider', () => {
-  it('refuses the server and every field of the credential but its kind and its scope, and the client id the person gives on the page', async () => {
+  it('refuses the server and every field of the credential but its kind, its scope among them, and the client id the person gives on the page', async () => {
     const given = {
       ...acmeTracker,
       type: 'mcp',
       entry: { url: 'https://elsewhere.example.com/mcp', headers: { 'X-Tenant': 'acme' } },
-      credential: { kind: 'secret', name: 'X-Key', in: 'header', client_id: 'acme' },
+      credential: { kind: 'secret', name: 'X-Key', in: 'header', scope: 'issues.read', client_id: 'acme' },
     };
 
     expect(issuesIn(await adding(harness(), given))).toEqual([
       { pointer: '/type', detail: 'Expected no type: the provider gives it' },
       { pointer: '/entry/url', detail: 'Expected no url: the provider gives the server' },
       { pointer: '/entry/headers', detail: 'Expected no headers: the provider gives the server' },
-      {
-        pointer: '/credential/name',
-        detail: 'Expected no name: the provider gives the credential but its kind and its scope',
-      },
-      {
-        pointer: '/credential/in',
-        detail: 'Expected no in: the provider gives the credential but its kind and its scope',
-      },
+      { pointer: '/credential/name', detail: 'Expected no name: the provider gives the credential but its kind' },
+      { pointer: '/credential/in', detail: 'Expected no in: the provider gives the credential but its kind' },
+      { pointer: '/credential/scope', detail: 'Expected no scope: the provider gives the credential but its kind' },
       { pointer: '/credential/client_id', detail: 'Expected no client_id: the person gives the client id on the page' },
     ]);
   });

@@ -2,18 +2,10 @@ import { alternatives, articled, listed } from '@on.auto/operations';
 import { WayClientSourceSchema, WayPkceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, notScopes, wordsIssuesOf } from './scope-groups.ts';
 import { wayAddresses, type WayAddress } from './templates.ts';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
-
-const mostScopeWordsCharacters = 120;
-
-const ScopeWordsSchema = Schema.String.check(
-  Schema.isMaxLength(mostScopeWordsCharacters),
-  Schema.isPattern(/^[A-Z][^.]*(?:\.[^.\s][^.]*)*\.$/u, {
-    expected: 'one sentence that opens with a capital letter and ends with its one period',
-  }),
-);
 
 export const wayFields = {
   in: Schema.Literals(['header', 'query', 'security']),
@@ -27,7 +19,8 @@ export const wayFields = {
   revocation_endpoint: Schema.String,
   pkce: WayPkceSchema,
   clients: Schema.Array(WayClientSourceSchema),
-  says: Schema.Record(Schema.String, ScopeWordsSchema),
+  says: ScopeWordsSchema,
+  more: Schema.Array(ScopeGroupSchema).check(Schema.isMinLength(1)),
 };
 
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
@@ -58,6 +51,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   pkce: Schema.optionalKey(wayFields.pkce),
   clients: Schema.optionalKey(wayFields.clients),
   says: Schema.optionalKey(wayFields.says),
+  more: Schema.optionalKey(wayFields.more),
   description: Schema.optionalKey(NamedSchema),
 });
 
@@ -87,6 +81,7 @@ const everyField: readonly Field[] = [
   'pkce',
   'clients',
   'says',
+  'more',
 ];
 
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
@@ -95,14 +90,9 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   none: { required: [], optional: [] },
   authorization: {
     required: ['issuer'],
-    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients'],
+    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'more'],
   },
 };
-
-export function asksAScope(kind: WayKind): boolean {
-  const { required, optional } = fieldsOfEachKind[kind];
-  return [...required, ...optional].includes('scope');
-}
 
 const parametersTheRequestSets: ReadonlySet<string> = new Set([
   'response_type',
@@ -122,6 +112,8 @@ interface WayIssue {
   readonly path: readonly string[];
   readonly issue: string;
 }
+
+type EntryIssue = Schema.FilterIssue;
 
 export interface ConsentFields extends Partial<Readonly<Record<ConsentEndpoint, string>>> {
   readonly scope?: string;
@@ -149,9 +141,7 @@ function presenceIssuesOf(way: CredentialWayFields): readonly WayIssue[] {
 }
 
 function scopeIssuesOf({ scope }: ConsentFields): readonly WayIssue[] {
-  return scope === undefined || isScope(scope)
-    ? []
-    : [{ path: ['scope'], issue: 'Expected scopes separated by single spaces, such as files.read mail.send' }];
+  return scope === undefined || isScope(scope) ? [] : [{ path: ['scope'], issue: notScopes }];
 }
 
 function parameterIssuesOf({ parameters = {} }: ConsentFields): readonly WayIssue[] {
@@ -225,32 +215,9 @@ export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
   ];
 }
 
-export function scopesIn(scope: string | undefined): readonly string[] {
-  return scope === undefined ? [] : scope.split(' ');
-}
-
-export function asksTheSameScopes(one: string | undefined, other: string | undefined): boolean {
-  return new Set(scopesIn(one)).symmetricDifference(new Set(scopesIn(other))).size === 0;
-}
-
-function wordsIssuesOf({ scope, says = {} }: CredentialWayFields): readonly WayIssue[] {
-  const asked = scope === undefined || isScope(scope) ? scopesIn(scope) : Object.keys(says);
-  return [
-    ...asked
-      .filter((name) => !Object.hasOwn(says, name))
-      .map((name) => ({
-        path: ['says'],
-        issue: `Expected words for the scope ${name}: one sentence of at most ${mostScopeWordsCharacters} characters that says what a connection can do through it`,
-      })),
-    ...Object.keys(says)
-      .filter((name) => !asked.includes(name))
-      .map((name) => ({ path: ['says', name], issue: 'Expected words only for a scope the way asks' })),
-  ];
-}
-
-function wayIssuesOf(way: CredentialWayFields): readonly WayIssue[] {
-  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way)];
-  return way.kind === 'authorization' ? [...issues, ...consentIssuesOf(way)] : issues;
+function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
+  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says)];
+  return way.kind === 'authorization' ? [...issues, ...consentIssuesOf(way), ...groupIssuesOf(way)] : issues;
 }
 
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));

@@ -48,6 +48,8 @@ export interface ConsentStart extends LinkUse {
   readonly client_id: string;
   readonly client_source: ClientSource;
   readonly expires_at: string;
+  readonly scope: string | undefined;
+  readonly says: Readonly<Record<string, string>>;
 }
 
 export interface ConsentFinish extends Connecting {

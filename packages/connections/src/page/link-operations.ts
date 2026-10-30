@@ -1,14 +1,20 @@
-import { defineHttpOperation } from '@on.auto/operations';
-import type { ConsentClient } from '@on.auto/tool-servers';
-import { Effect, Schema } from 'effect';
+import { defineHttpOperation, type Conflict } from '@on.auto/operations';
+import { Effect, Result, Schema } from 'effect';
 
-import { studioBaseFor, type ConnectPages } from '../links/connect-page.ts';
 import { tokenSha256Of } from '../links/link-token.ts';
-import { ClientSourceField, ConnectionIdField, ExpiresAtField, TokenField } from '../operations/connection-fields.ts';
+import {
+  ClientSourceField,
+  ConnectionIdField,
+  ExpiresAtField,
+  GroupOfMoreSchema,
+  TokenField,
+} from '../operations/connection-fields.ts';
+import type { ConnectionServices } from '../operations/connection-services.ts';
 import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
-import { ConnectionSchema, connectionShown, type RecordedConnection } from '../registry/connection.ts';
-import { isOpenConsent, linkedConnectionOf } from '../registry/registry-lookup.ts';
-import { wayOf } from './consent-asking.ts';
+import { keptAskedOf, moreAskedOf, noLongerNamed, type AskedMore } from '../providers/asking-more.ts';
+import { ConnectionSchema, connectionShown, scopesAddedTo } from '../registry/connection.ts';
+import { isOpenConsent, linkedConnectionOf, type KeptWithLink } from '../registry/registry-lookup.ts';
+import { isCoveredHere, sourceOfAStartOf, sourcesFor, type Sources } from './consent-asking.ts';
 
 export const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
@@ -16,7 +22,18 @@ const answeringTheRecord = { kind: 'json', outputSchema: ConnectionSchema } as c
 
 const LinkedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
-  link: Schema.Struct({ expires_at: ExpiresAtField }),
+  asked_scopes: ConnectionSchema.fields.asked_scopes.annotate({
+    description:
+      'The scopes the connection asked, and beside them those the consent this link starts asks, each with what a connection can do through it; empty where it asks none',
+  }),
+  link: Schema.Struct({
+    expires_at: ExpiresAtField,
+    more: Schema.optionalKey(
+      GroupOfMoreSchema.annotate({
+        description: 'The group of more the link asks beside what the connection holds, where it was given for one',
+      }),
+    ),
+  }),
   consent: Schema.optionalKey(
     Schema.Struct({
       started_at: Schema.String.annotate({ description: 'When the consent was started, in ISO 8601 UTC' }),
@@ -34,19 +51,44 @@ const LinkedSchema = Schema.Struct({
   description: 'The connection an open link names, and when the link expires',
 });
 
-interface LinkReading {
-  readonly consent: Pick<ConsentClient, 'hadSources'>;
-  readonly pages: ConnectPages;
+type LinkReading = Pick<ConnectionServices, 'consent' | 'pages' | 'providers'>;
+
+type Linked = KeptWithLink['connection'];
+
+interface AskedOfTheLink {
+  readonly scope: string | undefined;
+  readonly says: Readonly<Record<string, string>>;
+  readonly group?: AskedMore['group'];
 }
 
-function sourceOfAStart(connection: RecordedConnection, { consent, pages }: LinkReading) {
-  if (connection.credential.kind !== 'authorization') {
-    return Effect.succeed({});
-  }
-  return Effect.map(consent.hadSources(studioBaseFor(pages)), ({ sourceOf }) => {
-    const source = sourceOf(wayOf(connection));
-    return source === undefined ? {} : { client_source: source };
-  });
+function askedOfALinkForMore(
+  connection: Linked,
+  providers: LinkReading['providers'],
+  more: string,
+): Result.Result<AskedOfTheLink, Conflict> {
+  const asked = moreAskedOf(connection, providers, more);
+  return asked === undefined ? Result.fail(noLongerNamed(connection, more)) : Result.succeed(asked);
+}
+
+function keptUnlessUncovered(connection: Linked, sources: Sources): string | undefined {
+  const kept = keptAskedOf(connection);
+  return kept === connection.credential.scope || isCoveredHere(connection, kept, sources)
+    ? kept
+    : connection.credential.scope;
+}
+
+export function askedOfTheLink(
+  { connection, link }: KeptWithLink,
+  providers: LinkReading['providers'],
+  sources: Sources,
+): Result.Result<AskedOfTheLink, Conflict> {
+  return link.more === undefined
+    ? Result.succeed({ scope: keptUnlessUncovered(connection, sources), says: {} })
+    : askedOfALinkForMore(connection, providers, link.more);
+}
+
+function moreOfTheLink({ group }: AskedOfTheLink) {
+  return group === undefined ? {} : { more: { name: group.name, for: group.for } };
 }
 
 export function defineReadLink(reading: LinkReading) {
@@ -56,6 +98,7 @@ export function defineReadLink(reading: LinkReading) {
     description: [
       "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
       'A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it.',
+      "A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
       'A token that is unknown, used up, expired or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
@@ -63,7 +106,7 @@ export function defineReadLink(reading: LinkReading) {
     permittedBy: ['org:write'],
     inputSchema: LinkSchema,
     answer: { kind: 'json', outputSchema: LinkedSchema },
-    reasons: ['not_found'],
+    reasons: ['not_found', 'conflict'],
     handle: Effect.fnUntraced(function* ({ id, token }) {
       const registry = yield* loadRegistry;
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson: false };
@@ -71,13 +114,17 @@ export function defineReadLink(reading: LinkReading) {
       const kept = yield* Effect.fromResult(linkedConnectionOf(registry, use, acted)).pipe(
         Effect.catchTag('forbidden', Effect.die),
       );
+      const sources = yield* sourcesFor(kept.connection, reading);
+      const asked = yield* Effect.fromResult(askedOfTheLink(kept, reading.providers, sources));
       const started = isOpenConsent(kept, acted.at)
         ? { consent: { started_at: kept.consent.started_at, expires_at: kept.consent.expires_at } }
         : {};
-      const source = yield* sourceOfAStart(kept.connection, reading);
+      const source = sourceOfAStartOf(kept.connection, asked.scope, sources);
+      const shown = connectionShown(kept.connection, null);
       return {
-        ...connectionShown(kept.connection, null),
-        link: { expires_at: kept.link.expires_at },
+        ...shown,
+        asked_scopes: scopesAddedTo(shown.asked_scopes, asked.scope, asked.says),
+        link: { expires_at: kept.link.expires_at, ...moreOfTheLink(asked) },
         ...started,
         ...source,
       };

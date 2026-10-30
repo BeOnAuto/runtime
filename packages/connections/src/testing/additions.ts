@@ -110,3 +110,11 @@ export function reconnecting(h: Harness, id: string, at?: string): Promise<Outco
 export async function reconnected(h: Harness, id: string, at?: string): Promise<Added> {
   return linkedIn(await reconnecting(h, id, at));
 }
+
+export function reconnectingFor(h: Harness, id: string, more: string, at?: string): Promise<Outcome<Succeeded>> {
+  return h.call(operationNamed(h.operations, 'reconnect_connection'), ada, { id, more }, at);
+}
+
+export async function reconnectedFor(h: Harness, id: string, more: string, at?: string): Promise<Added> {
+  return linkedIn(await reconnectingFor(h, id, more, at));
+}

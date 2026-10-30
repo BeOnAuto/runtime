@@ -102,22 +102,19 @@ describe('the ways of an entry', () => {
     ]);
   });
 
-  it('are at least one, and of one kind each, or told apart by the scopes each asks', () => {
+  it('are at least one, and one of each kind, two of a kind refused whatever scopes they ask', () => {
     const [consent] = drive.credentials;
     const readingAlone = { ...consent, scope: 'files.read', says: { 'files.read': 'Read the files of the account.' } };
-    const reordered = { ...consent, scope: 'files.write files.read' };
-    const noneTwice =
-      'Expected a kind no other way has, since a none way asks no scope by which a caller would tell two apart';
-    const scopeTwice =
-      'Expected a scope no other authorization way asks, by which a caller tells two ways of one kind apart';
+    const kindTwice =
+      'Expected a kind no earlier way has, since a provider takes one way of each kind, and an authorization way names in more what a later consent may add';
 
     expect(problemsOf({ ...tracker, credentials: [] })).toMatchObject([['/credentials', expect.any(String)]]);
     expect(problemsOf({ ...tracker, credentials: [{ kind: 'none' }, { kind: 'none', description: 'Again' }] })).toEqual(
-      [['/credentials/1/kind', noneTwice]],
+      [['/credentials/1/kind', kindTwice]],
     );
-    expect(problemsOf({ ...drive, credentials: [consent, readingAlone] })).toEqual([]);
-    expect(problemsOf({ ...drive, credentials: [consent, readingAlone, reordered] })).toEqual([
-      ['/credentials/2/scope', scopeTwice],
+    expect(problemsOf({ ...drive, credentials: [consent, { kind: 'none' }, readingAlone, consent] })).toEqual([
+      ['/credentials/2/kind', kindTwice],
+      ['/credentials/3/kind', kindTwice],
     ]);
   });
 });

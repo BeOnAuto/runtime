@@ -66,6 +66,7 @@ const started: ConnectionEvent = {
     client_id: 'auto-runtime',
     client_source: 'registered',
     expires_at: '2026-10-15T14:10:00.000Z',
+    says: {},
   },
 };
 
@@ -204,6 +205,77 @@ describe('the scopes of a connection of consent, as the stream folds them', () =
     ]).toEqual([
       { asked: 'files.read files.write', granted: null },
       { asked: 'files.read files.write', granted: 'files.read' },
+    ]);
+  });
+});
+
+const readWords = 'Read the files of the account.';
+
+const shareWords = 'Share the files of the account with other people.';
+
+const addedWithWords: ConnectionEvent = {
+  ...askingToReadAndWrite,
+  data: { ...askingToReadAndWrite.data, says: { 'files.read': readWords } },
+};
+
+const askingToShare: ConnectionEvent = {
+  ...started,
+  data: { ...started.data, scope: 'files.read files.share', says: { 'files.share': shareWords } },
+};
+
+const grantedTheShare: ConnectionEvent = {
+  ...grantedTheRead,
+  data: { ...grantedTheRead.data, scope: 'files.read files.share' },
+};
+
+describe('the fold of a consent that asks more', () => {
+  it('adds to the scopes asked those the consent asks beyond them, with the words it records, and keeps its scope with the open consent', () => {
+    const kept = fold(addedWithWords, linkIssued, askingToShare);
+
+    expect([kept?.connection.asked_scopes, kept?.consent?.scope, kept?.connection.credential.scope]).toEqual([
+      [
+        { name: 'files.read', says: readWords },
+        { name: 'files.write', says: null },
+        { name: 'files.share', says: shareWords },
+      ],
+      'files.read files.share',
+      'files.read files.write',
+    ]);
+  });
+
+  it('takes the words of what it was granted from the grown scopes asked once it finishes', () => {
+    const connected = fold(addedWithWords, linkIssued, askingToShare, grantedTheShare)?.connection;
+
+    expect([connected?.granted_scope, connected?.granted_scopes]).toEqual([
+      'files.read files.share',
+      [
+        { name: 'files.read', says: readWords },
+        { name: 'files.share', says: shareWords },
+      ],
+    ]);
+  });
+
+  it('reads a start that names no scope as one that asks the scope of the credential, and adds nothing to the scopes asked', () => {
+    const kept = fold(addedWithWords, linkIssued, started);
+
+    expect([kept?.consent?.scope, kept?.connection.asked_scopes]).toEqual([
+      'files.read files.write',
+      [
+        { name: 'files.read', says: readWords },
+        { name: 'files.write', says: null },
+      ],
+    ]);
+  });
+});
+
+describe('a link given for a group of more, as the stream folds it', () => {
+  it('names the group, and a plain link after it names none', () => {
+    const forMore: ConnectionEvent = { ...linkIssued, data: { ...linkIssued.data, more: 'share' } };
+    const plain: ConnectionEvent = { ...linkIssued, data: { ...linkIssued.data, token_sha256: 'e5f6' } };
+
+    expect([fold(driveAdded, forMore)?.link, fold(driveAdded, forMore, plain)?.link]).toEqual([
+      { token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z', more: 'share' },
+      { token_sha256: 'e5f6', expires_at: '2026-10-16T14:00:00.000Z' },
     ]);
   });
 });

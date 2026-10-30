@@ -82,11 +82,12 @@ export function finishedConnectionOf(
 }
 
 function decideStart(command: ConsentStart & CommandMetadata, registry: Registry): Decision {
-  const { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at } = command;
+  const { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at, scope, says } = command;
+  const asked = scope === undefined ? {} : { scope };
   return Result.map(startableConnectionOf(registry, command, command), () => [
     {
       type: 'connection_consent_started',
-      data: { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at },
+      data: { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at, ...asked, says },
     },
   ]);
 }

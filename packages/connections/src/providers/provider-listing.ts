@@ -97,7 +97,7 @@ function placeholdersOf({ entry }: Provider): readonly ListedPlaceholder[] {
 
 function wayOfferingOf(way: CredentialWay, offering: Offering, { entry }: Provider, listing: Listing): Offering {
   const unsetUp = offering.offered ? consentUnsetUpOf(entry.name, way, listing.consent) : undefined;
-  return unsetUp === undefined ? offering : { offered: false, because: unsetUp.detail };
+  return unsetUp === undefined ? offering : { offered: false, because: unsetUp };
 }
 
 export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Listing): boolean {
@@ -107,11 +107,17 @@ export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Li
   );
 }
 
-function scopesSaidBy({
-  scope,
-  says = {},
-}: CredentialWay): readonly { readonly name: string; readonly says: unknown }[] {
+interface Said {
+  readonly scope?: string;
+  readonly says?: Readonly<Record<string, string>>;
+}
+
+function scopesSaidBy({ scope, says = {} }: Said): readonly { readonly name: string; readonly says: unknown }[] {
   return scopesIn(scope).map((name) => ({ name, says: says[name] }));
+}
+
+function moreSaidBy({ more = [] }: CredentialWay) {
+  return more.map((group) => ({ name: group.name, for: group.for, scopes: scopesSaidBy(group) }));
 }
 
 function listedProviderOf(provider: Provider, listing: Listing): readonly ListedProvider[] {
@@ -120,7 +126,12 @@ function listedProviderOf(provider: Provider, listing: Listing): readonly Listed
   const ways = credentials
     .filter((way) => isListed(provider, way, listing.policy))
     .map((way) =>
-      listedWayOf({ ...way, scopes: scopesSaidBy(way), ...wayOfferingOf(way, offering, provider, listing) }),
+      listedWayOf({
+        ...way,
+        scopes: scopesSaidBy(way),
+        more: moreSaidBy(way),
+        ...wayOfferingOf(way, offering, provider, listing),
+      }),
     );
   return ways.length === 0
     ? []

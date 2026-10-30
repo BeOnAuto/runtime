@@ -3,12 +3,12 @@ export {
   consentEndpoints,
   consentIssuesOf,
   holdsAClientId,
-  scopesIn,
   wayFields,
   type ConsentFields,
   type CredentialWay,
   type WayKind,
 } from './entry/credential-ways.ts';
+export { scopesIn, scopeWith, type ScopeGroup } from './entry/scope-groups.ts';
 export { wayAddresses, type WayAddress } from './entry/templates.ts';
 export { clientIdPlaceholder, type Choice, type Placeholder } from './entry/placeholders.ts';
 export {

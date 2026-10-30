@@ -412,7 +412,7 @@
                   "minLength": 1
                 },
                 "minItems": 1,
-                "description": "The scopes the client may ask at its issuers, each as a provider's way writes it: a way takes the first client at its issuer that names every scope the way asks. Named for each client where several clients serve one issuer, and left out for a client that may ask any"
+                "description": "The scopes the client may ask at its issuers, each as a provider's way writes it: a consent takes the first client at its issuer that names every scope it asks, the scope of the way at a first consent, and with a group of the way's more the scopes the connection holds and the group's. Named for each client where several clients serve one issuer, and left out for a client that may ask any"
               }
             },
             "required": ["issuers", "client_id"],
@@ -594,6 +594,41 @@
                         "pattern": "^[A-Z][^.]*(?:\\.[^.\\s][^.]*)*\\.$"
                       }
                     },
+                    "more": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]{0,31}$",
+                            "description": "The name a tool and a consent that asks more name the group by"
+                          },
+                          "for": {
+                            "type": "string",
+                            "maxLength": 120,
+                            "pattern": "^[A-Z][^.]*(?:\\.[^.\\s][^.]*)*\\.$",
+                            "description": "What the group is for, in one sentence of the person's words"
+                          },
+                          "scope": {
+                            "type": "string",
+                            "description": "The scopes it adds to those the way asks, separated by single spaces"
+                          },
+                          "says": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string",
+                              "maxLength": 120,
+                              "pattern": "^[A-Z][^.]*(?:\\.[^.\\s][^.]*)*\\.$"
+                            },
+                            "description": "What a connection can do through each scope it adds, by the scope"
+                          }
+                        },
+                        "required": ["name", "for", "scope", "says"],
+                        "additionalProperties": false
+                      },
+                      "minItems": 1
+                    },
                     "description": {
                       "type": "string",
                       "minLength": 1
@@ -603,7 +638,7 @@
                   "additionalProperties": false
                 },
                 "minItems": 1,
-                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default: secret, client_credentials, none or authorization, two of one kind told apart by the scope each asks; a way that asks a scope says, beside it, what a connection can do through each scope"
+                "description": "The ways a credential reaches the server, in the order a person is offered them, the first the default, each of its own kind: secret, client_credentials, none or authorization; a way that asks a scope says, beside it, what a connection can do through each scope, and an authorization way that asks a scope may name in more the groups of scopes a later consent may add to it"
               }
             },
             "required": ["name", "title", "description", "website", "type", "credentials"],

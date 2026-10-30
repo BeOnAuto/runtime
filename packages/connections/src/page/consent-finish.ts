@@ -85,7 +85,7 @@ function redeemedOf(
     if (verifier === undefined) {
       return yield* Effect.fail(noOpenConsent(kept.connection.name));
     }
-    const asked = consentAskedOf(kept.connection, services);
+    const asked = consentAskedOf(kept.connection, services, kept.consent.scope);
     const client = { client_id: clientId, client_source: clientSource };
     return yield* consent
       .finish({ ...asked, client, ...returnedFieldsOf(finishing), verifier: verifier.value })

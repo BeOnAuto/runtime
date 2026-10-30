@@ -8,12 +8,13 @@ import type {
   LinkIssued,
   RecordedConnectionEvent,
 } from './connection-events.ts';
-import { scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
+import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
 import type { Credential } from './credential.ts';
 
 export interface OpenLink {
   readonly token_sha256: string;
   readonly expires_at: string;
+  readonly more?: string;
 }
 
 export interface StartedConsent {
@@ -21,6 +22,7 @@ export interface StartedConsent {
   readonly verifier_secret_id: string;
   readonly client_id: string;
   readonly client_source: ClientSource;
+  readonly scope: string | undefined;
   readonly started_at: string;
   readonly expires_at: string;
 }
@@ -67,11 +69,13 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
   };
 }
 
-function withConsent(kept: KeptConnection, { data, context }: ConsentStarted): KeptConnection {
-  const { state_sha256, verifier_secret_id, client_id, client_source, expires_at } = data;
+function withConsent({ connection, ...kept }: KeptConnection, { data, context }: ConsentStarted): KeptConnection {
+  const { state_sha256, verifier_secret_id, client_id, client_source, expires_at, says } = data;
+  const scope = data.scope ?? connection.credential.scope;
   return {
     ...kept,
-    consent: { state_sha256, verifier_secret_id, client_id, client_source, started_at: context.at, expires_at },
+    connection: { ...connection, asked_scopes: scopesAddedTo(connection.asked_scopes, scope, says) },
+    consent: { state_sha256, verifier_secret_id, client_id, client_source, scope, started_at: context.at, expires_at },
   };
 }
 
@@ -80,9 +84,10 @@ function replacedLinksOf({ link, replacedLinks }: KeptConnection): ReadonlySet<s
 }
 
 function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
+  const { token_sha256: tokenSha256, expires_at: expiresAt, more } = data;
   return {
     ...kept,
-    link: { token_sha256: data.token_sha256, expires_at: data.expires_at },
+    link: { token_sha256: tokenSha256, expires_at: expiresAt, ...(more === undefined ? {} : { more }) },
     replacedLinks: replacedLinksOf(kept),
   };
 }

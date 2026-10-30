@@ -88,6 +88,23 @@ export async function consentedOf(h: Harness, link: Added, at?: string): Promise
   return consentedAt((await startedAt(h, link, at)).url);
 }
 
+export async function connectedThrough(h: Harness, link: Added, at?: string): Promise<Outcome<Succeeded>> {
+  return finishing(h, link, await consentedOf(h, link, at), at);
+}
+
+export async function scopeAskedAt(h: Harness, link: Added, at?: string): Promise<string | null> {
+  return new URL((await startedAt(h, link, at)).url).searchParams.get('scope');
+}
+
+export const sharing = {
+  name: 'share',
+  for: 'Share your files with other people.',
+  scope: 'files.share',
+  says: { 'files.share': 'Share the files of the account with other people.' },
+};
+
+export const sharingWay = { ...filesWay, more: [sharing] };
+
 export function filesApiAt(fake: FakeMcpServer) {
   return providerOf({
     name: 'files-api',

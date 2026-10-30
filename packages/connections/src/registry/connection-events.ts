@@ -1,4 +1,11 @@
-import { ActedContextSchema, RecordedCallerSchema, factOf, type Decided } from '@on.auto/operations';
+import {
+  ActedContextSchema,
+  RecordedCallerSchema,
+  earlierShapeOf,
+  factOf,
+  readingEarlierShapes,
+  type Decided,
+} from '@on.auto/operations';
 import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -31,6 +38,35 @@ function clientIssuesOf({ provider, credential }: Credentialled): readonly Schem
       ];
 }
 
+const startedFields = {
+  ...ofTheConnection,
+  state_sha256: Schema.String,
+  verifier_secret_id: Schema.String,
+  client_id: Schema.String,
+  client_source: ClientSourceSchema,
+  expires_at: Schema.String,
+};
+
+const ConsentStartedBefore = factOf('connection_consent_started', Schema.Struct(startedFields), ActedContextSchema);
+
+const ConsentStartedNow = factOf(
+  'connection_consent_started',
+  Schema.Struct({
+    ...startedFields,
+    scope: Schema.optionalKey(Schema.String),
+    says: Schema.Record(Schema.String, Schema.String),
+  }),
+  ActedContextSchema,
+);
+
+function askingTheCredentialsScope({ data, ...fact }: typeof ConsentStartedBefore.Type): typeof ConsentStartedNow.Type {
+  return { ...fact, data: { ...data, says: {} } };
+}
+
+export const ConsentStartedSchema = readingEarlierShapes(ConsentStartedNow, [
+  earlierShapeOf(ConsentStartedBefore, askingTheCredentialsScope),
+]);
+
 export const ConnectionEventSchema = Schema.Union([
   factOf(
     'connection_added',
@@ -49,21 +85,15 @@ export const ConnectionEventSchema = Schema.Union([
   ),
   factOf(
     'connection_link_issued',
-    Schema.Struct({ ...ofTheConnection, token_sha256: Schema.String, expires_at: Schema.String }),
-    ActedContextSchema,
-  ),
-  factOf(
-    'connection_consent_started',
     Schema.Struct({
       ...ofTheConnection,
-      state_sha256: Schema.String,
-      verifier_secret_id: Schema.String,
-      client_id: Schema.String,
-      client_source: ClientSourceSchema,
+      token_sha256: Schema.String,
       expires_at: Schema.String,
+      more: Schema.optionalKey(Schema.String),
     }),
     ActedContextSchema,
   ),
+  ConsentStartedSchema,
   factOf('connection_approved', Schema.Struct(ofTheConnection), ActedContextSchema),
   factOf(
     'connection_connected',

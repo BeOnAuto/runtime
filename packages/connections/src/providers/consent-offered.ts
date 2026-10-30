@@ -20,19 +20,11 @@ function scopelessOf({ scope: _scope, ...way }: WayOfConsent): WayOfConsent {
   return way;
 }
 
-export interface ConsentUnsetUp {
-  readonly detail: string;
-  readonly scopeUncovered: boolean;
-}
-
-export function consentUnsetUpOf(provider: string, way: WayOfConsent, consent: HadSources): ConsentUnsetUp | undefined {
+export function consentUnsetUpOf(provider: string, way: WayOfConsent, consent: HadSources): string | undefined {
   if (!isConsentUnsetUp(way, consent)) {
     return undefined;
   }
   return isConsentUnsetUp(scopelessOf(way), consent)
-    ? { detail: `${throughARegisteredClient(provider)}, which is not set up here`, scopeUncovered: false }
-    : {
-        detail: `${throughARegisteredClient(provider)}, and no client set up here covers every scope its way asks, ${String(way.scope)}`,
-        scopeUncovered: true,
-      };
+    ? `${throughARegisteredClient(provider)}, which is not set up here`
+    : `${throughARegisteredClient(provider)}, and no client set up here covers every scope its way asks, ${String(way.scope)}`;
 }

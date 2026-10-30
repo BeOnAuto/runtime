@@ -6,9 +6,9 @@ import { issuedToken, tenMinutesOn, tokenSha256Of } from '../links/link-token.ts
 import { ClientSourceField, ExpiresAtField } from '../operations/connection-fields.ts';
 import { actedNow, loadRegistry, recordInRegistry } from '../operations/registry-access.ts';
 import { startableConnectionOf } from '../registry/registry-decisions.ts';
-import { consentAskedOf, forgottenVerifierOf, namedOf, type ConsentServices } from './consent-asking.ts';
+import { consentAskedOf, forgottenVerifierOf, namedOf, sourcesFor, type ConsentServices } from './consent-asking.ts';
 import { consentRefusalOf, verifierUnkeptOf } from './consent-refusals.ts';
-import { LinkSchema } from './link-operations.ts';
+import { LinkSchema, askedOfTheLink } from './link-operations.ts';
 
 const StartedSchema = Schema.Struct({
   authorize: Schema.Struct({
@@ -35,6 +35,7 @@ export function defineStartConsent(services: ConsentServices) {
     title: 'Start consent',
     description: [
       "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to.",
+      "A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before.",
       'The consent is finished within ten minutes, and a second start replaces the first.',
       'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',
       'On a runtime that signs people in, only the person who added the connection may start it.',
@@ -48,7 +49,9 @@ export function defineStartConsent(services: ConsentServices) {
     handle: Effect.fnUntraced(function* ({ id, token }) {
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
       const kept = yield* Effect.fromResult(startableConnectionOf(yield* loadRegistry, use, yield* actedNow));
-      const asked = consentAskedOf(kept.connection, services);
+      const sources = yield* sourcesFor(kept.connection, services);
+      const { scope, says } = yield* Effect.fromResult(askedOfTheLink(kept, services.providers, sources));
+      const asked = consentAskedOf(kept.connection, services, scope);
       const named = namedOf(kept.connection);
       const state = issuedToken();
       const started = yield* consent
@@ -65,6 +68,8 @@ export function defineStartConsent(services: ConsentServices) {
         verifier_secret_id: verifierSecretId,
         ...started.client,
         expires_at: expiresAt,
+        scope,
+        says,
       }).pipe(Effect.onError(() => secrets.forget(verifierSecretId)));
       yield* forgottenVerifierOf(kept, services);
       return { authorize: { url: started.url, expires_at: expiresAt }, client_source: started.client.client_source };

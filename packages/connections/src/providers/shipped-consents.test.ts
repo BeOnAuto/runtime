@@ -1,6 +1,6 @@
 import { required } from '@on.auto/operations';
 import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
-import { readProviders, type Placeholder, type ProviderEntry, providersShippedRoots } from '@on.auto/providers';
+import { readProviders, providersShippedRoots } from '@on.auto/providers';
 import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -10,6 +10,7 @@ import { consentServedAs, servedAs, sourceOver } from '../testing/served-connect
 import { vendorsOfTheShippedWays } from '../testing/shipped-vendors.ts';
 import {
   consentedAtTheVendor,
+  examplesOf,
   harnessAtTheVendor,
   servedAsTheVendor,
   type VendorOfTheWay,
@@ -24,15 +25,6 @@ const closing: (() => Promise<void>)[] = [];
 afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
-
-function examplesOf({ placeholders = {} }: ProviderEntry): Readonly<Record<string, string>> {
-  return Object.fromEntries(
-    Object.entries(placeholders).map(([name, { example, choices = [] }]: readonly [string, Placeholder]) => [
-      name,
-      example ?? choices[0]?.value ?? '',
-    ]),
-  );
-}
 
 interface WayOfConsent {
   readonly name: string;
@@ -85,7 +77,7 @@ function parametersAsked(
   return Object.fromEntries(Object.keys(parameters).map((name) => [name, asked.searchParams.get(name)]));
 }
 
-async function consentOf({ name, placeholders, issuer, scope, vendor }: WayOfConsent, registered: boolean) {
+async function consentOf({ name, placeholders, issuer, vendor }: WayOfConsent, registered: boolean) {
   const theVendor = required(vendor);
   const fake = await servedAsTheVendor(theVendor);
   closing.push(fake.close);
@@ -95,7 +87,7 @@ async function consentOf({ name, placeholders, issuer, scope, vendor }: WayOfCon
   });
   const { asked, finished } = await consentedAtTheVendor(
     h,
-    { provider: name, placeholders, scope },
+    { provider: name, placeholders },
     { fake, vendor: theVendor },
   );
   const facts = await h.facts();
@@ -150,7 +142,6 @@ const providersTakingConsent = [
   'google-analytics',
   'google-analytics-admin',
   'google-docs',
-  'google-drive',
   'google-drive',
   'google-search-console',
   'google-sheets',
@@ -224,7 +215,7 @@ async function connectedAtLinkedIn() {
   const h = harnessAtTheVendor(fake, vendor, { providers: shipped, registeredIssuer: way.issuer });
   const { asked, finished } = await consentedAtTheVendor(
     h,
-    { provider: way.name, placeholders: way.placeholders, scope: way.scope },
+    { provider: way.name, placeholders: way.placeholders },
     { fake, vendor },
   );
   const { id, status } = connectedOf(finished).output;

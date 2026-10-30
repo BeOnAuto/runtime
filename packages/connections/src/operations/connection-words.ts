@@ -8,10 +8,11 @@ import {
   type Noun,
   type OfferedLink,
 } from '@on.auto/operations';
-import { providerNamed, type ProviderList } from '@on.auto/providers';
+import { providerNamed, type ProviderList, type ScopeGroup } from '@on.auto/providers';
 import { Result } from 'effect';
 
 import { linkLastsMs } from '../links/link-token.ts';
+import { groupNamed } from '../providers/asking-more.ts';
 import type { Connection } from '../registry/connection.ts';
 import type { AddedConnection } from './connection-fields.ts';
 import type { SecretKeeping } from './connection-services.ts';
@@ -114,8 +115,25 @@ function newLinkWordsOf(named: string, { status }: AddedConnection): string {
     : `Gave a new link to ${named}; the link before it stops working.`;
 }
 
-export function reconnectedWordsOf(reconnected: AddedConnection, providers: ProviderList): string {
-  return linkedWordsOf((named) => newLinkWordsOf(named, reconnected), reconnected, providers);
+function linkForMoreWordsOf(named: string, { status }: AddedConnection, group: ScopeGroup): string {
+  const asking = `Gave a new link to ${named} that asks the person to allow ${quoted(group.name)} as well: ${group.for}`;
+  return status === 'connected'
+    ? `${asking} It stays connected as it is until the person finishes on the page and so replaces its credential; the link before it stops working.`
+    : `${asking} The link before it stops working.`;
+}
+
+export function reconnectedWordsOf(
+  reconnected: AddedConnection,
+  providers: ProviderList,
+  more: string | undefined,
+): string {
+  const group = more === undefined ? undefined : groupNamed(reconnected, providers, more);
+  return linkedWordsOf(
+    (named) =>
+      group === undefined ? newLinkWordsOf(named, reconnected) : linkForMoreWordsOf(named, reconnected, group),
+    reconnected,
+    providers,
+  );
 }
 
 function linkToOpenOf({ connect, ...connection }: AddedConnection): LinkToOpen | undefined {

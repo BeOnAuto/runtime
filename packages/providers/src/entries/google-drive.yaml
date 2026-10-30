@@ -1,27 +1,24 @@
 name: google-drive
 title: Google Drive
-description: The first way searches, lists and reads every file of the person's Google Drive, text included, exporting Docs, Sheets and Slides as text, through drive.readonly, which Google restricts, and changes nothing. The second reaches only the files Auto creates, and creates empty files and copies files.
+description: Searches, lists and reads every file of the person's Google Drive, text included, exporting Docs, Sheets and Slides as text, through drive.readonly, which Google restricts, and creates empty files and copies files, writing only the files Auto creates, through drive.file.
 website: https://developers.google.com/workspace/drive/api/reference/rest/v3
 type: openapi
 document: documents/google-drive.openapi.json
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com
-    scope: https://www.googleapis.com/auth/drive.readonly
+    scope: https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file
     says:
       https://www.googleapis.com/auth/drive.readonly: See and download every file of the person's Google Drive.
-    parameters:
-      access_type: offline
-      prompt: consent
-    clients: [registered]
-    description: Sign in to Google and allow all of Google Drive to be read.
-  - kind: authorization
-    issuer: https://accounts.google.com
-    scope: https://www.googleapis.com/auth/drive.file
-    says:
       https://www.googleapis.com/auth/drive.file: See, change, create and delete only the Google Drive files opened or created through this connection.
+    more:
+      - name: edit
+        for: Change and delete files you already have.
+        scope: https://www.googleapis.com/auth/drive
+        says:
+          https://www.googleapis.com/auth/drive: See, change, create and delete every file of the person's Google Drive.
     parameters:
       access_type: offline
       prompt: consent
     clients: [registered]
-    description: Sign in to Google and allow only the Google Drive files Auto creates.
+    description: Sign in to Google and allow every Google Drive file to be read, and the files Auto creates to be changed.

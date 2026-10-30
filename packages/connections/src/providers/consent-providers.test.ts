@@ -122,7 +122,7 @@ describe('a connection whose way is consent', () => {
 });
 
 describe('a provider whose way is consent, as the page lists it', () => {
-  it('lists the way by its kind, its issuer, its scope and its description, and nothing else of it', async () => {
+  it('lists the way by its kind, its issuer, the scopes it asks with their words and its description, and nothing else of it', async () => {
     const h = consentHarness();
 
     const listed = await h.call(operationNamed(h.operations, 'list_providers'), ada);
@@ -137,7 +137,11 @@ describe('a provider whose way is consent, as the page lists it', () => {
               {
                 kind: 'authorization',
                 issuer: 'https://accounts.drive.example.com',
-                scope: 'files.read files.write',
+                scopes: [
+                  { name: 'files.read', says: 'Read the files of the account.' },
+                  { name: 'files.write', says: 'Create and change the files of the account.' },
+                ],
+                more: [],
                 description: 'Sign in to Drive and allow Auto to read and change your files.',
                 offered: true,
               },
@@ -147,6 +151,7 @@ describe('a provider whose way is consent, as the page lists it', () => {
       },
     });
     expect(listed).not.toHaveProperty('output.providers.1.credentials.0.parameters');
+    expect(listed).not.toHaveProperty('output.providers.1.credentials.0.scope');
   });
 
   it('is not listed where the rules leave the kind out and it takes no other way', async () => {

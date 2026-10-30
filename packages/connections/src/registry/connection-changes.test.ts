@@ -39,8 +39,37 @@ describe('the changes the facts of the connections of an org make', () => {
       [{ kind: 'connection', connection: 'c2' }],
       [],
       ['connections'],
-      ['connection_added', 'connection_connected', 'connection_broken', 'connection_removed'],
+      [
+        'connection_added',
+        'connection_consent_started',
+        'connection_connected',
+        'connection_broken',
+        'connection_removed',
+      ],
       false,
     ]);
+  });
+});
+
+const started = {
+  connection: 'c1',
+  state_sha256: 'a1b2',
+  verifier_secret_id: 'secret-1',
+  client_id: 'auto-runtime',
+  client_source: 'registered',
+  expires_at: '2026-10-05T09:10:00.000Z',
+};
+
+function startedWith(data: Readonly<Record<string, unknown>>) {
+  return catalog.changesOf({ id: 'm1', stream: 'connections', type: 'connection_consent_started', data, context });
+}
+
+describe('the change a start of a consent makes', () => {
+  it('names the connection where the consent asks scopes it had not asked, and nothing where it asks none more or an earlier release recorded it', () => {
+    expect([
+      startedWith({ ...started, scope: 'files.read files.share', says: { 'files.share': 'Share the files.' } }),
+      startedWith({ ...started, scope: 'files.read', says: {} }),
+      startedWith(started),
+    ]).toEqual([[{ kind: 'connection', connection: 'c1' }], [], []]);
   });
 });

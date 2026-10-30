@@ -48,11 +48,11 @@ const ledgersListed = {
     {
       kind: 'client_credentials',
       issuer: 'https://auth.ledgers.example.com/{tenant}',
-      scope: 'journal.read journal.write',
       scopes: [
         { name: 'journal.read', says: 'Read the journal entries of the tenant.' },
         { name: 'journal.write', says: 'Post journal entries to the tenant.' },
       ],
+      more: [],
       description: 'The client id and secret of a client registered for your tenant.',
       offered: true,
     },

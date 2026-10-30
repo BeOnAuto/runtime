@@ -3,19 +3,32 @@ import { Schema } from 'effect';
 
 import { ConnectionTypeSchema } from '../registry/connection-entry.ts';
 
+const ListedScopesSchema = Schema.Array(
+  Schema.Struct({
+    name: Schema.String.annotate({ description: 'A scope, as the authorization server names it' }),
+    says: Schema.String.annotate({ description: 'What a connection can do through it, in one sentence' }),
+  }),
+);
+
 const ListedWaySchema = Schema.Struct({
   kind: WayKindSchema,
   in: Schema.optionalKey(wayFields.in),
   name: Schema.optionalKey(wayFields.name),
   scheme: Schema.optionalKey(wayFields.scheme),
   issuer: Schema.optionalKey(wayFields.issuer),
-  scope: Schema.optionalKey(wayFields.scope),
-  scopes: Schema.Array(
+  scopes: ListedScopesSchema.annotate({
+    description: 'The scopes its first consent asks, in its order, each with its words; empty where it asks none',
+  }),
+  more: Schema.Array(
     Schema.Struct({
-      name: Schema.String.annotate({ description: 'A scope of scope, as the authorization server names it' }),
-      says: Schema.String.annotate({ description: 'What a connection can do through it, in one sentence' }),
+      name: Schema.String.annotate({ description: 'The name of the group, which reconnect_connection takes as more' }),
+      for: Schema.String.annotate({ description: "What the group is for, in one sentence of the person's words" }),
+      scopes: ListedScopesSchema.annotate({ description: 'The scopes it adds, in its order, each with its words' }),
     }),
-  ).annotate({ description: 'The scopes the way asks, in its order, each with its words; empty where it asks none' }),
+  ).annotate({
+    description:
+      'The groups of scopes a later consent of a connection made this way may add to what it holds; empty where it names none',
+  }),
   description: Schema.optionalKey(Schema.String),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),
   because: Schema.optionalKey(Schema.String.annotate({ description: 'Why the way is not offered, where it is not' })),

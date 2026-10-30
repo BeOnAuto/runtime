@@ -6,20 +6,27 @@ import {
   type ResourceChange,
 } from '@on.auto/operations';
 
-import { ConnectionEventSchema, type RecordedConnectionEvent } from './connection-events.ts';
+import { ConnectionEventSchema, ConsentStartedSchema, type RecordedConnectionEvent } from './connection-events.ts';
 import { connectionsStream } from './registry-decider.ts';
 
 const connectionChanged = changeKindOf(
   'connection',
-  'A connection added, connected, broken or removed',
+  'A connection added, connected, broken or removed, or asked for more',
   { connection: 'The id of the connection' },
   { permittedBy: ['org:read'] },
 );
 
 const decodeConnectionFact = strictRecordedDecoder(ConnectionEventSchema);
 
+const decodeConsentStarted = strictRecordedDecoder(ConsentStartedSchema);
+
 function connectionChangedBy(fact: ChangedFact): readonly ResourceChange[] {
   return [connectionChanged.of({ connection: decodeConnectionFact(fact).data.connection })];
+}
+
+function scopesAddedBy(fact: ChangedFact): readonly ResourceChange[] {
+  const { connection, says } = decodeConsentStarted(fact).data;
+  return Object.keys(says).length === 0 ? [] : [connectionChanged.of({ connection })];
 }
 
 const named: Readonly<
@@ -27,7 +34,7 @@ const named: Readonly<
 > = {
   connection_added: connectionChangedBy,
   connection_link_issued: null,
-  connection_consent_started: null,
+  connection_consent_started: scopesAddedBy,
   connection_approved: null,
   connection_connected: connectionChangedBy,
   connection_broken: connectionChangedBy,

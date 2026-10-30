@@ -979,7 +979,7 @@
                               "connection"
                             ],
                             "additionalProperties": false,
-                            "description": "A connection added, connected, broken or removed"
+                            "description": "A connection added, connected, broken or removed, or asked for more"
                           }
                         ]
                       },
@@ -1884,7 +1884,7 @@
                       },
                       "scope": {
                         "type": "string",
-                        "description": "For client_credentials, the scopes, separated by spaces, none when left out; with provider, the scope of the way to take, as list_providers lists it"
+                        "description": "For client_credentials, the scopes, separated by spaces, none when left out"
                       }
                     },
                     "required": [
@@ -2206,7 +2206,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -2217,7 +2217,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -2413,7 +2413,7 @@
       "get": {
         "operationId": "list_connections",
         "summary": "List connections",
-        "description": "Lists the connections of the org, newest first. Each has its server and whether it is pending, connected or broken. Use it to see which tool servers people added, and whether the person approved one add_connection added.",
+        "description": "Lists the connections of the org, newest first. Each has its server, whether it is pending, connected or broken, and the groups of more it may still be granted. Use it to see which tool servers people added, and whether the person approved one add_connection added.",
         "tags": [
           "connections"
         ],
@@ -2444,7 +2444,7 @@
                     "connections": {
                       "type": "array",
                       "items": {
-                        "$ref": "#/$defs/Connection"
+                        "$ref": "#/$defs/ListedConnection"
                       }
                     }
                   },
@@ -2453,7 +2453,7 @@
                   ],
                   "additionalProperties": false,
                   "$defs": {
-                    "Connection": {
+                    "ListedConnection": {
                       "type": "object",
                       "properties": {
                         "id": {
@@ -2754,7 +2754,7 @@
                             ],
                             "additionalProperties": false
                           },
-                          "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                          "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                         },
                         "granted_scope": {
                           "anyOf": [
@@ -2765,7 +2765,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                          "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                         },
                         "granted_scopes": {
                           "anyOf": [
@@ -2853,6 +2853,29 @@
                             }
                           ],
                           "description": "Why and since when it is broken, while it is"
+                        },
+                        "more": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The name reconnect_connection takes as more"
+                              },
+                              "for": {
+                                "type": "string",
+                                "description": "What it is for, in the person's words"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "for"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A group of scopes a later consent may add"
+                          },
+                          "description": "The groups of scopes its way names that it does not hold and a client here can ask; empty where there is none"
                         }
                       },
                       "required": [
@@ -2872,10 +2895,11 @@
                         "granted_scope",
                         "granted_scopes",
                         "credential_ends_with",
-                        "broken"
+                        "broken",
+                        "more"
                       ],
                       "additionalProperties": false,
-                      "description": "A tool server the org added, shared by its playbooks"
+                      "description": "A connection, and what it may still be granted beside what it holds"
                     }
                   }
                 }
@@ -2929,7 +2953,7 @@
       "get": {
         "operationId": "get_connection",
         "summary": "Get connection",
-        "description": "Reads one connection of the org: its server, who added it and whether it is pending, connected, broken or removed. Use it to see whether the person approved a connection; list_connections finds its id. `id` is the id add_connection answered.",
+        "description": "Reads one connection of the org: its server, who added it, whether it is pending, connected, broken or removed, and the groups of more it may still be granted. Use it to see whether the person approved a connection; list_connections finds its id. `id` is the id add_connection answered.",
         "tags": [
           "connections"
         ],
@@ -3256,7 +3280,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -3267,7 +3291,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -3355,6 +3379,29 @@
                         }
                       ],
                       "description": "Why and since when it is broken, while it is"
+                    },
+                    "more": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The name reconnect_connection takes as more"
+                          },
+                          "for": {
+                            "type": "string",
+                            "description": "What it is for, in the person's words"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "for"
+                        ],
+                        "additionalProperties": false,
+                        "description": "A group of scopes a later consent may add"
+                      },
+                      "description": "The groups of scopes its way names that it does not hold and a client here can ask; empty where there is none"
                     }
                   },
                   "required": [
@@ -3374,10 +3421,11 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "more"
                   ],
                   "additionalProperties": false,
-                  "description": "A tool server the org added, shared by its playbooks"
+                  "description": "A connection, and what it may still be granted beside what it holds"
                 }
               }
             }
@@ -3754,7 +3802,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -3765,7 +3813,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -3930,7 +3978,7 @@
       "post": {
         "operationId": "reconnect_connection",
         "summary": "Reconnect connection",
-        "description": "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working, and nothing else changes. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, rather than removing it and adding it again. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once.",
+        "description": "Issues a new link to Studio's page for a connection that is broken, or whose link ran out, so the person gives its credential or signs in again; the link before stops working, and nothing else changes. Use it where list_connections or search says a connection is broken and its reason says to reconnect it, rather than removing it and adding it again. With more, a group list_connections offers, the link asks its scopes beside those the connection holds. It answers the connection with the link, which the person who added it opens within 24 hours, or, where a broken connection sends a variable of the runtime that is set, connected again at once.",
         "tags": [
           "connections"
         ],
@@ -3958,7 +4006,12 @@
                 "$id": "https://on.auto/schemas/runtime/reconnect_connection/input",
                 "type": "object",
                 "additionalProperties": false,
-                "properties": {}
+                "properties": {
+                  "more": {
+                    "type": "string",
+                    "description": "A group list_connections offers the connection, by name; a plain link when left out"
+                  }
+                }
               }
             }
           }
@@ -4271,7 +4324,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -4282,7 +4335,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -4480,7 +4533,7 @@
       "get": {
         "operationId": "read_link",
         "summary": "Read link",
-        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A token that is unknown, used up, expired or replaced is answered as not found.",
+        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A token that is unknown, used up, expired or replaced is answered as not found.",
         "tags": [
           "connections"
         ],
@@ -4818,7 +4871,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes the connection asked, and beside them those the consent this link starts asks, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -4829,7 +4882,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -4924,6 +4977,25 @@
                         "expires_at": {
                           "type": "string",
                           "description": "When the link expires, in ISO 8601 UTC"
+                        },
+                        "more": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "description": "The name reconnect_connection takes as more"
+                            },
+                            "for": {
+                              "type": "string",
+                              "description": "What it is for, in the person's words"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "for"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The group of more the link asks beside what the connection holds, where it was given for one"
                         }
                       },
                       "required": [
@@ -5001,6 +5073,9 @@
           },
           "405": {
             "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
           },
           "413": {
             "$ref": "#/components/responses/content_too_large"
@@ -5385,7 +5460,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -5396,7 +5471,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -5936,7 +6011,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -5947,7 +6022,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -6112,7 +6187,7 @@
       "post": {
         "operationId": "start",
         "summary": "Start consent",
-        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
+        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
         "tags": [
           "connections"
         ],
@@ -6656,7 +6731,7 @@
                         ],
                         "additionalProperties": false
                       },
-                      "description": "The scopes its credential asks, in its order, each with what a connection can do through it; empty where it asks none"
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
                     },
                     "granted_scope": {
                       "anyOf": [
@@ -6667,7 +6742,7 @@
                           "type": "null"
                         }
                       ],
-                      "description": "For a connection connected by consent, the scopes its authorization server granted, separated by single spaces, which may be fewer than the scope its credential asked; else null"
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
                     },
                     "granted_scopes": {
                       "anyOf": [
@@ -6939,9 +7014,6 @@
                               "issuer": {
                                 "type": "string"
                               },
-                              "scope": {
-                                "type": "string"
-                              },
                               "scopes": {
                                 "type": "array",
                                 "items": {
@@ -6949,7 +7021,7 @@
                                   "properties": {
                                     "name": {
                                       "type": "string",
-                                      "description": "A scope of scope, as the authorization server names it"
+                                      "description": "A scope, as the authorization server names it"
                                     },
                                     "says": {
                                       "type": "string",
@@ -6962,7 +7034,52 @@
                                   ],
                                   "additionalProperties": false
                                 },
-                                "description": "The scopes the way asks, in its order, each with its words; empty where it asks none"
+                                "description": "The scopes its first consent asks, in its order, each with its words; empty where it asks none"
+                              },
+                              "more": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string",
+                                      "description": "The name of the group, which reconnect_connection takes as more"
+                                    },
+                                    "for": {
+                                      "type": "string",
+                                      "description": "What the group is for, in one sentence of the person's words"
+                                    },
+                                    "scopes": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "name": {
+                                            "type": "string",
+                                            "description": "A scope, as the authorization server names it"
+                                          },
+                                          "says": {
+                                            "type": "string",
+                                            "description": "What a connection can do through it, in one sentence"
+                                          }
+                                        },
+                                        "required": [
+                                          "name",
+                                          "says"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      "description": "The scopes it adds, in its order, each with its words"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "for",
+                                    "scopes"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The groups of scopes a later consent of a connection made this way may add to what it holds; empty where it names none"
                               },
                               "description": {
                                 "type": "string"
@@ -6979,6 +7096,7 @@
                             "required": [
                               "kind",
                               "scopes",
+                              "more",
                               "offered"
                             ],
                             "additionalProperties": false,

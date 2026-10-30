@@ -40,6 +40,13 @@ export const AddedSchema = Schema.Struct({
 
 export type AddedConnection = typeof AddedSchema.Type;
 
+export const GroupOfMoreSchema = Schema.Struct({
+  name: Schema.String.annotate({ description: 'The name reconnect_connection takes as more' }),
+  for: Schema.String.annotate({ description: "What it is for, in the person's words" }),
+}).annotate({ description: 'A group of scopes a later consent may add' });
+
+export type GroupOfMore = typeof GroupOfMoreSchema.Type;
+
 const { variable, name, in: placement, scheme, issuer, client_id: clientId, scope } = CredentialFieldsSchema.fields;
 
 const AddedCredentialSchema = Schema.Struct({
@@ -56,8 +63,7 @@ const AddedCredentialSchema = Schema.Struct({
   ),
   scope: Schema.optionalKey(
     scope.schema.annotate({
-      description:
-        'For client_credentials, the scopes, separated by spaces, none when left out; with provider, the scope of the way to take, as list_providers lists it',
+      description: 'For client_credentials, the scopes, separated by spaces, none when left out',
     }),
   ),
 }).annotate({ description: credentialDescription });
@@ -85,7 +91,7 @@ const credentialOfAnApiByHand = 'Expected credential, which an HTTP API given by
 
 const serverFields = ['url', 'document', 'base_url', 'headers', 'query_params', 'request_id'] as const;
 
-const placedByTheProvider = ['variable', 'name', 'in', 'scheme', 'issuer'] as const;
+const placedByTheProvider = ['variable', 'name', 'in', 'scheme', 'issuer', 'scope'] as const;
 
 function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): readonly ModeIssue[] {
   return [
@@ -97,7 +103,7 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
       .filter((field) => credential?.[field] !== undefined)
       .map((field) => ({
         path: ['credential', field],
-        issue: `Expected no ${field}: the provider gives the credential but its kind and its scope`,
+        issue: `Expected no ${field}: the provider gives the credential but its kind`,
       })),
     ...(credential?.client_id === undefined
       ? []
@@ -113,7 +119,7 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
 const consentOfAnApiByHand =
   'Expected another kind: an HTTP API given by hand takes no consent, since its document names no authorization server; name a provider, as search lists it, in provider';
 
-const givenBesideTheKind = [...placedByTheProvider, 'scope', 'client_id'] as const;
+const givenBesideTheKind = [...placedByTheProvider, 'client_id'] as const;
 
 type AddedCredential = NonNullable<AdditionGiven['credential']>;
 

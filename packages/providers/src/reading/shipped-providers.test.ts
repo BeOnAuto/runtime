@@ -59,8 +59,6 @@ const googleProviders = [
   'youtube-management',
 ];
 
-const googleWaysOfConsent = [...googleProviders, 'google-drive'].toSorted();
-
 function signsInAtGoogle({ entry }: Provider): boolean {
   return googleProviders.includes(entry.name);
 }
@@ -174,7 +172,7 @@ describe('the ways of the shipped providers', () => {
       ['google-analytics', ['authorization'], []],
       ['google-analytics-admin', ['authorization'], []],
       ['google-docs', ['authorization'], []],
-      ['google-drive', ['authorization', 'authorization'], []],
+      ['google-drive', ['authorization'], []],
       ['google-search-console', ['authorization'], []],
       ['google-sheets', ['authorization'], []],
       ['google-slides', ['authorization'], []],
@@ -228,7 +226,7 @@ describe('the shipped providers of Google', () => {
     const atGoogle = shipped.providers.filter((provider) => signsInAtGoogle(provider));
 
     expect(atGoogle.flatMap((provider) => waysOfConsentOf(provider))).toEqual(
-      googleWaysOfConsent.map((name) => [name, google, { access_type: 'offline', prompt: 'consent' }, ['registered']]),
+      googleProviders.map((name) => [name, google, { access_type: 'offline', prompt: 'consent' }, ['registered']]),
     );
   });
 

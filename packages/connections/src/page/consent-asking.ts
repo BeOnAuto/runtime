@@ -1,8 +1,8 @@
 import { required } from '@on.auto/operations';
-import { keptTokensIn, type ConsentServer, type StartAsked } from '@on.auto/tool-servers';
-import { Effect, Option } from 'effect';
+import { keptTokensIn, type ConsentServer, type HadSources, type StartAsked } from '@on.auto/tool-servers';
+import { Effect, Function, Option } from 'effect';
 
-import { returnAddressOf } from '../links/connect-page.ts';
+import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
 import type { RecordedConnection } from '../registry/connection.ts';
@@ -18,9 +18,14 @@ import { unavailableWords, unrevokedWordsOf, type ConsentNamed } from './consent
 
 export type ConsentAsked = Omit<StartAsked, 'state' | 'studioBase'>;
 
-export type ConsentServices = Pick<ConnectionServices, 'consent' | 'policy' | 'pages' | 'secrets' | 'resolve'> & {
+export type ConsentServices = Pick<
+  ConnectionServices,
+  'consent' | 'policy' | 'pages' | 'secrets' | 'resolve' | 'providers'
+> & {
   readonly bindsPerson: boolean;
 };
+
+export type Sources = Pick<HadSources, 'sourceOf'>;
 
 export type FinishedConsent = Effect.Success<ReturnType<ConsentServices['consent']['finish']>>;
 
@@ -32,10 +37,10 @@ function serverOf({ type, entry, provider }: RecordedConnection): ConsentServer 
   return type === 'mcp' ? { type, url: required(entry.url), givenByHand: provider === null } : { type };
 }
 
-export function wayOf({ credential }: RecordedConnection): ConsentAsked['way'] {
+function wayOf({ credential }: Pick<RecordedConnection, 'credential'>, scope: string | undefined): ConsentAsked['way'] {
   return {
     issuer: required(credential.issuer),
-    scope: credential.scope,
+    scope,
     parameters: credential.parameters,
     authorization_endpoint: credential.authorization_endpoint,
     token_endpoint: credential.token_endpoint,
@@ -45,13 +50,43 @@ export function wayOf({ credential }: RecordedConnection): ConsentAsked['way'] {
   };
 }
 
+const noSources: Sources = { sourceOf: Function.constUndefined };
+
+export function sourcesFor(
+  { credential }: Pick<RecordedConnection, 'credential'>,
+  { consent, pages }: Pick<ConnectionServices, 'consent' | 'pages'>,
+): Effect.Effect<Sources> {
+  return credential.kind === 'authorization' ? consent.hadSources(studioBaseFor(pages)) : Effect.succeed(noSources);
+}
+
+export function isCoveredHere(
+  connection: Pick<RecordedConnection, 'credential'>,
+  scope: string | undefined,
+  { sourceOf }: Sources,
+): boolean {
+  return sourceOf(wayOf(connection, scope)) !== undefined;
+}
+
+export function sourceOfAStartOf(
+  connection: Pick<RecordedConnection, 'credential'>,
+  scope: string | undefined,
+  { sourceOf }: Sources,
+) {
+  if (connection.credential.kind !== 'authorization') {
+    return {};
+  }
+  const source = sourceOf(wayOf(connection, scope));
+  return source === undefined ? {} : { client_source: source };
+}
+
 export function consentAskedOf(
   connection: RecordedConnection,
   services: Pick<ConnectionServices, 'policy' | 'pages' | 'resolve'>,
+  scope: string | undefined = connection.credential.scope,
 ): ConsentAsked {
   return {
     server: serverOf(connection),
-    way: wayOf(connection),
+    way: wayOf(connection, scope),
     returnAddress: returnAddressOf(services.pages),
     reaches: reachesUnder(services.policy, services.resolve),
   };
