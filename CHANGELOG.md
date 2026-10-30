@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.49.0](https://github.com/BeOnAuto/runtime/compare/v0.48.1...v0.49.0) (2026-10-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* **prediction:** the runtime predicts with its built-in forecaster alone
+
+### Features
+
+* **connections:** a connection's grant grows in context, by a consent that asks more ([6093a9b](https://github.com/BeOnAuto/runtime/commit/6093a9b755449c436331a3e8b9f24d974512edf9))
+* **prediction:** the runtime predicts with its built-in forecaster alone ([88e6508](https://github.com/BeOnAuto/runtime/commit/88e6508abd62d292f55b8d7ba5e22883f4bf6114))
+
+
+### Bug Fixes
+
+* **providers:** buffer connects with an API key, as its sign-in takes only the apps it lists ([4d41790](https://github.com/BeOnAuto/runtime/commit/4d417903a1358c4400d158e6855dde282a58a2aa))
+* **tool-servers:** a server that refuses to register a client is said so, not asked again ([d2a7e95](https://github.com/BeOnAuto/runtime/commit/d2a7e95df62bcdfc5f9f8621da8f77761e37082c))
+
 ## [0.48.1](https://github.com/BeOnAuto/runtime/compare/v0.48.0...v0.48.1) (2026-10-29)
 
 
