@@ -26,7 +26,7 @@ Setup work that couldn't be finished yet, and why.
 
 - [ ] **Require signed commits.** Set up SSH or GPG signing for every maintainer and agent that commits, then add `required_signatures` to the `main` ruleset. Turning it on first would block every push.
 - [ ] **Add CODEOWNERS and require code-owner review.** Wait until there's more than one maintainer; until then it would only request reviews from the same person who wrote the change.
-- [ ] **Make the CLA check required.** It runs on `pull_request_target`, so it never reports on merge-queue commits, and requiring it today would stall the queue. It needs a status that also reports on `merge_group`.
+- [x] **Make the CLA check required.** Done on 2026-10-30: the `main` ruleset requires `CLA`, `ci-ok` and `documentation`, and there is no merge queue.
 - [ ] **Move harden-runner from audit to block.** Once a few weeks of runs show which endpoints each job calls, switch `egress-policy` to `block` with that allowlist.
 - [ ] **Review the first OpenSSF Scorecard report.** It publishes after the Scorecard workflow's first run on `main`. Fix the findings worth fixing.
 
