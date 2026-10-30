@@ -44,28 +44,9 @@ const atlassianIssuer = `${atlassianAuth}/${atlassianMcpServerPath}`;
 
 const hubspotMcp = 'https://mcp.hubspot.com';
 
-const bufferMcp = 'https://mcp.buffer.com/mcp';
-
-const bufferAuth = 'https://auth.buffer.com';
-
 const linkedInIssuer = 'https://www.linkedin.com/oauth';
 
 const sixtyDays = 5_184_000;
-
-const bufferScopes = [
-  'posts:read',
-  'posts:write',
-  'ideas:read',
-  'ideas:write',
-  'account:read',
-  'account:write',
-  'insights:read',
-  'engagements:read',
-  'engagements:write',
-  'snippets:read',
-  'snippets:write',
-  'channels:write',
-];
 
 function registeringServerAt(server: string, issuer: string): VendorOfTheWay {
   const { origin, pathname } = new URL(server);
@@ -137,23 +118,6 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
     protectedResourceAt: `${atlassianMcp}/.well-known/oauth-protected-resource/v2/mcp`,
     authorizationServerAt: `${atlassianAuth}/.well-known/oauth-authorization-server/${atlassianMcpServerPath}`,
     resource: `${atlassianMcp}/v2/mcp`,
-  },
-  buffer: {
-    metadata: {
-      issuer: bufferAuth,
-      authorizationServers: [bufferAuth],
-      protectedResource: bufferMcp,
-      protectedScopes: bufferScopes,
-      scopesSupported: ['offline_access', ...bufferScopes],
-      dynamicRegistration: true,
-      clientSecret: undefined,
-      takesPublicClientsAlone: true,
-    },
-    challengedAt: bufferMcp,
-    protectedResourceAt: 'https://mcp.buffer.com/.well-known/oauth-protected-resource/mcp',
-    authorizationServerAt: `${bufferAuth}/.well-known/oauth-authorization-server`,
-    resource: bufferMcp,
-    asked: 'posts:read ideas:read account:read insights:read posts:write ideas:write offline_access',
   },
   'campaign-manager-360': googleApi,
   'display-video-360': googleApi,

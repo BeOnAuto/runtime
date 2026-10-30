@@ -141,7 +141,6 @@ const providersTakingConsent = [
   'amazon-ads',
   'amazon-ads-mcp',
   'atlassian',
-  'buffer',
   'campaign-manager-360',
   'display-video-360',
   'display-video-360-reports',
@@ -195,7 +194,6 @@ describe('every way of consent of a shipped provider, against the fake authoriza
     expect(registering.map(({ name }) => name)).toEqual([
       'adobe-analytics-mcp',
       'atlassian',
-      'buffer',
       'linear',
       'notion',
       'posthog',

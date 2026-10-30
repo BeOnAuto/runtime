@@ -38,7 +38,7 @@ const hostsOfTheWays = [
     ],
   ],
   [[['mcp.atlassian.com', 'auth.atlassian.com']]],
-  [[['mcp.buffer.com', 'auth.buffer.com']]],
+  [[['mcp.buffer.com']]],
   [[['dfareporting.googleapis.com', google]]],
   [[['displayvideo.googleapis.com', google]]],
   [[['doubleclickbidmanager.googleapis.com', google]]],
@@ -267,6 +267,6 @@ const saidScopes = shipped.providers.flatMap(({ entry }) => saidScopesOf(entry))
 describe('the words of the scopes the shipped providers ask', () => {
   it('say every scope in at most 120 characters, opening with a bare verb and naming no person by a pronoun', () => {
     expect(saidScopes.filter((said) => breaksTheRule(said))).toEqual([]);
-    expect(saidScopes).toHaveLength(127);
+    expect(saidScopes).toHaveLength(121);
   });
 });

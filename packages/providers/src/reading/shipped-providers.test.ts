@@ -164,7 +164,7 @@ describe('the ways of the shipped providers', () => {
       ['amazon-ads', ['authorization'], []],
       ['amazon-ads-mcp', ['authorization'], []],
       ['atlassian', ['authorization'], []],
-      ['buffer', ['authorization'], []],
+      ['buffer', ['secret'], []],
       ['campaign-manager-360', ['authorization'], []],
       ['display-video-360', ['authorization'], []],
       ['display-video-360-reports', ['authorization'], []],
