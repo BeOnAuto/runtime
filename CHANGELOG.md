@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.52.0](https://github.com/BeOnAuto/runtime/compare/v0.51.0...v0.52.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **interaction:** a request goes through a connection the person chose, or is held for an agent
+
+### Features
+
+* **interaction:** a request goes through a connection the person chose, or is held for an agent ([789a82c](https://github.com/BeOnAuto/runtime/commit/789a82c733f751f20892d7955cc27df70467d84a))
+
 ## [0.51.0](https://github.com/BeOnAuto/runtime/compare/v0.50.0...v0.51.0) (2026-10-30)
 
 
