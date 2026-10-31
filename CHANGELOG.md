@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.53.0](https://github.com/BeOnAuto/runtime/compare/v0.52.0...v0.53.0) (2026-10-31)
+
+
+### ⚠ BREAKING CHANGES
+
+* **connections:** a connection runs under an OAuth client, the operator's or the org's own
+
+### Features
+
+* **connections:** a connection runs under an OAuth client, the operator's or the org's own ([28e9d9d](https://github.com/BeOnAuto/runtime/commit/28e9d9d25eecdc03de3c7058a9e500cd006b7433))
+
 ## [0.52.0](https://github.com/BeOnAuto/runtime/compare/v0.51.0...v0.52.0) (2026-10-31)
 
 
