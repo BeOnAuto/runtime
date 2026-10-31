@@ -100,11 +100,11 @@ When Auto can't be reached, or answers with something it did not sign for this r
 
 ## Overage
 
-| Plan                      | Overage cap                                                                                                      |
-| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| Free                      | None                                                                                                             |
-| Starter, Team and Custom  | A quarter of the plan's monthly credits: 125 on Starter, 600 on Team                                             |
-| Under an Enterprise order | The order's own cap, or else a quarter of a month of the order's credits, or the plan's cap where that is larger |
+| Plan                      | Overage cap                                                                                          |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Free                      | None                                                                                                 |
+| Starter, Team and Custom  | A quarter of the plan's monthly credits: 125 on Starter, 600 on Team                                 |
+| Under an Enterprise order | The order's own cap, or else a quarter of a month of the order's credits, since it replaces the plan |
 
 - On a plan with a cap, a licensed runtime keeps starting runs after the credits are gone, and the organization owes them.
 - Once the organization owes its cap, its runtimes fall back to the free rate.
