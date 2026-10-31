@@ -27,6 +27,7 @@ export interface KnownCapabilities {
   readonly field: typeof DefinitionTypeField;
   readonly types: readonly string[];
   readonly typesWithNouns: string;
+  readonly reachesOutside: boolean;
   readonly publish: <Operation extends PublishedOperation>(operation: Operation, meaning?: string) => Operation;
   readonly capabilityOfType: (name: string) => Effect.Effect<Capability, NotFound>;
 }
@@ -71,6 +72,7 @@ export function knownCapabilities(capabilities: readonly Capability[]): KnownCap
     field: servedTypeField(names),
     types: names,
     typesWithNouns: capabilities.map(({ type, noun }) => `${type}, ${articled(noun.one)}`).join('; '),
+    reachesOutside: capabilities.some(({ reachesOutside }) => reachesOutside),
     publish: (operation, meaning = typeMeaning) => ({
       ...operation,
       registration: {

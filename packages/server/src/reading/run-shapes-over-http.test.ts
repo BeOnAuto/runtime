@@ -21,7 +21,7 @@ const definitions: readonly (readonly [string, string, string])[] = [
   [
     'interaction',
     'confirmed',
-    '---\nto: owner\nexpires: P1D\noutput:\n  schema:\n    type: object\n    required: [ok]\n    properties: { ok: { type: boolean } }\n---\nPlease confirm the note.',
+    '---\nto: owner\nexpires: P1D\ndeliver: agent\noutput:\n  schema:\n    type: object\n    required: [ok]\n    properties: { ok: { type: boolean } }\n---\nPlease confirm the note.',
   ],
   [
     'recall',

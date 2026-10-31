@@ -120,13 +120,13 @@ describe('the descriptions of the tools of /mcp', () => {
     });
   });
 
-  it('say that a function that calls a tool may change something, in run_definition at 798 characters, and that a reasoning run may be cancelled while one that ends within its call cannot, in cancel_run at 748', () => {
+  it('say that a function that calls a tool may change something, in run_definition at 799 characters, and that a reasoning run may be cancelled while one that ends within its call cannot, in cancel_run at 748', () => {
     const [running, cancelling] = [descriptionOf('run_definition'), descriptionOf('cancel_run')];
 
     expect(running).toContain('A function that calls a tool may change something outside the playbook');
     expect(cancelling).toContain('such as a workflow or a reasoning function');
     expect(cancelling).toContain('or an interaction function that calls a tool, cannot be cancelled.');
-    expect([running.length, cancelling.length]).toEqual([798, 748]);
+    expect([running.length, cancelling.length]).toEqual([799, 748]);
   });
 });
 
@@ -209,10 +209,10 @@ const served: Readonly<Record<string, Hints>> = {
   remove_connection: [false, true, true, false],
   list_connection_tools: [true, false, true, true],
   activate_license: [false, false, true, true],
-  create_definition: [false, false, false, false],
+  create_definition: [false, false, false, true],
   list_definitions: [true, false, true, false],
   get_definition: [true, false, true, false],
-  update_definition: [false, false, true, false],
+  update_definition: [false, false, true, true],
   retire_definition: [false, true, true, false],
   run_definition: [false, true, false, true],
   get_run: [true, false, true, false],
@@ -256,12 +256,14 @@ function reachingOutside(listed: readonly ListedTool[]): readonly string[] {
 }
 
 describe('the open-world hint of the tools of /mcp', () => {
-  it('is set for list_models and run_definition, which reach model providers, for the four tools over the tool servers and the one over the tools of a connection, which reach them, for activate_license, which reaches Auto, and for no other tool', () => {
+  it('is set for list_models and run_definition, which reach model providers, for create_definition and update_definition, whose check of a request asks the tool servers what they offer, for the four tools over the tool servers and the one over the tools of a connection, which reach them, for activate_license, which reaches Auto, and for no other tool', () => {
     expect(reachingOutside(tools)).toEqual([
       'list_models',
       'search',
       'list_connection_tools',
       'activate_license',
+      'create_definition',
+      'update_definition',
       'run_definition',
       'introspect',
       'dry_run',

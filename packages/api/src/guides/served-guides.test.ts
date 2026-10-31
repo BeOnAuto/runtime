@@ -219,7 +219,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3192, 3472,
+      3417, 3709,
     ]);
   });
 });
@@ -229,17 +229,17 @@ describe('the recipes of a server that serves interaction functions', () => {
     const texts = recipeTextsOf(servedWithInteraction);
 
     expect(texts['give-tools']).toContain(
-      '5. Ask the person what the function should do with the tools, and which of them it needs. When the playbook only needs what a tool answers, with nothing to reason about, write an interaction function that calls the tool instead: it answers at once with what the tool answered and spends no model call, and the interaction-function guide says how to write it from the answer execute gave. When the playbook should send a person a message through a tool and take their answer, write an interaction function instead: the interaction-function guide says how it names the tool it sends through and the tool it reads replies with, each called the same way.\n',
+      "5. Ask the person what the function should do with the tools, and which of them it needs. To read or act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once with what the tool answered and spends no model call, and the interaction-function guide says how to write it from the answer execute gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
     );
     expect(texts['first-playbook']).toContain(
-      'give it tools with the give-tools recipe, send someone a message through a tool and take their answer with an interaction function, or make the playbook remember its answers',
+      'give it tools with the give-tools recipe, ask someone through a connection and take their answer with an interaction function, or make the playbook remember its answers',
     );
     expect([
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [3562, 2327, 3753, 1741],
-      [3472, 2327, 3192, 1741],
+      [4082, 2327, 4063, 1741],
+      [3709, 2327, 3417, 1741],
     ]);
   });
 });

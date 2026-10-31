@@ -21,7 +21,7 @@ const essentials = ["to: '{{ input.owner }}'", 'expires: P2D'];
 const keys = 'description, call, to, from, expires, deliver, replies, input, output, reply';
 
 describe('an interaction function definition', () => {
-  it('reads its party, expiry, schemas and message, and waits in the inbox without deliver', () => {
+  it('reads its party, expiry, schemas and message, and is for an agent with deliver: agent', () => {
     const parsed = requestDocumentOf(approvalDocument());
 
     expect(parsed).toMatchObject({
@@ -30,9 +30,21 @@ describe('an interaction function definition', () => {
       expiresMs: 172_800_000,
       output: { schema: { document: { required: ['choice'] } } },
     });
-    expect(parsed.route).toBeUndefined();
+    expect([parsed.route, parsed.heldForAnAgent]).toEqual([undefined, { said: true, line: 5 }]);
     expect(parsed.to.variables.map(({ path }) => path)).toEqual([['input', 'owner']]);
     expect(parsed.message.variables.map(({ path }) => path)).toEqual([['input', 'campaign']]);
+  });
+
+  it('reads a request that names no way to its party as one for an agent, keeping where the way is unsaid for its save', () => {
+    const parsed = requestDocumentOf(approvalDocument([]));
+
+    expect([parsed.route, parsed.heldForAnAgent]).toEqual([undefined, { said: false, line: 2 }]);
+  });
+
+  it('refuses a deliver that is neither agent nor the block of a tool', () => {
+    expect(problemsOf(documentWith([...essentials, 'deliver: agents']))).toEqual([
+      'Line 4, /deliver: Expected agent, or the server, tool and with of the tool that sends the request',
+    ]);
   });
 
   it('is a notification when it gives no answer schema', () => {

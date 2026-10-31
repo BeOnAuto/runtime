@@ -5,7 +5,7 @@ import { interactionType } from '../capability/interaction-type.ts';
 import { routeOf, type Route } from '../tool-blocks/routes.ts';
 
 export const StandingSchema = Schema.Literals([
-  'in_inbox',
+  'held_for_an_agent',
   'to_deliver',
   'delivering',
   'delivered',

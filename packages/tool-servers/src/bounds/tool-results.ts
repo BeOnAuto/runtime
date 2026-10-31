@@ -39,7 +39,7 @@ const ListedToolSchema = Schema.Struct({
 
 export type ToolResult = typeof ToolResultSchema.Type;
 
-export type ListedTool = typeof ListedToolSchema.Type;
+export type ListedTool = typeof ListedToolSchema.Type & { readonly answersNoBody?: true };
 
 export type ToolAnnotations = typeof ToolAnnotationsSchema.Type;
 

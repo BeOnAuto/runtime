@@ -27,7 +27,7 @@ const InteractionSchema = Schema.Struct({
   to: Schema.String.annotate({ description: 'The party the request goes to' }),
   delivery: Schema.NullOr(Schema.Struct({ server: Schema.String, tool: Schema.String })).annotate({
     description:
-      'The tool the function delivers the request through, as its deliver names it, or null for a request waiting in the inbox',
+      'The tool the function delivers the request through, as its deliver names it, or null for a request held for an agent',
   }),
   message: Schema.String.annotate({ description: 'The message of the request' }),
   takes_answer: Schema.Boolean.annotate({ description: 'true for a question, false for a notification' }),
@@ -52,7 +52,7 @@ const InteractionSchema = Schema.Struct({
   }),
   standing: StandingSchema.annotate({
     description:
-      'How its delivery stands: in_inbox, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list',
+      'How its delivery stands: held_for_an_agent, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list',
   }),
 }).annotate({ identifier: 'Interaction', description: 'An open request of a function' });
 
@@ -71,7 +71,7 @@ function refusedInWords(interactions: readonly { readonly reply_refusals: number
 const FilterText = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(256));
 
 const description = [
-  'Lists the open requests of the playbook, newest first: what each function asked, of whom, through which tool, or in the inbox,',
+  'Lists the open requests of the playbook, newest first: what each function asked, of whom, through which tool or held for an agent,',
   'until when and how its delivery stands, with the `run_id` that answer_interaction takes.',
   'Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when asked,',
   'which get_definition may no longer show; null for a notification.',
@@ -101,7 +101,7 @@ const answerSchemaFrom = Schema.decodeUnknownSync(Schema.NullOr(Schema.fromJsonS
 
 function deliveryShown(kept: OpenRequestRow) {
   const route = routeOfRow(kept);
-  return route.kind === 'inbox' ? null : route.delivery;
+  return route.kind === 'agent' ? null : route.delivery;
 }
 
 function shownOf({ key, row }: ProjectedKeyedRow) {

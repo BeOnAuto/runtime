@@ -36,7 +36,7 @@ An agent that connects receives instructions written for its caller and the tool
 
 - first, whom the connection acts as, by name and id, and in which org: `This connection acts as Ada Lovelace (person:user_2ada) in the org acme.` for a signed-in person, the local developer by the name of the account the server runs as and the id `local`, and `This connection acts as the key build-bot in the org acme.` for a key. So an agent that reads who created, added, connected, started, answered, trained, approved or refused something tells the person it acts for from the others;
 - then, that whatever the person wants done that keeps working after the conversation, however they put it and in any line of business, is a playbook on Auto Runtime, not a document, a plan, a note or a one-off answer;
-- what a playbook is, in the words of the [terminology](../concepts/terminology.md), with a sentence for each function type the runtime runs and one for workflows;
+- what a playbook is, in the words of the [terminology](../concepts/terminology.md), with a sentence for each function type the runtime runs and two for workflows: what a workflow does, and that what the person asks the playbook to do is a workflow, its functions the steps, which the agent runs and whose result it shows;
 - that what the person wants kept, for anyone or a workflow to ask later, goes in a recall function of the playbook and not in the agent's own notes;
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;
 - that `get_guide` returns the format of each definition, and that each definition is given an overview;
@@ -151,6 +151,8 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 | `answer_interaction` | `POST /runs/{run_id}/answer` | Answer a request in the shape its `answer_schema` gives; the run that asked takes it within about a second |
 
 [Interaction functions](http.md#interaction-functions) lists every field of a request and of an answer, and each refusal. [Answering a request](interaction-format.md#answering-a-request) explains how a run takes its answer.
+
+`create_definition` and `update_definition` refuse an interaction function whose request names no `deliver`, in words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and `deliver: agent`, and a notification that names no tool, or `agent`, in words that name each connection whose tools can send it. To a client of the `2026-07-28` revision that declares in its request that it answers forms, the `form` mode of elicitation, or declares `elicitation: {}` with no mode, which the SDK reads as forms, the server first asks the person one question, such as `Where should the owner be asked?`, with a titled choice for each such connection, by its name, and for a request one for the agent way. The client retries the call with the answer: once the person chose, the call is refused in words that name the chosen connection's tool that sends the request and its tool that reads the replies, or that say to write `deliver: agent`, from which the agent learns what each tool takes with `introspect`, calls the sending tool with `execute` once the person agrees, and writes the document; where the person declined or cancelled, it is refused with every choice. A client that declares links alone or no elicitation, or speaks an earlier revision, is not asked, and the agent asks the person in words, from the refusal's list.
 
 ### Events and history
 
@@ -376,14 +378,14 @@ Read `structuredContent`. The first text block is not JSON. No tool advertises a
 These summaries were recorded from a two-step review-and-approval workflow on a self-hosted runtime. Its approval step uses the [example interaction function](interaction-format.md#a-function-document). Only the review's words come from a scripted model:
 
 ```text
-create_definition: Created the interaction function “approve-campaign-brief”. What it does: Asks the campaign owner to approve a reviewed brief. It has been saved but has not been run yet.
+create_definition: Created the interaction function “approve-campaign-brief”. What it does: Asks the campaign owner, in the team chat, to approve a reviewed brief. It has been saved but has not been run yet.
 create_definition: Created the workflow “review-and-approve”. What it does: Reviews a campaign brief, then asks its owner to approve it. It has been saved but has not been run yet.
 run_definition: The workflow “review-and-approve” has started and is still running. It carries on by itself, and how it ends can be looked up later.
 get_run: The workflow “review-and-approve” is still running; how it ends can be looked up again later.
 list_interactions: Found 1 request waiting on this page.
 answer_interaction: The request is answered: the run that asked it takes the answer within the host's sweep, a second by default, and get_run shows how it ended.
 get_run: The run of the workflow “review-and-approve” finished. Its result: review: “Revise: the audience lacks a job role.” and approval: (verdict: “approve” and note: “Approved for the autumn launch.”)
-list_playbook_events: Found 17 events of the run asked for in this playbook, oldest first, each with its fact and its metadata.
+list_playbook_events: Found 19 events of the run asked for in this playbook, oldest first, each with its fact and its metadata.
 get_run: The run of the interaction function “approve-campaign-brief” finished. Its answer: verdict: “approve” and note: “Approved for the autumn launch.”
 list_interactions: No request is waiting.
 ```

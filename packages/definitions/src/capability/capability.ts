@@ -1,4 +1,12 @@
-import type { Conflict, InvalidInput, Noun, RunCancelled, Settlement, Unavailable } from '@on.auto/operations';
+import type {
+  Conflict,
+  InvalidInput,
+  Noun,
+  PlaybookAddress,
+  RunCancelled,
+  Settlement,
+  Unavailable,
+} from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import type { CallEnd } from '../journal/call-numbering.ts';
@@ -96,6 +104,7 @@ export interface CapabilityDeclaration<Parsed> {
   readonly check?: (
     parsed: NoInfer<Parsed>,
     source: string,
+    place: PlaybookAddress,
   ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly summarize: (parsed: NoInfer<Parsed>) => DefinitionSummary;
   readonly run: (
@@ -124,7 +133,7 @@ export interface CapabilityDeclaration<Parsed> {
 
 export interface PreparedDefinition {
   readonly summary: DefinitionSummary;
-  readonly check: () => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
+  readonly check: (place: PlaybookAddress) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
   readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
   readonly whenCancelled: WhenCancelled;
   readonly cancelledAttempt: (attempt: RunAttempt) => CancelledAttempt;
@@ -246,7 +255,7 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
       parse(source).pipe(
         Effect.map((parsed) => ({
           summary: summarize(parsed),
-          check: () => Effect.suspend(() => check(parsed, source)),
+          check: (place) => Effect.suspend(() => check(parsed, source, place)),
           run: (input, context) => run(parsed, input, context, stripped),
           whenCancelled,
           cancelledAttempt: (attempt) => resumption?.cancelledAttempt(parsed, attempt) ?? nothingToEnd,

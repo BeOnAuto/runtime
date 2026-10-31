@@ -24,7 +24,7 @@ const decodeEvents = Schema.decodeUnknownSync(
 );
 
 const decodeListed = Schema.decodeUnknownSync(
-  Schema.Struct({ interactions: Schema.Array(Schema.Struct({ run_id: Schema.String })) }),
+  Schema.Struct({ interactions: Schema.Array(Schema.Struct({ run_id: Schema.String, standing: Schema.String })) }),
 );
 
 const review = [
@@ -148,7 +148,8 @@ async function startedAndAsked(session: McpSession) {
   });
   const listed = await until(
     () => called(session, 'list_interactions', {}),
-    ({ structuredContent }) => decodeListed(structuredContent).interactions.length > 0,
+    ({ structuredContent }) =>
+      decodeListed(structuredContent).interactions.some(({ standing }) => standing === 'delivered'),
   );
   const [request] = decodeListed(listed.structuredContent).interactions;
   return {
@@ -167,12 +168,12 @@ export async function approvalRunOn(session: McpSession): Promise<ApprovalRun> {
   const ended = await settledOn(session, workflowId);
   const history = await called(session, 'list_playbook_events', { run_id: workflowId, order: 'asc' });
   const request = await settledOn(session, requestId);
-  const inbox = await called(session, 'list_interactions', {});
+  const leftOpen = await called(session, 'list_interactions', {});
   const again = await called(session, 'answer_interaction', { run_id: requestId, answer: { verdict: 'revise' } });
   return {
     summaries: [
       ...created,
-      ...[started, listed, answered, history, request, ended, inbox].map((result) => plainTextIn(result)),
+      ...[started, listed, answered, history, request, ended, leftOpen].map((result) => plainTextIn(result)),
       ...decodeEvents(history.structuredContent)
         .events.filter(({ metadata }) => metadata.run_id === workflowId)
         .map(({ summary }) => summary),

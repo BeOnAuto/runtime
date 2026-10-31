@@ -753,7 +753,7 @@ jobs:
             '["conflict","unworkable","The program raised an error on line 5: Error: no rows"]'
           docker stop computation
           test "$(docker inspect computation --format '{{.State.ExitCode}}')" = 0
-      - name: Ask through the inbox and answer over HTTP
+      - name: Ask an agent and answer over HTTP
         timeout-minutes: 2
         run: |
           . .github/smoke/calls.sh
@@ -773,7 +773,7 @@ jobs:
               --header "authorization: Bearer $key" --header 'content-type: application/json' "${@:2}"
           }
           playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
-          source="$(printf '%s\n' '---' "to: '{{ input.owner }}'" 'expires: P1D' 'output:' \
+          source="$(printf '%s\n' '---' "to: '{{ input.owner }}'" 'expires: P1D' 'deliver: agent' 'output:' \
             '  schema: {type: object, required: [choice], properties: {choice: {type: string, enum: [approve, reject]}}}' \
             '---' 'Approve the brief for {{ input.campaign }}?')"
           definition="$(jq --null-input --arg source "$source" '{name: "approve-brief", source: $source}')"
@@ -783,8 +783,8 @@ jobs:
             "$playbook/definitions/interaction/approve-brief/run")" = 200
           test "$(jq --raw-output .status asked.json)" = started
           asked="$(jq --raw-output .run_id asked.json)"
-          test "$(call inbox.json "$playbook/interactions?to=ada")" = 200
-          test "$(jq --compact-output '[.interactions[] | [.run_id, .message]]' inbox.json)" = \
+          test "$(call open.json "$playbook/interactions?to=ada")" = 200
+          test "$(jq --compact-output '[.interactions[] | [.run_id, .message]]' open.json)" = \
             "[[\"$asked\",\"Approve the brief for Spring?\"]]"
           test "$(call answered.json --data '{"answer":{"choice":"approve"}}' "$playbook/runs/$asked/answer")" = 200
           for attempt in $(seq 1 20); do

@@ -6,8 +6,9 @@ import { Effect, Result, type Schema } from 'effect';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
+import { wayCheck, type WayPorts } from './request-ways.ts';
 
-export function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
+function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
   return Effect.flatMap(renderClock, (clock) =>
     Result.match(parseInteractionDocument(source, clock), {
       onSuccess: (document) => Effect.succeed(document),
@@ -40,4 +41,8 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
     ...(output.schema === undefined ? {} : { outputSchema: output.schema.document }),
     details: detailsOf(document),
   };
+}
+
+export function definitionReadingOf(tools: WayPorts) {
+  return { parse, check: wayCheck(tools), summarize };
 }

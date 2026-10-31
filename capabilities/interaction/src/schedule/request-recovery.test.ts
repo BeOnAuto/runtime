@@ -56,7 +56,7 @@ describe('a due request whose run has ended, or whose tool is no longer allowed'
     expect(tools.calls()).toEqual([]);
   });
 
-  it('fails each attempt as a tool no longer offered, and the request stays open, to be answered through the inbox', async () => {
+  it('fails each attempt as a tool no longer offered, and the request stays open, to be answered with answer_interaction', async () => {
     const { playbook, tools, askedAt } = await askedThroughChat();
     tools.disallow('post_message');
 

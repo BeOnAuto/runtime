@@ -177,6 +177,6 @@ describe('a reply rule on a definition that takes no answer', () => {
   it('refuses a rule on a notification, which takes no answer', () => {
     expect(
       problemsOf(notificationDocument().replace('---\nThe brief', 'reply: { note: text }\n---\nThe brief')),
-    ).toEqual(['Line 11, /reply: A notification takes no answer, so it takes no reply rule']);
+    ).toEqual(['Line 20, /reply: A notification takes no answer, so it takes no reply rule']);
   });
 });

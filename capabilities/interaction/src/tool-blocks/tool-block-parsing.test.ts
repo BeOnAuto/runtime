@@ -59,16 +59,20 @@ describe('the keys of a delivery and its reading', () => {
     ]);
   });
 
-  it('refuse a reading without a delivery, without an answer to read, or without the message that was sent', () => {
+  it('refuse a reading without a delivery, for an agent, without an answer to read, or without the message that was sent', () => {
     const unsent = without(delivering, '  sent:', '    conversation: /channel', '    id: /ts');
 
     expect([
       problemsOf(documentOf(delivering.slice(0, 2), reading, answering)),
+      problemsOf(documentOf(delivering.slice(0, 2), ['deliver: agent'], reading, answering)),
       problemsOf(documentOf(delivering, reading)),
       problemsOf(documentOf(unsent, reading, answering)),
     ]).toEqual([
       [
-        'Line 5, /replies: Only a function that delivers through a tool reads replies; a function without deliver waits in the inbox',
+        "Line 5, /replies: Only a function that delivers through a tool reads replies: deliver names a connection's tool that sends the request",
+      ],
+      [
+        'Line 6, /replies: A request for an agent is answered with answer_interaction, so it reads no replies; deliver through a tool to read them',
       ],
       ['Line 14, /replies: A notification takes no answer, so it reads no replies'],
       [

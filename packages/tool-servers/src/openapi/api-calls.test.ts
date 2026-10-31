@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -14,6 +14,14 @@ import {
 } from '../api-testing/api-calls.ts';
 import { describedAccess, type ClientRegistration } from '../testing/index.ts';
 import { serveFakeApi } from '../testing/served-fakes.ts';
+
+const toolsListedIn = Schema.decodeUnknownSync(
+  Schema.Struct({
+    tools: Schema.Array(
+      Schema.Struct({ name: Schema.String, answersNoBody: Schema.optionalKey(Schema.Literal(true)) }),
+    ),
+  }),
+);
 
 const searchTool: unknown = expect.arrayContaining([
   expect.objectContaining({
@@ -218,6 +226,15 @@ describe('the listing of the tools of an HTTP API', () => {
       tools: searchTool,
     });
     expect(fake.seen()).toEqual([]);
+  });
+
+  it('says of a tool whose described answers have no body that it answers none, and of no other', async () => {
+    const access = await accessTo(keyed(await fakeApi()));
+
+    const [listed] = await Effect.runPromise(access.listServers({ org: 'acme', playbook: 'alpha' }));
+    const { tools } = toolsListedIn(listed);
+
+    expect(tools.filter(({ answersNoBody }) => answersNoBody === true).map(({ name }) => name)).toEqual(['addNote']);
   });
 });
 

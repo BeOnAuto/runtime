@@ -13,7 +13,7 @@ import { requestedRun } from './run-requests.ts';
 const description = [
   'Runs a function or workflow with an input and records the run.',
   'A run that ends within its call answers its result; a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
-  "Use it to run a saved definition at the person's request; a workflow's steps call it the same way.",
+  "Run a workflow for what the person asked, or a function to test it; a workflow's steps call it too.",
   '`type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows,',
   'and `run_id` is optional: give the same id to retry safely, since a run that ended or waits answers as it stands and one that failed runs again.',
   'A function that calls a tool may change something outside the playbook, so a run of one that did not succeed is never run again under its id;',
@@ -28,7 +28,7 @@ export function defineRunDefinition(capabilities: readonly Capability[]) {
       title: 'Run definition',
       description,
       route: { method: 'POST', path: '/definitions/{type}/{name}/run' },
-      reachesOutside: capabilities.some(({ reachesOutside }) => reachesOutside),
+      reachesOutside: known.reachesOutside,
       mayChangeOutside: capabilities.some(({ mayChangeOutside }) => mayChangeOutside),
       inputSchema: Schema.Struct({
         type: known.field,

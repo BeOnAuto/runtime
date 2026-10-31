@@ -43,7 +43,7 @@ const request = {
   deliver,
 };
 
-const inTheInbox = Struct.omit(request, ['deliver']);
+const forAnAgent = Struct.omit(request, ['deliver']);
 
 function deferralOf(record: object): Fact {
   return { type: 'run_deferred', data: { record } };
@@ -57,7 +57,7 @@ describe('the open request of a run', () => {
   it('is made by the deferral of a run whose record is a request, whatever the type of its function, which it keeps', () => {
     expect([
       open,
-      after(undefined, deferralOf(inTheInbox), { ...ofTheRun, definitionType: 'reasoning', definitionName: 'demand' }),
+      after(undefined, deferralOf(forAnAgent), { ...ofTheRun, definitionType: 'reasoning', definitionName: 'demand' }),
       after(undefined, deferralOf({ run: 'x' })),
       after(undefined, deferralOf({ run: 'x' }), { ...ofTheRun, definitionType: 'workflow' }),
     ]).toEqual([
@@ -93,7 +93,7 @@ describe('the open request of a run', () => {
         type: 'reasoning',
         function: 'demand',
         delivery: null,
-        standing: 'in_inbox',
+        standing: 'held_for_an_agent',
         answers: true,
         ending_due_at: Date.parse(request.expires_at),
       }),
@@ -104,7 +104,7 @@ describe('the open request of a run', () => {
 });
 
 describe('the open request of a run whose request carries blocks the interaction does not read', () => {
-  it('is kept in the playbook’s shape, its blocks as written, waiting in the inbox until it expires', () => {
+  it('is kept in the playbook’s shape, its blocks as written, held for an agent until it expires', () => {
     const elsewhere = {
       ...Struct.omit(request, ['deliver']),
       deliver: { through: 'carrier-pigeon' },
@@ -119,7 +119,7 @@ describe('the open request of a run whose request carries blocks the interaction
       delivery: null,
       replies: JSON.stringify({ by: 'post' }),
       reply: JSON.stringify({ kind: 'yes_or_no' }),
-      standing: 'in_inbox',
+      standing: 'held_for_an_agent',
       open: true,
       attempt_due_at: null,
       ending_due_at: Date.parse(request.expires_at),
@@ -128,12 +128,15 @@ describe('the open request of a run whose request carries blocks the interaction
 });
 
 describe('the open request of a run, as its request recorded it', () => {
-  it('keeps the tool it delivers through and how it reads replies as JSON text, and neither in the inbox', () => {
-    const inbox = Struct.omit(request, ['deliver']);
+  it('keeps the tool it delivers through and how it reads replies as JSON text, and neither for an agent', () => {
+    const heldForAnAgent = Struct.omit(request, ['deliver']);
 
-    expect([after(undefined, deferralOf({ ...request, replies })), after(undefined, deferralOf(inbox))]).toMatchObject([
+    expect([
+      after(undefined, deferralOf({ ...request, replies })),
+      after(undefined, deferralOf(heldForAnAgent)),
+    ]).toMatchObject([
       { delivery: JSON.stringify({ server: 'chat', tool: 'post_message' }), replies: JSON.stringify(replies) },
-      { delivery: null, replies: null, standing: 'in_inbox', attempt_due_at: null },
+      { delivery: null, replies: null, standing: 'held_for_an_agent', attempt_due_at: null },
     ]);
   });
 

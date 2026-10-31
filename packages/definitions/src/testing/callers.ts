@@ -1,4 +1,4 @@
-import { allPermissions, recordedCallerOf, type CallerIdentity } from '@on.auto/operations';
+import { allPermissions, recordedCallerOf, type CallerIdentity, type PlaybookAddress } from '@on.auto/operations';
 
 export const acmeAdmin: CallerIdentity = {
   id: 'acme-admin',
@@ -7,6 +7,8 @@ export const acmeAdmin: CallerIdentity = {
   permissions: allPermissions,
   playbooks: '*',
 };
+
+export const savedIn: PlaybookAddress = { org: acmeAdmin.org, playbook: 'alpha' };
 
 export const recordedAdmin = recordedCallerOf(acmeAdmin);
 

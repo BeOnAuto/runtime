@@ -10,7 +10,7 @@ import type { InteractionFunctionDefinitionDocument } from '../document/interact
 import { interactionFacts } from '../facts/declared-facts.ts';
 import { asksLater, requestRun } from '../run/interaction-run.ts';
 import type { InteractionPorts } from '../run/request-reach.ts';
-import { parse, summarize } from './definition-reading.ts';
+import { definitionReadingOf } from './definition-reading.ts';
 import { interactionType } from './interaction-type.ts';
 import { describeAnswer, interactionRunWords } from './interaction-words.ts';
 import { cancelledRequest } from './request-cancels.ts';
@@ -38,8 +38,7 @@ export function makeInteractionFunctionAdapter(ports: InteractionPorts): Capabil
     noun: { one: functionResourceLabels.interaction.singular, other: functionResourceLabels.interaction.plural },
     describeOutput: describeAnswer,
     mediaType: 'text/markdown',
-    parse,
-    summarize,
+    ...definitionReadingOf(ports.tools),
     run: (document, input, context) =>
       document.shape === 'call' ? called(document, input, context) : asked(document, input, context),
     whenCancelled: 'finish',

@@ -1,4 +1,4 @@
-import { InvalidInput, Unavailable } from '@on.auto/operations';
+import { InvalidInput, Unavailable, type PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -9,8 +9,18 @@ import { harness, toPlaybook } from '../testing/harness.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
+const unsaid = new InvalidInput({
+  detail: 'The checked definition has a problem',
+  issues: [{ pointer: '', detail: 'Line 1: say which word it greets with' }],
+  options: {
+    question: 'Which word should it greet with?',
+    choices: [{ value: 'hello', title: 'Hello', issues: [{ pointer: '', detail: 'Line 1: write hello' }] }],
+  },
+});
+
 function checkedCapability() {
   const checked: string[] = [];
+  const places: PlaybookAddress[] = [];
   const capability = defineCapability({
     type: 'checked',
     title: 'Checked',
@@ -19,10 +29,14 @@ function checkedCapability() {
     describeOutput: () => 'It answered its document.',
     mediaType: 'text/plain',
     parse: (source: string) => Effect.succeed({ text: source }),
-    check: ({ text }, source) => {
+    check: ({ text }, source, place) => {
       checked.push(source);
+      places.push(place);
       if (text.includes('slow')) {
         return Effect.fail(new Unavailable({ detail: 'The check of the document did not answer in time' }));
+      }
+      if (text.includes('which')) {
+        return Effect.fail(unsaid);
       }
       return text.includes('wrong')
         ? Effect.fail(
@@ -36,18 +50,18 @@ function checkedCapability() {
     summarize: ({ text }) => ({ description: text }),
     run: ({ text }, _input, _run, { module = text }) => Effect.succeed({ output: module, record: {} }),
   });
-  return { capability, checked: () => checked };
+  return { capability, checked: () => checked, places: () => places };
 }
 
 function saving() {
-  const { capability, checked } = checkedCapability();
+  const { capability, checked, places } = checkedCapability();
   const operations = definitionOperationsFor([capability]);
   const { call } = harness();
   const create = (name: string, source: string) =>
     call(operations.createDefinition, toAlpha(acmeAdmin, { type: 'checked', name, source }));
   const update = (name: string, source: string) =>
     call(operations.updateDefinition, toAlpha(acmeAdmin, { type: 'checked', name, source }));
-  return { call, operations, create, update, checked };
+  return { call, operations, create, update, checked, places };
 }
 
 describe('the check of a document when it is saved', () => {
@@ -89,5 +103,33 @@ describe('the check of a document when it is saved', () => {
       await call(operations.runDefinition, toAlpha(acmeAdmin, { type: 'checked', name: 'greet', input: {} })),
     ).toMatchObject({ status: 'succeeded', output: { output: 'RIGHT' } });
     expect(checked()).toEqual(['right']);
+  });
+});
+
+describe('the check of a document, given the playbook it is saved in', () => {
+  it('is handed that playbook on a create and on an update', async () => {
+    const { create, update, places } = saving();
+    await create('greet', 'right');
+    await update('greet', 'righter');
+
+    expect(places()).toEqual([
+      { org: 'acme', playbook: 'alpha' },
+      { org: 'acme', playbook: 'alpha' },
+    ]);
+  });
+
+  it('refuses with the options it offers, the issues of each choice under the source too', async () => {
+    const { create } = saving();
+
+    expect(await create('greet', 'which')).toEqual({
+      status: 'rejected',
+      reason: 'invalid_input',
+      detail: 'The checked definition has a problem',
+      issues: [{ pointer: '/source', detail: 'Line 1: say which word it greets with' }],
+      options: {
+        question: 'Which word should it greet with?',
+        choices: [{ value: 'hello', title: 'Hello', issues: [{ pointer: '/source', detail: 'Line 1: write hello' }] }],
+      },
+    });
   });
 });

@@ -13,19 +13,19 @@ import {
 import { instructionsActingAs, instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,868 characters on /mcp, 1,865 on the org endpoint and 1,501 on the playbook endpoint after their opening line', () => {
+  it('take 1,861 characters on /mcp, 1,826 on the org endpoint and 1,494 on the playbook endpoint after their opening line', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1865, 1501, 1868]);
+    ).toEqual([1826, 1494, 1861]);
   });
 
-  it('take 1,998, 1,995 and 1,631 with the opening line of the person the bound holds, which takes 130 of them', () => {
+  it('take 1,991, 1,956 and 1,624 with the opening line of the person the bound holds, which takes 130 of them', () => {
     expect(
       everyEndpoint.map(
         ([endpoint, served]) =>
           instructionsActingAs(callerTheInstructionsHold, endpoint, served, definitionTypes).length,
       ),
-    ).toEqual([1995, 1631, 1998]);
+    ).toEqual([1956, 1624, 1991]);
   });
 });
 
@@ -37,10 +37,10 @@ describe('what the instructions say of calling a tool', () => {
 
   it('leave the model and tools of a reasoning function, a run that finishes later, execute and dry_run to their tools and guides, and keep the closing sentence', () => {
     expect(instructionsFor('own org', ownOrg, definitionTypes)).toContain(
-      "Read a definition's format with get_guide; give it an overview. When the person approves",
+      "Read a definition's format with get_guide; give it an overview. When the person answers",
     );
     expect(instructionsFor('playbook', playbookEndpoint, definitionTypes)).toContain(
-      "Read a definition's format with get_guide; give it an overview. When the person approves",
+      "Read a definition's format with get_guide; give it an overview. When the person answers",
     );
     expect(
       everyEndpoint.filter(([endpoint, served]) =>
@@ -65,7 +65,7 @@ describe('what the instructions say of calling a tool', () => {
       instructionsFor('playbook', { orgTools: [], playbookTools: queriesInsideAPlaybook }, definitionTypes),
     ];
 
-    expect(lengths.map(({ length }) => length)).toEqual([1411, 1411, 1521, 1388]);
+    expect(lengths.map(({ length }) => length)).toEqual([1397, 1397, 1482, 1374]);
   });
 });
 
@@ -77,7 +77,7 @@ describe('the instructions of an endpoint that lists search and add_connection',
 
   it('say after the sentence on the guides that a service is connected through search and add_connection, on /mcp and the org endpoint', () => {
     expect(instructionsFor('own org', withConnections(ownOrg), definitionTypes)).toContain(
-      `give it an overview. ${connecting} When the person approves`,
+      `give it an overview. ${connecting} When the person answers`,
     );
     expect(instructionsFor('org', withConnections(orgEndpoint), definitionTypes)).toContain(
       `the format of each definition. ${connecting} Say what was done`,

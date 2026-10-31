@@ -166,12 +166,9 @@ The interaction function `approve-brief` that a workflow calls in two steps and 
 
 ## Interaction functions
 
-Interaction functions use the operations of reasoning functions, with `interaction` in place of `reasoning` in each route, such as `POST /definitions/interaction` and `POST /definitions/interaction/{name}/run`. The `source` is an [interaction function document](interaction-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
+Interaction functions use the operations of reasoning functions, with `interaction` in place of `reasoning` in each route, such as `POST /definitions/interaction` and `POST /definitions/interaction/{name}/run`. The `source` is an [interaction function document](interaction-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions). A request whose document names no `deliver` is refused when saved, `invalid_input`, its issue naming the connections whose tools can send a request and read its replies, and `deliver: agent`, and so is a notification, which takes no answer and goes through a connection, that names no tool or `deliver: agent`, its issue naming the connections whose tools can send it; see [How a request reaches its party](interaction-format.md#how-a-request-reaches-its-party).
 
-A run responds with `200`, `status: started` and its `run_id`. It then waits until its request is answered, expires or is cancelled. Two kinds of run finish within the request instead:
-
-- a notification to the inbox;
-- a function that calls a tool, whose output is the tool's result, or which ends in one of the endings its format lists.
+A run responds with `200`, `status: started` and its `run_id`. It then waits until its request is answered, expires or is cancelled. A function that calls a tool finishes within the request instead: its output is the tool's result, or it ends in one of the endings its format lists.
 
 | Case                                                         | Response                                       |
 | ------------------------------------------------------------ | ---------------------------------------------- |
@@ -196,24 +193,24 @@ The requests of a playbook have two routes of their own, relative to `/v1/orgs/{
 
 Each request has these fields:
 
-| Field            | Contents                                                                                                                           |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `run_id`         | The run that asked, which `answer_interaction` takes                                                                               |
-| `type`           | The type of the function that asked                                                                                                |
-| `function`       | The name of the function that asked                                                                                                |
-| `version`        | The version of the function that asked                                                                                             |
-| `to`             | The party the request goes to                                                                                                      |
-| `delivery`       | The `server` and `tool` the request is sent through, or `null` for the inbox                                                       |
-| `message`        | The message of the request                                                                                                         |
-| `takes_answer`   | `true` for a question, `false` for a notification                                                                                  |
-| `answer_schema`  | The JSON Schema an answer must match, as the request recorded it when it was asked; `null` for a notification                      |
-| `requested_at`   | When the request was made, in ISO 8601 UTC                                                                                         |
-| `expires_at`     | When the request expires unanswered, in ISO 8601 UTC                                                                               |
-| `attempts`       | The delivery attempts made so far                                                                                                  |
-| `conversation`   | The conversation the playbook reads replies in, or `null`                                                                          |
-| `answerer`       | The party whose reply counts, or `null`                                                                                            |
-| `reply_refusals` | How many replies from the answerer the playbook refused                                                                            |
-| `standing`       | `in_inbox`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked |
+| Field            | Contents                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `run_id`         | The run that asked, which `answer_interaction` takes                                                                                        |
+| `type`           | The type of the function that asked                                                                                                         |
+| `function`       | The name of the function that asked                                                                                                         |
+| `version`        | The version of the function that asked                                                                                                      |
+| `to`             | The party the request goes to                                                                                                               |
+| `delivery`       | The `server` and `tool` the request is sent through, or `null` for a request held for an agent                                              |
+| `message`        | The message of the request                                                                                                                  |
+| `takes_answer`   | `true` for a question, `false` for a notification                                                                                           |
+| `answer_schema`  | The JSON Schema an answer must match, as the request recorded it when it was asked; `null` for a notification                               |
+| `requested_at`   | When the request was made, in ISO 8601 UTC                                                                                                  |
+| `expires_at`     | When the request expires unanswered, in ISO 8601 UTC                                                                                        |
+| `attempts`       | The delivery attempts made so far                                                                                                           |
+| `conversation`   | The conversation the playbook reads replies in, or `null`                                                                                   |
+| `answerer`       | The party whose reply counts, or `null`                                                                                                     |
+| `reply_refusals` | How many replies from the answerer the playbook refused                                                                                     |
+| `standing`       | `held_for_an_agent`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked |
 
 `answer_interaction` checks the `answer_schema` the request recorded. That holds even after the function has a newer version, whose `output_schema` is the one `get_definition` shows. A schema may be up to 64 KiB as JSON, so a page of 100 requests can contain up to 6.25 MiB of schemas. A smaller `limit` keeps a page smaller.
 

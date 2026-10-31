@@ -17,6 +17,11 @@ export interface CallDocument extends WrittenFunction {
   readonly output: { readonly schema: CompiledSchema };
 }
 
+interface HeldForAnAgent {
+  readonly said: boolean;
+  readonly line: number;
+}
+
 export interface RequestDocument extends WrittenFunction {
   readonly shape: 'request';
   readonly output: ValueContract;
@@ -26,6 +31,7 @@ export interface RequestDocument extends WrittenFunction {
   readonly expiresMs: number;
   readonly message: ParsedTemplate;
   readonly route?: WrittenRoute;
+  readonly heldForAnAgent?: HeldForAnAgent;
   readonly reply?: ReplyRule;
 }
 

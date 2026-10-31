@@ -7,7 +7,7 @@ import {
 import { Client as PreviousMajorClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport as PreviousMajorTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { Effect, Schema } from 'effect';
+import { Schema } from 'effect';
 
 export type McpClientKind = 'current revision' | 'previous revision' | 'previous major';
 
@@ -47,7 +47,7 @@ const ToolResultSchema = Schema.Struct({
 
 export type ToolResult = typeof ToolResultSchema.Type;
 
-const toolResultOf = Schema.decodeUnknownSync(ToolResultSchema);
+export const toolResultOf = Schema.decodeUnknownSync(ToolResultSchema);
 
 export function textOf({ content }: ToolResult): string {
   return content.map(({ text }) => text).join('');
@@ -198,102 +198,5 @@ export async function withMcpSession<T>(
     return await use(session);
   } finally {
     await session.close();
-  }
-}
-
-export interface LinkOpening {
-  readonly opens: 'links' | 'forms alone';
-  readonly revision: 'current revision' | 'previous revision';
-  readonly action: 'accept' | 'decline' | 'cancel';
-  readonly onThePage?: (url: string) => Promise<unknown>;
-}
-
-export interface LinksAsked {
-  readonly answer: ToolResult;
-  readonly elicited: readonly unknown[];
-}
-
-const openingEveryLink: LinkOpening = { opens: 'links', revision: 'current revision', action: 'accept' };
-
-const ElicitationSchema = Schema.Struct({ params: Schema.Unknown });
-
-const LinkAskedSchema = Schema.Struct({ url: Schema.String });
-
-export async function calledOpeningLinks(
-  { url, headers }: McpConnection,
-  call: { readonly name: string; readonly arguments: Readonly<Record<string, unknown>> },
-  opening: Partial<LinkOpening> = {},
-): Promise<LinksAsked> {
-  const { opens, revision, action, onThePage } = { ...openingEveryLink, ...opening };
-  const elicited: unknown[] = [];
-  const capabilities = { elicitation: opens === 'links' ? { url: {} } : { form: {} } };
-  const versionNegotiation = { mode: revision === 'current revision' ? { pin: '2026-07-28' } : 'legacy' } as const;
-  const client = new Client({ name: 'auto-runtime-tests', version: '2.0.0' }, { capabilities, versionNegotiation });
-  client.setRequestHandler('elicitation/create', async (request: unknown) => {
-    const { params } = Schema.decodeUnknownSync(ElicitationSchema)(request);
-    elicited.push(params);
-    await onThePage?.(Schema.decodeUnknownSync(LinkAskedSchema)(params).url);
-    return { action };
-  });
-  await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: { ...headers } } }));
-  try {
-    const answer = toolResultOf(await client.callTool({ name: call.name, arguments: { ...call.arguments } }));
-    return { answer, elicited };
-  } finally {
-    await client.close();
-  }
-}
-
-interface ToolCall {
-  readonly name: string;
-  readonly arguments: Readonly<Record<string, unknown>>;
-}
-
-const StateAskedSchema = Schema.Struct({
-  data: Schema.Struct({ lastResult: Schema.Struct({ requestState: Schema.String }) }),
-});
-
-const stateAskedIn = Schema.decodeUnknownSync(StateAskedSchema);
-
-async function linkOpenerOn({ url, headers }: McpConnection, rounds: number): Promise<Client> {
-  const client = new Client(
-    { name: 'auto-runtime-tests', version: '2.0.0' },
-    {
-      capabilities: { elicitation: { url: {} } },
-      versionNegotiation: { mode: { pin: '2026-07-28' } },
-      inputRequired: { maxRounds: rounds },
-    },
-  );
-  await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: { ...headers } } }));
-  return client;
-}
-
-export async function stateAskedBy(connection: McpConnection, call: ToolCall): Promise<string> {
-  const client = await linkOpenerOn(connection, 0);
-  const asking = Effect.tryPromise({
-    try: () => client.callTool({ name: call.name, arguments: { ...call.arguments } }),
-    catch: (stopped: unknown) => stopped,
-  });
-  const stopped = await Effect.runPromise(Effect.flip(asking));
-  await client.close();
-  return stateAskedIn(stopped).data.lastResult.requestState;
-}
-
-export async function retriedWith(
-  connection: McpConnection,
-  call: ToolCall,
-  requestState: string,
-): Promise<ToolResult> {
-  const client = await linkOpenerOn(connection, 1);
-  const retry = {
-    name: call.name,
-    arguments: { ...call.arguments },
-    requestState,
-    inputResponses: { link: { action: 'accept' } },
-  };
-  try {
-    return toolResultOf(await client.callTool(retry));
-  } finally {
-    await client.close();
   }
 }

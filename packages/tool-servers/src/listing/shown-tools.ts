@@ -47,5 +47,6 @@ export function shownTool(tool: ListedTool, showing: Showing): ServerTool {
     description: cutToDescriptionBound(scrub(description)),
     input_schema: scrubbedSchema(inputSchema, scrub),
     ...annotationsOf(tool),
+    ...(tool.answersNoBody === true ? { answersNoBody: true } : {}),
   };
 }

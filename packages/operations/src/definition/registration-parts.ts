@@ -2,7 +2,7 @@ import { Effect, Result, type Schema } from 'effect';
 
 import type { OperationKind, OperationScope } from '../caller/operation-scope.ts';
 import { Conflict, resolutionOf } from '../outcome/conflict.ts';
-import { rejected, succeeded, type Rejected, type Succeeded } from '../outcome/outcome.ts';
+import { cappedOptions, rejected, succeeded, type Rejected, type Succeeded } from '../outcome/outcome.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import { checkedDefinition } from './definition-checks.ts';
 import type { Definition, ObjectSchema } from './definition.ts';
@@ -25,9 +25,11 @@ function settledOf<Answer, S extends Succeeded, R extends DeclarableReason, Serv
     const issues = 'issues' in rejection ? rejection.issues : undefined;
     const kind = 'kind' in rejection ? rejection.kind : undefined;
     const because = 'because' in rejection ? rejection.because : undefined;
+    const options = 'options' in rejection ? rejection.options : undefined;
     const described: Rejected = {
       ...rejected(reason, detail, issues, kind),
       ...(because === undefined ? {} : { because }),
+      ...(options === undefined ? {} : { options: cappedOptions(options) }),
       ...(rejection instanceof Conflict ? resolutionOf(rejection) : {}),
     };
     return yield* reasons.includes(reason) ? Effect.fail(described) : Effect.die(rejection);

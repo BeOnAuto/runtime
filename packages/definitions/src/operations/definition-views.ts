@@ -1,4 +1,4 @@
-import type { InvalidInput, Unavailable } from '@on.auto/operations';
+import { PlaybookContext, type InvalidInput, type Unavailable } from '@on.auto/operations';
 import { Effect, Order, Struct } from 'effect';
 
 import type { Capability, DefinitionSummary } from '../capability/capability.ts';
@@ -61,10 +61,10 @@ function refusedSource(rejection: Rejection): Effect.Effect<never, InvalidInput>
 export function contentOf(
   capability: Capability,
   written: WrittenDefinition,
-): Effect.Effect<DefinitionContent, InvalidInput | Unavailable> {
+): Effect.Effect<DefinitionContent, InvalidInput | Unavailable, PlaybookContext> {
   return Effect.gen(function* () {
     const { summary, check } = yield* capability.prepare(written.source);
-    const stripped = yield* check();
+    const stripped = yield* check(yield* PlaybookContext);
     return contentFrom(written, summary, stripped);
   }).pipe(Effect.catchTag('invalid_input', refusedSource));
 }

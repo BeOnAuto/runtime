@@ -25,6 +25,7 @@ export function defineCreateDefinition(capabilities: readonly Capability[]) {
         'A document that does not fit its format is refused with the line and what is wrong, and nothing is saved.',
       ].join(' '),
       route: { method: 'POST', path: '/definitions/{type}' },
+      reachesOutside: known.reachesOutside,
       successStatus: 201,
       inputSchema: Schema.Struct({
         type: known.field,

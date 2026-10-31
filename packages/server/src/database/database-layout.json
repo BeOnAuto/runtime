@@ -46,36 +46,36 @@
       "sql": "CREATE INDEX ledger_messages_by_stream ON emt_messages (stream_id, global_position)"
     },
     {
-      "name": "open_requests_7",
-      "sql": "CREATE TABLE open_requests_7 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, sent_conversation TEXT, sent_id TEXT, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, PRIMARY KEY (playbook_key, row_key))"
+      "name": "open_requests_8",
+      "sql": "CREATE TABLE open_requests_8 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, sent_conversation TEXT, sent_id TEXT, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "open_requests_7_attempts_due",
-      "sql": "CREATE INDEX open_requests_7_attempts_due ON open_requests_7 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
+      "name": "open_requests_8_attempts_due",
+      "sql": "CREATE INDEX open_requests_8_attempts_due ON open_requests_8 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
     },
     {
-      "name": "open_requests_7_by_conversation",
-      "sql": "CREATE INDEX open_requests_7_by_conversation ON open_requests_7 (playbook_key, open, conversation, requested_at, row_key)"
+      "name": "open_requests_8_by_conversation",
+      "sql": "CREATE INDEX open_requests_8_by_conversation ON open_requests_8 (playbook_key, open, conversation, requested_at, row_key)"
     },
     {
-      "name": "open_requests_7_by_function",
-      "sql": "CREATE INDEX open_requests_7_by_function ON open_requests_7 (playbook_key, open, function, requested_at, row_key)"
+      "name": "open_requests_8_by_function",
+      "sql": "CREATE INDEX open_requests_8_by_function ON open_requests_8 (playbook_key, open, function, requested_at, row_key)"
     },
     {
-      "name": "open_requests_7_by_open",
-      "sql": "CREATE INDEX open_requests_7_by_open ON open_requests_7 (playbook_key, open, requested_at, row_key)"
+      "name": "open_requests_8_by_open",
+      "sql": "CREATE INDEX open_requests_8_by_open ON open_requests_8 (playbook_key, open, requested_at, row_key)"
     },
     {
-      "name": "open_requests_7_by_party",
-      "sql": "CREATE INDEX open_requests_7_by_party ON open_requests_7 (playbook_key, open, party, requested_at, row_key)"
+      "name": "open_requests_8_by_party",
+      "sql": "CREATE INDEX open_requests_8_by_party ON open_requests_8 (playbook_key, open, party, requested_at, row_key)"
     },
     {
-      "name": "open_requests_7_by_type",
-      "sql": "CREATE INDEX open_requests_7_by_type ON open_requests_7 (playbook_key, open, type, requested_at, row_key)"
+      "name": "open_requests_8_by_type",
+      "sql": "CREATE INDEX open_requests_8_by_type ON open_requests_8 (playbook_key, open, type, requested_at, row_key)"
     },
     {
-      "name": "open_requests_7_endings_due",
-      "sql": "CREATE INDEX open_requests_7_endings_due ON open_requests_7 (ending_due_at) WHERE ending_due_at IS NOT NULL"
+      "name": "open_requests_8_endings_due",
+      "sql": "CREATE INDEX open_requests_8_endings_due ON open_requests_8 (ending_due_at) WHERE ending_due_at IS NOT NULL"
     },
     {
       "name": "prediction_datasets",

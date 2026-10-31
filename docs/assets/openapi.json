@@ -4,7 +4,7 @@
   "info": {
     "title": "Auto Runtime",
     "version": "0.51.0",
-    "description": "Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run alone or in workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
+    "description": "Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
     {
@@ -69,7 +69,7 @@
       "post": {
         "operationId": "create_playbook",
         "summary": "Create playbook",
-        "description": "Start here when the person wants something done in their business that should keep working after this conversation, however they put it, and none of their playbooks covers it. Creates a playbook for one business responsibility, such as reviewing campaign briefs, and returns it, active and empty. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
+        "description": "Start here when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. Creates a playbook for one business responsibility, such as reviewing campaign briefs, and returns it empty. What the person asks it to do is a workflow, its functions the steps. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
         "tags": [
           "playbooks"
         ],
@@ -11073,7 +11073,7 @@
       "post": {
         "operationId": "run_definition",
         "summary": "Run definition",
-        "description": "Runs a function or workflow with an input and records the run. A run that ends within its call answers its result; a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended. Use it to run a saved definition at the person's request; a workflow's steps call it the same way. `type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows, and `run_id` is optional: give the same id to retry safely, since a run that ended or waits answers as it stands and one that failed runs again. A function that calls a tool may change something outside the playbook, so a run of one that did not succeed is never run again under its id; list_playbook_events with its run_id shows what it called.",
+        "description": "Runs a function or workflow with an input and records the run. A run that ends within its call answers its result; a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended. Run a workflow for what the person asked, or a function to test it; a workflow's steps call it too. `type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows, and `run_id` is optional: give the same id to retry safely, since a run that ended or waits answers as it stands and one that failed runs again. A function that calls a tool may change something outside the playbook, so a run of one that did not succeed is never run again under its id; list_playbook_events with its run_id shows what it called.",
         "tags": [
           "definitions"
         ],
@@ -15453,7 +15453,7 @@
       "post": {
         "operationId": "answer_interaction",
         "summary": "Answer a request",
-        "description": "Answers a request a function's run waits on; the run takes the answer within the host's sweep, a second by default, and an interaction function's run succeeds with it. Use it when the person approves, rejects, revises or otherwise answers a request list_interactions shows, wherever it reached them; a new run asks again and answers nothing, and send_run_event gives an event to a waiting workflow instead. `run_id` is the run of the request, and `answer` takes the shape of the request's answer_schema, which list_interactions shows, such as {\"decision\": \"approve\"}. `claimed_for` is whom the caller says it answers for, kept as a claim. The same answer again answers as before, another is a conflict, and one that does not match leaves the request open.",
+        "description": "Answers a request a function's run waits on; the run takes the answer within the host's sweep, a second by default, and an interaction function's run succeeds with it. Use it when the person approves, rejects, revises or otherwise answers a request list_interactions shows, held for an agent or sent through a tool; a new run asks again and answers nothing, and send_run_event gives an event to a waiting workflow instead. `run_id` is the run of the request, and `answer` takes the shape of the request's answer_schema, which list_interactions shows, such as {\"decision\": \"approve\"}. `claimed_for` is whom the caller says it answers for, kept as a claim. The same answer again answers as before, another is a conflict, and one that does not match leaves the request open.",
         "tags": [
           "interactions"
         ],
@@ -15630,7 +15630,7 @@
       "get": {
         "operationId": "list_interactions",
         "summary": "List open requests",
-        "description": "Lists the open requests of the playbook, newest first: what each function asked, of whom, through which tool, or in the inbox, until when and how its delivery stands, with the `run_id` that answer_interaction takes. Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when asked, which get_definition may no longer show; null for a notification. Use it when the person asks what the playbook is waiting on, or to find the request they answer. `to` keeps the requests to one party, `type` to one type of function and `function` to one name, which with `type` names one function; `cursor` is the next_cursor of the page before, to read on only as the person needs. Every reader of the playbook sees each party and message, as a run’s input is seen.",
+        "description": "Lists the open requests of the playbook, newest first: what each function asked, of whom, through which tool or held for an agent, until when and how its delivery stands, with the `run_id` that answer_interaction takes. Each carries its `answer_schema`, the shape answer_interaction checks an answer against, as recorded when asked, which get_definition may no longer show; null for a notification. Use it when the person asks what the playbook is waiting on, or to find the request they answer. `to` keeps the requests to one party, `type` to one type of function and `function` to one name, which with `type` names one function; `cursor` is the next_cursor of the page before, to read on only as the person needs. Every reader of the playbook sees each party and message, as a run’s input is seen.",
         "tags": [
           "interactions"
         ],
@@ -15781,7 +15781,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "The tool the function delivers the request through, as its deliver names it, or null for a request waiting in the inbox"
+                          "description": "The tool the function delivers the request through, as its deliver names it, or null for a request held for an agent"
                         },
                         "message": {
                           "type": "string",
@@ -15843,7 +15843,7 @@
                         "standing": {
                           "type": "string",
                           "enum": [
-                            "in_inbox",
+                            "held_for_an_agent",
                             "to_deliver",
                             "delivering",
                             "delivered",
@@ -15852,7 +15852,7 @@
                             "answered",
                             "cancelling"
                           ],
-                          "description": "How its delivery stands: in_inbox, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list"
+                          "description": "How its delivery stands: held_for_an_agent, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list"
                         }
                       },
                       "required": [

@@ -45,7 +45,7 @@ A run that a trigger starts acts as the playbook itself, not as you. Its `starte
 ### Overlap and cost
 
 - A schedule has one run at a time. A time that falls due while its previous run still runs is skipped.
-- Each run may call models and leave requests in the playbook's inbox. Test with a short schedule, and replace it once it has started a run.
+- Each run may call models and send requests to people. Test with a short schedule, and replace it once it has started a run.
 - Event triggers have limits on how many runs they start, how many filters they take and how long a chain of runs may grow. [Trigger limits](../reference/workflow-format.md#trigger-limits) lists them.
 
 What a trigger did not start is recorded as a `reaction_refused` event of the workflow, which `list_playbook_events` shows.
@@ -332,7 +332,7 @@ do:
 - **No run after you published an event.** The filter's `type` must match the event's type exactly, and events recorded before the trigger was saved never start it. Ask the agent to list the playbook's events of the type `reaction_refused` with `list_playbook_events`. They say what a trigger did not start and why, such as "the run its every schedule started before still runs".
 - **A run started and was rejected.** Ask the agent for the run's rejection. A rejection for its input means the steps did not get what they expect. A scheduled run gets only its due time, and a run an event started gets a list holding the event. Give it its input as in step 1, or shape it with `input.from` as in step 6.
 - **A workflow does not start for its own events.** That is by design. A workflow does not start for its own runs, for runs they started, or for events its runs emit.
-- **Requests pile up in the inbox.** Each run of a workflow that asks for an approval leaves a request. Replace a test trigger once it has started its first run, and cancel the runs you do not need.
+- **Requests pile up.** Each run of a workflow that asks for an approval sends a request, which `list_interactions` shows while it is open. Replace a test trigger once it has started its first run, and cancel the runs you do not need.
 
 ## Next
 

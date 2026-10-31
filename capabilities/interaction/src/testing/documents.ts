@@ -32,8 +32,10 @@ export const chatDelivery: readonly string[] = [
   '    id: /ts',
 ];
 
+export const agentDelivery: readonly string[] = ['deliver: agent'];
+
 export function approvalDocument(
-  delivery: readonly string[] = [],
+  delivery: readonly string[] = agentDelivery,
   expires = 'P2D',
   answer: readonly string[] = answerSchema,
 ): string {
@@ -50,7 +52,7 @@ export function approvalDocument(
   ].join('\n');
 }
 
-export function notificationDocument(delivery: readonly string[] = [], expires = 'PT1H'): string {
+export function notificationDocument(delivery: readonly string[] = chatDelivery, expires = 'PT1H'): string {
   return [
     '---',
     "to: '{{ input.owner }}'",

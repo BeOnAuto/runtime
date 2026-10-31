@@ -35,22 +35,29 @@ type Sentences = (serving: Serving) => readonly string[];
 
 const reasoningFunctionType = 'reasoning';
 
-const purposesByType: Readonly<Record<string, readonly string[]>> = {
-  reasoning: ['A reasoning function has a prompt and calls a language model.'],
-  interaction: ['An interaction function asks a system and answers at once, or a person and answers started.'],
-  computation: ['A computation function runs a program: same input, same output.'],
-  recall: [
+const whatIsAskedOfAPlaybook = 'What the person asks the playbook to do is a workflow, its functions the steps';
+
+const purposesByType: Readonly<Record<string, Sentences>> = {
+  reasoning: () => ['A reasoning function has a prompt and calls a language model.'],
+  interaction: () => ['An interaction function asks a system and answers at once, or a person and answers started.'],
+  computation: () => ['A computation function runs a program: same input, same output.'],
+  recall: () => [
     'Recall retrieves run results, definitions and events, never run inputs or tool calls.',
     'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.',
   ],
-  prediction: ['A prediction function forecasts a series from its own history, with a range.'],
-  workflow: ['A workflow runs functions in steps, waits for input and can start on a schedule or event.'],
+  prediction: () => ['A prediction function forecasts a series from its own history, with a range.'],
+  workflow: ({ listed }) => [
+    'A workflow waits for input and can start on a schedule or event.',
+    listed('run_definition')
+      ? `${whatIsAskedOfAPlaybook}; run the workflow and show its result.`
+      : `${whatIsAskedOfAPlaybook}.`,
+  ],
 };
 
 export const whatThisServerIsFor = [
   'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer.',
   'Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client.',
-  'A playbook contains one brain (its reusable functions) and workflows. The brain shares its lifecycle. Functions run alone or in workflows; runs belong to the playbook.',
+  'A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.',
 ];
 
 const howToAnswer =
@@ -74,12 +81,13 @@ const whatTheConnectionDoes: Readonly<Record<McpEndpoint, (serving: Serving) => 
   'own org': (serving) => joinedClauses("The org is the caller's own", playbooksClause(serving, 'its playbooks'), []),
   org: (serving) =>
     joinedClauses("This connection manages the org's playbooks", playbooksClause(serving, 'them'), [
-      "a playbook's functions and workflows are made on its connection, /orgs/{org}/playbooks/{playbook}/mcp",
+      "each playbook's definitions are made on /orgs/{org}/playbooks/{playbook}/mcp",
     ]),
   playbook: () => 'This connection acts inside one playbook.',
 };
 
-const purposes: Sentences = ({ definitionTypes }) => definitionTypes.flatMap(({ type }) => purposesByType[type] ?? []);
+const purposes: Sentences = (serving) =>
+  serving.definitionTypes.flatMap(({ type }) => purposesByType[type]?.(serving) ?? []);
 
 const connection: Sentences = (serving) => [whatTheConnectionDoes[serving.endpoint](serving)];
 
@@ -103,9 +111,7 @@ const connections: Sentences = ({ listed }) => (listed('search') && listed('add_
 
 const answeringWhatRunsWaitOn: Sentences = ({ listed }) =>
   listed('answer_interaction')
-    ? [
-        'When the person approves, rejects or otherwise answers what a run waits on, use answer_interaction, not a new run.',
-      ]
+    ? ['When the person answers what a run waits on, use answer_interaction, not a new run.']
     : [];
 
 const closing: Sentences = () => [howToAnswer, whenAToolCannot];

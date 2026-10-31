@@ -9,7 +9,7 @@ import type { RequestRecord } from './request-record.ts';
 import { unworkable } from './request-rendering.ts';
 
 export interface InteractionPorts {
-  readonly tools: Pick<ToolAccess, 'named' | 'configured' | 'callOnce'>;
+  readonly tools: Pick<ToolAccess, 'named' | 'configured' | 'callOnce' | 'listServers' | 'takesConnections'>;
   readonly openRequests: (playbook: PlaybookAddress) => Effect.Effect<number>;
   readonly mostOpenRequests: number;
 }

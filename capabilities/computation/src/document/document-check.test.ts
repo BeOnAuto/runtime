@@ -1,3 +1,4 @@
+import { savedIn } from '@on.auto/definitions/testing';
 import { InvalidInput, Unavailable } from '@on.auto/operations';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -17,7 +18,7 @@ const keeping = 'let kept = 0;\nexport default function (input: Input): Output {
 
 function checking(source: string) {
   const { prepared } = computationWith();
-  return Effect.runPromiseExit(prepared(source).check());
+  return Effect.runPromiseExit(prepared(source).check(savedIn));
 }
 
 describe('the check of a computation function when it is saved', () => {
@@ -105,10 +106,10 @@ describe('a check of a computation function that does not answer', () => {
     const tooLongToCheck =
       'The document took longer to check than the 2000 ms a save allows; simplify its types or split its program. A busy server may also have slowed the check, so saving it again later may succeed';
 
-    expect(await Effect.runPromiseExit(computationWith(tooLong).prepared(campaignPace).check())).toEqual(
+    expect(await Effect.runPromiseExit(computationWith(tooLong).prepared(campaignPace).check(savedIn))).toEqual(
       Exit.fail(new InvalidInput({ detail: tooLongToCheck, issues: [{ pointer: '', detail: tooLongToCheck }] })),
     );
-    expect(await Effect.runPromiseExit(computationWith(busy).prepared(campaignPace).check())).toEqual(
+    expect(await Effect.runPromiseExit(computationWith(busy).prepared(campaignPace).check(savedIn))).toEqual(
       Exit.fail(
         new Unavailable({
           detail:

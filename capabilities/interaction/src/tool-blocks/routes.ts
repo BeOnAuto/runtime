@@ -9,25 +9,25 @@ export interface RecordedBlocks {
 }
 
 export type Route =
-  | { readonly kind: 'inbox' }
+  | { readonly kind: 'agent' }
   | { readonly kind: 'tool'; readonly delivery: ToolReference; readonly replies?: Replies };
 
-const inbox: Route = { kind: 'inbox' };
+const heldForAnAgent: Route = { kind: 'agent' };
 
 export function routeOf({ deliver, replies }: RecordedBlocks): Route {
   if (deliver === undefined) {
-    return inbox;
+    return heldForAnAgent;
   }
   const delivery = { server: deliver.server, tool: deliver.tool };
   return replies === undefined ? { kind: 'tool', delivery } : { kind: 'tool', delivery, replies };
 }
 
 export function throughWords(route: Route): string {
-  return route.kind === 'inbox' ? 'in the inbox' : `through ${toolInWords(route.delivery)}`;
+  return route.kind === 'agent' ? 'held for an agent' : `through ${toolInWords(route.delivery)}`;
 }
 
 export function toolsOf(route: Route): readonly ToolReference[] {
-  if (route.kind === 'inbox') {
+  if (route.kind === 'agent') {
     return [];
   }
   const { delivery, replies } = route;

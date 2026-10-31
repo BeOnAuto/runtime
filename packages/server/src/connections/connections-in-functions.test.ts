@@ -1,5 +1,5 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
-import { chatDelivery } from '@on.auto/interaction/testing';
+import { agentDelivery, chatDelivery } from '@on.auto/interaction/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -56,7 +56,7 @@ describe('an interaction function that delivers through a connection', () => {
 describe('the tools of a connection over MCP', () => {
   it('are searched with the connection named, checked by dry_run and called by execute', async () => {
     const chat = await chatServer();
-    const server = await servingInteractions([], connectionsOnLoopback);
+    const server = await servingInteractions(agentDelivery, connectionsOnLoopback);
     const id = await connectedWith(server, aSecretHeader('chat', chat.url), `Bearer ${chatKey}`);
     const onAcme = { url: `${server.origin}/orgs/acme/mcp`, headers: {} };
     const onAlpha = { url: `${server.origin}/orgs/acme/playbooks/alpha/mcp`, headers: {} };

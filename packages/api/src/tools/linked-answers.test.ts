@@ -3,14 +3,9 @@ import { defineCommand, type OfferedLink, type Outcome } from '@on.auto/operatio
 import { Context, Effect, Redacted, Schema } from 'effect';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { calledOpeningLinks, retriedWith, stateAskedBy, type LinkOpening } from '../testing/elicited-calls.ts';
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
-import {
-  calledOpeningLinks,
-  plainTextIn,
-  retriedWith,
-  stateAskedBy,
-  type LinkOpening,
-} from '../testing/mcp-clients.ts';
+import { plainTextIn } from '../testing/mcp-clients.ts';
 import {
   acmeAdmin,
   acmeAlphaWriter,

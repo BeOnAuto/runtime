@@ -108,6 +108,34 @@ describe('a dispatched handler rejecting with invalid input', () => {
   });
 });
 
+describe('a dispatched handler rejecting with invalid input that offers options', () => {
+  it('carries the options it offers, a question and its choices, each with the issues it states once chosen', async () => {
+    const { dispatcher: calls, run } = harness();
+
+    expect(await run(calls.dispatchToPlaybook(publishDraft.registration, toAlpha(acmeAdmin, { lines: [] })))).toEqual({
+      status: 'rejected',
+      reason: 'invalid_input',
+      detail: 'The draft has no lines',
+      issues: [{ detail: 'Open the draft with a greeting or a title', pointer: '/lines' }],
+      options: {
+        question: 'What should the draft open with?',
+        choices: [
+          {
+            value: 'greeting',
+            title: 'A greeting',
+            issues: [{ detail: 'Open the draft with Hello', pointer: '/lines' }],
+          },
+          {
+            value: 'title',
+            title: 'A title',
+            issues: [{ detail: 'Open the draft with its title', pointer: '/lines' }],
+          },
+        ],
+      },
+    });
+  });
+});
+
 describe('pipeline steps', () => {
   it('run in order once a call is authorized and its playbook exists, before its input is decoded', async () => {
     const { steps, passed } = recordedSteps();

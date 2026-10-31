@@ -152,7 +152,7 @@ describe('the first-playbook prompt of the server', () => {
 
     expect(asked.content.text).toBe(`Create my first playbook.\n\n${recipe}`);
     expect(recipe).toContain(
-      '\n7. Where the work starts on its own, read the workflow guide with get_guide and write the workflow that runs the function,',
+      '\n7. Read the workflow guide with get_guide and write the workflow whose step is the function, which does what the person asked:',
     );
     expect(recipe).toContain('publish the material they paste with publish_event');
     expect(embedded.content.resource.uri).toBe('guide://reasoning-function');

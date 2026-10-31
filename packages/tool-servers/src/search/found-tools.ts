@@ -49,6 +49,15 @@ function foundTool({ server, tool }: Candidate): FoundTool {
   return { server, tool: tool.name, summary: summaryOf(tool.description), read_only: isReadOnly(tool.annotations) };
 }
 
+export function bestFoundOn(
+  server: ToolServer,
+  asked: SearchAsked & Pick<Required<SearchAsked>, 'terms'>,
+): readonly FoundTool[] {
+  return bestOf(candidatesOn(server, asked), asked.terms, searchableOf, byToolThenServer).map((candidate) =>
+    foundTool(candidate),
+  );
+}
+
 export function foundIn(servers: readonly ToolServer[], asked: SearchAsked): Found {
   const candidates = servers.flatMap((server) => candidatesOn(server, asked));
   const chosen =

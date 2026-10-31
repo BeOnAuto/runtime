@@ -15,6 +15,7 @@ export interface ServerTool {
   readonly description: string;
   readonly input_schema: Schema.JsonObject;
   readonly annotations?: ToolAnnotations;
+  readonly answersNoBody?: true;
 }
 
 export interface ServerFields {

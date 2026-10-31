@@ -12,6 +12,7 @@ const approval = [
   '---',
   "to: '{{ input.owner }}'",
   'expires: P1D',
+  'deliver: agent',
   'output:',
   '  schema: { type: object, required: [choice], properties: { choice: { type: string } } }',
   '---',

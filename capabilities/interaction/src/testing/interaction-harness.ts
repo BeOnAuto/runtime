@@ -27,7 +27,7 @@ import { makeInteractionFunctionAdapter } from '../capability/interaction-functi
 import { openRequests, openRequestsName } from '../requests/open-requests.ts';
 import { requestsDue, type DueRequestItem, type RequestsDue } from '../schedule/due-requests.ts';
 import { noTools, type ToolPorts } from './fake-tools.ts';
-import { dueInBothLanes, firstOpenOf, performedAll, performedEach } from './harness-parts.ts';
+import { dueInBothLanes, firstOpenOf, performedAll, performedEach, savedAsAnEarlierRelease } from './harness-parts.ts';
 
 export const acmeAdmin: CallerIdentity = {
   id: 'acme-admin',
@@ -72,6 +72,7 @@ export interface InteractionHarness {
   readonly due: RequestsDue;
   readonly call: Calling;
   readonly define: (name: string, source: string) => Promise<Outcome>;
+  readonly defineAsAnEarlierRelease: (name: string, source: string) => Promise<Outcome>;
   readonly ask: (name: string, input: unknown, runId: string) => Promise<Outcome>;
   readonly defineAs: (type: string, name: string, source: string) => Promise<Outcome>;
   readonly askAs: (type: string, name: string, input: unknown, runId: string) => Promise<Outcome>;
@@ -141,6 +142,8 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     due,
     call,
     define: (name, source) => defineAs('interaction', name, source),
+    defineAsAnEarlierRelease: (name, source) =>
+      call(defineCreateDefinition([savedAsAnEarlierRelease(capability)]), { type: 'interaction', name, source }),
     ask: (name, input, runId) => askAs('interaction', name, input, runId),
     defineAs,
     askAs,

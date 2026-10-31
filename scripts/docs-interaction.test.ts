@@ -39,11 +39,11 @@ await test('interaction functions are available in every runtime, with their for
   assert.match(format, /^### Answering by reply$/mu);
 });
 
-await test('the words of interaction are on the terminology page, and the interaction reference describes inbox answers', () => {
+await test('the words of interaction are on the terminology page, and the interaction reference describes answers', () => {
   const terminology = readFileSync(join(docs, 'concepts/terminology.md'), 'utf8');
   const reference = readFileSync(join(docs, 'reference/interaction-format.md'), 'utf8');
   const workflows = readFileSync(join(docs, 'concepts/workflows.md'), 'utf8');
-  for (const term of ['Request', 'Inbox', 'Delivery', 'Answer', 'Notification']) {
+  for (const term of ['Request', 'Held for an agent', 'Delivery', 'Answer', 'Notification']) {
     assert.match(terminology, new RegExp(`^\\| ${term} +\\| `, 'mu'), `The terminology page needs ${term}`);
   }
   assert.ok(

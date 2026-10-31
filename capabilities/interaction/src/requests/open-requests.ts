@@ -49,7 +49,7 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
   }
   const at = Date.parse(context.at);
   const delivery = deliveryOf(request.deliver);
-  const inInbox = delivery === null;
+  const forAnAgent = delivery === null;
   return rowOf({
     request_id: message.id,
     ...functionOf(context),
@@ -62,8 +62,8 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     requested_at: at,
     expires_at: Date.parse(request.expires_at),
     attempts: 0,
-    next_attempt_at: inInbox ? null : at,
-    standing: inInbox ? 'in_inbox' : 'to_deliver',
+    next_attempt_at: forAnAgent ? null : at,
+    standing: forAnAgent ? 'held_for_an_agent' : 'to_deliver',
     open: true,
     ended: null,
     conversation: null,
@@ -191,7 +191,7 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 7,
+  version: 8,
   kinds: ['runs'],
   types: [
     'run_deferred',

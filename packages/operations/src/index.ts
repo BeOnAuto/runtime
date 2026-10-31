@@ -140,6 +140,7 @@ export { eventMetadataOf } from './reading/event-metadata.ts';
 export { keptContentOf } from './reading/kept-content.ts';
 export { shownData, type EventView } from './reading/shown-data.ts';
 export { ServedAsTool } from './dispatch/served-as-tool.ts';
+export { OperationsServed } from './dispatch/operations-served.ts';
 export type { HandlerServices } from './definition/handler-services.ts';
 export { PlaybookIdSchema, OrgIdSchema } from './caller/identifiers.ts';
 export { IncidentReporter, type CallSummary, type Incident } from './dispatch/incident-reporter.ts';
@@ -160,6 +161,7 @@ export {
   type Trace,
 } from './reading/recorded-read.ts';
 export { IssueSchema, type Issue } from './outcome/issue.ts';
+export type { Choice, Options } from './outcome/options.ts';
 export type { JsonSchemaDocument } from './definition/json-schema.ts';
 export { Ledger, type ContentKeeper, type LedgerPorts } from './ledger/ledger.ts';
 export { lineageAttributeNames, messageIdOf, noLineage, type Lineage } from './ledger/message-lineage.ts';

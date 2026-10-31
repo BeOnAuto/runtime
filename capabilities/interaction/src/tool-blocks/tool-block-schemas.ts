@@ -29,6 +29,16 @@ export const DeliverBlockSchema = Schema.Struct({
   ),
 });
 
+export const forAnAgent = 'agent';
+
+export const DeliverSchema = Schema.Union([
+  Schema.Literal(forAnAgent).annotate({
+    description:
+      'The request is for an agent, which reads it with list_interactions and answers it with answer_interaction',
+  }),
+  DeliverBlockSchema,
+]).annotate({ expected: `${forAnAgent}, or the server, tool and with of the tool that sends the request` });
+
 export const CallBlockSchema = Schema.Struct({
   ...ToolUseSchema.fields,
   with: Schema.optionalKey(ArgumentsSchema),

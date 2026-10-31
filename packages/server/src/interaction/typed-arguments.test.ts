@@ -1,3 +1,4 @@
+import { agentDelivery } from '@on.auto/interaction/testing';
 import { describe, expect, it } from 'vitest';
 
 import { chatEnvironment, chatServer } from '../testing/interaction-servers/chat-deliveries.ts';
@@ -45,7 +46,7 @@ const answerSchema = {
 describe('the arguments of a delivery, typed as written, over HTTP', () => {
   it('sends a number, a boolean and an object as written, an expression alone as its value, and other strings as text', async () => {
     const chat = await chatServer();
-    const server = await servingInteractions([], chatEnvironment(chat.url));
+    const server = await servingInteractions(agentDelivery, chatEnvironment(chat.url));
     await server.call('POST', `${alpha}/definitions/interaction`, {
       body: { name: 'approve-limit', source: limitApproval },
     });

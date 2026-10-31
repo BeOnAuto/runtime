@@ -42,7 +42,11 @@ export function defineIntrospect(access: ToolLookup) {
     outputSchema: ToolDescribedSchema,
     reasons: ['unavailable'],
     handle: Effect.fnUntraced(function* ({ server, tool }) {
-      return { server, tool, ...Struct.omit(yield* namedToolOf(access, { server, tool }), ['name', 'title']) };
+      return {
+        server,
+        tool,
+        ...Struct.omit(yield* namedToolOf(access, { server, tool }), ['name', 'title', 'answersNoBody']),
+      };
     }),
     plainLanguage: {
       task: readingTask.introspect,

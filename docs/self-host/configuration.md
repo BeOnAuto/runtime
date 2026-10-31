@@ -206,7 +206,7 @@ An interaction function needs nothing configured beyond its [tool server](#tool-
 
 - calls the tool it names under `call`, and returns its result;
 - sends its request through the tool it names under `deliver`;
-- leaves its request in the playbook's inbox.
+- holds its request for an agent, which reads it with `list_interactions` and answers it with `answer_interaction`, under `deliver: agent`.
 
 It may also read the replies to what it sent through another tool of that server.
 
@@ -248,7 +248,7 @@ export const manifest = {
 };
 ```
 
-The contract is the one every capability of the runtime is made and served by, and its version is a whole number, `1` in this release, raised whenever the contract changes. The implementation of `capability/prediction` is a function the server calls once as it starts, before it opens its database, with the ports it hands a capability:
+The contract is the one every capability of the runtime is made and served by, and its version is a whole number, `1` in this release, raised when a change to it would refuse a capability built against the version before. Contract 1 hands a capability's `check` the playbook a definition is saved in, as its `place`; a check written before it takes the place and leaves it unread, so the version stays 1. The implementation of `capability/prediction` is a function the server calls once as it starts, before it opens its database, with the ports it hands a capability:
 
 | Port               | What the extension is handed                                                                                                                                                                                                                          |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

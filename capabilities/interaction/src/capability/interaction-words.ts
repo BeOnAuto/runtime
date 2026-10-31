@@ -28,7 +28,7 @@ function requestAccount(record: Schema.JsonObject): RunAccount | undefined {
   return {
     summary: `${what}, ${throughWords(route)}, until ${request.expires_at}${from}.`,
     data: {
-      delivery: route.kind === 'inbox' ? null : { server: route.delivery.server, tool: route.delivery.tool },
+      delivery: route.kind === 'agent' ? null : { server: route.delivery.server, tool: route.delivery.tool },
       to: cutParty(request.to),
       ...(answerer === undefined ? {} : { answerer: cutParty(answerer) }),
       message_bytes: Buffer.byteLength(request.message, 'utf8'),

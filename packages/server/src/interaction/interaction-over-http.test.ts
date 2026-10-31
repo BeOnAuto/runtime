@@ -1,4 +1,5 @@
 import { localDeveloper } from '@on.auto/identity/testing';
+import { agentDelivery, notificationDocument } from '@on.auto/interaction/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -10,8 +11,8 @@ const answerIdOf = Schema.decodeUnknownSync(Schema.Struct({ answer_id: Schema.St
 
 const developer = { id: 'local', name: localDeveloper.name };
 
-describe('an interaction function through the inbox, over HTTP', () => {
-  it('leaves its request in the inbox and takes a checked answer as the output, once, which its history shows', async () => {
+describe('an interaction function held for an agent, over HTTP', () => {
+  it('holds its request for an agent and takes a checked answer as the output, once, which its history shows', async () => {
     const server = await servingInteractions();
     const started = await server.call('POST', `${alpha}/definitions/interaction/approve-brief/run`, {
       body: { input: brief },
@@ -60,7 +61,7 @@ describe('an interaction function through the inbox, over HTTP', () => {
   });
 });
 
-describe('an interaction function through the inbox that ends without an answer, over HTTP', () => {
+describe('an interaction function held for an agent that ends without an answer, over HTTP', () => {
   it('ends a cancelled request as cancelled, which a late answer then finds ended', async () => {
     const server = await servingInteractions();
     const runId = await server.ask('approve-brief');
@@ -75,13 +76,28 @@ describe('an interaction function through the inbox that ends without an answer,
     });
     expect([late.status, await server.openRequests(0)]).toEqual([409, []]);
   });
+});
 
-  it('succeeds a notification at once, with nothing left in the inbox', async () => {
+describe('a notification for an agent, over HTTP', () => {
+  it('is refused at save, since a notification goes through a connection', async () => {
     const server = await servingInteractions();
-    const runId = await server.ask('brief-out');
+    const saved = await server.call('POST', `${alpha}/definitions/interaction`, {
+      body: { name: 'brief-out', source: notificationDocument(agentDelivery) },
+    });
 
-    expect(await server.settled(runId)).toMatchObject({ status: 'succeeded', output: {} });
-    expect((await server.call('GET', `${alpha}/interactions`)).body).toMatchObject({ interactions: [] });
+    expect([saved.status, saved.body]).toMatchObject([
+      422,
+      {
+        errors: [
+          {
+            pointer: '/source',
+            detail:
+              'Line 4, /deliver: A notification takes no answer, so no agent holds it: it goes through a connection, deliver naming the tool that sends it. No connection or tool server serves this playbook; one can be connected with search and add_connection.',
+          },
+        ],
+      },
+    ]);
+    expect(saved.body).not.toHaveProperty('options');
   });
 });
 
@@ -103,7 +119,7 @@ describe('an Authorization header that holds no Bearer key, over HTTP', () => {
   });
 });
 
-describe('a workflow that asks through the inbox', () => {
+describe('a workflow that asks an agent', () => {
   it('waits for the answer and takes it as the output of its step', async () => {
     const server = await servingInteractions();
     const workflowId = await server.workflow('approval', `do:\n${asking('approve-brief', 'approve')}`);

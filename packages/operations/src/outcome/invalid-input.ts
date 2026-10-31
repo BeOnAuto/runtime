@@ -1,6 +1,7 @@
 import { Data, Schema } from 'effect';
 
 import type { Issue } from './issue.ts';
+import type { Options } from './options.ts';
 
 export const InvalidInputKindSchema = Schema.Literals(['input_schema', 'cursor_not_held']);
 
@@ -11,4 +12,5 @@ export class InvalidInput extends Data.TaggedError('invalid_input')<{
   readonly issues: readonly Issue[];
   readonly kind?: InvalidInputKind;
   readonly record?: Schema.JsonObject;
+  readonly options?: Options;
 }> {}

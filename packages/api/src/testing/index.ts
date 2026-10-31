@@ -1,21 +1,25 @@
 export {
-  calledOpeningLinks,
   connectMcp,
   mcpClientKinds,
   plainTextIn,
   problemIn,
-  retriedWith,
-  stateAskedBy,
   technicalTextIn,
   textOf,
   withMcpSession,
-  type LinkOpening,
-  type LinksAsked,
   type McpClientKind,
   type McpConnection,
   type McpSession,
   type ToolResult,
 } from './mcp-clients.ts';
+export {
+  calledAnsweringForms,
+  calledOpeningLinks,
+  retriedWith,
+  stateAskedBy,
+  type FormAnswering,
+  type LinkOpening,
+  type LinksAsked,
+} from './elicited-calls.ts';
 export { foundIn, oldWords, oldWordsIn } from './vocabulary/old-words.ts';
 export {
   openApiErrorsIn,

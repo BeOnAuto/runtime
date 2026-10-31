@@ -1,13 +1,13 @@
-import { issueAt, type DocumentParts, type ValueContract } from '@on.auto/definitions/document';
+import { issueAt, type DocumentParts, type SourceLines, type ValueContract } from '@on.auto/definitions/document';
 import type { ParsedTemplate } from '@on.auto/definitions/template';
 import { Result } from 'effect';
 
 import type { ReplyRule } from '../replies/reply-rule.ts';
-import type { DocumentReading, WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
+import type { DocumentReading } from '../tool-blocks/compiled-tool-block.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { RequestDocument } from './interaction-document.ts';
 import { fromOf, replyOf } from './reply-parts.ts';
-import { routeIn } from './route-parts.ts';
+import { routeIn, wayOf, type WrittenWay } from './route-parts.ts';
 import { contractOf, expiresOf, issuesOf, messageOf, toOf, type Checked } from './written-parts.ts';
 
 interface Asked {
@@ -16,7 +16,7 @@ interface Asked {
 }
 
 type CheckedParts = {
-  readonly route: Checked<WrittenRoute | null>;
+  readonly route: Checked<WrittenWay>;
   readonly expires: Checked<number>;
   readonly input: Checked<ValueContract>;
   readonly output: Checked<ValueContract>;
@@ -59,12 +59,16 @@ function partsOf(
 
 type DoneParts = { readonly [Part in keyof CheckedParts]: Result.Result.Success<CheckedParts[Part]> };
 
-function documentOfParts(written: InteractionFrontMatter, expires: string, done: DoneParts): RequestDocument {
+function documentOfParts(
+  written: InteractionFrontMatter,
+  { expires, lines }: { readonly expires: string; readonly lines: SourceLines },
+  done: DoneParts,
+): RequestDocument {
   const { route, input, output, to, from, message, reply } = done;
   return {
     shape: 'request',
     ...(written.description === undefined ? {} : { description: written.description }),
-    ...(route === null ? {} : { route }),
+    ...wayOf(route, lines),
     to,
     ...(from === null ? {} : { from }),
     expires,
@@ -108,5 +112,5 @@ export function requestFrom(
   ];
   return found.length > 0
     ? Result.fail(found)
-    : Result.map(Result.all(checked), (done) => documentOfParts(written, expires, done));
+    : Result.map(Result.all(checked), (done) => documentOfParts(written, { expires, lines }, done));
 }

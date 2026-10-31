@@ -10,6 +10,7 @@ import type { LinkToOpen, OfferedLink, RegisteredPlainLanguage } from '@on.auto/
 import { Duration, Option, Redacted, Schema } from 'effect';
 
 import { orgCallOf, type OrgCall } from '../hand-off/caller-hand-off.ts';
+import { offeringOptions } from './offered-options.ts';
 import { callbackFor, type CalledTool, type CallServing, type Dispatch, type ToolContext } from './tool-callback.ts';
 
 interface StateVerifier {
@@ -186,5 +187,5 @@ function askingToOpen(serving: AnsweringServing, call: OrgCall, tool: LinkingToo
 
 export function toolCallbackOf(serving: AnsweringServing, call: OrgCall, tool: LinkingTool): AskingToOpen {
   const { link } = tool;
-  return link === undefined ? callbackFor(serving, call, tool) : askingToOpen(serving, call, tool, link);
+  return link === undefined ? offeringOptions(serving, call, tool) : askingToOpen(serving, call, tool, link);
 }

@@ -6,6 +6,7 @@ import type { DeliveryEvent } from '../facts/run-facts.ts';
 import { answerInteraction } from '../requests/answer-interaction.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import {
+  agentDelivery,
   approvalDocument,
   askedRunId,
   askedThroughChat,
@@ -71,8 +72,8 @@ describe('an expiry due behind attempts', () => {
   it('is read apart from the attempts due before it, as an item that calls out nowhere', async () => {
     const otherRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
     const { playbook, askedAt } = await askedThroughChat();
-    await playbook.define('ask-in-inbox', approvalDocument([], 'PT1M'));
-    await playbook.ask('ask-in-inbox', { campaign: 'Spring', owner: 'ada' }, otherRunId);
+    await playbook.define('ask-an-agent', approvalDocument(agentDelivery, 'PT1M'));
+    await playbook.ask('ask-an-agent', { campaign: 'Spring', owner: 'ada' }, otherRunId);
     const now = askedAt + 2 * minute;
 
     const attempts = await Effect.runPromise(playbook.due.due(now, 1, true));
@@ -89,8 +90,8 @@ describe('an expiry due behind attempts', () => {
   it('is the next time of the endings alone, apart from the next attempt, when the lane is asked', async () => {
     const otherRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7c';
     const { playbook } = await askedThroughChat();
-    await playbook.define('ask-in-inbox', approvalDocument([], 'PT1M'));
-    await playbook.ask('ask-in-inbox', { campaign: 'Spring', owner: 'ada' }, otherRunId);
+    await playbook.define('ask-an-agent', approvalDocument(agentDelivery, 'PT1M'));
+    await playbook.ask('ask-an-agent', { campaign: 'Spring', owner: 'ada' }, otherRunId);
     const rows = await Effect.runPromise(
       playbook.ledger.service.readProjectedRows(openRequestsName, alpha, {
         where: [],

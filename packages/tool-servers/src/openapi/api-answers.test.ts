@@ -86,7 +86,7 @@ describe('an answer of an HTTP API that is not shown as it is', () => {
   });
 });
 
-const describingAnId = { schemas: [], components: {}, headers: { '2XX': ['X-Id'] } };
+const describingAnId = { schemas: [], components: {}, headers: { '2XX': ['X-Id'] }, describesNoBody: false };
 
 const readInProcess = {
   named: undefined,

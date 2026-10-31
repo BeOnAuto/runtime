@@ -102,6 +102,7 @@ const decisionDocument = [
   'description: Ask the campaign owner to decide on a brief',
   "to: '{{ input.owner }}'",
   'expires: P2D',
+  'deliver: agent',
   'input:',
   '  schema: { type: object, required: [campaign, owner], properties: { campaign: { type: string }, owner: { type: string } } }',
   'output:',

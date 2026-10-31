@@ -7,8 +7,9 @@ import {
   type Registration,
   type RouteRegistration,
   type Dispatcher,
+  OperationsServed,
 } from '@on.auto/operations';
-import { Effect, Result } from 'effect';
+import { Context, Effect, Result } from 'effect';
 
 import {
   playbookCallOf,
@@ -145,8 +146,14 @@ interface ConnectedCall {
   readonly call: OrgCall;
 }
 
+function servingBeside(call: OrgCall, served: ServedTools): OrgCall {
+  const names = new Set([...served.orgTools, ...served.playbookTools]);
+  return { ...call, context: Context.add(call.context, OperationsServed, (name: string) => names.has(name)) };
+}
+
 function serverWithTools(connected: ConnectedCall, served: ServedTools, tools: readonly Tool[]): McpServer {
   const { connection, serving, call } = connected;
+  const callBeside = servingBeside(call, served);
   const session = {
     connection,
     actingAs: { caller: call.caller, org: call.org },
@@ -154,7 +161,7 @@ function serverWithTools(connected: ConnectedCall, served: ServedTools, tools: r
   };
   return serverOf(session, served, (server) => {
     for (const tool of tools) {
-      server.registerTool(tool.name, tool.definition, toolCallbackOf(serving, call, tool));
+      server.registerTool(tool.name, tool.definition, toolCallbackOf(serving, callBeside, tool));
     }
   });
 }

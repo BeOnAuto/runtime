@@ -1,4 +1,12 @@
-import { listedTools, withMcpSession, type ListedTool, type McpSession } from '@on.auto/api/testing';
+import {
+  calledAnsweringForms,
+  listedTools,
+  withMcpSession,
+  type FormAnswering,
+  type LinksAsked,
+  type ListedTool,
+  type McpSession,
+} from '@on.auto/api/testing';
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 
@@ -13,10 +21,16 @@ export interface Surfaces {
   readonly tools: readonly ListedTool[];
 }
 
+interface ToolCall {
+  readonly name: string;
+  readonly arguments: Readonly<Record<string, unknown>>;
+}
+
 export interface MeetingsServer {
   readonly surfaces: Surfaces;
   readonly onMcp: <T>(use: (session: McpSession) => Promise<T>) => Promise<T>;
   readonly onPlaybook: <T>(playbook: string, use: (session: McpSession) => Promise<T>) => Promise<T>;
+  readonly answeringForms: (call: ToolCall, answering: Partial<FormAnswering>) => Promise<LinksAsked>;
   readonly chat: FakeMcpServer | undefined;
   readonly stop: () => Promise<void>;
 }
@@ -51,13 +65,8 @@ async function chatServing(options: MeetingsOptions) {
   return { chat, servers: { chat: entry } };
 }
 
-export async function servingMeetings(
-  replies: readonly ScriptedReplies[],
-  options: MeetingsOptions = {},
-): Promise<MeetingsServer> {
-  const slack = await serveFakeMcp({ bearer: slackKey });
-  const { chat, servers } = await chatServing(options);
-  const server = await servingReasoning(replies, {
+function toolServersOf(slack: FakeMcpServer, servers: Readonly<Record<string, unknown>>) {
+  return {
     SLACK_KEY: slackKey,
     CHAT_KEY: chatKey,
     NOTES_KEY: 'a-key-the-server-refuses',
@@ -76,7 +85,16 @@ export async function servingMeetings(
       },
       ...servers,
     }),
-  });
+  };
+}
+
+export async function servingMeetings(
+  replies: readonly ScriptedReplies[],
+  options: MeetingsOptions = {},
+): Promise<MeetingsServer> {
+  const slack = await serveFakeMcp({ bearer: slackKey });
+  const { chat, servers } = await chatServing(options);
+  const server = await servingReasoning(replies, toolServersOf(slack, servers));
   const onMcp = <T>(use: (session: McpSession) => Promise<T>): Promise<T> =>
     withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, use);
   const surfaces = await onMcp(async (session) => ({
@@ -87,6 +105,8 @@ export async function servingMeetings(
     surfaces,
     chat,
     onMcp,
+    answeringForms: (call, answering) =>
+      calledAnsweringForms({ url: `${server.origin}/mcp`, headers: {} }, call, answering),
     onPlaybook: (playbook, use) =>
       withMcpSession(
         'current revision',

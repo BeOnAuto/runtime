@@ -55,7 +55,7 @@ describe('episode 1: asked "what is a playbook?"', () => {
     const answer = sentencesOf(surfaces.instructions).slice(1, 4).join(' ');
 
     expect(answer).toBe(
-      'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows.',
+      'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.',
     );
     expect(internalTermsIn(answer)).toEqual([]);
     expect(answer).not.toMatch(/[a-z]+_[a-z_]+|\bid\b/u);

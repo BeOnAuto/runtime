@@ -7,6 +7,7 @@ import type {
   OneCall,
   StartedFields,
   ToolAccess,
+  ToolServer,
 } from '@on.auto/tool-servers';
 import { ToolNotOffered } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
@@ -18,7 +19,10 @@ export type FakeAnswer =
   | { readonly kind: 'not_offered' }
   | { readonly kind: 'unopened'; readonly detail: string };
 
-export type ToolPorts = Pick<ToolAccess, 'named' | 'configured' | 'preparedCall' | 'callOnce'>;
+export type ToolPorts = Pick<
+  ToolAccess,
+  'named' | 'configured' | 'preparedCall' | 'callOnce' | 'listServers' | 'takesConnections'
+>;
 
 export interface FakeTools extends ToolPorts, Pick<ChatBoard, 'posted' | 'reply'> {
   readonly calls: () => readonly OneCall[];
@@ -102,6 +106,28 @@ function answeredWith(answer: BoardAnswer, number: number): AnsweredOnce {
   return { ...answering, outcome, failed: { because: outcome, duration_ms: 3, jsonrpc_id: number } };
 }
 
+function chatTool(name: string, description: string, readOnly: boolean) {
+  return {
+    name,
+    description,
+    input_schema: { type: 'object', properties: { channel: { type: 'string' } } },
+    ...(readOnly ? { annotations: { readOnlyHint: true } } : {}),
+  };
+}
+
+const theChat: ToolServer = {
+  name: 'chat',
+  type: 'mcp',
+  record_content: true,
+  playbooks: ['*'],
+  connection: 'conn_chat',
+  provider: 'chat',
+  tools: [
+    chatTool('post_message', 'Posts a message to a channel or a thread.', false),
+    chatTool('thread_replies', 'Lists the replies of a thread, oldest first.', true),
+  ],
+};
+
 function namedBy(refusals: readonly (Refusal | undefined)[]): Effect.Effect<void, ToolNotOffered> {
   const refusal = refusals.find((each) => each !== undefined);
   return refusal === undefined ? Effect.void : Effect.fail(new ToolNotOffered(refusal));
@@ -126,6 +152,8 @@ export function fakeTools(duringCall: (call: OneCall) => Effect.Effect<unknown> 
   };
   return {
     configured: true,
+    takesConnections: true,
+    listServers: () => Effect.succeed([theChat]),
     named: (_address, references) => namedBy(references.map((reference) => refusalOf(reference, offering))),
     preparedCall: (call) =>
       Effect.map(startOf(call), (fields) => ({ fields, called: Effect.suspend(() => sent(call)) })),
@@ -144,6 +172,8 @@ export function fakeTools(duringCall: (call: OneCall) => Effect.Effect<unknown> 
 
 export const noTools: ToolPorts = {
   configured: false,
+  takesConnections: false,
+  listServers: () => Effect.succeed([]),
   named: (_address, references) => namedBy(references.map(({ server }) => notConfigured(server))),
   preparedCall: (call) => Effect.map(startOf(call), (fields) => ({ fields, called: notOfferedOnce(call) })),
   callOnce: notOfferedOnce,

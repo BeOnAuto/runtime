@@ -8,6 +8,7 @@ export {
   type InteractionHarness,
 } from './interaction-harness.ts';
 export {
+  agentDelivery,
   approvalDocument,
   chatDelivery,
   datedAnswerSchema,

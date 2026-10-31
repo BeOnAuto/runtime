@@ -34,7 +34,7 @@ describe('the terminology guide', () => {
 
     expect(interacting).toContain(theRequestTerm);
     expect(notInteracting).not.toContain('Interaction:');
-    expect(notInteracting).not.toContain('- Inbox:');
+    expect(notInteracting).not.toContain('- Held for an agent:');
   });
 
   it('is stripped of the markup and links of the page', () => {

@@ -4,24 +4,66 @@
 
 An interaction function is a definition of the type `interaction`. It takes one of three shapes:
 
-| Shape                           | What a run does                                                                                       | Use it for                                                 |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Asks a system                   | Calls the tool named in `call` once, and returns part of the tool's result at once                    | What a system returns now, such as the replies of a thread |
-| Asks a person through the inbox | Renders a request to a party, with an expiry, and leaves it in the playbook's inbox                   | An approval, a choice, or a figure only someone else has   |
-| Asks a person through a tool    | Renders the same request and sends it through the tool named in `deliver`, such as a chat's post tool | The same, reaching the person where they already work      |
+| Shape                              | What a run does                                                                                                                                                            | Use it for                                                                |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Asks a system                      | Calls the tool named in `call` once, and returns part of the tool's result at once                                                                                         | What a system returns now, such as the replies of a thread                |
+| Asks a person through a connection | Renders a request to a party, with an expiry, and sends it through the tool of a connection named in `deliver`, such as a chat's post tool, and may read the replies to it | An approval, a choice, or a figure only someone else has, where they work |
+| Asks an agent                      | Renders the same request and holds it for an agent, `deliver: agent`, which reads it with `list_interactions` and answers it with `answer_interaction`                     | The same, answered by the person in a conversation with their agent       |
 
-A run that asks a person renders the message from its input. Then it waits until the request is answered, expires or is cancelled, without using server resources. The answer is checked against the document's answer schema, and becomes the run's output. A function without an answer schema sends a **notification**, which needs no answer.
+A run that asks a person renders the message from its input. Then it waits until the request is answered, expires or is cancelled, without using server resources. The answer is checked against the document's answer schema, and becomes the run's output. A function without an answer schema sends a **notification**, which needs no answer and goes through a connection.
+
+## How a request reaches its party
+
+Write in `deliver` how the request reaches its party: the tool of a connection that sends to them, or `agent`. A person answers a request where it reaches them, so a request that names neither is refused when it is saved. A connection carries a request when its server offers a tool that sends to a party, one whose name says it sends, posts, publishes, replies, comments or mails, or creates or writes a message, a comment or mail, and names no other operation, such as update, delete, pin or list, that deletes nothing and is not described as answering without a body, since `sent` points into what it answers, and a read-only tool that reads the replies, such as:
+
+- a chat tool: the tool that posts a message in a channel or a thread, and the one that lists the replies of a thread;
+- an email provider: the tool that sends mail, and the one that lists the messages of a thread;
+- a ticketing or approvals app: the tool that adds a comment to an item, and the one that lists its comments.
+
+`deliver: agent` holds the request for an agent: an agent the person talks to reads it with `list_interactions`, and answers it with `answer_interaction` once the person says what to answer.
+
+A notification takes no answer, so no agent holds it: it goes through a connection, `deliver` naming the tool that sends it, and any connection with a tool that sends can carry it.
+
+Ask the person once where they want to be asked. `create_definition` and `update_definition` refuse a request that names no way with words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way, and refuse a notification that names no tool, or `agent`, with words that name each connection whose tools can send it. A tool server of the server's own settings is named a tool server. A playbook with none is told so, and why for each connection that cannot be used just now. Wherever no connection can carry it, it is told that one can be connected with `search` and `add_connection`, where the agent's tools include both. When the agent's MCP client answers forms, the server asks the person itself before it refuses, "Where should the owner be asked?", or "told?" for a notification, with each such connection, and for a request the agent way, to choose from. Once they choose, the refusal names the connection's sending tool and its reading tool, or says to write `deliver: agent`; the agent learns what each tool takes with `introspect`, calls the sending tool with `execute` once the person agrees, to see what it answers for `sent`, and writes `deliver` and `replies` from it.
 
 ## A function document
 
-The source is Markdown with YAML front matter followed by the message. This example, `approve-campaign-brief`, asks a campaign's owner to approve the review of their brief. Its answer is `{ verdict: approve | revise, note? }`:
+The source is Markdown with YAML front matter followed by the message. This example, `approve-campaign-brief`, asks a campaign's owner, in the team chat, to approve the review of their brief, and takes their answer from their reply in the thread of the message. Its answer is `{ verdict: approve | revise, note? }`:
 
 <!-- prettier-ignore -->
 ```markdown
 ---
-description: Asks the campaign owner to approve a reviewed brief
+description: Asks the campaign owner, in the team chat, to approve a reviewed brief
 to: '{{ input.owner }}'
 expires: P2D
+deliver:
+  server: chat
+  tool: post_message
+  with:
+    channel: '{{ to }}'
+    text: '{{ message }}'
+  sent:
+    conversation: /channel
+    id: /ts
+replies:
+  conversation: '{{ sent.conversation }}/{{ sent.id }}'
+  tool: thread_replies
+  with:
+    channel: '{{ sent.conversation }}'
+    ts: '{{ sent.id }}'
+    oldest: '{{ since | default: "0" }}'
+    limit: 15
+  read:
+    list: /messages
+    order: oldest_first
+    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }
+  wait: PT1M
+  tell:
+    with:
+      channel: '{{ sent.conversation }}'
+      thread_ts: '{{ sent.id }}'
+      text: '{{ message }}'
+reply: { verdict: word, note: rest }
 input:
   schema:
     type: object
@@ -41,12 +83,12 @@ The review of your campaign brief is ready:
 
 {{ input.review }}
 
-Approve the brief as it stands, or ask for a revision.
+Reply **approve**, or **revise** with a note of what to change.
 ```
 
 To save it, call `create_definition` with `type: "interaction"`, the `name` `approve-campaign-brief`, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `owner` and `review` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook.
 
-The run returns `status: started` with its `run_id`. The function names no `deliver`, so the request waits in the playbook's inbox until it is answered.
+The run returns `status: started` with its `run_id`, and sends the review to the owner through the chat's `post_message`. The owner answers by replying in the thread of the message, or tells their agent, which answers with `answer_interaction`. The same request held for an agent writes `deliver: agent` in place of `deliver`, `replies` and `reply`.
 
 ## Asking a system
 
@@ -89,7 +131,7 @@ A run that called its tool and did not succeed is never run again under its run 
 
 ## Sending through a tool
 
-A function sends its request through a tool by naming the tool in `deliver`, with the arguments the call takes. It needs nothing set up beyond the tool server itself. A function without `deliver` waits in the playbook's inbox.
+A function sends its request through a tool by naming the tool in `deliver`, with the arguments the call takes. It needs nothing set up beyond the tool server itself, a connection of the org or a server whoever runs this server set up.
 
 Write a delivery from what the tool returns, not from memory:
 
@@ -119,65 +161,7 @@ The templates of `deliver.with` read:
 
 A template holds no `${`, since a document is never filled from the environment.
 
-This function sends a draft to its owner in a chat, and takes their approval from the replies in the thread of the message:
-
-<!-- prettier-ignore -->
-```markdown
----
-description: Send the draft to its owner in the chat and take their approval
-to: '{{ input.owner }}'
-expires: P2D
-deliver:
-  server: chat
-  tool: post_message
-  with:
-    channel: '{{ to }}'
-    text: '{{ message }}'
-  sent:
-    conversation: /channel
-    id: /ts
-replies:
-  conversation: '{{ sent.conversation }}/{{ sent.id }}'
-  tool: thread_replies
-  with:
-    channel: '{{ sent.conversation }}'
-    ts: '{{ sent.id }}'
-    oldest: '{{ since | default: "0" }}'
-    limit: 15
-  read:
-    list: /messages
-    order: oldest_first
-    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }
-  wait: PT1M
-  tell:
-    with:
-      channel: '{{ sent.conversation }}'
-      thread_ts: '{{ sent.id }}'
-      text: '{{ message }}'
-reply: { verdict: word, note: rest }
-input:
-  schema:
-    type: object
-    required: [owner, draft]
-    properties:
-      owner: { type: string }
-      draft: { type: string, maxLength: 4000 }
-output:
-  schema:
-    type: object
-    required: [verdict]
-    properties:
-      verdict: { type: string, enum: [approve, revise] }
-      note: { type: string, maxLength: 2000 }
----
-Here is the draft:
-
-{{ input.draft }}
-
-Reply **approve**, or **revise** with a note of what to change.
-```
-
-Every name in it is the chat's own, learned by testing its two tools. Testing shows what the sending tool takes, where its result names the message, and what the reading tool lists. `channel` is the chat's word for a conversation; the playbook passes it on as it passes any argument.
+[`approve-campaign-brief`](#a-function-document) sends the review to its owner in a chat, and takes their approval from the replies in the thread of the message. Every name in it is the chat's own, learned by testing its two tools. Testing shows what the sending tool takes, where its result names the message, and what the reading tool lists. `channel` is the chat's word for a conversation; the playbook passes it on as it passes any argument.
 
 - `tell` names no `tool`, so a party whose reply was not an answer is told through `post_message`, the sending tool, in the thread of the message.
 - `reply` takes the verdict from the first word of a reply and the note from the rest. Without it, the rule made from the schema would read the verdict alone and drop the note.
@@ -192,39 +176,41 @@ A request sent through a tool is attempted at once. After a failed attempt it is
 - Each attempt is one call of the tool. It is recorded in the run's history before it is sent, with the size and digest of its arguments. So two servers never make the same attempt. Its end records what the tool returned.
 - These are failed attempts, tried again: a tool error, a server failure, no response within 30 seconds, and a connection not opened within 10 seconds.
 - Arguments past 16 KiB are refused and not tried again.
-- A tool the server no longer offers to the playbook fails the attempt. The request stays open, to be answered through the inbox.
+- A tool the server no longer offers to the playbook fails the attempt. The request stays open, and `answer_interaction` answers it.
 - An attempt cut off by a restart counts as failed a minute after it started, and the next one follows. So a tool may be called twice for one request.
 - A question whose attempts are spent stays open until someone answers it or it expires. A notification whose attempts are spent ends `unanswered` as `undelivered`.
 
 ## Fields
 
-| Field           | Purpose                                                                                                                                                                                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description`   | Optional explanation, 1 to 1,000 characters                                                                                                                                                                                                                                                       |
-| `call`          | The tool the function asks: `server`, `tool`, `with` and `read`; see [`call`](#call). With it, `output.schema` is required and `to`, `expires`, `deliver`, `replies`, `from`, `reply` and the body are refused                                                                                    |
-| `to`            | Required without `call`, refused with it. A template that renders the party the request goes to: a name the playbook's readers filter by, which a delivery's templates may use as the tool's address                                                                                              |
-| `from`          | Optional. A template, as `to` is, that renders the party whose reply counts, the answerer; `to` when left out. A request sent to a room names the person here                                                                                                                                     |
-| `expires`       | Required without `call`, refused with it. An ISO 8601 duration from one minute to thirty days, such as `PT4H` or `P2D`, after which a request nobody answered ends                                                                                                                                |
-| `deliver`       | The tool the request is sent through: `server` and `tool` as `search` names them, and `with`, the call's arguments. `sent` holds two JSON Pointers into the tool's answer, to the conversation and to the message's identity; see [`deliver`](#deliver). Left out, the request waits in the inbox |
-| `replies`       | Only with `deliver`, its `sent` and `output.schema`: how the replies to the message are read, with `conversation`, `tool`, `with`, `read`, `wait` and `tell`; see [`replies`](#replies)                                                                                                           |
-| `input.schema`  | Optional JSON Schema of the input                                                                                                                                                                                                                                                                 |
-| `output.schema` | Optional JSON Schema of the answer. The answer must match it and is the run's output. A function without it is a notification: it takes no answer and succeeds once its request is delivered                                                                                                      |
-| `reply`         | Optional, only with `output.schema`: the reply rule; see [Answering by reply](#answering-by-reply)                                                                                                                                                                                                |
+| Field           | Purpose                                                                                                                                                                                                                                                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description`   | Optional explanation, 1 to 1,000 characters                                                                                                                                                                                                                                                                                   |
+| `call`          | The tool the function asks: `server`, `tool`, `with` and `read`; see [`call`](#call). With it, `output.schema` is required and `to`, `expires`, `deliver`, `replies`, `from`, `reply` and the body are refused                                                                                                                |
+| `to`            | Required without `call`, refused with it. A template that renders the party the request goes to: a name the playbook's readers filter by, which a delivery's templates may use as the tool's address                                                                                                                          |
+| `from`          | Optional. A template, as `to` is, that renders the party whose reply counts, the answerer; `to` when left out. A request sent to a room names the person here                                                                                                                                                                 |
+| `expires`       | Required without `call`, refused with it. An ISO 8601 duration from one minute to thirty days, such as `PT4H` or `P2D`, after which a request nobody answered ends                                                                                                                                                            |
+| `deliver`       | The tool the request is sent through: `server` and `tool` as `search` names them, and `with`, the call's arguments. `sent` holds two JSON Pointers into the tool's answer, to the conversation and to the message's identity; see [`deliver`](#deliver). Or `agent`, for a request held for an agent. Required without `call` |
+| `replies`       | Only with the tool of `deliver`, its `sent` and `output.schema`: how the replies to the message are read, with `conversation`, `tool`, `with`, `read`, `wait` and `tell`; see [`replies`](#replies)                                                                                                                           |
+| `input.schema`  | Optional JSON Schema of the input                                                                                                                                                                                                                                                                                             |
+| `output.schema` | Optional JSON Schema of the answer. The answer must match it and is the run's output. A function without it is a notification: it takes no answer and succeeds once its request is delivered                                                                                                                                  |
+| `reply`         | Optional, only with `output.schema`: the reply rule; see [Answering by reply](#answering-by-reply)                                                                                                                                                                                                                            |
 
 `model`, `config`, `tools`, `language` and every other field are rejected with their line. The body after the front matter is the message. The saved function has the `media_type` `text/markdown`.
 
 ### Fields by shape
 
-| Field                         | Asks a system | Asks through the inbox                           | Asks through a tool                                              |
-| ----------------------------- | ------------- | ------------------------------------------------ | ---------------------------------------------------------------- |
-| `call`                        | Required      | Refused                                          | Refused                                                          |
-| `to`, `expires`, the message  | Refused       | Required                                         | Required                                                         |
-| `from`                        | Refused       | Optional                                         | Optional                                                         |
-| `deliver`                     | Refused       | Left out                                         | Required                                                         |
-| `replies`                     | Refused       | Refused                                          | Optional; needs `deliver.sent`, `output.schema` and a reply rule |
-| `output.schema`               | Required      | Optional; without it, a notification             | Optional; without it, a notification                             |
-| `reply`                       | Refused       | Optional, with `output.schema`; nothing reads it | Optional, with `output.schema`; read only with `replies`         |
-| `description`, `input.schema` | Optional      | Optional                                         | Optional                                                         |
+| Field                         | Asks a system | Asks a person through a connection                               | Asks an agent                                    |
+| ----------------------------- | ------------- | ---------------------------------------------------------------- | ------------------------------------------------ |
+| `call`                        | Required      | Refused                                                          | Refused                                          |
+| `to`, `expires`, the message  | Refused       | Required                                                         | Required                                         |
+| `from`                        | Refused       | Optional                                                         | Optional                                         |
+| `deliver`                     | Refused       | Required: the tool that sends the request                        | Required: `agent`                                |
+| `replies`                     | Refused       | Optional; needs `deliver.sent`, `output.schema` and a reply rule | Refused                                          |
+| `output.schema`               | Required      | Optional; without it, a notification                             | Required                                         |
+| `reply`                       | Refused       | Optional, with `output.schema`; read only with `replies`         | Optional, with `output.schema`; nothing reads it |
+| `description`, `input.schema` | Optional      | Optional                                                         | Optional                                         |
+
+A request that names no `deliver` is refused when saved, in words that name the connections whose tools can send a request and read its replies, and the agent way, and so is a notification that names no tool, or `agent`, in words that name the connections whose tools can send it; see [How a request reaches its party](#how-a-request-reaches-its-party).
 
 A function that reads replies needs a reply rule: the one `reply` writes, or one made from the answer schema. Without either, it is refused when saved.
 
@@ -359,7 +345,7 @@ A person often answers in a conversation with their agent: they approve, reject,
 
 - `list_interactions` shows the `answer_schema` beside the `run_id`. It is the function's `output.schema` as it stood when the request was asked. Once the function has changed, `get_definition` no longer shows it.
 - For the document above, the person's "approve" is `{ "verdict": "approve" }`, and "revise: name the job role" is `{ "verdict": "revise", "note": "Name the job role." }`. A function with another `output.schema` takes its own shape, whatever words the person used: for a function whose answer has a `decision` of `approve`, `revise` or `skip` and an optional `note`, it is `{ "decision": "approve" }`.
-- This holds wherever the request reached the person, in the inbox or through a tool such as a chat's.
+- This holds for a request held for an agent and for one sent through a tool, such as a chat's.
 - Running the function or its workflow again answers nothing: it makes a new request, the first stays open until it expires, and the run that waits for it goes on waiting.
 
 Rules of an answer:
@@ -368,7 +354,7 @@ Rules of an answer:
 - The answer is checked against the answer schema the request recorded, and takes at most 64 KiB as JSON.
 - It is recorded on the run as one fact, `request_answered`, with the answer and `claimed_for`. `claimed_for` is whom the caller says it answers for: a claim the runtime keeps and never checks. The fact records the caller and the time itself.
 - `answer_interaction` returns that fact: the `run_id`, the `answer_id` of the fact (which `get_event` reads), the `answer`, `claimed_for`, `answered_by` (the caller who answered, by `id` and `name`) and `answered_at`.
-- The request leaves the inbox at once. The run takes the answer within about a second (the server checks waiting runs every second by default). It succeeds with the answer as its output, settled as the caller that answered.
+- The request leaves the open requests at once. The run takes the answer within about a second (the server checks waiting runs every second by default). It succeeds with the answer as its output, settled as the caller that answered.
 - An answer that does not match is `invalid_input`, with a pointer under `/answer` for each problem, and leaves the request open.
 - The same answer sent again returns the fact the run took. A different answer is `conflict`, since a run takes one answer.
 - An answer to a request that has ended, or whose run was asked to cancel, is `conflict`, and so is an answer to a notification.
@@ -378,9 +364,9 @@ Rules of an answer:
 `list_interactions`, or `GET /v1/orgs/{org}/playbooks/{playbook}/interactions` over HTTP, lists the playbook's open requests, newest first. An answered request leaves the list. Each request shows:
 
 - the `run_id`, and the `type`, the name and the version of the function that asked;
-- `to`, and the `delivery`: the tool the request is sent through, or `null` for the inbox;
+- `to`, and the `delivery`: the tool the request is sent through, or `null` for a request held for an agent;
 - the message, whether it takes an answer, and when it was asked and expires;
-- the attempts made, and how its delivery stands: `in_inbox`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked;
+- the attempts made, and how its delivery stands: `held_for_an_agent`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked;
 - its `answer_schema`, the JSON Schema an answer is checked against as the request recorded it, or `null` for a notification;
 - for a request answered by reply, the `conversation` the playbook reads, its `answerer` and how many of its replies were refused.
 
@@ -424,7 +410,7 @@ How replies are taken:
 | Ending                                         | When                                                                                                                                                                                                  |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `succeeded`                                    | The request was answered, and the answer is the output                                                                                                                                                |
-| `succeeded`                                    | A notification was delivered, with the output `{}`. One without `deliver` succeeds at once                                                                                                            |
+| `succeeded`                                    | A notification was delivered, with the output `{}`                                                                                                                                                    |
 | `succeeded`                                    | A function with `call`: the tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                     |
 | `invalid_input`                                | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads, as `money` refuses text: `The message cannot be rendered with this input`  |
 | `conflict`, kind `unworkable`                  | `to` or `from` rendered empty, as something that is not text, with a control character, or longer than 256 bytes                                                                                      |
@@ -556,6 +542,6 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 
 ## Availability
 
-Interaction functions are available in every runtime. A request reaches a person through the inbox, or through the tools of the tool servers the operator configures and of the org's connections. See [Functions and availability](../concepts/functions.md#availability).
+Interaction functions are available in every runtime. A request reaches a person through the tools of the tool servers the operator configures and of the org's connections, or is held for an agent. See [Functions and availability](../concepts/functions.md#availability).
 
 </div>

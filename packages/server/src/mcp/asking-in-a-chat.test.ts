@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { mostGuideBytes } from '@on.auto/api';
-import { plainTextIn, textOf, type McpSession } from '@on.auto/api/testing';
+import { plainTextIn, problemIn, textOf, type McpSession } from '@on.auto/api/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
@@ -187,7 +187,7 @@ describe('episode 10: asked to put the replies of a thread into the weekly summa
       'An interaction function asks a system and answers at once, or a person and answers started.',
     );
     expect(seen.recipe).toContain(
-      'When the playbook only needs what a tool answers, with nothing to reason about, write an interaction function that calls the tool instead',
+      "To read or act on a system, write an interaction function that calls the connection's tool with `call` instead",
     );
     expect(seen.called.structuredContent).toMatchObject({
       outcome: 'result',
@@ -196,5 +196,60 @@ describe('episode 10: asked to put the replies of a thread into the weekly summa
     });
     expect(seen.saved.isError).not.toBe(true);
     expect(seen.reasoning.structuredContent).toEqual({ definitions: [] });
+  });
+});
+
+const askingTheOwner = [
+  '---',
+  'description: Ask the owner to approve the draft',
+  "to: '{{ input.owner }}'",
+  'expires: P2D',
+  'input:',
+  '  schema: { type: object, required: [owner, draft], properties: { owner: { type: string }, draft: { type: string } } }',
+  'output:',
+  '  schema: { type: object, required: [verdict], properties: { verdict: { type: string, enum: [approve, revise] } } }',
+  '---',
+  'Here is the draft: {{ input.draft }}',
+].join('\n');
+
+const savingIt = {
+  name: 'create_definition',
+  arguments: { ...inMeetings, type: 'interaction', name: 'approve-the-draft', source: askingTheOwner },
+};
+
+const throughTheChat =
+  'Line 2, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute once the person agrees.';
+
+const namingTheChatAndTheAgent: unknown = expect.stringMatching(
+  /deliver: agent holds the request for an agent, .* This playbook can send a request and read its replies through the tool server chat \(post_message, thread_replies\); a connection can also be added with search and add_connection\.$/u,
+);
+
+describe('episode 11: asked to have the owner approve a draft, without saying where', () => {
+  it('asks the person where the owner should be asked, choosing among the tool servers that can carry it and the agent way, and is refused in the words of the chat they chose', async () => {
+    const { answer, elicited } = await meetings.answeringForms(savingIt, { content: { choice: 'tool_server:chat' } });
+
+    expect(elicited).toMatchObject([
+      {
+        mode: 'form',
+        message: 'Where should the owner be asked?',
+        requestedSchema: {
+          properties: {
+            choice: {
+              oneOf: [
+                { const: 'tool_server:chat', title: 'chat' },
+                { const: 'agent', title: 'An agent, such as this one' },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+    expect(problemIn(answer)).toMatchObject({ errors: [{ pointer: '/source', detail: throughTheChat }] });
+  });
+
+  it('is refused, for a client that answers no form, with the tool servers that can carry it and the agent way, which the agent asks the person about in words', async () => {
+    const refused = await meetings.onMcp((session) => session.callTool('create_definition', savingIt.arguments));
+
+    expect(problemIn(refused)).toMatchObject({ errors: [{ pointer: '/source', detail: namingTheChatAndTheAgent }] });
   });
 });

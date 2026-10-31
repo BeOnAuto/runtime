@@ -31,11 +31,16 @@ const aRun: RunContext = {
 };
 
 function openDocument(to: string, message: string): string {
-  return ['---', `to: '${to}'`, 'expires: P1D', 'output:', '  schema: { type: object }', '---', message].join('\n');
-}
-
-function notifying(message: string): string {
-  return ['---', "to: 'ada'", 'expires: PT1H', '---', message].join('\n');
+  return [
+    '---',
+    `to: '${to}'`,
+    'expires: P1D',
+    'deliver: agent',
+    'output:',
+    '  schema: { type: object }',
+    '---',
+    message,
+  ].join('\n');
 }
 
 async function askedWith(source: string, input: unknown) {
@@ -44,10 +49,10 @@ async function askedWith(source: string, input: unknown) {
   return playbook.ask('ask', input, runId);
 }
 
-describe('a notification to the inbox', () => {
-  it('succeeds at once with an empty output, keeping what it said, and waits for nothing', async () => {
+describe('a notification an earlier release saved without a way to its party', () => {
+  it('is held for an agent and succeeds at once with an empty output, keeping what it said, and waits for nothing', async () => {
     const playbook = interactionHarness();
-    await playbook.define('tell', notificationDocument());
+    await playbook.defineAsAnEarlierRelease('tell', notificationDocument([]));
 
     expect(await playbook.ask('tell', { campaign: 'Spring', owner: 'ada' }, runId)).toMatchObject({
       status: 'succeeded',
@@ -60,12 +65,27 @@ describe('a notification to the inbox', () => {
   });
 });
 
+describe('a request recorded before its way had to be said', () => {
+  it('runs as one held for an agent, deferring with no delivery in its record', async () => {
+    const { capability } = interactionHarness();
+    const recorded = Effect.runSync(onTheStandingClock(capability.prepare(approvalDocument([]))));
+
+    const asked = await Effect.runPromise(onTheStandingClock(recorded.run({ campaign: 'Spring', owner: 'ada' }, aRun)));
+
+    expect(asked).toMatchObject({ finishesLater: true, record: { to: 'ada' } });
+    expect(asked.record).not.toHaveProperty('deliver');
+  });
+});
+
 describe('a message that formats its input', () => {
   it('writes an amount as money, clips a text and counts its words, as every template may', async () => {
     const playbook = interactionHarness();
     await playbook.define(
       'tell',
-      notifying('{{ input.amount | money }} for {{ input.note | clip: 5 }}, in {{ input.note | words }} words'),
+      openDocument(
+        'ada',
+        '{{ input.amount | money }} for {{ input.note | clip: 5 }}, in {{ input.note | words }} words',
+      ),
     );
     await playbook.ask('tell', { amount: 1234.5, note: 'Hello, world' }, runId);
 

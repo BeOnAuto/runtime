@@ -27,7 +27,7 @@ Each function a step calls has a run of its own, with its own id, so you can ins
 
 ## Starting a run
 
-Your agent starts a run and gives it the workflow's input. The run then goes on by itself, and your agent can check on it later. Every step acts for whoever started the run, with the permissions they had when it started.
+What you ask the playbook to do is a workflow, its functions the steps, run and shown as one result: your agent writes it, a later ask changes it, a one-step workflow is still a workflow, and a function runs on its own only to test it. Your agent starts a run and gives it the workflow's input. The run then goes on by itself, and your agent can check on it later. Every step acts for whoever started the run, with the permissions they had when it started.
 
 [Starting and cancelling a run](../reference/workflow-format.md#starting-and-cancelling-a-run) gives the details, including how to repeat a start safely and how to cancel a run.
 
@@ -51,7 +51,7 @@ Two kinds of input reach a run that is already waiting, and neither starts a new
 - an answer to a request that one of its steps made;
 - an event sent to the run, for input that is not an answer, such as a revised brief.
 
-An approval is an interaction function. The workflow calls it as it calls any function. The function asks the person through the playbook's inbox or through a tool, such as a chat message, and the workflow waits. The person's answer is the result of that step. If nobody answers before the request expires, the workflow can catch that and take another path.
+An approval is an interaction function. The workflow calls it as it calls any function. The function asks the person through a connection they chose, such as a chat message, or holds the request for an agent they answer through, and the workflow waits. The person's answer is the result of that step. If nobody answers before the request expires, the workflow can catch that and take another path.
 
 [Waiting for events](../reference/workflow-format.md#waiting-for-events) gives the rules for events.
 

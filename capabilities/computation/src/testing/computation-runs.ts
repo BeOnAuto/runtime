@@ -10,6 +10,7 @@ import {
   measuredPoolSettings,
   noCalledDefinitions,
   recordingJournal,
+  savedIn,
 } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
 import { programPool, type PoolSettings, type ProgramPool } from '@on.auto/workflow-engine/dsl';
@@ -71,7 +72,7 @@ export function computationWith(pool: ProgramPool = poolOf(), bounds: RunBounds 
   const capability = makeComputationFunctionAdapter({ pool, deadlineMs: runsAwaitedAtMostMs, ...bounds });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   const saved = (source: string) =>
-    Effect.flatMap(prepared(source).check(), (stripped) => capability.prepare(source, stripped));
+    Effect.flatMap(prepared(source).check(savedIn), (stripped) => capability.prepare(source, stripped));
   return {
     capability,
     prepared,

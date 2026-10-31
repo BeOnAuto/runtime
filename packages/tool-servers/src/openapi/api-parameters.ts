@@ -19,9 +19,10 @@ export interface AnswerSchemas {
   readonly schemas: readonly Schema.Json[];
   readonly components: Readonly<Record<string, Schema.Json>>;
   readonly headers: Readonly<Record<string, readonly string[]>>;
+  readonly describesNoBody: boolean;
 }
 
-export const unschemedAnswers: AnswerSchemas = { schemas: [], components: {}, headers: {} };
+export const unschemedAnswers: AnswerSchemas = { schemas: [], components: {}, headers: {}, describesNoBody: false };
 
 export interface Placed<A> {
   readonly value: A;
@@ -180,6 +181,13 @@ function successResponsesOf(document: ApiDocument, operation: Placed<Operation>)
     );
 }
 
+function noBodyIn(responses: readonly SuccessResponse[]): boolean {
+  return (
+    responses.length > 0 &&
+    responses.every(([, { content = {} }]: SuccessResponse) => Object.keys(content).length === 0)
+  );
+}
+
 function answerSchemasOf(responses: readonly SuccessResponse[]): readonly Schema.Json[] {
   return responses.flatMap(([, { content = {} }]: SuccessResponse) =>
     Object.entries(content).flatMap(([mediaType, { schema }]: readonly [string, { readonly schema?: Schema.Json }]) =>
@@ -242,5 +250,6 @@ export function answersOf(
     ),
     components: definitions,
     headers: describedHeadersOf(document, operation),
+    describesNoBody: noBodyIn(responses),
   };
 }

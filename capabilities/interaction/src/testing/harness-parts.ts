@@ -1,4 +1,4 @@
-import type { PlaybookOperation } from '@on.auto/definitions';
+import { noStrippedForms, type Capability, type PlaybookOperation } from '@on.auto/definitions';
 import { onTheStandingClock } from '@on.auto/definitions/testing';
 import type { Outcome } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
@@ -12,6 +12,17 @@ const ListedSchema = Schema.Struct({
 });
 
 const decodeListed = Schema.decodeUnknownSync(ListedSchema);
+
+export function savedAsAnEarlierRelease(capability: Capability): Capability {
+  return {
+    ...capability,
+    prepare: (source, stripped) =>
+      Effect.map(capability.prepare(source, stripped), (prepared) => ({
+        ...prepared,
+        check: () => Effect.succeed(noStrippedForms),
+      })),
+  };
+}
 
 export async function firstOpenOf(
   call: (operation: PlaybookOperation, input: unknown) => Promise<Outcome>,

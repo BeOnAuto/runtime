@@ -53,6 +53,13 @@ async function sent(request: ApiRequest, sending: Sending, mintedAgain = false):
   return sent(request, sending, true);
 }
 
+function listingOf({ operations }: DescribedApiSettings['api']): ServerClient['listTools'] {
+  return () =>
+    Promise.resolve(
+      operations.map(({ tool, answers }) => (answers.describesNoBody ? { ...tool, answersNoBody: true } : tool)),
+    );
+}
+
 export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): ServerClient {
   const operations = new Map(settings.api.operations.map((operation) => [operation.tool.name, operation]));
   const endpoint: ApiEndpoint = {
@@ -95,7 +102,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
         return { error, observed: unobserved };
       }
     },
-    listTools: () => Promise.resolve(settings.api.operations.map(({ tool }) => tool)),
+    listTools: listingOf(settings.api),
     closed,
     end: () => {
       resolve();

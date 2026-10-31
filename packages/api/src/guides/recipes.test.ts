@@ -29,9 +29,9 @@ const firstPlaybookFile = readFileSync(new URL('recipes/first-playbook.md', impo
 const callsOfTheFunction = ['list_playbooks', 'create_playbook', 'create_definition', 'execute', 'run_definition'];
 
 describe('the first-playbook recipe where the workflow guide is carried', () => {
-  it('says that a first playbook holds the workflow that runs its function where the work should run on its own', () => {
+  it('says that a first playbook holds the workflow whose step its function is, which does what the person asked', () => {
     expect(withWorkflows?.text).toContain(
-      'A first playbook holds a first reasoning function that the person sees answer, and, where the work should run on its own, the workflow that runs it. Read the reasoning-function guide',
+      'A first playbook holds a first reasoning function that the person sees answer, and the workflow whose step it is, which does what the person asked. Read the reasoning-function guide',
     );
   });
 
@@ -41,15 +41,15 @@ describe('the first-playbook recipe where the workflow guide is carried', () => 
     );
   });
 
-  it('writes the workflow after the function has answered, with its trigger as the workflow guide says, and saves it once the person agrees', () => {
+  it('tests the function, then writes the workflow whose step it is, with its trigger as the workflow guide says, and saves it once the person agrees', () => {
     expect(withWorkflows?.text).toContain(
-      "6. Ask for an input, run the function with run_definition, and tell the person what it answered, in their words.\n7. Where the work starts on its own, read the workflow guide with get_guide and write the workflow that runs the function, with a `schedule` as the guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.\n",
+      "6. Ask for an input, run the function with run_definition to test it, and tell the person what it answered, in their words.\n7. Read the workflow guide with get_guide and write the workflow whose step is the function, which does what the person asked: a one-step workflow is still a workflow, and a later ask changes it. Where the work starts on its own, give it a `schedule` as the guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.\n",
     );
   });
 
-  it('tells the person when it next runs or what starts it, publishes what they paste for an event, and names the schedule recipe and the workflow guide first of what comes next', () => {
+  it('runs the workflow and tells the person what it answered and when it next runs or what starts it, publishes what they paste for an event, and names the schedule recipe and the workflow guide first of what comes next', () => {
     expect(withWorkflows?.text).toContain(
-      '\n9. Tell the person when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from, and a moment later show what its run answered with list_runs, `type` workflow, and get_run.\n\nThen tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, give it tools with the give-tools recipe, or make the playbook remember its answers with the remember recipe.\n',
+      '\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from, and a moment later show what its run answered with list_runs, `type` workflow, and get_run.\n\nThen tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, give it tools with the give-tools recipe, or make the playbook remember its answers with the remember recipe.\n',
     );
   });
 
@@ -61,9 +61,16 @@ describe('the first-playbook recipe where the workflow guide is carried', () => 
 describe('the first-playbook recipe where the interaction-function guide is carried too', () => {
   it('names an interaction function among what comes next, after the schedule recipe and the tools', () => {
     expect(withWorkflowsAndInteraction?.text).toContain(
-      'Then tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, give it tools with the give-tools recipe, send someone a message through a tool and take their answer with an interaction function, or make the playbook remember its answers with the remember recipe.\n',
+      'Then tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, give it tools with the give-tools recipe, ask someone through a connection and take their answer with an interaction function, or make the playbook remember its answers with the remember recipe.\n',
     );
     expect(withWorkflowsAndInteraction?.calls).toEqual(withWorkflows?.calls);
+  });
+
+  it('asks once, after what the playbook is for and its model, where the person wants to be asked', () => {
+    expect(withWorkflowsAndInteraction?.text).toContain(
+      'is not a model to run. Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither lists those that can.\n',
+    );
+    expect(withWorkflows?.text).not.toContain('ask once where they want to be asked');
   });
 });
 
@@ -73,6 +80,14 @@ describe('the give-tools recipe', () => {
 
     expect(recipes.find(({ name }) => name === 'give-tools')?.text).toContain(
       "Where search says a server's connection is `connection_broken` and its words say to reconnect it, call reconnect_connection with its `connection` as `id` and give the person the link it answers, rather than removing the connection and adding it again.",
+    );
+  });
+
+  it('ends, where the workflow guide is carried, with the workflow whose steps are the functions, run and its answer told', async () => {
+    const recipes = await recipesFor(recipeFiles, guidesNamed(['reasoning-function', 'workflow']));
+
+    expect(recipes.find(({ name }) => name === 'give-tools')?.text).toMatch(
+      /the function can call only the tools it names\.\n9\. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
     );
   });
 });

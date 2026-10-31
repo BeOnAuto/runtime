@@ -5,6 +5,7 @@ import { WrittenRuleSchema } from '../replies/reply-rule.ts';
 import {
   CallBlockSchema,
   DeliverBlockSchema,
+  DeliverSchema,
   EachSchema,
   ReadSchema,
   RepliesSchema,
@@ -20,7 +21,7 @@ const FrontMatterSchema = Schema.Struct({
   to: Schema.optionalKey(Schema.String),
   from: Schema.optionalKey(Schema.String),
   expires: Schema.optionalKey(Schema.String),
-  deliver: Schema.optionalKey(DeliverBlockSchema),
+  deliver: Schema.optionalKey(DeliverSchema),
   replies: Schema.optionalKey(RepliesSchema),
   input: Schema.optionalKey(SectionSchema),
   output: Schema.optionalKey(SectionSchema),

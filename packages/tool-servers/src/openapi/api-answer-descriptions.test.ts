@@ -6,6 +6,8 @@ import { describedAccess } from '../testing/index.ts';
 import { serveFakeApi } from '../testing/served-fakes.ts';
 import { settledOf } from './api-answers.ts';
 
+const described = { schema: { type: 'string' } };
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -78,11 +80,34 @@ describe('the answers of an operation of an HTTP API', () => {
       schemas: [{ $ref: '#/$defs/Message' }, { type: 'array', items: { $ref: '#/$defs/Message' } }],
       components: { Message: { type: 'object', properties: { raw: { type: ['string', 'null'], format: 'byte' } } } },
       headers: { '200': [], '201': [], '204': ['X-Deleted'], '2XX': ['Link'] },
+      describesNoBody: false,
     });
   });
 });
 
-const described = { schema: { type: 'string' } };
+describe('the answers an operation of an HTTP API describes', () => {
+  it('have no body when it describes successful responses and none of them has content, and are not said to when it describes none', () => {
+    const operations = {
+      '/notes': { post: { operationId: 'addNote', responses: { '201': { headers: { 'X-Id': described } } } } },
+      '/notes/{id}': {
+        delete: {
+          operationId: 'deleteNote',
+          responses: { '204': {}, '2XX': { $ref: '#/components/responses/Empty' } },
+        },
+        put: { operationId: 'putNote', responses: { '200': { content: { 'text/plain': {} } }, '204': {} } },
+        get: { operationId: 'getNote', responses: { default: {} } },
+      },
+    };
+    const document = documentOf(operations, { components: { responses: { Empty: {} } } });
+
+    expect(toolsOf(document).operations.map(({ tool, answers }) => [tool.name, answers.describesNoBody])).toEqual([
+      ['addNote', true],
+      ['getNote', false],
+      ['putNote', false],
+      ['deleteNote', true],
+    ]);
+  });
+});
 
 function answersDescribing(responses: Schema.JsonObject) {
   const document = documentOf({ '/notes': { post: { operationId: 'addNote', responses } } });

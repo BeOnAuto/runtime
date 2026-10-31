@@ -13,11 +13,11 @@ import {
 import { describeAnswer, interactionRunWords } from './interaction-words.ts';
 
 describe('the interaction capability', () => {
-  it('prepares a question to finish later within its expiry, and a notification to the inbox to finish at once', () => {
+  it('prepares a question to finish later within its expiry, and a notification an earlier release saved without deliver to finish at once', () => {
     const { capability } = interactionHarness();
     const input = { campaign: 'Spring', owner: 'ada' };
-    const prepared = [approvalDocument(), notificationDocument(), notificationDocument(chatDelivery)].map((document) =>
-      Effect.runSync(onTheStandingClock(capability.prepare(document))),
+    const prepared = [approvalDocument(), notificationDocument([]), notificationDocument(chatDelivery)].map(
+      (document) => Effect.runSync(onTheStandingClock(capability.prepare(document))),
     );
 
     expect(prepared).toMatchObject([
@@ -79,7 +79,7 @@ describe('the words of an interaction run', () => {
       interactionRunWords.deferral({ run: 'not a request' }),
     ]).toEqual([
       {
-        summary: 'A request is waiting for an answer, in the inbox, until 2026-10-09T09:00:00.000Z.',
+        summary: 'A request is waiting for an answer, held for an agent, until 2026-10-09T09:00:00.000Z.',
         data: {
           delivery: null,
           to: 'ada',
@@ -118,7 +118,7 @@ describe('the words of a request answered by reply', () => {
       }),
     ).toMatchObject({
       summary:
-        'A request is waiting for an answer, in the inbox, until 2026-10-09T09:00:00.000Z; a reply counts from its answerer alone.',
+        'A request is waiting for an answer, held for an agent, until 2026-10-09T09:00:00.000Z; a reply counts from its answerer alone.',
       data: { to: '#approvals-sales', answerer: 'U024BE7LH' },
     });
     expect(

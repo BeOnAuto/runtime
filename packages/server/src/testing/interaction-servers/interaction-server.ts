@@ -1,4 +1,4 @@
-import { approvalDocument, notificationDocument } from '@on.auto/interaction/testing';
+import { agentDelivery, approvalDocument, notificationDocument } from '@on.auto/interaction/testing';
 import { Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -89,7 +89,7 @@ export async function interactionServerOn(
 }
 
 export async function servingInteractions(
-  delivery: readonly string[] = [],
+  delivery: readonly string[] = agentDelivery,
   environment: Readonly<Record<string, string>> = {},
   parts: ServedParts = {},
 ): Promise<InteractionServer> {

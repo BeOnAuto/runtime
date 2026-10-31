@@ -75,7 +75,7 @@ export interface PredictionRuns {
 function preparedOnTheStandingClock(definition: PreparedDefinition): PreparedDefinition {
   return {
     ...definition,
-    check: () => onTheStandingClock(definition.check()),
+    check: (place) => onTheStandingClock(definition.check(place)),
     run: (input, context) => onTheStandingClock(definition.run(input, context)),
   };
 }

@@ -2,7 +2,14 @@ import { InvalidInput } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineRunDefinition, defineCapability, type RunContext, type CapabilityDeclaration } from '../index.ts';
+import {
+  defineCreateDefinition,
+  defineRunDefinition,
+  defineUpdateDefinition,
+  defineCapability,
+  type RunContext,
+  type CapabilityDeclaration,
+} from '../index.ts';
 import { recordingJournal } from '../journal-testing/recording-journal.ts';
 import { answeringLaterMs, answeringNowMs, asking, nudgesPresenter } from '../testing/asking.ts';
 import { noCalledDefinitions } from '../testing/called-definitions.ts';
@@ -82,15 +89,22 @@ describe('a capability', () => {
 });
 
 describe('the reach of a capability', () => {
-  it('reaches systems outside the server only when it says so, and so does run_definition when one of its capabilities does', () => {
+  it('reaches systems outside the server only when it says so, and so do run_definition and the saves, whose check may ask them, when one of its capabilities does', () => {
     const local = defineCapability(words);
     const outside = defineCapability({ ...words, type: 'lookup', reachesOutside: true });
+    const operations = [defineRunDefinition, defineCreateDefinition, defineUpdateDefinition];
 
     expect([local.reachesOutside, outside.reachesOutside]).toEqual([false, true]);
-    expect([
-      defineRunDefinition([local]).registration.reachesOutside,
-      defineRunDefinition([local, outside]).registration.reachesOutside,
-    ]).toEqual([false, true]);
+    expect(
+      operations.map((define) => [
+        define([local]).registration.reachesOutside,
+        define([local, outside]).registration.reachesOutside,
+      ]),
+    ).toEqual([
+      [false, true],
+      [false, true],
+      [false, true],
+    ]);
   });
 });
 

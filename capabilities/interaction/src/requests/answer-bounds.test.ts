@@ -6,7 +6,16 @@ import { answerInteraction } from './answer-interaction.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const anyAnswer = ['---', "to: 'ada'", 'expires: P2D', 'output:', '  schema: {}', '---', 'Anything?'].join('\n');
+const anyAnswer = [
+  '---',
+  "to: 'ada'",
+  'expires: P2D',
+  'deliver: agent',
+  'output:',
+  '  schema: {}',
+  '---',
+  'Anything?',
+].join('\n');
 
 type Nested = readonly Nested[] | string;
 

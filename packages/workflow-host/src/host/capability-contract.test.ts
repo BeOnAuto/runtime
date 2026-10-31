@@ -23,6 +23,7 @@ import type {
   CallLink,
   Conflict,
   InvalidInput,
+  PlaybookAddress,
   Presenter,
   Registration,
   TriggerLink,
@@ -83,7 +84,7 @@ interface ContractOne {
   };
   readonly prepared: {
     readonly summary: DefinitionSummary;
-    readonly check: () => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
+    readonly check: (place: PlaybookAddress) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
     readonly run: (input: Schema.Json, context: RunContext) => Effect.Effect<CapabilityAnswer, CapabilityRejection>;
     readonly whenCancelled: 'stop' | 'finish';
     readonly cancelledAttempt: (attempt: RunAttempt) => CancelledAttempt;

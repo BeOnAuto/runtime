@@ -66,7 +66,10 @@ function noServerInOrg(adding: Adding, offered: Offered): string {
   return `No tool server serves this org, so the functions of its playbooks can call no tools ${untilOneIsSetUp(adding, offered)}`;
 }
 
-function unavailableInWords(server: Extract<SearchedServer, { readonly unavailable: string }>, named: string): string {
+export function unavailableInWords(
+  server: Pick<Extract<SearchedServer, { readonly unavailable: string }>, 'unavailable' | 'because'>,
+  named: string,
+): string {
   if (isUnready(server.because) || server.because === 'scope_lacking') {
     return `${named} cannot be used: ${server.unavailable}.`;
   }

@@ -1,3 +1,4 @@
+import { agentDelivery } from '@on.auto/interaction/testing';
 import { movedClock } from '@on.auto/workflow-host/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -51,9 +52,9 @@ describe('another workflow, triggered by the answer to a request', () => {
 });
 
 describe('a request a workflow step waits for past its deadline', () => {
-  it('is cancelled with the kind deadline, and leaves the inbox', async () => {
+  it('is cancelled with the kind deadline, and leaves the open requests', async () => {
     const clock = movedClock(Date.now());
-    const server = await servingInteractions([], {}, { clock });
+    const server = await servingInteractions(agentDelivery, {}, { clock });
     const workflowId = await server.workflow('hurried', hurried);
 
     const [request] = await server.openRequests(1);

@@ -26,6 +26,7 @@ export function defineUpdateDefinition(capabilities: readonly Capability[]) {
       ].join(' '),
       repeatable: true,
       route: { method: 'PUT', path: '/definitions/{type}/{name}' },
+      reachesOutside: known.reachesOutside,
       inputSchema: Schema.Struct({
         type: known.field,
         name: DefinitionNameField,

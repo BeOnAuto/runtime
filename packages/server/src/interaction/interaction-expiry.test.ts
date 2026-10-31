@@ -1,4 +1,5 @@
 import { openRequests } from '@on.auto/interaction';
+import { agentDelivery } from '@on.auto/interaction/testing';
 import { projectedTableOf } from '@on.auto/operations';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -31,7 +32,7 @@ const unansweredAsExpired = { status: 'rejected', rejection: { reason: 'unanswer
 describe('requests past their expiry while the server was stopped', () => {
   it('end unanswered as expired from the read model alone, which a catch names and an uncaught call passes on', async () => {
     const file = ledgerFile();
-    const first = await servingInteractions([], { LEDGER_FILE: file });
+    const first = await servingInteractions(agentDelivery, { LEDGER_FILE: file });
     const asked = await first.ask('approve-brief');
     const caught = await first.workflow('guarded', guarded('approve-brief', 'expired'));
     const uncaught = await first.workflow('approval', `do:\n${asking('approve-brief', 'approve')}`);

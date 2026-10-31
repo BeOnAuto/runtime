@@ -128,6 +128,9 @@ export {
 export { isScope } from './consent/scopes.ts';
 export { keptTokensIn, type KeptTokens } from './consent-tokens/kept-tokens.ts';
 export { defineSearch } from './search/search.ts';
+export { requestCarriersAmong, type RequestCarrier } from './search/request-carriers.ts';
+export { unavailableInWords } from './search/search-words.ts';
+export type { ServerTool, ToolServer } from './listing/tool-server.ts';
 export { defineSearchInOrg, type PlaybookLookup } from './search/search-in-org.ts';
 export type { OfferedProvider, ProviderOffering } from './search/found-providers.ts';
 export { defineIntrospect } from './tool-reads/introspect.ts';

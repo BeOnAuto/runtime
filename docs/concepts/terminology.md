@@ -66,14 +66,14 @@ Definitions, versions, runs and results are separate concepts, and an overview d
 
 ## Interaction
 
-| Term         | Meaning                                                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Request      | What a run of a function waits on when it asks a person: a message, the party it goes to and when it expires. A run that asks makes one request. |
-| Party        | Whoever a request goes to. A party can answer where the request reached them, without calling the runtime, so a party need not be a caller.      |
-| Inbox        | The playbook's own place for open requests, where a caller who may write to the playbook reads and answers them.                                 |
-| Delivery     | How a request reaches a party outside the playbook: one call of the tool the function names in `deliver`.                                        |
-| Answer       | What the party or the tool gives back; it must match the answer schema and is recorded on the run once, as the run's output.                     |
-| Notification | A request that takes no answer, whose run succeeds once it is delivered.                                                                         |
+| Term              | Meaning                                                                                                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Request           | What a run of a function waits on when it asks a person: a message, the party it goes to and when it expires. A run that asks makes one request.                           |
+| Party             | Whoever a request goes to. A party can answer where the request reached them, without calling the runtime, so a party need not be a caller.                                |
+| Held for an agent | A request whose function writes `deliver: agent`: an agent reads it with `list_interactions` and answers it with `answer_interaction` once the person says what to answer. |
+| Delivery          | How a request reaches a party through a connection the person chose: one call of the tool the function names in `deliver`.                                                 |
+| Answer            | What the party or the tool gives back; it must match the answer schema and is recorded on the run once, as the run's output.                                               |
+| Notification      | A request that takes no answer, so it goes through a connection; its run succeeds once it is delivered.                                                                    |
 
 An interaction function asks a system and returns its result at once, or asks a person and takes the answer later. Answering a request is not sending an event: an event goes to a waiting workflow run, and an answer goes to the run of the function that asked.
 

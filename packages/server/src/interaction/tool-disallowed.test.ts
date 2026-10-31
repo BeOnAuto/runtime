@@ -18,7 +18,7 @@ async function dueNow(file: string): Promise<void> {
 }
 
 describe('a tool its operator disallowed after a request asked through it', () => {
-  it('fails the next attempt as a tool no longer offered, and the request stays open, answered through the inbox', async () => {
+  it('fails the next attempt as a tool no longer offered, and the request stays open, answered with answer_interaction', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
     const unreachable = await chatServer();

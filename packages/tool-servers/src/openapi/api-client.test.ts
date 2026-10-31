@@ -32,7 +32,7 @@ function searchAt(path: string): ApiOperation {
     inputs: [],
     body: null,
     credentials: [],
-    answers: { schemas: [], components: {}, headers: {} },
+    answers: { schemas: [], components: {}, headers: {}, describesNoBody: false },
   };
 }
 
@@ -110,8 +110,34 @@ describe('the client of an HTTP API', () => {
     });
     expect(sent).toEqual([]);
   });
+});
 
-  it('closes when it ends, holding no session', async () => {
+describe('the tools the client of an HTTP API lists', () => {
+  it('are those of its document, saying of one whose described answers have no body that it answers none', async () => {
+    const operations = toolsOf(
+      documentOf({
+        '/notes': {
+          post: { operationId: 'addNote', responses: { '201': { description: 'Added' } } },
+          get: { operationId: 'listNotes', responses: { '200': { content: { 'application/json': {} } } } },
+        },
+      }),
+    ).operations;
+    const client = apiClient(
+      { ...settings, api: { ...settings.api, operations } },
+      { fetch: globalThis.fetch, tokens: undefined, now: Date.now },
+    );
+
+    const listed = await client.listTools(defaultTiming.openMs);
+
+    expect(listed.map(({ name, answersNoBody }) => [name, answersNoBody])).toEqual([
+      ['listNotes', undefined],
+      ['addNote', true],
+    ]);
+  });
+});
+
+describe('the end of the client of an HTTP API', () => {
+  it('closes it, holding no session', async () => {
     const client = apiClient(settings, {
       fetch: globalThis.fetch,
       tokens: undefined,

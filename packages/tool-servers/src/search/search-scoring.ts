@@ -46,15 +46,33 @@ function bestFirstThen<A>(tied: Order.Order<A>): Order.Order<Scored<A>> {
   );
 }
 
+function scoredOf<A>(
+  candidates: readonly A[],
+  terms: string,
+  searchableOf: (candidate: A) => Searchable,
+): readonly Scored<A>[] {
+  const words = termWordsOf(terms);
+  return candidates.map((candidate) => ({ candidate, score: scoreOf(searchableOf(candidate), words) }));
+}
+
+export function rankedOf<A>(
+  candidates: readonly A[],
+  terms: string,
+  searchableOf: (candidate: A) => Searchable,
+  tied: Order.Order<A>,
+): readonly A[] {
+  return scoredOf(candidates, terms, searchableOf)
+    .toSorted(bestFirstThen(tied))
+    .map(({ candidate }) => candidate);
+}
+
 export function bestOf<A>(
   candidates: readonly A[],
   terms: string,
   searchableOf: (candidate: A) => Searchable,
   tied: Order.Order<A>,
 ): readonly A[] {
-  const words = termWordsOf(terms);
-  return candidates
-    .map((candidate): Scored<A> => ({ candidate, score: scoreOf(searchableOf(candidate), words) }))
+  return scoredOf(candidates, terms, searchableOf)
     .filter(({ score }) => score > 0)
     .toSorted(bestFirstThen(tied))
     .slice(0, searchBounds.found)

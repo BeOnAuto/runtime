@@ -2,6 +2,7 @@ import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { chatEnvironment, chatServer } from '../testing/interaction-servers/chat-deliveries.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { blocksInOrderOf, fencedBlocksOf } from '../testing/servers/tutorial-calls.ts';
 import { runIdIn, servingWorkflows, settledRun } from '../testing/servers/workflow-server.ts';
@@ -22,8 +23,12 @@ afterEach(async () => {
 });
 
 describe('the example of the workflow format, through the server', () => {
-  it('saves the functions the page shows, reviews the brief, asks its owner through the inbox, and ends with the review and the approval', async () => {
-    server = await servingWorkflows([answers(textResult('Revise: the audience lacks a job role.'))]);
+  it('saves the functions the page shows, reviews the brief, asks its owner in the chat, and ends with the review and the approval', async () => {
+    const chat = await chatServer();
+    server = await servingWorkflows(
+      [answers(textResult('Revise: the audience lacks a job role.'))],
+      chatEnvironment(chat.url),
+    );
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     await server.call('POST', `${alpha}/definitions/reasoning`, {
       body: { name: 'review-campaign-brief', source: reviewCampaignBrief },

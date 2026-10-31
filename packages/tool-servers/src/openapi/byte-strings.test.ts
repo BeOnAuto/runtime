@@ -19,6 +19,7 @@ function base64url(text: string): string {
 const gmailAnswers: AnswerSchemas = {
   schemas: [{ $ref: '#/$defs/Message' }],
   headers: {},
+  describesNoBody: false,
   components: {
     Message: {
       type: 'object',
@@ -68,6 +69,7 @@ function messageOf(text: string, image: string, belled: string) {
 const envelopeAnswers: AnswerSchemas = {
   schemas: [{ $ref: '#/$defs/Envelope' }],
   headers: {},
+  describesNoBody: false,
   components: {
     Envelope: {
       type: 'object',
@@ -89,6 +91,7 @@ const byteListAnswers: AnswerSchemas = {
   schemas: [{ type: 'array', items: { type: 'string', format: 'byte' } }],
   components: {},
   headers: {},
+  describesNoBody: false,
 };
 
 describe('an answer of an HTTP API whose document marks a string format byte', () => {

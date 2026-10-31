@@ -20,7 +20,7 @@ Real work often combines types. A budget review might recall the last decisions,
 
 ## Availability
 
-Hosted Auto runs reasoning, interaction, computation and recall functions, and workflows. An interaction function there asks a person in Studio's inbox or through a tool of one of the org's connections, and asks a system through such a tool. Your agent lists the definition types its connection supports.
+Hosted Auto runs reasoning, interaction, computation and recall functions, and workflows. Your agent lists the definition types its connection supports.
 
 The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
@@ -46,11 +46,11 @@ Choose reasoning when the work needs judgment or language. Leave exact arithmeti
 
 An interaction function exchanges information between the playbook and people or other systems. It can ask for an approval, send a notification, collect details from a person or ask another system what it holds right now.
 
-It asks a system and takes the result straight back, or it asks a person and waits. A request reaches the person in the playbook's inbox or through a tool, such as a chat message, and their answer becomes the run's result. For example, once a brief is reviewed, an interaction function asks its owner to approve the review.
+It asks a system and takes the result straight back, or it asks a person and waits. A request reaches the person through a connection they chose, such as a chat message or an email, or is held for an agent they answer through, and their answer becomes the run's result. For example, once a brief is reviewed, an interaction function asks its owner to approve the review.
 
 Choose interaction when a person must decide or supply something, or when the playbook needs what another system holds right now. An interaction function does not interpret anything: no model reads the answer.
 
-- [Interaction function format](../reference/interaction-format.md) describes the document, and [Terminology](terminology.md#interaction) defines request, inbox and answer.
+- [Interaction function format](../reference/interaction-format.md) describes the document, and [Terminology](terminology.md#interaction) defines request, delivery and answer.
 
 ## Prediction
 

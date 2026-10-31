@@ -93,14 +93,42 @@ Check the brief against four criteria: the audience names a job role and a type 
 {{ input.brief }}
 ```
 
-The interaction function `approve-campaign-brief` leaves a request in the playbook's inbox for the owner, which expires after two days. Its answer is `{ verdict: approve | revise, note? }`:
+The interaction function `approve-campaign-brief` sends the review to its owner through the chat connection of the playbook, and takes their reply in the thread of the message as the answer; the request expires after two days. Its answer is `{ verdict: approve | revise, note? }`. `search` names the chat's server and its two tools, and `execute` shows what each answers; [How a request reaches its party](interaction-format.md#how-a-request-reaches-its-party) says how to choose the connection with the person:
 
 <!-- prettier-ignore -->
 ```markdown
 ---
-description: Asks the campaign owner to approve a reviewed brief
+description: Asks the campaign owner, in the team chat, to approve a reviewed brief
 to: '{{ input.owner }}'
 expires: P2D
+deliver:
+  server: chat
+  tool: post_message
+  with:
+    channel: '{{ to }}'
+    text: '{{ message }}'
+  sent:
+    conversation: /channel
+    id: /ts
+replies:
+  conversation: '{{ sent.conversation }}/{{ sent.id }}'
+  tool: thread_replies
+  with:
+    channel: '{{ sent.conversation }}'
+    ts: '{{ sent.id }}'
+    oldest: '{{ since | default: "0" }}'
+    limit: 15
+  read:
+    list: /messages
+    order: oldest_first
+    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }
+  wait: PT1M
+  tell:
+    with:
+      channel: '{{ sent.conversation }}'
+      thread_ts: '{{ sent.id }}'
+      text: '{{ message }}'
+reply: { verdict: word, note: rest }
 input:
   schema:
     type: object
@@ -120,13 +148,13 @@ The review of your campaign brief is ready:
 
 {{ input.review }}
 
-Approve the brief as it stands, or ask for a revision.
+Reply **approve**, or **revise** with a note of what to change.
 ```
 
 Save the two functions first: `create_definition` takes each one's `type` (`reasoning` or `interaction`), `name` and document as `source`. Then save the workflow with `type: "workflow"` and the name `review-and-approve`, or with `update_definition` where the tutorial already saved it. `run_definition` takes the same type and name, with `brief` and `owner` in `input`. The run then:
 
 1. Reviews the brief. A review that raises status 503 is tried again after 5, 10 and 20 seconds. After the third retry, the run raises its own error; [Errors, retries and timeouts](#errors-retries-and-timeouts) explains this pattern.
-2. Asks the owner to approve the review. The interaction function's run leaves a request in the playbook's inbox, and the workflow waits for the answer without using server resources. Someone answers it with `answer_interaction`, such as `{ "verdict": "approve" }`; see [Interaction function format](interaction-format.md).
+2. Asks the owner to approve the review. The interaction function's run posts the request in the chat, and the workflow waits for the answer without using server resources. The owner answers by replying in the thread of the message, or through their agent with `answer_interaction`, such as `{ "verdict": "approve" }`; see [Interaction function format](interaction-format.md).
 3. Ends with the review and the answer, such as `{ "review": "...", "approval": { "verdict": "approve" } }`. When nobody answers before the request expires, the `catch` takes the `unanswered` error and the run ends with the verdict `revise`.
 
 An approval, or any other question for a person or a system, is an interaction function that the workflow calls, as here. A [`listen` task](#waiting-for-events) is for an event that is not the answer to a question.

@@ -152,7 +152,7 @@ describe('episode 7: the person approves, in the chat, a draft a workflow sent t
     const guide = await meetings.onMcp((session) => session.callTool('get_guide', { guide: 'interaction-function' }));
 
     expect(sentenceNaming(instructions, 'answer_interaction')).toBe(
-      'When the person approves, rejects or otherwise answers what a run waits on, use answer_interaction, not a new run.',
+      'When the person answers what a run waits on, use answer_interaction, not a new run.',
     );
     expect(descriptionIn(meetings.surfaces, 'run_definition')).toContain(
       'a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
@@ -163,7 +163,7 @@ describe('episode 7: the person approves, in the chat, a draft a workflow sent t
       ),
     ).toEqual([]);
     expect(descriptionIn(meetings.surfaces, 'answer_interaction')).toContain(
-      'Use it when the person approves, rejects, revises or otherwise answers a request list_interactions shows, wherever it reached them; a new run asks again and answers nothing,',
+      'Use it when the person approves, rejects, revises or otherwise answers a request list_interactions shows, held for an agent or sent through a tool; a new run asks again and answers nothing,',
     );
     expect(descriptionIn(meetings.surfaces, 'answer_interaction')).toContain(
       '`answer` takes the shape of the request\'s answer_schema, which list_interactions shows, such as {"decision": "approve"}.',
@@ -203,6 +203,6 @@ describe('the shape of the answer an open request takes, as the agent reads it',
     expect(descriptionIn(meetings.surfaces, 'answer_interaction')).toContain(
       "`answer` takes the shape of the request's answer_schema, which list_interactions shows,",
     );
-    expect([description.length, sentencesOf(description).length]).toEqual([795, 5]);
+    expect([description.length, sentencesOf(description).length]).toEqual([799, 5]);
   });
 });

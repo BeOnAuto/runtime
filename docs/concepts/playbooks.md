@@ -45,7 +45,7 @@ Auto Runtime runs playbooks, and Auto Studio inspects and manages them. Your age
 
 ## The agent and the playbook
 
-Your agent helps you create and refine definitions, supplies inputs and calls functions. It can coordinate its own calls to Auto and to other systems.
+Your agent helps you create and refine definitions, supplies inputs and calls functions. It can coordinate its own calls to Auto and to other systems. The kind of ask decides the shape: what you ask the playbook to do is a workflow, its functions the steps, run and shown as one result, and a later ask changes the workflow; what you ask it to remember is a recall function; what you ask it to connect is a connection; and a question for right now is answered now, with nothing saved.
 
 The playbook keeps the saved definitions and the recorded runs, whatever happens to that conversation. An authorized colleague can use the same function from their own agent. Access to the playbook does not give a colleague access to the accounts anyone else's agent is connected to.
 
@@ -55,7 +55,7 @@ Auto Studio shows running work, history and operating controls. Authoring starts
 
 A playbook should do only what your team would trust it to do. Decide which actions it may take on its own, and where a person must decide. A review function can recommend a budget change without being allowed to make one.
 
-Where a person must decide, the method includes an interaction function. The workflow asks that person and waits for their answer, which they give in the playbook's inbox or, for some functions, where the request reached them. The [Interaction function format](../reference/interaction-format.md) describes how a request is delivered and answered in a runtime that supports interaction functions.
+Where a person must decide, the method includes an interaction function. The workflow asks that person through the connection they chose, such as a chat or their email, or holds the request for an agent they answer through, and waits for their answer. The [Interaction function format](../reference/interaction-format.md) describes how a request is delivered and answered in a runtime that supports interaction functions.
 
 These limits must hold for direct calls as well as for workflows. An approval step cannot protect an action that someone is allowed to run directly. Permissions apply to an [org](terminology.md#orgs-and-callers) and its playbooks; [Requests and access](../reference/http.md#requests-and-access) lists them.
 

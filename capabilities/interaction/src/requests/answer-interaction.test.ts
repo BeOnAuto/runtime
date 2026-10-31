@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   acmeAdmin,
+  agentDelivery,
   approvalDocument,
   askedRunId,
   askedThroughChat,
@@ -52,7 +53,7 @@ const interaction = {
   conversation: null,
   answerer: null,
   reply_refusals: 0,
-  standing: 'in_inbox',
+  standing: 'held_for_an_agent',
 };
 
 const refused = { ...interaction, conversation: 'C0123/1699.1', answerer: 'U024BE7LH', reply_refusals: 2 };
@@ -66,7 +67,7 @@ async function askedApproval(document = approvalDocument()) {
 
 const thePlaybook = { id: 'playbook:alpha', name: 'alpha' };
 
-describe('a request asked through the inbox', () => {
+describe('a request held for an agent', () => {
   it('waits as a started run, listed among the open requests of the playbook', async () => {
     const { playbook, asked } = await askedApproval();
 
@@ -84,7 +85,7 @@ describe('a request asked through the inbox', () => {
             message: 'Please review the brief for Spring.',
             takes_answer: true,
             attempts: 0,
-            standing: 'in_inbox',
+            standing: 'held_for_an_agent',
           },
         ],
         has_more: false,
@@ -161,7 +162,7 @@ describe('an answer to a request a reply answered first', () => {
 
 describe('an answer the request does not take', () => {
   it('is invalid input when it does not match the answer schema, with pointers, and leaves the request open', async () => {
-    const { playbook } = await askedApproval(approvalDocument([], 'P2D', datedAnswerSchema));
+    const { playbook } = await askedApproval(approvalDocument(agentDelivery, 'P2D', datedAnswerSchema));
 
     expect(
       await playbook.call(answerInteraction, { run_id: runId, answer: { choice: 'maybe', due: 'Friday' } }),
@@ -178,7 +179,7 @@ describe('an answer the request does not take', () => {
 
   it('is refused for a run there is not, a run that asks nothing, and a notification', async () => {
     const playbook = interactionHarness();
-    await playbook.define('tell', notificationDocument());
+    await playbook.defineAsAnEarlierRelease('tell', notificationDocument([]));
     await playbook.ask('tell', { campaign: 'Spring', owner: 'ada' }, otherRunId);
 
     expect([
