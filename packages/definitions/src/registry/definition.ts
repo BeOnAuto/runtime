@@ -15,7 +15,7 @@ const listedDefinitionFields = {
   }),
   version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
     description:
-      'The definition version: 1 when created, and one more for every update that changes its document or its overview',
+      'The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram',
   }),
   status: Schema.Literals(['active', 'retired']).annotate({ description: 'active, or retired for good' }),
   media_type: Schema.String.annotate({
@@ -75,6 +75,12 @@ export const DefinitionSchema = Schema.Struct({
     Schema.String.annotate({
       description:
         'The overview its author wrote: Markdown for the person who runs the business, kept as written with this version',
+    }),
+  ),
+  diagram: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'The diagram its author gave a function with this version: Mermaid source of a flowchart or a state diagram of how it works, or the word none where a picture would add nothing; left out for a workflow and for a version saved without one',
     }),
   ),
   triggers_since: Schema.optionalKey(

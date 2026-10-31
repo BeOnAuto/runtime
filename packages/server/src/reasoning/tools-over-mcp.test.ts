@@ -84,7 +84,12 @@ async function withPlaybook(server: ReasoningServer): Promise<void> {
 async function executedTwice(server: ReasoningServer, document = source) {
   await withPlaybook(server);
   return onAlpha(server, async (session) => {
-    await session.callTool('create_definition', { type: 'reasoning', name: 'summary', source: document });
+    await session.callTool('create_definition', {
+      type: 'reasoning',
+      name: 'summary',
+      source: document,
+      diagram: 'none',
+    });
     const running = { type: 'reasoning', name: 'summary', input: {}, run_id: runId };
     const first = await session.callTool('run_definition', running);
     const again = await session.callTool('run_definition', running);

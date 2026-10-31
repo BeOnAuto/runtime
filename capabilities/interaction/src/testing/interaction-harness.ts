@@ -110,6 +110,11 @@ function servicesOf(ledger: HarnessLedger): Layer.Layer<DispatcherServices> {
   );
 }
 
+function savingAnInteraction(call: Calling, capabilities: readonly Capability[]): InteractionHarness['define'] {
+  return (name, source) =>
+    call(defineCreateDefinition(capabilities), { type: 'interaction', name, source, diagram: 'none' });
+}
+
 export function interactionHarness(options: HarnessOptions = {}): InteractionHarness {
   const ledger: HarnessLedger = options.ledger ?? memoryLedger(undefined, [openRequests]);
   const tools = options.tools ?? noTools;
@@ -141,9 +146,8 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     record: workRecorder(ledger.service, facts),
     due,
     call,
-    define: (name, source) => defineAs('interaction', name, source),
-    defineAsAnEarlierRelease: (name, source) =>
-      call(defineCreateDefinition([savedAsAnEarlierRelease(capability)]), { type: 'interaction', name, source }),
+    define: savingAnInteraction(call, capabilities),
+    defineAsAnEarlierRelease: savingAnInteraction(call, [savedAsAnEarlierRelease(capability)]),
     ask: (name, input, runId) => askAs('interaction', name, input, runId),
     defineAs,
     askAs,

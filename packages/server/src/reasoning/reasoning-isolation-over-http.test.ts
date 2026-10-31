@@ -28,7 +28,7 @@ beforeEach(async () => {
   });
   await server.call('POST', '/v1/orgs/acme/playbooks/alpha/definitions/reasoning', {
     ...acme,
-    body: { name: 'summary', source: summary },
+    body: { name: 'summary', source: summary, diagram: 'none' },
   });
   await server.call('POST', '/v1/orgs/acme/playbooks/alpha/definitions/reasoning/summary/run', {
     ...acme,

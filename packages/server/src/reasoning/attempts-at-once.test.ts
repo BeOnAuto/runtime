@@ -21,7 +21,9 @@ describe('two requests for one run at once, in one server', () => {
     const server = await servingReasoning([heldUntilAnswered]);
     onTestFinished(server.stop);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await server.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
     const request = { body: { input: { text: 'the quarter' }, run_id: runId } };
 
     const first = server.call('POST', `${alpha}/definitions/reasoning/summary/run`, request);

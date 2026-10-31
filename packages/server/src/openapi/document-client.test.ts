@@ -37,6 +37,7 @@ describe('a client built from the document alone', () => {
       type: 'reasoning',
       name: 'summary',
       source: summary,
+      diagram: 'none',
     });
     const ran = await client('run_definition', {
       ...inLocal,

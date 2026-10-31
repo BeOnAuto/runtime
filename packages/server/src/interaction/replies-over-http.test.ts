@@ -78,7 +78,7 @@ describe('a request whose function reads the replies to its message and changed 
     await until(() => interactionsOf(server), readingIn(1));
     const changed = approvalDocument([...chatDelivery, ...threadReading]).replace('tool: thread_replies', 'tool: echo');
     const updated = await server.call('PUT', `${alpha}/definitions/interaction/approve-brief`, {
-      body: { source: changed },
+      body: { source: changed, diagram: 'none' },
     });
     chat.chat.reply({ channel: '#approvals-ada', thread: chat.chat.posted()[0]?.ts, user: 'ada', text: 'reject' });
 
@@ -93,7 +93,7 @@ describe('two functions that read one conversation with one tool, over HTTP', ()
     const chat = await chatServer();
     const server = await servingInteractions([...chatDelivery, ...flatReading], chatEnvironment(chat.url));
     await server.call('POST', `${alpha}/definitions/interaction`, {
-      body: { name: 'approve-again', source: approvalDocument([...chatDelivery, ...flatReading]) },
+      body: { name: 'approve-again', source: approvalDocument([...chatDelivery, ...flatReading]), diagram: 'none' },
     });
     await server.ask('approve-brief');
     await server.ask('approve-again');

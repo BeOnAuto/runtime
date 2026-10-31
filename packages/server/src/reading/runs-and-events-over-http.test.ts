@@ -90,10 +90,12 @@ function holding(count: number): (response: TestResponse) => boolean {
     status === 200 && (Schema.is(EventsSchema)(body) ? body.events.length : runsOf(body).runs.length) === count;
 }
 
+const summaryFunction = { name: 'summary', source: summary, diagram: 'none' };
+
 async function playbookWithTwoRuns(environment: Readonly<Record<string, string>>): Promise<void> {
   server = await servingReasoning([answers(textResult('Profits\u0000rose.'))], environment);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, { body: summaryFunction });
   await server.call('POST', `${alpha}/definitions/reasoning/summary/run`, {
     body: { input: { text: 'the\u0000quarter' }, run_id: succeeded },
   });
@@ -233,7 +235,7 @@ describe.each(stores)('a retired playbook over HTTP, on $store', ({ skipped, env
       ),
     );
     const change = await server.call('POST', `${alpha}/definitions/reasoning`, {
-      body: { name: 'other', source: summary },
+      body: { name: 'other', source: summary, diagram: 'none' },
     });
 
     expect(reads.map(({ status }) => status)).toEqual([200, 200, 200]);
@@ -276,7 +278,7 @@ describe.skipIf(postgresql === '')(
       const environment = await onADatabaseOfItsOwn();
       server = await servingReasoning([answers(textResult('Profits rose.'))], environment);
       await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-      await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+      await server.call('POST', `${alpha}/definitions/reasoning`, { body: summaryFunction });
       const open = await anAppendLeftOpen(String(environment['DATABASE_URL']));
       await server.call('POST', `${alpha}/definitions/reasoning/summary/run`, {
         body: { input: { text: 'the quarter' }, run_id: succeeded },

@@ -46,7 +46,7 @@ async function executedVerdict(models: Readonly<Record<string, string>>): Promis
     compositionRoot,
   );
   await calling('POST', '/v1/orgs/acme/playbooks', { playbook: 'alpha', name: 'Alpha' });
-  await calling('POST', `${alpha}/definitions/reasoning`, { name: 'verdict', source: verdict });
+  await calling('POST', `${alpha}/definitions/reasoning`, { name: 'verdict', source: verdict, diagram: 'none' });
   return calling('POST', `${alpha}/definitions/reasoning/verdict/run`, { input: { expense: 'a dinner' } });
 }
 

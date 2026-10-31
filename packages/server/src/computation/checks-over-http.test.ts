@@ -54,7 +54,7 @@ async function serving(programPoolOf: ProgramPoolOf = patientWorkerPool): Promis
 }
 
 function saving(name: string, source: string) {
-  return server.call('POST', `${alpha}/definitions/computation`, { body: { name, source } });
+  return server.call('POST', `${alpha}/definitions/computation`, { body: { name, source, diagram: 'none' } });
 }
 
 describe('a computation function checked when it is saved, over HTTP', () => {
@@ -165,7 +165,9 @@ describe('a check at save that runs past its deadline, or has no checker ready, 
     });
     expect(await saving('again', campaignPace)).toMatchObject(unavailable);
     expect(
-      await server.call('PUT', `${alpha}/definitions/computation/pace`, { body: { source: `${campaignPace}\n` } }),
+      await server.call('PUT', `${alpha}/definitions/computation/pace`, {
+        body: { source: `${campaignPace}\n`, diagram: 'none' },
+      }),
     ).toMatchObject(unavailable);
     expect(await server.call('GET', `${alpha}/definitions/computation/pace`)).toMatchObject({
       body: { version: 1, source: campaignPace },

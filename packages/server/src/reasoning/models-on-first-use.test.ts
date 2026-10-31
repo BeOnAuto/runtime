@@ -38,7 +38,9 @@ describe('the models reasoning functions call', () => {
     });
     const atStart = composings.count;
     await request(server.port, 'POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await request(server.port, 'POST', `${alpha}/definitions/reasoning`, { body: { name: 'hello', source: greeting } });
+    await request(server.port, 'POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'hello', source: greeting, diagram: 'none' },
+    });
     const afterTheSave = composings.count;
 
     const listed = [

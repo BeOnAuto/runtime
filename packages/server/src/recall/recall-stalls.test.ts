@@ -56,7 +56,7 @@ async function stalledServer(): Promise<ReasoningServer> {
   closing.push(server.stop);
   await playbookWithReviews(server);
   await server.call('POST', `${alpha}/definitions/recall`, {
-    body: { name: 'objects', source: recallDocument(takingObjectsOnly, reviewRuns) },
+    body: { name: 'objects', source: recallDocument(takingObjectsOnly, reviewRuns), diagram: 'none' },
   });
   await reviewed(server, 2);
   return server;
@@ -103,7 +103,7 @@ describe('a recall function whose view stalled, afterwards', () => {
     await standingUntil(server, 'objects', inState('stalled'));
 
     await server.call('PUT', `${alpha}/definitions/recall/objects`, {
-      body: { source: recallDocument(foldOf('return view + 1;'), reviewRuns) },
+      body: { source: recallDocument(foldOf('return view + 1;'), reviewRuns), diagram: 'none' },
     });
     await standingUntil(server, 'objects', liveAt(2));
 

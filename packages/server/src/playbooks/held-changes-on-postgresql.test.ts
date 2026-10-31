@@ -60,7 +60,9 @@ describe.skipIf(skipped)(`A held request for the changes of a playbook on Postgr
     await administer(database, 'ALTER TABLE emt_messages RENAME TO emt_messages_away');
     await elapsed(1500);
     await administer(database, 'ALTER TABLE emt_messages_away RENAME TO emt_messages');
-    await serving.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await serving.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
 
     expect(await held).toMatchObject({
       status: 200,

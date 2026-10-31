@@ -79,7 +79,9 @@ export async function askingASystem({
     ...server,
     fake,
     define: (name, document = {}) =>
-      server.call('POST', `${alpha}/definitions/interaction`, { body: { name, source: callDocument(document) } }),
+      server.call('POST', `${alpha}/definitions/interaction`, {
+        body: { name, source: callDocument(document), diagram: 'none' },
+      }),
     runCall: (name, input = threadInput, runId = systemRunId) =>
       server.call('POST', `${alpha}/definitions/interaction/${name}/run`, { body: { input, run_id: runId } }),
     history: async (runId) => decodeHistory((await server.call('GET', `${alpha}/runs/${runId}/history`)).body).events,

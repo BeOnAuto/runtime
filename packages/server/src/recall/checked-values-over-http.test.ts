@@ -62,9 +62,15 @@ describe('values their schemas refuse, through the one checked worker, over HTTP
     );
     closing.push(server.stop);
     await playbookWithReviews(server, 1);
-    await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'strings', source: strings } });
-    await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'wrong', source: answeredWrong } });
-    await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'outgrowing', source: outgrowing } });
+    await server.call('POST', `${alpha}/definitions/computation`, {
+      body: { name: 'strings', source: strings, diagram: 'none' },
+    });
+    await server.call('POST', `${alpha}/definitions/recall`, {
+      body: { name: 'wrong', source: answeredWrong, diagram: 'none' },
+    });
+    await server.call('POST', `${alpha}/definitions/recall`, {
+      body: { name: 'outgrowing', source: outgrowing, diagram: 'none' },
+    });
 
     const computed = await server.call('POST', `${alpha}/definitions/computation/strings/run`, {
       body: { input: {} },

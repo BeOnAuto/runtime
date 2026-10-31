@@ -5,7 +5,7 @@ import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionWordsFor, whatItDoes } from '../plain-language/definition-words.ts';
 import { DefinitionSchema } from '../registry/definition.ts';
-import { DefinitionNameField, OverviewField, SourceField } from './definition-fields.ts';
+import { DefinitionNameField, DiagramField, OverviewField, SourceField } from './definition-fields.ts';
 import { answeredDefinition } from './definition-reading.ts';
 import { contentOf } from './definition-views.ts';
 import { recordInRegistry } from './registry-access.ts';
@@ -18,11 +18,12 @@ export function defineCreateDefinition(capabilities: readonly Capability[]) {
       name: 'create_definition',
       title: 'Create definition',
       description: [
-        'Saves a new function or workflow definition in the playbook from its document and returns it without running it.',
-        'Use it once the person has agreed to the definition; update_definition changes one that exists, and a name is never reused in a playbook.',
+        'Saves a new function or workflow from its document, without running it.',
+        'Use it once the person agrees; update_definition changes one that exists, and a name is never reused.',
         `\`type\` is the definition's type and \`name\` is how workflows and tools refer to it: ${known.typesWithNouns}.`,
-        "`source` is the whole document in that type's format, which get_guide gives, and `overview` the Markdown written after it for the person who runs the business.",
-        'A document that does not fit its format is refused with the line and what is wrong, and nothing is saved.',
+        "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
+        'A function needs `diagram` too, Mermaid source of how it works or the word none, and a workflow takes no `diagram`.',
+        'A document that does not fit its format is refused with the line and what is wrong.',
       ].join(' '),
       route: { method: 'POST', path: '/definitions/{type}' },
       reachesOutside: known.reachesOutside,
@@ -32,6 +33,7 @@ export function defineCreateDefinition(capabilities: readonly Capability[]) {
         name: DefinitionNameField,
         source: SourceField,
         overview: Schema.optionalKey(OverviewField),
+        diagram: Schema.optionalKey(DiagramField),
       }),
       outputSchema: DefinitionSchema,
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],

@@ -84,7 +84,10 @@ afterEach(async () => {
 
 function created({ type, name, source }: Saved): Promise<number> {
   return server
-    .call('POST', `${alpha}/definitions/${type}`, { key: admin.key, body: { name, source } })
+    .call('POST', `${alpha}/definitions/${type}`, {
+      key: admin.key,
+      body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
+    })
     .then(({ status }) => status);
 }
 

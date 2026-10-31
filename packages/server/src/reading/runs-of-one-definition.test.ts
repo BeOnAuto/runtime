@@ -94,8 +94,12 @@ afterEach(async () => {
 async function threeReasoningRunsBehindFiveComputationRuns(environment: Readonly<Record<string, string>>) {
   server = await servingReasoning([], environment);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
-  await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'echoed', source: echoed } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
+  await server.call('POST', `${alpha}/definitions/computation`, {
+    body: { name: 'echoed', source: echoed, diagram: 'none' },
+  });
   await inTurn(reasoningRuns, (runId) =>
     server.call('POST', `${alpha}/definitions/reasoning/summary/run`, {
       body: { input: { text: 7 }, run_id: runId },

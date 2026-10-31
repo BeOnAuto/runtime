@@ -53,7 +53,7 @@ Check the document before you approve it:
 
 The agent saves it with `create_definition` and the type `computation`. Saving checks the program with the TypeScript compiler. A problem is refused with its line, counted from the top of the document, and the compiler's words.
 
-Check that the agent confirms the function at version 1, and that it saved its `overview`: Markdown for the person who runs the business, on why the function exists, what it does and how it fits, for a reader who does not read TypeScript.
+Check that the agent confirms the function at version 1, and that it saved its `overview`: Markdown for the person who runs the business, on why the function exists, what it does and how it fits, for a reader who does not read TypeScript. It also saved a `diagram`, a flowchart of the calculation that Auto Studio draws under the overview, or the word `none` where a picture would add nothing.
 
 ## 3. Run it with an input you can check by hand
 

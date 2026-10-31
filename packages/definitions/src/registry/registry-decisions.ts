@@ -92,8 +92,8 @@ function withTheSavedOverview(content: DefinitionContent, { overview }: StoredDe
   return content.overview === undefined && overview !== undefined ? { ...content, overview } : content;
 }
 
-function isAsSaved({ source, overview }: DefinitionContent, saved: StoredDefinition): boolean {
-  return source === saved.source && overview === saved.overview;
+function isAsSaved({ source, overview, diagram }: DefinitionContent, saved: StoredDefinition): boolean {
+  return source === saved.source && overview === saved.overview && diagram === saved.diagram;
 }
 
 function decideUpdate(

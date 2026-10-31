@@ -30,7 +30,9 @@ describe('a reasoning run whose MCP client goes away while the model answers', (
   it('goes on without its client, and cancel_run over MCP stops it, its model call ended, the model called once', async () => {
     server = await servingReasoning([neverAnswering]);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await server.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
     const connection = { url: `${server.origin}/orgs/acme/playbooks/alpha/mcp`, headers: {} };
     const leaving = await connectMcp('current revision', connection);
 

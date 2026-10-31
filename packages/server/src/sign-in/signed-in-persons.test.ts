@@ -30,7 +30,7 @@ describe('a signed-in person on the facts', () => {
     });
     const definition = await server.call('POST', `${alpha}/definitions/interaction`, {
       key,
-      body: { name: 'approve-brief', source: approvalDocument() },
+      body: { name: 'approve-brief', source: approvalDocument(), diagram: 'none' },
     });
     const started = await server.call('POST', `${alpha}/definitions/interaction/approve-brief/run`, {
       key,

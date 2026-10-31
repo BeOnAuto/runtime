@@ -59,7 +59,9 @@ describe('the history of a reasoning run rejected after its model was called', (
       () => Effect.fail(unusable),
     ]);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await server.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
     const running = (runId: string, text: string) =>
       server.call('POST', `${alpha}/definitions/reasoning/summary/run`, {
         body: { input: { text }, run_id: runId },

@@ -64,7 +64,9 @@ afterEach(async () => {
 async function reviewed(): Promise<string> {
   server = await servingWorkflows([answers(jsonResult({ approve: false }))]);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'verdict', source: verdict } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'verdict', source: verdict, diagram: 'none' },
+  });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'review', source: review } });
   const started = await server.call('POST', `${alpha}/definitions/workflow/review/run`, {
     body: { input: { expense: 'a yacht' } },

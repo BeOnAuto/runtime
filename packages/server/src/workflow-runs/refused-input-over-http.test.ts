@@ -91,7 +91,9 @@ afterEach(async () => {
 async function servingTheHold(): Promise<void> {
   server = await servingWorkflows([]);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'seat-hold', source: seatHold } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'seat-hold', source: seatHold, diagram: 'none' },
+  });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'holding-seats', source: holdingSeats } });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'travelling', source: travelling } });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'booking-seats', source: bookingSeats } });

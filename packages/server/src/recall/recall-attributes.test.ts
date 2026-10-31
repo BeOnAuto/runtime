@@ -42,7 +42,9 @@ async function servingTheTally(): Promise<ReasoningServer> {
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'tally', source: tallying } });
-  await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'triggered', source: triggeredRuns } });
+  await server.call('POST', `${alpha}/definitions/recall`, {
+    body: { name: 'triggered', source: triggeredRuns, diagram: 'none' },
+  });
   return server;
 }
 

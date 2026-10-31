@@ -51,7 +51,9 @@ const computedRun = Schema.decodeUnknownSync(
 async function computedOn(environment: Readonly<Record<string, string>>) {
   const computing = await servingReasoning([], environment);
   await computing.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await computing.call('POST', `${playbook}/definitions/computation`, { body: { name: 'pace', source: campaignPace } });
+  await computing.call('POST', `${playbook}/definitions/computation`, {
+    body: { name: 'pace', source: campaignPace, diagram: 'none' },
+  });
   const runs = await runIds.reduce<Promise<readonly ReturnType<typeof computedRun>[]>>(async (before, runId) => {
     await computing.call('POST', `${playbook}/definitions/computation/pace/run`, {
       body: { input: campaignRows(500), run_id: runId },
@@ -89,7 +91,7 @@ describe.skipIf(skipped)(`A server that keeps its ledger in PostgreSQL${notice}`
       body: { playbook: 'alpha', name: 'Alpha' },
     });
     const definition = await first.call('POST', `${playbook}/definitions/reasoning`, {
-      body: { name: 'summary', source: summary },
+      body: { name: 'summary', source: summary, diagram: 'none' },
     });
     const ran = await first.call('POST', `${playbook}/definitions/reasoning/summary/run`, {
       body: { input: { text: 'the quarter' }, run_id: runId },

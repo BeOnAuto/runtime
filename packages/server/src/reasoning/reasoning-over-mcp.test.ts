@@ -67,14 +67,12 @@ async function onAlpha<T>(replies: readonly ScriptedReply[], use: (session: McpS
   );
 }
 
+const summaryFunction = { type: 'reasoning', name: 'summary', source: summary, diagram: 'none' };
+
 describe('a reasoning function definition over MCP, on the endpoint of its playbook', () => {
   it('is created, executed and read back with its run', async () => {
     const { created, ran, run } = await onAlpha([answers(textResult('Profits rose.'))], async (session) => {
-      const creating = await session.callTool('create_definition', {
-        type: 'reasoning',
-        name: 'summary',
-        source: summary,
-      });
+      const creating = await session.callTool('create_definition', summaryFunction);
       const running = await session.callTool('run_definition', {
         type: 'reasoning',
         name: 'summary',
@@ -98,7 +96,7 @@ describe('a reasoning function definition over MCP, on the endpoint of its playb
 
   it('answers an input the definition rejects with isError and the problem document', async () => {
     const ran = await onAlpha([], async (session) => {
-      await session.callTool('create_definition', { type: 'reasoning', name: 'summary', source: summary });
+      await session.callTool('create_definition', summaryFunction);
       return session.callTool('run_definition', { type: 'reasoning', name: 'summary', input: { text: 7 } });
     });
 

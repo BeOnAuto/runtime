@@ -133,7 +133,7 @@ describe('the prediction functions a playbook keeps', () => {
 
     await savedVisits(server);
     const second = await server.call('POST', `${alpha}/definitions/prediction`, {
-      body: { name: 'more-visits', source: dailyVisits },
+      body: { name: 'more-visits', source: dailyVisits, diagram: 'none' },
     });
 
     expect(second.status).toBe(409);

@@ -33,7 +33,9 @@ export function visitsOf(store: string, ago: number): number {
 }
 
 export async function savedVisits(server: ReasoningServer, name = 'daily-visits'): Promise<void> {
-  const created = await server.call('POST', `${alpha}/definitions/prediction`, { body: { name, source: dailyVisits } });
+  const created = await server.call('POST', `${alpha}/definitions/prediction`, {
+    body: { name, source: dailyVisits, diagram: 'none' },
+  });
   expect(created.status).toBe(201);
 }
 

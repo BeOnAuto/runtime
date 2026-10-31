@@ -24,7 +24,7 @@ playbooks="$base_url/v1/orgs/$org/playbooks"
 call --data "{\"playbook\": \"$playbook\", \"name\": \"Trying reasoning functions\"}" "$playbooks" > /dev/null
 source="$(printf '%s\n' '---' "model: $model" 'config: {max_output_tokens: 200}' '---' \
   '{% system %}Answer in one sentence.{% endsystem %}Greet {{ input.name }} and name today, {{ today }}.')"
-call --data "$(jq --null-input --arg source "$source" '{name: "greeting", source: $source}')" \
+call --data "$(jq --null-input --arg source "$source" '{name: "greeting", source: $source, diagram: "none"}')" \
   "$playbooks/$playbook/definitions/reasoning" > /dev/null
 run="$(call --data '{"input": {"name": "Ada"}}' "$playbooks/$playbook/definitions/reasoning/greeting/run")"
 call "$playbooks/$playbook/runs/$(jq --raw-output .run_id <<< "$run")" | jq .

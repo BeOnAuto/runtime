@@ -121,9 +121,15 @@ async function answeredBy(server: ReasoningServer, name: string) {
 
 async function viewsOn(server: ReasoningServer) {
   await playbookWithReviews(server, outputs.length);
-  await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'campaigns', source: byCampaign } });
-  await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'depths', source: depths } });
-  await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'counted', source: counted } });
+  await server.call('POST', `${alpha}/definitions/recall`, {
+    body: { name: 'campaigns', source: byCampaign, diagram: 'none' },
+  });
+  await server.call('POST', `${alpha}/definitions/recall`, {
+    body: { name: 'depths', source: depths, diagram: 'none' },
+  });
+  await server.call('POST', `${alpha}/definitions/recall`, {
+    body: { name: 'counted', source: counted, diagram: 'none' },
+  });
   await standingUntil(server, 'campaigns', liveWith(outputs.length));
   await standingUntil(server, 'counted', liveWith(outputs.length));
   const answers = { cold: await answeredBy(server, 'counted'), warm: await answeredBy(server, 'counted') };

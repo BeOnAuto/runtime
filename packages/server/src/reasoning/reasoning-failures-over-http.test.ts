@@ -68,7 +68,9 @@ let server: ReasoningServer;
 async function failingWith(failure: () => ModelFailure, input: object) {
   server = await servingReasoning([() => Effect.fail(failure())]);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'verdict', source: verdict } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'verdict', source: verdict, diagram: 'none' },
+  });
   return server.call('POST', `${alpha}/definitions/reasoning/verdict/run`, {
     body: { input, run_id: runId },
   });

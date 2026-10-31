@@ -31,10 +31,10 @@ describe('the example of the workflow format, through the server', () => {
     );
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     await server.call('POST', `${alpha}/definitions/reasoning`, {
-      body: { name: 'review-campaign-brief', source: reviewCampaignBrief },
+      body: { name: 'review-campaign-brief', source: reviewCampaignBrief, diagram: 'none' },
     });
     await server.call('POST', `${alpha}/definitions/interaction`, {
-      body: { name: 'approve-campaign-brief', source: approveCampaignBrief },
+      body: { name: 'approve-campaign-brief', source: approveCampaignBrief, diagram: 'none' },
     });
 
     const created = await server.call('POST', `${alpha}/definitions/workflow`, {

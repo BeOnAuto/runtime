@@ -122,7 +122,11 @@ export async function gatewayThatHangsFirst(): Promise<StubGateway> {
 
 export async function welcomingStarted(port: number, playbook: string): Promise<string> {
   await requestTo(port, 'POST', '', { playbook, name: 'Welcoming' });
-  await requestTo(port, 'POST', `/${playbook}/definitions/reasoning`, { name: 'welcome', source: welcome });
+  await requestTo(port, 'POST', `/${playbook}/definitions/reasoning`, {
+    name: 'welcome',
+    source: welcome,
+    diagram: 'none',
+  });
   await requestTo(port, 'POST', `/${playbook}/definitions/workflow`, { name: 'welcoming', source: welcoming });
   const started = await requestTo(port, 'POST', `/${playbook}/definitions/workflow/welcoming/run`, {
     input: { name: 'Ada' },

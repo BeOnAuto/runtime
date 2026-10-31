@@ -57,7 +57,9 @@ export function waitingAgain(server: ReasoningServer, run: string, times: number
 
 export async function defined(server: ReasoningServer): Promise<void> {
   await tallyCreated(server);
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
   await server.call('POST', `${alpha}/definitions/workflow`, {
     body: { name: 'asking-then-tallying', source: askingThenTallying },
   });

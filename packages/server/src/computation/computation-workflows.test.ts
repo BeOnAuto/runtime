@@ -153,7 +153,11 @@ async function serving(programPoolOf: ProgramPoolOf, ...replies: readonly Script
   ] as const;
   await definitions.reduce(
     (created: Promise<unknown>, [type, name, source]) =>
-      created.then(() => server.call('POST', `${alpha}/definitions/${type}`, { body: { name, source } })),
+      created.then(() =>
+        server.call('POST', `${alpha}/definitions/${type}`, {
+          body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
+        }),
+      ),
     Promise.resolve(),
   );
   return server;

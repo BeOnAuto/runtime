@@ -120,7 +120,12 @@ describe('workflows over MCP', () => {
 
   it('executes a workflow that calls a reasoning function definition and waits for an event the tools send', async () => {
     const { started, sent, run } = await onAlpha([answers(jsonResult({ approve: true }))], async (session) => {
-      await session.callTool('create_definition', { type: 'reasoning', name: 'verdict', source: verdict });
+      await session.callTool('create_definition', {
+        type: 'reasoning',
+        name: 'verdict',
+        source: verdict,
+        diagram: 'none',
+      });
       await session.callTool('create_definition', { type: 'workflow', name: 'approval', source: approval });
       const starting = await session.callTool('run_definition', {
         type: 'workflow',
@@ -195,7 +200,12 @@ function causesNamedNowhereIn(events: readonly Event[]): readonly string[] {
 describe('the graph of a workflow run over MCP', () => {
   it('reads the whole tree of a run in the feed of its playbook, its steps with their causes and its child caused by the input that started the call', async () => {
     const tree = await onAlpha([answers(jsonResult({ approve: true }))], async (session) => {
-      await session.callTool('create_definition', { type: 'reasoning', name: 'verdict', source: verdict });
+      await session.callTool('create_definition', {
+        type: 'reasoning',
+        name: 'verdict',
+        source: verdict,
+        diagram: 'none',
+      });
       await session.callTool('create_definition', { type: 'workflow', name: 'approval', source: approval });
       const starting = await session.callTool('run_definition', {
         type: 'workflow',

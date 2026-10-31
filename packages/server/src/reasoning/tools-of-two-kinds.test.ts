@@ -46,7 +46,9 @@ async function servingBoth() {
     'Count acme.',
   ];
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'count', source: source.join('\n') } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'count', source: source.join('\n'), diagram: 'none' },
+  });
   return { graph, billing, server };
 }
 

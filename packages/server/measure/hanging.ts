@@ -59,7 +59,11 @@ function hangingServerOf(url: string): Readonly<Record<string, string>> {
 
 async function askedOn(server: MeasuredServer, requests: number, plan: TimerPlan): Promise<number> {
   await server.call('POST', '/v1/orgs/local/playbooks', { playbook: 'measure', name: 'Measure' });
-  await server.call('POST', `${playbook}/definitions/interaction`, { name: 'approval', source: approval });
+  await server.call('POST', `${playbook}/definitions/interaction`, {
+    name: 'approval',
+    source: approval,
+    diagram: 'none',
+  });
   await server.call('POST', `${playbook}/definitions/workflow`, { name: 'pause', source: pauseSource(plan.seconds) });
   const from = Date.now();
   await inTurns(requests, 32, async (index) => {

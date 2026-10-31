@@ -56,7 +56,9 @@ function internalsIn({ text }: TestResponse): readonly string[] {
 describe('a run whose gateway rejects the model', () => {
   it('answers and records what the status says and the code the gateway gave, and gives the gateway text to the operator', async () => {
     await request(server.port, 'POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await request(server.port, 'POST', `${alpha}/definitions/reasoning`, { body: { name: 'hello', source } });
+    await request(server.port, 'POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'hello', source, diagram: 'none' },
+    });
     const ran = await request(server.port, 'POST', `${alpha}/definitions/reasoning/hello/run`, {
       body: { input: {}, run_id: runId },
     });

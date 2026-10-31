@@ -50,13 +50,13 @@ async function serving(): Promise<ReasoningServer> {
 
 function saved(server: ReasoningServer, name: string, fold: string) {
   return server.call('POST', `${alpha}/definitions/recall`, {
-    body: { name, source: recallDocument(foldOf(fold), reviewRuns) },
+    body: { name, source: recallDocument(foldOf(fold), reviewRuns), diagram: 'none' },
   });
 }
 
 function updated(server: ReasoningServer, name: string, fold: string) {
   return server.call('PUT', `${alpha}/definitions/recall/${name}`, {
-    body: { source: recallDocument(foldOf(fold), reviewRuns) },
+    body: { source: recallDocument(foldOf(fold), reviewRuns), diagram: 'none' },
   });
 }
 

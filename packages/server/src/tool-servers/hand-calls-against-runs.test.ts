@@ -30,7 +30,9 @@ describe('what a call made by hand answers', () => {
     });
     closing.push(server.stop);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'profile', source: profiling } });
+    await server.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'profile', source: profiling, diagram: 'none' },
+    });
 
     const ran = await server.call('POST', `${alpha}/definitions/reasoning/profile/run`, { body: { input: {} } });
     const called = await server.call('POST', `${alpha}/tool-servers/graph/tools/profile/execute`, { body: {} });

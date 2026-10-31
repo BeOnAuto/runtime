@@ -52,7 +52,7 @@ async function serving(...replies: readonly ScriptedReplies[]): Promise<Reasonin
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'echo', source: reasoningFunction('crm/echo') },
+    body: { name: 'echo', source: reasoningFunction('crm/echo'), diagram: 'none' },
   });
   return server;
 }

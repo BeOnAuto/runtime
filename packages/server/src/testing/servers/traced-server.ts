@@ -58,6 +58,8 @@ export async function servingTraced(environment: Readonly<Record<string, string>
   );
   const call = (method: string, path: string, options?: RequestOptions) => request(server.port, method, path, options);
   await call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'searching', source: searching } });
+  await call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'searching', source: searching, diagram: 'none' },
+  });
   return { receiver, tools, call, stop: () => server.stop() };
 }

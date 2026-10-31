@@ -1,0 +1,16 @@
+{
+  "type": "definition_updated",
+  "data": {
+    "content": {
+      "source": "---\nlanguage: typescript\n---\nexport default () => true;\n",
+      "diagram": "none"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "definitionType": "computation",
+    "definitionName": "check-totals",
+    "definitionVersion": 2
+  }
+}

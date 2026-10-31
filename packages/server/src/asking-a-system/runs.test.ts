@@ -47,7 +47,7 @@ describe('a run that asks a system whose session or process is gone', () => {
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     const define = (name: string, tool: string, written: readonly string[] = []) =>
       server.call('POST', `${alpha}/definitions/interaction`, {
-        body: { name, source: callDocument({ server: 'notes', ...calling(tool, written) }) },
+        body: { name, source: callDocument({ server: 'notes', ...calling(tool, written) }), diagram: 'none' },
       });
     await define('exiting', 'exit');
     await define('searching', 'search', ['    query: acme']);

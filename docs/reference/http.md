@@ -117,31 +117,32 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 
 These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Operation           | Method and route                            | Permission       | Input                                    |
-| ------------------- | ------------------------------------------- | ---------------- | ---------------------------------------- |
-| `create_definition` | `POST /definitions/reasoning`               | `playbook:write` | `name`, `source`, optional `overview`    |
-| `list_definitions`  | `GET /definitions/reasoning`                | `playbook:read`  | Optional `include_retired`               |
-| `get_definition`    | `GET /definitions/reasoning/{name}`         | `playbook:read`  | Name in path                             |
-| `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`, optional `overview`            |
-| `retire_definition` | `POST /definitions/reasoning/{name}/retire` | `playbook:write` | Name in path                             |
-| `run_definition`    | `POST /definitions/reasoning/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id` |
-| `get_run`           | `GET /runs/{run_id}`                        | `playbook:read`  | Run id in path                           |
+| Operation           | Method and route                            | Permission       | Input                                            |
+| ------------------- | ------------------------------------------- | ---------------- | ------------------------------------------------ |
+| `create_definition` | `POST /definitions/reasoning`               | `playbook:write` | `name`, `source`, `diagram`, optional `overview` |
+| `list_definitions`  | `GET /definitions/reasoning`                | `playbook:read`  | Optional `include_retired`                       |
+| `get_definition`    | `GET /definitions/reasoning/{name}`         | `playbook:read`  | Name in path                                     |
+| `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`, `diagram`, optional `overview`         |
+| `retire_definition` | `POST /definitions/reasoning/{name}/retire` | `playbook:write` | Name in path                                     |
+| `run_definition`    | `POST /definitions/reasoning/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id`         |
+| `get_run`           | `GET /runs/{run_id}`                        | `playbook:read`  | Run id in path                                   |
 
 The `source` is a [reasoning function document](reasoning-format.md). These rules apply to the definitions of every type:
 
 - A name follows the playbook id rule: 3 to 48 lowercase letters, digits and hyphens, beginning with a letter.
 - A name is unique within its type and playbook, and cannot be reused after retirement.
 - A source document may be at most 65,536 UTF-8 bytes.
-- Changing a document or its overview creates a version. Updating it with identical source, and the same overview or none, records no change.
+- Changing a document, its overview or its diagram creates a version. Updating it with identical source and diagram, and the same overview or none, records no change.
 - A run uses the latest active version.
 - A retired definition can be read, but cannot be edited or run.
 - A definition carries its `input_schema` and `output_schema` where its document declares them. A reasoning function, a computation function or a workflow whose `output.shape` names an [output shape](output-shapes.md) has the shape's schema as its `output_schema`, and the shape's name as `details.shape`, such as `"details": { "shape": "series" }`; `details` is left out otherwise. A prediction function has the `series` shape so, since its questions answer a series. `list_definitions` shows both too.
 
 A definition names the caller who created it as `created_by`, by `id` and `name`, and keeps it across its versions.
 
-`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview` and its `used_by`; `list_definitions` leaves both out.
+`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out.
 
-- `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
+- `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
+- `diagram` is how a function works as a picture, which Auto Studio draws under the overview. Every `create_definition` and `update_definition` of a function gives it, as one of two choices: Mermaid source of a flowchart or a state diagram, whose first line is `flowchart`, `graph` or `stateDiagram`, optionally with a direction such as `TD`, in at most 8,192 UTF-8 bytes; or the word `none`, when a picture would add nothing. Since Auto Studio draws it at full size in a column, a diagram reads best top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. The version keeps it as given. A version saved before functions took one has none.
 - `used_by` lists the active definitions of the playbook that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`; `remembers-runs` or `remembers-changes` for a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`). A definition that uses this one in two ways is listed for each.
 
 The interaction function `approve-brief` that a workflow calls in two steps and that two recall functions follow is returned with this `used_by`, shown here without its other fields:
@@ -163,6 +164,14 @@ The interaction function `approve-brief` that a workflow calls in two steps and 
   ]
 }
 ```
+
+A save is refused for its `diagram` in these cases, and nothing is saved:
+
+| Case                                                                                     | Response                                                                                                                                                                                                |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A function saved without `diagram`                                                       | `invalid_input` at `/diagram`: `Say whether this reasoning function has a diagram: give diagram as Mermaid source of a flowchart or a state diagram, or the word none when a picture would add nothing` |
+| A `diagram` that is neither a flowchart or state diagram nor `none`, or over 8,192 bytes | `invalid_input` at `/diagram`, which names the two choices or the bound                                                                                                                                 |
+| A workflow saved with `diagram`                                                          | `invalid_input` at `/diagram`: `A workflow takes no diagram, since Auto Studio draws a workflow from its steps; leave diagram out`                                                                      |
 
 ## Interaction functions
 
@@ -314,6 +323,7 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 The `source` is a [workflow document](workflow-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
 
 - A saved workflow has the `media_type` `application/yaml`.
+- A workflow takes no `diagram`, and one given is refused: Auto Studio draws a workflow from its steps, with the words [Describing steps](workflow-format.md#describing-steps) sets out.
 - Its `description`, `input_schema` and `output_schema` come from the document, the `output_schema` from its `output.shape` where it names one, with `details.shape`.
 - A workflow whose document has a `schedule` also has `triggers`, in `get_definition` and `list_definitions`. They are the [triggers](workflow-format.md#triggers) its schedule names, in the order it names them.
 

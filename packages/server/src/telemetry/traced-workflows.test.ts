@@ -37,7 +37,9 @@ async function spansOfARun(): Promise<readonly ExportedSpan[]> {
     OTEL_EXPORTER_OTLP_PROTOCOL: 'http/json',
   });
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'asking', source: asking } });
   const started = await server.call('POST', `${alpha}/definitions/workflow/asking/run`, { body: { input: {} } });
   await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);

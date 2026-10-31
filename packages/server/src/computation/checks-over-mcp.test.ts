@@ -64,7 +64,12 @@ async function onAlpha<T>(programPoolOf: ProgramPoolOf, use: (session: McpSessio
 describe('a computation function checked when it is saved, over MCP', () => {
   it('answers a refused program with isError, its line and the compiler’s words, in plain words', async () => {
     const created = await onAlpha(patientWorkerPool, (session) =>
-      session.callTool('create_definition', { type: 'computation', name: 'misspelt', source: misspelt }),
+      session.callTool('create_definition', {
+        type: 'computation',
+        name: 'misspelt',
+        source: misspelt,
+        diagram: 'none',
+      }),
     );
 
     expect({ isError: created.isError, problem: problemIn(created) }).toMatchObject({
@@ -94,6 +99,7 @@ describe('each refusal of the check at save, over MCP', () => {
             type: 'computation',
             name: `refused-${index}`,
             source: documentOf(program),
+            diagram: 'none',
           }),
         ],
         Promise.resolve([]),
@@ -117,21 +123,33 @@ describe('a check at save that does not answer in time, or has no checker ready,
   it('answers invalid input when the check runs past its deadline, and unavailable, on a create and an update, when no checker is ready', async () => {
     const { stall, poolOf } = stallingChecks();
     const saved = await onAlpha(poolOf, async (session) => {
-      await session.callTool('create_definition', { type: 'computation', name: 'pace', source: campaignPace });
+      await session.callTool('create_definition', {
+        type: 'computation',
+        name: 'pace',
+        source: campaignPace,
+        diagram: 'none',
+      });
       stall('deadline');
       const tooLong = await session.callTool('create_definition', {
         type: 'computation',
         name: 'slow',
         source: campaignPace,
+        diagram: 'none',
       });
       stall('busy');
       return [
         tooLong,
-        await session.callTool('create_definition', { type: 'computation', name: 'again', source: campaignPace }),
+        await session.callTool('create_definition', {
+          type: 'computation',
+          name: 'again',
+          source: campaignPace,
+          diagram: 'none',
+        }),
         await session.callTool('update_definition', {
           type: 'computation',
           name: 'pace',
           source: `${campaignPace}\n`,
+          diagram: 'none',
         }),
       ];
     });

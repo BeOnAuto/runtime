@@ -55,7 +55,7 @@ async function serving(replies: readonly ScriptedReplies[]): Promise<ReasoningSe
   });
   onTestFinished(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source, diagram: 'none' } });
   return server;
 }
 

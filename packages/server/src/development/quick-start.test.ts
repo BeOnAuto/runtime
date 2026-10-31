@@ -126,7 +126,8 @@ function settled(session: McpSession, runId: unknown): Promise<Readonly<Record<s
 }
 
 async function stored(session: McpSession, type: string, name: string, source: string): Promise<unknown> {
-  return structured(await session.callTool('create_definition', { playbook, type, name, source }));
+  const diagram = type === 'workflow' ? {} : { diagram: 'none' };
+  return structured(await session.callTool('create_definition', { playbook, type, name, source, ...diagram }));
 }
 
 async function ran(session: McpSession, name: string, input: object, type = 'reasoning'): Promise<unknown> {
@@ -146,6 +147,7 @@ describe('the requests the quick start suggests, made over /mcp as an assistant 
           type: 'reasoning',
           name: 'classify-ticket',
           source: classifyingPrompt('Anything about money is billing and at least normal urgency.'),
+          diagram: 'none',
         }),
       ),
       second: await ran(session, 'classify-ticket', { ticket: charged }),

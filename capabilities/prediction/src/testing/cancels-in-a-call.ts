@@ -68,7 +68,8 @@ export function cancelsInACall(capability: Capability): CancelsInACall {
   const createDefinition = defineCreateDefinition([capability]);
   const runDefinition = defineRunDefinition([capability]);
   return {
-    create: (name, source) => Effect.runPromise(dispatch(createDefinition, { type: capability.type, name, source })),
+    create: (name, source) =>
+      Effect.runPromise(dispatch(createDefinition, { type: capability.type, name, source, diagram: 'none' })),
     run: (name, input, runId) =>
       Effect.runPromise(dispatch(runDefinition, { type: capability.type, name, input, run_id: runId })),
     cancelled: () => cancelled,

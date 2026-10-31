@@ -48,7 +48,7 @@ describe('the arguments of a delivery, typed as written, over HTTP', () => {
     const chat = await chatServer();
     const server = await servingInteractions(agentDelivery, chatEnvironment(chat.url));
     await server.call('POST', `${alpha}/definitions/interaction`, {
-      body: { name: 'approve-limit', source: limitApproval },
+      body: { name: 'approve-limit', source: limitApproval, diagram: 'none' },
     });
 
     await server.call('POST', `${alpha}/definitions/interaction/approve-limit/run`, {

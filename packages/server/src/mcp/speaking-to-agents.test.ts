@@ -130,6 +130,7 @@ async function rememberedOverMcp(session: McpSession) {
     type: 'reasoning',
     name: 'post-notes',
     source: postingWhatItPosted,
+    diagram: 'none',
   });
   await session.callTool('run_definition', {
     ...inPosts,
@@ -142,6 +143,7 @@ async function rememberedOverMcp(session: McpSession) {
     type: 'recall',
     name: 'posted',
     source: rememberingWhatWasPosted,
+    diagram: 'none',
   });
   await liveOverMcp(session, { ...inPosts, name: 'posted' }, 1);
   return session.callTool('run_definition', { ...inPosts, type: 'recall', name: 'posted' });
@@ -179,6 +181,7 @@ describe('episode 5: quoting the tools to a person who does not code', () => {
           type: 'reasoning',
           name: 'post-notes',
           source: posting,
+          diagram: 'none',
         }),
         await session.callTool('list_definitions', { playbook: 'standups', type: 'reasoning' }),
         await session.callTool('list_runs', { playbook: 'standups' }),
@@ -199,6 +202,7 @@ describe('episode 6: a tool server that refuses its key, and a playbook with no 
         type: 'reasoning',
         name: 'post-notes',
         source: posting,
+        diagram: 'none',
       });
       return {
         refused: await session.callTool('run_definition', {

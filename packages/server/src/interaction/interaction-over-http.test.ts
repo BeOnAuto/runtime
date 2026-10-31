@@ -82,7 +82,7 @@ describe('a notification for an agent, over HTTP', () => {
   it('is refused at save, since a notification goes through a connection', async () => {
     const server = await servingInteractions();
     const saved = await server.call('POST', `${alpha}/definitions/interaction`, {
-      body: { name: 'brief-out', source: notificationDocument(agentDelivery) },
+      body: { name: 'brief-out', source: notificationDocument(agentDelivery), diagram: 'none' },
     });
 
     expect([saved.status, saved.body]).toMatchObject([

@@ -43,8 +43,12 @@ function numberedIn(body: unknown): readonly (readonly [string, number | null])[
 async function serving(...replies: readonly ScriptedReply[]): Promise<ReasoningServer> {
   server = await servingReasoning(replies);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'verdict', source: verdict } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'verdict', source: verdict, diagram: 'none' },
+  });
   return server;
 }
 

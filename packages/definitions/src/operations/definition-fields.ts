@@ -8,6 +8,8 @@ const mostSourceBytes = 65_536;
 
 const mostOverviewBytes = 16_384;
 
+const mostDiagramBytes = 8192;
+
 function atMostBytes(most: number, written: string) {
   return Schema.makeFilter((text: string) => Buffer.byteLength(text, 'utf8') <= most, {
     expected: `${written} of at most ${most} bytes in UTF-8`,
@@ -33,8 +35,28 @@ export const SourceField = Schema.String.annotate({
 
 export const OverviewField = Schema.String.annotate({
   description:
-    'Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Avoid invented benefits.',
+    'Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs, with no diagram. Avoid invented benefits.',
 }).check(Schema.isMinLength(1), atMostBytes(mostOverviewBytes, 'an overview'));
+
+const noDiagram = 'none';
+
+const startsAsAFlow =
+  /^\s*(?:(?:graph|flowchart)(?:[^\S\n]+(?:TD|TB|LR|RL|BT))?[^\S\n]*;?|stateDiagram(?:-v2)?)[^\S\n]*(?:\n|$)/iu;
+
+function isADiagramChoice(diagram: string): boolean {
+  return diagram === noDiagram || startsAsAFlow.test(diagram);
+}
+
+export const DiagramField = Schema.String.annotate({
+  description:
+    'Required for a function, refused for a workflow: Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing',
+}).check(
+  Schema.makeFilter(isADiagramChoice, {
+    expected:
+      'Mermaid source of a flowchart or a state diagram, whose first line is flowchart, graph or stateDiagram, or the word none',
+  }),
+  atMostBytes(mostDiagramBytes, 'a diagram'),
+);
 
 export const RunIdInputField = Schema.String.annotate({
   description: "The run's id, a UUID in any case, kept in lowercase",

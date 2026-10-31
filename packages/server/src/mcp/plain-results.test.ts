@@ -81,7 +81,7 @@ function executedOnce(): Promise<ToolResult> {
   const reasonFunction = { type: 'reasoning', name: 'summary' };
   return onMcp(async (session) => {
     await session.callTool('create_playbook', { playbook: 'sales', name: 'Sales' });
-    await session.callTool('create_definition', inSales({ ...reasonFunction, source: summary }));
+    await session.callTool('create_definition', inSales({ ...reasonFunction, source: summary, diagram: 'none' }));
     return session.callTool('run_definition', inSales({ ...reasonFunction, input: { text: 'the quarter' } }));
   });
 }
@@ -129,7 +129,10 @@ function firstEventIn({ structuredContent }: ToolResult): string {
 
 async function reasonFunctionsCalled(session: McpSession): Promise<Called> {
   const reasonFunction = { type: 'reasoning', name: 'summary' };
-  const created = await session.callTool('create_definition', inSales({ ...reasonFunction, source: summary }));
+  const created = await session.callTool(
+    'create_definition',
+    inSales({ ...reasonFunction, source: summary, diagram: 'none' }),
+  );
   const ran = await session.callTool('run_definition', inSales({ ...reasonFunction, input: { text: 'the quarter' } }));
   const runId = String(ran.structuredContent?.['run_id']);
   const revised = summary.replace('Summarize: ', 'Sum up: ');
@@ -138,7 +141,10 @@ async function reasonFunctionsCalled(session: McpSession): Promise<Called> {
     ['create_definition', created],
     ['list_definitions', await session.callTool('list_definitions', inSales({ type: 'reasoning' }))],
     ['get_definition', await session.callTool('get_definition', inSales(reasonFunction))],
-    ['update_definition', await session.callTool('update_definition', inSales({ ...reasonFunction, source: revised }))],
+    [
+      'update_definition',
+      await session.callTool('update_definition', inSales({ ...reasonFunction, source: revised, diagram: 'none' })),
+    ],
     ['run_definition', ran],
     ['get_run', await session.callTool('get_run', inSales({ run_id: runId }))],
     ['list_runs', await session.callTool('list_runs', inSales({}))],
@@ -174,7 +180,7 @@ function cancelled(session: McpSession, { structuredContent }: ToolResult): Prom
 async function errorsCalled(session: McpSession): Promise<Called> {
   const run = (input: Readonly<Record<string, unknown>>) =>
     session.callTool('run_definition', inSales({ type: 'reasoning', name: 'summary', ...input }));
-  const broken = { type: 'reasoning', name: 'broken', source: '---\nmodel: [\n---\nHi' };
+  const broken = { type: 'reasoning', name: 'broken', source: '---\nmodel: [\n---\nHi', diagram: 'none' };
   const retired = { type: 'workflow', name: 'approval', source: approval };
   return [
     ['an unconnected provider', await run({ input: { text: 'the quarter' }, run_id: unconnectedRun })],
@@ -191,6 +197,7 @@ async function errorsCalled(session: McpSession): Promise<Called> {
         type: 'reasoning',
         name: 'summary',
         source: summary,
+        diagram: 'none',
       }),
     ],
     ['something missing', await session.callTool('get_definition', inSales({ type: 'reasoning', name: 'nowhere' }))],

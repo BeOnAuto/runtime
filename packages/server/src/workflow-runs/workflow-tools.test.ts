@@ -70,16 +70,16 @@ async function serving(...replies: readonly ScriptedReplies[]): Promise<Reasonin
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'graph', source: reasoningFunction('graph/search') },
+    body: { name: 'graph', source: reasoningFunction('graph/search'), diagram: 'none' },
   });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'crm', source: reasoningFunction('crm/search') },
+    body: { name: 'crm', source: reasoningFunction('crm/search'), diagram: 'none' },
   });
   await server.call('POST', `${alpha}/definitions/workflow`, {
     body: { name: 'reporting', source: workflowCalling('reporting', 'crm', true) },
   });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'down', source: reasoningFunction('down/search') },
+    body: { name: 'down', source: reasoningFunction('down/search'), diagram: 'none' },
   });
   await server.call('POST', `${alpha}/definitions/workflow`, {
     body: { name: 'careless', source: workflowCalling('careless', 'graph', false) },

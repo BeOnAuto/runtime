@@ -93,7 +93,7 @@ describe('a question to a prediction function of a runtime an extension fills ca
   it('is answered by the capability the extension makes from the ports of the runtime and its own settings, in place of the forecaster', async () => {
     const server = await servingWith([forecastsFilling('@acme/forecasts')]);
     await server.call('POST', `${alpha}/definitions/prediction`, {
-      body: { name: 'daily-visits', source: dailyVisits },
+      body: { name: 'daily-visits', source: dailyVisits, diagram: 'none' },
     });
 
     const answer = await server.call('POST', `${alpha}/definitions/prediction/daily-visits/run`, {

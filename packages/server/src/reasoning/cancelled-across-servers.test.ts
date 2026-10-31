@@ -43,7 +43,9 @@ async function twoServersOnOneLedger(first: readonly ScriptedReply[]) {
   const other = await servingReasoning([], environment, undefined, { ledger });
   onTestFinished(other.stop);
   await running.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await running.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+  await running.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
   return { graph, running, other };
 }
 

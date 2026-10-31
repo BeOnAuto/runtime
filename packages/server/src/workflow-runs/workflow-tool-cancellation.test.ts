@@ -51,7 +51,9 @@ async function serving(fake: FakeMcpServer, clock: HostClock): Promise<Reasoning
   );
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'sleeper', source: sleeper } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'sleeper', source: sleeper, diagram: 'none' },
+  });
   await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'impatient', source: impatient } });
   return server;
 }

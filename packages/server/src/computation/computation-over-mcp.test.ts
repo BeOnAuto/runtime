@@ -43,6 +43,7 @@ describe('a computation function over MCP, on the endpoint of its playbook', () 
         type: 'computation',
         name: 'pace',
         source: campaignPace,
+        diagram: 'none',
       });
       const running = await session.callTool('run_definition', {
         type: 'computation',
@@ -52,7 +53,12 @@ describe('a computation function over MCP, on the endpoint of its playbook', () 
       const reading = await session.callTool('get_run', {
         run_id: String(running.structuredContent?.['run_id']),
       });
-      await session.callTool('create_definition', { type: 'computation', name: 'total', source: total });
+      await session.callTool('create_definition', {
+        type: 'computation',
+        name: 'total',
+        source: total,
+        diagram: 'none',
+      });
       const summing = await session.callTool('run_definition', {
         type: 'computation',
         name: 'total',
@@ -74,7 +80,12 @@ describe('a computation function over MCP, on the endpoint of its playbook', () 
 describe('a computation function that cannot work as written, over MCP', () => {
   it('answers a program whose output is not JSON with isError, the conflict and its kind, in plain words', async () => {
     const ran = await onAlpha(async (session) => {
-      await session.callTool('create_definition', { type: 'computation', name: 'dated', source: dated });
+      await session.callTool('create_definition', {
+        type: 'computation',
+        name: 'dated',
+        source: dated,
+        diagram: 'none',
+      });
       return session.callTool('run_definition', { type: 'computation', name: 'dated', input: [1, 2] });
     });
 

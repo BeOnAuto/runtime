@@ -30,11 +30,15 @@ afterEach(async () => {
   await server.stop();
 });
 
+function savedComputation(name: string, source: string) {
+  return server.call('POST', `${alpha}/definitions/computation`, { body: { name, source, diagram: 'none' } });
+}
+
 async function serving(programPoolOf: ProgramPoolOf = patientWorkerPool): Promise<ReasoningServer> {
   server = await servingReasoning([], {}, undefined, { programPoolOf });
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'pace', source: campaignPace } });
-  await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'raising', source: raising } });
+  await savedComputation('pace', campaignPace);
+  await savedComputation('raising', raising);
   return server;
 }
 
@@ -131,7 +135,7 @@ describe('an output too large to record, over HTTP', () => {
       '  return [text, text];',
       '}',
     ].join('\n');
-    await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'doubled', source: doubled } });
+    await savedComputation('doubled', doubled);
 
     expect(await running('doubled', { input: null })).toMatchObject({
       status: 409,
@@ -156,7 +160,7 @@ describe('a long error, over HTTP', () => {
       "  throw new Error('x'.repeat(30_000_000));",
       '}',
     ].join('\n');
-    await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'shouting', source: shouting } });
+    await savedComputation('shouting', shouting);
     const detail = `The program raised an error on line 5: Error: ${'x'.repeat(1017)}…`;
 
     const ran = await running('shouting', { input: null, run_id: runId });
@@ -184,9 +188,7 @@ describe('the definitions and inputs of computation functions, over HTTP', () =>
     const keyed = ['---', 'language: typescript', 'model: anthropic/claude-sonnet-4-5', '---', program].join('\n');
     const random = ['---', 'language: typescript', '---', program].join('\n');
 
-    expect(
-      await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'keyed', source: keyed } }),
-    ).toMatchObject({
+    expect(await savedComputation('keyed', keyed)).toMatchObject({
       status: 422,
       body: {
         reason: 'invalid_input',
@@ -199,9 +201,7 @@ describe('the definitions and inputs of computation functions, over HTTP', () =>
         ],
       },
     });
-    expect(
-      await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'random', source: random } }),
-    ).toMatchObject({
+    expect(await savedComputation('random', random)).toMatchObject({
       status: 422,
       body: {
         reason: 'invalid_input',
@@ -210,7 +210,7 @@ describe('the definitions and inputs of computation functions, over HTTP', () =>
     });
     expect(
       await server.call('POST', `${alpha}/definitions/computation`, {
-        body: { name: 'large', source: `---\nlanguage: typescript\n---\n${' '.repeat(65_536)}` },
+        body: { name: 'large', source: `---\nlanguage: typescript\n---\n${' '.repeat(65_536)}`, diagram: 'none' },
       }),
     ).toMatchObject({ status: 422, body: { reason: 'invalid_input', errors: [{ pointer: '/source' }] } });
   });

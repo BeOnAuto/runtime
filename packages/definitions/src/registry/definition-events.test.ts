@@ -45,10 +45,33 @@ const baseline: readonly (typeof DefinitionEventSchema.Type)[] = [
   { type: 'definition_retired', data: {}, context: { ...ofTheDefinition, definitionVersion: 2 } },
 ];
 
+const ofAFunction = { ...ofTheDefinition, definitionType: 'computation', definitionName: 'check-totals' };
+
+const drawn: readonly (typeof DefinitionEventSchema.Type)[] = [
+  {
+    type: 'definition_created',
+    data: {
+      content: {
+        source: '---\nlanguage: typescript\n---\nexport default (input: { total: number }) => input.total > 0;\n',
+        overview: 'Checks that an invoice has a total to pay',
+        diagram: 'flowchart LR\n  invoice[An invoice arrives] --> total[Its total is checked]',
+        description: 'Checks the total of an invoice',
+      },
+      created_by: { id: 'key_7f3a', name: 'key_7f3a' },
+    },
+    context: ofAFunction,
+  },
+  {
+    type: 'definition_updated',
+    data: { content: { source: '---\nlanguage: typescript\n---\nexport default () => true;\n', diagram: 'none' } },
+    context: { ...ofAFunction, definitionVersion: 2 },
+  },
+];
+
 describe('the facts of the definitions of a playbook', () => {
   recordedFactsBehaviour({
     schema: DefinitionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.52.0': drawn },
   });
 });

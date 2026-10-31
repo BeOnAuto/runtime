@@ -34,13 +34,19 @@ describe('a recall function over MCP, on the endpoint of its playbook', () => {
     closing.push(server.stop);
 
     const { created, definition, recalled, run, count } = await onAlpha(server, async (session) => {
-      await session.callTool('create_definition', { type: 'reasoning', name: 'review-brief', source: anyReview });
+      await session.callTool('create_definition', {
+        type: 'reasoning',
+        name: 'review-brief',
+        source: anyReview,
+        diagram: 'none',
+      });
       const creating = await session.callTool('create_definition', {
         type: 'recall',
         name: 'reviews',
         source: campaignReviews,
+        diagram: 'none',
       });
-      await session.callTool('create_definition', { type: 'recall', name: 'count', source: counting });
+      await session.callTool('create_definition', { type: 'recall', name: 'count', source: counting, diagram: 'none' });
       await session.callTool('run_definition', {
         type: 'reasoning',
         name: 'review-brief',

@@ -122,7 +122,7 @@ describe('an extension installed beside the runtime of the npm package', () => {
     const runtime = await launchedWithAnExtension();
     const playbook = `${runtime.url}/v1/orgs/local/playbooks/alpha`;
     await posted(`${runtime.url}/v1/orgs/local/playbooks`, { playbook: 'alpha', name: 'Alpha' });
-    await posted(`${playbook}/definitions/prediction`, { name: 'daily-visits', source: dailyVisits });
+    await posted(`${playbook}/definitions/prediction`, { name: 'daily-visits', source: dailyVisits, diagram: 'none' });
 
     const answer = await posted(`${playbook}/definitions/prediction/daily-visits/run`, { input: { series: 'north' } });
     await runtime.stopped();

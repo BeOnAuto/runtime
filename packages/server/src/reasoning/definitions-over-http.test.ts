@@ -24,7 +24,7 @@ afterEach(async () => {
 });
 
 function creating(name: string, source: string) {
-  return server.call('POST', `${alpha}/definitions/reasoning`, { body: { name, source } });
+  return server.call('POST', `${alpha}/definitions/reasoning`, { body: { name, source, diagram: 'none' } });
 }
 
 describe('the reasoning function definitions of a playbook over HTTP', () => {
@@ -51,7 +51,7 @@ describe('the life of a reasoning function definition over HTTP', () => {
     const listed = await server.call('GET', `${alpha}/definitions/reasoning`);
     const read = await server.call('GET', `${alpha}/definitions/reasoning/summary`);
     const updated = await server.call('PUT', `${alpha}/definitions/reasoning/summary`, {
-      body: { source: summary.replace('Be brief.', 'Be very brief.') },
+      body: { source: summary.replace('Be brief.', 'Be very brief.'), diagram: 'none' },
     });
     const retired = await server.call('POST', `${alpha}/definitions/reasoning/summary/retire`);
 

@@ -224,6 +224,7 @@ describe('one connection to /mcp', () => {
         type: 'reasoning',
         name: 'summary',
         source: summary,
+        diagram: 'none',
       });
       const ran = await session.callTool('run_definition', {
         playbook: 'alpha',

@@ -150,6 +150,7 @@ describe('the answer shape of an open request', () => {
       type: 'interaction',
       name: 'approve-brief',
       source: decisionDocument,
+      diagram: 'none',
     });
     const shapes = await shapesIn(playbook);
 

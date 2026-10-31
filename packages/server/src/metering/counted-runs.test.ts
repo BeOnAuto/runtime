@@ -36,7 +36,9 @@ describe('a workflow of a licensed runtime that calls a workflow that calls a fu
     const server = await licensedServedBy(accounts, { AUTO_RUNTIME_LICENSE_KEY: accounts.key }, {}, [
       answers(textResult('Short.')),
     ]);
-    await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await server.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'asking', source: asking } });
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'nesting', source: nesting } });
     const started = await server.call('POST', `${alpha}/definitions/workflow/nesting/run`, { body: { input: {} } });
@@ -58,7 +60,9 @@ describe('a workflow of a licensed runtime and the reasoning run it called, resu
     onTestFinished(ledger.remove);
     const licensed = { AUTO_RUNTIME_LICENSE_KEY: accounts.key };
     const first = await licensedServedBy(accounts, licensed, { ledger }, [() => Effect.never]);
-    await first.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await first.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
     await first.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'asking', source: asking } });
     const started = await first.call('POST', `${alpha}/definitions/workflow/asking/run`, { body: { input: {} } });
     await until(

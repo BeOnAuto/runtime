@@ -18,7 +18,7 @@ export async function interactionsCalled(
   inPlaybook: InPlaybook,
 ): Promise<readonly (readonly [string, ToolResult])[]> {
   const asking = { type: 'interaction', name: 'approval' };
-  await session.callTool('create_definition', inPlaybook({ ...asking, source: approvalRequest }));
+  await session.callTool('create_definition', inPlaybook({ ...asking, source: approvalRequest, diagram: 'none' }));
   const asked = await session.callTool('run_definition', inPlaybook({ ...asking, input: { owner: 'ada' } }));
   const runId = String(asked.structuredContent?.['run_id']);
   return [

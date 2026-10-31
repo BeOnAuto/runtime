@@ -79,7 +79,12 @@ export async function projectedSales(settingsOf: SettingsOf, sales: Sales): Prom
     datasets: datasets.database,
   });
   expect(
-    await playbook.call(playbook.operations.create, { type: 'prediction', name: sales.name, source: sales.source }),
+    await playbook.call(playbook.operations.create, {
+      type: 'prediction',
+      name: sales.name,
+      source: sales.source,
+      diagram: 'none',
+    }),
   ).toMatchObject({ status: 'succeeded' });
   return {
     playbook,

@@ -84,7 +84,9 @@ async function playbookWithThreeRuns(environment: Readonly<Record<string, string
     environment,
   );
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
   const running = (input: Readonly<Record<string, unknown>>) =>
     server.call('POST', `${alpha}/definitions/reasoning/summary/run`, { body: { input } });
   await running({ text: 'the quarter' });

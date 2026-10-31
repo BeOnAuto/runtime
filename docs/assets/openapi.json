@@ -9046,7 +9046,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function or workflow definition in the playbook from its document and returns it without running it. Use it once the person has agreed to the definition; update_definition changes one that exists, and a name is never reused in a playbook. `type` is the definition's type and `name` is how workflows and tools refer to it: reasoning, a reasoning function; interaction, an interaction function; computation, a computation function; recall, a recall function; prediction, a prediction function; workflow, a workflow. `source` is the whole document in that type's format, which get_guide gives, and `overview` the Markdown written after it for the person who runs the business. A document that does not fit its format is refused with the line and what is wrong, and nothing is saved.",
+        "description": "Saves a new function or workflow from its document, without running it. Use it once the person agrees; update_definition changes one that exists, and a name is never reused. `type` is the definition's type and `name` is how workflows and tools refer to it: reasoning, a reasoning function; interaction, an interaction function; computation, a computation function; recall, a recall function; prediction, a prediction function; workflow, a workflow. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none, and a workflow takes no `diagram`. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -9097,9 +9097,14 @@
                   },
                   "overview": {
                     "type": "string",
-                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Avoid invented benefits.",
+                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs, with no diagram. Avoid invented benefits.",
                     "minLength": 1,
                     "maxLength": 16384
+                  },
+                  "diagram": {
+                    "type": "string",
+                    "description": "Required for a function, refused for a workflow: Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing",
+                    "maxLength": 8192
                   }
                 },
                 "required": [
@@ -9131,7 +9136,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram"
                     },
                     "status": {
                       "type": "string",
@@ -9324,6 +9329,10 @@
                     "overview": {
                       "type": "string",
                       "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
+                    },
+                    "diagram": {
+                      "type": "string",
+                      "description": "The diagram its author gave a function with this version: Mermaid source of a flowchart or a state diagram of how it works, or the word none where a picture would add nothing; left out for a workflow and for a version saved without one"
                     },
                     "triggers_since": {
                       "type": "string",
@@ -9557,7 +9566,7 @@
                         "version": {
                           "type": "integer",
                           "minimum": 1,
-                          "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
+                          "description": "The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram"
                         },
                         "status": {
                           "type": "string",
@@ -9869,7 +9878,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram"
                     },
                     "status": {
                       "type": "string",
@@ -10062,6 +10071,10 @@
                     "overview": {
                       "type": "string",
                       "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
+                    },
+                    "diagram": {
+                      "type": "string",
+                      "description": "The diagram its author gave a function with this version: Mermaid source of a flowchart or a state diagram of how it works, or the word none where a picture would add nothing; left out for a workflow and for a version saved without one"
                     },
                     "triggers_since": {
                       "type": "string",
@@ -10218,7 +10231,7 @@
       "put": {
         "operationId": "update_definition",
         "summary": "Update definition",
-        "description": "Replaces the whole document of an active function or workflow definition and returns its new version, which every run uses from then on. Use it when the person changes a saved definition; create_definition saves a new one, and a retired definition cannot change. `type` and `name` say which definition, `source` is the whole new document in its type's format, which get_guide gives, and `overview` the Markdown for the person who runs the business, written again with every update; left out, the saved overview stays. A document that does not fit its format is refused with the line and what is wrong, and one the same as the saved document, with its overview the same or left out, records nothing. A new version of a recall function builds its view again from the playbook's history.",
+        "description": "Replaces the document of an active function or workflow and returns its new version, which every run uses from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time, Mermaid source of how it works or the word none, and a workflow takes no `diagram`. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a recall function builds its view again from the playbook's history.",
         "tags": [
           "definitions"
         ],
@@ -10274,9 +10287,14 @@
                   },
                   "overview": {
                     "type": "string",
-                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs. Add a Mermaid diagram if useful. Avoid invented benefits.",
+                    "description": "Write a plain-language Markdown overview: what this definition does, why it is needed, and how it fits the playbook. Use only supplied context, in one to three short paragraphs, with no diagram. Avoid invented benefits.",
                     "minLength": 1,
                     "maxLength": 16384
+                  },
+                  "diagram": {
+                    "type": "string",
+                    "description": "Required for a function, refused for a workflow: Mermaid source of a flowchart or a state diagram of how the function works, its first line flowchart, graph or stateDiagram, or the word none when a picture would add nothing",
+                    "maxLength": 8192
                   }
                 },
                 "required": [
@@ -10307,7 +10325,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram"
                     },
                     "status": {
                       "type": "string",
@@ -10500,6 +10518,10 @@
                     "overview": {
                       "type": "string",
                       "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
+                    },
+                    "diagram": {
+                      "type": "string",
+                      "description": "The diagram its author gave a function with this version: Mermaid source of a flowchart or a state diagram of how it works, or the word none where a picture would add nothing; left out for a workflow and for a version saved without one"
                     },
                     "triggers_since": {
                       "type": "string",
@@ -10735,7 +10757,7 @@
                     "version": {
                       "type": "integer",
                       "minimum": 1,
-                      "description": "The definition version: 1 when created, and one more for every update that changes its document or its overview"
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram"
                     },
                     "status": {
                       "type": "string",
@@ -10928,6 +10950,10 @@
                     "overview": {
                       "type": "string",
                       "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
+                    },
+                    "diagram": {
+                      "type": "string",
+                      "description": "The diagram its author gave a function with this version: Mermaid source of a flowchart or a state diagram of how it works, or the word none where a picture would add nothing; left out for a workflow and for a version saved without one"
                     },
                     "triggers_since": {
                       "type": "string",

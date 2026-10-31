@@ -53,7 +53,7 @@ export async function rejectedRun(port: number, key?: string): Promise<TestRespo
   await request(port, 'POST', '/v1/orgs/acme/playbooks', { ...caller, body: { playbook: 'alpha', name: 'Alpha' } });
   await request(port, 'POST', `${alpha}/definitions/reasoning`, {
     ...caller,
-    body: { name: 'verdict', source: verdict },
+    body: { name: 'verdict', source: verdict, diagram: 'none' },
   });
   return request(port, 'POST', `${alpha}/definitions/reasoning/verdict/run`, {
     ...caller,

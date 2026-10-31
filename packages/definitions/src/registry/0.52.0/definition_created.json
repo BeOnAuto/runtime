@@ -1,0 +1,22 @@
+{
+  "type": "definition_created",
+  "data": {
+    "content": {
+      "source": "---\nlanguage: typescript\n---\nexport default (input: { total: number }) => input.total > 0;\n",
+      "overview": "Checks that an invoice has a total to pay",
+      "diagram": "flowchart LR\n  invoice[An invoice arrives] --> total[Its total is checked]",
+      "description": "Checks the total of an invoice"
+    },
+    "created_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "definitionType": "computation",
+    "definitionName": "check-totals",
+    "definitionVersion": 1
+  }
+}

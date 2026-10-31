@@ -66,7 +66,11 @@ async function killedWhileItCalledItsModel(playbook: string, recordContent: bool
   const first = workflowProcess(ledger.fileName, environment);
   const port = await first.port;
   await requestTo(port, 'POST', '', { playbook, name: 'Resuming' });
-  await requestTo(port, 'POST', `/${playbook}/definitions/reasoning`, { name: 'summary', source: summary });
+  await requestTo(port, 'POST', `/${playbook}/definitions/reasoning`, {
+    name: 'summary',
+    source: summary,
+    diagram: 'none',
+  });
   const startedRun = await starting(port, playbook);
   await gateway.secondHeard;
   first.signal('SIGKILL');
@@ -157,7 +161,11 @@ describe('a reasoning run whose server stops while the run calls a tool', () => 
     const first = workflowProcess(ledger.fileName, environment);
     const port = await first.port;
     await requestTo(port, 'POST', '', { playbook: 'delta', name: 'Stopping' });
-    await requestTo(port, 'POST', '/delta/definitions/reasoning', { name: 'waiting', source: sleeping });
+    await requestTo(port, 'POST', '/delta/definitions/reasoning', {
+      name: 'waiting',
+      source: sleeping,
+      diagram: 'none',
+    });
     const asked = requestTo(port, 'POST', '/delta/definitions/reasoning/waiting/run', {
       input: {},
       run_id: reasoningRun,

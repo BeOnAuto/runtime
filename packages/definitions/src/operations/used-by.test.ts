@@ -41,7 +41,7 @@ function checkingPlain(name: string, ...steps: readonly number[]) {
 }
 
 function rememberingPlain(name: string, type: string, attribute: object) {
-  return { type: 'recall', name, source: JSON.stringify({ filters: [{ type, ...attribute }] }) };
+  return { type: 'recall', name, source: JSON.stringify({ filters: [{ type, ...attribute }] }), diagram: 'none' };
 }
 
 const weeklyReview = {

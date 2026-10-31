@@ -65,7 +65,9 @@ async function servingACalledPlaybook(): Promise<CalledPlaybook> {
   const saving = [
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-a-call', source: onACall } }),
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-a-closing', source: onAClosing } }),
-    await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'seen', source: foldingWhatItSees } }),
+    await server.call('POST', `${alpha}/definitions/recall`, {
+      body: { name: 'seen', source: foldingWhatItSees, diagram: 'none' },
+    }),
   ];
   return { server, saved: saving.map(({ status }) => status) };
 }

@@ -97,8 +97,12 @@ async function ranIn(server: ReasoningServer, input: Schema.Json, ids: RunIds) {
 
 async function ranOn(server: ReasoningServer, input: Schema.Json) {
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'pace', source: campaignPace } });
-  await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'churning', source: churning } });
+  await server.call('POST', `${alpha}/definitions/computation`, {
+    body: { name: 'pace', source: campaignPace, diagram: 'none' },
+  });
+  await server.call('POST', `${alpha}/definitions/computation`, {
+    body: { name: 'churning', source: churning, diagram: 'none' },
+  });
   const cold = await ranIn(server, input, runIds.cold);
   const warm = await ranIn(server, input, runIds.warm);
   await server.stop();

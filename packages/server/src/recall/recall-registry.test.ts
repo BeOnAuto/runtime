@@ -36,7 +36,7 @@ async function serving(environment: Readonly<Record<string, string>> = {}): Prom
 }
 
 function created(server: ReasoningServer, name: string) {
-  return server.call('POST', `${alpha}/definitions/recall`, { body: { name, source: counting } });
+  return server.call('POST', `${alpha}/definitions/recall`, { body: { name, source: counting, diagram: 'none' } });
 }
 
 function createdInTurn(server: ReasoningServer, names: readonly string[]): Promise<unknown> {
@@ -53,7 +53,7 @@ describe('the recall functions a playbook keeps', () => {
 
     const thirtyThird = await created(server, 'one-too-many');
     const anotherVersion = await server.call('PUT', `${alpha}/definitions/recall/count-0`, {
-      body: { source: countingTwice },
+      body: { source: countingTwice, diagram: 'none' },
     });
     await server.call('POST', `${alpha}/definitions/recall/count-1/retire`);
     const afterRetiring = await created(server, 'one-too-many');
@@ -85,7 +85,7 @@ describe('the bound on the recall functions a playbook keeps', () => {
     const lowered = await servingRecall([], { ...ledger, RECALL_MAX_FUNCTIONS: '1' });
     closing.push(lowered.stop);
     const anotherVersion = await lowered.call('PUT', `${alpha}/definitions/recall/count`, {
-      body: { source: countingTwice },
+      body: { source: countingTwice, diagram: 'none' },
     });
     await standingUntil(lowered, 'count', liveWith(0));
     const ran = await recalled(lowered, 'count', {});

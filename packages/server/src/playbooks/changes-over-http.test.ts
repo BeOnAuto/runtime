@@ -31,7 +31,9 @@ async function cursorOf(path: string): Promise<string> {
 }
 
 function summaryCreated() {
-  return server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+  return server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
 }
 
 describe('the changes of an org over HTTP', () => {

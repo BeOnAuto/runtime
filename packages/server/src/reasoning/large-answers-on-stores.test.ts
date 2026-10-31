@@ -104,7 +104,9 @@ async function servingLargeAnswers(environment: Readonly<Record<string, string>>
   });
   onTestFinished(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'reading', source: reading } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'reading', source: reading, diagram: 'none' },
+  });
   return server;
 }
 

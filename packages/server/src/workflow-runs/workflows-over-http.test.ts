@@ -102,8 +102,12 @@ afterEach(async () => {
 async function serving(...replies: readonly ScriptedReply[]): Promise<void> {
   server = await servingWorkflows(replies);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'verdict', source: verdict } });
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'verdict', source: verdict, diagram: 'none' },
+  });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
   await server.call('POST', `${alpha}/definitions/workflow`, {
     body: { name: 'expense-review', source: expenseReview },
   });

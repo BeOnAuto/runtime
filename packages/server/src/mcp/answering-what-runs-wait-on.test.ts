@@ -66,6 +66,7 @@ beforeAll(async () => {
       type: 'interaction',
       name: 'approve-draft',
       source: approvingTheDraft,
+      diagram: 'none',
     });
     await session.callTool('create_definition', {
       ...inMeetings,

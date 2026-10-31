@@ -46,10 +46,10 @@ describe('the functions pnpm dev serves in worker threads', () => {
       request(port, method, path, { body });
 
     await call('POST', '/v1/orgs/local/playbooks', { playbook: 'meetings', name: 'Meetings' });
-    await call('POST', `${meetings}/definitions/computation`, { name: 'echo', source: echo });
+    await call('POST', `${meetings}/definitions/computation`, { name: 'echo', source: echo, diagram: 'none' });
     const echoed = await call('POST', `${meetings}/definitions/computation/echo/run`, { input: { said: 'hello' } });
     expect(echoed.body).toMatchObject({ status: 'succeeded', output: { said: 'hello' } });
-    await call('POST', `${meetings}/definitions/recall`, { name: 'said', source: saidSoFar });
+    await call('POST', `${meetings}/definitions/recall`, { name: 'said', source: saidSoFar, diagram: 'none' });
     const recalled = await until(async () => {
       const answered = await call('POST', `${meetings}/definitions/recall/said/run`, { input: {} });
       expect(answered.status).toBe(200);

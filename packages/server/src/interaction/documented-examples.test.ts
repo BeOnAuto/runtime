@@ -18,7 +18,7 @@ describe('the example of the interaction function format', () => {
     const server = await interactionServerOn(chatEnvironment((await chatServer()).url));
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
     await server.call('POST', `${alpha}/definitions/interaction`, {
-      body: { name: 'approve-campaign-brief', source: reference.get('markdown') },
+      body: { name: 'approve-campaign-brief', source: reference.get('markdown'), diagram: 'none' },
     });
     await server.call('POST', `${alpha}/definitions/workflow`, {
       body: { name: 'brief-approval', source: reference.get('yaml') },

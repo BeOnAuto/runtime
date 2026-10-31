@@ -293,14 +293,15 @@ Each item of a task list is a mapping with one key, the task's name. Its value d
 
 Every task also accepts these fields:
 
-| Field        | Purpose                                                                      |
-| ------------ | ---------------------------------------------------------------------------- |
-| `if`         | A condition; when it does not hold, the task is skipped                      |
-| `input.from` | An expression or template that shapes the task's input                       |
-| `output.as`  | An expression or template that shapes what the task hands on                 |
-| `export.as`  | An expression or template whose result is `$context` for the tasks after it  |
-| `timeout`    | `after` with a duration, or the name of a timeout in `use.timeouts`          |
-| `then`       | What runs next: `continue`, `exit`, `end`, or a task's name in the same list |
+| Field        | Purpose                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `if`         | A condition; when it does not hold, the task is skipped                                     |
+| `input.from` | An expression or template that shapes the task's input                                      |
+| `output.as`  | An expression or template that shapes what the task hands on                                |
+| `export.as`  | An expression or template whose result is `$context` for the tasks after it                 |
+| `timeout`    | `after` with a duration, or the name of a timeout in `use.timeouts`                         |
+| `then`       | What runs next: `continue`, `exit`, `end`, or a task's name in the same list                |
+| `metadata`   | A mapping of any keys, which the runtime ignores; see [Describing steps](#describing-steps) |
 
 ### Data between tasks
 
@@ -322,6 +323,41 @@ The run's output is the output of its last task, or of the task that ended it, s
 - A branch of a fork can use only `continue`, `exit` and `end`.
 
 A `switch` tests its cases in order and follows the `then` of the first case whose `when` holds. A case without `when` is the default, chosen when no other case holds. When no case is chosen, the `switch` task's own `then` applies. A `switch` hands on its input unchanged.
+
+### Describing steps
+
+Auto Studio draws a workflow as a diagram for a person to read. Beside each step's name, it reads three keys of the step's `metadata`. The runtime keeps them with the document and ignores them when it runs.
+
+- `metadata.description`, on any step, is one sentence saying what the step does in this workflow. A call shows it on its card; a call without one shows the description of the function it calls. A `set` the run passes through is drawn only when it has one, as a small step that reads it, so give one to a `set` a person should see.
+- `metadata.when`, on a step with `if`, is the condition in words, such as `The report comes to more than 750 dollars` beside `if: '${ $data.totals.total_cents > 75000 }'`. It is shown behind an (i) on the line into the step, and the expression never is.
+- `metadata.cases`, on a `switch`, maps a case's name to one sentence saying when that case holds. Each sentence is shown behind an (i) on its case's branch. A case without `when` needs none.
+- A step's name is shown in words, so `billing-question` reads Billing question. Name each step for what it does, in words a person reads easily.
+- A case's name labels its branch in the same way, and a case named `default`, `otherwise` or `else` reads Otherwise.
+
+Each sentence is plain text, not an expression. Quote one that contains `: `, which YAML would otherwise read as a key. These steps ask a manager to approve a large expense report, then follow the answer:
+
+```yaml
+- ask-the-manager:
+    if: '${ $data.totals.total_cents > 75000 }'
+    call: run_definition
+    with:
+      type: interaction
+      name: approve-expense-report
+      input: { report: '${ $data }' }
+    metadata:
+      description: Asks the submitter's manager to approve the report
+      when: The report comes to more than 750 dollars
+- act-on-the-answer:
+    switch:
+      - send-back:
+          when: '${ $data.verdict === "revise" }'
+          then: return-the-report
+      - pay:
+          then: pay-the-report
+    metadata:
+      cases:
+        send-back: The manager asked for changes
+```
 
 ### Calling a function
 
@@ -635,7 +671,7 @@ These are refused when a document is saved, each for the reason given:
 
 ## The overview
 
-`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the workflow exists, what it does and how it fits, in one to three short paragraphs, with a Mermaid diagram in a fenced block where a flow is worth a picture; less technical, more value. Write it after the document, and write it again with every update.
+`create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the workflow exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update. Unlike a function, a workflow takes no `diagram`, and a save that gives one is refused: Auto Studio draws a workflow from its steps, with the words in [Describing steps](#describing-steps).
 
 An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.
 

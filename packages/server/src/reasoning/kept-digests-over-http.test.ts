@@ -46,7 +46,7 @@ async function servingTheEcho(recordContent: boolean): Promise<ReasoningServer> 
   onTestFinished(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   const source = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/echo]', '---', 'Echo it.'].join('\n');
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'echo', source } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'echo', source, diagram: 'none' } });
   await server.call('POST', `${alpha}/definitions/reasoning/echo/run`, { body: { input: {}, run_id: runId } });
   return server;
 }

@@ -64,7 +64,12 @@ async function keptAndAskedOverMcp(session: McpSession) {
   await session.callTool('create_playbook', { playbook: monthlyRevenue.playbook, name: 'Figures' });
   await session.callTool('publish_event', revenueReported('2026-08', 98_000));
   await session.callTool('publish_event', revenueReported('2026-09', 120_000));
-  await session.callTool('create_definition', { ...monthlyRevenue, type: 'recall', source: revenueOfEachMonth });
+  await session.callTool('create_definition', {
+    ...monthlyRevenue,
+    type: 'recall',
+    source: revenueOfEachMonth,
+    diagram: 'none',
+  });
   await liveOverMcp(session, monthlyRevenue, 2);
   return session.callTool('run_definition', { ...monthlyRevenue, type: 'recall', input: { month: '2026-08' } });
 }

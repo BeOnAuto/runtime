@@ -41,7 +41,12 @@ describe('the calls of a workflow to a prediction function', () => {
   it('wait 10 s for a question, written out or computed at run time, since the forecaster answers within its call', async () => {
     const { starts, recording } = recordingStarts();
     const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording), prediction]);
-    await playbook.call(playbook.createDefinition, { type: 'prediction', name: 'weekly-orders', source: weeklyOrders });
+    await playbook.call(playbook.createDefinition, {
+      type: 'prediction',
+      name: 'weekly-orders',
+      source: weeklyOrders,
+      diagram: 'none',
+    });
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'predicting', source: predicting });
 
     await playbook.call(playbook.runDefinition, { type: 'workflow', name: 'predicting', run_id: runId });

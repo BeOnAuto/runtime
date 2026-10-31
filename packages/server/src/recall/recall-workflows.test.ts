@@ -91,7 +91,11 @@ async function serving(...more: readonly ScriptedReply[]): Promise<ReasoningServ
   ] as const;
   await definitions.reduce(
     (created: Promise<unknown>, [type, name, source]) =>
-      created.then(() => server.call('POST', `${alpha}/definitions/${type}`, { body: { name, source } })),
+      created.then(() =>
+        server.call('POST', `${alpha}/definitions/${type}`, {
+          body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
+        }),
+      ),
     Promise.resolve(),
   );
   await standingUntil(server, 'reviews', liveWith(2));

@@ -79,7 +79,9 @@ describe('what a call read, kept and reacted to', () => {
   it('is folded by a recall function from the run that ended, and starts a workflow that listens for that ending', async () => {
     const server = await askingASystem();
     await server.define('thread-replies');
-    await server.call('POST', `${alpha}/definitions/recall`, { body: { name: 'kept-replies', source: keptReplies } });
+    await server.call('POST', `${alpha}/definitions/recall`, {
+      body: { name: 'kept-replies', source: keptReplies, diagram: 'none' },
+    });
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-replies', source: onReplies } });
 
     await server.runCall('thread-replies');

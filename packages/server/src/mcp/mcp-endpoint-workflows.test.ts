@@ -50,6 +50,7 @@ async function welcomedAfterReply(session: McpSession): Promise<ToolResult> {
     type: 'reasoning',
     name: 'greeting',
     source: greeting,
+    diagram: 'none',
   });
   await session.callTool('create_definition', {
     playbook: 'sales',

@@ -59,7 +59,9 @@ beforeAll(async () => {
   server = await servingReasoning([answers(jsonResult({ text: 'A short note.' }))]);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await inTurn(definitions, ([type, name, source]) =>
-    server.call('POST', `${alpha}/definitions/${type}`, { body: { name, source } }),
+    server.call('POST', `${alpha}/definitions/${type}`, {
+      body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
+    }),
   );
   await inTurn(definitions.slice(0, 4), ([type, name]) =>
     server.call('POST', `${alpha}/definitions/${type}/${name}/run`, { body: { input: {}, run_id: runIds[type] } }),

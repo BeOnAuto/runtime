@@ -121,13 +121,19 @@ function settledOn(session: McpSession, id: string): Promise<ToolResult> {
 
 async function saved(session: McpSession): Promise<readonly string[]> {
   await session.callTool('create_playbook', { playbook: 'campaign-review-tutorial', name: 'Campaign review tutorial' });
-  await called(session, 'create_definition', { type: 'reasoning', name: 'review-campaign-brief', source: review });
+  await called(session, 'create_definition', {
+    type: 'reasoning',
+    name: 'review-campaign-brief',
+    source: review,
+    diagram: 'none',
+  });
   return [
     plainTextIn(
       await called(session, 'create_definition', {
         type: 'interaction',
         name: 'approve-campaign-brief',
         source: approval.get('markdown'),
+        diagram: 'none',
       }),
     ),
     plainTextIn(

@@ -32,7 +32,9 @@ afterEach(async () => {
 });
 
 function saved(type: string, name: string, source: string | undefined) {
-  return server.call('POST', `${alpha}/definitions/${type}`, { body: { name, source } });
+  return server.call('POST', `${alpha}/definitions/${type}`, {
+    body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
+  });
 }
 
 describe('the example of the recall function format, through the server', () => {

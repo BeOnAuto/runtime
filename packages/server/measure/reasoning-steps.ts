@@ -171,14 +171,20 @@ const keepingNothing = withTools.map((line) => line.replace('graph/search', 'qui
 
 async function defined(server: MeasuredServer): Promise<void> {
   await server.call('POST', '/v1/orgs/local/playbooks', { playbook: 'measure', name: 'Measure' });
-  await server.call('POST', `${playbook}/definitions/reasoning`, { name: 'reading', source: withTools.join('\n') });
+  await server.call('POST', `${playbook}/definitions/reasoning`, {
+    name: 'reading',
+    source: withTools.join('\n'),
+    diagram: 'none',
+  });
   await server.call('POST', `${playbook}/definitions/reasoning`, {
     name: 'answering',
     source: withoutTools.join('\n'),
+    diagram: 'none',
   });
   await server.call('POST', `${playbook}/definitions/reasoning`, {
     name: 'quietly',
     source: keepingNothing.join('\n'),
+    diagram: 'none',
   });
 }
 

@@ -26,7 +26,7 @@ async function servingOrgs() {
     ['acme', 'globex', 'initech'].map(async (org) => {
       await server.call('POST', `/v1/orgs/${org}/playbooks`, { body: { playbook: 'alpha', name: 'Alpha' } });
       await server.call('POST', `/v1/orgs/${org}/playbooks/alpha/definitions/reasoning`, {
-        body: { name: 'count', source },
+        body: { name: 'count', source, diagram: 'none' },
       });
     }),
   );

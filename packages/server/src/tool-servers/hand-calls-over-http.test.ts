@@ -174,7 +174,7 @@ describe('what a call made by hand does not record', () => {
     ].join('\n');
     await server.call('POST', `${alpha}/definitions/computation`, {
       key: builder.key,
-      body: { name: 'echo', source: echo },
+      body: { name: 'echo', source: echo, diagram: 'none' },
     });
 
     const ran = await server.call('POST', `${alpha}/definitions/computation/echo/run`, {

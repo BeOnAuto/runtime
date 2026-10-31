@@ -93,6 +93,7 @@ async function askedToSendADraft(session: McpSession) {
     type: 'interaction',
     name: 'approve-draft',
     source: approvingInTheChat,
+    diagram: 'none',
   });
   const reasoning = await session.callTool('list_definitions', { ...inMeetings, type: 'reasoning' });
   return { guide, sent, read, saved, reasoning };
@@ -106,6 +107,7 @@ async function askedWhereNoToolServerIs(session: McpSession) {
     type: 'interaction',
     name: 'approve-draft',
     source: approvingInTheChat,
+    diagram: 'none',
   });
   return session.callTool('run_definition', {
     ...briefs,
@@ -174,6 +176,7 @@ async function askedForTheRepliesOfAThread(session: McpSession) {
     type: 'interaction',
     name: 'thread-replies',
     source: readingAThread,
+    diagram: 'none',
   });
   const reasoning = await session.callTool('list_definitions', { ...inMeetings, type: 'reasoning' });
   return { recipe, called, saved, reasoning };
@@ -214,7 +217,7 @@ const askingTheOwner = [
 
 const savingIt = {
   name: 'create_definition',
-  arguments: { ...inMeetings, type: 'interaction', name: 'approve-the-draft', source: askingTheOwner },
+  arguments: { ...inMeetings, type: 'interaction', name: 'approve-the-draft', source: askingTheOwner, diagram: 'none' },
 };
 
 const throughTheChat =

@@ -56,7 +56,9 @@ describe('a run of a computation function that does not end by itself, over HTTP
         ),
     });
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await server.call('POST', `${alpha}/definitions/computation`, { body: { name: 'pace', source: campaignPace } });
+    await server.call('POST', `${alpha}/definitions/computation`, {
+      body: { name: 'pace', source: campaignPace, diagram: 'none' },
+    });
     const warm = await ranOn(3);
     const started = performance.now();
     const settled = { run: false };

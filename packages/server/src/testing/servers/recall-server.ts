@@ -83,9 +83,13 @@ export function foldsHeld(gate: Gate, folds: number): Promise<void> {
 export async function playbookWithReviews(server: ReasoningServer, briefsFirst = 0, playbook = 'alpha'): Promise<void> {
   const path = `/v1/orgs/acme/playbooks/${playbook}`;
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook, name: playbook } });
-  await server.call('POST', `${path}/definitions/reasoning`, { body: { name: 'review-brief', source: anyReview } });
+  await server.call('POST', `${path}/definitions/reasoning`, {
+    body: { name: 'review-brief', source: anyReview, diagram: 'none' },
+  });
   await reviewed(server, briefsFirst, playbook);
-  await server.call('POST', `${path}/definitions/recall`, { body: { name: 'reviews', source: campaignReviews } });
+  await server.call('POST', `${path}/definitions/recall`, {
+    body: { name: 'reviews', source: campaignReviews, diagram: 'none' },
+  });
 }
 
 export function reviewed(server: ReasoningServer, briefs: number, playbook = 'alpha'): Promise<unknown> {

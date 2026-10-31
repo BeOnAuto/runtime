@@ -49,7 +49,9 @@ describe('a runtime on this computer with no model provider', () => {
 
   it('tells it the same when a reasoning function cannot run', async () => {
     await request(server.port, 'POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await request(server.port, 'POST', `${alpha}/definitions/reasoning`, { body: { name: 'review', source: review } });
+    await request(server.port, 'POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'review', source: review, diagram: 'none' },
+    });
 
     const run = await request(server.port, 'POST', `${alpha}/definitions/reasoning/review/run`, {
       body: { input: { brief: 'a brief' } },

@@ -96,10 +96,10 @@ export async function servingInteractions(
   const server = await interactionServerOn(environment, parts);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/interaction`, {
-    body: { name: 'approve-brief', source: approvalDocument(delivery) },
+    body: { name: 'approve-brief', source: approvalDocument(delivery), diagram: 'none' },
   });
   await server.call('POST', `${alpha}/definitions/interaction`, {
-    body: { name: 'brief-out', source: notificationDocument(delivery) },
+    body: { name: 'brief-out', source: notificationDocument(delivery), diagram: 'none' },
   });
   return server;
 }

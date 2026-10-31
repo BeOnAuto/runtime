@@ -54,7 +54,9 @@ async function connectedBeforeARestart(): Promise<{ readonly fileName: string; r
 const echoing = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [crm/echo]', '---', 'Echo a note.'].join('\n');
 
 async function ranEchoing(server: ReasoningServer) {
-  await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'echo', source: echoing } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'echo', source: echoing, diagram: 'none' },
+  });
   return server.call('POST', `${alpha}/definitions/reasoning/echo/run`, { body: { input: {} } });
 }
 

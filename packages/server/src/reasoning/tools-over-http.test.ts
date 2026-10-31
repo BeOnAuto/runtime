@@ -69,16 +69,16 @@ async function serving(fake: FakeMcpServer, ...replies: readonly ScriptedReplies
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'graph', source: reasoningFunction('graph/search') },
+    body: { name: 'graph', source: reasoningFunction('graph/search'), diagram: 'none' },
   });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'limitless', source: reasoningFunction('limitless/*') },
+    body: { name: 'limitless', source: reasoningFunction('limitless/*'), diagram: 'none' },
   });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'echo', source: reasoningFunction('graph/echo') },
+    body: { name: 'echo', source: reasoningFunction('graph/echo'), diagram: 'none' },
   });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
-    body: { name: 'crm', source: reasoningFunction('crm/search') },
+    body: { name: 'crm', source: reasoningFunction('crm/search'), diagram: 'none' },
   });
   return server;
 }

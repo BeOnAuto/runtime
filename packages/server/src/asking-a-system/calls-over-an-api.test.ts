@@ -34,7 +34,9 @@ async function askingAnApi() {
     input: openInput,
     output: nameOutput,
   });
-  await server.call('POST', `${alpha}/definitions/interaction`, { body: { name: 'profile-name', source } });
+  await server.call('POST', `${alpha}/definitions/interaction`, {
+    body: { name: 'profile-name', source, diagram: 'none' },
+  });
   return { billing, server };
 }
 

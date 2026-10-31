@@ -41,8 +41,18 @@ describe('the calls of a workflow to reasoning functions', () => {
   it('each carry the interval after which its run may be resumed, resumesAfterMsOf its own definition, and a call of a workflow, whose runs do not resume, none', async () => {
     const { starts, recording } = recordingStarts();
     const playbook = playbookOn(memoryLedger(), [recordingWorkflows(recording), reasoning]);
-    await playbook.call(playbook.createDefinition, { type: 'reasoning', name: 'brief', source: brief });
-    await playbook.call(playbook.createDefinition, { type: 'reasoning', name: 'thorough', source: thorough });
+    await playbook.call(playbook.createDefinition, {
+      type: 'reasoning',
+      name: 'brief',
+      source: brief,
+      diagram: 'none',
+    });
+    await playbook.call(playbook.createDefinition, {
+      type: 'reasoning',
+      name: 'thorough',
+      source: thorough,
+      diagram: 'none',
+    });
     await playbook.call(playbook.createDefinition, { type: 'workflow', name: 'calling', source: calling });
 
     await playbook.call(playbook.runDefinition, { type: 'workflow', name: 'calling', run_id: runId });

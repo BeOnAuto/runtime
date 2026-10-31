@@ -48,7 +48,9 @@ describe('a run whose client goes away while the model answers', () => {
       Effect.promise(() => answering.promise).pipe(Effect.as(textResult('Profits rose.')));
     server = await servingReasoning([heldUntilReleased]);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await server.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
 
     const client = givenUp();
     await until(
@@ -85,7 +87,9 @@ describe('a run whose client went away, cancelled while the model answers', () =
   it('is stopped by cancel_run, its model call ended as interrupted, ends cancelled as asked, the model called once', async () => {
     server = await servingReasoning([neverAnswering]);
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    await server.call('POST', `${alpha}/definitions/reasoning`, { body: { name: 'summary', source: summary } });
+    await server.call('POST', `${alpha}/definitions/reasoning`, {
+      body: { name: 'summary', source: summary, diagram: 'none' },
+    });
 
     const client = givenUp();
     await until(
