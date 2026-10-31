@@ -6,16 +6,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { added, type Added } from '../testing/additions.ts';
 import {
-  appSecret,
+  orgsClientSecret,
   connectedThrough,
   consentHarnessAt,
   finishing,
   givingTheClient,
-  orgsAppFake,
+  orgsOAuthClientFake,
   startedAt,
   starting,
-  theOrgsApp,
-  underTheOrgsApp,
+  theOrgsOAuthClient,
+  underTheOrgsOAuthClient,
 } from '../testing/consents.ts';
 import { ada, loopbackAndCrmPolicy, operationNamed, type Harness } from '../testing/harness.ts';
 import { calledThrough, sealedConsentAt } from '../testing/sealed-consents.ts';
@@ -27,21 +27,23 @@ afterEach(async () => {
 });
 
 async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await orgsAppFake(changes);
+  const fake = await orgsOAuthClientFake(changes);
   closing.push(fake.close);
   return fake;
 }
 
-interface UnderTheOrgsApp {
+interface UnderTheOrgsOAuthClient {
   readonly fake: FakeMcpServer;
   readonly h: Harness;
   readonly link: Added;
 }
 
-async function givenUnderTheOrgsApp(changes: Partial<ClientRegistration> = {}): Promise<UnderTheOrgsApp> {
+async function givenUnderTheOrgsOAuthClient(
+  changes: Partial<ClientRegistration> = {},
+): Promise<UnderTheOrgsOAuthClient> {
   const fake = await served(changes);
   const h = consentHarnessAt(fake);
-  const link = await added(h, underTheOrgsApp);
+  const link = await added(h, underTheOrgsOAuthClient);
   await givingTheClient(h, link);
   return { fake, h, link };
 }
@@ -69,29 +71,29 @@ function tokensKeptIn(h: Harness, secretId: string) {
 }
 
 const unreadNow: unknown = expect.stringMatching(
-  /^The consent of the connection files cannot go on now, since the runtime cannot read the client secret of the org's own app: The custodian of the key /u,
+  /^The consent of the connection files cannot go on now, since the runtime cannot read the client secret of the organization's own OAuth client: The custodian of the key /u,
 );
 
 const clientGone =
-  "The client secret of the org's own app for the connection files is no longer in the secret store, so the person gives the app's client id and client secret again on its page";
+  "The client secret of the organization's own OAuth client for the connection files is no longer in the secret store, so the person gives its client ID and client secret again on its page";
 
-describe('the consent of a connection under the org’s own app', () => {
-  it('is refused until the client of the org’s app is given on the page, and nothing is started', async () => {
+describe('the consent of a connection under the organization’s own OAuth client', () => {
+  it('is refused until the organization’s own OAuth client is given on the page, and nothing is started', async () => {
     const fake = await served();
     const h = consentHarnessAt(fake);
-    const link = await added(h, underTheOrgsApp);
+    const link = await added(h, underTheOrgsOAuthClient);
 
     expect(await starting(h, link)).toMatchObject({
       status: 'rejected',
       reason: 'conflict',
       detail:
-        "The connection files runs under the org's own app, whose client id and client secret the person gives on its page before signing in",
+        "The connection files runs under the organization's own OAuth client, whose client ID and client secret the person gives on its page before signing in",
     });
     expect(typesOf(await h.facts())).toEqual(['connection_added', 'connection_link_issued']);
   });
 
   it('starts at the provider’s authorization endpoint with the org’s client, and the finish connects it with that client', async () => {
-    const { fake, h, link } = await givenUnderTheOrgsApp();
+    const { fake, h, link } = await givenUnderTheOrgsOAuthClient();
 
     const { url } = await startedAt(h, link);
     const finished = await finishing(h, link, await consentedAt(url));
@@ -113,13 +115,13 @@ describe('the consent of a connection under the org’s own app', () => {
       data: { client_id: 'org-app', client_source: 'own' },
     });
     expect(await admitted(fake, tokensKeptIn(h, 'secret-3').access_token)).toBe(true);
-    expect(JSON.stringify(facts)).not.toContain(appSecret);
+    expect(JSON.stringify(facts)).not.toContain(orgsClientSecret);
   });
 });
 
-describe('the consent of a connection under the org’s own app, where Auto’s clients are on', () => {
+describe('the consent of a connection under the organization’s own OAuth client, where Auto’s clients are on', () => {
   it('never begins through Auto’s consent service, though Auto has a client at the provider', async () => {
-    const serving = await servedThroughAuto({ clientId: theOrgsApp.client_id, clientSecret: appSecret });
+    const serving = await servedThroughAuto({ clientId: theOrgsOAuthClient.client_id, clientSecret: orgsClientSecret });
     closing.push(serving.close);
     const h = consentHarnessAt(serving.fake, {
       policy: loopbackAndCrmPolicy,
@@ -129,7 +131,7 @@ describe('the consent of a connection under the org’s own app, where Auto’s 
         runtime: () => 'http://localhost:5555',
       },
     });
-    const link = await added(h, underTheOrgsApp);
+    const link = await added(h, underTheOrgsOAuthClient);
     await givingTheClient(h, link);
     const askedBefore = serving.service.calls().length;
 
@@ -143,7 +145,7 @@ describe('the consent of a connection under the org’s own app, where Auto’s 
     const harnessed = consentHarnessAt(await served());
     const counting = sourcesCounted(harnessed.consent);
     const h: Harness = { ...harnessed, operations: harnessed.operationsWith({ consent: counting.consent }) };
-    const link = await added(h, underTheOrgsApp);
+    const link = await added(h, underTheOrgsOAuthClient);
     await givingTheClient(h, link);
 
     const read = await h.call(operationNamed(h.operations, 'read_link'), ada, { id: link.id, token: link.token });
@@ -157,11 +159,11 @@ describe('the consent of a connection under the org’s own app, where Auto’s 
   });
 });
 
-describe('the consent of a connection under the org’s own app whose client secret is not had', () => {
+describe('the consent of a connection under the organization’s own OAuth client whose client secret is not had', () => {
   it('is unavailable where the client secret cannot be read now, and nothing is started', async () => {
     const sealed = sealedConsentAt(await served());
-    const link = await added(sealed.h, underTheOrgsApp);
-    await calledThrough(sealed, 'give_client', { id: link.id, token: link.token, ...theOrgsApp });
+    const link = await added(sealed.h, underTheOrgsOAuthClient);
+    await calledThrough(sealed, 'give_client', { id: link.id, token: link.token, ...theOrgsOAuthClient });
 
     sealed.custodian.refuse();
     const unread = await calledThrough(sealed, 'start', { id: link.id, token: link.token });
@@ -171,7 +173,7 @@ describe('the consent of a connection under the org’s own app whose client sec
   });
 
   it('asks for the client again where its secret is no longer in the secret store, at the start or at the finish', async () => {
-    const { h, link } = await givenUnderTheOrgsApp();
+    const { h, link } = await givenUnderTheOrgsOAuthClient();
     const { url } = await startedAt(h, link);
     await Effect.runPromise(h.secrets.forget('secret-1'));
 

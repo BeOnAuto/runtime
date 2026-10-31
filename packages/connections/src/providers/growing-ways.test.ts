@@ -74,11 +74,11 @@ describe('a provider whose way names more, by the clients set up for it', () => 
     });
   });
 
-  it('is offered under the org’s own app alone, in words that name its scope, where no client covers its first consent', async () => {
+  it('is offered under the organization’s own OAuth client alone, in words that name its scope, where no client covers its first consent', async () => {
     const h = harnessCovering(['files.read', 'files.share']);
 
     expect(await waysListedBy(h)).toMatchObject({
-      output: { providers: [{ credentials: [{ offered: true, own_app: 'required', because: notCovered }] }] },
+      output: { providers: [{ credentials: [{ offered: true, oauth_client: 'required', because: notCovered }] }] },
     });
     expect(await adding(h, { provider: 'files', credential: { kind: 'authorization' } })).toMatchObject({
       status: 'succeeded',

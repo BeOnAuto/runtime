@@ -586,7 +586,7 @@
                         "enum": ["registered", "metadata_document", "dynamic"]
                       }
                     },
-                    "own_app": {
+                    "oauth_client": {
                       "type": "string",
                       "enum": ["required"]
                     },

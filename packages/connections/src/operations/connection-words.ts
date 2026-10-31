@@ -62,14 +62,16 @@ const givingTheCredential: Doing = {
   youDo: 'give its credential where it takes one',
 };
 
-const givingTheOrgsApp: Doing = {
-  theyDo: "gives the client id and the client secret of the org's own app, registered with the provider, then signs in",
-  youDo: "give the client id and the client secret of the org's own app, registered with the provider, then sign in",
+const givingTheOrgsOAuthClient: Doing = {
+  theyDo:
+    "gives the client ID and the client secret of the organization's own OAuth client, registered with the provider, then signs in",
+  youDo:
+    "give the client ID and the client secret of the organization's own OAuth client, registered with the provider, then sign in",
 };
 
 function doingOf({ provider, credential }: Linked): Doing {
   if (credential.client_source === 'own') {
-    return givingTheOrgsApp;
+    return givingTheOrgsOAuthClient;
   }
   if (provider !== null || credential.kind !== 'authorization') {
     return givingTheCredential;

@@ -3,7 +3,7 @@ import { Result } from 'effect';
 
 import type { CommandMetadata, ConsentFinish, ConsentStart, LinkUse } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
-import { clientUngivenOf } from './own-app-decisions.ts';
+import { clientUngivenOf } from './oauth-client-decisions.ts';
 import {
   clientChangedOf,
   finishableConnectionOf,

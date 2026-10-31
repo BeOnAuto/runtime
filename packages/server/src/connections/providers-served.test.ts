@@ -57,7 +57,11 @@ const WaysListedSchema = Schema.Struct({
     Schema.Struct({
       name: Schema.String,
       credentials: Schema.Array(
-        Schema.Struct({ kind: Schema.String, offered: Schema.Boolean, own_app: Schema.optionalKey(Schema.String) }),
+        Schema.Struct({
+          kind: Schema.String,
+          offered: Schema.Boolean,
+          oauth_client: Schema.optionalKey(Schema.String),
+        }),
       ),
     }),
   ),
@@ -114,14 +118,14 @@ describe('the providers a server lists over HTTP', () => {
   });
 });
 
-const alone = 'under the org’s own app alone';
+const alone = 'under the organization’s own OAuth client alone';
 
 async function waysListedBy(served: ReasoningServer): Promise<readonly (readonly [string, readonly string[]])[]> {
   const { body } = await served.call('GET', '/v1/orgs/local/providers');
   return Schema.decodeUnknownSync(WaysListedSchema)(body).providers.map(({ name, credentials }) => [
     name,
-    credentials.map(({ kind, offered, own_app: ownApp }) =>
-      [kind, offered ? 'offered' : 'set up first', ownApp === 'required' ? alone : ''].join(' ').trim(),
+    credentials.map(({ kind, offered, oauth_client: oauthClient }) =>
+      [kind, offered ? 'offered' : 'set up first', oauthClient === 'required' ? alone : ''].join(' ').trim(),
     ),
   ]);
 }
@@ -152,28 +156,28 @@ function waysExpected(
   return names.map((name) => [name, required(known[name])]);
 }
 
-const underTheOrgsAppAlone = `authorization offered ${alone}`;
+const underTheOrgsOAuthClientAlone = `authorization offered ${alone}`;
 
 const waysWithoutAClient = {
-  'adobe-analytics': ['client_credentials offered', underTheOrgsAppAlone],
+  'adobe-analytics': ['client_credentials offered', underTheOrgsOAuthClientAlone],
   'adobe-analytics-mcp': ['authorization offered'],
-  'amazon-ads': [underTheOrgsAppAlone],
-  'amazon-ads-mcp': [underTheOrgsAppAlone],
+  'amazon-ads': [underTheOrgsOAuthClientAlone],
+  'amazon-ads-mcp': [underTheOrgsOAuthClientAlone],
   atlassian: ['authorization offered'],
   buffer: ['secret offered'],
-  github: ['secret offered', underTheOrgsAppAlone],
-  'google-drive': [underTheOrgsAppAlone],
-  hubspot: [underTheOrgsAppAlone],
+  github: ['secret offered', underTheOrgsOAuthClientAlone],
+  'google-drive': [underTheOrgsOAuthClientAlone],
+  hubspot: [underTheOrgsOAuthClientAlone],
   linear: ['authorization offered'],
-  linkedin: [underTheOrgsAppAlone],
+  linkedin: [underTheOrgsOAuthClientAlone],
   notion: ['authorization offered'],
   posthog: ['authorization offered'],
   profound: ['authorization offered', 'secret offered'],
-  slack: [underTheOrgsAppAlone],
+  slack: [underTheOrgsOAuthClientAlone],
   'slack-bot': ['secret offered'],
   stripe: ['authorization offered'],
-  x: [underTheOrgsAppAlone],
-  zoom: [underTheOrgsAppAlone],
+  x: [underTheOrgsOAuthClientAlone],
+  zoom: [underTheOrgsOAuthClientAlone],
 };
 
 const waysWithAClient = {
@@ -194,17 +198,17 @@ const waysWithAClient = {
   slack: ['authorization offered'],
   'slack-bot': ['secret offered'],
   stripe: ['authorization offered'],
-  x: [underTheOrgsAppAlone],
+  x: [underTheOrgsOAuthClientAlone],
   zoom: ['authorization offered'],
 };
 
 describe('the ways of the providers a server lists', () => {
-  it('offer consent beside the org’s own app where whoever runs it registered a client at the issuer or the server registers one itself, under the org’s own app alone elsewhere, and search offers every provider', async () => {
+  it('offer consent beside the organization’s own OAuth client where whoever runs it registered a client at the issuer or the server registers one itself, under the organization’s own OAuth client alone elsewhere, and search offers every provider', async () => {
     const withClients = await servingReasoning([], registeredAtTheIssuers);
     onTestFinished(() => withClients.stop());
 
     expect([await waysListedBy(server), await namesSearchedBy(server)]).toEqual([
-      waysExpected(waysWithoutAClient, [underTheOrgsAppAlone]),
+      waysExpected(waysWithoutAClient, [underTheOrgsOAuthClientAlone]),
       names,
     ]);
     expect([await waysListedBy(withClients), await namesSearchedBy(withClients)]).toEqual([
@@ -261,8 +265,8 @@ describe('a connection added by a provider', () => {
   });
 });
 
-describe('a connection added by a provider whose way requires the org’s own app, as x’s does', () => {
-  it('is added over HTTP by its name alone under the org’s own app, whether or not a client is registered at its issuer', async () => {
+describe('a connection added by a provider whose way requires the organization’s own OAuth client, as x’s does', () => {
+  it('is added over HTTP by its name alone under the organization’s own OAuth client, whether or not a client is registered at its issuer', async () => {
     const withClients = await servingReasoning([], registeredAtTheIssuers);
     onTestFinished(() => withClients.stop());
     const added = await Promise.all(
@@ -270,7 +274,7 @@ describe('a connection added by a provider whose way requires the org’s own ap
         served.call('POST', '/v1/orgs/local/connections', { body: { provider: 'x' } }),
       ),
     );
-    const underTheOrgsApp = {
+    const underTheOrgsOAuthClient = {
       status: 201,
       body: {
         name: 'x',
@@ -288,7 +292,7 @@ describe('a connection added by a provider whose way requires the org’s own ap
       },
     };
 
-    expect(added).toMatchObject([underTheOrgsApp, underTheOrgsApp]);
+    expect(added).toMatchObject([underTheOrgsOAuthClient, underTheOrgsOAuthClient]);
     expect(added[0]).not.toHaveProperty('body.credential.client_id');
     expect(added[1]).not.toHaveProperty('body.credential.client_id');
   });

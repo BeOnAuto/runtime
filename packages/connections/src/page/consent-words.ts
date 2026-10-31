@@ -80,11 +80,11 @@ export const unavailableWords = {
   tokensUnread: (name: string, detail: string) =>
     `The tokens of the connection ${name} cannot be read now, so they were not revoked and end on their own: ${detail}`,
   ownClientUnrevoked: (name: string, detail: string) =>
-    `The tokens of the connection ${name} were not revoked, since the client secret of the org's own app they were given to cannot be read now, so they end on their own: ${detail}`,
+    `The tokens of the connection ${name} were not revoked, since the client secret of the organization's own OAuth client they were given to cannot be read now, so they end on their own: ${detail}`,
   ownClientUnread: (name: string, detail: string) =>
-    `The consent of the connection ${name} cannot go on now, since the runtime cannot read the client secret of the org's own app: ${detail}`,
+    `The consent of the connection ${name} cannot go on now, since the runtime cannot read the client secret of the organization's own OAuth client: ${detail}`,
   clientUnkept: (name: string, detail: string) =>
-    `The client secret of the org's own app for the connection ${name} cannot be kept now, so nothing is changed and its link stays open: ${detail}`,
+    `The client secret of the organization's own OAuth client for the connection ${name} cannot be kept now, so nothing is changed and its link stays open: ${detail}`,
 } as const;
 
 const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = {

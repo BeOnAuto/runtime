@@ -5,7 +5,7 @@ import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { reconnectionStartedAt, theOrgsApp } from '../testing/consents.ts';
+import { reconnectionStartedAt, theOrgsOAuthClient } from '../testing/consents.ts';
 import { consentServedAs, servedAs, sourceOver } from '../testing/served-connections.ts';
 import { vendorsOfTheShippedWays } from '../testing/shipped-vendors.ts';
 import {
@@ -32,12 +32,12 @@ interface WayOfConsent {
   readonly issuer: string;
   readonly scope: string | undefined;
   readonly clients: readonly string[];
-  readonly ownApp: boolean;
+  readonly oauthClient: boolean;
   readonly vendor: VendorOfTheWay | undefined;
 }
 
 const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entry }) =>
-  entry.credentials.flatMap(({ kind, issuer, scope, clients = ['registered'], own_app: ownApp }) =>
+  entry.credentials.flatMap(({ kind, issuer, scope, clients = ['registered'], oauth_client: oauthClient }) =>
     kind === 'authorization' && issuer !== undefined
       ? [
           {
@@ -46,7 +46,7 @@ const waysOfConsent: readonly WayOfConsent[] = shipped.providers.flatMap(({ entr
             issuer,
             scope,
             clients,
-            ownApp: ownApp === 'required',
+            oauthClient: oauthClient === 'required',
             vendor: vendorsOfTheShippedWays[entry.name],
           },
         ]
@@ -79,7 +79,7 @@ function parametersAsked(
   return Object.fromEntries(Object.keys(parameters).map((name) => [name, asked.searchParams.get(name)]));
 }
 
-async function consentOf({ name, placeholders, issuer, ownApp, vendor }: WayOfConsent, registered: boolean) {
+async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: WayOfConsent, registered: boolean) {
   const theVendor = required(vendor);
   const fake = await servedAsTheVendor(theVendor);
   closing.push(fake.close);
@@ -89,7 +89,7 @@ async function consentOf({ name, placeholders, issuer, ownApp, vendor }: WayOfCo
   });
   const { asked, finished } = await consentedAtTheVendor(
     h,
-    { provider: name, placeholders, ...(ownApp ? { orgsApp: theOrgsApp } : {}) },
+    { provider: name, placeholders, ...(oauthClient ? { orgsOAuthClient: theOrgsOAuthClient } : {}) },
     { fake, vendor: theVendor },
   );
   const facts = await h.facts();
@@ -125,8 +125,8 @@ function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string
   };
 }
 
-function sourceTakenBesideARegisteredClient({ clients, ownApp }: WayOfConsent): string {
-  if (ownApp) {
+function sourceTakenBesideARegisteredClient({ clients, oauthClient }: WayOfConsent): string {
+  if (oauthClient) {
     return 'own';
   }
   return clients.includes('registered') ? 'registered' : 'dynamic';

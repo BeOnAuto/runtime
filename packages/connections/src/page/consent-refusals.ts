@@ -102,7 +102,7 @@ function ownClientRefusalOf(named: ConsentNamed, unheld: OwnClientUnheld): Conse
     ? refusedFor(named, { refusing: unavailable, detail: unavailableWords.ownClientUnread(named.name, unheld.detail) })
     : refusedFor(named, {
         refusing: conflict,
-        detail: `The client secret of the org's own app for the connection ${named.name} is no longer in the secret store, so the person gives the app's client id and client secret again on its page`,
+        detail: `The client secret of the organization's own OAuth client for the connection ${named.name} is no longer in the secret store, so the person gives its client ID and client secret again on its page`,
       });
 }
 

@@ -125,7 +125,7 @@ const askingMore: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
-const underTheOrgsApp: readonly (typeof ConnectionEventSchema.Type)[] = [
+const underTheOrgsOAuthClient: readonly (typeof ConnectionEventSchema.Type)[] = [
   {
     type: 'connection_added',
     data: {
@@ -164,7 +164,7 @@ describe('the facts of the registry of connections', () => {
   recordedFactsBehaviour({
     schema: ConnectionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.49.0': [...askingMore, ...underTheOrgsApp] },
+    releases: { '0.46.0': baseline, '0.49.0': [...askingMore, ...underTheOrgsOAuthClient] },
   });
 });
 

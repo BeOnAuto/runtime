@@ -13,7 +13,7 @@ import { Effect, Function, Option } from 'effect';
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
-import { runsUnderTheOrgsApp, type RecordedConnection } from '../registry/connection.ts';
+import { runsUnderTheOrgsOAuthClient, type RecordedConnection } from '../registry/connection.ts';
 import {
   clientChangedOf,
   isOpenConsent,
@@ -71,13 +71,13 @@ function wayOf({ credential }: Pick<RecordedConnection, 'credential'>, scope: st
     revocation_endpoint: credential.revocation_endpoint,
     pkce: credential.pkce,
     clients: credential.clients,
-    app: credential.client_source === 'own' ? credential.client_source : undefined,
+    oauth_client: credential.client_source === 'own' ? credential.client_source : undefined,
   };
 }
 
 const noSources: Sources = { sourceOf: Function.constUndefined };
 
-const theOrgsAppAlone: Sources = { sourceOf: Function.constant('own') };
+const theOrgsOAuthClientAlone: Sources = { sourceOf: Function.constant('own') };
 
 export function sourcesFor(
   connection: Pick<RecordedConnection, 'credential'>,
@@ -86,7 +86,9 @@ export function sourcesFor(
   if (connection.credential.kind !== 'authorization') {
     return Effect.succeed(noSources);
   }
-  return runsUnderTheOrgsApp(connection) ? Effect.succeed(theOrgsAppAlone) : consent.hadSources(studioBaseFor(pages));
+  return runsUnderTheOrgsOAuthClient(connection)
+    ? Effect.succeed(theOrgsOAuthClientAlone)
+    : consent.hadSources(studioBaseFor(pages));
 }
 
 export function isCoveredHere(
@@ -117,7 +119,7 @@ export function returnAddressFor(
   connection: Pick<RecordedConnection, 'credential'>,
   { pages }: Pick<ConnectionServices, 'pages'>,
 ): { readonly return_address?: string } {
-  return runsUnderTheOrgsApp(connection) ? { return_address: returnAddressOf(pages) } : {};
+  return runsUnderTheOrgsOAuthClient(connection) ? { return_address: returnAddressOf(pages) } : {};
 }
 
 function consentAskedOf(
@@ -170,7 +172,7 @@ function consentAskedUnder(
   scope: string | undefined,
 ): Effect.Effect<ConsentAsked, OwnClientUnheld> {
   const asked = consentAskedOf(kept.connection, services, scope);
-  if (!runsUnderTheOrgsApp(kept.connection)) {
+  if (!runsUnderTheOrgsOAuthClient(kept.connection)) {
     return Effect.succeed(asked);
   }
   return Effect.flatMap(ownClientOf(given, services), (ownClient) =>

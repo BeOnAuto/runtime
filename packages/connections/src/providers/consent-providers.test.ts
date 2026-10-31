@@ -167,7 +167,7 @@ const unsetUp =
   'The provider drive takes consent through a client whoever runs Auto registers, which is not set up here';
 
 describe('a provider whose way is consent where whoever runs Auto registered no client the way takes', () => {
-  it('is added under the org’s own app, the one app its way then takes', async () => {
+  it('is added under the organization’s own OAuth client, the one OAuth client its way then takes', async () => {
     const h = harness({ providers: consentProviders });
 
     expect(await adding(h, { provider: 'drive' })).toMatchObject({
@@ -176,7 +176,7 @@ describe('a provider whose way is consent where whoever runs Auto registered no 
     });
   });
 
-  it('is listed with the way offered under the org’s own app alone, because whoever runs Auto sets up no client it takes, and a way that registers dynamically offered beside it', async () => {
+  it('is listed with the way offered under the organization’s own OAuth client alone, because whoever runs Auto sets up no client it takes, and a way that registers dynamically offered beside it', async () => {
     const h = harness({ providers: consentProviders });
 
     const listed = await h.call(operationNamed(h.operations, 'list_providers'), ada);
@@ -187,13 +187,13 @@ describe('a provider whose way is consent where whoever runs Auto registered no 
           {
             name: 'adverts',
             credentials: [
-              { kind: 'authorization', offered: true, own_app: 'optional' },
+              { kind: 'authorization', offered: true, oauth_client: 'optional' },
               { kind: 'secret', offered: true },
             ],
           },
           {
             name: 'drive',
-            credentials: [{ kind: 'authorization', offered: true, own_app: 'required', because: unsetUp }],
+            credentials: [{ kind: 'authorization', offered: true, oauth_client: 'required', because: unsetUp }],
           },
         ],
       },
@@ -217,7 +217,7 @@ function offeredWith(consenting: Partial<ConsentClientOptions>) {
 const driveOffered = { name: 'drive', title: 'Drive', description: 'Read and change the files of an account.' };
 
 describe('the providers search offers a caller who may add', () => {
-  it('take in a provider whose way of consent takes no client the runtime has, under the org’s own app, as one whose way takes a client registered here', async () => {
+  it('take in a provider whose way of consent takes no client the runtime has, under the organization’s own OAuth client, as one whose way takes a client registered here', async () => {
     expect([await offeredWith({}), await offeredWith({ registeredClients })]).toEqual([[driveOffered], [driveOffered]]);
   });
 });
@@ -257,7 +257,7 @@ describe('a provider whose way is consent where Auto’s consent service serves 
   });
 
   it.each(unservedBy)(
-    'is added under the org’s own app alone, and the service asked nothing, where %s',
+    'is added under the organization’s own OAuth client alone, and the service asked nothing, where %s',
     async (_, enabled, kind) => {
       const service = await serviceOfDrive();
       const consenting = switchedOf(service, enabled, kind);
@@ -272,7 +272,7 @@ describe('a provider whose way is consent where Auto’s consent service serves 
           output: {
             providers: [
               { name: 'adverts' },
-              { name: 'drive', credentials: [{ offered: true, own_app: 'required', because: unsetUp }] },
+              { name: 'drive', credentials: [{ offered: true, oauth_client: 'required', because: unsetUp }] },
             ],
           },
         },

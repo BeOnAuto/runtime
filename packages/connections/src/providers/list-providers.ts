@@ -1,7 +1,7 @@
 import { Caller, defineHttpOperation } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { studioBaseFor } from '../links/connect-page.ts';
+import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
 import { ProvidersSchema } from './listed-providers.ts';
 import { listedProviders } from './provider-listing.ts';
 import { refusalToAdd, type OfferingServices } from './provider-offering.ts';
@@ -14,6 +14,7 @@ export function defineListProviders(listing: OfferingServices) {
       'Lists the providers a person may connect here, by name, each with the ways a credential reaches its server and the values a connection to it takes.',
       'Use it to show a person what they can connect; add_connection connects one by its name.',
       '`may_add` says whether this caller may add a connection, and `refusal` why not.',
+      "`return_address` is the redirect URI the organization's own OAuth client registers at a provider before a person connects under it.",
     ].join(' '),
     route: { method: 'GET', path: '/providers' },
     body: { kind: 'none' },
@@ -23,7 +24,12 @@ export function defineListProviders(listing: OfferingServices) {
     handle: Effect.fnUntraced(function* () {
       const refusal = refusalToAdd(listing, yield* Caller);
       const consent = yield* listing.consent.hadSources(studioBaseFor(listing.pages));
-      return { providers: listedProviders({ ...listing, consent }), may_add: refusal === null, refusal };
+      return {
+        providers: listedProviders({ ...listing, consent }),
+        may_add: refusal === null,
+        refusal,
+        return_address: returnAddressOf(listing.pages),
+      };
     }),
   });
 }

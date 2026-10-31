@@ -128,32 +128,32 @@ describe('the addresses of a way of consent', () => {
   });
 });
 
-describe('the org’s own app a way of consent requires', () => {
-  it('is required alone, on a way of consent that names no clients, since consent runs under that app', () => {
-    const secretUnderAnApp = { kind: 'secret', in: 'header', name: 'Authorization', own_app: 'required' };
+describe('the organization’s own OAuth client a way of consent requires', () => {
+  it('is required alone, on a way of consent that names no clients, since consent runs under that client', () => {
+    const secretUnderAClient = { kind: 'secret', in: 'header', name: 'Authorization', oauth_client: 'required' };
 
     expect([
-      consentAs({ own_app: 'required' }),
+      consentAs({ oauth_client: 'required' }),
       consentAs({
-        own_app: 'required',
+        oauth_client: 'required',
         pkce: 'none',
         authorization_endpoint: 'https://accounts.drive.example.com/authorize',
         token_endpoint: 'https://accounts.drive.example.com/token',
       }),
     ]).toEqual([[], []]);
     expect([
-      consentAs({ own_app: 'required', clients: ['registered'] }),
-      consentAs({ own_app: 'optional' }),
-      problemsOf({ ...tracker, credentials: [secretUnderAnApp] }),
+      consentAs({ oauth_client: 'required', clients: ['registered'] }),
+      consentAs({ oauth_client: 'optional' }),
+      problemsOf({ ...tracker, credentials: [secretUnderAClient] }),
     ]).toEqual([
       [
         [
           '/credentials/0/clients',
-          "Expected no clients beside own_app: a way that requires the org's own app takes consent under that app alone",
+          "Expected no clients beside oauth_client: a way that requires the organization's own OAuth client takes consent under that client alone",
         ],
       ],
-      [['/credentials/0/own_app', 'Expected "required"']],
-      [['/credentials/0/own_app', 'Expected no own_app: a secret way takes in, name, and scheme']],
+      [['/credentials/0/oauth_client', 'Expected "required"']],
+      [['/credentials/0/oauth_client', 'Expected no oauth_client: a secret way takes in, name, and scheme']],
     ]);
   });
 });

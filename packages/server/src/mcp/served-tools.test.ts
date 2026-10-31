@@ -148,9 +148,9 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     );
     expect(adding).toMatch(/ Nothing is granted by this call and no credential passes through it\.$/u);
     expect(adding).toMatch(
-      / An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says the server names none\. /u,
+      / An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none\. /u,
     );
-    expect(adding).toHaveLength(573);
+    expect(adding).toHaveLength(565);
   });
 });
 

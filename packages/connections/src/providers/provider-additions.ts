@@ -21,7 +21,7 @@ import { policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Credential } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
-import { appForOf, isOfferedWay, waysInOrderOf, type Listing } from './provider-listing.ts';
+import { isOfferedWay, oauthClientForOf, waysInOrderOf, type Listing } from './provider-listing.ts';
 
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
@@ -68,7 +68,7 @@ function givenToProvider(
         name,
         placeholders,
         kind: credential?.kind,
-        appFor: appForOf(named, listing, credential?.app),
+        oauthClientFor: oauthClientForOf(named, listing, credential?.oauth_client),
         canBeGiven: (way) => isOfferedWay(named, way, listing),
         playbooks: entry.playbooks,
         allowed: entry.allowed,

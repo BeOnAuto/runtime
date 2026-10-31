@@ -23,20 +23,23 @@ export function consentFake(changes: Partial<ClientRegistration> = {}): Promise<
   return servedForConsent({ redirectUris: [studioReturn], ...changes });
 }
 
-export const appSecret = 'the-org-app-client-secret-91d0';
+export const orgsClientSecret = 'the-org-app-client-secret-91d0';
 
-export const theOrgsApp = { client_id: 'org-app', client_secret: appSecret };
+export const theOrgsOAuthClient = { client_id: 'org-app', client_secret: orgsClientSecret };
 
-export const underTheOrgsApp = { provider: 'files', credential: { kind: 'authorization', app: 'own' } };
+export const underTheOrgsOAuthClient = {
+  provider: 'files',
+  credential: { kind: 'authorization', oauth_client: 'own' },
+};
 
-export function orgsAppFake(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  return consentFake({ clientId: theOrgsApp.client_id, clientSecret: appSecret, ...changes });
+export function orgsOAuthClientFake(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
+  return consentFake({ clientId: theOrgsOAuthClient.client_id, clientSecret: orgsClientSecret, ...changes });
 }
 
 export function givingTheClient(
   h: Harness,
   { id, token }: Pick<Added, 'id' | 'token'>,
-  given: Readonly<Record<string, string>> = theOrgsApp,
+  given: Readonly<Record<string, string>> = theOrgsOAuthClient,
   caller = ada,
 ): Promise<Outcome> {
   return h.call(operationNamed(h.operations, 'give_client'), caller, { id, token, ...given });

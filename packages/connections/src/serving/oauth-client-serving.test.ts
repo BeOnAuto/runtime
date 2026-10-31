@@ -13,12 +13,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { SecretKeeping } from '../operations/connection-services.ts';
 import { added, reconnected } from '../testing/additions.ts';
 import {
-  appSecret,
+  orgsClientSecret,
   connectedThrough,
   consentHarnessAt,
   givingTheClient,
-  orgsAppFake,
-  underTheOrgsApp,
+  orgsOAuthClientFake,
+  underTheOrgsOAuthClient,
 } from '../testing/consents.ts';
 import { harnessPages, loopbackPolicy, type Harness } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
@@ -29,11 +29,11 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-async function connectedUnderTheOrgsApp() {
-  const fake: FakeMcpServer = await orgsAppFake();
+async function connectedUnderTheOrgsOAuthClient() {
+  const fake: FakeMcpServer = await orgsOAuthClientFake();
   closing.push(fake.close);
   const h = consentHarnessAt(fake);
-  const link = await added(h, underTheOrgsApp);
+  const link = await added(h, underTheOrgsOAuthClient);
   await givingTheClient(h, link);
   await connectedThrough(h, link);
   return { fake, h, id: link.id };
@@ -81,9 +81,9 @@ function readingAllBut(h: Harness, unread: string): Pick<SecretKeeping, 'read' |
   };
 }
 
-describe('a connection under the org’s own app, as it is served', () => {
-  it('is served with the client of the org’s app, through which its tokens are renewed', async () => {
-    const { fake, h } = await connectedUnderTheOrgsApp();
+describe('a connection under the organization’s own OAuth client, as it is served', () => {
+  it('is served with the organization’s own OAuth client, through which its tokens are renewed', async () => {
+    const { fake, h } = await connectedUnderTheOrgsOAuthClient();
     const consent = await consentOf(h);
     const clock = clockAt(Date.parse('2026-10-15T14:00:00.000Z'));
     const source = h.consent.tokenSource(consent, {
@@ -99,34 +99,38 @@ describe('a connection under the org’s own app, as it is served', () => {
 
     expect(consent).toMatchObject({
       client: { client_id: 'org-app', client_source: 'own' },
-      way: { app: 'own' },
+      way: { oauth_client: 'own' },
       ownClient: { clientId: 'org-app' },
     });
-    expect(Redacted.value(Option.getOrThrow(Option.fromNullishOr(consent.ownClient?.clientSecret)))).toBe(appSecret);
+    expect(Redacted.value(Option.getOrThrow(Option.fromNullishOr(consent.ownClient?.clientSecret)))).toBe(
+      orgsClientSecret,
+    );
     expect(renewed).toEqual(expect.any(String));
     expect(fake.tokenRequests()).toBe(2);
   });
 
   it('is served with the client it runs under while a next client given on the page waits for a sign-in', async () => {
-    const { h, id } = await connectedUnderTheOrgsApp();
+    const { h, id } = await connectedUnderTheOrgsOAuthClient();
     const next = { client_id: 'another-app', client_secret: 'another-app-client-secret-0c4f' };
     await givingTheClient(h, await reconnected(h, id), next);
 
     const consent = await consentOf(h);
 
     expect(consent).toMatchObject({ client: { client_id: 'org-app' }, ownClient: { clientId: 'org-app' } });
-    expect(Redacted.value(Option.getOrThrow(Option.fromNullishOr(consent.ownClient?.clientSecret)))).toBe(appSecret);
+    expect(Redacted.value(Option.getOrThrow(Option.fromNullishOr(consent.ownClient?.clientSecret)))).toBe(
+      orgsClientSecret,
+    );
   });
 });
 
-describe('a connection under the org’s own app whose client secret is not had, as it is served', () => {
-  it('is broken at first use where the client secret of the org’s app is no longer in the secret store', async () => {
-    const { h, id } = await connectedUnderTheOrgsApp();
+describe('a connection under the organization’s own OAuth client whose client secret is not had, as it is served', () => {
+  it('is broken at first use where the client secret of the organization’s own OAuth client is no longer in the secret store', async () => {
+    const { h, id } = await connectedUnderTheOrgsOAuthClient();
     await Effect.runPromise(h.secrets.forget('secret-1'));
 
     const refused = await Effect.runPromise(Effect.flip(await preparedIn(h)));
     const detail =
-      "The client secret of the org's own app for the connection files is no longer in the secret store, so the person who added it reconnects it and gives the app's client id and client secret again";
+      "The client secret of the organization's own OAuth client for the connection files is no longer in the secret store, so the person who added it reconnects it and gives its client ID and client secret again";
 
     expect(refused).toEqual({ because: 'connection_broken', detail });
     expect((await h.facts()).at(-1)).toMatchObject({
@@ -135,8 +139,8 @@ describe('a connection under the org’s own app whose client secret is not had,
     });
   });
 
-  it('is unavailable where the client secret of the org’s app cannot be read now, and is not broken', async () => {
-    const { h } = await connectedUnderTheOrgsApp();
+  it('is unavailable where the client secret of the organization’s own OAuth client cannot be read now, and is not broken', async () => {
+    const { h } = await connectedUnderTheOrgsOAuthClient();
 
     const refused = await Effect.runPromise(Effect.flip(await preparedIn(h, readingAllBut(h, 'secret-1'))));
 

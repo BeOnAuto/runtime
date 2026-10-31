@@ -9,12 +9,12 @@ function resolved(provider: ProviderEntry, given: GivenToProvider) {
   return Result.getOrThrow(additionOfProvider(provider, given));
 }
 
-describe('the addition of a way of consent under the org’s own app', () => {
-  const requiring = decodedEntry({ ...drive, credentials: [{ ...drive.credentials[0], own_app: 'required' }] });
+describe('the addition of a way of consent under the organization’s own OAuth client', () => {
+  const requiring = decodedEntry({ ...drive, credentials: [{ ...drive.credentials[0], oauth_client: 'required' }] });
 
-  it('keeps own as the source of its client, where the caller asks for the org’s app or the way requires it, and nothing else of the way', () => {
+  it('keeps own as the source of its client, where the caller asks for the organization’s own OAuth client or the way requires it, and nothing else of the way', () => {
     expect([
-      resolved(drive, { appFor: () => 'own' }).credential,
+      resolved(drive, { oauthClientFor: () => 'own' }).credential,
       resolved(requiring, {}).credential,
       resolved(drive, {}).credential.client_source,
     ]).toEqual([
@@ -36,9 +36,9 @@ describe('the addition of a way of consent under the org’s own app', () => {
     ]);
   });
 
-  it('is no source of a client for a way that is not consent, which takes no app', () => {
+  it('is no source of a client for a way that is not consent, which takes no OAuth client', () => {
     expect(
-      resolved(tracker, { appFor: () => 'own', kind: 'secret', placeholders: { site: 'acme' } }).credential,
+      resolved(tracker, { oauthClientFor: () => 'own', kind: 'secret', placeholders: { site: 'acme' } }).credential,
     ).toEqual({
       kind: 'secret',
       in: 'header',

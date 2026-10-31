@@ -69,8 +69,8 @@ export {
 export {
   ClientIdSchema,
   ClientSourceSchema,
-  WayAppSchema,
   WayClientSourceSchema,
+  WayOAuthClientSchema,
   WayPkceSchema,
   clientMetadataDocumentOf,
   isSameIssuer,
@@ -82,8 +82,8 @@ export {
   type RegisteredClient,
   type RegisteredCredential,
   type TokenEndpointAuthMethod,
-  type WayApp,
   type WayClientSource,
+  type WayOAuthClient,
   type WayOfClients,
   type WayPkce,
 } from './consent/client-sources.ts';

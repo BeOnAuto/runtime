@@ -2,7 +2,7 @@ import { Conflict, Forbidden, InvalidInput, NotFound } from '@on.auto/operations
 import { Effect, Result } from 'effect';
 
 import type { LinkUse } from './connection-commands.ts';
-import { runsUnderTheOrgsApp } from './connection.ts';
+import { runsUnderTheOrgsOAuthClient } from './connection.ts';
 import {
   signingInClientOf,
   type KeptConnection,
@@ -124,12 +124,12 @@ export function stateIssueOf({ consent }: KeptWithConsent, stateSha256: string):
 
 function givenAgainMeanwhile(name: string): Conflict {
   return new Conflict({
-    detail: `The client of the org's own app for the connection ${name} was given again meanwhile, so the person signs in again under the client given last`,
+    detail: `The organization's own OAuth client for the connection ${name} was given again meanwhile, so the person signs in again under the client given last`,
   });
 }
 
 export function clientChangedOf(kept: KeptConnection, clientId: string): Conflict | undefined {
-  return runsUnderTheOrgsApp(kept.connection) && signingInClientOf(kept)?.client_id !== clientId
+  return runsUnderTheOrgsOAuthClient(kept.connection) && signingInClientOf(kept)?.client_id !== clientId
     ? givenAgainMeanwhile(kept.connection.name)
     : undefined;
 }

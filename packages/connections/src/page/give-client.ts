@@ -5,7 +5,7 @@ import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { actedNow, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
 import { shownConnection } from '../operations/shown-connections.ts';
-import { clientGivenConnectionOf } from '../registry/own-app-decisions.ts';
+import { clientGivenConnectionOf } from '../registry/oauth-client-decisions.ts';
 import { nextClientOf, releasedClientsForgottenOf } from './consent-asking.ts';
 import { ClientGivenSchema, GivingTheClientSchema, clientUnkeptOf } from './given-fields.ts';
 
@@ -17,10 +17,10 @@ export function defineGiveClient(services: ClientGiving) {
     name: 'give_client',
     title: 'Give client',
     description: [
-      "Gives the client id and the client secret of the org's own app, an app the org registered with the provider, for a connection under that app, through its open link, before the person signs in.",
-      'The runtime keeps the client secret sealed in its secret store, and no answer, record or history of the org ever holds it; the record keeps the client id.',
+      "Gives the client ID and the client secret of the organization's own OAuth client, a client the organization registered with the provider, for a connection under that client, through its open link, before the person signs in.",
+      'The runtime keeps the client secret sealed in its secret store, and no answer, record or history of the org ever holds it; the record keeps the client ID.',
       'The link stays open, and its consent then starts with this client.',
-      'A connection that holds no tokens yet, or is given the client id it runs under, takes the client at once, its secret replacing the one before; another client id given while it holds tokens is kept as its next client, which its next sign-in takes and which replaces its client once that sign-in finishes, so the record shows the client it runs under until then and next_client_id the client given.',
+      'A connection that holds no tokens yet, or is given the client ID it runs under, takes the client at once, its secret replacing the one before; another client ID given while it holds tokens is kept as its next client, which its next sign-in takes and which replaces its client once that sign-in finishes, so the record shows the client it runs under until then and next_client_id the client given.',
       'Where the secret store cannot keep the secret just now, it answers unavailable in the words of the store and keeps nothing.',
       'On a runtime that signs people in, only the person who added the connection may give it.',
     ].join(' '),

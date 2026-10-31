@@ -1,6 +1,6 @@
 name: x
 title: X
-description: Read who you are at X, create, edit and delete posts, and read a user's posts, their mentions and the posts of the last seven days a search matches, as yourself, through the X API, under your organization's own X app, which X bills for each call.
+description: Read who you are at X, create, edit and delete posts, and read a user's posts, their mentions and the posts of the last seven days a search matches, as yourself, through the X API, under your organization's own OAuth client, which X bills for each call.
 website: https://docs.x.com/fundamentals/developer-apps
 type: openapi
 document: documents/x.openapi.json
@@ -17,5 +17,5 @@ credentials:
       tweet.write: Create, edit, repost and delete posts as the X account that connects.
       users.read: Read the profiles of every account the X account can see, protected accounts among them.
       offline.access: Keep access to X when nobody is signed in.
-    own_app: required
-    description: Sign in to X and allow posting as you, under your organization's X app.
+    oauth_client: required
+    description: Sign in to X and allow posting as you, under your organization's own OAuth client.

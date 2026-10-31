@@ -17,15 +17,15 @@ export const WayPkceSchema = Schema.Literal('none');
 
 export type WayPkce = typeof WayPkceSchema.Type;
 
-export const WayAppSchema = Schema.Literal('own');
+export const WayOAuthClientSchema = Schema.Literal('own');
 
-export type WayApp = typeof WayAppSchema.Type;
+export type WayOAuthClient = typeof WayOAuthClientSchema.Type;
 
 export const ClientIdSchema = Schema.String.check(Schema.isMinLength(1));
 
 const defaultClientSources: readonly WayClientSource[] = ['registered'];
 
-const theOrgsAppAlone: readonly ClientSource[] = ['own'];
+const theOrgsOAuthClientAlone: readonly ClientSource[] = ['own'];
 
 export type RegisteredCredential =
   | { readonly kind: 'client_secret'; readonly clientSecret: Redacted.Redacted }
@@ -66,7 +66,7 @@ export interface WayOfClients {
   readonly scope?: string | undefined;
   readonly clients?: readonly WayClientSource[] | undefined;
   readonly pkce?: WayPkce | undefined;
-  readonly app?: WayApp | undefined;
+  readonly oauth_client?: WayOAuthClient | undefined;
 }
 
 export interface HadSources {
@@ -135,8 +135,8 @@ export function takesNoPkce({ pkce }: WayOfClients): boolean {
   return pkce === WayPkceSchema.literal;
 }
 
-export function runsUnderTheOrgsApp({ app }: WayOfClients): boolean {
-  return app === WayAppSchema.literal;
+export function runsUnderTheOrgsOAuthClient({ oauth_client: oauthClient }: WayOfClients): boolean {
+  return oauthClient === WayOAuthClientSchema.literal;
 }
 
 function bindsItsCodeAt({ credential }: RegisteredClient, way: WayOfClients): boolean {
@@ -222,8 +222,8 @@ function isHad(source: ClientSource, way: WayOfClients, had: ClientsHad): boolea
 }
 
 function clientSourcesOf(way: WayOfClients): readonly ClientSource[] {
-  if (runsUnderTheOrgsApp(way)) {
-    return theOrgsAppAlone;
+  if (runsUnderTheOrgsOAuthClient(way)) {
+    return theOrgsOAuthClientAlone;
   }
   const listed = way.clients ?? defaultClientSources;
   return listed.includes('registered') ? [...listed, 'auto'] : listed;

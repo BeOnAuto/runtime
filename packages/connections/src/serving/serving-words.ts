@@ -19,7 +19,7 @@ export const servingWords = {
   clientGone: (name: string) =>
     `The client the connection ${name} was made with is no longer registered, so ${reconnects}`,
   ownClientGone: (name: string) =>
-    `The client secret of the org's own app for the connection ${name} is no longer in the secret store, so ${reconnects} and gives the app's client id and client secret again`,
+    `The client secret of the organization's own OAuth client for the connection ${name} is no longer in the secret store, so ${reconnects} and gives its client ID and client secret again`,
   keyUnknown: (name: string) =>
     `Auto's consent service does not know the key of the connection ${name}, so its tokens cannot be renewed, and ${reconnects}`,
   keyRefused: `The tool server answered HTTP 401: it refused the credential the connection holds, so ${reconnects}`,

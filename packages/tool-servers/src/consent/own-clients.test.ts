@@ -35,20 +35,20 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-const appSecret = 'the-org-app-client-secret-91d0';
+const orgsClientSecret = 'the-org-app-client-secret-91d0';
 
-const theOrgsApp: OwnClient = { clientId: 'org-app', clientSecret: Redacted.make(appSecret) };
+const theOrgsOAuthClient: OwnClient = { clientId: 'org-app', clientSecret: Redacted.make(orgsClientSecret) };
 
-const ofTheOrgsApp: Partial<ClientRegistration> = { clientId: 'org-app', clientSecret: appSecret };
+const ofTheOrgsOAuthClient: Partial<ClientRegistration> = { clientId: 'org-app', clientSecret: orgsClientSecret };
 
 async function served(changes: Partial<ClientRegistration> = {}): Promise<FakeMcpServer> {
-  const fake = await servedForConsent({ ...ofTheOrgsApp, ...changes });
+  const fake = await servedForConsent({ ...ofTheOrgsOAuthClient, ...changes });
   closing.push(fake.close);
   return fake;
 }
 
-function underTheOrgsApp(fake: FakeMcpServer, way: Partial<ConsentWay> = {}): StartAsked {
-  return { ...startAskedAt(fake, { app: 'own', ...way }), ownClient: theOrgsApp };
+function underTheOrgsOAuthClient(fake: FakeMcpServer, way: Partial<ConsentWay> = {}): StartAsked {
+  return { ...startAskedAt(fake, { oauth_client: 'own', ...way }), ownClient: theOrgsOAuthClient };
 }
 
 interface TokenRequestSeen {
@@ -73,7 +73,7 @@ function finished(client: ConsentClient, asked: FinishAsked): Promise<FinishedCo
   return Effect.runPromise(client.finish(asked).pipe(Effect.provide(TestClock.layer())));
 }
 
-const asTheOrgsApp = `Basic ${btoa(`org-app:${appSecret}`)}`;
+const asTheOrgsOAuthClient = `Basic ${btoa(`org-app:${orgsClientSecret}`)}`;
 
 async function redeemedAt(fake: FakeMcpServer, asked: StartAsked) {
   const recording = recordingTokenRequests();
@@ -86,9 +86,9 @@ async function redeemedAt(fake: FakeMcpServer, asked: StartAsked) {
   };
 }
 
-describe('the start of a consent under the org’s own app', () => {
+describe('the start of a consent under the organization’s own OAuth client', () => {
   it('sends the person to the authorization endpoint with the org’s client, before a client registered here at the issuer, and never through Auto’s consent service', async () => {
-    const serving = await servedThroughAuto(ofTheOrgsApp);
+    const serving = await servedThroughAuto(ofTheOrgsOAuthClient);
     closing.push(serving.close);
     const { fake, service } = serving;
     const client = consentClientWith({
@@ -96,7 +96,7 @@ describe('the start of a consent under the org’s own app', () => {
       autoClients: autoClientsOf(service),
     });
 
-    const start = await Effect.runPromise(client.start(underTheOrgsApp(fake)));
+    const start = await Effect.runPromise(client.start(underTheOrgsOAuthClient(fake)));
     const page = new URL(start.url);
 
     expect(start.client).toEqual({ client_id: 'org-app', client_source: 'own' });
@@ -109,13 +109,13 @@ describe('the start of a consent under the org’s own app', () => {
 
   it('is refused as having no client where the org’s client is not given', async () => {
     const fake = await served();
-    const { ownClient: _given, ...ungiven } = underTheOrgsApp(fake);
+    const { ownClient: _given, ...ungiven } = underTheOrgsOAuthClient(fake);
 
     expect(await Effect.runPromise(Effect.flip(consentClientWith().start(ungiven)))).toEqual({ refused: 'no_client' });
   });
 });
 
-describe('the finish of a consent under the org’s own app', () => {
+describe('the finish of a consent under the organization’s own OAuth client', () => {
   it('redeems the code with the org’s client, its secret in the Basic header where the metadata lists client_secret_basic or where the way writes out its endpoints, and in the form where the metadata lists client_secret_post alone', async () => {
     const listingBoth = await served();
     const listingThePost = await served({ takesBasicSecrets: false });
@@ -125,23 +125,31 @@ describe('the finish of a consent under the org’s own app', () => {
       token_endpoint: `${unpublished.origin}/token`,
     };
     const redeemed = await Promise.all([
-      redeemedAt(listingBoth, underTheOrgsApp(listingBoth)),
-      redeemedAt(listingThePost, underTheOrgsApp(listingThePost)),
-      redeemedAt(unpublished, underTheOrgsApp(unpublished, endpoints)),
+      redeemedAt(listingBoth, underTheOrgsOAuthClient(listingBoth)),
+      redeemedAt(listingThePost, underTheOrgsOAuthClient(listingThePost)),
+      redeemedAt(unpublished, underTheOrgsOAuthClient(unpublished, endpoints)),
     ]);
 
-    const byTheOrgsApp = { client_id: 'org-app', client_source: 'own' };
+    const byTheOrgsOAuthClient = { client_id: 'org-app', client_source: 'own' };
     expect(redeemed).toEqual([
-      { client: byTheOrgsApp, admitted: true, seen: [{ authorization: asTheOrgsApp, clientSecret: null }] },
-      { client: byTheOrgsApp, admitted: true, seen: [{ authorization: null, clientSecret: appSecret }] },
-      { client: byTheOrgsApp, admitted: true, seen: [{ authorization: asTheOrgsApp, clientSecret: null }] },
+      {
+        client: byTheOrgsOAuthClient,
+        admitted: true,
+        seen: [{ authorization: asTheOrgsOAuthClient, clientSecret: null }],
+      },
+      { client: byTheOrgsOAuthClient, admitted: true, seen: [{ authorization: null, clientSecret: orgsClientSecret }] },
+      {
+        client: byTheOrgsOAuthClient,
+        admitted: true,
+        seen: [{ authorization: asTheOrgsOAuthClient, clientSecret: null }],
+      },
     ]);
   });
 
   it('is refused as the client gone where the client given is not the one the consent was started with', async () => {
     const fake = await served();
     const client = consentClientWith();
-    const asked = await finishAskedOf(client, underTheOrgsApp(fake));
+    const asked = await finishAskedOf(client, underTheOrgsOAuthClient(fake));
     const another = { clientId: 'another-app', clientSecret: Redacted.make('another-app-client-secret-0c4f') };
 
     expect([
@@ -151,21 +159,24 @@ describe('the finish of a consent under the org’s own app', () => {
   });
 });
 
-async function servedUnderTheOrgsApp() {
+async function servedUnderTheOrgsOAuthClient() {
   const fake = await served();
   const client = consentClientWith({ renewalSpreadMs: 0 });
-  const asked = await finishAskedOf(client, underTheOrgsApp(fake));
+  const asked = await finishAskedOf(client, underTheOrgsOAuthClient(fake));
   const done = await finished(client, asked);
   const connected = { fake, client: done.client, tokens: done.tokens, kept: tokensKeptBy(done) };
   const clock = clockAt(0);
   const row = rowOf(connected, clock.now);
-  const consent: ConsentServed = { ...servedOf(connected, row, { app: 'own' }), ownClient: theOrgsApp };
+  const consent: ConsentServed = {
+    ...servedOf(connected, row, { oauth_client: 'own' }),
+    ownClient: theOrgsOAuthClient,
+  };
   return { fake, client, asked, connected, clock, row, consent };
 }
 
-describe('the tokens of a connection under the org’s own app', () => {
+describe('the tokens of a connection under the organization’s own OAuth client', () => {
   it('are renewed and revoked with the org’s client', async () => {
-    const { fake, client, asked, connected, clock, row, consent } = await servedUnderTheOrgsApp();
+    const { fake, client, asked, connected, clock, row, consent } = await servedUnderTheOrgsOAuthClient();
     const { source } = servedTokensOf(consent, clock.now, client);
 
     clock.setTo(3_540_000);
@@ -179,9 +190,9 @@ describe('the tokens of a connection under the org’s own app', () => {
   });
 });
 
-describe('the secrets the answers of a connection under the org’s own app are scrubbed of', () => {
+describe('the secrets the answers of a connection under the organization’s own OAuth client are scrubbed of', () => {
   it('hold the secret of the org’s client beside its tokens', async () => {
-    const { fake, consent } = await servedUnderTheOrgsApp();
+    const { fake, consent } = await servedUnderTheOrgsOAuthClient();
     const settings: McpServerSettings = {
       type: 'mcp',
       name: 'files',
@@ -198,6 +209,6 @@ describe('the secrets the answers of a connection under the org’s own app are 
       provider: 'files',
     };
 
-    expect(secretsOf(secretsOfServer(settings)).scrub(`echoed ${appSecret}`)).toBe('echoed [redacted]');
+    expect(secretsOf(secretsOfServer(settings)).scrub(`echoed ${orgsClientSecret}`)).toBe('echoed [redacted]');
   });
 });

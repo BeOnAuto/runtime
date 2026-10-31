@@ -52,7 +52,7 @@ describe('the changes the facts of the connections of an org make', () => {
   });
 });
 
-describe('the change a client of the org’s own app makes', () => {
+describe('the change the organization’s own OAuth client makes', () => {
   it('names the connection given it by its id, since its record holds the client id', () => {
     expect(
       catalog.changesOf({

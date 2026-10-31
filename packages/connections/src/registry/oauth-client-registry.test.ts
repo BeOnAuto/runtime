@@ -61,7 +61,7 @@ function heldAfter(...events: readonly ConnectionEvent[]) {
 
 const connected = [posts, clientGiven('org-app', 'secret-1'), connectedUnder('org-app', 'secret-2')];
 
-describe('a connection under the org’s own app that holds no tokens, as the stream folds it', () => {
+describe('a connection under the organization’s own OAuth client that holds no tokens, as the stream folds it', () => {
   it('runs under the client given on the page at once, a later client replacing it with its secret', () => {
     expect([
       heldAfter(posts),
@@ -75,7 +75,7 @@ describe('a connection under the org’s own app that holds no tokens, as the st
   });
 });
 
-describe('a connection under the org’s own app that holds tokens, as the stream folds it', () => {
+describe('a connection under the organization’s own OAuth client that holds tokens, as the stream folds it', () => {
   it('keeps another client id as its next client, and runs under it once a sign-in under it connects', () => {
     const next = clientGiven('renewed-app', 'secret-3');
 
@@ -118,7 +118,7 @@ describe('a connection under the org’s own app that holds tokens, as the strea
   });
 });
 
-describe('the clients of a connection under the org’s own app', () => {
+describe('the clients of a connection under the organization’s own OAuth client', () => {
   it('sign in under the next client where there is one, and otherwise under the client it runs under', () => {
     expect([
       signingInClientOf(postsAfter(posts)),
@@ -159,7 +159,7 @@ const linkIssued: ConnectionEvent = {
   data: { connection: '0199-posts', token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
 };
 
-const startedUnderTheOrgsApp: ConnectionEvent = {
+const startedUnderTheOrgsOAuthClient: ConnectionEvent = {
   type: 'connection_consent_started',
   data: {
     connection: '0199-posts',
@@ -205,9 +205,9 @@ function decided(command: ConnectionCommand, ...history: readonly ConnectionEven
 }
 
 const givenAgain =
-  "The client of the org's own app for the connection posts was given again meanwhile, so the person signs in again under the client given last";
+  "The organization's own OAuth client for the connection posts was given again meanwhile, so the person signs in again under the client given last";
 
-describe('the start and the finish of a consent under the org’s own app, as the decider takes them', () => {
+describe('the start and the finish of a consent under the organization’s own OAuth client, as the decider takes them', () => {
   it('are refused where they took a client the next sign-in no longer takes, as a client given meanwhile leaves it', () => {
     const given = [posts, linkIssued, clientGiven('org-app', 'secret-1')];
     const givenMeanwhile = clientGiven('another-app', 'secret-4');
@@ -215,8 +215,8 @@ describe('the start and the finish of a consent under the org’s own app, as th
     expect([
       decided(starting, ...given),
       decided(starting, ...given, givenMeanwhile),
-      decided(finishing, ...given, startedUnderTheOrgsApp),
-      decided(finishing, ...given, startedUnderTheOrgsApp, givenMeanwhile),
+      decided(finishing, ...given, startedUnderTheOrgsOAuthClient),
+      decided(finishing, ...given, startedUnderTheOrgsOAuthClient, givenMeanwhile),
     ]).toMatchObject([
       Result.succeed([{ type: 'connection_consent_started' }]),
       Result.fail({ _tag: 'conflict', detail: givenAgain }),

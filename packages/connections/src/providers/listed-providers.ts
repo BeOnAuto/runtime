@@ -1,4 +1,5 @@
 import { WayKindSchema, wayFields } from '@on.auto/providers';
+import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionTypeSchema } from '../registry/connection-entry.ts';
@@ -10,9 +11,9 @@ const ListedScopesSchema = Schema.Array(
   }),
 );
 
-const OwnAppSchema = Schema.Literals(['optional', 'required']);
+const OAuthClientChoiceSchema = Schema.Literals(['optional', 'required']);
 
-export type OwnAppChoice = typeof OwnAppSchema.Type;
+export type OAuthClientChoice = typeof OAuthClientChoiceSchema.Type;
 
 const ListedWaySchema = Schema.Struct({
   kind: WayKindSchema,
@@ -20,10 +21,16 @@ const ListedWaySchema = Schema.Struct({
   name: Schema.optionalKey(wayFields.name),
   scheme: Schema.optionalKey(wayFields.scheme),
   issuer: Schema.optionalKey(wayFields.issuer),
-  own_app: Schema.optionalKey(
-    OwnAppSchema.annotate({
+  oauth_client: Schema.optionalKey(
+    OAuthClientChoiceSchema.annotate({
       description:
-        "For authorization, whether the person may connect under the org's own app, an app the org registers with the provider and gives the client id and client secret of on the page: optional, beside the client Auto or whoever runs it has there, or required, where the way connects under the org's own app alone, as it says or since no client here covers it",
+        "For authorization, whether the person may connect under the organization's own OAuth client, a client the organization registers with the provider and gives the client ID and client secret of on the page: optional, beside the client Auto or whoever runs it has there, or required, where the way connects under the organization's own OAuth client alone, as it says or since no client here covers it",
+    }),
+  ),
+  client_source: Schema.optionalKey(
+    ClientSourceSchema.annotate({
+      description:
+        "For authorization whose oauth_client is optional, the source of the client a start takes without the organization's own, as read_link names it",
     }),
   ),
   scopes: ListedScopesSchema.annotate({
@@ -42,7 +49,9 @@ const ListedWaySchema = Schema.Struct({
   description: Schema.optionalKey(Schema.String),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),
   because: Schema.optionalKey(
-    Schema.String.annotate({ description: "Why the way is not offered, or why only under the org's own app" }),
+    Schema.String.annotate({
+      description: "Why the way is not offered, or why only under the organization's own OAuth client",
+    }),
   ),
 }).annotate({ description: 'A way a credential reaches the server, the first the default' });
 
@@ -77,4 +86,8 @@ export const ProvidersSchema = Schema.Struct({
   providers: Schema.Array(ProviderSchema),
   may_add: Schema.Boolean.annotate({ description: 'Whether this caller may add a connection here' }),
   refusal: Schema.NullOr(Schema.String).annotate({ description: 'Why this caller may not add a connection here' }),
+  return_address: Schema.String.annotate({
+    description:
+      "The address the runtime sends a provider's authorization server as redirect_uri for a connection under the organization's own OAuth client, which that client registers as an authorized redirect URI",
+  }),
 });

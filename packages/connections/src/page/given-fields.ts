@@ -37,9 +37,10 @@ export const GivingTheClientSchema = Schema.Struct({
   id: ConnectionIdField,
   token: TokenField,
   client_id: ClientIdSchema.annotate({
-    description: "The client id of the org's own app, as the provider issued it when the org registered the app",
+    description:
+      "The client ID of the organization's own OAuth client, as the provider issued it when the organization registered the client",
   }),
-  client_secret: GivenField.annotate({ description: "The client secret of the org's own app" }),
+  client_secret: GivenField.annotate({ description: "The client secret of the organization's own OAuth client" }),
 });
 
 export const ClientGivenSchema = Schema.Struct({
@@ -47,7 +48,8 @@ export const ClientGivenSchema = Schema.Struct({
   next_client_id: NextClientIdField,
 }).annotate({
   identifier: 'ClientGivenConnection',
-  description: "The connection the client of the org's own app was given to, with its next client where it keeps one",
+  description:
+    "The connection the organization's own OAuth client was given to, with its next client where it keeps one",
 });
 
 function refused(issues: readonly Issue[]): InvalidInput {

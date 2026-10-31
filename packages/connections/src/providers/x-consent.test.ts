@@ -4,7 +4,7 @@ import { admitted, clockAt, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { appSecret, studioReturn, theOrgsApp } from '../testing/consents.ts';
+import { orgsClientSecret, studioReturn, theOrgsOAuthClient } from '../testing/consents.ts';
 import { ada, operationNamed, type Harness } from '../testing/harness.ts';
 import { consentServedAs, sourceOver } from '../testing/served-connections.ts';
 import { xApi, xMetadata } from '../testing/shipped-vendors.ts';
@@ -59,7 +59,7 @@ async function connectedAtX() {
   const { fake, h, asked: addressesAsked } = await servedAsX();
   const { asked, finished } = await consentedAtTheVendor(
     h,
-    { provider: 'x', placeholders: {}, orgsApp: theOrgsApp },
+    { provider: 'x', placeholders: {}, orgsOAuthClient: theOrgsOAuthClient },
     { fake, vendor: xApi },
   );
   const connected = Schema.decodeUnknownSync(ConnectedSchema)(finished).output;
@@ -73,14 +73,14 @@ async function waysOfXListedBy(h: Harness) {
   return listed.output.providers.find(({ name }) => name === 'x')?.credentials;
 }
 
-describe('the provider x, whose consent runs under the org’s own app alone', () => {
-  it('is listed under the org’s own app, offered where no client here covers it, and added by its name alone under that app', async () => {
+describe('the provider x, whose consent runs under the organization’s own OAuth client alone', () => {
+  it('is listed under the organization’s own OAuth client, offered where no client here covers it, and added by its name alone under that client', async () => {
     const { h } = await servedAsX();
 
     const ways = await waysOfXListedBy(h);
     const added = await h.call(operationNamed(h.operations, 'add_connection'), ada, { provider: 'x' });
 
-    expect(ways).toEqual([expect.objectContaining({ kind: 'authorization', own_app: 'required', offered: true })]);
+    expect(ways).toEqual([expect.objectContaining({ kind: 'authorization', oauth_client: 'required', offered: true })]);
     expect(ways?.[0]).not.toHaveProperty('because');
     expect(added).toMatchObject({
       status: 'succeeded',
@@ -101,17 +101,17 @@ describe('the consent of x', () => {
     expect(`${asked.origin}${asked.pathname}`).toBe('https://x.com/i/oauth2/authorize');
     expect(
       ['client_id', 'redirect_uri', 'scope', 'code_challenge_method'].map((name) => asked.searchParams.get(name)),
-    ).toEqual([theOrgsApp.client_id, studioReturn, askedOfX, 'S256']);
+    ).toEqual([theOrgsOAuthClient.client_id, studioReturn, askedOfX, 'S256']);
     expect(asked.searchParams.get('code_challenge')).toEqual(expect.stringMatching(/^[\w-]{43}$/u));
     expect(connected).toMatchObject({
       status: 'connected',
       granted_scope: askedOfX,
-      credential: { client_id: theOrgsApp.client_id, client_source: 'own' },
+      credential: { client_id: theOrgsOAuthClient.client_id, client_source: 'own' },
     });
     expect(fake.tokenRequests()).toBe(1);
     expect(addressesAsked).toContain('https://api.x.com/2/oauth2/token');
     expect(addressesAsked).not.toContain(xMetadata);
-    expect(JSON.stringify(facts)).not.toContain(appSecret);
+    expect(JSON.stringify(facts)).not.toContain(orgsClientSecret);
   });
 });
 

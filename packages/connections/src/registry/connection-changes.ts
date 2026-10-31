@@ -11,7 +11,7 @@ import { connectionsStream } from './registry-decider.ts';
 
 const connectionChanged = changeKindOf(
   'connection',
-  "A connection added, connected, broken or removed, asked for more, or given the client of the org's own app",
+  "A connection added, connected, broken or removed, asked for more, or given the organization's own OAuth client",
   { connection: 'The id of the connection' },
   { permittedBy: ['org:read'] },
 );

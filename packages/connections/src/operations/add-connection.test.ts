@@ -184,7 +184,7 @@ describe('the description of adding a connection', () => {
       [
         "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
         'A service a playbook will use is connected here, whatever connector the agent has of its own for it.',
-        'An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says the server names none.',
+        'An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none.',
         "It answers pending with a link to Studio's page, where the person approves it within 24 hours.",
         'Nothing is granted by this call and no credential passes through it.',
       ].join(' '),

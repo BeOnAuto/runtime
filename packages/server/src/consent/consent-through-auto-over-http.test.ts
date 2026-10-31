@@ -17,7 +17,13 @@ const ListedSchema = Schema.Struct({
   providers: Schema.Array(
     Schema.Struct({
       name: Schema.String,
-      credentials: Schema.Array(Schema.Struct({ offered: Schema.Boolean, own_app: Schema.String })),
+      credentials: Schema.Array(
+        Schema.Struct({
+          offered: Schema.Boolean,
+          oauth_client: Schema.String,
+          client_source: Schema.optionalKey(Schema.String),
+        }),
+      ),
     }),
   ),
 });
@@ -71,15 +77,15 @@ function throughTheService(serving: ThroughAuto): Environment {
 }
 
 describe('a provider of consent on a runtime in local mode', () => {
-  it('is offered through Auto’s consent service where AUTO_CLIENTS is on, and under the org’s own app alone where it is off', async () => {
+  it('is offered through Auto’s consent service where AUTO_CLIENTS is on, and under the organization’s own OAuth client alone where it is off', async () => {
     const serving = await throughAuto();
 
     const on = await servedWith(throughTheService(serving));
     const off = await servedWith({ ...throughTheService(serving), AUTO_CLIENTS: 'false' });
 
     expect([await filesOfferedBy(on), await filesOfferedBy(off)]).toEqual([
-      [{ offered: true, own_app: 'optional' }],
-      [{ offered: true, own_app: 'required' }],
+      [{ offered: true, oauth_client: 'optional', client_source: 'auto' }],
+      [{ offered: true, oauth_client: 'required' }],
     ]);
   });
 });

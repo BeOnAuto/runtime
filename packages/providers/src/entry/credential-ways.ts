@@ -19,7 +19,7 @@ export const wayFields = {
   revocation_endpoint: Schema.String,
   pkce: WayPkceSchema,
   clients: Schema.Array(WayClientSourceSchema),
-  own_app: Schema.Literal('required'),
+  oauth_client: Schema.Literal('required'),
   says: ScopeWordsSchema,
   more: Schema.Array(ScopeGroupSchema).check(Schema.isMinLength(1)),
 };
@@ -51,7 +51,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
   revocation_endpoint: Schema.optionalKey(wayFields.revocation_endpoint),
   pkce: Schema.optionalKey(wayFields.pkce),
   clients: Schema.optionalKey(wayFields.clients),
-  own_app: Schema.optionalKey(wayFields.own_app),
+  oauth_client: Schema.optionalKey(wayFields.oauth_client),
   says: Schema.optionalKey(wayFields.says),
   more: Schema.optionalKey(wayFields.more),
   description: Schema.optionalKey(NamedSchema),
@@ -82,7 +82,7 @@ const everyField: readonly Field[] = [
   ...consentEndpoints,
   'pkce',
   'clients',
-  'own_app',
+  'oauth_client',
   'says',
   'more',
 ];
@@ -93,7 +93,7 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   none: { required: [], optional: [] },
   authorization: {
     required: ['issuer'],
-    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'own_app', 'more'],
+    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'oauth_client', 'more'],
   },
 };
 
@@ -218,14 +218,14 @@ export function consentIssuesOf(fields: ConsentFields): readonly WayIssue[] {
   ];
 }
 
-function ownAppIssuesOf({ own_app: ownApp, clients }: CredentialWayFields): readonly WayIssue[] {
-  return ownApp === undefined || clients === undefined
+function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: CredentialWayFields): readonly WayIssue[] {
+  return oauthClient === undefined || clients === undefined
     ? []
     : [
         {
           path: ['clients'],
           issue:
-            "Expected no clients beside own_app: a way that requires the org's own app takes consent under that app alone",
+            "Expected no clients beside oauth_client: a way that requires the organization's own OAuth client takes consent under that client alone",
         },
       ];
 }
@@ -233,7 +233,7 @@ function ownAppIssuesOf({ own_app: ownApp, clients }: CredentialWayFields): read
 function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
   const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says)];
   return way.kind === 'authorization'
-    ? [...issues, ...consentIssuesOf(way), ...ownAppIssuesOf(way), ...groupIssuesOf(way)]
+    ? [...issues, ...consentIssuesOf(way), ...oauthClientIssuesOf(way), ...groupIssuesOf(way)]
     : issues;
 }
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));

@@ -86,7 +86,7 @@ export function connectionShown(connection: RecordedConnection, endsWith: string
   return { ...connection, credential_ends_with: endsWith };
 }
 
-export function runsUnderTheOrgsApp({ credential }: Pick<RecordedConnection, 'credential'>): boolean {
+export function runsUnderTheOrgsOAuthClient({ credential }: Pick<RecordedConnection, 'credential'>): boolean {
   return credential.client_source === 'own';
 }
 

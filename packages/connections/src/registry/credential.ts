@@ -56,7 +56,7 @@ export const CredentialFieldsSchema = Schema.Struct({
   client_id: Schema.optionalKey(
     ClientIdSchema.annotate({
       description:
-        "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page",
+        "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page",
     }),
   ),
   scope: Schema.optionalKey(
@@ -100,7 +100,7 @@ export const CredentialFieldsSchema = Schema.Struct({
   client_source: Schema.optionalKey(
     ClientSourceSchema.annotate({
       description:
-        "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page",
+        "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page",
     }),
   ),
 });

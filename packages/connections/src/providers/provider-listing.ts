@@ -10,18 +10,18 @@ import {
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
-import type { HadSources, WayApp } from '@on.auto/tool-servers';
+import type { ClientSource, HadSources, WayOAuthClient } from '@on.auto/tool-servers';
 import type { Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
 import { hostRefusalOf } from '../policy/policy-rules.ts';
-import { consentUnsetUpOf } from './consent-offered.ts';
+import { consentOfferedOf } from './consent-offered.ts';
 import {
   listedWayOf,
   type ListedPlaceholder,
   type ListedProvider,
   type ListedWay,
-  type OwnAppChoice,
+  type OAuthClientChoice,
 } from './listed-providers.ts';
 
 export interface Listing {
@@ -101,50 +101,55 @@ function placeholdersOf({ entry }: Provider): readonly ListedPlaceholder[] {
   );
 }
 
-interface OwnAppOffered {
-  readonly own_app: OwnAppChoice;
+interface OAuthClientOffered {
+  readonly oauth_client: OAuthClientChoice;
+  readonly client_source?: ClientSource;
   readonly because?: string;
 }
 
-function ownAppOfferedOf(provider: Provider, way: CredentialWay, listing: Listing): OwnAppOffered | undefined {
+function oauthClientOfferedOf(
+  provider: Provider,
+  way: CredentialWay,
+  listing: Listing,
+): OAuthClientOffered | undefined {
   if (way.kind !== 'authorization') {
     return undefined;
   }
-  if (way.own_app !== undefined) {
-    return { own_app: way.own_app };
+  if (way.oauth_client !== undefined) {
+    return { oauth_client: way.oauth_client };
   }
-  const unsetUp = consentUnsetUpOf(provider.entry.name, way, listing.consent);
-  return unsetUp === undefined ? { own_app: 'optional' } : { own_app: 'required', because: unsetUp };
+  const offered = consentOfferedOf(provider.entry.name, way, listing.consent);
+  return 'because' in offered ? { oauth_client: 'required', ...offered } : { oauth_client: 'optional', ...offered };
 }
 
 function wayOfferingOf(way: CredentialWay, offering: Offering, provider: Provider, listing: Listing) {
-  const ownApp = ownAppOfferedOf(provider, way, listing);
-  if (ownApp === undefined) {
+  const oauthClient = oauthClientOfferedOf(provider, way, listing);
+  if (oauthClient === undefined) {
     return offering;
   }
-  return offering.offered ? { ...offering, ...ownApp } : { ...offering, own_app: ownApp.own_app };
+  return offering.offered ? { ...offering, ...oauthClient } : { ...offering, oauth_client: oauthClient.oauth_client };
 }
 
 export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Listing): boolean {
   return isListed(provider, way, listing.policy) && offeringOf(provider, listing.providerValues).offered;
 }
 
-function isUnderTheOrgsAppAlone(provider: Provider, way: CredentialWay, listing: Listing): boolean {
-  return ownAppOfferedOf(provider, way, listing)?.own_app === 'required';
+function isUnderTheOrgsOAuthClientAlone(provider: Provider, way: CredentialWay, listing: Listing): boolean {
+  return oauthClientOfferedOf(provider, way, listing)?.oauth_client === 'required';
 }
 
 export function waysInOrderOf(provider: Provider, listing: Listing): readonly CredentialWay[] {
   const { credentials } = provider.entry;
-  const alone = credentials.filter((way) => isUnderTheOrgsAppAlone(provider, way, listing));
+  const alone = credentials.filter((way) => isUnderTheOrgsOAuthClientAlone(provider, way, listing));
   return [...credentials.filter((way) => !alone.includes(way)), ...alone];
 }
 
-export function appForOf(
+export function oauthClientForOf(
   provider: Provider,
   listing: Listing,
-  asked: WayApp | undefined,
-): (way: CredentialWay) => WayApp | undefined {
-  return (way) => asked ?? (isUnderTheOrgsAppAlone(provider, way, listing) ? 'own' : undefined);
+  asked: WayOAuthClient | undefined,
+): (way: CredentialWay) => WayOAuthClient | undefined {
+  return (way) => asked ?? (isUnderTheOrgsOAuthClientAlone(provider, way, listing) ? 'own' : undefined);
 }
 
 interface Said {

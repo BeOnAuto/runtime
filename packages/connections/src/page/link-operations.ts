@@ -49,13 +49,13 @@ const LinkedSchema = Schema.Struct({
   client_source: Schema.optionalKey(
     ClientSourceField.annotate({
       description:
-        "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service, own where it runs under the org's own app. Left out where the runtime has no client the way takes",
+        "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service, own where it runs under the organization's own OAuth client. Left out where the runtime has no client the way takes",
     }),
   ),
   return_address: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        "For a connection under the org's own app, the address the runtime sends its authorization server as redirect_uri, which the app registers as its callback",
+        "For a connection under the organization's own OAuth client, the address the runtime sends its authorization server as redirect_uri, which that client registers as an authorized redirect URI",
     }),
   ),
   next_client_id: NextClientIdField,
@@ -112,7 +112,7 @@ export function defineReadLink(reading: LinkReading) {
       "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
       'A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it.',
       "A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
-      "A connection under the org's own app, its credential's client_source own, holds its credential's client_id once give_client gave the app's client, and until then the page asks for the client before the sign-in, showing return_address, the address its app registers as its callback, and answers next_client_id while it keeps a client given as its next.",
+      "A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next.",
       'A token that is unknown, used up, expired or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },

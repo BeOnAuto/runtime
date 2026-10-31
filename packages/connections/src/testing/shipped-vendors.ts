@@ -1,4 +1,4 @@
-import { appSecret, theOrgsApp } from './consents.ts';
+import { orgsClientSecret, theOrgsOAuthClient } from './consents.ts';
 import { googleApi } from './google-vendors.ts';
 import { microsoftAdvertising, microsoftGraph, workIq } from './microsoft-vendors.ts';
 import type { VendorOfTheWay } from './vendor-fakes.ts';
@@ -74,8 +74,8 @@ function registeringServerAt(server: string, issuer: string): VendorOfTheWay {
 export const xApi: VendorOfTheWay = {
   metadata: {
     issuer: 'https://api.x.com',
-    clientId: theOrgsApp.client_id,
-    clientSecret: appSecret,
+    clientId: theOrgsOAuthClient.client_id,
+    clientSecret: orgsClientSecret,
     takesPostedSecrets: false,
     rotatesRefreshTokens: true,
     expiresInSeconds: twoHours,

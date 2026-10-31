@@ -162,24 +162,27 @@ describe('the client of Auto’s consent service among the sources a runtime has
   });
 });
 
-describe('the client sources of a way under the org’s own app', () => {
+describe('the client sources of a way under the organization’s own OAuth client', () => {
   const issuer = 'https://accounts.example.com';
 
-  it('are the org’s app alone, whatever clients the runtime and Auto’s consent service have at the issuer, and whatever scope it asks', () => {
+  it('are the organization’s own OAuth client alone, whatever clients the runtime and Auto’s consent service have at the issuer, and whatever scope it asks', () => {
     const had = {
       registeredClients: [{ ...accounts, scopes: ['files.read'] }],
       publicUrl: 'https://runtime.example.com',
       serviceClients: [{ issuer, client_id: 'auto' }],
     };
-    const underTheOrgsApp: WayOfClients = {
+    const underTheOrgsOAuthClient: WayOfClients = {
       issuer,
       scope: 'files.write',
       clients: ['registered', 'dynamic'],
-      app: 'own',
+      oauth_client: 'own',
     };
 
-    expect([sourcesHad(underTheOrgsApp, had), sourceTakenOf(underTheOrgsApp, had)]).toEqual([['own'], 'own']);
-    expect(sourcesHad({ ...underTheOrgsApp, app: undefined }, had)).toEqual(['auto', 'dynamic']);
+    expect([sourcesHad(underTheOrgsOAuthClient, had), sourceTakenOf(underTheOrgsOAuthClient, had)]).toEqual([
+      ['own'],
+      'own',
+    ]);
+    expect(sourcesHad({ ...underTheOrgsOAuthClient, oauth_client: undefined }, had)).toEqual(['auto', 'dynamic']);
   });
 });
 

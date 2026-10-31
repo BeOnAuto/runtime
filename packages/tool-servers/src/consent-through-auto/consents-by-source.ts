@@ -4,7 +4,7 @@ import { requestBoundsOf } from '../bounds/call-bounds.ts';
 import { tokenRequestsOf, type TokenRequests } from '../consent-tokens/token-requests.ts';
 import { isServerSource, requestsOf, type Requests, type ServerSource } from '../consent/acting-clients.ts';
 import {
-  runsUnderTheOrgsApp,
+  runsUnderTheOrgsOAuthClient,
   serviceClientTakenOf,
   sourcesHad,
   sourceTakenOf,
@@ -42,7 +42,7 @@ const studioElsewhere: ConsentRefusal = { refused: 'studio_elsewhere' };
 
 const noServiceClients: readonly ServiceClient[] = [];
 
-const theOrgsApp: readonly ServerSource[] = ['own'];
+const theOrgsOAuthClient: readonly ServerSource[] = ['own'];
 
 function takenThroughAutoAlone(asked: StartAsked, options: LoadedOptions): Effect.Effect<boolean> {
   return Effect.map(
@@ -73,8 +73,8 @@ function startedWithTheClientsHere(asked: StartAsked, { options, requests, serve
 }
 
 function started(asked: StartAsked, consenting: Consenting): Effect.Effect<StartedConsent, ConsentRefusal> {
-  return runsUnderTheOrgsApp(asked.way)
-    ? consenting.server.start(asked, theOrgsApp)
+  return runsUnderTheOrgsOAuthClient(asked.way)
+    ? consenting.server.start(asked, theOrgsOAuthClient)
     : startedWithTheClientsHere(asked, consenting);
 }
 

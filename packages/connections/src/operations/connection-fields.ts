@@ -1,4 +1,4 @@
-import { ClientSourceSchema, WayAppSchema, givenByTheProvider } from '@on.auto/tool-servers';
+import { ClientSourceSchema, WayOAuthClientSchema, givenByTheProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionEntrySchema, ConnectionTypeSchema } from '../registry/connection-entry.ts';
@@ -66,10 +66,10 @@ const AddedCredentialSchema = Schema.Struct({
       description: 'For client_credentials, the scopes, separated by spaces, none when left out',
     }),
   ),
-  app: Schema.optionalKey(
-    WayAppSchema.annotate({
+  oauth_client: Schema.optionalKey(
+    WayOAuthClientSchema.annotate({
       description:
-        "For a provider's authorization, own to connect under the org's own app there, its client id and secret given on the page; own by default where the way takes no other client here",
+        "For a provider's authorization, own for the organization's own OAuth client, its client ID and secret given on the page; the default where the way takes no client here",
     }),
   ),
 }).annotate({ description: credentialDescription });
@@ -119,16 +119,17 @@ function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): 
             issue: 'Expected no client_id: the person gives the client id on the page',
           },
         ]),
-    ...appIssuesOf(credential),
+    ...oauthClientIssuesOf(credential),
   ];
 }
 
-const appOfConsentAlone = "Expected no app: only an authorization credential's consent runs under an app";
+const oauthClientOfConsentAlone =
+  "Expected no oauth_client: only an authorization credential's consent runs under an OAuth client";
 
-function appIssuesOf(credential: AdditionGiven['credential']): readonly ModeIssue[] {
-  return credential?.app === undefined || credential.kind === 'authorization'
+function oauthClientIssuesOf(credential: AdditionGiven['credential']): readonly ModeIssue[] {
+  return credential?.oauth_client === undefined || credential.kind === 'authorization'
     ? []
-    : [{ path: ['credential', 'app'], issue: appOfConsentAlone }];
+    : [{ path: ['credential', 'oauth_client'], issue: oauthClientOfConsentAlone }];
 }
 
 const consentOfAnApiByHand =
@@ -136,8 +137,8 @@ const consentOfAnApiByHand =
 
 const givenBesideTheKind = [...placedByTheProvider, 'client_id'] as const;
 
-const appOfAProvider =
-  "Expected no app without provider: consent runs under the org's own app at a provider, whose way says where to register it";
+const oauthClientOfAProvider =
+  "Expected no oauth_client without provider: consent runs under the organization's own OAuth client at a provider, whose way says where to register it";
 
 type AddedCredential = NonNullable<AdditionGiven['credential']>;
 
@@ -176,7 +177,9 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
     ...(placeholders === undefined
       ? []
       : [{ path: ['placeholders'], issue: 'Expected no placeholders without provider' }]),
-    ...(given.credential?.app === undefined ? [] : [{ path: ['credential', 'app'], issue: appOfAProvider }]),
+    ...(given.credential?.oauth_client === undefined
+      ? []
+      : [{ path: ['credential', 'oauth_client'], issue: oauthClientOfAProvider }]),
     ...credentialIssuesOf(given),
   ];
 }
@@ -198,6 +201,6 @@ export const TokenField = Schema.String.check(Schema.isMinLength(1), Schema.isMa
 export const NextClientIdField = Schema.optionalKey(
   Schema.String.annotate({
     description:
-      "For a connection under the org's own app, the client id given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it",
+      "For a connection under the organization's own OAuth client, the client ID given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it",
   }),
 );

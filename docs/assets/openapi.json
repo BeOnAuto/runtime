@@ -975,7 +975,7 @@
                               "connection"
                             ],
                             "additionalProperties": false,
-                            "description": "A connection added, connected, broken or removed, asked for more, or given the client of the org's own app"
+                            "description": "A connection added, connected, broken or removed, asked for more, or given the organization's own OAuth client"
                           }
                         ]
                       },
@@ -1735,7 +1735,7 @@
       "post": {
         "operationId": "add_connection",
         "summary": "Add connection",
-        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. A service a playbook will use is connected here, whatever connector the agent has of its own for it. An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says the server names none. It answers pending with a link to Studio's page, where the person approves it within 24 hours. Nothing is granted by this call and no credential passes through it.",
+        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. A service a playbook will use is connected here, whatever connector the agent has of its own for it. An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none. It answers pending with a link to Studio's page, where the person approves it within 24 hours. Nothing is granted by this call and no credential passes through it.",
         "tags": [
           "connections"
         ],
@@ -1882,12 +1882,12 @@
                         "type": "string",
                         "description": "For client_credentials, the scopes, separated by spaces, none when left out"
                       },
-                      "app": {
+                      "oauth_client": {
                         "type": "string",
                         "enum": [
                           "own"
                         ],
-                        "description": "For a provider's authorization, own to connect under the org's own app there, its client id and secret given on the page; own by default where the way takes no other client here"
+                        "description": "For a provider's authorization, own for the organization's own OAuth client, its client ID and secret given on the page; the default where the way takes no client here"
                       }
                     },
                     "required": [
@@ -2051,7 +2051,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -2104,7 +2104,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -2600,7 +2600,7 @@
                             "client_id": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                              "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                             },
                             "scope": {
                               "type": "string",
@@ -2653,7 +2653,7 @@
                                 "dynamic",
                                 "own"
                               ],
-                              "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                              "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                             }
                           },
                           "required": [
@@ -3127,7 +3127,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -3180,7 +3180,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -3650,7 +3650,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -3703,7 +3703,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -4173,7 +4173,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -4226,7 +4226,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -4541,7 +4541,7 @@
       "get": {
         "operationId": "read_link",
         "summary": "Read link",
-        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A connection under the org's own app, its credential's client_source own, holds its credential's client_id once give_client gave the app's client, and until then the page asks for the client before the sign-in, showing return_address, the address its app registers as its callback, and answers next_client_id while it keeps a client given as its next. A token that is unknown, used up, expired or replaced is answered as not found.",
+        "description": "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long. A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it. A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before. A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next. A token that is unknown, used up, expired or replaced is answered as not found.",
         "tags": [
           "connections"
         ],
@@ -4721,7 +4721,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -4774,7 +4774,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -5040,15 +5040,15 @@
                         "dynamic",
                         "own"
                       ],
-                      "description": "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service, own where it runs under the org's own app. Left out where the runtime has no client the way takes"
+                      "description": "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service, own where it runs under the organization's own OAuth client. Left out where the runtime has no client the way takes"
                     },
                     "return_address": {
                       "type": "string",
-                      "description": "For a connection under the org's own app, the address the runtime sends its authorization server as redirect_uri, which the app registers as its callback"
+                      "description": "For a connection under the organization's own OAuth client, the address the runtime sends its authorization server as redirect_uri, which that client registers as an authorized redirect URI"
                     },
                     "next_client_id": {
                       "type": "string",
-                      "description": "For a connection under the org's own app, the client id given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
+                      "description": "For a connection under the organization's own OAuth client, the client ID given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
                     }
                   },
                   "required": [
@@ -5320,7 +5320,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -5373,7 +5373,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -5872,7 +5872,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -5925,7 +5925,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -6207,7 +6207,7 @@
       "post": {
         "operationId": "give_client",
         "summary": "Give client",
-        "description": "Gives the client id and the client secret of the org's own app, an app the org registered with the provider, for a connection under that app, through its open link, before the person signs in. The runtime keeps the client secret sealed in its secret store, and no answer, record or history of the org ever holds it; the record keeps the client id. The link stays open, and its consent then starts with this client. A connection that holds no tokens yet, or is given the client id it runs under, takes the client at once, its secret replacing the one before; another client id given while it holds tokens is kept as its next client, which its next sign-in takes and which replaces its client once that sign-in finishes, so the record shows the client it runs under until then and next_client_id the client given. Where the secret store cannot keep the secret just now, it answers unavailable in the words of the store and keeps nothing. On a runtime that signs people in, only the person who added the connection may give it.",
+        "description": "Gives the client ID and the client secret of the organization's own OAuth client, a client the organization registered with the provider, for a connection under that client, through its open link, before the person signs in. The runtime keeps the client secret sealed in its secret store, and no answer, record or history of the org ever holds it; the record keeps the client ID. The link stays open, and its consent then starts with this client. A connection that holds no tokens yet, or is given the client ID it runs under, takes the client at once, its secret replacing the one before; another client ID given while it holds tokens is kept as its next client, which its next sign-in takes and which replaces its client once that sign-in finishes, so the record shows the client it runs under until then and next_client_id the client given. Where the secret store cannot keep the secret just now, it answers unavailable in the words of the store and keeps nothing. On a runtime that signs people in, only the person who added the connection may give it.",
         "tags": [
           "connections"
         ],
@@ -6245,12 +6245,12 @@
                   "client_id": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "The client id of the org's own app, as the provider issued it when the org registered the app"
+                    "description": "The client ID of the organization's own OAuth client, as the provider issued it when the organization registered the client"
                   },
                   "client_secret": {
                     "type": "string",
                     "minLength": 1,
-                    "description": "The client secret of the org's own app"
+                    "description": "The client secret of the organization's own OAuth client"
                   }
                 },
                 "required": [
@@ -6412,7 +6412,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -6465,7 +6465,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -6673,7 +6673,7 @@
                     },
                     "next_client_id": {
                       "type": "string",
-                      "description": "For a connection under the org's own app, the client id given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
+                      "description": "For a connection under the organization's own OAuth client, the client ID given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
                     }
                   },
                   "required": [
@@ -6696,7 +6696,7 @@
                     "broken"
                   ],
                   "additionalProperties": false,
-                  "description": "The connection the client of the org's own app was given to, with its next client where it keeps one"
+                  "description": "The connection the organization's own OAuth client was given to, with its next client where it keeps one"
                 }
               }
             }
@@ -6751,7 +6751,7 @@
       "post": {
         "operationId": "start",
         "summary": "Start consent",
-        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before. A connection under the org's own app starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
+        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before. A connection under the organization's own OAuth client starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
         "tags": [
           "connections"
         ],
@@ -6831,7 +6831,7 @@
                         "dynamic",
                         "own"
                       ],
-                      "description": "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code, and own where it began under the org's own app"
+                      "description": "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code, and own where it began under the organization's own OAuth client"
                     }
                   },
                   "required": [
@@ -7138,7 +7138,7 @@
                         "client_id": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the org's own app the id of the app's client once the person gives it on the page"
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
                         },
                         "scope": {
                           "type": "string",
@@ -7191,7 +7191,7 @@
                             "dynamic",
                             "own"
                           ],
-                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the org's own app, an app the org registers with the provider, whose client the person gives on the page"
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         }
                       },
                       "required": [
@@ -7473,7 +7473,7 @@
       "get": {
         "operationId": "list_providers",
         "summary": "List providers",
-        "description": "Lists the providers a person may connect here, by name, each with the ways a credential reaches its server and the values a connection to it takes. Use it to show a person what they can connect; add_connection connects one by its name. `may_add` says whether this caller may add a connection, and `refusal` why not.",
+        "description": "Lists the providers a person may connect here, by name, each with the ways a credential reaches its server and the values a connection to it takes. Use it to show a person what they can connect; add_connection connects one by its name. `may_add` says whether this caller may add a connection, and `refusal` why not. `return_address` is the redirect URI the organization's own OAuth client registers at a provider before a person connects under it.",
         "tags": [
           "providers"
         ],
@@ -7512,12 +7512,17 @@
                         }
                       ],
                       "description": "Why this caller may not add a connection here"
+                    },
+                    "return_address": {
+                      "type": "string",
+                      "description": "The address the runtime sends a provider's authorization server as redirect_uri for a connection under the organization's own OAuth client, which that client registers as an authorized redirect URI"
                     }
                   },
                   "required": [
                     "providers",
                     "may_add",
-                    "refusal"
+                    "refusal",
+                    "return_address"
                   ],
                   "additionalProperties": false,
                   "$defs": {
@@ -7580,13 +7585,24 @@
                               "issuer": {
                                 "type": "string"
                               },
-                              "own_app": {
+                              "oauth_client": {
                                 "type": "string",
                                 "enum": [
                                   "optional",
                                   "required"
                                 ],
-                                "description": "For authorization, whether the person may connect under the org's own app, an app the org registers with the provider and gives the client id and client secret of on the page: optional, beside the client Auto or whoever runs it has there, or required, where the way connects under the org's own app alone, as it says or since no client here covers it"
+                                "description": "For authorization, whether the person may connect under the organization's own OAuth client, a client the organization registers with the provider and gives the client ID and client secret of on the page: optional, beside the client Auto or whoever runs it has there, or required, where the way connects under the organization's own OAuth client alone, as it says or since no client here covers it"
+                              },
+                              "client_source": {
+                                "type": "string",
+                                "enum": [
+                                  "registered",
+                                  "auto",
+                                  "metadata_document",
+                                  "dynamic",
+                                  "own"
+                                ],
+                                "description": "For authorization whose oauth_client is optional, the source of the client a start takes without the organization's own, as read_link names it"
                               },
                               "scopes": {
                                 "type": "array",
@@ -7664,7 +7680,7 @@
                               },
                               "because": {
                                 "type": "string",
-                                "description": "Why the way is not offered, or why only under the org's own app"
+                                "description": "Why the way is not offered, or why only under the organization's own OAuth client"
                               }
                             },
                             "required": [
