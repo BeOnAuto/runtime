@@ -31,7 +31,7 @@ function unavailable(name: string, because: string) {
 }
 
 function tool(server: string, name: string) {
-  return { server, tool: name, summary: '', read_only: false };
+  return { server, tool: name, summary: '', mark: 'unmarked' } as const;
 }
 
 const lookups = Array.from({ length: 23 }, (_, index) => tool('notes', `lookup_${index + 1}`));

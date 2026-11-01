@@ -35,7 +35,7 @@ const theAnswer = {
   jsonrpc_id: 2,
 };
 
-const answeredAs = { kind: 'answered', retryAfterMs: null, annotations: { readOnlyHint: true } } as const;
+const answeredAs = { kind: 'answered', retryAfterMs: null, mark: 'reads' } as const;
 
 const answered: AnsweredOnce = {
   ...answeredAs,

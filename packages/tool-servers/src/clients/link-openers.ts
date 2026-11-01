@@ -13,7 +13,7 @@ import {
   type OutputReport,
   type TraceMeta,
 } from './mcp-client.ts';
-import type { ServerClient } from './server-client.ts';
+import type { ServedClient } from './server-client.ts';
 import type { StdioOpening } from './stdio-client.ts';
 import { tokenSource, type ConsentTokenSources, type Discovery, type TokenSource } from './token-source.ts';
 
@@ -27,6 +27,7 @@ export interface LinkOptions {
   readonly timer?: Timer;
   readonly timing: Timing;
   readonly reportOutput: (server: string, line: string) => void;
+  readonly reportMarkUnlisted: (server: string, tool: string) => void;
   readonly traceMeta?: TraceMeta;
 }
 
@@ -63,16 +64,16 @@ function tokensOf({ settings, serverUrl, discovery }: Remote, options: Linking):
 async function openedStdio(
   settings: Extract<LinkedServerSettings, { readonly type: 'stdio' }>,
   opening: StdioOpening,
-): Promise<ServerClient> {
+): Promise<ServedClient> {
   const { openStdio } = await import('./stdio-client.ts');
   return openStdio(settings, opening);
 }
 
-function tracedOpener(open: () => Promise<ServerClient>, traceMeta?: TraceMeta): () => Promise<ServerClient> {
+function tracedOpener(open: () => Promise<ServedClient>, traceMeta?: TraceMeta): () => Promise<ServedClient> {
   return traceMeta === undefined ? open : async () => tracedClient(await open(), traceMeta);
 }
 
-export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOptions): () => Promise<ServerClient> {
+export function openerOf(settings: LinkedServerSettings, linkOptions: LinkOptions): () => Promise<ServedClient> {
   const options: Linking = { ...linkOptions, timer: linkOptions.timer ?? systemTimer };
   const output: OutputReport = {
     scrub: options.secrets.scrub,

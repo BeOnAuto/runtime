@@ -15,7 +15,7 @@ import {
 } from '@on.auto/tool-servers';
 import { Context, Effect, Layer } from 'effect';
 
-import { logLeftOutOperation, logServerMessage } from '../logging/tool-server-logging.ts';
+import { logLeftOutOperation, logMarkUnlisted, logServerMessage } from '../logging/tool-server-logging.ts';
 import type { Settings } from '../settings/settings.ts';
 import { outboundFetch } from './outbound-fetch.ts';
 import { release } from './release.ts';
@@ -73,6 +73,9 @@ export function toolsComposedBy(
       runtimeSecrets: registeredClientSecrets(registeredClients),
       reportServerMessage: (report) => {
         void runtime.run(logServerMessage(report));
+      },
+      reportMarkUnlisted: (server, tool) => {
+        void runtime.run(logMarkUnlisted(server, tool));
       },
     }),
   );

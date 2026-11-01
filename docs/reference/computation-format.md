@@ -278,7 +278,7 @@ A workflow calls a computation function as it calls a reasoning function, with `
 This workflow reads a month's campaign costs through a tool server, computes the pace of each campaign and has a reasoning function write a summary:
 
 - The first function is an [interaction function that asks a system](interaction-format.md#asking-a-system). It calls the tool and returns the rows it gives, checked against its output schema, with no model to read them.
-- A run of it that called the tool and did not succeed is never run again under its run id. A retry starts a new run, which calls the tool again; see [Retrying under a run id](http.md#retrying-under-a-run-id). A retry on status 503 is safe: such a run raises 503 only before its call, or after a call of a tool its server marks read-only.
+- A run of it that called the tool and did not succeed is never run again under its run id. A retry starts a new run, which calls the tool again; see [Retrying under a run id](http.md#retrying-under-a-run-id). A retry on status 503 is safe: such a run raises 503 only before its call, or after a call of a tool marked `reads`.
 - The arithmetic happens in the computation function, and the words in the reasoning function.
 
 The interaction function `read-campaign-costs`:

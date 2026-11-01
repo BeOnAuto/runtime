@@ -252,7 +252,7 @@ describe('the providers of a search the caller may not add from', () => {
             tool_count: 1,
           },
         ],
-        tools: [{ server: 'issues', tool: 'search', summary: anySummary, read_only: true }],
+        tools: [{ server: 'issues', tool: 'search', summary: anySummary, mark: 'reads' }],
         scopes: ['issues'],
       },
     });

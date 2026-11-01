@@ -1,16 +1,16 @@
 import { defineQuery } from '@on.auto/operations';
 import { Effect, Schema, Struct } from 'effect';
 
-import { ToolAnnotationsSchema } from '../bounds/tool-results.ts';
+import { MarkedBySchema, marksMeant, ToolAnnotationsSchema, ToolMarkSchema } from '../bounds/tool-results.ts';
 import { NamedToolSchema } from '../names/tool-fields.ts';
 import { namedToolOf, type ToolLookup } from './named-tool.ts';
 import { introspected, readingTask, toolRead } from './read-words.ts';
 import { toolRemedies } from './tool-refusals.ts';
 
 const description = [
-  "Describes one tool of a tool server this playbook's functions may use, whole: what it does, the JSON Schema of the arguments it takes and the hints its server gives it.",
+  "Describes one tool of a tool server this playbook's functions may use, whole: what it does, the JSON Schema of the arguments it takes, its server's hints and its mark.",
   'Use it once search has found a tool, before writing its arguments or naming it in the tools of a function as server/tool.',
-  'Its server is asked for its tools when this is called, and nothing is sent to the tool; dry_run checks arguments against the schema and execute calls it.',
+  'Its server is asked for its tools when this is called, and nothing is sent to the tool; dry_run checks arguments and execute calls it.',
   '`server` and `tool` name the tool as search lists it.',
 ].join(' ');
 
@@ -29,6 +29,8 @@ const ToolDescribedSchema = Schema.Struct({
         'The hints its server gives the tool, readOnlyHint, destructiveHint, idempotentHint and openWorldHint, as it gives them; absent when it gives none',
     }),
   ),
+  mark: ToolMarkSchema.annotate({ description: `The mark of the tool: ${marksMeant}` }),
+  marked_by: MarkedBySchema,
 });
 
 export function defineIntrospect(access: ToolLookup) {

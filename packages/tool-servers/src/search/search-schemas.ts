@@ -1,6 +1,7 @@
 import { PlaybookIdSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+import { marksMeant, ToolMarkSchema } from '../bounds/tool-results.ts';
 import { UnavailableBecauseSchema } from '../listing/tool-server.ts';
 import { serverNamePattern } from '../names/tool-reference.ts';
 import { searchBounds, termsWithinTheirBound } from './search-terms.ts';
@@ -19,7 +20,7 @@ const searchFields = {
   ),
   only: Schema.optionalKey(
     Schema.Literals(['read', 'write']).annotate({
-      description: 'read keeps the tools their server marks read-only, write the others, which may change something',
+      description: 'read keeps the tools marked reads, write the others',
     }),
   ),
 };
@@ -88,7 +89,7 @@ const FoundToolSchema = Schema.Struct({
   summary: Schema.String.annotate({
     description: 'The first sentence of what the tool does, as its server describes it, at most 300 characters',
   }),
-  read_only: Schema.Boolean.annotate({ description: 'Whether its server marks the tool read-only' }),
+  mark: ToolMarkSchema.annotate({ description: `The mark of the tool: ${marksMeant}` }),
 });
 
 const foundFields = {

@@ -257,7 +257,7 @@ describe('episode 8: asked what a gateway-style tool server offers, and then to 
     );
     expect(seen.found.structuredContent).toMatchObject({
       servers: [{ name: 'slack' }],
-      tools: [{ server: 'slack', tool: 'search', read_only: true }],
+      tools: [{ server: 'slack', tool: 'search', mark: 'reads' }],
     });
     expect(plainTextIn(seen.found)).toBe(
       "1 tool of this playbook's tool servers matches “search rows”, best first: the search tool of slack.",

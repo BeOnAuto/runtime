@@ -3,7 +3,7 @@ import { unreadDocuments, type DocumentReading } from '@on.auto/documents';
 import { Result } from 'effect';
 
 import type { Observed } from '../clients/observed-requests.ts';
-import type { ServerClient } from '../clients/server-client.ts';
+import type { ServedClient } from '../clients/server-client.ts';
 import type { TokenSource } from '../clients/token-source.ts';
 import { settledOf, type Answering } from './api-answers.ts';
 import { apiRequestOf, isUnderBase, type ApiEndpoint, type ApiRequest } from './api-requests.ts';
@@ -53,14 +53,14 @@ async function sent(request: ApiRequest, sending: Sending, mintedAgain = false):
   return sent(request, sending, true);
 }
 
-function listingOf({ operations }: DescribedApiSettings['api']): ServerClient['listTools'] {
+function listingOf({ operations }: DescribedApiSettings['api']): ServedClient['listTools'] {
   return () =>
     Promise.resolve(
       operations.map(({ tool, answers }) => (answers.describesNoBody ? { ...tool, answersNoBody: true } : tool)),
     );
 }
 
-export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): ServerClient {
+export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): ServedClient {
   const operations = new Map(settings.api.operations.map((operation) => [operation.tool.name, operation]));
   const endpoint: ApiEndpoint = {
     baseUrl: settings.api.baseUrl,

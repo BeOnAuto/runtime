@@ -4,6 +4,9 @@ description: Read Google Analytics accounts, properties, data streams, custom di
 website: https://developers.google.com/analytics/devguides/config/admin/v1
 type: openapi
 document: documents/google-analytics-admin.openapi.json
+marks:
+  reads:
+    - analyticsadmin.properties.runAccessReport
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com

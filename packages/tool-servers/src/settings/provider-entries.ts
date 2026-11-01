@@ -102,6 +102,9 @@ function fieldsOf(credential: WrittenCredential): CredentialFields {
   return typeof credential === 'string' ? { value: credential } : credential;
 }
 
+const marksOfTheProvider =
+  "Expected no marks: the provider's entry gives the marks; write the server without provider to mark its tools";
+
 export function givenByTheProvider(field: string): string {
   return `Expected no ${field}: the provider gives the server`;
 }
@@ -137,6 +140,7 @@ function shapeProblemsOf(name: string, written: ServerEntryFields): readonly Set
     ...fieldsOfTheServer
       .filter((field) => written[field] !== undefined)
       .map((field) => problem(toolServersSetting, at(name, field), givenByTheProvider(field))),
+    ...(written.marks === undefined ? [] : [problem(toolServersSetting, at(name, 'marks'), marksOfTheProvider)]),
     ...(written.credential === undefined ? [] : credentialProblemsOf(name, written.credential)),
   ];
 }

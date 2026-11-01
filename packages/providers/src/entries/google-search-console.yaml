@@ -4,6 +4,10 @@ description: Query clicks, impressions, click-through rates and positions, inspe
 website: https://developers.google.com/webmaster-tools
 type: openapi
 document: documents/google-search-console.openapi.json
+marks:
+  reads:
+    - webmasters.searchanalytics.query
+    - searchconsole.urlInspection.index.inspect
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com

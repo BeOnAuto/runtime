@@ -8,6 +8,15 @@ base_url: https://{api_host}
 headers:
   Amazon-Ads-ClientId: '{client_id}'
   Amazon-Ads-AccountId: '{account_id}'
+marks:
+  reads:
+    - QueryAdvertiserAccount
+    - QueryCampaign
+    - QueryAdGroup
+    - QueryAd
+    - QueryTarget
+    - QueryRecommendation
+    - AdsApiv1RetrieveReport
 placeholders:
   region:
     description: The region of your advertiser account, which sets the host of the Amazon Ads API and the Login with Amazon hosts a person signs in at and the tokens come from.

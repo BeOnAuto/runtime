@@ -1,6 +1,6 @@
 import { Order } from 'effect';
 
-import { isReadOnly } from '../bounds/tool-results.ts';
+import { onlyReads } from '../bounds/tool-results.ts';
 import type { AvailableServer, ServerTool, ToolServer } from '../listing/tool-server.ts';
 import { bestFoundOn } from './found-tools.ts';
 import { rankedOf, type Searchable } from './search-scoring.ts';
@@ -37,9 +37,9 @@ function namesASending(name: string): boolean {
   return sends && !carries(words, anotherOperation);
 }
 
-function sendsWithAnAnswer({ name, annotations, answersNoBody }: ServerTool): boolean {
-  const adds = !isReadOnly(annotations) && annotations?.destructiveHint !== true;
-  return adds && answersNoBody !== true && namesASending(name);
+function sendsWithAnAnswer(tool: ServerTool): boolean {
+  const adds = !onlyReads(tool) && tool.annotations?.destructiveHint !== true;
+  return adds && tool.answersNoBody !== true && namesASending(tool.name);
 }
 
 function byWhatItDoes({ name, description }: ServerTool): Searchable {

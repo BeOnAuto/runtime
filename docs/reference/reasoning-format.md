@@ -246,7 +246,7 @@ A provider may signal that the request is too long: HTTP 413, or the error code 
 
 Each call adds two events to the run's history, appended as they happen:
 
-1. `tool_call_started`, recorded before the call is sent. It has the call's number, the id the model gave it, the server, the tool and the size of its arguments. It has `read_only: true` when the server marks the tool read-only, and the SHA-256 digest of the arguments when they are kept.
+1. `tool_call_started`, recorded before the call is sent. It has the call's number, the id the model gave it, the server, the tool and the size of its arguments. It has `read_only: true` when the tool is marked `reads`, and the SHA-256 digest of the arguments when they are kept.
 2. Then one of:
    - `tool_call_answered`, when the tool answered: `is_error`, the size of the result and its digest when it is kept, `shown_bytes` when the model read less than all of it, the duration and the JSON-RPC id.
    - `tool_call_failed`, when it did not: `because` (`arguments_refused`, `server_failure`, `timed_out`, `too_large` for a result larger than the transport reads, `cancelled`, or `interrupted` for a call whose attempt ended before it answered, which the run makes again; see [A run performed again](#a-run-performed-again)), the failure message, the duration and the JSON-RPC id.
@@ -257,17 +257,17 @@ Either event carries the server's own request id when the server's `request_id` 
 
 A tool may change something outside the playbook. So a run that called tools and then could not finish ends in one of two ways, depending on what it called:
 
-| It called                                                | Ending                                 | Status | What may follow                                                                                |
-| -------------------------------------------------------- | -------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
-| Only tools their servers mark read-only (`readOnlyHint`) | `unavailable`, kind `tools_unfinished` | 503    | A new run, or a workflow's retry on status 503, may do the work again                          |
-| Any tool its server does not mark read-only              | `conflict`, kind `effect_unknown`      | 409    | No retry on status 503 matches it, since that tool may already have changed an external system |
+| It called                   | Ending                                 | Status | What may follow                                                                                |
+| --------------------------- | -------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
+| Only tools marked `reads`   | `unavailable`, kind `tools_unfinished` | 503    | A new run, or a workflow's retry on status 503, may do the work again                          |
+| Any tool not marked `reads` | `conflict`, kind `effect_unknown`      | 409    | No retry on status 503 matches it, since that tool may already have changed an external system |
 
 Both endings name, in words, the tools the run called. They keep the `because` field of the bound or failure that stopped the run.
 
 The same run id never runs that work again. [Retrying under a run id](http.md#retrying-under-a-run-id) gives the rule for every run; for a tool-calling run:
 
-- `run_definition` with the `run_id` of a tool-calling run that ended without succeeding returns `conflict` with the kind `tools_called`. When every tool it called only reads, the rejection also has `because: "only_read"`, and its words say nothing was changed.
-- A run that is still `started` is not started again: it goes on from what it recorded, and calls again only a tool its server marks read-only whose call has no answer; see [A run performed again](#a-run-performed-again).
+- `run_definition` with the `run_id` of a tool-calling run that ended without succeeding returns `conflict` with the kind `tools_called`. When every tool it called is marked `reads`, the rejection also has `because: "only_read"`, and its words say nothing was changed.
+- A run that is still `started` is not started again: it goes on from what it recorded, and calls again only a tool marked `reads` whose call has no answer; see [A run performed again](#a-run-performed-again).
 
 A caller that disconnects before the run returns does not stop the run: it goes on to its end and records it, and a request with its `run_id` is given what it recorded. Only the server stopping cuts a run off, and that leaves it to be performed again from what it recorded; see [A run performed again](#a-run-performed-again).
 
@@ -302,7 +302,7 @@ Every rejection is a problem document, and is recorded on the run.
 | A run that called tools cannot finish                                                    | `unavailable`, kind `tools_unfinished`, or `conflict`, kind `effect_unknown`                            | 503 or 409 |
 | The run under the `run_id` is still `started`, and its last event is recent              | `conflict`, kind `taken`: the run is still running; see [A run performed again](#a-run-performed-again) | 409        |
 | The server restarted before the run finished, and the run kept no content to go on from  | `unavailable`, `because: "restarted_without_content"`                                                   | 503 or 409 |
-| The server restarted while the run called a tool its server does not mark read-only      | `conflict`, kind `effect_unknown`, `because: "call_outcome_unknown"`                                    | 409        |
+| The server restarted while the run called a tool not marked `reads`                      | `conflict`, kind `effect_unknown`, `because: "call_outcome_unknown"`                                    | 409        |
 | The caller disconnects before the run returns                                            | The run goes on to its end and records it; a request with its `run_id` is given its result              | 499        |
 
 What the rejections say:
@@ -364,8 +364,8 @@ The run goes on from its events and the content it kept, and reads them before i
 
 - The bound of a run that calls tools, 10 minutes, counts from its start.
 - A model call that was answered is not made again. A model call started without an answer ends as `interrupted` and is made again from the same messages, under the next number.
-- When the last model call asked for tool calls, each call that has an answer gives the model that answer again, rebuilt from what the run kept, and a call that failed gives the model its failure. A call without an answer ends as `interrupted`, and is made again when its server marks the tool read-only. Every call counts toward the run's 25, the ones made before included.
-- A call without an answer of a tool its server does not mark read-only is not made again, since it may already have changed something outside the playbook, and neither is any other call of the same step without an answer, even one of a read-only tool. Each ends as `interrupted`, and the run ends as `conflict`, kind `effect_unknown`, with `because: "call_outcome_unknown"`.
+- When the last model call asked for tool calls, each call that has an answer gives the model that answer again, rebuilt from what the run kept, and a call that failed gives the model its failure. A call without an answer ends as `interrupted`, and is made again when the tool is marked `reads`. Every call counts toward the run's 25, the ones made before included.
+- A call without an answer of a tool not marked `reads` is not made again, since it may already have changed something outside the playbook, and neither is any other call of the same step without an answer, even one of a tool marked `reads`. Each ends as `interrupted`, and the run ends as `conflict`, kind `effect_unknown`, with `because: "call_outcome_unknown"`.
 - A call of a tool the run no longer offers, because its tool server changed while the run was stopped, is not sent. The model is told so and goes on.
 - A model call that failed ends the run as that failure did, and a run whose cancel was asked ends cancelled, neither calling anything.
 - A run that kept no content, because a tool server of the run has `record_content: false`, cannot go on. Each of its calls without an answer ends as `interrupted`, so every call it started has an end, and the run ends as `unavailable` with `because: "restarted_without_content"`, or, once it called a tool, as `tools_unfinished` or `effect_unknown` with that `because`; see [When a tool-calling run cannot finish](#when-a-tool-calling-run-cannot-finish).

@@ -151,10 +151,19 @@ function serverOf(name: string, fields: Partial<ToolServer>): ToolServer {
   return { name, type: 'mcp', record_content: true, playbooks: ['*'], provider: null, tools: [], ...fields };
 }
 
+const unmarked = { mark: 'unmarked', marked_by: 'server' } as const;
+
 const mail = serverOf('mail', {
   tools: [
-    { name: 'send_mail', description: 'Sends mail.', input_schema: {} },
-    { name: 'mail_replies', description: 'Lists the replies.', input_schema: {}, annotations: { readOnlyHint: true } },
+    { name: 'send_mail', description: 'Sends mail.', input_schema: {}, ...unmarked },
+    {
+      name: 'mail_replies',
+      description: 'Lists the replies.',
+      input_schema: {},
+      annotations: { readOnlyHint: true },
+      mark: 'reads',
+      marked_by: 'server',
+    },
   ],
 });
 
@@ -164,11 +173,13 @@ const pending = serverOf('crm', {
   because: 'connection_pending',
 });
 
-const files = serverOf('files', { tools: [{ name: 'list_files', description: 'Lists files.', input_schema: {} }] });
+const files = serverOf('files', {
+  tools: [{ name: 'list_files', description: 'Lists files.', input_schema: {}, ...unmarked }],
+});
 
 const drive = serverOf('drive', {
   connection: 'conn_drive',
-  tools: [{ name: 'upload_file', description: 'Uploads a file.', input_schema: {} }],
+  tools: [{ name: 'upload_file', description: 'Uploads a file.', input_schema: {}, ...unmarked }],
 });
 
 describe('the way a request is reached, where no connection can carry it', () => {

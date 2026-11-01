@@ -35,6 +35,7 @@ export function linkedAccess(settings: ToolServers, options: LinkedOptions): Lin
     reportOutput: (server: string, message: string) => {
       report({ server, message, run_id: null, call_id: null });
     },
+    reportMarkUnlisted: options.reportMarkUnlisted,
     ...(options.traceMeta === undefined ? {} : { traceMeta: options.traceMeta }),
   };
   const made = settings.servers.filter(({ name }) => !options.borrowed.has(name));

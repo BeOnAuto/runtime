@@ -14,7 +14,7 @@ A run that asks a person renders the message from its input. Then it waits until
 
 ## How a request reaches its party
 
-Write in `deliver` how the request reaches its party: the tool of a connection that sends to them, or `agent`. A person answers a request where it reaches them, so a request that names neither is refused when it is saved. A connection carries a request when its server offers a tool that sends to a party, one whose name says it sends, posts, publishes, replies, comments or mails, or creates or writes a message, a comment or mail, and names no other operation, such as update, delete, pin or list, that deletes nothing and is not described as answering without a body, since `sent` points into what it answers, and a read-only tool that reads the replies, such as:
+Write in `deliver` how the request reaches its party: the tool of a connection that sends to them, or `agent`. A person answers a request where it reaches them, so a request that names neither is refused when it is saved. A connection carries a request when its server offers a tool that sends to a party, one whose name says it sends, posts, publishes, replies, comments or mails, or creates or writes a message, a comment or mail, and names no other operation, such as update, delete, pin or list, that deletes nothing and is not described as answering without a body, since `sent` points into what it answers, and a tool marked `reads` that reads the replies, such as:
 
 - a chat tool: the tool that posts a message in a channel or a thread, and the one that lists the replies of a thread;
 - an email provider: the tool that sends mail, and the one that lists the messages of a thread;
@@ -98,7 +98,7 @@ Such a function makes no request, sends no message and asks no model. So it has 
 
 Write a call from what the tool returns, not from memory:
 
-1. Call `search` to see the tool servers this playbook may use, the tools each offers and whether its server marks each read-only. Call `introspect` for the `input_schema` a tool takes.
+1. Call `search` to see the tool servers this playbook may use, the tools each offers and the mark of each. Call `introspect` for the `input_schema` a tool takes.
 2. Call the tool with `execute`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text. For example, a chat's tool that lists the replies of a thread returns the replies and a cursor to the next page.
 3. Write `call`:
    - `server` and `tool`, as `search` names them;
@@ -121,7 +121,7 @@ How a call ends when it goes wrong:
 
 - Before anything is sent: the playbook may not use the tool server, the operator does not allow the tool, the server does not list it, or the server cannot be reached. The run ends `unavailable`, in words that name `search`, and can be run again.
 - Once the call is sent, it is in the run's history. When the tool server fails on it, or the tool returns an error:
-  - a tool its server marks read-only ends the run `unavailable` as `tools_unfinished`, status 503. A workflow may try it again.
+  - a tool marked `reads` ends the run `unavailable` as `tools_unfinished`, status 503. A workflow may try it again.
   - any other tool may have changed something, so the run ends `conflict` as `effect_unknown`, status 409. A workflow's retry on status 503 does not match it.
 - The tool refused the arguments, or the answer holds nothing where `read` points, or does not match `output.schema`. The run ends `conflict` as `unworkable`, which trying again does not change.
 
@@ -421,8 +421,8 @@ How replies are taken:
 | `conflict`, kind `unworkable`                  | A function with `call`: the part at `read` is more than a run may record (1 MiB with its record), or holds a value `output.schema` refuses                                                            |
 | `unavailable`, kind `tool_not_offered`         | A server the function names does not serve the playbook, or its operator does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent |
 | `unavailable`, kind `tool_server_failed`       | A function with `call`: the tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                 |
-| `unavailable`, kind `tools_unfinished`         | A function with `call`: the call was sent and then failed, and the server marks the tool read-only. Trying again under a new run id is safe                                                           |
-| `conflict`, kind `effect_unknown`              | The same, for a tool not marked read-only, which may have changed something. No retry on status 503 matches it; a person, or a workflow rule that names the kind, decides                             |
+| `unavailable`, kind `tools_unfinished`         | A function with `call`: the call was sent and then failed, and the tool is marked `reads`. Trying again under a new run id is safe                                                                    |
+| `conflict`, kind `effect_unknown`              | The same, for a tool not marked `reads`, which may have changed something. No retry on status 503 matches it; a person, or a workflow rule that names the kind, decides                               |
 | `unavailable`, kind `requests_full`            | The playbook already has as many open requests as the runtime allows: 10,000 unless its operator sets another number with `INTERACTION_OPEN_REQUESTS`                                                 |
 | `rejected` as `unanswered`, kind `expired`     | Nobody answered the request before it expired                                                                                                                                                         |
 | `rejected` as `unanswered`, kind `undelivered` | Every attempt to deliver a notification failed                                                                                                                                                        |

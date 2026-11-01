@@ -1,7 +1,7 @@
 import type { Schema } from 'effect';
 
 import { cutToDescriptionBound } from '../bounds/call-bounds.ts';
-import { isReadOnly, type ToolAnnotations } from '../bounds/tool-results.ts';
+import { onlyReads, type ToolAnnotations } from '../bounds/tool-results.ts';
 import { scrubbedSchema } from '../listing/shown-tools.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import type { CallReply } from './call-replies.ts';
@@ -35,7 +35,7 @@ export function offeredToolOf(parts: RunToolsParts, state: RunState, tool: Named
     description: cutToDescriptionBound(parts.secrets.scrub(tool.tool.description ?? '')),
     inputSchema: scrubbedSchema(tool.tool.inputSchema, parts.secrets.scrub),
     annotations: tool.tool.annotations,
-    readOnly: isReadOnly(tool.tool.annotations),
+    readOnly: onlyReads(tool.tool),
     start,
     send,
     call: caller(parts, state, tool),

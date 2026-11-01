@@ -1,8 +1,9 @@
 import { JsonPointer, Result, type Schema } from 'effect';
 
 import { cutToDescriptionBound, toolBounds } from '../bounds/call-bounds.ts';
-import type { ListedTool, ToolAnnotations } from '../bounds/tool-results.ts';
+import type { ServedTool } from '../bounds/tool-results.ts';
 import {
+  annotationsOf,
   methods,
   type ApiDocument,
   type DocumentProblem,
@@ -42,7 +43,7 @@ export interface QueryInput {
 type ApiInput = PathInput | QueryInput;
 
 export interface ApiOperation {
-  readonly tool: ListedTool;
+  readonly tool: ServedTool;
   readonly method: Method;
   readonly path: string;
   readonly inputs: readonly ApiInput[];
@@ -99,10 +100,6 @@ const notBelowTheBase =
 const leavesItself =
   'A path a call cannot keep as written: a . or .. segment, or a ? or #, would move the call out of it';
 
-const readOnlyMethods: ReadonlySet<Method> = new Set(['get', 'head']);
-
-const idempotentMethods: ReadonlySet<Method> = new Set(['get', 'head', 'put', 'delete']);
-
 function derivedName(method: Method, path: string): string {
   const segments = path
     .replace(/^\//u, '')
@@ -122,15 +119,6 @@ function descriptionOf({ summary, description }: Operation): string | undefined 
     each === undefined || each.trim() === '' ? [] : [each.trim()],
   );
   return written.length === 0 ? undefined : cutToDescriptionBound(written.join('\n\n'));
-}
-
-function annotationsOf(method: Method): ToolAnnotations {
-  return {
-    ...(readOnlyMethods.has(method) ? { readOnlyHint: true } : {}),
-    ...(method === 'delete' ? { destructiveHint: true } : {}),
-    ...(idempotentMethods.has(method) ? { idempotentHint: true } : {}),
-    openWorldHint: true,
-  };
 }
 
 function inputOf({ name, in: place, explode }: Parameter): readonly ApiInput[] {
@@ -153,7 +141,7 @@ function namedOperation({ method, path, operation }: Located): string {
 function offeredOf(located: Located, inputSchema: Schema.JsonObject, sent: Sent): Offered {
   const { parameters, body, credentials, answers } = sent;
   const description = descriptionOf(located.operation.value);
-  const tool: ListedTool = {
+  const tool: ServedTool = {
     name: toolNameOf(located),
     ...(description === undefined ? {} : { description }),
     inputSchema,

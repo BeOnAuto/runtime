@@ -185,7 +185,7 @@ describe('unsuccessfulWords of a run whose tools only read', () => {
         because: 'run_bound',
       }),
     ).toBe(
-      "Could not run the reasoning function “summary”: it called tools but could not finish, because it ran out of time. Nothing was changed. Every tool it called only reads, by its server's own account, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.",
+      "Could not run the reasoning function “summary”: it called tools but could not finish, because it ran out of time. Nothing was changed. Every tool it called is marked reads, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.",
     );
   });
 });

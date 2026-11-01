@@ -151,7 +151,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
   tools_unfinished: {
     why: 'it called tools but could not finish',
     remedy:
-      "Every tool it called only reads, by its server's own account, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.",
+      "Every tool it called is marked reads, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.",
   },
 };
 
@@ -177,7 +177,7 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
     'because the server restarted before it finished, and the playbook keeps no content of its calls to go on from',
   call_outcome_unknown:
     'because the server restarted while it called a tool that may change something, so whether that call did is not known',
-  only_read: "because every tool it called only reads, by its server's own account",
+  only_read: 'because every tool it called is marked reads',
   stalled: 'because its dataset stopped at an event its fold could not take',
   ...creditBecauses,
 };
@@ -199,7 +199,7 @@ const explanationByKindAndBecause: Readonly<
   },
   tools_called: {
     only_read: {
-      why: "an attempt of this run under the same id did not succeed, and every tool it called only reads, by its server's own account",
+      why: 'an attempt of this run under the same id did not succeed, and every tool it called is marked reads',
       remedy: 'So it was not run again under its id: start a new run instead; its history shows what it called.',
     },
   },

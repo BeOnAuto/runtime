@@ -134,13 +134,16 @@ describe('the descriptions of the tools of /mcp', () => {
 });
 
 describe('the descriptions of the tools that find and connect a provider', () => {
-  it('name in search the providers that match a service and no server serves yet, at 454 characters', () => {
+  it('name in search the providers that match a service and no server serves yet, and the mark of each tool, at 553 characters', () => {
     const searching = descriptionOf('search');
 
     expect(searching).toContain(
       'With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.',
     );
-    expect(searching).toHaveLength(454);
+    expect(searching).toContain(
+      'each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts.',
+    );
+    expect(searching).toHaveLength(553);
   });
 
   it("open add_connection with a person's account at a service that search lists, claim a service a playbook will use, say an MCP server given by hand says how it authenticates, and end it with what the call does not grant, at 573 characters", () => {

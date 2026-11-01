@@ -1,14 +1,14 @@
 import { capitalized, counted, type Noun } from '@on.auto/phrasing';
 import { Predicate, type Schema } from 'effect';
 
-import { isReadOnly, type ToolAnnotations } from '../bounds/tool-results.ts';
+import type { ToolMark } from '../bounds/tool-results.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
 import { inWords, namesListed, toolInWords } from '../names/tool-words.ts';
 import type { DryRun } from './dry-run-schema.ts';
 
 interface Described extends ToolReference {
   readonly input_schema: Schema.JsonObject;
-  readonly annotations?: ToolAnnotations;
+  readonly mark: ToolMark;
 }
 
 const argumentNoun: Noun = { one: 'argument', other: 'arguments' };
@@ -29,14 +29,14 @@ function argumentsTaken({ input_schema: { properties } }: Described): string {
     : `takes ${counted(names.length, argumentNoun)}, ${namesListed(names)},`;
 }
 
-function readingOf(annotations: ToolAnnotations | undefined): string {
-  return isReadOnly(annotations)
-    ? "only reads, by its server's own account"
-    : 'is not marked read-only by its server, so it may change something';
-}
+const markedInWords: Readonly<Record<ToolMark, string>> = {
+  reads: 'is marked reads, so it only reads',
+  acts: 'is marked acts, so it may change something',
+  unmarked: 'is unmarked, so it counts as one that may change something',
+};
 
 export function introspected(described: Described): string {
-  return `${capitalized(toolInWords(described))} ${argumentsTaken(described)} and ${readingOf(described.annotations)}; what it does and what it takes are in the details.`;
+  return `${capitalized(toolInWords(described))} ${argumentsTaken(described)} and ${markedInWords[described.mark]}; what it does and what it takes are in the details.`;
 }
 
 function argumentsInWords({ arguments: checked }: DryRun): string {
@@ -75,6 +75,6 @@ export function dryRunWords(answer: DryRun, asked: ToolReference): string {
   if (!answer.would_run) {
     return `${call} would not be made now: ${whyNot(answer).join('; ')}.`;
   }
-  const reads = answer.read_only === true ? "only reads, by its server's own account" : 'may change something';
-  return `${call} would be made now, and the tool ${reads}${argumentsInWords(answer)}.`;
+  const marked = answer.mark === null ? 'may change something' : markedInWords[answer.mark];
+  return `${call} would be made now, and the tool ${marked}${argumentsInWords(answer)}.`;
 }

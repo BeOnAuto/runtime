@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 
 import { serverFailedReasons } from '../access/tool-server-failed.ts';
-import type { ToolAnnotations } from '../bounds/tool-results.ts';
+import type { ToolAnnotations, ToolMarking } from '../bounds/tool-results.ts';
 import { unreadyReasons } from '../org-servers/connection-source.ts';
 import type { ServerType } from '../settings/server-settings.ts';
 
@@ -9,7 +9,7 @@ export const UnavailableBecauseSchema = Schema.Literals([...serverFailedReasons,
 
 export type UnavailableBecause = typeof UnavailableBecauseSchema.Type;
 
-export interface ServerTool {
+export interface ServerTool extends ToolMarking {
   readonly name: string;
   readonly title?: string;
   readonly description: string;

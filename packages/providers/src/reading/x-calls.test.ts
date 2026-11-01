@@ -74,17 +74,22 @@ async function sentFor({ tool, input }: Called) {
     .map(({ method, path, query, body }) => ({ method, path, query: decodeURIComponent(query), body }));
 }
 
-const reading = { readOnlyHint: true, idempotentHint: true, openWorldHint: true };
+const reading = { annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true }, mark: 'reads' };
 
-const deleting = { destructiveHint: true, idempotentHint: true, openWorldHint: true };
+const posting = { annotations: { readOnlyHint: false, openWorldHint: true }, mark: 'acts' };
 
-function toolSaying(name: string, summary: string, annotations: Readonly<Record<string, boolean>>): unknown {
+const deleting = {
+  annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true },
+  mark: 'acts',
+};
+
+function toolSaying(name: string, summary: string, marked: Readonly<Record<string, unknown>>): unknown {
   const described: unknown = expect.stringMatching(new RegExp(`^${summary}\\n\\n[A-Z]`, 'u'));
-  return expect.objectContaining({ name, description: described, annotations });
+  return expect.objectContaining({ name, description: described, ...marked, marked_by: 'method' });
 }
 
 describe('the tools of x through its shipped document', () => {
-  it('are the six operations the manifest keeps, each named and described in X’s words, those that read marked read-only', async () => {
+  it('are the six operations the manifest keeps, each named and described in X’s words and marked by its method, those that read marked reads', async () => {
     const { access } = await accessAtTheFake();
 
     const listed = await Effect.runPromise(access.listServers({ org: 'acme', playbook: 'alpha' }));
@@ -94,7 +99,7 @@ describe('the tools of x through its shipped document', () => {
         name: 'x',
         tools: [
           toolSaying('getUsersMe', 'Get My User', reading),
-          toolSaying('createPosts', 'Create or Edit Post', { openWorldHint: true }),
+          toolSaying('createPosts', 'Create or Edit Post', posting),
           toolSaying('deletePosts', 'Delete Post', deleting),
           toolSaying('getUsersPosts', 'Get Posts', reading),
           toolSaying('getUsersMentions', 'Get Mentions', reading),

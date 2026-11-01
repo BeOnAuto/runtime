@@ -106,6 +106,23 @@ const servedFields = {
         'The tools of this server a function may name, each named as the server lists it; every tool of the server when left out',
     }),
   ),
+  marks: Schema.optionalKey(
+    Schema.Struct({
+      reads: Schema.optionalKey(
+        Schema.Array(Schema.String).annotate({
+          description: 'The tools that only read, each named as the server lists it',
+        }),
+      ),
+      acts: Schema.optionalKey(
+        Schema.Array(Schema.String).annotate({
+          description: 'The tools that may change something, each named as the server lists it',
+        }),
+      ),
+    }).annotate({
+      description:
+        "The mark of each tool named, which wins over the one the server's hints or the HTTP method of an operation give: reads for a tool that only reads, acts for one that may change something; a tool named in neither keeps the mark it is listed with, and one nothing marks is unmarked, which counts as one that may change something. A name the server does not list is ignored",
+    }),
+  ),
   record_content: Schema.optionalKey(
     Schema.Boolean.annotate({
       description:

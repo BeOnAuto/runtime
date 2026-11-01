@@ -16,6 +16,7 @@ function httpSettings(url: string): McpServerSettings {
     orgs: ['acme'],
     playbooks: null,
     allowed: null,
+    marks: { reads: [], acts: [] },
     record_content: false,
     request_id: null,
     secrets: [],

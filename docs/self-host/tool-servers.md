@@ -33,7 +33,7 @@ A remote server needs nothing installed. A process runs on the machine that runs
 
 Then decide three things for the entry:
 
-- Which tools a function may call, listed in `allowed`. Without `allowed`, a function may name every tool of the server, including any that write, send or delete. When a function's job is to read, allow only tools that read; no function can then change anything through that server, whatever its prompt says. Allow a tool that writes only when a function must write, and name that tool alone. Auto counts a tool as read-only only when its server marks it so.
+- Which tools a function may call, listed in `allowed`. Without `allowed`, a function may name every tool of the server, including any that write, send or delete. When a function's job is to read, allow only tools that read; no function can then change anything through that server, whatever its prompt says. Allow a tool that writes only when a function must write, and name that tool alone. Auto counts a tool as one that only reads only when it is marked `reads`, by its server, by the HTTP method of its operation or by the entry's [`marks`](configuration.md#the-mark-of-a-tool).
 - Who may use it. `org` is required: one organization (org), a list of orgs, or `'*'` for every org. `playbooks` narrows the entry to some playbooks of each org. Limit it to your org and the playbooks that need the server. The entry has one key, and every playbook it serves calls the server with that key.
 - What the history keeps. Every call's arguments and results are kept whole in the playbook's history, scrubbed of secrets, for anyone who may read the playbook. The secrets are the values your references take, a header's credential after its scheme among them, so a key an `Authorization: ${GRAPH_HEADER}` of `Bearer <key>` sends is scrubbed alone too, and the credentials of `auth`, as the [configuration reference](configuration.md#tool-servers) lists them. If those readers should not see what the tools return, set `record_content: false`, and the history keeps only the sizes.
 
@@ -130,7 +130,7 @@ Using Auto's search tool, list the tool servers my "<playbook name>" playbook
 may use, with their tools. Tell me which tools only read.
 ```
 
-Check that the agent reports your server with its tools, and which of them have `read_only: true`. A server that cannot be used is shown as unavailable, with a `because` field that says why.
+Check that the agent reports your server with its tools, and the mark of each, `reads`, `acts` or `unmarked`. A server that cannot be used is shown as unavailable, with a `because` field that says why.
 
 If you left `allowed` out, have the agent add it now with the tools functions need, and restart Auto. `search` then lists only those tools.
 
@@ -196,7 +196,7 @@ In this entry:
 
 :::
 
-After a restart, `search` lists `files` with these two tools, each with `read_only: true`. Once a run or a listing first needs the server, a log at `LOG_LEVEL=info` shows what it writes, such as `Secure MCP Filesystem Server running on stdio`.
+After a restart, `search` lists `files` with these two tools, each with `mark: reads`. Once a run or a listing first needs the server, a log at `LOG_LEVEL=info` shows what it writes, such as `Secure MCP Filesystem Server running on stdio`.
 
 [Example: review a brief from the folder](../guides/tools.md#example-review-a-brief-from-the-folder) gives one of these tools to a function.
 

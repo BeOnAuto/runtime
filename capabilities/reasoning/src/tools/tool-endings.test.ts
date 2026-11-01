@@ -147,7 +147,7 @@ function unknown(because: string, detail: string) {
 
 const echoed: ScriptedCall = ['graph__echo', { said: 'acme' }];
 
-describe('a run that could not finish after calling a tool its server does not mark read-only', () => {
+describe('a run that could not finish after calling a tool not marked reads', () => {
   it('is a conflict whose effect is unknown, with the because and detail it would have had, whether that tool came first or last', async () => {
     expect(await ending(await graphServer(), ...callingTools([...searched, echoed], timedOut))).toEqual(
       unknown(

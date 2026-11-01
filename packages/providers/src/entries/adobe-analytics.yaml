@@ -7,6 +7,9 @@ document: documents/adobe-analytics.openapi.json
 base_url: https://analytics.adobe.io/api/{global_company_id}
 headers:
   x-api-key: '{client_id}'
+marks:
+  reads:
+    - runReport
 placeholders:
   global_company_id:
     description: Your global company ID, which https://analytics.adobe.io/discovery/me answers.

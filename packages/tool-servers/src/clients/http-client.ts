@@ -13,7 +13,7 @@ import type { McpServerSettings } from '../settings/server-settings.ts';
 import { ignored } from './ignored.ts';
 import { observingFetch, openingClient, serverClientOver, type ClientInfo } from './mcp-client.ts';
 import type { Observations } from './observed-requests.ts';
-import type { ServerClient } from './server-client.ts';
+import type { ServedClient } from './server-client.ts';
 import { failureOf } from './server-failures.ts';
 
 export interface Timer {
@@ -78,7 +78,7 @@ class ObservedHttpTransport extends StreamableHTTPClientTransport {
   }
 }
 
-async function openedOnce(settings: McpServerSettings, opening: HttpOpening): Promise<ServerClient | Limited> {
+async function openedOnce(settings: McpServerSettings, opening: HttpOpening): Promise<ServedClient | Limited> {
   const sdk = openingClient(opening.clientInfo, settings.request_id, opening.reportError);
   const transport = new ObservedHttpTransport(settings, opening, sdk.observations);
   try {
@@ -102,11 +102,11 @@ async function openedOnce(settings: McpServerSettings, opening: HttpOpening): Pr
   });
 }
 
-function isLimited(opened: ServerClient | Limited): opened is Limited {
+function isLimited(opened: ServedClient | Limited): opened is Limited {
   return 'failure' in opened;
 }
 
-export async function openHttp(settings: McpServerSettings, opening: HttpOpening): Promise<ServerClient> {
+export async function openHttp(settings: McpServerSettings, opening: HttpOpening): Promise<ServedClient> {
   const first = await openedOnce(settings, opening);
   if (!isLimited(first)) {
     return first;

@@ -52,8 +52,10 @@ model_aliases:
 # allowed names the tools of a server a function may name, as the server lists
 # them; every tool of the server when left out. It is the one list of the tools
 # of a server, for the runs of functions and for a call made by hand with
-# execute alike; search shows whether the server marks each one read-only, and
-# an HTTP API marks the tools of its GET and HEAD operations read-only.
+# execute alike. search shows each tool's mark: reads where its server hints it
+# only reads, as an HTTP API does for GET and HEAD, and acts for POST, PUT, PATCH
+# and DELETE or a server's hint that it may change something; marks overrides
+# both, with reads and acts, each a list of the server's tools.
 #
 # An openapi entry gives its credential under security, by the name of the
 # security scheme its document declares, and the server places it as the scheme

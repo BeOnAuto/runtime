@@ -18,6 +18,12 @@ export function logServerMessage(report: ServerMessage): Effect.Effect<void> {
       );
 }
 
+export function logMarkUnlisted(server: string, tool: string): Effect.Effect<void> {
+  return Effect.logWarning(`The tool server ${server} lists no tool ${tool}, which its entry marks`).pipe(
+    Effect.annotateLogs({ tool_server: server, tool }),
+  );
+}
+
 export function logLeftOutOperation(server: string, { operation, because }: LeftOutOperation): Effect.Effect<void> {
   return Effect.logWarning(
     `The tool server ${server} offers no tool for the operation ${operation} of its document: ${because}`,

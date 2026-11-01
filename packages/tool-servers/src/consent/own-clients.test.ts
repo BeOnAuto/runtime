@@ -202,6 +202,7 @@ describe('the secrets the answers of a connection under the organization’s own
       orgs: ['acme'],
       playbooks: null,
       allowed: null,
+      marks: { reads: [], acts: [] },
       record_content: false,
       request_id: null,
       secrets: [],

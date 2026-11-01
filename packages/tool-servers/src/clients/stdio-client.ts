@@ -9,7 +9,7 @@ import {
   type ClientInfo,
   type OutputReport,
 } from './mcp-client.ts';
-import type { ServerClient } from './server-client.ts';
+import type { ServedClient } from './server-client.ts';
 import { StdioProcessTransport } from './stdio-transport.ts';
 
 export interface StdioOpening {
@@ -24,7 +24,7 @@ function environmentOf({ env }: StdioServerSettings): Readonly<Record<string, st
   );
 }
 
-export async function openStdio(settings: StdioServerSettings, opening: StdioOpening): Promise<ServerClient> {
+export async function openStdio(settings: StdioServerSettings, opening: StdioOpening): Promise<ServedClient> {
   const sdk = openingClient(
     opening.clientInfo,
     settings.request_id,

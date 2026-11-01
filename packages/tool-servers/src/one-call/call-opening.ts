@@ -1,6 +1,6 @@
 import { Array as Arr, Option, Result } from 'effect';
 
-import { isReadOnly, type ListedTool } from '../bounds/tool-results.ts';
+import { onlyReads, type ListedTool } from '../bounds/tool-results.ts';
 import type { ServerSlot } from '../calls/server-slot.ts';
 import type { ServerLink } from '../clients/server-links.ts';
 import { listedThrough, type Listing } from '../listing/server-listing.ts';
@@ -47,5 +47,5 @@ export async function openedFor(
     return notOfferedOnce(notListed(unlisted));
   }
   const { slot, tool } = Option.getOrThrow(Arr.head(offeredOn(listed.success, naming)));
-  return { slot, tool, readOnly: isReadOnly(tool.annotations) };
+  return { slot, tool, readOnly: onlyReads(tool) };
 }

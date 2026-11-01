@@ -27,7 +27,13 @@ export type { SentReply, ToolSending } from './calls/tool-caller.ts';
 export type { AnsweredFields, StartedFields } from './calls/recorded-calls.ts';
 export type { AnsweredOnce, CallAnswer, CalledOnce, UnopenedOnce } from './one-call/called-once.ts';
 export type { OneCall, RunCall } from './one-call/one-call.ts';
-export { answerDocument, isReadOnly, type ToolAnnotations } from './bounds/tool-results.ts';
+export {
+  answerDocument,
+  onlyReads,
+  type MarkedBy,
+  type ToolAnnotations,
+  type ToolMark,
+} from './bounds/tool-results.ts';
 export type { NamingCheck } from './org-servers/org-naming.ts';
 export type { PreparedCall } from './access/call-ways.ts';
 export {
@@ -151,6 +157,7 @@ export {
   type ServerEntryFields,
 } from './settings/server-entries.ts';
 export { servedFieldsOf, serverNameProblems } from './settings/entry-checks.ts';
+export { markIssuesOf, marksOf } from './settings/tool-lists.ts';
 export { headerNamePattern, isPinnableUrl, pinnedUrlShape, redactedValuesOf } from './settings/checked.ts';
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
 export { headersTheRuntimeSets } from './settings/reserved-headers.ts';

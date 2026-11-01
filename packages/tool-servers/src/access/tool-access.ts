@@ -17,6 +17,7 @@ export interface ToolAccessOptions {
   readonly runtimeSecrets?: SecretValues;
   readonly connections?: ConnectionSource;
   readonly reportLeftOut?: Describing['reportLeftOut'];
+  readonly reportMarkUnlisted?: LinkOptions['reportMarkUnlisted'];
   readonly fetch?: LinkOptions['fetch'];
   readonly now?: () => number;
   readonly documents?: LinkOptions['documents'];
@@ -36,6 +37,7 @@ type LinksLent = () => Promise<Links>;
 
 export interface LinkedOptions extends ToolAccessOptions, RecordingParts {
   readonly reportLeftOut: Describing['reportLeftOut'];
+  readonly reportMarkUnlisted: LinkOptions['reportMarkUnlisted'];
   readonly borrowed: Links;
 }
 
@@ -65,7 +67,8 @@ export function toolAccessOf(settings: ToolServers, options: ToolAccessOptions, 
   const source = options.connections ?? noConnections;
   const linkedOnUse = (): Promise<LinkedAccess> => {
     const reportLeftOut = options.reportLeftOut ?? ignored;
-    loading.access ??= linked(settings, { ...options, ...recording, reportLeftOut }, lent);
+    const reportMarkUnlisted = options.reportMarkUnlisted ?? ignored;
+    loading.access ??= linked(settings, { ...options, ...recording, reportLeftOut, reportMarkUnlisted }, lent);
     return loading.access;
   };
   const access = orgAccessOf(settings, { source, loaded: linkedOnUse, secrets: recording.secrets });

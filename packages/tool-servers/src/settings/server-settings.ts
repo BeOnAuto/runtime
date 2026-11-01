@@ -24,11 +24,19 @@ export type MintingAuth = AuthSettings & { readonly credential: MintingCredentia
 
 export type ConsentAuth = AuthSettings & { readonly credential: ConsentCredential };
 
+export interface ToolMarks {
+  readonly reads: readonly string[];
+  readonly acts: readonly string[];
+}
+
+export const noMarks: ToolMarks = { reads: [], acts: [] };
+
 interface ServedBy {
   readonly name: string;
   readonly orgs: readonly string[] | null;
   readonly playbooks: readonly string[] | null;
   readonly allowed: readonly string[] | null;
+  readonly marks: ToolMarks;
   readonly record_content: boolean;
   readonly request_id: string | null;
   readonly secrets: readonly Redacted.Redacted[];

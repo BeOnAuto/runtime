@@ -7,12 +7,13 @@ import { apiTransport } from './api-entry-checks.ts';
 import { accepted, at, problemsOf, refused, rejected, redactedValuesOf, type Checked } from './checked.ts';
 import { checkedAuth, checkedHeaders } from './remote-checks.ts';
 import { toolServersSetting, type ServerEntryFields } from './server-entries.ts';
-import type {
-  DocumentsPlace,
-  McpServerSettings,
-  ServerSettings,
-  ServerType,
-  StdioServerSettings,
+import {
+  noMarks,
+  type DocumentsPlace,
+  type McpServerSettings,
+  type ServerSettings,
+  type ServerType,
+  type StdioServerSettings,
 } from './server-settings.ts';
 import { toolListProblems } from './tool-lists.ts';
 
@@ -23,6 +24,7 @@ type Transport<S extends ServerSettings> = S extends ServerSettings
       | 'orgs'
       | 'playbooks'
       | 'allowed'
+      | 'marks'
       | 'record_content'
       | 'request_id'
       | 'secrets'
@@ -206,6 +208,7 @@ export function checkedEntry(
     name,
     orgs: scope.success.orgs,
     ...servedFieldsOf(fields),
+    marks: { ...noMarks, ...fields.marks },
     secrets,
     connection: null,
     provider,

@@ -358,6 +358,8 @@ tool_servers:
       PATH: /usr/local/bin:/usr/bin
       NOTES_API_KEY: ${NOTES_API_KEY}
     org: acme
+    marks:
+      reads: [find_notes, read_note] # tools the server lists without a hint
   billing:
     document: https://billing.example.com/openapi.json
     base_url: https://billing.example.com/v2
@@ -387,9 +389,10 @@ tool_servers:
 | `org`            | every type       | Required. The org whose functions may use the server, a list of orgs, or `*` for every org of the runtime. One entry serves each org under one name, with one credential and one connection, and each org sees the same tools                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `playbooks`      | every type       | The playbooks that may use it within each org it names, by id, the same list in each. Every playbook of each org when left out. Refused beside `*`, since a playbook id belongs to one org                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `allowed`        | every type       | The tools of the server that a function may name and that a call made by hand with `execute` may call, each named as the server lists it, without the server's name and without `*`. Every tool of the server when left out                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `marks`          | every type       | The mark of the tools it names, in place of the one their server's hints or their HTTP method give: `reads` lists the tools that only read, `acts` those that may change something, each named as the server lists it. A tool named in neither keeps the mark it is listed with. A name the server does not list is ignored, with a warning in the log at each listing. See [The mark of a tool](#the-mark-of-a-tool)                                                                                                                                                                                                                |
 | `record_content` | every type       | Whether the arguments and results of calls are kept whole, scrubbed of secrets, in the playbook's ledger, where anyone who may read the playbook reads them. `true` when left out; `false` keeps their sizes alone                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `request_id`     | every type       | The response header, or for an MCP server the key of a result's metadata, in which the server returns its own id of a request, recorded with each call                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `provider`       | `mcp`, `openapi` | A provider Auto knows, by its name, in place of every field of the server: it gives the type, the address, the headers, `request_id` and where the credential goes, and the entry gives `org`, `playbooks`, `allowed` and `record_content`. See [Name a provider](tool-servers.md#name-a-provider)                                                                                                                                                                                                                                                                                                                                   |
+| `provider`       | `mcp`, `openapi` | A provider Auto knows, by its name, in place of every field of the server: it gives the type, the address, the headers, `request_id`, `marks` and where the credential goes, and the entry gives `org`, `playbooks`, `allowed` and `record_content`. See [Name a provider](tool-servers.md#name-a-provider)                                                                                                                                                                                                                                                                                                                          |
 | `placeholders`   | `mcp`, `openapi` | With `provider`, the value of each placeholder it asks for, by name, written out                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `credential`     | `mcp`, `openapi` | With `provider`, its credential: a reference alone, such as `${GITHUB_TOKEN}`, for a `secret`; for `client_credentials`, `client_id` written out with `client_secret`, or with `private_key` and its `algorithm`, each key a reference; nothing for `none`. The entry takes the provider's first way but `authorization`, a consent a person gives on Studio's page, which this file cannot give, and `kind` names another. An entry that names `kind: authorization` stops Auto at start, at `kind`, and one that names a provider whose only way it is stops it at `credential`: let people connect that provider on Studio's page |
 
@@ -494,7 +497,7 @@ Each operation becomes one tool:
 - Its name is the `operationId`, with any character a tool name cannot hold as `_`. Without one, it is the method and the path in lower case, such as `get_invoices_id` for `GET /invoices/{id}`.
 - Its description is the operation's `summary` and `description`.
 - Its input is one object: each path and query parameter by its name, and `body` for a JSON request body, each required when the document says so. The schemas of `components` they refer to are held inside it, so a function's model reads one schema whole.
-- `GET` and `HEAD` are read-only, `DELETE` destructive, and `GET`, `HEAD`, `PUT` and `DELETE` idempotent. So `allowed`, `search` and a run's read-only calls read an API's tools as they read an MCP server's.
+- `GET` and `HEAD` are read-only, and so marked `reads`; `POST`, `PUT`, `PATCH` and `DELETE` are not, and so marked `acts`, `DELETE` destructive too; and `GET`, `HEAD`, `PUT` and `DELETE` are idempotent. So `allowed`, `search` and the calls of a run read an API's tools as they read an MCP server's. An operation that only reads through `POST`, such as a report or a search, is marked `reads` by the entry's `marks`.
 
 Some operations are not offered as tools. When it reads the document, the server logs a warning for each operation it leaves out, naming the entry and the reason. It leaves out an operation that:
 
@@ -540,12 +543,35 @@ Listing an HTTP API's tools asks the API nothing: the document is the list.
 - A function's `server/*` offers exactly the tools its server's entry allows.
 - `allowed` is the one list of a server's tools. The five operations over the playbook's tool servers, `search`, `introspect`, `validate`, `dry_run` and `execute`, show and call the tools it allows and no other.
 
+### The mark of a tool
+
+Every tool the runtime lists carries one mark, `reads`, `acts` or `unmarked`. The tool lists show it, and a run that calls tools and cannot finish reads it to say whether running it again is safe. A tool's mark is, in order:
+
+1. the one the entry's `marks` gives it, or, for a server a provider gives, the one the provider's entry gives;
+2. `reads`, where its server hints that it only reads (`readOnlyHint: true`), as the HTTP method of an operation of an HTTP API does for `GET` and `HEAD`;
+3. `acts`, where its server hints that it does more than read (`readOnlyHint: false`) or destroys (`destructiveHint: true`), as the method does for `POST`, `PUT`, `PATCH` and `DELETE`;
+4. `unmarked`, where nothing marks it.
+
+A tool that is `unmarked` counts as one that may change something, as the MCP specification's own default for a tool that declares nothing says, until its entry marks it. `marked_by` says which gave the mark: `server`, `method`, `catalogue` or `settings`.
+
+```yaml
+tool_servers:
+  notes:
+    command: /usr/local/bin/notes-mcp-server
+    org: acme
+    marks:
+      reads: [find_notes, read_note]
+      acts: [archive_note]
+```
+
+A server a provider gives takes the marks of its provider's entry. An entry that names a `provider` and writes `marks` stops the server at start: the provider's entry gives the marks, so write the server without `provider` to mark its tools. A name `marks` gives that the server does not list is ignored, and the server logs a warning naming the server and the tool each time it lists them.
+
 ### Try the tools by hand
 
 An agent or a person can look at a server's tools, and call one, before a function names it.
 
 - `search` shows anyone who may read a playbook the entries that serve it, with the tools that each entry lets functions name. At the org level, a caller who may read every playbook of the org (with `org:read` or `playbook:read`) sees every entry that serves the org, whether the entry names the org in `org` or uses `*`. Each comes with its `playbooks` (`["*"]` when they are left out).
-- `search` and `dry_run` say whether the server marks a tool read-only (`readOnlyHint`).
+- `search` and `dry_run` answer the [mark](#the-mark-of-a-tool) of each tool, and `introspect` and `list_connection_tools` its mark and `marked_by` beside the hints its server gives, `list_connection_tools` all but the read-only one, which the mark says.
 - `search` and `introspect` add no header, environment value, URL, command or credential of their own. What a server writes is passed on with the secrets above scrubbed out, except values shorter than 8 characters.
 - `execute` calls one tool as a run would, under the entry's credential, which is the playbook's. So it needs `playbook:write` whatever the tool does, and it is live.
 - While a tool server is configured, `execute` is marked destructive, so a client that honours the MCP hints asks the person before a call.
@@ -572,6 +598,7 @@ The server checks every entry at start. It stops at any of these, naming the set
 - a `base_url`, or a first server of a document, with a query or a fragment;
 - a `document` path that leaves the directory of this file;
 - in `allowed`, an empty list, a name listed twice, a `*`, or a name that is not a tool name of 1 to 128 letters, digits, underscores, hyphens and dots (such as `graph/search`);
+- in `marks`, neither `reads` nor `acts`, an empty list, a name listed twice, a tool marked both `reads` and `acts`, or a name that is not a tool name;
 - beside `provider`, a field of the server, a provider Auto does not know, a placeholder it does not ask for, one it asks for that is left out or a value its pattern does not take, a way it does not offer or its way `authorization`, which a person gives on Studio's page alone, the fields of a credential that way does not take, and a `credential` that holds anything but a reference where a key goes; and `placeholders` or `credential` without `provider`.
 
 An unknown key in an entry is refused, like any other unknown key.

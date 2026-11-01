@@ -31,6 +31,7 @@ export interface AccessOptions {
   readonly runtimeSecrets?: ToolAccessOptions['runtimeSecrets'];
   readonly documents?: ToolAccessOptions['documents'] | null;
   readonly providers?: NonNullable<ToolServerSettingsContext['providers']>;
+  readonly reportMarkUnlisted?: ToolAccessOptions['reportMarkUnlisted'];
 }
 
 export interface ReportingAccess {
@@ -54,19 +55,16 @@ function servers(
   );
 }
 
-function accessOver(
-  settings: ToolServers,
-  {
-    timing,
-    fetch,
-    consent = consentClientWith(),
-    now,
-    traceMeta,
-    connections,
-    runtimeSecrets,
-    documents,
-  }: AccessOptions,
-): ReportingAccess {
+function timedBy({ timing, now, traceMeta }: AccessOptions): Pick<ToolAccessOptions, 'timing' | 'now' | 'traceMeta'> {
+  return {
+    ...(timing === undefined ? {} : { timing }),
+    ...(now === undefined ? {} : { now }),
+    ...(traceMeta === undefined ? {} : { traceMeta }),
+  };
+}
+
+function accessOver(settings: ToolServers, options: AccessOptions): ReportingAccess {
+  const { fetch, consent = consentClientWith(), connections, runtimeSecrets, documents, reportMarkUnlisted } = options;
   const messages: ServerMessage[] = [];
   const content = memoryRecordedContent();
   const access = makeToolAccess(settings, {
@@ -77,12 +75,11 @@ function accessOver(
     reportServerMessage: (message) => {
       messages.push(message);
     },
-    ...(timing === undefined ? {} : { timing }),
+    ...timedBy(options),
     ...(fetch === undefined ? {} : { fetch }),
-    ...(now === undefined ? {} : { now }),
-    ...(traceMeta === undefined ? {} : { traceMeta }),
     ...(connections === undefined ? {} : { connections }),
     ...(runtimeSecrets === undefined ? {} : { runtimeSecrets }),
+    ...(reportMarkUnlisted === undefined ? {} : { reportMarkUnlisted }),
   });
   return { access, content, messages: () => [...messages] };
 }

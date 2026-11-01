@@ -4,6 +4,10 @@ description: Create, run and list Campaign Manager 360 reports and their files, 
 website: https://developers.google.com/doubleclick-advertisers/getting_started
 type: openapi
 document: documents/campaign-manager-360.openapi.json
+marks:
+  reads:
+    - dfareporting.dimensionValues.query
+    - dfareporting.reports.compatibleFields.query
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com

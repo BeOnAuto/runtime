@@ -54,6 +54,21 @@ describe('the fields of an entry', () => {
   });
 });
 
+describe('the marks of an entry', () => {
+  it('are taken for the tools named, each a tool name, once, in one mark alone', () => {
+    expect(problemsOf({ ...ledgers, marks: { reads: ['ledgers.query'], acts: ['ledgers.post'] } })).toEqual([]);
+    expect(
+      problemsOf({ ...ledgers, marks: { reads: ['ledgers query', 'ledgers.query'], acts: ['ledgers.query'] } }),
+    ).toEqual([
+      ['/marks/reads/0', 'Expected a tool name of 1 to 128 letters, digits, underscores, hyphens and dots'],
+      ['/marks/acts/0', 'ledgers.query is marked reads too, and a tool takes one mark'],
+    ]);
+    expect(problemsOf({ ...ledgers, marks: {} })).toEqual([
+      ['/marks', 'Expected reads or acts, or both; leave marks out to mark no tool'],
+    ]);
+  });
+});
+
 describe('the address of an entry', () => {
   it('is the one of its type, and none of another', () => {
     const unaddressed = Object.fromEntries(

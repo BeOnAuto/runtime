@@ -26,6 +26,7 @@ const tracker: FakeProvider = ({ placeholders, credential }) => ({
   url: `https://${placeholders['site'] ?? 'www'}.tracker.example.com/mcp`,
   headers: { Authorization: `Bearer ${reference(credential.value)}` },
   request_id: 'X-Request-Id',
+  marks: { reads: ['search'] },
 });
 
 const ledgers: FakeProvider = ({ credential }) => ({
@@ -101,7 +102,7 @@ const referenceAlone =
   'Expected a reference alone to the environment variable that holds the credential, such as ${TRACKER_TOKEN}, which the provider places where its way says';
 
 describe('an entry that names a provider of a secret', () => {
-  it('is the server the provider resolves to, with the org, playbooks, tools and content it gives, and its provider', () => {
+  it('is the server the provider resolves to, with the org, playbooks, tools and content it gives, the marks of its provider, and its provider', () => {
     const given = providers();
     const server = serverOf({ issues: trackerEntry }, given);
 
@@ -114,6 +115,7 @@ describe('an entry that names a provider of a secret', () => {
       allowed: ['search'],
       record_content: false,
       request_id: 'X-Request-Id',
+      marks: { reads: ['search'], acts: [] },
       connection: null,
       provider: 'tracker',
     });
@@ -168,11 +170,18 @@ describe('the fields an entry that names a provider may hold', () => {
   it('are none of the server, which the provider gives', () => {
     expect(
       problemsOf({
-        issues: { provider: 'tracker', url: 'https://tracker.example.com/mcp', request_id: 'X-Id', org: 'acme' },
+        issues: {
+          provider: 'tracker',
+          url: 'https://tracker.example.com/mcp',
+          request_id: 'X-Id',
+          marks: { reads: ['search'] },
+          org: 'acme',
+        },
       }),
     ).toEqual([
       'TOOL_SERVERS: /issues/url: Expected no url: the provider gives the server',
       'TOOL_SERVERS: /issues/request_id: Expected no request_id: the provider gives the server',
+      "TOOL_SERVERS: /issues/marks: Expected no marks: the provider's entry gives the marks; write the server without provider to mark its tools",
     ]);
   });
 

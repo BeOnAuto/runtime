@@ -85,8 +85,10 @@ describe('list_connection_tools', () => {
   });
 });
 
+const unmarked = { mark: 'unmarked', marked_by: 'server' };
+
 describe('the tools of a connection', () => {
-  it('are those its server offers now and its entry allows, by name, each with its title, its whole description and its hints', async () => {
+  it('are those its server offers now and its entry allows, by name, each with its title, its whole description, the hints its server gives besides whether it only reads, and its mark', async () => {
     const { listed } = await connectedGraph(['search', 'verbose', 'environment', 'exit', 'echo']);
 
     expect(await listed({ id: 'graph-id' })).toEqual({
@@ -95,20 +97,28 @@ describe('the tools of a connection', () => {
         connection: 'graph-id',
         server: 'graph',
         tools: [
-          { name: 'echo', description: 'Answers with its arguments.' },
+          { name: 'echo', description: 'Answers with its arguments.', ...unmarked },
           {
             name: 'environment',
             title: 'Environment',
             description: 'Answers with the names of the environment variables of the server.',
+            ...unmarked,
           },
-          { name: 'exit', description: 'Ends the server while it is called.', destructive: true },
+          {
+            name: 'exit',
+            description: 'Ends the server while it is called.',
+            hints: { destructiveHint: true },
+            mark: 'acts',
+            marked_by: 'server',
+          },
           {
             name: 'search',
             description: 'Finds the rows of the graph that match a query.',
-            read_only: true,
-            open_world: true,
+            hints: { openWorldHint: true },
+            mark: 'reads',
+            marked_by: 'server',
           },
-          { name: 'verbose', title: 'Verbose', description: verboseDescription.slice(0, 4096) },
+          { name: 'verbose', title: 'Verbose', description: verboseDescription.slice(0, 4096), ...unmarked },
         ],
         has_more: false,
         next_cursor: null,
@@ -147,7 +157,7 @@ describe('the pages of the tools of a connection', () => {
 });
 
 describe('the tools of a connection to an HTTP API', () => {
-  it('are the operations of its document, those that only read marked read-only', async () => {
+  it('are the operations of its document, each marked by its method, those that only read marked reads', async () => {
     const fake = await serveFakeApi({ key: fakeApiKey });
     closing.push(fake.close);
     const connections = fakeConnections();
@@ -163,8 +173,19 @@ describe('the tools of a connection to an HTTP API', () => {
       status: 'succeeded',
       output: {
         tools: [
-          { name: 'echo', description: 'Answers with its arguments.', open_world: true },
-          { name: 'search', read_only: true, idempotent: true, open_world: true },
+          {
+            name: 'echo',
+            description: 'Answers with its arguments.',
+            hints: { openWorldHint: true },
+            mark: 'acts',
+            marked_by: 'method',
+          },
+          {
+            name: 'search',
+            hints: { idempotentHint: true, openWorldHint: true },
+            mark: 'reads',
+            marked_by: 'method',
+          },
         ],
       },
     });
@@ -206,7 +227,7 @@ describe('the words of the tools of a connection', () => {
     const words = registration.plainLanguage;
     const page = { connection: 'graph-id', server: 'graph', next_cursor: null };
     const asked = { id: 'graph-id' };
-    const echo = { name: 'echo', description: '' };
+    const echo = { name: 'echo', description: '', mark: 'unmarked', marked_by: 'server' } as const;
 
     expect([
       words?.outcome({ ...page, tools: [echo], has_more: false }, asked),

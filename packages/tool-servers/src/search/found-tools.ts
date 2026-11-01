@@ -1,6 +1,6 @@
 import { Order, Predicate } from 'effect';
 
-import { isReadOnly } from '../bounds/tool-results.ts';
+import { onlyReads } from '../bounds/tool-results.ts';
 import type { AvailableServer, ServerTool, ToolServer } from '../listing/tool-server.ts';
 import type { Found, FoundTool, SearchAsked, SearchedServer } from './search-schemas.ts';
 import { bestOf, summaryOf, wholeWithinTheBound, type Searchable } from './search-scoring.ts';
@@ -11,8 +11,8 @@ interface Candidate {
 }
 
 const keptBy: Readonly<Record<NonNullable<SearchAsked['only']>, (tool: ServerTool) => boolean>> = {
-  read: ({ annotations }) => isReadOnly(annotations),
-  write: ({ annotations }) => !isReadOnly(annotations),
+  read: (tool) => onlyReads(tool),
+  write: (tool) => !onlyReads(tool),
 };
 
 function consideredOn({ tools }: AvailableServer, { only }: SearchAsked): readonly ServerTool[] {
@@ -46,7 +46,7 @@ function searchableOf({ tool }: Candidate): Searchable {
 }
 
 function foundTool({ server, tool }: Candidate): FoundTool {
-  return { server, tool: tool.name, summary: summaryOf(tool.description), read_only: isReadOnly(tool.annotations) };
+  return { server, tool: tool.name, summary: summaryOf(tool.description), mark: tool.mark };
 }
 
 export function bestFoundOn(

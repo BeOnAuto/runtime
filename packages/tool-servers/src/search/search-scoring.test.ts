@@ -168,12 +168,20 @@ describe('a tool whose input schema names no argument', () => {
       record_content: true,
       playbooks: ['*'],
       provider: null,
-      tools: [{ name: 'note_count', description: 'Counts the notes.', input_schema: { type: 'object' } }],
+      tools: [
+        {
+          name: 'note_count',
+          description: 'Counts the notes.',
+          input_schema: { type: 'object' },
+          mark: 'unmarked',
+          marked_by: 'server',
+        },
+      ],
     };
     const { call } = playbookToolCalls({ ...access, listServers: () => Effect.succeed([listed]) });
 
     expect(await call('search', { terms: 'count notes' })).toMatchObject({
-      output: { tools: [{ server: 'notes', tool: 'note_count', summary: 'Counts the notes.', read_only: false }] },
+      output: { tools: [{ server: 'notes', tool: 'note_count', summary: 'Counts the notes.', mark: 'unmarked' }] },
     });
   });
 });

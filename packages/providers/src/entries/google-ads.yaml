@@ -6,6 +6,11 @@ type: openapi
 document: documents/google-ads.openapi.json
 headers:
   login-customer-id: '{manager_id}'
+marks:
+  reads:
+    - googleads.customers.googleAds.search
+    - googleads.customers.googleAds.searchStream
+    - googleads.googleAdsFields.search
 placeholders:
   manager_id:
     description: The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.

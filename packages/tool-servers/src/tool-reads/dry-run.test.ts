@@ -57,7 +57,7 @@ describe('dry_run', () => {
         caller_may: true,
         playbook_retired: false,
         allowed: true,
-        read_only: true,
+        mark: 'reads',
         arguments: { valid: true, issues: [] },
         server: reached,
       },
@@ -79,7 +79,7 @@ describe('dry_run of a call that would not be made', () => {
         caller_may: false,
         playbook_retired: false,
         allowed: true,
-        read_only: false,
+        mark: 'unmarked',
         arguments: null,
         server: reached,
       },
@@ -97,7 +97,7 @@ describe('dry_run of a call that would not be made', () => {
         caller_may: true,
         playbook_retired: false,
         allowed: false,
-        read_only: null,
+        mark: null,
         arguments: {
           valid: null,
           issues: [
@@ -135,7 +135,7 @@ describe('dry_run of a server that cannot be asked', () => {
       output: {
         would_run: false,
         allowed: true,
-        read_only: null,
+        mark: null,
         arguments: { valid: null, issues: [{ path: '' }] },
         server: { reachable: 'no', because: 'unreachable' },
       },
@@ -144,14 +144,15 @@ describe('dry_run of a server that cannot be asked', () => {
 });
 
 describe('dry_run of the hints and the arguments of a tool', () => {
-  it('answers whether the tool only reads as its server marks it when it lists it', async () => {
+  it('answers the mark of the tool as its server lists it, or as its entry marks it in place of its server', async () => {
     const fake = await serveFakeMcp({ bearer: apiKey, hints: { search: { readOnlyHint: false } } });
     closing.push(fake.close);
-    const { call } = callsOn({ graph: remote(fake) });
+    const { call } = callsOn({ graph: remote(fake), wiki: remote(fake, { marks: { reads: ['search'] } }) });
 
-    expect(await call('dry_run', { server: 'graph', tool: 'search' })).toMatchObject({
-      output: { would_run: true, read_only: false },
-    });
+    expect([
+      await call('dry_run', { server: 'graph', tool: 'search' }),
+      await call('dry_run', { server: 'wiki', tool: 'search' }),
+    ]).toMatchObject([{ output: { would_run: true, mark: 'acts' } }, { output: { would_run: true, mark: 'reads' } }]);
   });
 
   it('answers that execute would call a tool with arguments it does not take, which the tool may refuse', async () => {

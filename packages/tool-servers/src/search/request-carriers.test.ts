@@ -19,6 +19,8 @@ function tool(name: string, description: string, written: Written = {}): ServerT
     ...(reads ? { annotations: { readOnlyHint: true } } : {}),
     ...(deletes ? { annotations: { destructiveHint: true } } : {}),
     ...(answersNoBody ? { answersNoBody: true } : {}),
+    mark: reads ? 'reads' : 'unmarked',
+    marked_by: 'server',
   };
 }
 

@@ -37,14 +37,51 @@ const ListedToolSchema = Schema.Struct({
   ),
 });
 
+export const toolMarks = ['reads', 'acts', 'unmarked'] as const;
+
+const markGivers = ['server', 'method', 'catalogue', 'settings'] as const;
+
+export const marksMeant =
+  'reads when the tool only reads, acts when it may change something, and unmarked when nothing marks it, which counts as acts';
+
+export const ToolMarkSchema = Schema.Literals(toolMarks);
+
+export const MarkedBySchema = Schema.Literals(markGivers).annotate({
+  description:
+    'What gave the mark: server for the hints its server lists it with, or the lack of them, method for the HTTP method of its operation, catalogue for the entry of its provider, settings for its entry in the settings of whoever runs this server',
+});
+
+export type ToolMark = (typeof toolMarks)[number];
+
+export type GivenMark = Exclude<ToolMark, 'unmarked'>;
+
+export type MarkedBy = (typeof markGivers)[number];
+
 export type ToolResult = typeof ToolResultSchema.Type;
 
-export type ListedTool = typeof ListedToolSchema.Type & { readonly answersNoBody?: true };
+export type ServedTool = typeof ListedToolSchema.Type & { readonly answersNoBody?: true };
+
+export interface ToolMarking {
+  readonly mark: ToolMark;
+  readonly marked_by: MarkedBy;
+}
+
+export type ListedTool = ServedTool & ToolMarking;
 
 export type ToolAnnotations = typeof ToolAnnotationsSchema.Type;
 
-export function isReadOnly(annotations: ToolAnnotations | undefined): boolean {
-  return annotations?.readOnlyHint === true;
+export function toolMarkOf(annotations: ToolAnnotations | undefined, override: GivenMark | undefined): ToolMark {
+  if (override !== undefined) {
+    return override;
+  }
+  if (annotations?.readOnlyHint === true) {
+    return 'reads';
+  }
+  return annotations?.readOnlyHint === false || annotations?.destructiveHint === true ? 'acts' : 'unmarked';
+}
+
+export function onlyReads({ mark }: Pick<ToolMarking, 'mark'>): boolean {
+  return mark === 'reads';
 }
 
 type ContentBlock = typeof ContentBlockSchema.Type;

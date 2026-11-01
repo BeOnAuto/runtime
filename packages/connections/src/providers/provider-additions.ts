@@ -101,8 +101,10 @@ export function providingOf(
   if (provider === null) {
     return undefined;
   }
-  const documentServer = Result.getOrUndefined(Result.map(providerNamed(providers, provider), documentServerOf));
-  return { documents: providers.documents, values: providerValues, documentServer };
+  const named = providerNamed(providers, provider);
+  const documentServer = Result.getOrUndefined(Result.map(named, documentServerOf));
+  const marks = Result.getOrUndefined(Result.map(named, ({ entry }) => entry.marks));
+  return { documents: providers.documents, values: providerValues, documentServer, marks };
 }
 
 function isWrittenBy(pointer: string, written: string): boolean {

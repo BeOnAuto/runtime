@@ -5,6 +5,7 @@ import type {
   CalledOnce,
   NotOfferedBecause,
   OneCall,
+  ServerTool,
   StartedFields,
   ToolAccess,
   ToolServer,
@@ -94,7 +95,7 @@ function answeredOf(bytes: number, isError: boolean, number: number) {
 
 function answeredWith(answer: BoardAnswer, number: number): AnsweredOnce {
   const { detail, retryAfterMs } = answer;
-  const answering = { kind: 'answered', annotations: undefined, detail, retryAfterMs } as const;
+  const answering = { kind: 'answered', mark: 'unmarked', detail, retryAfterMs } as const;
   if (answer.outcome === 'result') {
     const bytes = Buffer.byteLength(JSON.stringify(answer.answer));
     return { ...answering, outcome: 'result', answer: answer.answer, answered: answeredOf(bytes, false, number) };
@@ -106,12 +107,14 @@ function answeredWith(answer: BoardAnswer, number: number): AnsweredOnce {
   return { ...answering, outcome, failed: { because: outcome, duration_ms: 3, jsonrpc_id: number } };
 }
 
-function chatTool(name: string, description: string, readOnly: boolean) {
+function chatTool(name: string, description: string, readOnly: boolean): ServerTool {
   return {
     name,
     description,
     input_schema: { type: 'object', properties: { channel: { type: 'string' } } },
     ...(readOnly ? { annotations: { readOnlyHint: true } } : {}),
+    mark: readOnly ? 'reads' : 'unmarked',
+    marked_by: 'server',
   };
 }
 

@@ -1,6 +1,6 @@
 import { Redacted, Result, type Schema } from 'effect';
 
-import type { ListedTool } from '../bounds/tool-results.ts';
+import type { ServedTool } from '../bounds/tool-results.ts';
 import { decodedDocument, type DocumentProblem } from '../openapi/api-document.ts';
 import { derivedTools, type DerivedTools } from '../openapi/api-tools.ts';
 import type { Presented } from '../openapi/security-schemes.ts';
@@ -30,7 +30,7 @@ export function problemsOf(document: DocumentFields): readonly DocumentProblem[]
   );
 }
 
-export function toolNamed(document: DocumentFields, name: string): ListedTool | undefined {
+export function toolNamed(document: DocumentFields, name: string): ServedTool | undefined {
   return toolsOf(document)
     .operations.map(({ tool }) => tool)
     .find((tool) => tool.name === name);

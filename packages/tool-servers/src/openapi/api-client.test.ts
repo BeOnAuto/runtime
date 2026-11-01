@@ -75,6 +75,7 @@ const settings: DescribedApiSettings = {
   orgs: ['acme'],
   playbooks: null,
   allowed: null,
+  marks: { reads: [], acts: [] },
   record_content: true,
   request_id: null,
   secrets: [],

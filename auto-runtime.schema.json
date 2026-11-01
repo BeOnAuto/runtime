@@ -275,6 +275,27 @@
             },
             "description": "The tools of this server a function may name, each named as the server lists it; every tool of the server when left out"
           },
+          "marks": {
+            "type": "object",
+            "properties": {
+              "reads": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The tools that only read, each named as the server lists it"
+              },
+              "acts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The tools that may change something, each named as the server lists it"
+              }
+            },
+            "additionalProperties": false,
+            "description": "The mark of each tool named, which wins over the one the server's hints or the HTTP method of an operation give: reads for a tool that only reads, acts for one that may change something; a tool named in neither keeps the mark it is listed with, and one nothing marks is unmarked, which counts as one that may change something. A name the server does not list is ignored"
+          },
           "record_content": {
             "type": "boolean",
             "description": "Whether the arguments and the answers of this server's calls are kept whole, scrubbed of secrets, in the playbook's ledger, where anyone who may read the playbook reads them; false keeps their sizes alone. Default true"
@@ -482,6 +503,27 @@
               "request_id": {
                 "type": "string",
                 "description": "The response header, or for an MCP server the key of the metadata of a result, in which the server carries its own id of a request, recorded with each call"
+              },
+              "marks": {
+                "type": "object",
+                "properties": {
+                  "reads": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The tools that only read, each named as the server lists it"
+                  },
+                  "acts": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The tools that may change something, each named as the server lists it"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "The mark of each tool named, for the tools the server marks wrongly or not at all: reads for a tool that only reads, acts for one that may change something, each named as the server lists it; for openapi, a tool of the document beside the entries"
               },
               "placeholders": {
                 "type": "object",

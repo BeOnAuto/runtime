@@ -3,7 +3,7 @@ import { Effect, Predicate, type Schema } from 'effect';
 import type { NotOfferedBecause, ToolNotOffered } from '../access/tool-not-offered.ts';
 import type { ToolServerFailed, ServerFailedBecause } from '../access/tool-server-failed.ts';
 import { cutToFailureBound } from '../bounds/call-bounds.ts';
-import { resultText, type AnswerBlock, type ToolAnnotations } from '../bounds/tool-results.ts';
+import { resultText, type AnswerBlock, type ToolMark } from '../bounds/tool-results.ts';
 import type { CallAnswered, CallFailed, SentCallFailedBecause } from '../calls/call-facts.ts';
 import type { SentCall } from '../calls/tool-caller.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
@@ -19,7 +19,7 @@ interface AnsweredCall {
   readonly kind: 'answered';
   readonly detail: string;
   readonly retryAfterMs: number | null;
-  readonly annotations: ToolAnnotations | undefined;
+  readonly mark: ToolMark;
 }
 
 export type AnsweredOnce =
@@ -59,12 +59,8 @@ export function refusedOnce(unusable: Unusable): UnopenedOnce {
   return Predicate.isTagged(refusal, 'tool_not_offered') ? notOfferedOnce(refusal) : failedToOpenOnce(refusal);
 }
 
-export function answeredOnce(
-  sent: SentCall,
-  scrub: (text: string) => string,
-  annotations: ToolAnnotations | undefined,
-): AnsweredOnce {
-  const answered = { kind: 'answered', annotations, retryAfterMs: sent.done.retryAfterMs } as const;
+export function answeredOnce(sent: SentCall, scrub: (text: string) => string, mark: ToolMark): AnsweredOnce {
+  const answered = { kind: 'answered', mark, retryAfterMs: sent.done.retryAfterMs } as const;
   if (!sent.answered) {
     const { done, fact } = sent;
     return { ...answered, outcome: done.outcome, failed: fact, detail: cutToFailureBound(scrub(done.message)) };

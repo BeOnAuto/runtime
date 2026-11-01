@@ -210,7 +210,7 @@ describe('the recipes that give a playbook tools', () => {
     const texts = recipeTextsOf(served);
 
     expect(String(texts['give-tools'])).toContain(
-      "4. To learn what a tool answers, call it with execute, with the arguments its input_schema takes, and read its `text`: that is what the function's model will see. Never make a function to look. A tool whose `read_only` is false may change something, so call it only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+      "4. To learn what a tool answers, call it with execute, with the arguments its input_schema takes, and read its `text`: that is what the function's model will see. Never make a function to look. A tool whose `mark` is acts or unmarked may change something, so call it only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
     );
     expect(String(texts['give-tools'])).toContain(
       'the org it serves, with `allowed` naming the tools a function may call. The server reads them when it starts again.',
@@ -219,7 +219,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3417, 3715,
+      3423, 3715,
     ]);
   });
 });
@@ -238,8 +238,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4088, 2327, 4063, 1741],
-      [3715, 2327, 3417, 1741],
+      [4088, 2327, 4069, 1741],
+      [3715, 2327, 3423, 1741],
     ]);
   });
 });

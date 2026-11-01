@@ -55,7 +55,7 @@ describe('introspect', () => {
 });
 
 describe('introspect of a tool of an MCP server', () => {
-  it('describes a tool whole, with the hints its server gives it or none, to a key that may only read, and calls nothing', async () => {
+  it('describes a tool whole, with the hints its server gives it or none and its mark, to a key that may only read, and calls nothing', async () => {
     const fake = await fakeServer();
     const { call } = callsOn({ graph: remote(fake) });
 
@@ -71,6 +71,8 @@ describe('introspect of a tool of an MCP server', () => {
           description: 'Finds the rows of the graph that match a query.',
           input_schema: queried,
           annotations: { readOnlyHint: true, openWorldHint: true },
+          mark: 'reads',
+          marked_by: 'server',
         },
       },
       {
@@ -80,6 +82,8 @@ describe('introspect of a tool of an MCP server', () => {
           tool: 'echo',
           description: 'Answers with its arguments.',
           input_schema: { type: 'object', properties: {}, required: [] },
+          mark: 'unmarked',
+          marked_by: 'server',
         },
       },
     ]);
@@ -108,6 +112,8 @@ describe('introspect of an operation of an HTTP API', () => {
           required: ['id'],
         },
         annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+        mark: 'reads',
+        marked_by: 'method',
       },
     });
     expect(fake.seen()).toEqual([]);

@@ -1,4 +1,4 @@
-import { Redacted } from 'effect';
+import { Function, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming, secretsOf } from '../index.ts';
@@ -36,6 +36,7 @@ function httpSettings(url: string, changes: Partial<McpServerSettings> = {}): Mc
     orgs: ['acme'],
     playbooks: null,
     allowed: null,
+    marks: { reads: [], acts: [] },
     record_content: false,
     request_id: null,
     secrets: [],
@@ -67,6 +68,7 @@ function linked(settings: McpServerSettings, options: Partial<Parameters<typeof 
     reportOutput: (_server, line) => {
       reported.push(line);
     },
+    reportMarkUnlisted: Function.constVoid,
     ...options,
   });
   closing.push(link.stop);

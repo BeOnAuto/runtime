@@ -6,6 +6,10 @@ type: openapi
 document: documents/search-ads-360.openapi.json
 headers:
   login-customer-id: '{manager_id}'
+marks:
+  reads:
+    - searchads360.customers.searchAds360.search
+    - searchads360.searchAds360Fields.search
 placeholders:
   manager_id:
     description: The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.

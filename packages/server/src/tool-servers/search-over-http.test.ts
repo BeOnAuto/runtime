@@ -69,10 +69,10 @@ const searchTool = {
   server: 'graph',
   tool: 'search',
   summary: 'Finds the rows of the graph that match a query.',
-  read_only: true,
+  mark: 'reads',
 };
 
-const echoTool = { server: 'graph', tool: 'echo', summary: 'Answers with its arguments.', read_only: false };
+const echoTool = { server: 'graph', tool: 'echo', summary: 'Answers with its arguments.', mark: 'unmarked' };
 
 const foundForAlpha = {
   servers: [graphOfAlpha, wikiOfAlpha],

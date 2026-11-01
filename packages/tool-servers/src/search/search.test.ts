@@ -45,10 +45,10 @@ const searchOf = (server: string) => ({
   server,
   tool: 'search',
   summary: 'Finds the rows of the graph that match a query.',
-  read_only: true,
+  mark: 'reads',
 });
 
-const echoOf = (server: string) => ({ server, tool: 'echo', summary: 'Answers with its arguments.', read_only: false });
+const echoOf = (server: string) => ({ server, tool: 'echo', summary: 'Answers with its arguments.', mark: 'unmarked' });
 
 describe('search', () => {
   it('is a query of the playbook at GET /tool-servers/search that reaches the servers outside', async () => {
@@ -81,7 +81,7 @@ describe('search', () => {
 });
 
 describe('search kept to some tools', () => {
-  it('keeps with only the tools their server marks read-only, or the others', async () => {
+  it('keeps with only the tools marked reads, or the others, which may change something', async () => {
     const { call } = await twoServers();
 
     expect([await call('search', { only: 'read' }), await call('search', { only: 'write' })]).toMatchObject([

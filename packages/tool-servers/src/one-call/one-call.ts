@@ -54,7 +54,7 @@ async function calledOnce(call: OneCall, link: ServerLink, { access, journalling
     if (!journey.sent) {
       throw new Error(notRecorded);
     }
-    return answeredOnce(journey, access.secrets.scrub, tool.annotations);
+    return answeredOnce(journey, access.secrets.scrub, tool.mark);
   } finally {
     await slot.release();
   }

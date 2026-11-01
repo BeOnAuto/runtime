@@ -18,19 +18,25 @@ const takingTwo = {
 };
 
 describe('the plain words of introspect', () => {
-  it('say which tool it tried to describe, what it takes and whether it only reads', () => {
+  it('say which tool it tried to describe, what it takes and what its mark means', () => {
     expect(introspectWords?.attempt(asked)).toBe('describe the search tool of graph');
+    const described = { ...asked, description: '', input_schema: { type: 'object' }, marked_by: 'server' } as const;
+
     expect(
       introspectWords?.outcome(
-        { ...asked, description: '', input_schema: takingTwo, annotations: { readOnlyHint: true } },
+        { ...described, input_schema: takingTwo, annotations: { readOnlyHint: true }, mark: 'reads' },
         asked,
       ),
     ).toBe(
-      "The search tool of graph takes 2 arguments, query and max rows, and only reads, by its server's own account; what it does and what it takes are in the details.",
+      'The search tool of graph takes 2 arguments, query and max rows, and is marked reads, so it only reads; what it does and what it takes are in the details.',
     );
-    expect(introspectWords?.outcome({ ...asked, description: '', input_schema: { type: 'object' } }, asked)).toBe(
-      'The search tool of graph takes no arguments and is not marked read-only by its server, so it may change something; what it does and what it takes are in the details.',
-    );
+    expect([
+      introspectWords?.outcome({ ...described, mark: 'acts' }, asked),
+      introspectWords?.outcome({ ...described, mark: 'unmarked' }, asked),
+    ]).toEqual([
+      'The search tool of graph takes no arguments and is marked acts, so it may change something; what it does and what it takes are in the details.',
+      'The search tool of graph takes no arguments and is unmarked, so it counts as one that may change something; what it does and what it takes are in the details.',
+    ]);
   });
 
   it('end a refusal with what search shows, in place of the words for a function', () => {
@@ -64,29 +70,29 @@ const wouldRun = {
   caller_may: true,
   playbook_retired: false,
   allowed: true,
-  read_only: true,
+  mark: 'reads',
   arguments: null,
   server: { reachable: 'yes' },
 };
 
 describe('the plain words of dry_run', () => {
-  it('say that a call would be made, whether the tool only reads, and whether its arguments are what it takes', () => {
+  it('say that a call would be made, what the mark of the tool means, and whether its arguments are what it takes', () => {
     expect(dryRunWords?.attempt(asked)).toBe('dry run the search tool of graph');
     expect([
       dryRunWords?.outcome(wouldRun, asked),
-      dryRunWords?.outcome({ ...wouldRun, read_only: false, arguments: { valid: true, issues: [] } }, asked),
-      dryRunWords?.outcome({ ...wouldRun, arguments: { valid: false, issues: [] } }, asked),
-      dryRunWords?.outcome({ ...wouldRun, arguments: { valid: null, issues: [] } }, asked),
+      dryRunWords?.outcome({ ...wouldRun, mark: 'acts', arguments: { valid: true, issues: [] } }, asked),
+      dryRunWords?.outcome({ ...wouldRun, mark: 'unmarked', arguments: { valid: false, issues: [] } }, asked),
+      dryRunWords?.outcome({ ...wouldRun, mark: null, arguments: { valid: null, issues: [] } }, asked),
     ]).toEqual([
-      "A call of the search tool of graph would be made now, and the tool only reads, by its server's own account.",
-      'A call of the search tool of graph would be made now, and the tool may change something, and its arguments are what it takes.',
-      "A call of the search tool of graph would be made now, and the tool only reads, by its server's own account, but its arguments are not what it takes.",
-      "A call of the search tool of graph would be made now, and the tool only reads, by its server's own account, though its arguments could not be checked on this server.",
+      'A call of the search tool of graph would be made now, and the tool is marked reads, so it only reads.',
+      'A call of the search tool of graph would be made now, and the tool is marked acts, so it may change something, and its arguments are what it takes.',
+      'A call of the search tool of graph would be made now, and the tool is unmarked, so it counts as one that may change something, but its arguments are not what it takes.',
+      'A call of the search tool of graph would be made now, and the tool may change something, though its arguments could not be checked on this server.',
     ]);
   });
 
   it('say every reason a call would not be made', () => {
-    const refused = { ...wouldRun, would_run: false, read_only: null };
+    const refused = { ...wouldRun, would_run: false, mark: null };
 
     expect([
       dryRunWords?.outcome({ ...refused, caller_may: false }, asked),

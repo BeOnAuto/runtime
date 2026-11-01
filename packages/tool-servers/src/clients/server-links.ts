@@ -1,7 +1,8 @@
+import { markedTool, unlistedMarksOf } from '../listing/tool-marks.ts';
 import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import { ignored } from './ignored.ts';
 import { openerOf, type LinkOptions } from './link-openers.ts';
-import type { ServerClient } from './server-client.ts';
+import type { ServedClient, ServerClient } from './server-client.ts';
 import { ConnectionBroken, isCredentialRefused } from './server-failures.ts';
 
 export type CredentialRefused = () => Promise<string>;
@@ -73,6 +74,29 @@ function tellingRefusals(client: ServerClient, refused: CredentialRefused): Serv
   };
 }
 
+type MarkUnlisted = LinkOptions['reportMarkUnlisted'];
+
+function markedClient(client: ServedClient, settings: LinkedServerSettings, unlisted: MarkUnlisted): ServerClient {
+  return {
+    ...client,
+    listTools: async (timeoutMs) => {
+      const tools = await client.listTools(timeoutMs);
+      for (const tool of unlistedMarksOf(tools, settings)) {
+        unlisted(settings.name, tool);
+      }
+      return tools.map((tool) => markedTool(tool, settings));
+    },
+  };
+}
+
+function markingListings(
+  open: () => Promise<ServedClient>,
+  settings: LinkedServerSettings,
+  unlisted: MarkUnlisted,
+): () => Promise<ServerClient> {
+  return async () => markedClient(await open(), settings, unlisted);
+}
+
 function refusalsTold(open: () => Promise<ServerClient>, refused?: CredentialRefused): () => Promise<ServerClient> {
   return refused === undefined
     ? open
@@ -88,7 +112,8 @@ export function serverLink(
   options: LinkOptions,
   credentialRefused?: CredentialRefused,
 ): ServerLink {
-  const held = heldClient(refusalsTold(openerOf(settings, options), credentialRefused));
+  const marking = markingListings(openerOf(settings, options), settings, options.reportMarkUnlisted);
+  const held = heldClient(refusalsTold(marking, credentialRefused));
   let holders = 0;
   return {
     settings,

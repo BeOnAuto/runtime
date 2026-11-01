@@ -4,12 +4,13 @@ import { fileURLToPath } from 'node:url';
 import { importedWithoutAnAddress } from '@on.auto/operations/testing';
 import { shippedFileIn } from '@on.auto/shipped-files';
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { Result } from 'effect';
+import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
   documentServerOf,
   operatorVariablesOf,
+  providerNamed,
   readProviders,
   type Provider,
   providersShippedRoots,
@@ -222,6 +223,31 @@ describe('the servers of the shipped providers', () => {
     expect([...shipped.documents.keys()].toSorted()).toEqual(documentsBesideTheEntries);
     expect(documentsBesideTheEntries.map((written) => shipped.documents.get(written))).toEqual(onDisk);
     expect(documentsBesideTheEntries.length).toBeGreaterThan(0);
+  });
+});
+
+const OperationsSchema = Schema.Record(Schema.String, Schema.Struct({ operationId: Schema.String }));
+
+const decodeOperations = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Struct({ paths: Schema.Record(Schema.String, OperationsSchema) })),
+);
+
+const { entry: analytics } = Result.getOrThrow(providerNamed(shipped, 'google-analytics'));
+
+function markedLackingIn({ entry }: Pick<Provider, 'entry'>): readonly string[] {
+  const document = shipped.documents.get(entry.document ?? '');
+  const { paths } = decodeOperations(document?.text ?? '{"paths":{}}');
+  const operations = new Set(
+    Object.values(paths).flatMap((each) => Object.values(each).map(({ operationId }) => operationId)),
+  );
+  const marked = [...(entry.marks?.reads ?? []), ...(entry.marks?.acts ?? [])];
+  return document === undefined ? [] : marked.filter((tool) => !operations.has(tool));
+}
+
+describe('the marks of the shipped providers', () => {
+  it('name only operations of the document beside the entry, and a name the document lacks is refused', () => {
+    expect(shipped.providers.flatMap((provider) => markedLackingIn(provider))).toEqual([]);
+    expect(markedLackingIn({ entry: { ...analytics, marks: { reads: ['runReport'] } } })).toEqual(['runReport']);
   });
 });
 

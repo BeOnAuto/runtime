@@ -1,7 +1,7 @@
 import { Caller, PlaybookContext, PlaybookLifecycle, defineQuery, type Permission } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 
-import { isReadOnly } from '../bounds/tool-results.ts';
+import type { ToolMark } from '../bounds/tool-results.ts';
 import { ArgumentsField, ServerField, ToolField } from '../names/tool-fields.ts';
 import { checkedArguments, uncheckable, type ArgumentCheck } from './argument-checks.ts';
 import { DryRunSchema, type DryRun } from './dry-run-schema.ts';
@@ -11,8 +11,8 @@ import { dryRunWords, readingTask, toolRead } from './read-words.ts';
 import { toolRemedies, unavailableOf } from './tool-refusals.ts';
 
 const description = [
-  'Answers what execute would check for one tool and its arguments, without calling the tool: whether the caller may execute, whether the playbook is retired, whether whoever runs this server allows the tool, whether it only reads, whether the arguments match its input schema and whether its server can be reached just now.',
-  'Use it before execute when a call may change something, or when the arguments are unsure.',
+  'Answers what execute would check for one tool and its arguments, without calling the tool: whether the caller may execute, whether the playbook is retired, whether whoever runs this server allows the tool, its mark, whether the arguments match its input schema and whether its server can be reached just now.',
+  'Use it before execute when a call may act, or when the arguments are unsure.',
   'Nothing is sent to the tool and nothing is recorded.',
   '`server` and `tool` name the tool as search lists it, and `arguments`, when given, are the object to check.',
 ].join(' ');
@@ -32,8 +32,8 @@ function argumentsOf(seen: Seen, input: Schema.JsonObject | undefined): Argument
   return 'tool' in seen ? checkedArguments(seen.tool.input_schema, input) : uncheckable(seen.unseen);
 }
 
-function readOnlyOf(seen: Seen): boolean | null {
-  return 'tool' in seen ? isReadOnly(seen.tool.annotations) : null;
+function markOf(seen: Seen): ToolMark | null {
+  return 'tool' in seen ? seen.tool.mark : null;
 }
 
 export function defineDryRun(access: ToolLookup) {
@@ -63,7 +63,7 @@ export function defineDryRun(access: ToolLookup) {
         caller_may: callerMay,
         playbook_retired: retired,
         allowed,
-        read_only: readOnlyOf(seen),
+        mark: markOf(seen),
         arguments: argumentsOf(seen, input),
         server: seen.server,
       };

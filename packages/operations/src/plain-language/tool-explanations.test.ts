@@ -9,7 +9,7 @@ const serverFailed =
   'Nothing was called through it, so it can be tried again later; if it keeps happening, whoever runs the server can look into that tool server.';
 
 const toolsOnlyRead =
-  "Every tool it called only reads, by its server's own account, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.";
+  "Every tool it called is marked reads, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.";
 
 const effectUnknown =
   'It is not run again by itself: a person decides, or a workflow rule that names this kind; its history shows the call.';
@@ -118,11 +118,11 @@ describe('explanationOf a run that needs tools', () => {
     expect(changing.map(([, rejection]) => rejection.kind)).toEqual(Array.from({ length: 6 }, () => 'effect_unknown'));
   });
 
-  it('says why the effect is not known in 105 characters and what to do in 117, and that tools that only read may run again in 171', () => {
+  it('says why the effect is not known in 105 characters and what to do in 117, and that tools marked reads may run again in 147', () => {
     const unknown = explanationOf({ reason: 'conflict', kind: 'effect_unknown' });
     const onlyRead = explanationOf({ reason: 'unavailable', kind: 'tools_unfinished' });
 
-    expect([unknown.why.length, unknown.remedy.length, onlyRead.remedy.length]).toEqual([105, 117, 171]);
+    expect([unknown.why.length, unknown.remedy.length, onlyRead.remedy.length]).toEqual([105, 117, 147]);
     expect(
       explanationOf({ reason: 'conflict', kind: 'effect_unknown', because: 'tool_error' }).why.slice(
         unknown.why.length + 2,
@@ -164,7 +164,7 @@ const calledOnlyReading = { ...calledTools, because: 'only_read' } as const;
 describe('a run not made again under its id after calling tools that only read', () => {
   it('says that nothing was changed, which a run whose tools may have changed something never says', () => {
     expect(unsuccessfulWords('run the function', 'command', calledOnlyReading)).toBe(
-      "Could not run the function: an attempt of this run under the same id did not succeed, and every tool it called only reads, by its server's own account. Nothing was changed. So it was not run again under its id: start a new run instead; its history shows what it called.",
+      'Could not run the function: an attempt of this run under the same id did not succeed, and every tool it called is marked reads. Nothing was changed. So it was not run again under its id: start a new run instead; its history shows what it called.',
     );
     expect(unsuccessfulWords('run the function', 'command', calledTools)).not.toContain('Nothing was changed.');
   });

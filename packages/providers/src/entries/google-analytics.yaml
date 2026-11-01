@@ -4,6 +4,15 @@ description: Run Google Analytics 4 reports, pivot, batch and realtime reports, 
 website: https://developers.google.com/analytics/devguides/reporting/data/v1
 type: openapi
 document: documents/google-analytics.openapi.json
+marks:
+  reads:
+    - analyticsdata.properties.runReport
+    - analyticsdata.properties.runPivotReport
+    - analyticsdata.properties.batchRunReports
+    - analyticsdata.properties.batchRunPivotReports
+    - analyticsdata.properties.runRealtimeReport
+    - analyticsdata.properties.checkCompatibility
+    - analyticsdata.properties.audienceExports.query
 credentials:
   - kind: authorization
     issuer: https://accounts.google.com

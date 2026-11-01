@@ -1,4 +1,4 @@
-import { ServerEntrySchema, serverNameProblems } from '@on.auto/tool-servers';
+import { markIssuesOf, ServerEntrySchema, serverNameProblems } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { CredentialWaySchema } from './credential-ways.ts';
@@ -6,7 +6,7 @@ import { placementIssuesOf } from './entry-placeholders.ts';
 import { localDocumentOf, writtenIssuesOf } from './entry-values.ts';
 import { PlaceholdersSchema } from './placeholders.ts';
 
-const { type, url, document, base_url, headers, query_params, request_id } = ServerEntrySchema.fields;
+const { type, url, document, base_url, headers, query_params, request_id, marks } = ServerEntrySchema.fields;
 
 const mostDescriptionCharacters = 300;
 
@@ -42,6 +42,10 @@ const ProviderEntryFieldsSchema = Schema.Struct({
     description: `For openapi, query parameters sent with every call, ${ofWhoeverRunsIt}`,
   }),
   request_id,
+  marks: marks.annotate({
+    description:
+      'The mark of each tool named, for the tools the server marks wrongly or not at all: reads for a tool that only reads, acts for one that may change something, each named as the server lists it; for openapi, a tool of the document beside the entries',
+  }),
   placeholders: Schema.optionalKey(
     PlaceholdersSchema.annotate({
       description:
@@ -90,6 +94,10 @@ function typeIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
 const oneWayOfEachKind =
   'Expected a kind no earlier way has, since a provider takes one way of each kind, and an authorization way names in more what a later consent may add';
 
+function markedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
+  return markIssuesOf(entry.marks).map(({ path, detail }) => ({ path: ['marks', ...path], issue: detail }));
+}
+
 function wayIssuesOf({ credentials }: ProviderEntry): readonly EntryIssue[] {
   const kinds = credentials.map(({ kind }) => kind);
   return kinds.flatMap((kind, index): readonly EntryIssue[] =>
@@ -103,6 +111,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...websiteIssuesOf(entry),
     ...typeIssuesOf(entry),
     ...wayIssuesOf(entry),
+    ...markedIssuesOf(entry),
     ...placementIssuesOf(entry),
     ...writtenIssuesOf(entry),
   ]),

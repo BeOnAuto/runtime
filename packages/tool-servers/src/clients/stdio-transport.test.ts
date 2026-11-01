@@ -1,4 +1,4 @@
-import { Redacted, Schema } from 'effect';
+import { Function, Redacted, Schema } from 'effect';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
@@ -40,6 +40,7 @@ function stdioSettings(args: readonly string[], changes: Partial<StdioServerSett
     env: environment,
     orgs: ['acme'],
     allowed: null,
+    marks: { reads: [], acts: [] },
     playbooks: null,
     record_content: false,
     request_id: null,
@@ -62,6 +63,7 @@ function linkTo(settings: StdioServerSettings, openMs = patientMs) {
     reportOutput: (server, line) => {
       lines.push(`${server}: ${line}`);
     },
+    reportMarkUnlisted: Function.constVoid,
   });
   return { link, lines };
 }

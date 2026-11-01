@@ -1,5 +1,6 @@
 import { Schema } from 'effect';
 
+import { marksMeant, ToolMarkSchema } from '../bounds/tool-results.ts';
 import { UnavailableBecauseSchema } from '../listing/tool-server.ts';
 import { ArgumentCheckSchema } from './argument-checks.ts';
 
@@ -31,9 +32,8 @@ export const DryRunSchema = Schema.Struct({
   allowed: Schema.Boolean.annotate({
     description: "Whether whoever runs this server allows the tool on its server's entry, for runs and execute alike",
   }),
-  read_only: Schema.NullOr(Schema.Boolean).annotate({
-    description:
-      "Whether the tool's server marks it read-only; null when its listing was not read, as for a tool that is not allowed or a server that could not be asked",
+  mark: Schema.NullOr(ToolMarkSchema).annotate({
+    description: `The mark of the tool: ${marksMeant}; null when its listing was not read, as for a tool that is not allowed or a server that could not be asked`,
   }),
   arguments: Schema.NullOr(ArgumentCheckSchema).annotate({
     description: "The arguments checked against the tool's input schema; null when none were given",

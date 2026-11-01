@@ -4,7 +4,7 @@ import { mostResultBytes } from '@on.auto/definitions';
 import { issuesDetail } from '@on.auto/json-schema';
 import { Conflict, Unavailable } from '@on.auto/operations';
 import { capitalized } from '@on.auto/phrasing';
-import { answerDocument, isReadOnly, toolInWords, type AnsweredOnce, type CalledOnce } from '@on.auto/tool-servers';
+import { answerDocument, onlyReads, toolInWords, type AnsweredOnce, type CalledOnce } from '@on.auto/tool-servers';
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result, Schema } from 'effect';
 
@@ -39,8 +39,8 @@ interface Reading {
   readonly unreadable: (detail: string) => Ending;
 }
 
-function unreadableAfter({ annotations }: Answered): (detail: string) => Ending {
-  return (detail) => unworkable(isReadOnly(annotations) ? detail : `${detail}. ${mayHaveActed}`);
+function unreadableAfter(answer: Answered): (detail: string) => Ending {
+  return (detail) => unworkable(onlyReads(answer) ? detail : `${detail}. ${mayHaveActed}`);
 }
 
 function checkedValue(document: CallDocument, value: Schema.Json, { named, at, unreadable }: Reading): Ending {
@@ -88,7 +88,7 @@ function afterSending(called: AnsweredOnce, because: 'tool_error' | 'server_fail
     ...(called.retryAfterMs === null ? {} : { record: { retry_after_ms: called.retryAfterMs } }),
   };
   return Effect.fail(
-    isReadOnly(called.annotations)
+    onlyReads(called)
       ? new Unavailable({ ...ending, kind: 'tools_unfinished' })
       : new Conflict({ ...ending, kind: 'effect_unknown' }),
   );

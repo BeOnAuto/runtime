@@ -39,7 +39,7 @@ describe('the tools of an HTTP API', () => {
           Person: { type: 'object', properties: { name: { type: 'string' } } },
         },
       },
-      annotations: { idempotentHint: true, openWorldHint: true },
+      annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
     });
   });
 });
@@ -145,19 +145,19 @@ describe('the size of the tools of an HTTP API', () => {
 });
 
 describe('the hints and the names of the tools of an HTTP API', () => {
-  it('are read-only for GET and HEAD, destructive for DELETE, idempotent for both and for PUT, and open to the world', () => {
+  it('are read-only for GET and HEAD, not read-only for POST, PUT, PATCH and DELETE, destructive for DELETE, idempotent for GET, HEAD, PUT and DELETE, and open to the world', () => {
     const tools = toolsOf(
       documentOf({ '/notes': { get: {}, head: {}, post: {}, put: {}, patch: {}, delete: {}, options: {} } }),
     );
 
     expect(tools.operations.map(({ tool }) => [tool.name, tool.annotations])).toEqual([
       ['get_notes', { readOnlyHint: true, idempotentHint: true, openWorldHint: true }],
-      ['put_notes', { idempotentHint: true, openWorldHint: true }],
-      ['post_notes', { openWorldHint: true }],
-      ['delete_notes', { destructiveHint: true, idempotentHint: true, openWorldHint: true }],
+      ['put_notes', { readOnlyHint: false, idempotentHint: true, openWorldHint: true }],
+      ['post_notes', { readOnlyHint: false, openWorldHint: true }],
+      ['delete_notes', { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true }],
       ['options_notes', { openWorldHint: true }],
       ['head_notes', { readOnlyHint: true, idempotentHint: true, openWorldHint: true }],
-      ['patch_notes', { openWorldHint: true }],
+      ['patch_notes', { readOnlyHint: false, openWorldHint: true }],
     ]);
   });
 

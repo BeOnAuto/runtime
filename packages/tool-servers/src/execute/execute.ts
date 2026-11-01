@@ -12,7 +12,7 @@ import { answeredOn, offeredIn } from './executed-call.ts';
 const description = [
   "Calls one tool of a tool server this playbook's functions may use, with the arguments it is given, as a run of a reasoning function would call it, and answers what that run's model would see.",
   'Use it when the person asks for what a tool does, or to learn what a tool answers before a function names it, in place of a function made to look.',
-  'The call is live and acts as the playbook, so it needs the permission to change the playbook whatever the tool does; search says which tools only read, and dry_run what this would check.',
+  'The call is live and acts as the playbook, so it needs the permission to change the playbook whatever the tool does; search says the mark of each tool, and dry_run what this would check.',
   "It is recorded in the playbook's history, with its content where the server's entry keeps it.",
   '`server` and `tool` name the tool as search lists it, and `arguments` is the object its input_schema takes.',
 ].join(' ');

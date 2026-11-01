@@ -58,7 +58,13 @@ describe('introspect over HTTP', () => {
 
     expect(fromTheServer).toMatchObject({
       status: 200,
-      body: { server: 'graph', tool: 'search', annotations: { readOnlyHint: true, openWorldHint: true } },
+      body: {
+        server: 'graph',
+        tool: 'search',
+        annotations: { readOnlyHint: true, openWorldHint: true },
+        mark: 'reads',
+        marked_by: 'server',
+      },
     });
     expect(fromTheApi).toMatchObject({
       status: 200,
@@ -66,7 +72,9 @@ describe('introspect over HTTP', () => {
         server: 'billing',
         tool: 'updateProfile',
         input_schema: { required: ['id', 'body'] },
-        annotations: { idempotentHint: true, openWorldHint: true },
+        annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: true },
+        mark: 'acts',
+        marked_by: 'method',
       },
     });
     expect([graph.received(), billing.seen()]).toEqual([[], []]);
@@ -90,7 +98,7 @@ describe('validate and dry_run over HTTP', () => {
     expect(validated).toMatchObject({ status: 200, body: { valid: false, issues: [{}, {}] } });
     expect(dryRun).toMatchObject({
       status: 200,
-      body: { would_run: false, caller_may: false, allowed: true, read_only: true, arguments: { valid: true } },
+      body: { would_run: false, caller_may: false, allowed: true, mark: 'reads', arguments: { valid: true } },
     });
     expect([graph.received(), billing.seen()]).toEqual([[], []]);
   });

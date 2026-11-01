@@ -41,7 +41,7 @@ function fieldsOfEachServer(found: unknown): readonly (readonly string[])[] {
 const aSummary: unknown = expect.any(String);
 
 const searchThatReads: unknown = expect.arrayContaining([
-  { server: 'slack', tool: 'search', summary: aSummary, read_only: true },
+  { server: 'slack', tool: 'search', summary: aSummary, mark: 'reads' },
 ]);
 
 async function askedBeforeAndAfterThePlaybookIsMade() {

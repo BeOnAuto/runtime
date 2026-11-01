@@ -10,22 +10,24 @@ import {
   partsOfCursor,
 } from '@on.auto/operations';
 import { counted, quoted, type Noun } from '@on.auto/phrasing';
-import { Effect, Option, Order, Schema } from 'effect';
+import { Effect, Option, Order, Schema, Struct } from 'effect';
 
-import type { ToolAnnotations } from '../bounds/tool-results.ts';
+import { MarkedBySchema, marksMeant, ToolAnnotationsSchema, ToolMarkSchema } from '../bounds/tool-results.ts';
 import { unavailableServerOf } from '../tool-reads/tool-refusals.ts';
 import type { ListingWays } from './listing-ways.ts';
 import type { ServerTool } from './tool-server.ts';
 
 const description = [
   "Lists the tools a connection's server offers now, those its entry allows, by name, a page at a time.",
-  'Each has its title where the server gives one, its whole description and its hints: read_only, destructive, idempotent and open_world.',
+  'Each has its title where the server gives one, its whole description, its hints and its mark.',
   'Use it to show the person what one connection can do; search finds tools across servers.',
   '`cursor` is the next_cursor of the page before, to read on only as the person needs.',
 ].join(' ');
 
-const hinted = (what: string) =>
-  Schema.optionalKey(Schema.Boolean.annotate({ description: `Whether its server marks the tool ${what}` }));
+const HintsSchema = Schema.Struct(Struct.omit(ToolAnnotationsSchema.fields, ['readOnlyHint'])).annotate({
+  description:
+    'The hints its server gives the tool, destructiveHint, idempotentHint and openWorldHint, as it gives them; absent when it gives none. Whether it only reads is its mark',
+});
 
 const ConnectionToolSchema = Schema.Struct({
   name: Schema.String.annotate({ description: 'The name of the tool, which a function writes after the slash' }),
@@ -33,11 +35,12 @@ const ConnectionToolSchema = Schema.Struct({
   description: Schema.String.annotate({
     description: 'What the tool does, as its server describes it, cut to 4 KiB; empty when it gives none',
   }),
-  read_only: hinted('read-only'),
-  destructive: hinted('destructive, where it is not read-only'),
-  idempotent: hinted('idempotent'),
-  open_world: hinted('as reaching beyond its server'),
-}).annotate({ description: 'A tool, with the hints its server gives it, each absent where it gives none' });
+  hints: Schema.optionalKey(HintsSchema),
+  mark: ToolMarkSchema.annotate({ description: `The mark of the tool: ${marksMeant}` }),
+  marked_by: MarkedBySchema,
+}).annotate({
+  description: 'A tool, with the hints its server gives it and its mark',
+});
 
 const ConnectionToolsSchema = Schema.Struct({
   connection: Schema.String.annotate({ description: 'The id of the connection, as given' }),
@@ -50,28 +53,21 @@ const ConnectionToolsSchema = Schema.Struct({
 
 type ConnectionTool = typeof ConnectionToolSchema.Type;
 
-const hintNames: readonly (readonly [
-  keyof ToolAnnotations,
-  'read_only' | 'destructive' | 'idempotent' | 'open_world',
-])[] = [
-  ['readOnlyHint', 'read_only'],
-  ['destructiveHint', 'destructive'],
-  ['idempotentHint', 'idempotent'],
-  ['openWorldHint', 'open_world'],
-];
-
-function hintsOf({ annotations = {} }: ServerTool): Partial<Record<(typeof hintNames)[number][1], boolean>> {
-  return Object.fromEntries(
-    hintNames.flatMap(([hint, name]) => {
-      const given = annotations[hint];
-      return given === undefined ? [] : [[name, given]];
-    }),
-  );
+function hintsOf({ annotations = {} }: ServerTool): Pick<ConnectionTool, 'hints'> {
+  const hints = Struct.omit(annotations, ['readOnlyHint']);
+  return Object.keys(hints).length === 0 ? {} : { hints };
 }
 
 function shownOf(tool: ServerTool): ConnectionTool {
-  const { name, title, description: what } = tool;
-  return { name, ...(title === undefined ? {} : { title }), description: what, ...hintsOf(tool) };
+  const { name, title, description: what, mark, marked_by: markedBy } = tool;
+  return {
+    name,
+    ...(title === undefined ? {} : { title }),
+    description: what,
+    ...hintsOf(tool),
+    mark,
+    marked_by: markedBy,
+  };
 }
 
 const byName = Order.mapInput(Order.String, ({ name }: ServerTool) => name);

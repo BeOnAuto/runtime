@@ -96,7 +96,7 @@ const toolsWereCalled = new Conflict({
 
 const toolsOnlyRead = new Conflict({
   detail:
-    "The run called tools and did not succeed, so it is not run again under its id; every tool it called only reads, by its server's own account, so nothing was changed: start a new run with another run id, and read with list_playbook_events, given its run id, what it called",
+    'The run called tools and did not succeed, so it is not run again under its id; every tool it called is marked reads, so nothing was changed: start a new run with another run id, and read with list_playbook_events, given its run id, what it called',
   kind: 'tools_called',
   because: 'only_read',
 });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { linesLoggedBy } from '../testing/records/logged-lines.ts';
-import { logLeftOutOperation, logServerMessage } from './tool-server-logging.ts';
+import { logLeftOutOperation, logMarkUnlisted, logServerMessage } from './tool-server-logging.ts';
 
 describe('logServerMessage', () => {
   it('tells a line a tool server wrote, as information', async () => {
@@ -59,5 +59,16 @@ describe('logLeftOutOperation', () => {
       '"message":"The tool server billing offers no tool for the operation upload (POST /uploads) of its document: its body is application/xml, and a call sends a body only as JSON","level":"WARN"',
     );
     expect(line).toContain('"annotations":{"tool_server":"billing"}');
+  });
+});
+
+describe('logMarkUnlisted', () => {
+  it('warns of a tool the entry of a tool server marks that the server does not list, naming both', async () => {
+    const [line] = await linesLoggedBy(logMarkUnlisted('graph', 'archive_note'));
+
+    expect(line).toContain(
+      '"message":"The tool server graph lists no tool archive_note, which its entry marks","level":"WARN"',
+    );
+    expect(line).toContain('"annotations":{"tool_server":"graph","tool":"archive_note"}');
   });
 });

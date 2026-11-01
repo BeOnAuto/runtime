@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { endOfCall } from './call-ends.ts';
 
-const answering = { kind: 'answered', annotations: undefined } as const;
+const answering = { kind: 'answered', mark: 'unmarked' } as const;
 
 const answered = {
   is_error: false,

@@ -1,6 +1,6 @@
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
 import { callsEnded, noCalls } from '../bounds/call-bounds.ts';
-import { isReadOnly } from '../bounds/tool-results.ts';
+import { onlyReads } from '../bounds/tool-results.ts';
 import { modelFacingNames } from '../names/model-facing-names.ts';
 import { toolsInWords } from '../names/tool-words.ts';
 import { offeredToolOf, type OfferedTool } from './offered-tools.ts';
@@ -58,7 +58,7 @@ export function runTools(parts: RunToolsParts): RunTools {
     ended: stop.signal,
     ending: () => ending,
     calledAny: () => used.length > 0,
-    calledOnlyReadOnly: () => used.every(({ tool }) => isReadOnly(tool.annotations)),
+    calledOnlyReadOnly: () => used.every(({ tool }) => onlyReads(tool)),
     usedInWords: () => toolsInWords(used.map(({ reference }) => reference)),
     answeredBytes: () => answeredBytes,
     close: async () => {

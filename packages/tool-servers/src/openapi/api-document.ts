@@ -1,5 +1,7 @@
 import { JsonPointer, Predicate, Result, Schema, SchemaIssue, type StandardSchema } from 'effect';
 
+import type { ToolAnnotations } from '../bounds/tool-results.ts';
+
 export interface DocumentProblem {
   readonly pointer: string;
   readonly detail: string;
@@ -99,6 +101,28 @@ const ApiDocumentSchema = Schema.Struct({
 export type ApiDocument = typeof ApiDocumentSchema.Type;
 
 export type Method = (typeof methods)[number];
+
+const readOnlyMethods: ReadonlySet<Method> = new Set(['get', 'head']);
+
+const actingMethods: ReadonlySet<Method> = new Set(['post', 'put', 'patch', 'delete']);
+
+const idempotentMethods: ReadonlySet<Method> = new Set(['get', 'head', 'put', 'delete']);
+
+function readingOf(method: Method): Pick<ToolAnnotations, 'readOnlyHint'> {
+  if (readOnlyMethods.has(method)) {
+    return { readOnlyHint: true };
+  }
+  return actingMethods.has(method) ? { readOnlyHint: false } : {};
+}
+
+export function annotationsOf(method: Method): ToolAnnotations {
+  return {
+    ...readingOf(method),
+    ...(method === 'delete' ? { destructiveHint: true } : {}),
+    ...(idempotentMethods.has(method) ? { idempotentHint: true } : {}),
+    openWorldHint: true,
+  };
+}
 
 export type Operation = typeof OperationSchema.Type;
 

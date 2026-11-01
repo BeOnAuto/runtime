@@ -86,8 +86,8 @@ describe('the words of a run that asks a system, kept plain', () => {
     const { ran, read } = await saidOf(server, longestName);
 
     expect(ran).toBe(
-      `Could not run the interaction function “${longestName}”: it called tools but could not finish, because the tool answered an error, which the details below give. Nothing was changed. Every tool it called only reads, by its server's own account, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.`,
+      `Could not run the interaction function “${longestName}”: it called tools but could not finish, because the tool answered an error, which the details below give. Nothing was changed. Every tool it called is marked reads, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.`,
     );
-    expect([read.length, ran.length]).toEqual([382, 387]);
+    expect([read.length, ran.length]).toEqual([358, 363]);
   });
 });

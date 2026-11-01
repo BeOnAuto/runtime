@@ -1241,7 +1241,7 @@
       "get": {
         "operationId": "search_in_org",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first. A server that cannot be asked says why. Each server names the playbooks it serves. With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why. Each server names the playbooks it serves. With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.",
         "tags": [
           "tool-servers"
         ],
@@ -1289,7 +1289,7 @@
                 "read",
                 "write"
               ],
-              "description": "read keeps the tools their server marks read-only, write the others, which may change something"
+              "description": "read keeps the tools marked reads, write the others"
             }
           }
         ],
@@ -1458,16 +1458,21 @@
                             "type": "string",
                             "description": "The first sentence of what the tool does, as its server describes it, at most 300 characters"
                           },
-                          "read_only": {
-                            "type": "boolean",
-                            "description": "Whether its server marks the tool read-only"
+                          "mark": {
+                            "type": "string",
+                            "enum": [
+                              "reads",
+                              "acts",
+                              "unmarked"
+                            ],
+                            "description": "The mark of the tool: reads when the tool only reads, acts when it may change something, and unmarked when nothing marks it, which counts as acts"
                           }
                         },
                         "required": [
                           "server",
                           "tool",
                           "summary",
-                          "read_only"
+                          "mark"
                         ],
                         "additionalProperties": false
                       },
@@ -1570,7 +1575,7 @@
       "get": {
         "operationId": "list_connection_tools",
         "summary": "List the tools of a connection",
-        "description": "Lists the tools a connection's server offers now, those its entry allows, by name, a page at a time. Each has its title where the server gives one, its whole description and its hints: read_only, destructive, idempotent and open_world. Use it to show the person what one connection can do; search finds tools across servers. `cursor` is the next_cursor of the page before, to read on only as the person needs.",
+        "description": "Lists the tools a connection's server offers now, those its entry allows, by name, a page at a time. Each has its title where the server gives one, its whole description, its hints and its mark. Use it to show the person what one connection can do; search finds tools across servers. `cursor` is the next_cursor of the page before, to read on only as the person needs.",
         "tags": [
           "connections"
         ],
@@ -1646,29 +1651,50 @@
                             "type": "string",
                             "description": "What the tool does, as its server describes it, cut to 4 KiB; empty when it gives none"
                           },
-                          "read_only": {
-                            "type": "boolean",
-                            "description": "Whether its server marks the tool read-only"
+                          "hints": {
+                            "type": "object",
+                            "properties": {
+                              "destructiveHint": {
+                                "type": "boolean"
+                              },
+                              "idempotentHint": {
+                                "type": "boolean"
+                              },
+                              "openWorldHint": {
+                                "type": "boolean"
+                              }
+                            },
+                            "additionalProperties": false,
+                            "description": "The hints its server gives the tool, destructiveHint, idempotentHint and openWorldHint, as it gives them; absent when it gives none. Whether it only reads is its mark"
                           },
-                          "destructive": {
-                            "type": "boolean",
-                            "description": "Whether its server marks the tool destructive, where it is not read-only"
+                          "mark": {
+                            "type": "string",
+                            "enum": [
+                              "reads",
+                              "acts",
+                              "unmarked"
+                            ],
+                            "description": "The mark of the tool: reads when the tool only reads, acts when it may change something, and unmarked when nothing marks it, which counts as acts"
                           },
-                          "idempotent": {
-                            "type": "boolean",
-                            "description": "Whether its server marks the tool idempotent"
-                          },
-                          "open_world": {
-                            "type": "boolean",
-                            "description": "Whether its server marks the tool as reaching beyond its server"
+                          "marked_by": {
+                            "type": "string",
+                            "enum": [
+                              "server",
+                              "method",
+                              "catalogue",
+                              "settings"
+                            ],
+                            "description": "What gave the mark: server for the hints its server lists it with, or the lack of them, method for the HTTP method of its operation, catalogue for the entry of its provider, settings for its entry in the settings of whoever runs this server"
                           }
                         },
                         "required": [
                           "name",
-                          "description"
+                          "description",
+                          "mark",
+                          "marked_by"
                         ],
                         "additionalProperties": false,
-                        "description": "A tool, with the hints its server gives it, each absent where it gives none"
+                        "description": "A tool, with the hints its server gives it and its mark"
                       },
                       "description": "The tools of this page, by name"
                     },
@@ -11366,7 +11392,7 @@
                                 "dataset_not_ready",
                                 "meter_unavailable"
                               ],
-                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which its server marks read-only, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
+                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
                             },
                             "because": {
                               "type": "string",
@@ -11443,7 +11469,7 @@
                                 "license_invalid",
                                 "account_closed"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
                             "because": {
                               "type": "string",
@@ -11801,7 +11827,7 @@
                                 "dataset_not_ready",
                                 "meter_unavailable"
                               ],
-                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which its server marks read-only, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
+                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
                             },
                             "because": {
                               "type": "string",
@@ -11878,7 +11904,7 @@
                                 "license_invalid",
                                 "account_closed"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
                             "because": {
                               "type": "string",
@@ -12247,7 +12273,7 @@
                                 "dataset_not_ready",
                                 "meter_unavailable"
                               ],
-                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which its server marks read-only, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
+                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
                             },
                             "because": {
                               "type": "string",
@@ -12324,7 +12350,7 @@
                                 "license_invalid",
                                 "account_closed"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool its server does not mark read-only, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
                             "because": {
                               "type": "string",
@@ -14577,7 +14603,7 @@
       "get": {
         "operationId": "search",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first. A server that cannot be asked says why.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why.",
         "tags": [
           "tool-servers"
         ],
@@ -14618,7 +14644,7 @@
                 "read",
                 "write"
               ],
-              "description": "read keeps the tools their server marks read-only, write the others, which may change something"
+              "description": "read keeps the tools marked reads, write the others"
             }
           }
         ],
@@ -14771,16 +14797,21 @@
                             "type": "string",
                             "description": "The first sentence of what the tool does, as its server describes it, at most 300 characters"
                           },
-                          "read_only": {
-                            "type": "boolean",
-                            "description": "Whether its server marks the tool read-only"
+                          "mark": {
+                            "type": "string",
+                            "enum": [
+                              "reads",
+                              "acts",
+                              "unmarked"
+                            ],
+                            "description": "The mark of the tool: reads when the tool only reads, acts when it may change something, and unmarked when nothing marks it, which counts as acts"
                           }
                         },
                         "required": [
                           "server",
                           "tool",
                           "summary",
-                          "read_only"
+                          "mark"
                         ],
                         "additionalProperties": false
                       },
@@ -14851,7 +14882,7 @@
       "get": {
         "operationId": "introspect",
         "summary": "Introspect a tool",
-        "description": "Describes one tool of a tool server this playbook's functions may use, whole: what it does, the JSON Schema of the arguments it takes and the hints its server gives it. Use it once search has found a tool, before writing its arguments or naming it in the tools of a function as server/tool. Its server is asked for its tools when this is called, and nothing is sent to the tool; dry_run checks arguments against the schema and execute calls it. `server` and `tool` name the tool as search lists it.",
+        "description": "Describes one tool of a tool server this playbook's functions may use, whole: what it does, the JSON Schema of the arguments it takes, its server's hints and its mark. Use it once search has found a tool, before writing its arguments or naming it in the tools of a function as server/tool. Its server is asked for its tools when this is called, and nothing is sent to the tool; dry_run checks arguments and execute calls it. `server` and `tool` name the tool as search lists it.",
         "tags": [
           "tool-servers"
         ],
@@ -14927,13 +14958,34 @@
                       },
                       "additionalProperties": false,
                       "description": "The hints its server gives the tool, readOnlyHint, destructiveHint, idempotentHint and openWorldHint, as it gives them; absent when it gives none"
+                    },
+                    "mark": {
+                      "type": "string",
+                      "enum": [
+                        "reads",
+                        "acts",
+                        "unmarked"
+                      ],
+                      "description": "The mark of the tool: reads when the tool only reads, acts when it may change something, and unmarked when nothing marks it, which counts as acts"
+                    },
+                    "marked_by": {
+                      "type": "string",
+                      "enum": [
+                        "server",
+                        "method",
+                        "catalogue",
+                        "settings"
+                      ],
+                      "description": "What gave the mark: server for the hints its server lists it with, or the lack of them, method for the HTTP method of its operation, catalogue for the entry of its provider, settings for its entry in the settings of whoever runs this server"
                     }
                   },
                   "required": [
                     "server",
                     "tool",
                     "description",
-                    "input_schema"
+                    "input_schema",
+                    "mark",
+                    "marked_by"
                   ],
                   "additionalProperties": false
                 }
@@ -15141,7 +15193,7 @@
       "post": {
         "operationId": "dry_run",
         "summary": "Dry run a tool call",
-        "description": "Answers what execute would check for one tool and its arguments, without calling the tool: whether the caller may execute, whether the playbook is retired, whether whoever runs this server allows the tool, whether it only reads, whether the arguments match its input schema and whether its server can be reached just now. Use it before execute when a call may change something, or when the arguments are unsure. Nothing is sent to the tool and nothing is recorded. `server` and `tool` name the tool as search lists it, and `arguments`, when given, are the object to check.",
+        "description": "Answers what execute would check for one tool and its arguments, without calling the tool: whether the caller may execute, whether the playbook is retired, whether whoever runs this server allows the tool, its mark, whether the arguments match its input schema and whether its server can be reached just now. Use it before execute when a call may act, or when the arguments are unsure. Nothing is sent to the tool and nothing is recorded. `server` and `tool` name the tool as search lists it, and `arguments`, when given, are the object to check.",
         "tags": [
           "tool-servers"
         ],
@@ -15225,16 +15277,21 @@
                       "type": "boolean",
                       "description": "Whether whoever runs this server allows the tool on its server's entry, for runs and execute alike"
                     },
-                    "read_only": {
+                    "mark": {
                       "anyOf": [
                         {
-                          "type": "boolean"
+                          "type": "string",
+                          "enum": [
+                            "reads",
+                            "acts",
+                            "unmarked"
+                          ]
                         },
                         {
                           "type": "null"
                         }
                       ],
-                      "description": "Whether the tool's server marks it read-only; null when its listing was not read, as for a tool that is not allowed or a server that could not be asked"
+                      "description": "The mark of the tool: reads when the tool only reads, acts when it may change something, and unmarked when nothing marks it, which counts as acts; null when its listing was not read, as for a tool that is not allowed or a server that could not be asked"
                     },
                     "arguments": {
                       "anyOf": [
@@ -15327,7 +15384,7 @@
                     "caller_may",
                     "playbook_retired",
                     "allowed",
-                    "read_only",
+                    "mark",
                     "arguments",
                     "server"
                   ],
@@ -15383,7 +15440,7 @@
       "post": {
         "operationId": "execute",
         "summary": "Execute a tool call",
-        "description": "Calls one tool of a tool server this playbook's functions may use, with the arguments it is given, as a run of a reasoning function would call it, and answers what that run's model would see. Use it when the person asks for what a tool does, or to learn what a tool answers before a function names it, in place of a function made to look. The call is live and acts as the playbook, so it needs the permission to change the playbook whatever the tool does; search says which tools only read, and dry_run what this would check. It is recorded in the playbook's history, with its content where the server's entry keeps it. `server` and `tool` name the tool as search lists it, and `arguments` is the object its input_schema takes.",
+        "description": "Calls one tool of a tool server this playbook's functions may use, with the arguments it is given, as a run of a reasoning function would call it, and answers what that run's model would see. Use it when the person asks for what a tool does, or to learn what a tool answers before a function names it, in place of a function made to look. The call is live and acts as the playbook, so it needs the permission to change the playbook whatever the tool does; search says the mark of each tool, and dry_run what this would check. It is recorded in the playbook's history, with its content where the server's entry keeps it. `server` and `tool` name the tool as search lists it, and `arguments` is the object its input_schema takes.",
         "tags": [
           "tool-servers"
         ],

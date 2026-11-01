@@ -494,7 +494,7 @@ A `started` run of a reasoning function is never started a second time. A reques
 
 A run that may have called a tool is never attempted again under its id once it ended. That is a run of a reasoning function with `tools`, or of an interaction function with `call`:
 
-- A run that recorded a tool call and ended without a final result returns `conflict` with the kind `tools_called`. When every tool it called is one its server marks read-only, the rejection adds `because: "only_read"`, and its words say nothing was changed.
+- A run that recorded a tool call and ended without a final result returns `conflict` with the kind `tools_called`. When every tool it called is marked `reads`, the rejection adds `because: "only_read"`, and its words say nothing was changed.
 - A run of an interaction function with `call` that is still `started` returns `tools_called` too, even before its first recorded call, since it may still be in progress.
 - A run that ended before its first call, for example with `tool_not_offered` or `tool_server_failed`, runs again like any other.
 
@@ -615,7 +615,7 @@ A retired playbook stays readable: these reads work on it, while every change to
 
 Runs that use tools (a reasoning function's, and an interaction function's that calls a tool) also record each call:
 
-- `tool_call_started`, with `read_only: true` when the server marks the tool read-only, and `connection_id` beside `server` when the server is a connection a person added;
+- `tool_call_started`, with `read_only: true` when the tool's [mark](#the-mark-of-a-tool) is `reads`, and `connection_id` beside `server` when the server is a connection a person added;
 - then `tool_call_answered` when the tool answered, with `is_error` when its result is an error of its own;
 - or `tool_call_failed` when it never answered, with `because`: `arguments_refused`, `server_failure`, `timed_out`, `cancelled`, or `too_large` when the tool's result was larger than one call may return.
 
@@ -906,7 +906,7 @@ Five operations find and call the tools of the tool servers of a playbook: those
 
 - Without `terms`, it lists every tool when the servers offer at most 100 in total, in the order of the servers and of each server's own list. When they offer more, it returns only the servers, each with its count of tools; search them with `terms`.
 - `terms` is up to 8 words of up to 64 characters each, separated by spaces. Tools with a score come best first, those with the same score by name and then by server, at most 100.
-- `only: read` keeps the tools their server marks read-only, and `only: write` the others.
+- `only: read` keeps the tools marked `reads`, and `only: write` the others, which may change something.
 - `server` keeps the server of that name and asks no other. A name no server of the playbook has returns `invalid_input` at `/server`.
 
 Each word of `terms`, and each part of it split at `_`, `.`, `-` and case changes, scores in any letter case:
@@ -936,12 +936,12 @@ Authorization: Bearer <key>
     }
   ],
   "tools": [
-    { "server": "billing", "tool": "getInvoice", "summary": "Reads one invoice.", "read_only": true },
+    { "server": "billing", "tool": "getInvoice", "summary": "Reads one invoice.", "mark": "reads" },
     {
       "server": "billing",
       "tool": "listCustomers",
       "summary": "Lists the customers, with the invoice each owes.",
-      "read_only": true
+      "mark": "reads"
     }
   ],
   "scopes": ["billing", "notes"]
@@ -971,12 +971,12 @@ Each server has these fields:
 
 Each tool has these fields:
 
-| Field       | Contents                                                     |
-| ----------- | ------------------------------------------------------------ |
-| `server`    | The server's name                                            |
-| `tool`      | The tool's name                                              |
-| `summary`   | The first sentence of its description, cut at 300 characters |
-| `read_only` | Whether its server marks it read-only                        |
+| Field     | Contents                                                       |
+| --------- | -------------------------------------------------------------- |
+| `server`  | The server's name                                              |
+| `tool`    | The tool's name                                                |
+| `summary` | The first sentence of its description, cut at 300 characters   |
+| `mark`    | Its [mark](#the-mark-of-a-tool): `reads`, `acts` or `unmarked` |
 
 What the result never contains:
 
@@ -1001,13 +1001,27 @@ On the org route, `search` also returns `providers`: the [providers](#providers)
 - It covers the whole org, whatever `playbook` narrows the servers to, and is left out with `server`.
 - It is present exactly where the caller may add a connection, as `may_add` of `list_providers` says: a signed-in person, or the local developer in local mode, with `org:write`, on a runtime whose `connections.people_may_add` is not `false`. It is then empty when every provider listed is served or left out. A key, a caller who may only read and a runtime where nobody may add get no `providers`. The playbook route never returns it.
 
+### The mark of a tool
+
+Every tool the runtime lists carries one mark: `reads` when it only reads, `acts` when it may change something, and `unmarked` when nothing marks it, which counts as `acts`, as the MCP specification's own default for a tool that declares nothing says. `marked_by` says what gave it:
+
+| `marked_by` | The mark is                                                                                                                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `server`    | The one the server's hints give: `reads` for `readOnlyHint: true`, `acts` for `readOnlyHint: false` or `destructiveHint: true`, and `unmarked` else |
+| `method`    | The one the HTTP method of an operation of an HTTP API gives: `reads` for `GET` and `HEAD`, `acts` for `POST`, `PUT`, `PATCH` and `DELETE`          |
+| `catalogue` | The one the entry of its [provider](#providers) gives it, in place of its server's or its method's, as for an operation that reads through `POST`   |
+| `settings`  | The one its entry in the [configuration](../self-host/configuration.md#the-mark-of-a-tool) gives it, in place of its server's or its method's       |
+
+`search` and `dry_run` answer it as `mark`, and `introspect` and `list_connection_tools` answer `mark` and `marked_by`.
+
 ### Reading one tool
 
 `introspect` returns one tool in full, as its server lists it:
 
 - its `description`, cut to 4 KiB;
 - its `input_schema`, the JSON Schema of the arguments it takes;
-- its `annotations`, the hints its server gives it (`readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`), left out when the server gives none.
+- its `annotations`, the hints its server gives it (`readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`), left out when the server gives none;
+- its `mark` and `marked_by`, as [The mark of a tool](#the-mark-of-a-tool) sets out.
 
 A tool of an HTTP API takes one object: each path and query parameter by its name, and `body` for a JSON body. The schemas from the document's `components` that it refers to are placed under `$defs`.
 
@@ -1027,7 +1041,9 @@ Authorization: Bearer <key>
     "required": ["id"],
     "additionalProperties": false
   },
-  "annotations": { "readOnlyHint": true, "idempotentHint": true, "openWorldHint": true }
+  "annotations": { "readOnlyHint": true, "idempotentHint": true, "openWorldHint": true },
+  "mark": "reads",
+  "marked_by": "method"
 }
 ```
 
@@ -1047,16 +1063,16 @@ Content-Type: application/json
 
 `dry_run` reports what `execute` would check for the tool and its `arguments`, without calling the tool:
 
-| Field              | Contents                                                                                                                                                             |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `would_run`        | Whether `execute` would call the tool now: the caller may, the playbook is not retired, the operator allows the tool, and its server responded                       |
-| `needs`            | `playbook:write`, the permission `execute` needs whatever the tool does                                                                                              |
-| `caller_may`       | Whether the caller has that permission                                                                                                                               |
-| `playbook_retired` | Whether the playbook is retired, which `execute` refuses, since a retired playbook can no longer change                                                              |
-| `allowed`          | Whether the operator allows the tool on its server's entry, for runs and for `execute` alike                                                                         |
-| `read_only`        | Whether the server marks the tool read-only; `null` when the tool's listing was not read, for a tool the operator does not allow or a server that could not be asked |
-| `arguments`        | The `arguments` checked as `validate` checks them, `valid: null` with one issue saying why when the tool's input schema was not read; `null` when none were given    |
-| `server`           | `reachable` (`yes` or `no`) and, with `no`, the `because` field that says why the server could not be asked                                                          |
+| Field              | Contents                                                                                                                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `would_run`        | Whether `execute` would call the tool now: the caller may, the playbook is not retired, the operator allows the tool, and its server responded                                                 |
+| `needs`            | `playbook:write`, the permission `execute` needs whatever the tool does                                                                                                                        |
+| `caller_may`       | Whether the caller has that permission                                                                                                                                                         |
+| `playbook_retired` | Whether the playbook is retired, which `execute` refuses, since a retired playbook can no longer change                                                                                        |
+| `allowed`          | Whether the operator allows the tool on its server's entry, for runs and for `execute` alike                                                                                                   |
+| `mark`             | The tool's [mark](#the-mark-of-a-tool), `reads`, `acts` or `unmarked`; `null` when the tool's listing was not read, for a tool the operator does not allow or a server that could not be asked |
+| `arguments`        | The `arguments` checked as `validate` checks them, `valid: null` with one issue saying why when the tool's input schema was not read; `null` when none were given                              |
+| `server`           | `reachable` (`yes` or `no`) and, with `no`, the `because` field that says why the server could not be asked                                                                                    |
 
 `dry_run` returns `would_run: true` even for arguments the tool's schema does not accept. `execute` does not check arguments, and the tool returns its own error for them. The `arguments` field reports the problem beforehand.
 
@@ -1122,7 +1138,7 @@ The response is `200` whenever the call was made, whatever the tool returned. No
 - the operator does not allow the tool, the server is not set up for the playbook, or the server does not list the tool: `unavailable` with kind `tool_not_offered` and `because` set to `tool_not_allowed`, `tool_server_not_configured` or `tool_not_listed`, or for a connection that is not ready `connection_pending`, `connection_broken`, `connection_not_allowed` or `connection_unavailable`;
 - the server cannot be used: `unavailable` with kind `tool_server_failed`.
 
-A call is live: a tool its server does not mark read-only may change something. That is why `execute` is marked destructive over MCP while a tool server is configured or people may add connections.
+A call is live: a tool that is not marked `reads` may change something. That is why `execute` is marked destructive over MCP while a tool server is configured or people may add connections.
 
 Each call is recorded in the playbook's history: as `tool_call_started` before it is sent, with `connection_id` beside `server` for a connection, and as `tool_call_answered` or `tool_call_failed` after. These are the same facts a run's tool calls record, with the caller who made the call as the one who acted.
 
@@ -1207,12 +1223,13 @@ Every operation answers the connection: `id`, a UUIDv7; `name`; `type`, `mcp` or
 
 `list_connection_tools` answers the tools a connection's server offers now, those its entry's `allowed` names where it names any, so a page or an agent shows what one connection can do without searching the whole org. The runtime asks the server for its tools when it is called, as `search` does, and sends nothing to a tool. It answers `connection`, the id given, `server`, the connection's name, which a function writes before the slash, `tools`, sorted by name, `has_more` and `next_cursor`, read as [Paging](#paging) reads a list: `limit` from 1 to 100, 20 when left out, and `cursor` the `next_cursor` of the page before; a cursor no page gave is refused as `invalid_input` at `/cursor`. Each tool holds:
 
-| Field                                                  | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                                                 | The tool, as a function names it after the slash                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `title`                                                | What a person reads as its name, where its server gives one: an MCP tool's `title`, or the `title` of its annotations; an operation of an HTTP API has none, its summary opening its description                                                                                                                                                                                                                                                                                                      |
-| `description`                                          | What it does, as its server describes it, whole up to 4 KiB, as `introspect` answers it; empty where it gives none                                                                                                                                                                                                                                                                                                                                                                                    |
-| `read_only`, `destructive`, `idempotent`, `open_world` | The hints its server gives, the `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` of the MCP specification, each left out where the server gives none, which the specification reads as a tool that may change something, may destroy what it changes, may not be repeated safely and reaches outside; an operation of an HTTP API is `read_only` for `GET` and `HEAD`, `destructive` for `DELETE`, `idempotent` for `GET`, `HEAD`, `PUT` and `DELETE`, and `open_world` always |
+| Field               | What it holds                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`              | The tool, as a function names it after the slash                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `title`             | What a person reads as its name, where its server gives one: an MCP tool's `title`, or the `title` of its annotations; an operation of an HTTP API has none, its summary opening its description                                                                                                                                                                                                                                                                                                                                            |
+| `description`       | What it does, as its server describes it, whole up to 4 KiB, as `introspect` answers it; empty where it gives none                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `hints`             | The hints its server gives, `destructiveHint`, `idempotentHint` and `openWorldHint` of the MCP specification as it gives them, each left out where the server gives none and `hints` left out where it gives none of them, which the specification reads as a tool that may destroy what it changes, may not be repeated safely and reaches outside; an operation of an HTTP API is `destructiveHint` for `DELETE`, `idempotentHint` for `GET`, `HEAD`, `PUT` and `DELETE`, and `openWorldHint` always. Whether it only reads is its `mark` |
+| `mark`, `marked_by` | Its [mark](#the-mark-of-a-tool) and what gave it                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 A connection that is not connected, or whose server cannot be reached, is refused as `unavailable`, with the `kind`, the `because` and the words a function's refusal and `search` give: `tool_not_offered` and the `because` [A connection that is not ready](#a-connection-that-is-not-ready) lists, or `tool_server_failed` where its server fails. An id the org has no connection of, or one removed, is `not_found`.
 
@@ -1350,7 +1367,7 @@ A problem document's `type` is a URI that names its kind of problem:
 | `https://on.auto/problems/method_not_allowed`     | 405    | The path does not take that method                                                                                                                                                                                                                                                                                                                         |
 | `https://on.auto/problems/conflict`               | 409    | The request clashes with what is there                                                                                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/tools_called`           | 409    | A run that may have called tools is not run again under its id; its `reason` is `conflict`. When every tool the run called only reads, it has `because: "only_read"`, and its words say nothing was changed                                                                                                                                                |
-| `https://on.auto/problems/effect_unknown`         | 409    | A run called a tool its server does not mark read-only, and could not finish. Whether the tool changed something is not known. Its `reason` is `conflict`; a person, or a workflow rule that names it, decides what happens next                                                                                                                           |
+| `https://on.auto/problems/effect_unknown`         | 409    | A run called a tool not marked `reads`, and could not finish. Whether the tool changed something is not known. Its `reason` is `conflict`; a person, or a workflow rule that names it, decides what happens next                                                                                                                                           |
 | `https://on.auto/problems/credits_exhausted`      | 409    | The org's account has no credits left for the run; on a self-hosted runtime, one that runs at the free rate since its org has no credits or owes its cap and has used the rate, or one whose offline credits are spent; its `reason` is `conflict`. Nothing of the run is recorded, and it can be run again once the account has credits or the rate lifts |
 | `https://on.auto/problems/license_required`       | 409    | The runtime holds no key and has used its free runs, the 100 it runs first and the 15 a UTC day or 75 a UTC month after; its `reason` is `conflict`. Nothing of the run is recorded, and it can be run again once the rate lifts or a key is activated                                                                                                     |
 | `https://on.auto/problems/license_invalid`        | 409    | The runtime runs at the free rate since its license can't be used right now, its key rotated or removed, its org closed, out of touch past its license's `limit_at` or not yet activated, and has used the rate; or its offline credits stopped; or a key given to activate is invalid; its `reason` is `conflict`. Nothing of the run is recorded         |
@@ -1364,7 +1381,7 @@ A problem document's `type` is a URI that names its kind of problem:
 | `https://on.auto/problems/client_closed_request`  | 499    | The client disconnected before the response                                                                                                                                                                                                                                                                                                                |
 | `https://on.auto/problems/internal`               | 500    | Something went wrong inside the server                                                                                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/unavailable`            | 503    | Something the server relies on cannot serve now                                                                                                                                                                                                                                                                                                            |
-| `https://on.auto/problems/tools_unfinished`       | 503    | A run called only tools their servers mark read-only, and could not finish; its `reason` is `unavailable`, and running it again under a new id is safe                                                                                                                                                                                                     |
+| `https://on.auto/problems/tools_unfinished`       | 503    | A run called only tools marked `reads`, and could not finish; its `reason` is `unavailable`, and running it again under a new id is safe                                                                                                                                                                                                                   |
 | `https://on.auto/problems/rebuilding`             | 503    | The view of a recall function is still being built; its `reason` is `unavailable`; try again later                                                                                                                                                                                                                                                         |
 
 ### The refusals of the meter

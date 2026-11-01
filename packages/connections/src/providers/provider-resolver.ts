@@ -7,12 +7,13 @@ import {
   type ProviderEntry,
   type ProviderList,
 } from '@on.auto/providers';
-import type {
-  CredentialGiven,
-  ProviderNamed,
-  ProviderResolved,
-  ProviderResolver,
-  ShippedDocument,
+import {
+  marksOf,
+  type CredentialGiven,
+  type ProviderNamed,
+  type ProviderResolved,
+  type ProviderResolver,
+  type ShippedDocument,
 } from '@on.auto/tool-servers';
 import { Result } from 'effect';
 
@@ -97,11 +98,11 @@ function writtenAtOf({ placedAt }: Placing): (pointer: string) => string {
 function resolvedOf(
   addition: ProviderAddition,
   { credential, reference }: Credentialled,
-  documents: ReadonlyMap<string, ShippedDocument>,
+  { entry, documents }: { readonly entry: ProviderEntry; readonly documents: ReadonlyMap<string, ShippedDocument> },
 ) {
   const placing = placedReference({ provider: addition.provider, entry: addition.entry, credential }, reference);
   const resolved: ProviderResolved = {
-    written: { ...placing.written, type: addition.type },
+    written: { ...placing.written, ...marksOf(entry.marks), type: addition.type },
     placedValues: placing.placedValues,
     documents: { kind: 'shipped', byName: documents },
     writtenAt: writtenAtOf(placing),
@@ -114,7 +115,7 @@ export function makeProviderResolver(providers: ProviderList): ProviderResolver 
     Result.flatMap(providerNamed(providers, named.provider), ({ entry }) =>
       Result.flatMap(additionOfTheSettings(entry, named), (addition) =>
         Result.map(credentialledOf(addition.credential, named.credential), (credentialled) =>
-          resolvedOf(addition, credentialled, providers.documents),
+          resolvedOf(addition, credentialled, { entry, documents: providers.documents }),
         ),
       ),
     );

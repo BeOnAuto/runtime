@@ -47,7 +47,11 @@ const searchTool = {
     required: ['query'],
   },
   annotations: { readOnlyHint: true, openWorldHint: true },
+  mark: 'reads',
+  marked_by: 'server',
 };
+
+const unmarked = { mark: 'unmarked', marked_by: 'server' };
 
 const nothingTaken = { type: 'object', properties: {}, required: [] };
 
@@ -55,6 +59,7 @@ const echoTool = {
   name: 'echo',
   description: 'Answers with its arguments.',
   input_schema: nothingTaken,
+  ...unmarked,
 };
 
 const verboseTool = {
@@ -62,6 +67,7 @@ const verboseTool = {
   title: 'Verbose',
   description: verboseDescription.slice(0, 4096),
   input_schema: nothingTaken,
+  ...unmarked,
 };
 
 describe('the tool servers a playbook may use', () => {
@@ -267,6 +273,8 @@ describe('the secrets of a tool server', () => {
               properties: { query: { type: 'string', description: '[redacted]' } },
             },
             annotations: searchTool.annotations,
+            mark: 'reads',
+            marked_by: 'server',
           },
         ],
       },

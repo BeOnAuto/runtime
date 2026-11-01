@@ -23,7 +23,7 @@ Tell me which tools only read. Then show me the arguments the "<tool name>"
 tool takes.
 ```
 
-Check that the agent reports the server with its tools, and which have `read_only: true`. Auto counts a tool as read-only only when its server marks it so. Where a server offers many tools, ask the agent to search with a few words of what you want done; it passes them to `search` as `terms`.
+Check that the agent reports the server with its tools, and the mark of each: `reads` for a tool that only reads, `acts` for one that may change something, and `unmarked` for one nothing marks, which Auto counts as one that may change something. Where a server offers many tools, ask the agent to search with a few words of what you want done; it passes them to `search` as `terms`.
 
 If the agent finds no server, or none with the tool you need, [connect a provider](#connect-a-provider) that offers it, or [ask for a tool server](#ask-for-a-tool-server). A server that cannot be used is shown as unavailable, with a `because` field that says why; see [If something goes wrong](#if-something-goes-wrong).
 
@@ -41,7 +41,7 @@ would see. If the tool does not only read, ask me before you call it.
 
 The agent fills in the tool's arguments from what you asked. Check that the call shows `outcome: result` and the `text` you expect. That text is exactly what a function's model would read.
 
-The call is live. It acts as the playbook and uses the server's key, as every call to the server does, by hand or from a run. A tool its server does not mark read-only may change something, so your agent should ask you before it calls one.
+The call is live. It acts as the playbook and uses the server's key, as every call to the server does, by hand or from a run. A tool that is not marked `reads` may change something, so your agent should ask you before it calls one.
 
 ::: details More about calling a tool by hand
 
@@ -88,7 +88,7 @@ While a tool server is configured, Auto marks `run_definition` as possibly destr
 Check the run's status and output. Then check its history, which the agent reads with `list_playbook_events`, given the run's `run_id`. A run that made one call shows these events, oldest first:
 
 - `run_started`: the run started, with its input.
-- `tool_call_started`: the call's number, its server and tool, its arguments, and `read_only: true` for a tool that only reads.
+- `tool_call_started`: the call's number, its server and tool, its arguments, and `read_only: true` for a tool marked `reads`.
 - `tool_call_answered`: the tool's answer, its size and how long it took, with `is_error: true` for an error. A call that got no answer shows `tool_call_failed` instead, with a `because`.
 - `run_succeeded`: the run finished, with its output.
 

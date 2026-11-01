@@ -53,7 +53,7 @@ describe('one call of a tool', () => {
       answer: { content: [{ type: 'text', text: JSON.stringify(echoCall.input) }] },
       detail: '',
       retryAfterMs: null,
-      annotations: undefined,
+      mark: 'unmarked',
     });
     expect((await Effect.runPromise(access.preparedCall(echoCall))).fields).toEqual({
       server: 'graph',
@@ -81,12 +81,17 @@ describe('one call of a tool', () => {
 });
 
 describe('what one call answers of its tool', () => {
-  it('answers the hints the server gives the tool it listed', async () => {
+  it('answers the mark of the tool it listed, as its server marks it or as its entry marks it in place of its server', async () => {
     const fake = await oneCallServer();
+    const search = { reference: { server: 'graph', tool: 'search' } };
 
-    expect(await calledOnce(oneCallAccess(fake.url), { reference: { server: 'graph', tool: 'search' } })).toMatchObject(
-      { outcome: 'result', annotations: { readOnlyHint: true, openWorldHint: true } },
-    );
+    expect([
+      await calledOnce(oneCallAccess(fake.url), search),
+      await calledOnce(oneCallAccess(fake.url, { marks: { acts: ['search'] } }), search),
+    ]).toMatchObject([
+      { outcome: 'result', mark: 'reads' },
+      { outcome: 'result', mark: 'acts' },
+    ]);
   });
 
   it('keeps the arguments and the answer, scrubbed, unless the entry of the server turns keeping off', async () => {

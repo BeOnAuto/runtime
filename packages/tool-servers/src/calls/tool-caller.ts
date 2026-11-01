@@ -1,5 +1,5 @@
 import { admission } from '../bounds/call-bounds.ts';
-import { answerOf, isReadOnly } from '../bounds/tool-results.ts';
+import { answerOf, onlyReads } from '../bounds/tool-results.ts';
 import type { CallAnswered, CallEnded, CallFailed, CallStarted } from './call-facts.ts';
 import {
   callReplyOf,
@@ -155,7 +155,7 @@ export function sending(parts: RunToolsParts, offered: NamedOffer): ToolSending 
   const tool = offered.tool.name;
   const recording = recordingOf(slot.settings, parts.secrets, parts.keep);
   const replying = replyingOf(parts, offered);
-  const readOnly = isReadOnly(offered.tool.annotations);
+  const readOnly = onlyReads(offered.tool);
   return {
     start: ({ callId, input }) => startOf({ slot, tool, input }, recording, { callId, readOnly }),
     send: async ({ input, room }, signal) => {
@@ -190,7 +190,7 @@ export function caller(
     const forwarding = { slot, tool: offered.tool.name, input, meta: context.meta, signal: signals.signal };
     const journalling: CallJournalling = {
       callId,
-      readOnly: isReadOnly(offered.tool.annotations),
+      readOnly: onlyReads(offered.tool),
       started: async (fact) => {
         const number = await parts.run(context.journal.started(fact));
         if (number !== undefined) {
