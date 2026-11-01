@@ -36,7 +36,7 @@ When the server [sends telemetry](../self-host/telemetry.md), every response exc
 | `GET /.well-known/api-catalog` | The API catalog of this server, as `application/linkset+json` |
 | `GET /health`                  | Whether the server is up                                      |
 
-These four need no key. Where sign-in is on, the [protected resource metadata](authentication.md#protected-resource-metadata) needs no key either. It is served at `/.well-known/oauth-protected-resource` and under the path of each MCP endpoint. Where the runtime signs people in at an `https` `PUBLIC_URL`, the [client metadata document](authentication.md#client-metadata-document), by which Auto names its own client when a person connects a provider by consent, needs no key either. It is served at `/oauth/client.json`.
+These four need no key, and neither does [content at a signed address](#content-at-a-signed-address), whose signature is its credential. Where sign-in is on, the [protected resource metadata](authentication.md#protected-resource-metadata) needs no key either. It is served at `/.well-known/oauth-protected-resource` and under the path of each MCP endpoint. Where the runtime signs people in at an `https` `PUBLIC_URL`, the [client metadata document](authentication.md#client-metadata-document), by which Auto names its own client when a person connects a provider by consent, needs no key either. It is served at `/oauth/client.json`.
 
 ### The OpenAPI document
 
@@ -71,6 +71,30 @@ The document, the guides and the catalog change only when a new release of the s
 - Each responds with `304` and no body when the request's `If-None-Match` names its tag, a list that includes it, or `*`.
 - `HEAD` returns their headers without the body.
 - `/health` is never cached: it responds with `Cache-Control: no-store`.
+
+## Content at a signed address
+
+This route serves the bytes a playbook keeps by their digest at an address the runtime signs. The address carries its own credential, so a person or a browser can follow it without a key.
+
+| Method and route                                                                   | Returns                                                   |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `GET /v1/orgs/{org}/playbooks/{playbook}/content/{sha256}?until={until}&sig={sig}` | The content's bytes, with the media type it was kept with |
+
+- `sha256` is the SHA-256 of the bytes, in lowercase hex.
+- `until` is the time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z. An address lasts 15 minutes at the most. The runtime accepts an `until` up to 30 seconds later than that, for servers whose clocks differ, and refuses one beyond it.
+- `sig` is the runtime's signature of the org, the playbook, the digest and `until`, under a key the runtime keeps for itself.
+- The runtime signs an address only on an `https` origin or on `localhost`, `127.0.0.1` or `[::1]`, as it does for [links to Studio](#links-to-studio).
+- The response carries `Content-Type`, `Content-Length` and `Cache-Control: private, max-age={seconds}`, the seconds the address has left, at most 900.
+- The route takes no key and makes no `Origin` check. `HEAD` returns the headers without the bytes, and any other method gets `405`.
+- Every response of this route carries `Cross-Origin-Resource-Policy: cross-origin`, so a page on another origin can embed the bytes in an `img`, `audio` or `video` element. Every other route answers `same-origin`.
+- Every response of this route carries a `Content-Security-Policy` with `sandbox`, so HTML or SVG content opened at the address runs no script and submits no form. An image still displays.
+- The route does not serve `Range` requests yet. It answers every request with the whole content, so a player that needs ranges, as some do for video, cannot use the address.
+
+| Case                                                                                         | Response                                                                              |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| The time in `until` has passed                                                               | `403` `forbidden`, "The address to this content expired at {time}; ask for a new one" |
+| The signature is not for this org, playbook, digest and time, or `until` or `sig` is missing | `403` `forbidden`, "The address is not one this runtime signed for this content"      |
+| The playbook holds no content under the digest, such as content it no longer keeps           | `404` `not_found`, "The playbook holds no content under this digest"                  |
 
 ## Playbooks
 

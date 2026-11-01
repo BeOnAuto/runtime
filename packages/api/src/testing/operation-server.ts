@@ -79,6 +79,7 @@ export interface OperationServerOptions {
   readonly heartbeatEveryMs?: number;
   readonly callContext?: CallContext;
   readonly installId?: () => string | undefined;
+  readonly routes?: readonly RegisterRoutes[];
 }
 
 type McpServed = Pick<McpRoutesOptions, 'catalog' | 'dispatcher' | 'runCall' | 'retryStateKeys'> & {
@@ -98,6 +99,10 @@ function mcpRoutesServing(
   });
 }
 
+function routesBeside(more: readonly RegisterRoutes[] | undefined): readonly RegisterRoutes[] {
+  return more ?? [];
+}
+
 export async function operationServer({
   authenticator = keyHolders,
   allowedOrigins = [],
@@ -109,6 +114,7 @@ export async function operationServer({
   heartbeatEveryMs,
   callContext,
   installId,
+  routes: more,
 }: OperationServerOptions = {}): Promise<OperationServer> {
   const services = operationServices(tracer);
   const runtime = await makeAppRuntime(services.layer);
@@ -123,6 +129,7 @@ export async function operationServer({
     mcpRoutesServing({ catalog, dispatcher, runCall: runtime.run, retryStateKeys, heartbeatEveryMs }, (error) => {
       mcpErrors.push(error.message);
     }),
+    ...routesBeside(more),
   ];
   const { handler, reported } = createTestHandler({
     authenticator,

@@ -200,8 +200,8 @@ describe('the retry of add_connection', () => {
       added_by: { id: 'local', name: localDeveloper.name },
     });
     expect(listed.body).toMatchObject({ connections: [{ name: 'notes-across' }] });
-    expect(await ownKeyFactsIn(fileName)).toMatchObject([
-      { type: 'own_key_kept', data: { purpose: 'retry_state' }, context: { by: 'runtime' } },
+    expect((await ownKeyFactsIn(fileName)).filter(({ data }) => data.purpose === 'retry_state')).toMatchObject([
+      { type: 'own_key_kept', context: { by: 'runtime' } },
     ]);
   });
 

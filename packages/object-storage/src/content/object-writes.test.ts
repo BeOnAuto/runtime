@@ -109,7 +109,7 @@ describe('a put on object storage that another put of its digest raced', () => {
     expect(kept).toEqual({ sha256, bytes: 2_500_000, mediaType: octets });
   });
 
-  it('fails as a defect when the store says another put wrote first but holds nothing under the digest', async () => {
+  it('answers what it put when the store says another put wrote first and holds nothing under the digest, which a removal took between them', async () => {
     const store = fakeContentStore(location);
     store.bucket.intercepting('PutObjectCommand', () =>
       Promise.reject(
@@ -117,11 +117,10 @@ describe('a put on object storage that another put of its digest raced', () => {
       ),
     );
 
-    const put = Effect.runPromise(store.content.put(alpha, textToKeep('lost', octets)));
+    const kept = await resultOf(store.content.put(alpha, textToKeep('lost', octets)));
 
-    await expect(put).rejects.toThrow(
-      `No object holds the content just put under ${keys.kept(alpha, sha256Of('lost'))}, though nothing deletes what is kept`,
-    );
+    expect(kept).toEqual({ sha256: sha256Of('lost'), bytes: 4, mediaType: octets });
+    expect(store.bucket.keys()).toEqual([]);
   });
 });
 

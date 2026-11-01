@@ -24,6 +24,7 @@ export { serverStopping } from './problem/outcome-problem.ts';
 export type { RetryStateKeys } from './tools/linked-answers.ts';
 export { openApiDocumentRoutes, openApiPath, type OpenApiServing } from './openapi/openapi-routes.ts';
 export { guideRoutes } from './guides/guide-routes.ts';
+export { contentAddressRoutes, type ContentAddressServing } from './content/content-routes.ts';
 export { apiCatalogRoutes } from './discovery/api-catalog.ts';
 export { clientMetadataRoutes, type ClientMetadataDocument } from './discovery/client-metadata.ts';
 export {

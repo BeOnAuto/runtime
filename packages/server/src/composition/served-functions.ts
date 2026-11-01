@@ -17,7 +17,10 @@ interface ServedWiring extends Omit<FunctionWiring, 'programPoolOf'>, ToolUsersW
 }
 
 export interface ServedFunctions {
-  readonly parts: Omit<WorkflowParts, 'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys' | 'shippedFiles'>;
+  readonly parts: Omit<
+    WorkflowParts,
+    'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys' | 'contentAddressKey' | 'shippedFiles'
+  >;
 }
 
 export async function functionsServedBy(

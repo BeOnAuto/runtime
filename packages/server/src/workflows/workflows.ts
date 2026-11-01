@@ -26,6 +26,7 @@ export interface WorkflowParts extends HostParts {
   readonly names: PlaybookOwnNames;
   readonly identityIssuer: string;
   readonly retryStateKeys: ServedCatalog['retryStateKeys'];
+  readonly contentAddressKey: ServedCatalog['contentAddressKey'];
   readonly shippedFiles: ShippedFiles;
 }
 
@@ -68,7 +69,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     ...parts.playbookOperations,
     defineSendRunEvent(host, names),
   ]);
-  const { identityIssuer, retryStateKeys, shippedFiles } = parts;
-  const served = { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys, shippedFiles };
+  const { identityIssuer, retryStateKeys, contentAddressKey, shippedFiles } = parts;
+  const served = { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys, contentAddressKey, shippedFiles };
   return { routes: await routesFor(runtime, served), stopWork: host.stop };
 }

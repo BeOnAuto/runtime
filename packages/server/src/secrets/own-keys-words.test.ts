@@ -1,10 +1,10 @@
 import { memoryLedger } from '@on.auto/operations/testing';
 import { secretStoreOn } from '@on.auto/secrets';
 import { memoryKeeper, memoryRows } from '@on.auto/secrets/testing';
-import { DateTime, Effect, Logger } from 'effect';
+import { DateTime, Effect, Logger, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { retryStateKeysKeptBy, secretsKeptBy } from './own-keys.ts';
+import { contentAddressKeyKeptBy, retryStateKeysKeptBy, secretsKeptBy } from './own-keys.ts';
 
 const now = Effect.map(DateTime.now, DateTime.toEpochMillis);
 
@@ -67,5 +67,31 @@ describe('the key that signs the state of a retry, kept in a secret manager', ()
     expect(gone).toBe(
       'OwnKeyUnavailable: The key the runtime keeps for retry_state is no longer in AWS Parameter Store under /auto-runtime/secrets in eu-north-1, the region AWS_DEFAULT_REGION names, so the server does not start',
     );
+  });
+});
+
+function bytesOf(key: Redacted.Redacted<Uint8Array>): readonly number[] {
+  return Array.from(Redacted.value(key));
+}
+
+describe('the key that signs the addresses of content, kept in a secret manager', () => {
+  it('is 32 bytes of its own beside the key of a retry, the same at the next start, and logged under its own purpose with the id of its secret', async () => {
+    const { rows, services } = inTheManagerAlone();
+
+    const retries = await Effect.runPromise(retryStateKeysKeptBy(services, inTheManager));
+    const first = await Effect.runPromise(contentAddressKeyKeptBy(services, inTheManager));
+    const lines = await loggedWhile(contentAddressKeyKeptBy(services, inTheManager));
+    const next = await Effect.runPromise(contentAddressKeyKeptBy(services, inTheManager));
+    const [, row] = rows.kept();
+
+    expect([bytesOf(first).length, bytesOf(next)]).toEqual([32, bytesOf(first)]);
+    expect(bytesOf(first)).not.toEqual(bytesOf(retries.current));
+    expect(rows.kept()).toHaveLength(2);
+    expect(lines).toEqual([
+      expect.stringContaining(
+        `"message":"The runtime read the key it keeps for content_address in AWS Parameter Store under /auto-runtime/secrets in eu-north-1","level":"INFO"`,
+      ),
+    ]);
+    expect(lines[0]).toContain(`"annotations":{"own_key":"content_address","own_key_id":"${String(row?.id)}"}`);
   });
 });

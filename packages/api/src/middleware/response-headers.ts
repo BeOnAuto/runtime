@@ -2,15 +2,21 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { secureHeaders } from 'hono/secure-headers';
 
 import type { ApiEnv } from '../api-env.ts';
+import { servesContentAt } from '../content/content-routes.ts';
 import { servesStudioAt, type ApiStudio } from '../studio/served-studio.ts';
 import { servedStudioPolicyOf } from '../studio/studio-policy.ts';
 import { assignRequestId } from './request-id.ts';
 
 const frameHeaders = { strictTransportSecurity: false, xFrameOptions: 'DENY' } as const;
 
-const securityHeaders = secureHeaders({
+const policyOfAnAnswer = { defaultSrc: ["'none'"], frameAncestors: ["'none'"] };
+
+const securityHeaders = secureHeaders({ ...frameHeaders, contentSecurityPolicy: policyOfAnAnswer });
+
+const headersOfContentAnyOriginEmbeds = secureHeaders({
   ...frameHeaders,
-  contentSecurityPolicy: { defaultSrc: ["'none'"], frameAncestors: ["'none'"] },
+  crossOriginResourcePolicy: 'cross-origin',
+  contentSecurityPolicy: { ...policyOfAnAnswer, sandbox: [] },
 });
 
 const otherHeadersOfTheServedStudio = secureHeaders(frameHeaders);
@@ -27,7 +33,12 @@ const servedStudioHeaders: MiddlewareHandler<ApiEnv> = (c, next) =>
 
 function securityHeadersFor(studio: ApiStudio): MiddlewareHandler<ApiEnv> {
   const servesStudio = servesStudioAt(studio);
-  return (c, next) => (servesStudio(c.req.path) ? servedStudioHeaders(c, next) : securityHeaders(c, next));
+  return (c, next) => {
+    if (servesStudio(c.req.path)) {
+      return servedStudioHeaders(c, next);
+    }
+    return servesContentAt(c.req.path) ? headersOfContentAnyOriginEmbeds(c, next) : securityHeaders(c, next);
+  };
 }
 
 export function requestIdAndSecurityHeadersFor(studio: ApiStudio): readonly MiddlewareHandler<ApiEnv>[] {

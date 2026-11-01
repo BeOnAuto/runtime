@@ -48,6 +48,10 @@ async function servedOn(database: string): Promise<ReasoningServer> {
   return served;
 }
 
+const recordedOwnKeys = `SELECT message_type, (message_data ->> 'json')::jsonb ->> 'purpose' AS purpose,
+  (message_data ->> 'json')::jsonb ->> 'secret_id' AS secret_id
+  FROM emt_messages WHERE stream_id = $1 ORDER BY stream_position`;
+
 function onMcpOf({ origin }: ReasoningServer) {
   return { url: `${origin}/mcp`, headers: {} };
 }
@@ -62,18 +66,21 @@ async function addingANotesServer() {
 }
 
 describe.skipIf(skipped)(`Two servers that start at once on one ledger in PostgreSQL${notice}`, () => {
-  it('keep one key that signs the state of a retry between them, recorded once and kept in one row, so a retry one asked for is answered by the other', async () => {
+  it('keep one key of each purpose between them, the one that signs the state of a retry and the one that signs the addresses of content, each recorded once and kept in one row, so a retry one asked for is answered by the other', async () => {
     const database = await aDatabaseOfItsOwn();
     const [first, second] = await Promise.all([servedOn(database), servedOn(database)]);
     const adding = await addingANotesServer();
 
     const state = await stateAskedBy(onMcpOf(first), adding);
     const retried = await retriedWith(onMcpOf(second), adding, state);
+    const recorded = await queried(database, recordedOwnKeys, [ownKeysStream]);
+    const kept = await queried(database, 'SELECT id FROM kept_secrets ORDER BY id');
 
     expect(retried.structuredContent).toMatchObject({ name: 'notes-raced', status: 'pending' });
-    expect(
-      await queried(database, 'SELECT message_type FROM emt_messages WHERE stream_id = $1', [ownKeysStream]),
-    ).toEqual([{ message_type: 'own_key_kept' }]);
-    expect(await queried(database, 'SELECT count(*)::int AS rows FROM kept_secrets')).toEqual([{ rows: 1 }]);
+    expect(recorded.map(({ message_type, purpose }) => [message_type, purpose])).toEqual([
+      ['own_key_kept', 'retry_state'],
+      ['own_key_kept', 'content_address'],
+    ]);
+    expect(kept.map(({ id }) => String(id))).toEqual(recorded.map(({ secret_id }) => String(secret_id)).toSorted());
   });
 });

@@ -19,6 +19,7 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
   providers: 'The providers a person may connect to the org by name, and whether the caller may add a connection',
   license:
     'The license of the runtime, activated with the key Studio gives, by which each new action is admitted against the account of an org at Auto',
+  content: 'The bytes a playbook keeps by their digest, served at an address the runtime signs for a browser to follow',
   guides: "The playbook's guides: what its words mean, how each kind of definition is written, and recipes",
 };
 

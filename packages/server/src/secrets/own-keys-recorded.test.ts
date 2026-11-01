@@ -15,6 +15,13 @@ describe('the facts of the keys the runtime keeps for itself', () => {
           context: { at: '2026-10-29T10:00:00.000Z', by: 'runtime' },
         },
       ],
+      '0.56.0': [
+        {
+          type: 'own_key_kept',
+          data: { purpose: 'content_address', secret_id: '019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e6f' },
+          context: { at: '2026-11-01T10:00:00.000Z', by: 'runtime' },
+        },
+      ],
     },
   });
 });

@@ -300,13 +300,13 @@ jobs:
           AWS_ENDPOINT_URL_KMS: http://127.0.0.1:19760
           AWS_ACCESS_KEY_ID: aws-ci
           AWS_SECRET_ACCESS_KEY: aws-ci-secret
-      - name: Keep every secret in Parameter Store across a restart with no key and no key file, keep a connection's value there through the API and forget it, then move a secret the ledger seals there, logging the prefix and the region and nothing of a value, a key or a credential
+      - name: Keep every secret in Parameter Store across a restart with no key and no key file, keep a connection's value there through the API and forget it, then move the secrets the ledger seals there, logging the prefix and the region and nothing of a value, a key or a credential
         timeout-minutes: 4
         run: |
           prefix=/auto-runtime/secrets
           connections=http://127.0.0.1:19762/v1/orgs/local/connections
           in_the_manager="\"message\":\"Secrets are kept in AWS Parameter Store under $prefix in $AWS_REGION, and"
-          own_key_read="\"message\":\"The runtime read the key it keeps for retry_state in AWS Parameter Store under $prefix in $AWS_REGION\""
+          own_key_read='"message":"The runtime read the key it keeps for '
           export SECRETS_KEEPER="aws-parameter-store:$prefix" LEDGER_FILE="$RUNNER_TEMP/ssm/ledger.db" HOST=127.0.0.1 PORT=19762 DO_NOT_TRACK=1
           moved_ledger="$RUNNER_TEMP/moved/ledger.db"
           value="ci-pasted-key-$(openssl rand -hex 12)"
@@ -371,34 +371,37 @@ jobs:
           started_as second
           test "$(asked "$connections/$id" | jq --raw-output .credential_ends_with)" = "${value: -4}"
           parameters
-          test "$(jq '.Parameters | length' "$RUNNER_TEMP/parameters.json")" = 2
+          test "$(jq '.Parameters | length' "$RUNNER_TEMP/parameters.json")" = 3
           test "$(jq --arg value "$value" '[.Parameters[] | select(.Value == $value)] | length' "$RUNNER_TEMP/parameters.json")" = 1
           jq --raw-output '.Parameters[].Value' "$RUNNER_TEMP/parameters.json" > "$RUNNER_TEMP/values-kept"
           rows_in "$LEDGER_FILE" > "$RUNNER_TEMP/rows.json"
-          test "$(wc --lines < "$RUNNER_TEMP/rows.json")" = 2
-          test "$(jq --slurp '[.[] | select(.kept_by == "aws-parameter-store" and .wrapped_key == null and .kid == null)] | length' "$RUNNER_TEMP/rows.json")" = 2
-          test "$(jq --slurp --raw-output '.[].held' "$RUNNER_TEMP/rows.json" | grep --count --extended-regexp "^$prefix/[0-9a-f-]{36}:[0-9]+\$")" = 2
+          test "$(wc --lines < "$RUNNER_TEMP/rows.json")" = 3
+          test "$(jq --slurp '[.[] | select(.kept_by == "aws-parameter-store" and .wrapped_key == null and .kid == null)] | length' "$RUNNER_TEMP/rows.json")" = 3
+          test "$(jq --slurp --raw-output '.[].held' "$RUNNER_TEMP/rows.json" | grep --count --extended-regexp "^$prefix/[0-9a-f-]{36}:[0-9]+\$")" = 3
           test "$(grep --count --fixed-strings "$value" "$RUNNER_TEMP/rows.json")" = 0
           test ! -e "$RUNNER_TEMP/ssm/secrets.key"
           test "$(asked --request DELETE "$connections/$id" | jq --raw-output .status)" = removed
           parameters
-          test "$(jq '.Parameters | length' "$RUNNER_TEMP/parameters.json")" = 1
+          test "$(jq '.Parameters | length' "$RUNNER_TEMP/parameters.json")" = 2
           stopped
           started_as sealed SECRETS_KEEPER=ledger SECRETS_KEY="$key" LEDGER_FILE="$moved_ledger"
           stopped
           started_as moving SECRETS_KEEPER_PREVIOUS=ledger SECRETS_KEY="$key" LEDGER_FILE="$moved_ledger"
           stopped
           rows_in "$moved_ledger" > "$RUNNER_TEMP/moved-rows.json"
-          test "$(jq --slurp '[.[] | select(.kept_by == "aws-parameter-store")] | length' "$RUNNER_TEMP/moved-rows.json")" = 1
-          test "$(wc --lines < "$RUNNER_TEMP/moved-rows.json")" = 1
+          test "$(jq --slurp '[.[] | select(.kept_by == "aws-parameter-store")] | length' "$RUNNER_TEMP/moved-rows.json")" = 2
+          test "$(wc --lines < "$RUNNER_TEMP/moved-rows.json")" = 2
           parameters
           jq --raw-output '.Parameters[].Value' "$RUNNER_TEMP/parameters.json" >> "$RUNNER_TEMP/values-kept"
           log="$RUNNER_TEMP/ssm-runtime.log"
           cat "$RUNNER_TEMP"/ssm-runtime-*.log > "$log"
           test "$(grep --count --fixed-strings "$in_the_manager 0 kept by the previous keeper were moved there\"" "$RUNNER_TEMP/ssm-runtime-first.log" "$RUNNER_TEMP/ssm-runtime-second.log" | grep --count ':1$')" = 2
-          test "$(grep --count --fixed-strings "$own_key_read" "$RUNNER_TEMP/ssm-runtime-first.log" "$RUNNER_TEMP/ssm-runtime-second.log" | grep --count ':1$')" = 2
+          test "$(grep --count --fixed-strings "$own_key_read" "$RUNNER_TEMP/ssm-runtime-first.log" "$RUNNER_TEMP/ssm-runtime-second.log" | grep --count ':2$')" = 2
+          for purpose in retry_state content_address; do
+            test "$(grep --count --fixed-strings "$own_key_read$purpose in AWS Parameter Store under $prefix in $AWS_REGION\"" "$RUNNER_TEMP/ssm-runtime-first.log" "$RUNNER_TEMP/ssm-runtime-second.log" | grep --count ':1$')" = 2
+          done
           test "$(grep --count --fixed-strings "\"message\":\"Secrets are kept in the ledger's database, sealed under the key " "$RUNNER_TEMP/ssm-runtime-sealed.log")" = 1
-          test "$(grep --count --fixed-strings "$in_the_manager 1 kept by the previous keeper were moved there\"" "$RUNNER_TEMP/ssm-runtime-moving.log")" = 1
+          test "$(grep --count --fixed-strings "$in_the_manager 2 kept by the previous keeper were moved there\"" "$RUNNER_TEMP/ssm-runtime-moving.log")" = 1
           test "$(grep --count --fixed-strings --regexp="$value" --regexp="$key" --regexp="$AWS_SECRET_ACCESS_KEY" --file="$RUNNER_TEMP/values-kept" "$log")" = 0
         env:
           AWS_ENDPOINT_URL_SSM: http://127.0.0.1:19760

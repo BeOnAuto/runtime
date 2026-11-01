@@ -119,9 +119,9 @@ describe('the OpenAPI document of a catalog', () => {
 
   it('describes each registration once, by its name, its title and the description its tool has', () => {
     expect(operationsIn(document).map(({ operation }) => operation.operationId)).toEqual(
-      expect.arrayContaining(['list_notes', 'list_notes_in_org', 'add_note', 'read_blob', 'get_guide']),
+      expect.arrayContaining(['list_notes', 'list_notes_in_org', 'add_note', 'read_blob', 'get_content', 'get_guide']),
     );
-    expect(operationsIn(document)).toHaveLength(operations.length + 1);
+    expect(operationsIn(document)).toHaveLength(operations.length + 2);
     expect(operationNamed('list_notes_in_org')).toMatchObject({
       path: '/orgs/{org}/notes',
       method: 'get',
@@ -222,12 +222,14 @@ describe('the input of a command', () => {
 });
 
 describe('the security of the operations of the document', () => {
-  it('takes on every operation but the guides a key, or an access token granted the permission it needs as a scope', () => {
-    const { get_guide: guides, ...others } = Object.fromEntries(
-      operationsIn(document).map(({ operation }) => [operation.operationId, operation.security]),
-    );
+  it('takes on every operation but the content and the guides a key, or an access token granted the permission it needs as a scope', () => {
+    const {
+      get_content: content,
+      get_guide: guides,
+      ...others
+    } = Object.fromEntries(operationsIn(document).map(({ operation }) => [operation.operationId, operation.security]));
 
-    expect(guides).toEqual([]);
+    expect([content, guides]).toEqual([[], []]);
     expect(others).toMatchObject({
       list_notes: [{ bearer: [] }, { openIdConnect: ['playbook:read'] }],
       add_note: [{ bearer: [] }, { openIdConnect: ['playbook:write'] }],

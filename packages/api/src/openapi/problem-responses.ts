@@ -60,7 +60,7 @@ const statuses = [...new Set(problemReasons.map((reason) => problemTypes[reason]
   (one, other) => one - other,
 );
 
-function problemAnswersOf(answered: ReadonlySet<ProblemReason>): readonly ProblemAnswer[] {
+export function problemAnswersOf(answered: ReadonlySet<ProblemReason>): readonly ProblemAnswer[] {
   return statuses.flatMap((status) => {
     const reasons = problemReasons.filter((reason) => answered.has(reason) && problemTypes[reason].status === status);
     return reasons.length === 0 ? [] : [{ status, name: reasons.join('_or_'), response: responseOf(reasons) }];

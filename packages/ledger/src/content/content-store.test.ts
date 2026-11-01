@@ -53,6 +53,10 @@ function recordingHoldingOneChunk(data: unknown): Recording {
   return recordingAnswering((statement) => (statement.startsWith('SELECT data') ? [{ data }] : [headOf('upload')]));
 }
 
+function answeringTheRemovedUpload(statement: string): readonly unknown[] {
+  return statement.startsWith('DELETE FROM recorded_content_heads') ? [{ upload_id: 'u1' }] : [];
+}
+
 function kindsOf({ statements }: Recording): readonly string[] {
   return statements.map((statement) => statement.split(' ').slice(0, 3).join(' '));
 }
@@ -71,14 +75,18 @@ function headOf(uploadId: string) {
 }
 
 describe('the writes of a recorded content', () => {
-  it('write its chunks first, each on its own, its head last, and read back the head they wrote', async () => {
+  it('write its chunks first, each on its own, its head last, read back the head they wrote, and answer what the put took where a removal took the head first', async () => {
     const recording = recordingFinding([]);
 
-    const put = Effect.runPromise(
+    const kept = await Effect.runPromise(
       sqliteContentOn(recording.pool).content.put(alpha, textToKeep(largerThanTwoChunks, 'text/plain')),
     );
 
-    await expect(put).rejects.toThrow('No head names the content just put, though nothing deletes what is kept');
+    expect(kept).toEqual({
+      sha256: sha256Of(largerThanTwoChunks),
+      bytes: 2 * mostContentChunkBytes + 1,
+      mediaType: 'text/plain',
+    });
     expect(kindsOf(recording)).toEqual([
       'INSERT INTO recorded_content_chunks',
       'INSERT INTO recorded_content_chunks',
@@ -135,6 +143,25 @@ describe('the writes of a recorded content that another put of its digest raced'
 });
 
 describe('the reads and the removals of a recorded content', () => {
+  it("remove a content in one transaction, its head first, answering its upload, and that upload's chunks after, and no chunk where no head was", async () => {
+    const [held, none] = [recordingAnswering(answeringTheRemovedUpload), recordingFinding([])];
+
+    await Effect.runPromise(sqliteContentOn(held.pool).content.remove(alpha, 'digest'));
+    await Effect.runPromise(sqliteContentOn(none.pool).content.remove(alpha, 'digest'));
+
+    const headRemoved =
+      'DELETE FROM recorded_content_heads WHERE playbook_key = "playbook/acme/alpha/" AND sha256 = "digest" RETURNING upload_id';
+    expect([held.statements, none.statements]).toEqual([
+      [
+        'BEGIN',
+        headRemoved,
+        'DELETE FROM recorded_content_chunks WHERE playbook_key = "playbook/acme/alpha/" AND upload_id = "u1"',
+        'COMMIT',
+      ],
+      ['BEGIN', headRemoved, 'COMMIT'],
+    ]);
+  });
+
   it('read no chunk of a digest the playbook does not hold', async () => {
     const recording = recordingFinding([]);
 

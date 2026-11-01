@@ -77,6 +77,7 @@ describe('the problems operations answer', () => {
       'bad_request',
       'unauthenticated',
       'forbidden_or_origin_not_allowed',
+      'forbidden',
       'not_found',
       'method_not_allowed',
       'conflict',
@@ -117,7 +118,7 @@ describe('the components of the document', () => {
     });
   });
 
-  it('tag each operation by the resource its route names, and the guides by their own, with what each tag holds', () => {
+  it('tag each operation by the resource its route names, and the content and the guides by their own, with what each tag holds', () => {
     expect(tags).toEqual([
       { name: 'notes' },
       { name: 'lines' },
@@ -126,6 +127,11 @@ describe('the components of the document', () => {
       { name: 'playbooks', description: 'The playbooks of the org: made, listed, read, renamed and retired' },
       { name: 'playbook-labels' },
       { name: 'blobs' },
+      {
+        name: 'content',
+        description:
+          'The bytes a playbook keeps by their digest, served at an address the runtime signs for a browser to follow',
+      },
       {
         name: 'guides',
         description: "The playbook's guides: what its words mean, how each kind of definition is written, and recipes",

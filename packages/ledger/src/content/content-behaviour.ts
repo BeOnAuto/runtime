@@ -152,6 +152,27 @@ function readFailing(entry: LedgerEntry): void {
   });
 }
 
+function readWhileRemoved(entry: LedgerEntry): void {
+  it('fails as a defect on a read of a content removed while it is read, at a chunk it had not read yet', async () => {
+    const { ledger } = await opened(entry);
+    const { sha256 } = await resultOf(ledger.content.put(alpha, textToKeep(answerOfAbout(5_000_000), json)));
+    const { stream } = await present(ledger.content.get(alpha, sha256));
+    const reader = stream.getReader();
+    const first = await reader.read();
+    reader.releaseLock();
+
+    await resultOf(ledger.content.remove(alpha, sha256));
+    const rest = await deliveredBeforeFailing(stream);
+
+    expect(first.done).toBe(false);
+    expect(rest.bytes).toBeLessThanOrEqual(mostContentChunkBytes);
+    expect(rest.failure).toHaveProperty(
+      'message',
+      expect.stringMatching(new RegExp(`^The content kept under ${sha256} is missing its chunk [12]$`, 'u')),
+    );
+  });
+}
+
 export function contentBehaviour(entry: LedgerEntry): void {
   recordedContentBehaviour(contentEntryOf(entry));
   describe('the content a playbook recorded, in chunks', () => {
@@ -159,6 +180,7 @@ export function contentBehaviour(entry: LedgerEntry): void {
   });
   describe('the content a playbook recorded, read back', () => {
     readFailing(entry);
+    readWhileRemoved(entry);
   });
   unnamedChunksSwept(entry);
 }

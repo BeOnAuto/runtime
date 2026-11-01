@@ -88,8 +88,8 @@ describe('the three projections of the catalog', () => {
     },
   );
 
-  it('leaves out of the document no operation but the guides, which the catalog does not hold', () => {
-    expect(documented.length - registrations.length).toBe(1);
-    expect(documented.at(-1)?.operation.operationId).toBe('get_guide');
+  it('leaves out of the document no operation but the content and the guides, which the catalog does not hold', () => {
+    expect(documented.length - registrations.length).toBe(2);
+    expect(documented.slice(-2).map(({ operation }) => operation.operationId)).toEqual(['get_content', 'get_guide']);
   });
 });

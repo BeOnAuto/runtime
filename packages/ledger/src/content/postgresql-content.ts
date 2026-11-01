@@ -47,7 +47,7 @@ export function inTransactionOn(connections: ContentConnections): InTransaction 
 export function postgresqlContentOn(connections: ContentConnections): ContentStore {
   const execute = executorOn(connections);
   return {
-    content: recordedContentOn(execute, postgresqlContent),
+    content: recordedContentOn({ execute, inTransaction: inTransactionOn(connections) }, postgresqlContent),
     sweepContent: contentSweepOn(execute),
   };
 }

@@ -60,6 +60,10 @@
       "description": "The requests runs wait on, and their answers"
     },
     {
+      "name": "content",
+      "description": "The bytes a playbook keeps by their digest, served at an address the runtime signs for a browser to follow"
+    },
+    {
       "name": "guides",
       "description": "The playbook's guides: what its words mean, how each kind of definition is written, and recipes"
     }
@@ -16226,6 +16230,97 @@
         ]
       }
     },
+    "/orgs/{org}/playbooks/{playbook}/content/{sha256}": {
+      "get": {
+        "operationId": "get_content",
+        "summary": "Get content",
+        "description": "Answers the bytes of a content a playbook keeps, with the media type it was kept with, at an address the runtime signed for that content. The address is what a browser follows, so it needs no credential: its signature and the time it lasts until are its credential, and it lasts 15 minutes at the most. An address past its time, or not signed for this content, is refused as forbidden.",
+        "tags": [
+          "content"
+        ],
+        "parameters": [
+          {
+            "name": "org",
+            "in": "path",
+            "required": true,
+            "description": "The id of the org whose playbook keeps the content",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$"
+            }
+          },
+          {
+            "name": "playbook",
+            "in": "path",
+            "required": true,
+            "description": "The id of the playbook that keeps the content",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$"
+            }
+          },
+          {
+            "name": "sha256",
+            "in": "path",
+            "required": true,
+            "description": "The SHA-256 of the content's bytes, in lowercase hex",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": true,
+            "description": "The time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "sig",
+            "in": "query",
+            "required": true,
+            "description": "The signature the runtime made of the org, the playbook, the digest and the time, in lowercase hex",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The content's bytes, with the media type it was kept with as their Content-Type",
+            "headers": {
+              "Cache-Control": {
+                "description": "private, with a max-age of the seconds the address has left",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "*/*": {}
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          }
+        },
+        "security": []
+      }
+    },
     "/guides/{guide}": {
       "get": {
         "operationId": "get_guide",
@@ -16591,6 +16686,16 @@
       },
       "forbidden_or_origin_not_allowed": {
         "description": "forbidden: The credentials may not do that. origin_not_allowed: A browser sent it from an origin the server refuses.",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/problem"
+            }
+          }
+        }
+      },
+      "forbidden": {
+        "description": "forbidden: The credentials may not do that.",
         "content": {
           "application/problem+json": {
             "schema": {

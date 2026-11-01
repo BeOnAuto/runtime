@@ -13,12 +13,13 @@ import {
 import { randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { StatementExecutor, TransactionalPool } from '../event-store.ts';
+import { inTransactionOf, type InTransaction, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
 import { sqliteContent, type ContentDialect } from './content-dialects.ts';
 import {
   playbookPlaceOf,
   columnsOf,
   commanded,
+  contentRemoved,
   headOf,
   hexOf,
   readOn,
@@ -31,11 +32,6 @@ import {
 } from './content-places.ts';
 import { contentSweepOn } from './content-sweep.ts';
 import { keptShelf } from './content-tables.ts';
-
-interface Placed {
-  readonly uploadId: string;
-  readonly head: KeptHead | undefined;
-}
 
 interface ChunkWriting {
   readonly take: (chunk: Readonly<Uint8Array>) => Effect.Effect<void>;
@@ -107,11 +103,15 @@ function placedAfter(
   });
 }
 
+function keptOf(head: ContentKept | undefined, { sha256, bytes }: Taken, mediaType: string): ContentKept {
+  return head === undefined ? { sha256, bytes, mediaType } : { sha256, bytes: head.bytes, mediaType: head.mediaType };
+}
+
 function placedOn(
   shelved: Shelved,
   place: Key,
   { stream, mediaType, expected }: ContentToKeep,
-): Effect.Effect<Placed, ContentRefused> {
+): Effect.Effect<ContentKept, ContentRefused> {
   return Effect.suspend(() => {
     const uploadId = randomUUIDv7();
     let digested: string | undefined;
@@ -122,28 +122,31 @@ function placedOn(
       digested = taken.sha256;
       yield* requireExpected(expected, taken);
       const head = held ?? (yield* placedAfter(shelved, place, uploadId, { taken, mediaType, writing }));
-      return { uploadId, head };
+      return keptOf(head, taken, mediaType);
     }).pipe(Effect.onError(() => uploadRemoved(shelved, place, { uploadId, sha256: digested })));
   });
 }
 
-function keptOf({ head }: Placed): Effect.Effect<ContentKept> {
-  return head === undefined
-    ? Effect.die(new Error('No head names the content just put, though nothing deletes what is kept'))
-    : Effect.succeed({ sha256: head.sha256, bytes: head.bytes, mediaType: head.mediaType });
+interface ContentStatements {
+  readonly execute: StatementExecutor;
+  readonly inTransaction: InTransaction;
 }
 
-export function recordedContentOn(execute: StatementExecutor, dialect: ContentDialect): RecordedContent {
+export function recordedContentOn(
+  { execute, inTransaction }: ContentStatements,
+  dialect: ContentDialect,
+): RecordedContent {
   const keeping: Shelved = { execute, dialect, shelf: keptShelf };
   return {
-    put: (playbook, content) => Effect.flatMap(placedOn(keeping, playbookPlaceOf(playbook), content), keptOf),
+    put: (playbook, content) => placedOn(keeping, playbookPlaceOf(playbook), content),
     get: (playbook, sha256) => readOn(keeping, playbookPlaceOf(playbook), sha256),
+    remove: (playbook, sha256) => contentRemoved(keeping, inTransaction, playbookPlaceOf(playbook), sha256),
   };
 }
 
 export function sqliteContentOn(pool: TransactionalPool): ContentStore {
   return {
-    content: recordedContentOn(pool.execute, sqliteContent),
+    content: recordedContentOn({ execute: pool.execute, inTransaction: inTransactionOf(pool) }, sqliteContent),
     sweepContent: contentSweepOn(pool.execute),
   };
 }

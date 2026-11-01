@@ -58,5 +58,9 @@ export function memoryRecordedContent(): RecordedContent {
   return {
     put: (playbook, content) => Effect.map(received(content), (taken) => keptOn(shelfOf(shelfKeyOf(playbook)), taken)),
     get: (playbook, sha256) => Effect.sync(() => readFrom(kept.get(shelfKeyOf(playbook)), sha256)),
+    remove: (playbook, sha256) =>
+      Effect.sync(() => {
+        kept.get(shelfKeyOf(playbook))?.delete(sha256);
+      }),
   };
 }

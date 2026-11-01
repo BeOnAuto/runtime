@@ -23,9 +23,11 @@ import { keyHeldBy } from './secrets-logging.ts';
 
 export const ownKeysStream = 'runtime/own-keys';
 
-const OwnKeyPurposeSchema = Schema.Literals(['retry_state']);
+const OwnKeyPurposeSchema = Schema.Literals(['retry_state', 'content_address']);
 
 type OwnKeyPurpose = typeof OwnKeyPurposeSchema.Type;
+
+type OwnKey = Redacted.Redacted<Uint8Array>;
 
 export const OwnKeyEventSchema = Schema.Union([
   factOf('own_key_kept', Schema.Struct({ purpose: OwnKeyPurposeSchema, secret_id: Schema.String }), ActedContextSchema),
@@ -175,27 +177,46 @@ function ownKeyIn(
   );
 }
 
+function ownKeyKeptBy(services: OwnKeyServices, asked: Asked): Effect.Effect<OwnKey, OwnKeyUnavailable> {
+  return Effect.gen(function* () {
+    const secretId = yield* ownKeyIdOf(services, asked);
+    const key = yield* ownKeyIn(services, asked, secretId);
+    yield* asked.kept.logKeyRead(asked.purpose, secretId);
+    return key;
+  });
+}
+
 export function retryStateKeysKeptBy(
   services: OwnKeyServices,
   kept: SecretsKept,
 ): Effect.Effect<RetryStateKeys, OwnKeyUnavailable> {
-  const asked: Asked = { purpose: 'retry_state', kept };
-  return Effect.gen(function* () {
-    const secretId = yield* ownKeyIdOf(services, asked);
-    const key = yield* ownKeyIn(services, asked, secretId);
-    yield* kept.logKeyRead(asked.purpose, secretId);
-    return { current: key };
-  });
+  return Effect.map(ownKeyKeptBy(services, { purpose: 'retry_state', kept }), (current) => ({ current }));
 }
 
-export async function retryStateKeysOf(
+export function contentAddressKeyKeptBy(
+  services: OwnKeyServices,
+  kept: SecretsKept,
+): Effect.Effect<OwnKey, OwnKeyUnavailable> {
+  return ownKeyKeptBy(services, { purpose: 'content_address', kept });
+}
+
+export interface OwnKeysRead {
+  readonly retryStateKeys: RetryStateKeys;
+  readonly contentAddressKey: OwnKey;
+}
+
+export async function ownKeysOf(
   runtime: AppRuntime<DispatcherServices>,
   secrets: SecretStore,
   kept: SecretsKept,
-): Promise<RetryStateKeys> {
+): Promise<OwnKeysRead> {
+  const services = { registry: runtimeLedger(runtime), secrets };
   try {
     return await Effect.runPromiseWith(runtime.context)(
-      retryStateKeysKeptBy({ registry: runtimeLedger(runtime), secrets }, kept),
+      Effect.all({
+        retryStateKeys: retryStateKeysKeptBy(services, kept),
+        contentAddressKey: contentAddressKeyKeptBy(services, kept),
+      }),
     );
   } catch (failure) {
     await secrets.close();

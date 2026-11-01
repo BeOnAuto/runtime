@@ -20,6 +20,7 @@ export function objectContentOn(bucket: Bucket, location: ContentLocation): Cont
     content: {
       put: (playbook, content) => placedOn(placing, (sha256) => keys.kept(playbook, sha256), content),
       get: (playbook, sha256) => readOf(keys.kept(playbook, sha256), sha256),
+      remove: (playbook, sha256) => Effect.promise(() => bucket.delete([keys.kept(playbook, sha256)])),
     },
     sweepContent: (before) => sweptUploads(bucket, keys.uploads, before),
   };

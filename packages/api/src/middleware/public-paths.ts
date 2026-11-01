@@ -7,8 +7,36 @@ import { servesStudioAt, type ApiStudio } from '../studio/served-studio.ts';
 
 export type IsPublic = (path: string) => boolean;
 
-export function publicPathsOf({ resource }: Authenticator, publicPaths: ReadonlySet<string>): IsPublic {
-  return (path) => publicPaths.has(path) || (resource !== undefined && isMetadataPath(path));
+export interface PublicPaths {
+  readonly add: (path: string) => void;
+  readonly has: IsPublic;
+}
+
+const parameter = /^:\w+$/u;
+
+export function pathMatcherOf(path: string): IsPublic {
+  const segments = path.split('/').map((segment) => (parameter.test(segment) ? '[^/]+' : RegExp.escape(segment)));
+  const pattern = new RegExp(`^${segments.join('/')}$`, 'u');
+  return (candidate) => pattern.test(candidate);
+}
+
+export function publicPathsKept(): PublicPaths {
+  const paths = new Set<string>();
+  const patterns: IsPublic[] = [];
+  return {
+    add: (path) => {
+      if (path.includes('/:')) {
+        patterns.push(pathMatcherOf(path));
+      } else {
+        paths.add(path);
+      }
+    },
+    has: (path) => paths.has(path) || patterns.some((matches) => matches(path)),
+  };
+}
+
+export function publicPathsOf({ resource }: Authenticator, isListed: IsPublic): IsPublic {
+  return (path) => isListed(path) || (resource !== undefined && isMetadataPath(path));
 }
 
 export function needingNoCallerOf(isPublic: IsPublic, studio: ApiStudio): IsPublic {

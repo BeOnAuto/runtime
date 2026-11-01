@@ -4,7 +4,7 @@ export { ApiKeysSchema, apiKeysVariable, readApiKeys } from './keys/api-keys-set
 export { authenticatorFor, type AccessSettings, type Authenticator } from './access/authenticator.ts';
 export { accessModeOf, type AccessFacts, type AccessMode, type DeclaredAccessMode } from './access/access-mode.ts';
 export { listensOnlyOnLoopback } from './access/loopback.ts';
-export { loopbackNames, namesTheLoopback } from './access/loopback-names.ts';
+export { isHttpsOrLoopback, loopbackNames, namesTheLoopback } from './access/loopback-names.ts';
 export { InvalidApiKeysError } from './keys/invalid-api-keys-error.ts';
 export { ReachableWithoutCredentialsError } from './access/reachable-without-credentials-error.ts';
 export { pageOriginsOf, type PageSettings } from './access/page-origins.ts';
@@ -15,6 +15,16 @@ export {
   studioLinkOf,
   type StudioSettings,
 } from './access/studio.ts';
+export {
+  contentAddressesUnder,
+  contentAddressLastsSeconds,
+  contentPathOf,
+  type ContentAddressCheck,
+  type ContentAddresses,
+  type ContentAddressKey,
+  type ContentSignature,
+  type SignedContentAddress,
+} from './addresses/content-addresses.ts';
 export {
   isKeyHolder,
   isRefusal,

@@ -1,4 +1,4 @@
-import { clientMetadataRoutes, type RegisterRoutes, type RetryStateKeys } from '@on.auto/api';
+import { clientMetadataRoutes, type RegisterRoutes } from '@on.auto/api';
 import {
   makeConnectionOperations,
   makeConnectionSource,
@@ -14,12 +14,11 @@ import { consentClientOf, servedClientMetadataDocumentOf } from '../composition/
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
 import { licenseServedBy, type ServedLicense } from '../licensing/served-license.ts';
-import { retryStateKeysOf, secretsKeptBy } from '../secrets/own-keys.ts';
+import { ownKeysOf, secretsKeptBy, type OwnKeysRead } from '../secrets/own-keys.ts';
 import type { Settings } from '../settings/settings.ts';
 
-export interface StoresAndConnections {
+export interface StoresAndConnections extends OwnKeysRead {
   readonly stores: LedgerStores;
-  readonly retryStateKeys: RetryStateKeys;
   readonly consent: ReturnType<typeof consentClientOf>;
   readonly connections: ConnectionOperations;
   readonly source: ReturnType<typeof makeConnectionSource>;
@@ -101,13 +100,13 @@ export async function storesAndConnectionsOf(
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);
-  const retryStateKeys = await retryStateKeysOf(runtime, stores.secrets, secretsKeptBy(settings));
+  const ownKeys = await ownKeysOf(runtime, stores.secrets, secretsKeptBy(settings));
   const consent = consentClientOf(runtime, settings, stores.secrets);
   const pages = { studio: settings.studio, runtime: ownOrigin };
   const services = connectionServicesOf(settings, { secrets: stores.secrets, consent, pages });
   return {
     stores,
-    retryStateKeys,
+    ...ownKeys,
     consent,
     connections: makeConnectionOperations(services),
     source: sourceServedBy(runtime, settings, { secrets: stores.secrets, pages }),

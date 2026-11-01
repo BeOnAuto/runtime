@@ -20,6 +20,7 @@ export interface ContentKept extends Digested {
 export interface RecordedContent {
   readonly put: (playbook: ContentOwner, content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
   readonly get: (playbook: ContentOwner, sha256: string) => Effect.Effect<StreamedContent | undefined>;
+  readonly remove: (playbook: ContentOwner, sha256: string) => Effect.Effect<void>;
 }
 
 export interface ContentStore {

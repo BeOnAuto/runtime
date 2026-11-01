@@ -5,19 +5,31 @@ import type { ApiOptions } from '../api-options.ts';
 import { authenticate } from '../authentication/authentication.ts';
 import { landingPageFor } from '../landing/landing-page.ts';
 import { corsFor } from './cors.ts';
-import { exceptOn, needingNoCallerOf, publicPathsOf } from './public-paths.ts';
+import { exceptOn, needingNoCallerOf, publicPathsKept, publicPathsOf, type PublicPaths } from './public-paths.ts';
 import { requestIdAndSecurityHeadersFor } from './response-headers.ts';
 import { validateHost } from './validate-host.ts';
 import { validateOrigin } from './validate-origin.ts';
 
-export function middlewareFor(
-  { allowedOrigins, studio, authenticator, requests, runtimeControl, installId, licenseNotice, pageStyle }: ApiOptions,
-  publicPaths: ReadonlySet<string>,
-): readonly MiddlewareHandler<ApiEnv>[] {
-  const isPublic = publicPathsOf(authenticator, publicPaths);
+interface MiddlewareChain {
+  readonly handlers: readonly MiddlewareHandler<ApiEnv>[];
+  readonly publicPaths: PublicPaths;
+}
+
+export function middlewareFor({
+  allowedOrigins,
+  studio,
+  authenticator,
+  requests,
+  runtimeControl,
+  installId,
+  licenseNotice,
+  pageStyle,
+}: ApiOptions): MiddlewareChain {
+  const publicPaths = publicPathsKept();
+  const isPublic = publicPathsOf(authenticator, publicPaths.has);
   const hostValidation = authenticator.mode === 'local' ? [validateHost] : [];
   const pages = { studio, allowedOrigins };
-  return [
+  const handlers = [
     ...(requests === undefined ? [] : [requests]),
     landingPageFor({
       control: runtimeControl,
@@ -34,4 +46,5 @@ export function middlewareFor(
     ...corsFor(pages, authenticator.resource),
     exceptOn(needingNoCallerOf(isPublic, studio), authenticate(authenticator)),
   ];
+  return { handlers, publicPaths };
 }

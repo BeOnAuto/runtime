@@ -3,7 +3,8 @@ import { verifiedStream, type ContentKept, type StreamedContent } from '@on.auto
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import type { StatementExecutor } from '../event-store.ts';
+import type { InTransaction, StatementExecutor } from '../event-store.ts';
+import { inTurn } from '../projections/inline-projection.ts';
 import type { ContentDialect } from './content-dialects.ts';
 import type { Shelf } from './content-tables.ts';
 
@@ -27,6 +28,8 @@ const HeadRows = Schema.Array(
 const StoredBytes = Schema.Union([Schema.Uint8Array, Schema.instanceOf(ArrayBuffer)]);
 
 const ChunkRows = Schema.Array(Schema.Struct({ data: StoredBytes }));
+
+const RemovedUploadRows = Schema.Array(Schema.Struct({ upload_id: Schema.String }));
 
 function viewOf(stored: Readonly<Uint8Array> | Readonly<ArrayBuffer>): Uint8Array {
   return stored instanceof Uint8Array ? stored : new Uint8Array(stored);
@@ -107,6 +110,24 @@ export function uploadRemoved(shelved: Shelved, place: Key, { uploadId, sha256 }
       ? SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(upload)}`
       : SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(upload)}
           AND NOT EXISTS (SELECT 1 FROM ${SQL.identifier(heads)} WHERE ${matching([...upload, ['sha256', sha256]])})`,
+  );
+}
+
+export function contentRemoved(
+  { shelf: { chunks, heads } }: Pick<Shelved, 'shelf'>,
+  inTransaction: InTransaction,
+  place: Key,
+  sha256: string,
+): Effect.Effect<void> {
+  return Effect.promise(() =>
+    inTransaction(async (execute) => {
+      const { rows } = await execute.query(
+        SQL`DELETE FROM ${SQL.identifier(heads)} WHERE ${matching(place)} AND sha256 = ${sha256} RETURNING upload_id`,
+      );
+      await inTurn(Schema.decodeUnknownSync(RemovedUploadRows)(rows), ({ upload_id }) =>
+        execute.command(SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(uploadOf(place, upload_id))}`),
+      );
+    }),
   );
 }
 

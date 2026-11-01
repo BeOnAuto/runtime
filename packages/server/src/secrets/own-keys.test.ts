@@ -15,9 +15,9 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { memoryRuntime } from '../testing/records/memory-runtime.ts';
 import {
   ownKeysDecider,
+  ownKeysOf,
   ownKeysStream,
   retryStateKeysKeptBy,
-  retryStateKeysOf,
   secretsKeptBy,
   type OwnKeyEvent,
   type OwnKeyKeeping,
@@ -268,18 +268,22 @@ function closingCounted(store: SecretStore) {
   return { closes, counted };
 }
 
-describe('the start of a server that reads the key that signs the state of a retry', () => {
-  it('closes its secret store before it fails, and leaves it open once it has the key', async () => {
+describe('the start of a server that reads the keys it keeps for itself', () => {
+  it('closes its secret store before it fails, and leaves it open once it has the key of a retry and the key of the addresses of content', async () => {
     const refusing = recordingCustodian();
     refusing.refuse();
     const failing = closingCounted(storeOver(memoryRows({ now }), refusing));
     const answering = closingCounted(storeOver(memoryRows({ now }), recordingCustodian()));
 
-    const failed = retryStateKeysOf(await aRuntime(), failing.counted, fromTheEnvironment);
+    const failed = ownKeysOf(await aRuntime(), failing.counted, fromTheEnvironment);
     await expect(failed).rejects.toThrow('cannot be kept under the key that SECRETS_KEY holds');
-    const kept = await retryStateKeysOf(await aRuntime(), answering.counted, fromTheEnvironment);
+    const { retryStateKeys, contentAddressKey } = await ownKeysOf(
+      await aRuntime(),
+      answering.counted,
+      fromTheEnvironment,
+    );
 
-    expect(failing.closes.made).toBe(1);
-    expect([bytesOf(kept.current).length, answering.closes.made]).toEqual([32, 0]);
+    expect([failing.closes.made, answering.closes.made]).toEqual([1, 0]);
+    expect([bytesOf(retryStateKeys.current), bytesOf(contentAddressKey)].map(({ length }) => length)).toEqual([32, 32]);
   });
 });

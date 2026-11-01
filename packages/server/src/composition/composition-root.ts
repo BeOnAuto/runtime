@@ -40,7 +40,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
   const { modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, made } = serving;
   return async (runtime, ownOrigin) => {
     const { ledger, workflows, identityIssuer } = settings;
-    const { stores, retryStateKeys, consent, connections, source, offering, clientMetadata, license } =
+    const { stores, consent, connections, source, offering, clientMetadata, license, ...ownKeys } =
       await storesAndConnectionsOf(runtime, settings, database, ownOrigin);
     const registry = await made.registry.openedIn(runtime, settings, {
       ...wiring,
@@ -62,7 +62,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       ledger,
       workflows,
       identityIssuer,
-      retryStateKeys,
+      ...ownKeys,
       shippedFiles,
       ...functions.parts,
       orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations],

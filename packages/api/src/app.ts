@@ -13,8 +13,8 @@ import { studioRoutes } from './studio/served-studio.ts';
 export function createApp(options: ApiOptions, callContext: CallContext): ApiApp {
   const app: ApiApp['app'] = new Hono();
   const closes: Close[] = [];
-  const publicPaths = new Set<string>();
-  app.use(...middlewareFor(options, publicPaths));
+  const { handlers, publicPaths } = middlewareFor(options);
+  app.use(...handlers);
   app.use(
     methodNotAllowed({
       app,

@@ -30,6 +30,7 @@ export async function servingAToolThatWaits(): Promise<WaitingServer> {
           await routesServing([...playbookOperations, waitForeverAnnouncing(calling.resolve)], {
             identityIssuer: settings.identityIssuer,
             retryStateKeys: { current: keyInHandOf({ from: 'start' }) },
+            contentAddressKey: keyInHandOf({ from: 'start' }),
             shippedFiles,
           })(runtime),
         ),

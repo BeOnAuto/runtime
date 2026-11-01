@@ -1,5 +1,6 @@
 import type { Catalog, RouteRegistration } from '@on.auto/operations';
 
+import { contentPath, contentPathItem, contentProblems, contentTag } from '../content/content-path-item.ts';
 import type { GuideShelf } from '../guides/guide-shelf.ts';
 import { guidePath, guidePathItemOf } from './guide-path.ts';
 import { describedOperationOf, type DescribedOperation } from './operation-object.ts';
@@ -35,8 +36,8 @@ export function documentPathsOf(catalog: Catalog, shelf: GuideShelf): DocumentPa
     describedOperationOf(registration, operationIdOf(registration)),
   );
   return {
-    paths: { ...pathItemsOf(described), [guidePath]: guidePathItemOf(shelf) },
-    tags: tagsNamed([...described.map(({ tag }) => tag), guidesTag]),
-    problems: described.flatMap(({ problems }) => problems),
+    paths: { ...pathItemsOf(described), [contentPath]: contentPathItem, [guidePath]: guidePathItemOf(shelf) },
+    tags: tagsNamed([...described.map(({ tag }) => tag), contentTag, guidesTag]),
+    problems: [...described.flatMap(({ problems }) => problems), ...contentProblems],
   };
 }

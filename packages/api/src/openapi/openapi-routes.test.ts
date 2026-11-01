@@ -52,7 +52,7 @@ describe('the OpenAPI document', () => {
     ];
 
     expect(first).toMatchObject({ status: 200, body: { openapi: '3.1.1', info: { title: 'Auto Runtime' } } });
-    expect(operationsIn(first.body)).toHaveLength(notebookOperations.length + 1);
+    expect(operationsIn(first.body)).toHaveLength(notebookOperations.length + 2);
     expect(first.headers.get('content-type')).toBe('application/json');
     expect(first.headers.get('cache-control')).toBe('public, max-age=300');
     expect(second.text).toBe(first.text);

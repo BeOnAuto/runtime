@@ -32,12 +32,8 @@ function heldOf(bucket: Bucket, key: string): Effect.Effect<ObjectHead | undefin
   return Effect.promise(() => bucket.head(key));
 }
 
-function keptAt(bucket: Bucket, key: string, sha256: string): Effect.Effect<ContentKept> {
-  return Effect.flatMap(heldOf(bucket, key), (held) =>
-    held === undefined
-      ? Effect.die(new Error(`No object holds the content just put under ${key}, though nothing deletes what is kept`))
-      : Effect.succeed({ sha256, ...held }),
-  );
+function keptAt(bucket: Bucket, key: string, put: ContentKept): Effect.Effect<ContentKept> {
+  return Effect.map(heldOf(bucket, key), (held) => (held === undefined ? put : { sha256: put.sha256, ...held }));
 }
 
 function readAlone(): Effect.Effect<void> {
@@ -63,8 +59,8 @@ function keptAfter(bucket: Bucket, keyOf: KeyOf, written: Written): Effect.Effec
       yield* Effect.promise(() => bucket.delete(written.writing.uploading() ? [written.upload] : []));
       return { sha256, ...held };
     }
-    const first = yield* placedFirst(bucket, key, written);
-    return first ? { sha256, bytes, mediaType: written.mediaType } : yield* keptAt(bucket, key, sha256);
+    const put = { sha256, bytes, mediaType: written.mediaType };
+    return (yield* placedFirst(bucket, key, written)) ? put : yield* keptAt(bucket, key, put);
   });
 }
 

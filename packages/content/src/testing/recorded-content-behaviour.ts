@@ -171,6 +171,92 @@ function putRaced(entry: ContentEntry): void {
   });
 }
 
+function removedWhole(entry: ContentEntry): void {
+  it('removes a content of one chunk and one of several, so no read finds them, and leaves the other contents of the playbook and the same digest in another playbook whole', async () => {
+    const store = await entry.aStore();
+    const [small, large, other] = [await generated(1000), await generated(2_500_000), await generated(1000, 11)];
+    await Promise.all([small, large, other].map(({ content }) => resultOf(store.content.put(alpha, content()))));
+    await resultOf(store.content.put(beta, large.content()));
+
+    await resultOf(store.content.remove(alpha, small.sha256));
+    await resultOf(store.content.remove(alpha, large.sha256));
+
+    expect(await resultOf(store.content.get(alpha, small.sha256))).toBeUndefined();
+    expect(await resultOf(store.content.get(alpha, large.sha256))).toBeUndefined();
+    expect(await resultOf(store.elsewhere.get(alpha, large.sha256))).toBeUndefined();
+    expect(await readBack(await present(store.content.get(alpha, other.sha256)))).toMatchObject({
+      sha256: other.sha256,
+      bytes: 1000,
+    });
+    expect(await readBack(await present(store.content.get(beta, large.sha256)))).toMatchObject({
+      sha256: large.sha256,
+      bytes: 2_500_000,
+    });
+    expect(await store.unnamedLeft()).toBe(0);
+  });
+
+  it('removes a content the playbook does not hold, or no longer holds, without failing', async () => {
+    const store = await entry.aStore();
+    const kept = await resultOf(store.content.put(alpha, textToKeep('{"a":1}', json)));
+
+    const removed = await Promise.all([
+      resultOf(store.content.remove(alpha, sha256Of('never kept'))),
+      resultOf(store.content.remove(beta, kept.sha256)),
+      resultOf(store.content.remove(alpha, kept.sha256)).then(() => resultOf(store.content.remove(alpha, kept.sha256))),
+    ]);
+
+    expect(removed).toEqual([undefined, undefined, undefined]);
+    expect(await resultOf(store.content.get(alpha, kept.sha256))).toBeUndefined();
+    expect(await store.unnamedLeft()).toBe(0);
+  });
+}
+
+function keptAgainAfterRemoval(entry: ContentEntry): void {
+  it('keeps a content put again after its removal, with the media type of the put after it', async () => {
+    const store = await entry.aStore();
+    const large = await generated(2_500_000);
+    await resultOf(store.content.put(alpha, textToKeep('{"a":1}', json)));
+    await resultOf(store.content.put(alpha, large.content()));
+    await resultOf(store.content.remove(alpha, sha256Of('{"a":1}')));
+    await resultOf(store.content.remove(alpha, large.sha256));
+
+    const kept = [
+      await resultOf(store.content.put(alpha, textToKeep('{"a":1}', 'text/plain'))),
+      await resultOf(store.content.put(alpha, { ...large.content(), mediaType: json })),
+    ];
+
+    expect(kept).toEqual([
+      { sha256: sha256Of('{"a":1}'), bytes: 7, mediaType: 'text/plain' },
+      { sha256: large.sha256, bytes: 2_500_000, mediaType: json },
+    ]);
+    expect(await readBack(await present(store.content.get(alpha, large.sha256)))).toMatchObject({
+      sha256: large.sha256,
+      bytes: 2_500_000,
+      mediaType: json,
+    });
+    expect(await store.unnamedLeft()).toBe(0);
+  });
+
+  it('leaves a content whole or not at all where a removal meets a put of its digest, and nothing a put left behind', async () => {
+    const store = await entry.aStore();
+    const large = await generated(2_500_000);
+    await resultOf(store.content.put(alpha, large.content()));
+
+    await Promise.all([
+      resultOf(store.content.remove(alpha, large.sha256)),
+      resultOf(store.elsewhere.put(alpha, large.content())),
+      resultOf(store.content.put(alpha, large.content())),
+    ]);
+    const left = await resultOf(store.content.get(alpha, large.sha256));
+    const digestsRead = await Promise.all(
+      [left].filter((held) => held !== undefined).map(async (held) => (await readBack(held)).sha256),
+    );
+
+    expect(new Set([large.sha256, ...digestsRead])).toEqual(new Set([large.sha256]));
+    expect(await store.unnamedLeft()).toBe(0);
+  });
+}
+
 export function recordedContentBehaviour(entry: ContentEntry): void {
   describe('the content a playbook recorded', () => {
     keptWhole(entry);
@@ -180,5 +266,9 @@ export function recordedContentBehaviour(entry: ContentEntry): void {
     putRefused(entry);
     heldDigestDefended(entry);
     putRaced(entry);
+  });
+  describe('the content a playbook recorded, removed', () => {
+    removedWhole(entry);
+    keptAgainAfterRemoval(entry);
   });
 }

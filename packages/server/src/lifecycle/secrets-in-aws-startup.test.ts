@@ -170,29 +170,29 @@ describe('a server whose secrets AWS Parameter Store keeps, as it starts', () =>
 });
 
 describe('a server that moves its secrets into AWS Parameter Store, as it starts', () => {
-  it('moves the key it keeps for itself from the ledger with the secrets, and starts under the manager alone with it', async () => {
+  it('moves the keys it keeps for itself from the ledger with the secrets, and starts under the manager alone with them', async () => {
     const { fileName, remove } = temporaryLedger();
     onTestFinished(remove);
     const key = { SECRETS_KEY: Buffer.alloc(32, 9).toString('base64') };
     const sealed = await startedUnder({ HOST: '127.0.0.1', PORT: '0', LEDGER_FILE: fileName, ...key });
-    const [kept] = await ownKeyFactsIn(fileName);
+    const kept = await ownKeyFactsIn(fileName);
 
     const moving = await startedUnder({ ...inTheManager(fileName), ...key, SECRETS_KEEPER_PREVIOUS: 'ledger' });
     const alone = await startedUnder(inTheManager(fileName));
 
     expect(sealed).toContain('and 0 sealed under the previous key were sealed again under it"');
     expect(moving).toContain(
-      `"message":"Secrets are kept in AWS Parameter Store under ${prefix} in eu-west-1, and 1 kept by the previous keeper were moved there"`,
+      `"message":"Secrets are kept in AWS Parameter Store under ${prefix} in eu-west-1, and 2 kept by the previous keeper were moved there"`,
     );
     expect(alone).toContain(`Secrets are kept in AWS Parameter Store under ${prefix} in eu-west-1, and 0 kept`);
-    expect(await heldInTheManager(fileName)).toEqual([
-      {
-        id: kept?.data.secret_id,
+    expect(await heldInTheManager(fileName)).toEqual(
+      kept.map(({ data }) => ({
+        id: data.secret_id,
         version: 1,
-        holding: { keptBy: 'aws-parameter-store', held: `${prefix}/${String(kept?.data.secret_id)}:1` },
-      },
-    ]);
-    expect(await ownKeyFactsIn(fileName)).toHaveLength(1);
+        holding: { keptBy: 'aws-parameter-store', held: `${prefix}/${data.secret_id}:1` },
+      })),
+    );
+    expect((await ownKeyFactsIn(fileName)).map(({ data }) => data.purpose)).toEqual(['retry_state', 'content_address']);
   });
 });
 

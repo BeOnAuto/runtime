@@ -173,32 +173,33 @@ describe('a server whose secrets key cannot be had', () => {
   });
 });
 
-async function ownKeyIn(fileName: string): Promise<string> {
-  const [kept] = await ownKeyFactsIn(fileName);
+async function ownKeysIn(fileName: string): Promise<readonly string[]> {
+  const kept = await ownKeyFactsIn(fileName);
   const store = await secretStoreInFile(fileName, currentKey);
-  const read = await Effect.runPromise(store.read(String(kept?.data.secret_id)));
+  const read = await Effect.runPromise(Effect.forEach(kept, ({ data }) => store.read(data.secret_id)));
   await store.close();
-  return read === undefined ? '' : Redacted.value(read.value);
+  return read.map((secret) => (secret === undefined ? '' : Redacted.value(secret.value)));
 }
 
-describe('the key the runtime keeps for itself as the server starts', () => {
-  it('is kept in the secret store at the first start, read again at the next, recorded once, and in no line of the log', async () => {
+describe('the keys the runtime keeps for itself as the server starts', () => {
+  it('are kept in the secret store at the first start, read again at the next, recorded once each, and in no line of the log', async () => {
     const fileName = aLedgerFile();
     const current = { LEDGER_FILE: fileName, SECRETS_KEY: currentKey.toString('base64') };
 
     const first = await startedWith(current);
     const next = await startedWith(current);
-    const ownKey = await ownKeyIn(fileName);
+    const ownKeys = await ownKeysIn(fileName);
+    const written = ownKeys.flatMap((ownKey) => [ownKey, Buffer.from(ownKey, 'base64').toString('hex')]);
 
-    expect(Buffer.from(ownKey, 'base64')).toHaveLength(32);
-    expect(await ownKeyFactsIn(fileName)).toHaveLength(1);
-    expect(secretsIn(`${first}${next}`, [ownKey, Buffer.from(ownKey, 'base64').toString('hex')])).toEqual([]);
+    expect(ownKeys.map((ownKey) => Buffer.from(ownKey, 'base64').length)).toEqual([32, 32]);
+    expect((await ownKeyFactsIn(fileName)).map(({ data }) => data.purpose)).toEqual(['retry_state', 'content_address']);
+    expect(secretsIn(`${first}${next}`, written)).toEqual([]);
   });
 
   it('stops the process at start when SECRETS_KEY cannot read it, naming its purpose and the words of the store and never a key', async () => {
     const fileName = aLedgerFile();
     await startedWith({ LEDGER_FILE: fileName, SECRETS_KEY: currentKey.toString('base64') });
-    const ownKey = await ownKeyIn(fileName);
+    const ownKeys = await ownKeysIn(fileName);
 
     const stderr = await refusedStart({ LEDGER_FILE: fileName, SECRETS_KEY: previousKey.toString('base64') });
 
@@ -206,7 +207,7 @@ describe('the key the runtime keeps for itself as the server starts', () => {
       `Auto Runtime could not start: OwnKeyUnavailable: The key the runtime keeps for retry_state cannot be read under the key that SECRETS_KEY holds: The secret is sealed under the key ${kidOf(currentKey)}, which is neither the current key nor the previous one. Start the server with the key the ledger's secrets were sealed under, or give that key as SECRETS_KEY_PREVIOUS, SECRETS_KEY_FILE_PREVIOUS or SECRETS_KEY_KMS_PREVIOUS beside a new key`,
       '',
     ]);
-    expect(secretsIn(stderr, [ownKey])).toEqual([]);
+    expect(secretsIn(stderr, ownKeys)).toEqual([]);
   });
 });
 

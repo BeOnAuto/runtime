@@ -29,6 +29,18 @@ function keptOnObjects(entry: ObjectStoreEntry): void {
   });
 }
 
+function removedFromObjects(entry: ObjectStoreEntry): void {
+  it('removes a content by deleting the one object under its playbook and digest', async () => {
+    const store = await entry.aStore();
+    const { content } = objectContentOn(bucketOnS3(store.bucket), store.location);
+    const { sha256 } = await resultOf(content.put(alpha, (await generated(2_500_000)).content()));
+
+    await resultOf(content.remove(alpha, sha256));
+
+    expect(await keysIn(store.bucket, store.location.prefix)).toEqual([]);
+  });
+}
+
 function misfiledRead(entry: ObjectStoreEntry): void {
   it('fails a read of an object whose bytes are not those its digest names, before it hands over the last of them', async () => {
     const store = await entry.aStore();
@@ -85,6 +97,7 @@ export function objectContentBehaviour(entry: ObjectStoreEntry): void {
   describe('the content kept on objects', () => {
     bucketChecked(entry);
     keptOnObjects(entry);
+    removedFromObjects(entry);
     misfiledRead(entry);
     uploadsSwept(entry);
   });

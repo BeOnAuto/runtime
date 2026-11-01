@@ -53,8 +53,16 @@ function answeringHeadsAfterTheFirst(): (text: string) => readonly unknown[] {
   };
 }
 
+function answeringTheRemovedUpload(text: string): readonly unknown[] {
+  return text.startsWith('DELETE FROM recorded_content_heads') ? [{ upload_id: 'u1' }] : [];
+}
+
 function answeringOneChunk(text: string): readonly unknown[] {
   return text.startsWith('SELECT upload_id') ? [headOf('u1')] : [{ data: Buffer.from('{"a":1}') }];
+}
+
+function nothing(): readonly unknown[] {
+  return [];
 }
 
 describe('the content a playbook keeps on PostgreSQL', () => {
@@ -70,6 +78,25 @@ describe('the content a playbook keeps on PostgreSQL', () => {
     expect(asked[1]?.values[3]).toBe(Buffer.from('{"b":2}').toString('hex'));
   });
 
+  it('removes a content in a transaction on one connection, its head and then the chunks of the upload the head named, and commits and releases it', async () => {
+    const { connections, asked } = connectionsAnswering(answeringTheRemovedUpload);
+
+    await Effect.runPromise(postgresqlContentOn(connections).content.remove(alpha, 'digest'));
+
+    expect(asked.map(({ on, text }) => `${on}: ${text.split(' ').slice(0, 3).join(' ')}`)).toEqual([
+      'connection: BEGIN',
+      'connection: DELETE FROM recorded_content_heads',
+      'connection: DELETE FROM recorded_content_chunks',
+      'connection: COMMIT',
+      'connection: released',
+    ]);
+    expect(asked[1]?.text).toContain('RETURNING upload_id');
+    expect(asked.slice(1, 3).map(({ values }) => values)).toEqual([
+      ['playbook/acme/alpha/', 'digest'],
+      ['playbook/acme/alpha/', 'u1'],
+    ]);
+  });
+
   it('reads the chunks of a head in their order', async () => {
     const { connections } = connectionsAnswering(answeringOneChunk);
 
@@ -83,10 +110,6 @@ describe('the content a playbook keeps on PostgreSQL', () => {
     expect(read).toBe('{"a":1}');
   });
 });
-
-function nothing(): readonly unknown[] {
-  return [];
-}
 
 describe('a transaction on PostgreSQL', () => {
   it('runs on one connection, which it commits and releases', async () => {

@@ -1,4 +1,4 @@
-import { namesTheLoopback, studioLinkOf } from '@on.auto/identity';
+import { isHttpsOrLoopback, studioLinkOf } from '@on.auto/identity';
 import { StudioLinks, type StudioLinkTo } from '@on.auto/operations';
 import { Context } from 'effect';
 
@@ -8,14 +8,9 @@ import { noContextOfTheCall, type CallContext } from '../routes.ts';
 
 type LinkingStudio = Pick<ApiOptions, 'studio' | 'authenticator' | 'callContext'>;
 
-function opensInStudio(origin: string): boolean {
-  const { protocol, hostname } = new URL(origin);
-  return protocol === 'https:' || namesTheLoopback(hostname);
-}
-
 function studioLinksAt({ studio, authenticator }: LinkingStudio, request: Request): StudioLinkTo | null {
   const ownOrigin = publicOriginOfRequest(request, authenticator.resource);
-  return opensInStudio(ownOrigin)
+  return isHttpsOrLoopback(ownOrigin)
     ? (page) => studioLinkOf(studio, { ownOrigin, openedFrom: 'agent', installId: undefined, page })
     : null;
 }

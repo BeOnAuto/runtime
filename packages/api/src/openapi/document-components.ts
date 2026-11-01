@@ -6,7 +6,7 @@ import { selfContainedSchemaOf } from '../tools/tool-schema.ts';
 import { identifiedSchemaOf } from './operation-schemas.ts';
 import type { OpenApiObject, ProblemAnswer } from './problem-responses.ts';
 
-function scopeParameterOf(name: string, schema: Schema.Constraint, description: string): OpenApiObject {
+export function scopeParameterOf(name: string, schema: Schema.Constraint, description: string): OpenApiObject {
   return { name, in: 'path', required: true, description, schema: Schema.toJsonSchemaDocument(schema).schema };
 }
 
