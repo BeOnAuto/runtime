@@ -8,7 +8,7 @@ head:
 
 # Self-hosted licensing reference
 
-The rules a runtime you host follows: what it runs without a key and with one, how it reports to Auto, when it falls back to the free rate, how offline credits work, what it sends Auto and every refusal of its meter. [License a self-hosted runtime](licenses.md) gives the steps. [How billing works](https://on.auto/docs/cloud/billing) explains an organization's credits, which hosted Auto and its runtimes share.
+The rules a runtime you host follows: what it runs without a key and with one, how it reports to Auto, when it falls back to the free rate, how offline credits work, what it sends Auto and every refusal of its meter. [License a self-hosted runtime](licenses.md) gives the steps. [Pricing](https://on.auto/pricing) explains an organization's credits and plans, which hosted Auto and its runtimes share.
 
 ## What is counted
 
@@ -47,19 +47,19 @@ Whenever it takes a license, the runtime raises its licensed count to the licens
 
 ### The license
 
-| Field                     | Meaning                                                                                                                                                   |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `org`, `org_name`, `plan` | The organization the key names, its name at Auto and its plan: `free`, `starter`, `team`, `custom`, or `enterprise` while an Enterprise order is in force |
-| `policy`                  | The version of the plan's numbers, such as `2026-10-28`                                                                                                   |
-| `issued_at`               | When Auto signed the license                                                                                                                              |
-| `warn_at`                 | 14 days after `issued_at`, or what an Enterprise order sets                                                                                               |
-| `limit_at`                | 28 days after `issued_at`, or what an Enterprise order sets                                                                                               |
-| `charged_through`         | The licensed runs Auto has taken credits for, in all                                                                                                      |
-| `admits_through`          | The runtime may start runs on the license while its licensed count is below this                                                                          |
-| `standing`                | Where the organization's credits stood: `ok`, `low`, `empty`, `overage`, `near_cap` or `capped`                                                           |
-| `credits`                 | `{ available, owed, overage_cap }`: what the organization could spend, what it owed in overage and the most it may owe                                    |
-| `fallback`                | `{ per_day, per_month }`: the free rate the runtime falls back to                                                                                         |
-| `features`                | The [features](#features) the organization's agreement includes; none where the license lists none                                                        |
+| Field                     | Meaning                                                                                                                                         |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `org`, `org_name`, `plan` | The organization the key names, its name at Auto and its plan: `free`, `starter`, `team`, or `enterprise` while an Enterprise order is in force |
+| `policy`                  | The version of the plan's numbers, such as `2026-10-28`                                                                                         |
+| `issued_at`               | When Auto signed the license                                                                                                                    |
+| `warn_at`                 | 14 days after `issued_at`, or what an Enterprise order sets                                                                                     |
+| `limit_at`                | 28 days after `issued_at`, or what an Enterprise order sets                                                                                     |
+| `charged_through`         | The licensed runs Auto has taken credits for, in all                                                                                            |
+| `admits_through`          | The runtime may start runs on the license while its licensed count is below this                                                                |
+| `standing`                | Where the organization's credits stood: `ok`, `low`, `empty`, `overage`, `near_cap` or `capped`                                                 |
+| `credits`                 | `{ available, owed, overage_cap }`: what the organization could spend, what it owed in overage and the most it may owe                          |
+| `fallback`                | `{ per_day, per_month }`: the free rate the runtime falls back to                                                                               |
+| `features`                | The [features](#features) the organization's agreement includes; none where the license lists none                                              |
 
 `admits_through` is the higher of `charged_through` and the licensed count the runtime reported, plus what the organization may still spend. On a paid plan, that is its available credits plus its overage cap, less what it owes. On Free, it is its available credits, counting Free plan credits only up to what is left of the day's 15.
 
@@ -103,7 +103,7 @@ When Auto can't be reached, or answers with something it did not sign for this r
 | Plan                      | Overage cap                                                                                          |
 | ------------------------- | ---------------------------------------------------------------------------------------------------- |
 | Free                      | None                                                                                                 |
-| Starter, Team and Custom  | A quarter of the plan's monthly credits: 125 on Starter, 600 on Team                                 |
+| Starter and Team          | A quarter of the plan's monthly credits                                                              |
 | Under an Enterprise order | The order's own cap, or else a quarter of a month of the order's credits, since it replaces the plan |
 
 - On a plan with a cap, a licensed runtime keeps starting runs after the credits are gone, and the organization owes them.
@@ -111,7 +111,7 @@ When Auto can't be reached, or answers with something it did not sign for this r
 - Every runtime of the organization is allowed all the overage that is left until it reports. Several runtimes can go past the cap between reports. The early report keeps this small, and runs past the cap are owed too.
 - The organization's next credits repay what it owes first. Auto never bills for overage.
 
-[Overage](https://on.auto/docs/cloud/billing#overage) explains it for the whole organization.
+[Pricing](https://on.auto/pricing#overage) gives each plan's cap and explains overage for the whole organization.
 
 ## Falling back to the free rate
 
@@ -138,7 +138,7 @@ Offline credits serve a runtime that can't reach Auto. Auto moves them out of th
 | Rule               | Detail                                                                                                                                                               |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | How long they last | 30 days from when they were issued or last refreshed, or 90 where Auto chooses it under an Enterprise order. Never past the earliest expiry of the credits they took |
-| Which credits      | Any of the organization's credits except Free plan credits, the soonest to expire first                                                                              |
+| Which credits      | Any of the organization's credits except Free plan credits, the soonest to expire first and top-ups, which never expire, last                                        |
 | Admission          | While they stand, they decide before a license or the first 100 runs                                                                                                 |
 | Past their date    | A new run is refused as `license_invalid`                                                                                                                            |
 | Once spent         | A new run is refused as `credits_exhausted` with `because: "none_left"`                                                                                              |
