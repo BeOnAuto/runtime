@@ -1,6 +1,6 @@
 import { userInfo } from 'node:os';
 
-import { allPermissions, type CallerIdentity, type Permission } from '@on.auto/operations';
+import { allPermissions, type CallerIdentity, type CallingClient, type Permission } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import type { ApiKey } from '../keys/api-key.ts';
@@ -22,6 +22,7 @@ export interface VerifiedPerson {
   readonly name: string;
   readonly org: string;
   readonly permissions: readonly Permission[];
+  readonly client?: CallingClient;
 }
 
 export type LocalAccount = () => { readonly username: string };
@@ -59,8 +60,9 @@ export function principalOf({ id, org, permissions, playbooks }: ApiKey): Princi
 
 const personPrefix = 'person:';
 
-export function signedInPersonOf({ subject, name, org, permissions }: VerifiedPerson): Principal {
-  return principalOfCaller({ id: `${personPrefix}${subject}`, name, org, permissions, playbooks: '*' });
+export function signedInPersonOf({ subject, name, org, permissions, client }: VerifiedPerson): Principal {
+  const id = `${personPrefix}${subject}`;
+  return principalOfCaller({ id, name, org, permissions, playbooks: '*', ...(client === undefined ? {} : { client }) });
 }
 
 export function isSignedInPerson({ id }: Pick<CallerIdentity, 'id'>): boolean {

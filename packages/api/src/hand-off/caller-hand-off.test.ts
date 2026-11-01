@@ -63,3 +63,19 @@ describe('the hand-off of a caller to the MCP SDK', () => {
     expect(() => playbookCallOf({ authInfo: authInfoFor(orgCall) })).toThrow('playbook');
   });
 });
+
+describe('the hand-off of a signed-in person who called through a client', () => {
+  it('reads back the client a signed-in person called through, so an operation the call reaches records it', () => {
+    const throughAClient = {
+      ...orgCall,
+      caller: {
+        ...caller,
+        id: 'person:ada',
+        name: 'Ada Lovelace',
+        client: { id: 'https://agent.example/oauth/client.json', name: 'An agent', domain: 'agent.example' },
+      },
+    };
+
+    expect(orgCallOf({ authInfo: authInfoFor(throughAClient) }).caller).toEqual(throughAClient.caller);
+  });
+});

@@ -101,12 +101,12 @@ export async function added(h: Harness, input: unknown = crm, { caller = ada, at
   return linkedIn(await h.call(operationNamed(h.operations, 'add_connection'), caller, input, at));
 }
 
-export function reconnecting(h: Harness, id: string, at?: string): Promise<Outcome> {
-  return h.call(operationNamed(h.operations, 'reconnect_connection'), ada, { id }, at);
+export function reconnecting(h: Harness, id: string, at?: string, caller = ada): Promise<Outcome> {
+  return h.call(operationNamed(h.operations, 'reconnect_connection'), caller, { id }, at);
 }
 
-export async function reconnected(h: Harness, id: string, at?: string): Promise<Added> {
-  return linkedIn(await reconnecting(h, id, at));
+export async function reconnected(h: Harness, id: string, at?: string, caller = ada): Promise<Added> {
+  return linkedIn(await reconnecting(h, id, at, caller));
 }
 
 export function reconnectingFor(h: Harness, id: string, more: string, at?: string): Promise<Outcome> {

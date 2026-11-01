@@ -62,6 +62,16 @@ describe('a session the identity service gave a page', () => {
     },
   );
 
+  it('names no client, whatever client_id it holds, since a session serves its own page', async () => {
+    const { identityService, session } = await signedTokens(fakeIssuer('https://login.example'), atStart);
+    const claims = { client_id: 'https://agent.example/oauth/client.json', client_name: 'An agent' };
+    const person = principalIn(
+      await identityService.personOf(await session(defaultStudioOrigin, claims), '', defaultStudioOrigin),
+    );
+
+    expect(person?.own).not.toHaveProperty('client');
+  });
+
   it('is taken on an MCP endpoint from its page, though it names no audience', async () => {
     const { identityService, session } = await signedTokens(fakeIssuer('https://login.example'), atStart);
     const person = await identityService.personOf(

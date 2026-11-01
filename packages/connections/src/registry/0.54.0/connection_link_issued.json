@@ -1,0 +1,17 @@
+{
+  "type": "connection_link_issued",
+  "data": {
+    "connection": "connection-1",
+    "token_sha256": "a1b2c3",
+    "expires_at": "2026-10-30T10:00:00.000Z",
+    "asked_by": {
+      "id": "https://agent.example/oauth/client.json",
+      "name": "An agent",
+      "domain": "agent.example"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

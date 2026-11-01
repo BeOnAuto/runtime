@@ -1,3 +1,4 @@
+import type { CallingClient } from '@on.auto/operations';
 import type { ClientSource } from '@on.auto/tool-servers';
 
 import type {
@@ -16,6 +17,7 @@ export interface OpenLink {
   readonly token_sha256: string;
   readonly expires_at: string;
   readonly more?: string;
+  readonly asked_by?: CallingClient;
 }
 
 export interface StartedConsent {
@@ -112,10 +114,15 @@ function replacedLinksOf({ link, replacedLinks }: KeptConnection): ReadonlySet<s
 }
 
 function withLink(kept: KeptConnection, { data }: LinkIssued): KeptConnection {
-  const { token_sha256: tokenSha256, expires_at: expiresAt, more } = data;
+  const { token_sha256: tokenSha256, expires_at: expiresAt, more, asked_by: askedBy } = data;
   return {
     ...kept,
-    link: { token_sha256: tokenSha256, expires_at: expiresAt, ...(more === undefined ? {} : { more }) },
+    link: {
+      token_sha256: tokenSha256,
+      expires_at: expiresAt,
+      ...(more === undefined ? {} : { more }),
+      ...(askedBy === undefined ? {} : { asked_by: askedBy }),
+    },
     replacedLinks: replacedLinksOf(kept),
   };
 }

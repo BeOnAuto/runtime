@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { added, billing, crm, notes } from '../testing/additions.ts';
+import type { RecordedConnectionEvent } from '../registry/connection-events.ts';
+import { added, billing, crm, notes, reconnected } from '../testing/additions.ts';
 import { acmeWriter, ada, grace, harness, operationNamed, type Harness } from '../testing/harness.ts';
 
 const aDayAndAMinuteLater = '2026-10-16T14:01:00.000Z';
@@ -51,6 +52,70 @@ describe('reading a link', () => {
     expect(await reading(h, id, other.token)).toEqual(noOpenLink);
     expect(await reading(h, id, token, aDayAndAMinuteLater)).toEqual(noOpenLink);
     expect(await reading(h, 'nowhere', token)).toMatchObject({ reason: 'not_found' });
+  });
+});
+
+const anAgentsClient = { id: 'https://agent.example/oauth/client.json', name: 'An agent', domain: 'agent.example' };
+
+const anotherAgentsClient = { id: 'f7d3b2a1', name: 'Another agent', domain: null };
+
+function linksIssuedIn(facts: readonly RecordedConnectionEvent[]) {
+  return facts.flatMap((fact) => (fact.type === 'connection_link_issued' ? [fact.data] : []));
+}
+
+describe('the client a link was asked through', () => {
+  it('is recorded with the link of an addition the person makes through a client, and answered with that link', async () => {
+    const h = harness();
+    const { id, token } = await added(h, crm, { caller: { ...ada, client: anAgentsClient } });
+    const facts = await h.facts();
+
+    expect(linksIssuedIn(facts)).toEqual([expect.objectContaining({ asked_by: anAgentsClient })]);
+    expect(facts.find(({ type }) => type === 'connection_added')?.data).not.toHaveProperty('asked_by');
+    expect(await reading(h, id, token)).toMatchObject({ output: { id, asked_by: anAgentsClient } });
+  });
+
+  it('is answered for a client its token names no name or domain of, by its client ID alone', async () => {
+    const h = harness();
+    const unnamed = { id: 'f7d3b2a1', name: null, domain: null };
+    const { id, token } = await added(h, crm, { caller: { ...ada, client: unnamed } });
+
+    expect(await reading(h, id, token)).toMatchObject({ output: { asked_by: unnamed } });
+  });
+
+  it.each([
+    ['a person whose call names no client', 'people', ada],
+    ['a key, where the runtime lets one add a connection', 'local', acmeWriter],
+  ] as const)('is none, recorded and answered, for %s', async (_case, access, caller) => {
+    const h = harness({ access });
+    const { id, token } = await added(h, crm, { caller });
+
+    expect(linksIssuedIn(await h.facts())[0]).not.toHaveProperty('asked_by');
+    expect(await reading(h, id, token)).not.toHaveProperty('output.asked_by');
+  });
+});
+
+describe('the client a new link was asked through', () => {
+  it('is the one each new link was asked through, whoever asked for the link before it', async () => {
+    const h = harness();
+    const { id } = await added(h, crm, { caller: { ...ada, client: anAgentsClient } });
+    const throughAnother = await reconnected(h, id, undefined, { ...ada, client: anotherAgentsClient });
+    const throughNone = await reconnected(h, id);
+
+    expect(linksIssuedIn(await h.facts()).map((link) => link.asked_by)).toEqual([
+      anAgentsClient,
+      anotherAgentsClient,
+      undefined,
+    ]);
+    expect(await reading(h, id, throughNone.token)).not.toHaveProperty('output.asked_by');
+    expect(await reading(h, id, throughAnother.token)).toMatchObject({ reason: 'not_found' });
+  });
+
+  it('is answered for a new link, as the call that gave it named it', async () => {
+    const h = harness();
+    const { id } = await added(h, crm);
+    const { token } = await reconnected(h, id, undefined, { ...ada, client: anotherAgentsClient });
+
+    expect(await reading(h, id, token)).toMatchObject({ output: { asked_by: anotherAgentsClient } });
   });
 });
 

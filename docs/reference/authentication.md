@@ -176,6 +176,12 @@ A signed-in person acts under the id `person:<subject>`, where the subject is th
 - The id and the name, as `{ id, name }`, are the `created_by` of a playbook and a definition they create, the `added_by` and the `connected_by` of a connection they add and connect, the `started_by` of a run they start and the `answered_by` of a request they answer.
 - A run event the person sends without a `source` gets the source `/callers/` followed by that name, percent-encoded as one path segment.
 
+## The client a person calls through
+
+An access token that holds `client_id`, the client it was issued to, names that client beside the person. The runtime reads it under the bounds of `sub`, and with it `client_name`, the client's name, where the token holds one under the same bounds. A `client_id` that is an `https` address is the address of the client's metadata document, and its host is the client's domain. A session names no client, since it serves its own page, and a `client_id` or `client_name` outside the bounds is not read; neither refuses the token.
+
+`add_connection` and `reconnect_connection` record the client with the link they give, as `asked_by`, `{ id, name, domain }`, with `name` and `domain` `null` where the token gives none, and `read_link` answers the client of the link it reads. A link asked for with an API key, with a session or with a token that holds no `client_id` records none.
+
 ## What happens when access is revoked
 
 The runtime verifies a token on every request and keeps none.

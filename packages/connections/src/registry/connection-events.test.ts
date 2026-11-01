@@ -160,11 +160,28 @@ const underTheOrgsOAuthClient: readonly (typeof ConnectionEventSchema.Type)[] = 
   },
 ];
 
+const askedThroughAClient: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_link_issued',
+    data: {
+      ...ofTheConnection,
+      token_sha256: 'a1b2c3',
+      expires_at: '2026-10-30T10:00:00.000Z',
+      asked_by: { id: 'https://agent.example/oauth/client.json', name: 'An agent', domain: 'agent.example' },
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the registry of connections', () => {
   recordedFactsBehaviour({
     schema: ConnectionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.49.0': [...askingMore, ...underTheOrgsOAuthClient] },
+    releases: {
+      '0.46.0': baseline,
+      '0.49.0': [...askingMore, ...underTheOrgsOAuthClient],
+      '0.54.0': askedThroughAClient,
+    },
   });
 });
 

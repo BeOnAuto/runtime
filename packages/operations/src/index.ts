@@ -16,6 +16,7 @@ export { PlaybookLifecycle } from './caller/playbook-lifecycle.ts';
 export { CallLineage, type CallLink, type GivenLineage, type TriggerLink } from './caller/call-lineage.ts';
 export { PlaybookWriter } from './ledger/playbook-writer.ts';
 export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } from './caller/caller.ts';
+export { CallingClientSchema, type CallingClient } from './caller/calling-client.ts';
 export { CallFetch } from './caller/call-fetch.ts';
 export {
   CallResultSchema,

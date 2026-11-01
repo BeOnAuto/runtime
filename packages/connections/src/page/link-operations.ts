@@ -1,4 +1,4 @@
-import { defineHttpOperation, type Conflict } from '@on.auto/operations';
+import { CallingClientSchema, defineHttpOperation, type Conflict } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
@@ -59,6 +59,12 @@ const LinkedSchema = Schema.Struct({
     }),
   ),
   next_client_id: NextClientIdField,
+  asked_by: Schema.optionalKey(
+    CallingClientSchema.annotate({
+      description:
+        'The client the caller who asked for this link called through, add_connection for the link of an addition and reconnect_connection for a new one, as the token of that call named it: its client ID, its name and the domain of its client ID metadata document. Left out where the call named none, as a call with an API key, or with a session of a page, names none',
+    }),
+  ),
 }).annotate({
   identifier: 'LinkedConnection',
   description: 'The connection an open link names, and when the link expires',
@@ -100,6 +106,10 @@ export function askedOfTheLink(
     : askedOfALinkForMore(connection, providers, link.more);
 }
 
+function askedByOf({ link }: KeptWithLink) {
+  return link.asked_by === undefined ? {} : { asked_by: link.asked_by };
+}
+
 function moreOfTheLink({ group }: AskedOfTheLink) {
   return group === undefined ? {} : { more: { name: group.name, for: group.for } };
 }
@@ -109,10 +119,11 @@ export function defineReadLink(reading: LinkReading) {
     name: 'read_link',
     title: 'Read link',
     description: [
-      "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve and for how long.",
+      "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve.",
       'A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it.',
       "A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
       "A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next.",
+      'asked_by names the client the link was asked through, where the call that gave it named one.',
       'A token that is unknown, used up, expired or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
@@ -143,6 +154,7 @@ export function defineReadLink(reading: LinkReading) {
         ...source,
         ...returnAddressFor(kept.connection, reading),
         ...nextClientOf(kept),
+        ...askedByOf(kept),
       };
     }),
   });

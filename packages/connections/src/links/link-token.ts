@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import { sha256Of } from '@on.auto/operations';
+import { Caller, sha256Of } from '@on.auto/operations';
 import { DateTime, Duration, Effect } from 'effect';
 
 import type { OpenLink } from '../registry/registry.ts';
@@ -36,7 +36,8 @@ export function issuedToken(): { readonly token: string; readonly token_sha256: 
   return { token, token_sha256: tokenSha256Of(token) };
 }
 
-export const issuedLink: Effect.Effect<IssuedLink> = Effect.map(momentAfter(linkLastsMs), (expiresAt) => ({
-  ...issuedToken(),
-  expires_at: expiresAt,
-}));
+export const issuedLink: Effect.Effect<IssuedLink, never, Caller> = Effect.gen(function* () {
+  const expiresAt = yield* momentAfter(linkLastsMs);
+  const { client } = yield* Caller;
+  return { ...issuedToken(), expires_at: expiresAt, ...(client === undefined ? {} : { asked_by: client }) };
+});

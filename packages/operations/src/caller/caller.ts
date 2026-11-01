@@ -1,5 +1,6 @@
 import { Context, Schema } from 'effect';
 
+import { CallingClientSchema, type CallingClient } from './calling-client.ts';
 import { OrgIdSchema } from './identifiers.ts';
 import { PermissionSchema, type Permission } from './permission.ts';
 import { PlaybookAccessSchema, type PlaybookAccess } from './playbook-access.ts';
@@ -10,6 +11,7 @@ export interface CallerIdentity {
   readonly org: string;
   readonly permissions: readonly Permission[];
   readonly playbooks: PlaybookAccess;
+  readonly client?: CallingClient;
 }
 
 export const CallerIdentitySchema = Schema.Struct({
@@ -18,6 +20,7 @@ export const CallerIdentitySchema = Schema.Struct({
   org: OrgIdSchema,
   permissions: Schema.Array(PermissionSchema),
   playbooks: PlaybookAccessSchema,
+  client: Schema.optionalKey(CallingClientSchema),
 });
 
 export function playbookCallerOf({

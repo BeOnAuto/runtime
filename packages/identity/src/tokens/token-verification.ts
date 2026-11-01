@@ -21,6 +21,10 @@ const pageClaim = 'azp';
 
 const nameClaim = 'name';
 
+const clientIdClaim = 'client_id';
+
+const clientNameClaim = 'client_name';
+
 const leewaySeconds = 60;
 
 const accessTokenTypes: ReadonlySet<string> = new Set(['at+jwt', 'application/at+jwt', 'jwt', 'application/jwt']);
@@ -143,6 +147,20 @@ function permissionsGrantedBy({ [scopeClaim]: scope = '' }: Payload, form: Form)
   return allPermissions.filter((permission) => granted.has(permission));
 }
 
+function metadataDocumentHostOf(clientId: string): string | null {
+  const address = URL.parse(clientId);
+  return address?.protocol === 'https:' ? address.host : null;
+}
+
+function clientOf(
+  { [clientIdClaim]: id, [clientNameClaim]: name }: Payload,
+  form: Form,
+): Pick<VerifiedPerson, 'client'> {
+  return form === 'access token' && isNamingClaim(id)
+    ? { client: { id, name: isNamingClaim(name) ? name : null, domain: metadataDocumentHostOf(id) } }
+    : {};
+}
+
 function personIn(payload: Payload, form: Form, now: number): string | VerifiedPerson {
   const { iat, sub, [nameClaim]: given } = payload;
   const name = given === undefined ? sub : given;
@@ -161,7 +179,9 @@ function personIn(payload: Payload, form: Form, now: number): string | VerifiedP
     return `its ${orgClaimPath.join('.')} claim is not an org id other than local`;
   }
   const permissions = permissionsGrantedBy(payload, form);
-  return Predicate.isString(permissions) ? permissions : { subject: sub, name, org, permissions };
+  return Predicate.isString(permissions)
+    ? permissions
+    : { subject: sub, name, org, permissions, ...clientOf(payload, form) };
 }
 
 async function verified(token: string, keySet: JWTVerifyGetKey, expected: Expected): Promise<string | VerifiedPerson> {

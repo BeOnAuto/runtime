@@ -1,5 +1,6 @@
 import {
   ActedContextSchema,
+  CallingClientSchema,
   RecordedCallerSchema,
   earlierShapeOf,
   factOf,
@@ -90,6 +91,7 @@ export const ConnectionEventSchema = Schema.Union([
       token_sha256: Schema.String,
       expires_at: Schema.String,
       more: Schema.optionalKey(Schema.String),
+      asked_by: Schema.optionalKey(CallingClientSchema),
     }),
     ActedContextSchema,
   ),
