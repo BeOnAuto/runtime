@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.55.1](https://github.com/BeOnAuto/runtime/compare/v0.55.0...v0.55.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **server:** the ledger's start check knows the facts an extension declares ([a20ccd9](https://github.com/BeOnAuto/runtime/commit/a20ccd9bef7d3175d4ad36b648e281c1f1d22333))
+
 ## [0.55.0](https://github.com/BeOnAuto/runtime/compare/v0.54.0...v0.55.0) (2026-11-01)
 
 
