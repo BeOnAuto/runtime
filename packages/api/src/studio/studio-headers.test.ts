@@ -16,7 +16,7 @@ function policyAllowing(...scripts: readonly string[]): string {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data:",
-    "connect-src 'self'",
+    "connect-src 'self' https://us.i.posthog.com",
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
