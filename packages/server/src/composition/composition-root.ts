@@ -89,7 +89,10 @@ export function compositionRootWith(
     const database = await ledgerDatabaseOf(settings, telemetry.appended);
     const made = await madeAtStart(settings, { programPoolOf: wiring.programPoolOf, shippedFiles, installed });
     const ledgerLayer = withARefusedLayoutExplained(
-      ledgerLayerFor(settings, database, wiring.projections.appends),
+      ledgerLayerFor(settings, database, {
+        declared: made.prediction.provided.capability.facts.onRuns,
+        appends: wiring.projections.appends,
+      }),
       settings,
     );
     const meter = {

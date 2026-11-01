@@ -41,11 +41,22 @@ function goingBackOr(earlier: LedgerRemedy): LedgerRemedy {
   };
 }
 
+const listedNoLonger = ', or by an extension that declares them and is no longer listed in extensions';
+
+function listingTheExtensionFirst(remedy: LedgerRemedy): LedgerRemedy {
+  return {
+    says: `If an extension that is no longer listed in extensions declares them, list it again and start Auto Runtime again. ${remedy.says}`,
+    command: remedy.command,
+  };
+}
+
 export function ledgerOfUnknownFacts(
   { unknown, unreadable }: RefusedFacts,
   settings: Pick<Settings, 'ledger' | 'distribution'>,
 ): LedgerOfUnknownFacts {
-  const happened = `${whereTheLedgerIsKept(settings.ledger)}, and holds ${whatIsHeld({ unknown, unreadable })}: it was made by a newer version, or by an earlier version than this one carries forward.`;
-  const remedy = goingBackOr(remedyFor(settings));
+  const ofAnExtension = unknown.length > 0;
+  const happened = `${whereTheLedgerIsKept(settings.ledger)}, and holds ${whatIsHeld({ unknown, unreadable })}: it was made by a newer version, or by an earlier version than this one carries forward${ofAnExtension ? listedNoLonger : ''}.`;
+  const goingBack = goingBackOr(remedyFor(settings));
+  const remedy = ofAnExtension ? listingTheExtensionFirst(goingBack) : goingBack;
   return new LedgerOfUnknownFacts({ unknown, unreadable, happened, remedy, message: messageOf(happened, remedy) });
 }

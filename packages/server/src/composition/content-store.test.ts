@@ -45,7 +45,7 @@ async function ledgerOn(host: string): Promise<Ledger['Service']> {
     AWS_ENDPOINT_URL: `http://${host}`,
     AWS_REGION: 'us-east-1',
   });
-  const runtime = ManagedRuntime.make(ledgerLayerFor(settings, await ledgerDatabaseOf(settings)));
+  const runtime = ManagedRuntime.make(ledgerLayerFor(settings, await ledgerDatabaseOf(settings), { declared: [] }));
   onTestFinished(() => runtime.dispose());
   return runtime.runPromise(Ledger);
 }

@@ -5,7 +5,7 @@ import { Data, Result, Schema } from 'effect';
 import type { StatementExecutor } from '../event-store.ts';
 import type { LayoutDialect } from './layout-dialects.ts';
 
-export type FactSchemaRead = Schema.ConstraintCodec<unknown, unknown>;
+export type FactSchemaRead = Schema.ConstraintDecoder<unknown>;
 
 export interface UnreadableFact {
   readonly type: string;

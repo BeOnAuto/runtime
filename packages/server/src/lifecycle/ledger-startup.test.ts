@@ -130,7 +130,7 @@ describe('a ledger file that holds facts this version of Auto Runtime does not r
     expect(await child.exited).toBe(1);
     expect(child.output()).toEqual({
       stdout: '',
-      stderr: `Auto Runtime could not start: The ledger is kept in the file ${file}, and holds facts of the type ${aFactOfAnEarlierVersion}, which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward. If a newer version of Auto Runtime made the ledger, start that version or a later one, or restore the backup taken before the upgrade. A ledger an earlier version made is not carried forward: Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f ${file} ${file}-wal ${file}-shm\n`,
+      stderr: `Auto Runtime could not start: The ledger is kept in the file ${file}, and holds facts of the type ${aFactOfAnEarlierVersion}, which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward, or by an extension that declares them and is no longer listed in extensions. If an extension that is no longer listed in extensions declares them, list it again and start Auto Runtime again. If a newer version of Auto Runtime made the ledger, start that version or a later one, or restore the backup taken before the upgrade. A ledger an earlier version made is not carried forward: Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f ${file} ${file}-wal ${file}-shm\n`,
     });
   });
 
@@ -158,7 +158,7 @@ describe('a ledger file that holds what an earlier version of Auto Runtime recor
 
     expect(await child.exited).toBe(1);
     expect(child.output().stderr).toContain(
-      `, and holds facts of the type ${aFactOfAPredictionBuild}, which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward.`,
+      `, and holds facts of the type ${aFactOfAPredictionBuild}, which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward, or by an extension that declares them and is no longer listed in extensions.`,
     );
   });
 

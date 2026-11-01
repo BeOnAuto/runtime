@@ -2,7 +2,7 @@ import { defineCapability } from '@on.auto/definitions';
 import { answerInteraction } from '@on.auto/interaction';
 import { datasetsProvidedOn } from '@on.auto/prediction';
 import type { CapabilityPorts } from '@on.auto/workflow-host';
-import { Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { configured } from '../testing/extensions/scratch-packages.ts';
@@ -146,6 +146,22 @@ const refusalsOfWhatItMakes: readonly (readonly [string, Implementation, string]
     'makes a capability whose list is none',
     makingOnly(withMember('facts', { onRuns: [], streams: {} })),
     'its capability.facts.streams is not a list',
+  ],
+  [
+    'makes a capability whose fact on runs has the schema of a fact of another type',
+    makingOnly(
+      withMember('facts', {
+        onRuns: [
+          {
+            type: 'forecast_checked',
+            schema: Schema.Struct({ type: Schema.Literal('forecast_noted') }),
+            present: () => ({}),
+          },
+        ],
+        streams: [],
+      }),
+    ),
+    'its capability.facts.onRuns[0] declares the fact forecast_checked with a schema that does not read facts of the type forecast_checked alone',
   ],
   [
     'makes a capability whose members are not its own',

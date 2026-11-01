@@ -1,6 +1,9 @@
-import { firstLineOf } from '@on.auto/definitions';
+import { firstLineOf, type DeclaredFact } from '@on.auto/definitions';
+import { factTypesOf } from '@on.auto/operations';
 import type { ProvidedCapability, SomeFolder } from '@on.auto/workflow-host';
-import { Predicate, Result, Schema, SchemaIssue } from 'effect';
+import { Predicate, Result, Schema, SchemaIssue, type SchemaAST } from 'effect';
+
+import { knownFactSchemas } from '../composition/known-facts.ts';
 
 const missing = 'missing';
 
@@ -15,6 +18,8 @@ const text = kept(Schema.String, 'text');
 const aNumber = kept(Schema.Number, 'a number');
 
 const aBoolean = kept(Schema.Boolean, 'a boolean');
+
+const aSchema = kept(Schema.declare(Schema.isSchema), 'a schema');
 
 function aList<Item extends Schema.Top>(item: Item) {
   return kept(Schema.Array(item), 'a list');
@@ -38,7 +43,10 @@ const CapabilitySchema = anObject({
   standing: aFunction,
   cancel: aFunction,
   runWords: anObject({ deferralType: text, deferral: aFunction }),
-  facts: anObject({ onRuns: aList(Schema.Unknown), streams: aList(Schema.Unknown) }),
+  facts: anObject({
+    onRuns: aList(anObject({ type: text, schema: aSchema, present: aFunction })),
+    streams: aList(Schema.Unknown),
+  }),
   resumes: aBoolean,
   prepare: aFunction,
 });
@@ -140,11 +148,29 @@ function folderProblem(folder: SomeFolder, at: number): string | undefined {
   return Result.isSuccess(decoded) ? undefined : problemOf(decoded.failure.issue, ['folders', at]);
 }
 
+const typesTheRuntimeReads: ReadonlySet<string> = new Set(
+  knownFactSchemas.flatMap((schema: { readonly ast: SchemaAST.AST }) => factTypesOf(schema)),
+);
+
+function declaredFactProblem({ type, schema }: DeclaredFact, at: number): string | undefined {
+  const declaring = `its capability.facts.onRuns[${at}] declares the fact ${type}`;
+  if (typesTheRuntimeReads.has(type)) {
+    return `${declaring}, a type the runtime reads as a fact of its own`;
+  }
+  const [read, ...others] = factTypesOf(schema);
+  return read === type && others.length === 0
+    ? undefined
+    : `${declaring} with a schema that does not read facts of the type ${type} alone`;
+}
+
 function shapeProblem({ capability, folders = [] }: ProvidedCapability): string | undefined {
   if (!isPlainObject(capability)) {
     return 'its capability is not a plain object of its members, as defineCapability makes one';
   }
-  return folders.map((folder, at) => folderProblem(folder, at)).find((problem) => problem !== undefined);
+  return [
+    ...capability.facts.onRuns.map((fact, at) => declaredFactProblem(fact, at)),
+    ...folders.map((folder, at) => folderProblem(folder, at)),
+  ].find((problem) => problem !== undefined);
 }
 
 export function providedCapabilityOf(made: unknown): Result.Result<ProvidedCapability, string> {

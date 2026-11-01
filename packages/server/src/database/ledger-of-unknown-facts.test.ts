@@ -14,16 +14,16 @@ const inPostgreSQL = {
 
 const askedAt = 'Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8';
 
-const eitherVersion =
-  'which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward.';
+const eitherVersionOrAnExtension =
+  'which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward, or by an extension that declares them and is no longer listed in extensions.';
 
-const goingBackFirst =
-  'If a newer version of Auto Runtime made the ledger, start that version or a later one, or restore the backup taken before the upgrade. A ledger an earlier version made is not carried forward:';
+const listingFirst =
+  'If an extension that is no longer listed in extensions declares them, list it again and start Auto Runtime again. If a newer version of Auto Runtime made the ledger, start that version or a later one, or restore the backup taken before the upgrade. A ledger an earlier version made is not carried forward:';
 
 const goesWithIt = 'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';
 
 describe('a ledger that holds facts of types this version of Auto Runtime does not read', () => {
-  it('names each type, says a newer or an earlier version made it, and what to do for each, ending with the command that deletes a file', () => {
+  it('names each type, says a newer or an earlier version or an extension no longer listed made it, and what to do for each, listing the extension again first and ending with the command that deletes a file', () => {
     const inTheFile = ledgerOfUnknownFacts(
       { unknown: ['metering_faulted'], unreadable: [] },
       {
@@ -33,7 +33,7 @@ describe('a ledger that holds facts of types this version of Auto Runtime does n
     );
 
     expect(inTheFile.message).toBe(
-      `The ledger is kept in the file /data/ledger.db, and holds facts of the type metering_faulted, ${eitherVersion} ${goingBackFirst} Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f /data/ledger.db /data/ledger.db-wal /data/ledger.db-shm`,
+      `The ledger is kept in the file /data/ledger.db, and holds facts of the type metering_faulted, ${eitherVersionOrAnExtension} ${listingFirst} Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f /data/ledger.db /data/ledger.db-wal /data/ledger.db-shm`,
     );
     expect(inTheFile.unknown).toEqual(['metering_faulted']);
     expect(String(inTheFile)).toMatch(/^LedgerOfUnknownFacts: The ledger is kept in the file /u);
@@ -56,18 +56,18 @@ describe('a ledger that holds facts of types this version of Auto Runtime does n
     );
 
     expect(inTheDatabase.message).toBe(
-      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and holds facts of the types license_refreshed, metering_faulted, ${eitherVersion} ${goingBackFirst} Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs. ${askedAt}`,
+      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and holds facts of the types license_refreshed, metering_faulted, ${eitherVersionOrAnExtension} ${listingFirst} Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs. ${askedAt}`,
     );
     expect(inTheDatabase.message).not.toContain('a-secret-password');
     expect(inTheImage).toMatchObject({
-      happened: `The ledger is kept in the file /app/data/ledger.db, and holds facts of the type metering_faulted, ${eitherVersion}`,
+      happened: `The ledger is kept in the file /app/data/ledger.db, and holds facts of the type metering_faulted, ${eitherVersionOrAnExtension}`,
       remedy: { command: undefined },
     });
   });
 });
 
 describe('a ledger whose newest fact of a type is in a shape this version of Auto Runtime does not read', () => {
-  it('names the fact and its position, beside any type it does not read', () => {
+  it('names the fact and its position, beside any type it does not read, and an extension no longer listed only where a type is unread', () => {
     const inAnEarlierShape = ledgerOfUnknownFacts(
       { unknown: [], unreadable: [{ type: 'license_activated', position: '1204' }] },
       { ledger: inPostgreSQL, distribution: 'npx' },
@@ -85,7 +85,7 @@ describe('a ledger whose newest fact of a type is in a shape this version of Aut
 
     expect([inAnEarlierShape.happened, both.happened]).toEqual([
       `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and holds the fact license_activated at position 1204, in a shape this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward.`,
-      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and holds facts of the type metering_faulted, which this version of Auto Runtime does not read, and the facts license_activated at position 1204, connection_added at position 77, in a shape this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward.`,
+      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and holds facts of the type metering_faulted, which this version of Auto Runtime does not read, and the facts license_activated at position 1204, connection_added at position 77, in a shape this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward, or by an extension that declares them and is no longer listed in extensions.`,
     ]);
   });
 });

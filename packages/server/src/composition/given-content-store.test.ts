@@ -14,9 +14,8 @@ describe('a ledger given a content store of its own', () => {
   it('keeps what the ledger is given to keep, and reads it back, in the store it is composed with', async () => {
     const content = memoryRecordedContent();
     const runtime = ManagedRuntime.make(
-      ledgerLayerOf(await ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: ':memory:' })), undefined, {
-        content,
-        sweepContent: () => Promise.resolve(),
+      ledgerLayerOf(await ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: ':memory:' })), {
+        content: { content, sweepContent: () => Promise.resolve() },
       }),
     );
     onTestFinished(() => runtime.dispose());

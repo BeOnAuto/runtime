@@ -4,8 +4,10 @@ import {
   EventPublishedSchema,
   ReactionRefusedSchema,
   RunEventSchema,
+  type DeclaredFact,
 } from '@on.auto/definitions';
 import { InteractionRunFactSchema } from '@on.auto/interaction';
+import type { FactSchemaRead } from '@on.auto/ledger';
 import { MeterEventSchema } from '@on.auto/meter';
 import { PlaybookEventSchema } from '@on.auto/playbooks';
 import { ConversationCallEventSchema, HandCallEventSchema } from '@on.auto/tool-servers';
@@ -30,3 +32,7 @@ export const knownFactSchemas = [
   OwnKeyEventSchema,
   LicenseKeyEventSchema,
 ];
+
+export function factSchemasKnownWith(declared: readonly DeclaredFact[]): readonly FactSchemaRead[] {
+  return [...knownFactSchemas, ...declared.map(({ schema }) => schema)];
+}
