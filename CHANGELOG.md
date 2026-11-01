@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.54.0](https://github.com/BeOnAuto/runtime/compare/v0.53.0...v0.54.0) (2026-11-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* **definitions:** a function says whether it has a diagram
+
+### Features
+
+* **api:** a new organization is welcomed on first contact, with prompts and links to Studio ([fefc8c7](https://github.com/BeOnAuto/runtime/commit/fefc8c75d79bebf9650cd80fdbac51ad9942045e))
+* **connections:** a connection's link says who asked for it ([6575bd9](https://github.com/BeOnAuto/runtime/commit/6575bd9b7d79fd45a932efa5d295817322a10eed))
+* **definitions:** a function says whether it has a diagram ([8205bdb](https://github.com/BeOnAuto/runtime/commit/8205bdb6f7149824c8d5b365382c10e51a9c2012))
+
 ## [0.53.0](https://github.com/BeOnAuto/runtime/compare/v0.52.0...v0.53.0) (2026-10-31)
 
 
