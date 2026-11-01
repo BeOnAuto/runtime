@@ -72,6 +72,6 @@ describe('the facts of the definitions of a playbook', () => {
   recordedFactsBehaviour({
     schema: DefinitionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.52.0': drawn },
+    releases: { '0.46.0': baseline, '0.54.0': drawn },
   });
 });
