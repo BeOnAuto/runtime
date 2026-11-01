@@ -49,7 +49,7 @@ Your agent helps you create and refine definitions, supplies inputs and calls fu
 
 The playbook keeps the saved definitions and the recorded runs, whatever happens to that conversation. An authorized colleague can use the same function from their own agent. Access to the playbook does not give a colleague access to the accounts anyone else's agent is connected to.
 
-Auto Studio shows running work, history and operating controls. Authoring starts with the agent.
+Auto Studio shows running work, history and operating controls. Authoring starts with the agent, and what it makes or runs comes back with a link to its page in Studio, which it gives you.
 
 ## Authority and judgment
 

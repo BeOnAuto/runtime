@@ -1,10 +1,20 @@
+import { StudioLinks } from '@on.auto/operations/studio-links';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { createPlaybook, listPlaybooks, retirePlaybook } from '../index.ts';
-import { acmeAdmin, acmeGammaReader } from '../testing/callers.ts';
+import { acmeAdmin, acmeAlphaKeeper, acmeGammaReader, acmeReader } from '../testing/callers.ts';
 import { asQueryString, firstMoment, harness, toOrg } from '../testing/harness.ts';
 
 const toAcme = toOrg('acme');
+
+const welcome = [
+  'This organization has no playbooks yet.',
+  'A playbook is work a person asks for once and Auto keeps and runs: functions that reason, interact, predict, recall and compute, coordinated by workflows.',
+  'Unless the person has already said what they want, ask what they want done, and offer three starts: set up a first playbook, connect a service they use, or hear what Auto can do for their team.',
+  "Studio is your team's window on everything your agent builds.",
+  'Each playbook and its workflows, every run and what it produced, the services connected, who is in the organization and what it costs.',
+].join(' ');
 
 const later = '2026-10-02T14:15:00.000Z';
 
@@ -58,25 +68,6 @@ describe('list_playbooks', () => {
     });
   });
 
-  it('lists nothing for an org without playbooks', async () => {
-    const { call } = harness();
-
-    expect(await call(listPlaybooks, toAcme(acmeAdmin))).toEqual({ status: 'succeeded', output: { playbooks: [] } });
-  });
-
-  it('says in the same words to an empty org and to a key whose playbooks are not made yet that it sees no playbook', async () => {
-    const { call } = harness();
-    const empty = { status: 'succeeded', output: { playbooks: [] } };
-
-    expect([await call(listPlaybooks, toAcme(acmeAdmin)), await call(listPlaybooks, toAcme(acmeGammaReader))]).toEqual([
-      empty,
-      empty,
-    ]);
-    expect(listPlaybooks.registration.plainLanguage?.outcome(empty.output, {})).toBe(
-      'There is no playbook in use that this connection may see.',
-    );
-  });
-
   it('lists the active playbooks sorted by id', async () => {
     const { call } = await withGammaAlphaAndRetiredBeta();
 
@@ -84,6 +75,62 @@ describe('list_playbooks', () => {
       status: 'succeeded',
       output: { playbooks: [activePlaybook('alpha', 'Alpha'), activePlaybook('gamma', 'Gamma')] },
     });
+  });
+});
+
+describe('the welcome of list_playbooks', () => {
+  it('lists nothing for an org without playbooks, and welcomes it with what a playbook is, three starts and what Studio shows', async () => {
+    const { call } = harness();
+
+    expect(await call(listPlaybooks, toAcme(acmeAdmin))).toEqual({
+      status: 'succeeded',
+      output: { playbooks: [], welcome },
+    });
+  });
+
+  it("ends the welcome with Studio's link where the server serving the call knows Studio's address", async () => {
+    const { dispatch, run } = harness();
+    const listed = dispatch(listPlaybooks, toAcme(acmeAdmin)).pipe(
+      Effect.provideService(StudioLinks, () => 'https://studio.example/'),
+    );
+
+    expect(await run(listed)).toEqual({
+      status: 'succeeded',
+      output: { playbooks: [], welcome: `${welcome} https://studio.example/` },
+    });
+  });
+
+  it('relays the welcome as it is', () => {
+    expect(listPlaybooks.registration.plainLanguage?.relayed?.({ playbooks: [], welcome })).toBe(welcome);
+  });
+});
+
+describe('the plain empty list of list_playbooks', () => {
+  it('is answered to a caller who may not make the first playbook: one limited to some playbooks, or one that may only read', async () => {
+    const { call } = harness();
+    const none = { status: 'succeeded', output: { playbooks: [] } };
+
+    expect([
+      await call(listPlaybooks, toAcme(acmeGammaReader)),
+      await call(listPlaybooks, toAcme(acmeAlphaKeeper)),
+      await call(listPlaybooks, toAcme(acmeReader)),
+    ]).toEqual([none, none, none]);
+  });
+
+  it('is answered to an org with playbooks, though the caller may see none of them, or none is active', async () => {
+    const playbooks = harness();
+    await playbooks.call(createPlaybook, toAcme(acmeAdmin, { playbook: 'beta', name: 'Beta' }));
+    await playbooks.call(retirePlaybook, toAcme(acmeAdmin, { playbook: 'beta' }), later);
+    const none = { status: 'succeeded', output: { playbooks: [] } };
+
+    expect([
+      await playbooks.call(listPlaybooks, toAcme(acmeAdmin)),
+      await playbooks.call(listPlaybooks, toAcme(acmeGammaReader)),
+    ]).toEqual([none, none]);
+    expect([
+      listPlaybooks.registration.plainLanguage?.outcome(none.output, {}),
+      listPlaybooks.registration.plainLanguage?.relayed?.(none.output),
+    ]).toEqual(['There is no playbook in use that this connection may see.', undefined]);
   });
 });
 

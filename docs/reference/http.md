@@ -90,7 +90,9 @@ These routes are relative to `/v1/orgs/{org}`:
 | `name`        | 1 to 100 characters, stored without the whitespace around it; it cannot be all whitespace |
 | `description` | At most 2,000 characters, stored without the whitespace around it                         |
 
-Each operation returns the playbook, with its `id`, `name`, `description`, `status` (`active` or `retired`), `created_at`, `created_by`, the caller who created it, by `id` and `name`, `updated_at` and, once retired, `retired_at`. `list_playbooks` returns them in `playbooks`.
+Each operation returns the playbook, with its `id`, `name`, `description`, `status` (`active` or `retired`), `created_at`, `created_by`, the caller who created it, by `id` and `name`, `updated_at` and, once retired, `retired_at`. `list_playbooks` returns them in `playbooks`, and `create_playbook` returns the playbook's page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
+
+`list_playbooks` of an org with no playbook yet, active or retired, to a caller who may act on every playbook of the org and holds `org:write`, also returns `welcome`: words the agent relays to the person, on what a playbook is, three ways to start and what Studio shows, ending with the link to Studio's home. [The welcome of a new organization](mcp.md#the-welcome-of-a-new-organization) quotes them. A caller who may only read, or who acts on some playbooks alone, gets the empty list and no `welcome`, and an org with a playbook returns none to anyone.
 
 - `list_playbooks` lists the playbooks the caller may access. It leaves out retired ones unless `include_retired` asks for them. It also accepts a key with only `playbook:read`, so a key that may only read inside some playbooks can find them.
 - A key limited to a list of playbooks can create only a playbook whose id is on that list.
@@ -104,6 +106,10 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 | `update_playbook` of a retired playbook                                               | `conflict`                |
 | `get_playbook`, `update_playbook` or `retire_playbook` of an id the org does not have | `not_found`               |
 | A change that meets another change to the org's playbooks at the same moment          | `conflict`; send it again |
+
+### Links to Studio
+
+`create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the run's. The link opens the Studio the runtime names, `/studio/` on its own origin where it serves Studio and the Studio host, `STUDIO_ORIGIN`, otherwise, on the runtime the request reached, its `PUBLIC_URL` where it signs people in, as `server`, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`. A definition's page is named by its type and its name, as `reasoning=summarize-brief`. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
 
 ## Models
 
@@ -139,7 +145,7 @@ The `source` is a [reasoning function document](reasoning-format.md). These rule
 
 A definition names the caller who created it as `created_by`, by `id` and `name`, and keeps it across its versions.
 
-`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out.
+`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out. `create_definition` and `update_definition` return its page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
 
 - `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
 - `diagram` is how a function works as a picture, which Auto Studio draws under the overview. Every `create_definition` and `update_definition` of a function gives it, as one of two choices: Mermaid source of a flowchart or a state diagram, whose first line is `flowchart`, `graph` or `stateDiagram`, optionally with a direction such as `TD`, in at most 8,192 UTF-8 bytes; or the word `none`, when a picture would add nothing. Since Auto Studio draws it at full size in a column, a diagram reads best top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. The version keeps it as given. A version saved before functions took one has none.
@@ -413,7 +419,7 @@ A cancelled run's rejection names the kind of its cancellation:
 
 ## Runs and results
 
-A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
+A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record`, and `run_definition` the run's page in Studio as `studio` ([Links to Studio](#links-to-studio)). A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
 Most runs finish within the request that starts them. These runs finish later, so `run_definition` returns them `started`, unless one ended before its first wait:
 

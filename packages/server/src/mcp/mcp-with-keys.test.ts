@@ -8,6 +8,7 @@ import { release } from '../composition/release.ts';
 import { startServer } from '../lifecycle/lifecycle.ts';
 import { type RunningServer } from '../server-options/server-options.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { withoutStudioLink } from '../testing/servers/http-client.ts';
 
 const acmeAdmin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
 
@@ -136,7 +137,9 @@ describe('the playbook tools of the server', () => {
       }),
     );
     expect(outcome.created.structuredContent).toMatchObject({ id: 'alpha', name: 'Alpha', status: 'active' });
-    expect(outcome.listed.structuredContent).toEqual({ playbooks: [outcome.created.structuredContent] });
+    expect(outcome.listed.structuredContent).toEqual({
+      playbooks: [withoutStudioLink(outcome.created.structuredContent)],
+    });
     expect(outcome.updated.structuredContent).toMatchObject({ name: 'Alpha prime', description: 'Notes' });
     expect(outcome.retired.structuredContent).toMatchObject({ status: 'retired' });
   });

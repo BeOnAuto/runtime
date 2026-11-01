@@ -1,4 +1,5 @@
 import { PlaybookIdSchema, RecordedCallerSchema } from '@on.auto/operations';
+import { studioLinkField } from '@on.auto/operations/studio-links';
 import { Schema } from 'effect';
 
 export const PlaybookSchema = Schema.Struct({
@@ -15,3 +16,8 @@ export const PlaybookSchema = Schema.Struct({
 }).annotate({ identifier: 'Playbook', description: 'A playbook of the org' });
 
 export type Playbook = typeof PlaybookSchema.Type;
+
+export const CreatedPlaybookSchema = Schema.Struct({
+  ...PlaybookSchema.fields,
+  studio: studioLinkField('made'),
+}).annotate({ identifier: 'CreatedPlaybook', description: 'A playbook just created, with its page in Studio' });

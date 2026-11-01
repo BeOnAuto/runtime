@@ -174,6 +174,10 @@
                     "retired_at": {
                       "type": "string",
                       "description": "When the playbook was retired, in ISO 8601 UTC"
+                    },
+                    "studio": {
+                      "type": "string",
+                      "description": "The page in Studio of what was made"
                     }
                   },
                   "required": [
@@ -186,7 +190,7 @@
                     "updated_at"
                   ],
                   "additionalProperties": false,
-                  "description": "A playbook of the org"
+                  "description": "A playbook just created, with its page in Studio"
                 }
               }
             }
@@ -272,6 +276,10 @@
                       "items": {
                         "$ref": "#/$defs/Playbook"
                       }
+                    },
+                    "welcome": {
+                      "type": "string",
+                      "description": "Where the org has no playbook yet and the caller may make one there, words the agent relays to the person: what a playbook is, three ways to start, and what Studio shows, with Studio's link where the runtime knows its address"
                     }
                   },
                   "required": [
@@ -9425,6 +9433,10 @@
                         ]
                       },
                       "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                    },
+                    "studio": {
+                      "type": "string",
+                      "description": "The page in Studio of what was saved"
                     }
                   },
                   "required": [
@@ -9439,7 +9451,7 @@
                     "source"
                   ],
                   "additionalProperties": false,
-                  "description": "A saved definition, with its document"
+                  "description": "A definition just saved, with its document and its page in Studio"
                 }
               }
             }
@@ -10614,6 +10626,10 @@
                         ]
                       },
                       "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                    },
+                    "studio": {
+                      "type": "string",
+                      "description": "The page in Studio of what was saved"
                     }
                   },
                   "required": [
@@ -10628,7 +10644,7 @@
                     "source"
                   ],
                   "additionalProperties": false,
-                  "description": "A saved definition, with its document"
+                  "description": "A definition just saved, with its document and its page in Studio"
                 }
               }
             }
@@ -11516,6 +11532,10 @@
                     "record": {
                       "type": "object",
                       "description": "What the runtime adapter recorded: of the run that succeeded, of what a rejected run did before it was rejected, such as the tokens a model call used, or of the work it started that finishes later"
+                    },
+                    "studio": {
+                      "type": "string",
+                      "description": "The page in Studio of what was run"
                     }
                   },
                   "required": [
@@ -11528,7 +11548,7 @@
                     "started_by"
                   ],
                   "additionalProperties": false,
-                  "description": "One run of a definition with an input, how it ended, and what its runtime adapter recorded"
+                  "description": "A run run_definition answers: how it stands or ended, what its runtime adapter recorded and its page in Studio"
                 }
               }
             }

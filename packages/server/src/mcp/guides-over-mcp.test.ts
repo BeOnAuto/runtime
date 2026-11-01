@@ -98,7 +98,7 @@ const PromptSchema = Schema.Struct({
 });
 
 describe('the prompts of the server', () => {
-  it('are the four recipes, with their titles and arguments', async () => {
+  it('are the two starting prompts and the four recipes, with their titles and arguments', async () => {
     const { prompts } = Schema.decodeUnknownSync(PromptsSchema)(await onMcp((session) => session.listPrompts()));
 
     expect(
@@ -108,6 +108,8 @@ describe('the prompts of the server', () => {
         given.map(({ name: argument, required }) => [argument, required]),
       ]),
     ).toEqual([
+      ['get-started', 'Get started with Auto', []],
+      ['connect-a-service', 'Connect a service', [['service', true]]],
       ['first-playbook', 'Create your first playbook', []],
       ['remember', 'Make the playbook remember something', [['what', true]]],
       ['give-tools', 'Give the playbook tools', [['server', false]]],
@@ -173,13 +175,16 @@ const acmeReader = createApiKey({
 });
 
 describe('the prompts of a connection', () => {
-  it('are the recipes whose every tool it lists: on a playbook endpoint, all but making a first playbook, and on an org endpoint none', async () => {
+  it('are the starting prompts and the recipes whose every tool it lists: on a playbook endpoint the recipes but making a first playbook, and on an org endpoint connecting a service alone', async () => {
     const [onAPlaybook, onAnOrg] = await Promise.all([
       onMcp((session) => session.listPrompts(), '/orgs/local/playbooks/alpha/mcp'),
       onMcp((session) => session.listPrompts(), '/orgs/local/mcp'),
     ]);
 
-    expect([promptNamesIn(onAPlaybook), promptNamesIn(onAnOrg)]).toEqual([['remember', 'give-tools', 'schedule'], []]);
+    expect([promptNamesIn(onAPlaybook), promptNamesIn(onAnOrg)]).toEqual([
+      ['remember', 'give-tools', 'schedule'],
+      ['connect-a-service'],
+    ]);
   });
 
   it('are none for a key that may only read, whose instructions name no recipe either', async () => {

@@ -8,6 +8,7 @@ import { createApp } from './app.ts';
 import { withRequestIdAndSecurityHeaders } from './middleware/response-headers.ts';
 import { errorHandler } from './problem/error-boundary.ts';
 import { badRequestHandler } from './problem/unreadable-request.ts';
+import { callContextLinkingStudio } from './studio/studio-links.ts';
 
 export interface ApiHandler {
   readonly fetch: (request: Request) => Promise<Response>;
@@ -16,7 +17,7 @@ export interface ApiHandler {
 }
 
 export function createApiHandler(options: ApiOptions): ApiHandler {
-  const { app, close } = createApp(options);
+  const { app, close } = createApp(options, callContextLinkingStudio(options));
   const handleError = errorHandler(options.reportIncident);
   const handle = async (request: Request): Promise<Response> => {
     try {

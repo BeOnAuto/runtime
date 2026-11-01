@@ -1,8 +1,9 @@
 import { Caller, defineCommand, quoted, recordedCallerOf } from '@on.auto/operations';
+import { withStudioLink } from '@on.auto/operations/studio-links';
 import { Effect, Schema } from 'effect';
 
 import { playbookNamed, purposeOf } from '../plain-language/playbook-words.ts';
-import { PlaybookSchema } from '../registry/playbook.ts';
+import { CreatedPlaybookSchema } from '../registry/playbook.ts';
 import { PlaybookDescriptionField, PlaybookIdField, PlaybookNameField } from './playbook-fields.ts';
 import { recordInRegistry } from './registry-recording.ts';
 
@@ -23,12 +24,15 @@ export const createPlaybook = defineCommand('org', {
     name: PlaybookNameField,
     description: Schema.optionalKey(PlaybookDescriptionField),
   }),
-  outputSchema: PlaybookSchema,
+  outputSchema: CreatedPlaybookSchema,
   reasons: ['conflict'],
   handle: ({ playbook, name, description = '' }) =>
     Caller.use((caller) =>
       recordInRegistry({ type: 'create', playbook, name, description, created_by: recordedCallerOf(caller) }),
-    ).pipe(Effect.catchTag('not_found', Effect.die)),
+    ).pipe(
+      Effect.catchTag('not_found', Effect.die),
+      Effect.flatMap((created) => withStudioLink(created, { kind: 'playbook', playbook })),
+    ),
   plainLanguage: {
     task: 'create a playbook',
     attempt: ({ playbook }) => `create the playbook ${quoted(playbook)}`,

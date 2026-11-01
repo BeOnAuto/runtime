@@ -1,3 +1,4 @@
+import { StudioLinks, type StudioPage } from '@on.auto/operations/studio-links';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -57,6 +58,26 @@ describe('create_playbook', () => {
     await call(createPlaybook, toAcme(acmeAdmin, { playbook: 'alpha', name: 'Alpha' }));
 
     expect(ledger.streamNames()).toEqual(['org/acme/playbooks']);
+  });
+});
+
+function pageOf(page?: StudioPage): string {
+  return `https://studio.example/${JSON.stringify(page)}`;
+}
+
+describe('the page in Studio of a playbook created', () => {
+  it("carries the playbook's page in Studio where the server serving the call knows Studio's address, and none where not", async () => {
+    const { dispatch, run } = harness();
+    const creatingAlpha = dispatch(createPlaybook, toAcme(acmeAdmin, { playbook: 'alpha', name: 'Alpha' }));
+    const creatingBeta = dispatch(createPlaybook, toAcme(acmeAdmin, { playbook: 'beta', name: 'Beta' }));
+
+    expect([
+      await run(creatingAlpha.pipe(Effect.provideService(StudioLinks, pageOf))),
+      await run(creatingBeta),
+    ]).toMatchObject([
+      { status: 'succeeded', output: { id: 'alpha', studio: pageOf({ kind: 'playbook', playbook: 'alpha' }) } },
+      { status: 'succeeded', output: { id: 'beta' } },
+    ]);
   });
 });
 

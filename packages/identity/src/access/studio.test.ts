@@ -1,6 +1,7 @@
+import type { StudioPage } from '@on.auto/operations/studio-links';
 import { describe, expect, it } from 'vitest';
 
-import { defaultStudioOrigin, pageOriginsOf, studioBaseOf, studioLinkOf } from '../index.ts';
+import { defaultStudioOrigin, pageOriginsOf, studioBaseOf, studioLinkOf, type StudioSettings } from '../index.ts';
 
 const ownOrigin = 'http://127.0.0.1:5555';
 
@@ -41,6 +42,35 @@ describe('the link that opens Studio on the runtime', () => {
       }),
     ).toBe(
       'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=terminal&install=6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b',
+    );
+  });
+});
+
+function atPage(studio: StudioSettings, page: StudioPage): string {
+  return studioLinkOf(studio, { ownOrigin, openedFrom: 'agent', installId: undefined, page });
+}
+
+describe('the link that opens Studio on the runtime at a page', () => {
+  it("names the playbook of the page, and a definition's type and name or a run's id", () => {
+    expect([
+      atPage(elsewhere, { kind: 'playbook', playbook: 'alpha' }),
+      atPage(elsewhere, { kind: 'definition', playbook: 'alpha', type: 'workflow', name: 'weekly-build' }),
+      atPage(elsewhere, { kind: 'run', playbook: 'alpha', run: '0190f5c2-run' }),
+    ]).toEqual([
+      'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha',
+      'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&workflow=weekly-build',
+      'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&run=0190f5c2-run',
+    ]);
+  });
+
+  it('names a reasoning function by its type, as every definition is named', () => {
+    expect(
+      atPage(
+        { ...elsewhere, served: true },
+        { kind: 'definition', playbook: 'alpha', type: 'reasoning', name: 'summary' },
+      ),
+    ).toBe(
+      'http://127.0.0.1:5555/studio/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&reasoning=summary',
     );
   });
 });

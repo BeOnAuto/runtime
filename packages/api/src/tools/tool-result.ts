@@ -2,6 +2,7 @@ import type { CallToolResult } from '@modelcontextprotocol/server';
 import {
   mostOutcomeCharacters,
   mostRefusalCharacters,
+  mostRelayedCharacters,
   unsuccessfulWords,
   withinCharacters,
   type Cancelled,
@@ -44,6 +45,13 @@ export function unsuccessfulResultOf(
   };
 }
 
+function wordsOfTheOutput({ outcome, relayed }: RegisteredPlainLanguage, output: unknown, input: unknown): string {
+  const toRelay = relayed?.(output);
+  return toRelay === undefined
+    ? withinCharacters(outcome(output, input), mostOutcomeCharacters)
+    : withinCharacters(toRelay, mostRelayedCharacters);
+}
+
 export function toolResultOf(
   settled: Settled,
   clientClosedRequest: boolean,
@@ -52,10 +60,7 @@ export function toolResultOf(
 ): CallToolResult {
   if (settled.status === 'succeeded') {
     return {
-      content: [
-        textOf(withinCharacters(plainLanguage.outcome(settled.output, input), mostOutcomeCharacters)),
-        textOf(JSON.stringify(settled.output)),
-      ],
+      content: [textOf(wordsOfTheOutput(plainLanguage, settled.output, input)), textOf(JSON.stringify(settled.output))],
       structuredContent: settled.output,
     };
   }

@@ -6,6 +6,7 @@ export interface Asking {
   readonly description?: string;
   readonly argument?: string;
   readonly outcome?: string;
+  readonly relayed?: string;
   readonly attempt?: string;
 }
 
@@ -14,6 +15,7 @@ export function asking({
   description = 'Asks. Use it to ask. It answers.',
   argument = 'What to ask',
   outcome = 'Asked.',
+  relayed,
   attempt = 'ask',
 }: Asking) {
   return defineQuery('playbook', {
@@ -28,7 +30,7 @@ export function asking({
       question === 'nothing'
         ? Effect.fail(new NotFound({ detail: 'There is nothing' }))
         : Effect.succeed({ answered: true }),
-    plainLanguage: { task: 'ask', attempt: () => attempt, outcome: () => outcome },
+    plainLanguage: { task: 'ask', attempt: () => attempt, outcome: () => outcome, relayed: () => relayed },
   });
 }
 

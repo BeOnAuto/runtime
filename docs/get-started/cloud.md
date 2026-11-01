@@ -38,7 +38,7 @@ For a guided exercise with sample inputs and results to check, follow [Build you
 
 ## See your work in Studio
 
-Open [Auto Studio](https://studio.on.auto) and select the same organization. You can inspect your playbooks, read their definitions and follow their runs. Use your agent to create and change the work.
+Open [Auto Studio](https://studio.on.auto) and select the same organization. You can inspect your playbooks, read their definitions and follow their runs. Use your agent to create and change the work; it gives you the link to each playbook, definition and run it makes, which opens here.
 
 ## If you cannot connect
 

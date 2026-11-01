@@ -8,6 +8,8 @@ import { createApiKey } from '@on.auto/identity';
 import { spawnForTheTest } from '@on.auto/operations/testing';
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { servedStudioHomeOf, welcomeLinking } from '../testing/studios/welcome.ts';
+
 const command = fileURLToPath(new URL('../../auto-runtime.ts', import.meta.url));
 
 const home = mkdtempSync(join(tmpdir(), 'auto-runtime-command-'));
@@ -69,7 +71,7 @@ describe('the auto-runtime command', () => {
     const playbooks = await fetch(`${runtime.url}/v1/orgs/local/playbooks`);
 
     expect(await health.json()).toEqual({ status: 'ok' });
-    expect(await playbooks.json()).toEqual({ playbooks: [] });
+    expect(await playbooks.json()).toEqual({ playbooks: [], welcome: welcomeLinking(servedStudioHomeOf(runtime.url)) });
     expect(runtime.output().stdout).toContain(`     MCP      ${runtime.url}/mcp\n`);
     expect(runtime.output().stdout).toContain('     Docs     https://on.auto/docs/\n');
     expect(runtime.output().stdout).toMatch(

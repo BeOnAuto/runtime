@@ -113,6 +113,14 @@ These tools are listed on `/mcp` and the org endpoint. Their routes are relative
 
 Each playbook `list_playbooks` returns holds every field of the playbook, a retired one among them with `include_retired`. [Playbooks](http.md#playbooks) and [Models](http.md#models) give the fields, limits and refusals.
 
+### The welcome of a new organization
+
+`list_playbooks` of an organization with no playbook yet, active or retired, answers a caller who may make its first playbook, one who may act on every playbook of the org and holds `org:write`, a `welcome` beside the empty `playbooks`, which the agent relays to the person; over MCP the result's text is that welcome, whole, in place of the summary. It reads:
+
+> This organization has no playbooks yet. A playbook is work a person asks for once and Auto keeps and runs: functions that reason, interact, predict, recall and compute, coordinated by workflows. Unless the person has already said what they want, ask what they want done, and offer three starts: set up a first playbook, connect a service they use, or hear what Auto can do for their team. Studio is your team's window on everything your agent builds. Each playbook and its workflows, every run and what it produced, the services connected, who is in the organization and what it costs.
+
+It ends with the link to Studio's home, as [Links to Studio](http.md#links-to-studio) sets out. A caller who may only read, or who acts on some playbooks alone, is answered the empty list and no `welcome`, so it learns nothing more of the organization; and an organization that has a playbook answers no `welcome` to anyone.
+
 ### Definitions
 
 These tools are listed on `/mcp` and a playbook endpoint. Their routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`, where `{type}` is the tool's `type` argument.
@@ -138,6 +146,8 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 | `list_runs`      | `GET /runs`                           | List the playbook's runs, newest first                                     |
 | `cancel_run`     | `POST /runs/{run_id}/cancel`          | Cancel a run that is still going                                           |
 | `send_run_event` | `POST /runs/{run_id}/events`          | Deliver an event to a workflow run that is still `started`                 |
+
+`create_playbook` answers the playbook's page in Studio as `studio`, `create_definition` and `update_definition` the definition's, and `run_definition` the run's, so the agent gives the person the link without being asked; [Links to Studio](http.md#links-to-studio) says what each link opens.
 
 [Runs and results](http.md#runs-and-results) covers input limits and which runs finish later, and [Retrying under a run id](http.md#retrying-under-a-run-id) what a request under an earlier run's id returns. [Cancelling a run](http.md#cancelling-a-run), [Sending an event to a run](http.md#sending-an-event-to-a-run) and [Run history and playbook events](http.md#run-history-and-playbook-events) give the rest.
 
@@ -234,7 +244,16 @@ A connection is a tool server that a person adds to the org through their agent,
 | `templates`                                                                                                                   | The filters every template may use, from [Templates](template.md)                                                             |
 | `first-playbook`, `remember`, `give-tools` and `schedule`                                                                     | Recipes for common tasks, listed below                                                                                        |
 
-The recipes are also prompts, which a client that shows MCP prompts offers in its menu. A connection offers a prompt only when it lists every tool the recipe's steps call, and the description of `get_guide` names the same recipes. So a playbook endpoint offers no `first-playbook`, the org endpoint offers none, and a key that may only read gets none.
+Two prompts, listed first, are for a person who does not yet know what to ask. Each is offered only where the connection lists every tool it asks for: `get-started` where `create_playbook`, `create_definition` and `run_definition` all are, so on `/mcp` alone, and `connect-a-service` where `add_connection` is, on `/mcp` and the org endpoint. A playbook endpoint offers neither, and a key that may only read gets neither. Each answers one message from the person, with nothing embedded:
+
+| Prompt              | Title                 | Arguments                                                                  | The message                                                                                                                                                                                         |
+| ------------------- | --------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get-started`       | Get started with Auto | None                                                                       | Create a playbook in my Auto Runtime with one function and run it on a made-up example. Ask me what the playbook is for and anything else you need first, then give me a link to the run in Studio. |
+| `connect-a-service` | Connect a service     | `service`, required: the service to connect, such as Slack or Google Drive | Connect {service} to my Auto Runtime for my team, and once it is connected tell me what it can do.                                                                                                  |
+
+A `connect-a-service` asked without `service` is the JSON-RPC error `-32602`, which names the argument.
+
+The recipes are also prompts, listed after those two. A connection offers a recipe's prompt only when it lists every tool the recipe's steps call, and the description of `get_guide` names the same recipes. So a playbook endpoint offers no `first-playbook`, the org endpoint offers none, and a key that may only read gets none.
 
 | Prompt           | Title                                | Arguments                            | What the recipe does                                                                                                                                           |
 | ---------------- | ------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -362,17 +381,18 @@ This catalog lists language models, not MCP tools. `search` finds the tools of t
 
 A successful tool result carries a plain-language summary, the operation's output as JSON text and the same output as structured content:
 
-| Field               | Contents                                                                       |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `content[0].text`   | A plain-language summary of what was done                                      |
-| `content[1].text`   | The operation's output as JSON text, for clients that do not read the next one |
-| `structuredContent` | The same output as structured content                                          |
+| Field               | Contents                                                                        |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `content[0].text`   | A plain-language summary of what was done, or the words the agent relays, whole |
+| `content[1].text`   | The operation's output as JSON text, for clients that do not read the next one  |
+| `structuredContent` | The same output as structured content                                           |
 
 Read `structuredContent`. The first text block is not JSON. No tool advertises an output schema, so a client should use `structuredContent` as it comes rather than validate it against a schema.
 
 - A run's result is the run: its run id, definition version and status, and its output when it succeeded. `get_run` adds the detailed record.
 - A run that finishes later, such as a workflow's, is `started` when `run_definition` returns; [Runs and results](http.md#runs-and-results) says which runs do and how to read them again.
-- The summary repeats a short result in words, and points to `structuredContent` for a long one.
+- The summary repeats a short result in words, and points to `structuredContent` for a long one. It takes at most 400 characters.
+- Where the output holds words for the agent to relay, as the [welcome](#the-welcome-of-a-new-organization) of `list_playbooks` does, the first text block is those words, whole up to 1,000 characters.
 - A review that recommends Revise still belongs to a succeeded run: the operation completed and produced that recommendation.
 
 These summaries were recorded from a two-step review-and-approval workflow on a self-hosted runtime. Its approval step uses the [example interaction function](interaction-format.md#a-function-document). Only the review's words come from a scripted model:

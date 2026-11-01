@@ -1,3 +1,5 @@
+import { Schema } from 'effect';
+
 export interface TestResponse {
   readonly status: number;
   readonly headers: Headers;
@@ -35,4 +37,12 @@ export async function request(
   });
   const text = await response.text();
   return { status: response.status, headers: response.headers, text, body: JSON.parse(text) };
+}
+
+const fieldsOf = Schema.decodeUnknownSync(Schema.Record(Schema.String, Schema.Unknown));
+
+export function withoutStudioLink(answer: unknown): Readonly<Record<string, unknown>> {
+  return Object.fromEntries(
+    Object.entries(fieldsOf(answer)).filter(([field]: readonly [string, unknown]) => field !== 'studio'),
+  );
 }

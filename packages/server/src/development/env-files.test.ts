@@ -16,6 +16,7 @@ import {
   type DevelopmentOptions,
 } from '../testing/processes/development-process.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
+import { servedStudioHomeOf, welcomeLinking } from '../testing/studios/welcome.ts';
 
 const example = new URL('../../../../.env.example', import.meta.url);
 
@@ -50,7 +51,10 @@ describe('local Studio under pnpm dev', () => {
         const response = await fetch(`http://127.0.0.1:${port}/v1/orgs/local/playbooks`, { headers: { origin } });
         expect(response.status).toBe(200);
         expect(response.headers.get('access-control-allow-origin')).toBe(origin);
-        expect(await response.json()).toEqual({ playbooks: [] });
+        expect(await response.json()).toEqual({
+          playbooks: [],
+          welcome: welcomeLinking(servedStudioHomeOf(`http://127.0.0.1:${port}`)),
+        });
       }),
     );
 

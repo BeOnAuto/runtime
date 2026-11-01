@@ -12,6 +12,7 @@ import { Schema } from 'effect';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { studioHostHomeOf, welcomeLinking } from '../testing/studios/welcome.ts';
 
 const listResultOf = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Struct({ result: Schema.Unknown })));
 
@@ -106,7 +107,10 @@ describe('the org of a key on /mcp', () => {
       named: await session.callTool('list_playbooks', { org: 'acme' }),
     }));
 
-    expect(outcome.listed.structuredContent).toEqual({ playbooks: [] });
+    expect(outcome.listed.structuredContent).toEqual({
+      playbooks: [],
+      welcome: welcomeLinking(studioHostHomeOf(server.origin)),
+    });
     expect(problemIn(outcome.searched)).toMatchObject({
       reason: 'not_found',
       detail: 'There is no playbook alpha in this org',

@@ -95,6 +95,6 @@ export function serverOf(
     },
   );
   registerTools(server);
-  serveGuides(server, connection.shelf, recipesFollowedWith(served, connection.shelf.recipes));
+  serveGuides(server, connection.shelf, served);
   return server;
 }

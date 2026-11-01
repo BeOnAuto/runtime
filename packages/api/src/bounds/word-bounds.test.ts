@@ -32,6 +32,20 @@ describe('the words of an outcome', () => {
   });
 });
 
+describe('the words to relay', () => {
+  it('are served whole at 1,000 characters in place of the outcome, and cut at a sentence with the rest in the details at 1,001', async () => {
+    const first = sentencesOf(499);
+    const outcome = 'Asked.';
+
+    expect(await plainWordsOf(asking({ outcome, relayed: `${first} ${sentencesOf(500)}` }))).toBe(
+      `${first} ${sentencesOf(500)}`,
+    );
+    expect(await plainWordsOf(asking({ outcome, relayed: `${first} ${sentencesOf(501)}` }))).toBe(
+      `${first} The rest is in the details below.`,
+    );
+  });
+});
+
 function refusalWordsOf(attempt: string): string {
   return unsuccessfulWords(attempt, 'query', { status: 'rejected', reason: 'not_found', detail: 'There is nothing' });
 }

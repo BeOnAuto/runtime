@@ -2,9 +2,9 @@ import type { GetPromptResult, McpServer, StandardSchemaWithJSON } from '@modelc
 import { Schema } from 'effect';
 
 import { guideAddress, guideMediaType } from './guide-resources.ts';
-import type { RecipeWords, ShelvedRecipe } from './guide-shelf.ts';
+import type { RecipeArgument, RecipeWords, ShelvedRecipe } from './guide-shelf.ts';
 
-function wordsSchemaOf({ arguments: given }: ShelvedRecipe): StandardSchemaWithJSON<unknown, RecipeWords> {
+export function wordsSchemaOf(given: readonly RecipeArgument[]): StandardSchemaWithJSON<unknown, RecipeWords> {
   const fields = Object.fromEntries(
     given.map(({ name, required }) => [name, required ? Schema.String : Schema.optionalKey(Schema.String)]),
   );
@@ -41,7 +41,7 @@ export function serveRecipePrompts(
   for (const recipe of recipes) {
     server.registerPrompt(
       recipe.name,
-      { title: recipe.title, description: recipe.description, argsSchema: wordsSchemaOf(recipe) },
+      { title: recipe.title, description: recipe.description, argsSchema: wordsSchemaOf(recipe.arguments) },
       promptOf(recipe),
     );
   }

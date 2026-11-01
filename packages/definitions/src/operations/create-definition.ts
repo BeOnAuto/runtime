@@ -4,11 +4,11 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionWordsFor, whatItDoes } from '../plain-language/definition-words.ts';
-import { DefinitionSchema } from '../registry/definition.ts';
 import { DefinitionNameField, DiagramField, OverviewField, SourceField } from './definition-fields.ts';
 import { answeredDefinition } from './definition-reading.ts';
 import { contentOf } from './definition-views.ts';
 import { recordInRegistry } from './registry-access.ts';
+import { SavedDefinitionSchema, withDefinitionPageInStudio } from './studio-pages.ts';
 
 export function defineCreateDefinition(capabilities: readonly Capability[]) {
   const known = knownCapabilities(capabilities);
@@ -35,21 +35,18 @@ export function defineCreateDefinition(capabilities: readonly Capability[]) {
         overview: Schema.optionalKey(OverviewField),
         diagram: Schema.optionalKey(DiagramField),
       }),
-      outputSchema: DefinitionSchema,
+      outputSchema: SavedDefinitionSchema,
       reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name, ...written }) {
         const capability = yield* known.capabilityOfType(type);
         const content = yield* contentOf(capability, written);
-        return yield* answeredDefinition(
-          capability,
-          known.types,
-          yield* recordInRegistry(capability, {
-            type: 'create',
-            name,
-            content,
-            created_by: recordedCallerOf(yield* Caller),
-          }),
-        );
+        const created = yield* recordInRegistry(capability, {
+          type: 'create',
+          name,
+          content,
+          created_by: recordedCallerOf(yield* Caller),
+        });
+        return yield* withDefinitionPageInStudio(yield* answeredDefinition(capability, known.types, created));
       }),
       plainLanguage: {
         task: `create a new ${words.kinds}`,

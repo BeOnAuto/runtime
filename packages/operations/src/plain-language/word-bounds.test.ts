@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { mostOutcomeCharacters, mostRefusalCharacters, withinCharacters } from '../index.ts';
+import { mostOutcomeCharacters, mostRefusalCharacters, mostRelayedCharacters, withinCharacters } from '../index.ts';
 
 function sentenceOf(length: number): string {
   return `${'A'.padEnd(length - 1, 'a')}.`;
 }
 
-describe('the words of an outcome and of a refusal', () => {
-  it('take at most 400 and 600 characters', () => {
-    expect([mostOutcomeCharacters, mostRefusalCharacters]).toEqual([400, 600]);
+describe('the words of an outcome, of a refusal and to relay', () => {
+  it('take at most 400, 600 and 1,000 characters', () => {
+    expect([mostOutcomeCharacters, mostRefusalCharacters, mostRelayedCharacters]).toEqual([400, 600, 1000]);
   });
 });
 

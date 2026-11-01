@@ -8,6 +8,7 @@ import {
   threadInput,
   type HistoryEvent,
 } from '../testing/interaction-servers/system-calls.ts';
+import { withoutStudioLink } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 
 const aNumber: unknown = expect.any(Number);
@@ -45,7 +46,7 @@ describe('an interaction function that asks a system, over HTTP', () => {
         finished_at: aTime,
       },
     });
-    expect(read.body).toEqual(ran.body);
+    expect(read.body).toEqual(withoutStudioLink(ran.body));
     expect(server.fake.received()).toEqual([
       {
         tool: 'thread',

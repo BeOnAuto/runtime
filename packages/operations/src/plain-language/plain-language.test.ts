@@ -98,6 +98,36 @@ describe('the plain language of a registration', () => {
   });
 });
 
+const greetingShelf = defineCommand('org', {
+  name: 'greet_shelf',
+  title: 'Greet shelf',
+  description: 'Greets a shelf.',
+  route: { method: 'POST', path: '/greetings' },
+  inputSchema: Schema.Struct({ title: Title }),
+  outputSchema: Schema.Struct({ title: Title, greeting: Schema.optionalKey(Title) }),
+  reasons: [],
+  handle: ({ title }) => Effect.succeed({ title }),
+  plainLanguage: {
+    task: 'greet a shelf',
+    attempt: () => 'greet a shelf',
+    outcome: () => 'Greeted the shelf.',
+    relayed: ({ greeting }) => greeting,
+  },
+});
+
+describe('the words a registration relays', () => {
+  it('are those the operation gives from the encoded output, none where the output holds none', () => {
+    expect([
+      greetingShelf.registration.plainLanguage?.relayed?.({ title: 'Poetry', greeting: '  Welcome, Poetry.  ' }),
+      greetingShelf.registration.plainLanguage?.relayed?.({ title: 'Poetry' }),
+    ]).toEqual(['Welcome, Poetry.', undefined]);
+  });
+
+  it('are absent from an operation that relays nothing', () => {
+    expect(registration.plainLanguage?.relayed).toBeUndefined();
+  });
+});
+
 describe('the remedies of a registration', () => {
   it('carries the remedies the operation gives of its own, and none when it gives none', () => {
     const plain = defineCommand('org', {

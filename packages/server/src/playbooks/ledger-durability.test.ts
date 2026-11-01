@@ -9,7 +9,7 @@ import { startServer } from '../lifecycle/lifecycle.ts';
 import { spawnServer } from '../testing/processes/spawned-server.ts';
 import { appendMalformedPlaybookEvent } from '../testing/records/malformed-playbook-event.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
-import { request } from '../testing/servers/http-client.ts';
+import { request, withoutStudioLink } from '../testing/servers/http-client.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
 
@@ -70,7 +70,7 @@ describe('playbooks in the ledger file', () => {
       read: 200,
       secondExit: 0,
     });
-    expect(read.body).toEqual(created.body);
+    expect(read.body).toEqual(withoutStudioLink(created.body));
   });
 });
 

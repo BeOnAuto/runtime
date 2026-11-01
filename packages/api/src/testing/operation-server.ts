@@ -78,6 +78,7 @@ export interface OperationServerOptions {
   readonly retryStateKeys?: RetryStateKeys;
   readonly heartbeatEveryMs?: number;
   readonly callContext?: CallContext;
+  readonly installId?: () => string | undefined;
 }
 
 type McpServed = Pick<McpRoutesOptions, 'catalog' | 'dispatcher' | 'runCall' | 'retryStateKeys'> & {
@@ -107,6 +108,7 @@ export async function operationServer({
   retryStateKeys = testRetryStateKeys,
   heartbeatEveryMs,
   callContext,
+  installId,
 }: OperationServerOptions = {}): Promise<OperationServer> {
   const services = operationServices(tracer);
   const runtime = await makeAppRuntime(services.layer);
@@ -129,6 +131,7 @@ export async function operationServer({
     routes,
     ...(requests === undefined ? {} : { requests }),
     ...(callContext === undefined ? {} : { callContext }),
+    ...(installId === undefined ? {} : { installId }),
   });
   return {
     handler,

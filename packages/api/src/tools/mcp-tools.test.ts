@@ -75,31 +75,40 @@ describe('the tools of each endpoint', () => {
 
 const echoRecord = { record: { greeting: 'Hello' } };
 
+function createdRanAndRead() {
+  return onAlpha(async (session) => {
+    const created = await session.callTool('create_definition', {
+      type: 'echo',
+      name: 'greeter',
+      source: '{"greeting":"Hello"}',
+    });
+    const ran = await session.callTool('run_definition', { type: 'echo', name: 'greeter', input: { who: 'Ada' } });
+    const run = await session.callTool('get_run', { run_id: String(ran.structuredContent?.['run_id']) });
+    return { created, ran, run };
+  });
+}
+
+function inStudio(page: string): string {
+  return `https://studio.on.auto/?server=${encodeURIComponent(listening.origin)}&src=agent&playbook=alpha&${page}`;
+}
+
 describe('the definition tools on a playbook endpoint', () => {
   it('create a definition, execute it and read the run back', async () => {
-    const outcome = await onAlpha(async (session) => {
-      const created = await session.callTool('create_definition', {
-        type: 'echo',
-        name: 'greeter',
-        source: '{"greeting":"Hello"}',
-      });
-      const ran = await session.callTool('run_definition', {
-        type: 'echo',
-        name: 'greeter',
-        input: { who: 'Ada' },
-      });
-      const run = await session.callTool('get_run', {
-        run_id: String(ran.structuredContent?.['run_id']),
-      });
-      return { created, ran, run };
-    });
+    const { created, ran, run } = await createdRanAndRead();
+    const runId = String(ran.structuredContent?.['run_id']);
 
-    expect(outcome.created.structuredContent).toMatchObject({ type: 'echo', name: 'greeter', version: 1 });
-    expect(outcome.ran.structuredContent).toMatchObject({
+    expect(created.structuredContent).toMatchObject({
+      type: 'echo',
+      name: 'greeter',
+      version: 1,
+      studio: inStudio('echo=greeter'),
+    });
+    expect(ran.structuredContent).toMatchObject({
       status: 'succeeded',
       output: { greeting: 'Hello', input: { who: 'Ada' } },
+      studio: inStudio(`run=${runId}`),
     });
-    expect(outcome.run.structuredContent).toEqual({ ...outcome.ran.structuredContent, ...echoRecord });
+    expect(run.structuredContent).toEqual({ ...ran.structuredContent, studio: undefined, ...echoRecord });
   });
 
   it('list, read, update and retire a definition', async () => {

@@ -2,6 +2,8 @@ export const mostOutcomeCharacters = 400;
 
 export const mostRefusalCharacters = 600;
 
+export const mostRelayedCharacters = 1000;
+
 const restInTheDetails = ' The rest is in the details below.';
 
 const betweenSentences = /(?<=[.!?…]["”’)]*)\s+(?=["“‘(]?[A-Z])/u;

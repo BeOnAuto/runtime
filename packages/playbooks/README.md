@@ -25,19 +25,21 @@ The limits of `name` and `description` hold for the text as sent, so the JSON Sc
 
 All five are org operations, so their routes are relative to the org. `playbookOperations` lists them for a catalog. `get_playbook` is defined with `defineHttpOperation` and so served over HTTP alone, since a playbook `list_playbooks` lists holds the same fields; the other four are also MCP tools.
 
-| Operation         | Kind    | Route                               | Input                                                      | Answer                          | Rejections of the handler |
-| ----------------- | ------- | ----------------------------------- | ---------------------------------------------------------- | ------------------------------- | ------------------------- |
-| `create_playbook` | command | `POST /playbooks`                   | `playbook` (the id), `name`, `description` (default empty) | the playbook, `201`             | `conflict`                |
-| `list_playbooks`  | query   | `GET /playbooks`                    | `include_retired` (default `false`)                        | `{ playbooks }`, sorted by id   | none                      |
-| `get_playbook`    | query   | `GET /playbooks/{playbook}`         | `playbook`                                                 | the playbook, active or retired | `not_found`               |
-| `update_playbook` | command | `PUT /playbooks/{playbook}`         | `playbook`, `name`, `description`, all required            | the playbook                    | `not_found`, `conflict`   |
-| `retire_playbook` | command | `POST /playbooks/{playbook}/retire` | `playbook`                                                 | the playbook                    | `not_found`, `conflict`   |
+| Operation         | Kind    | Route                               | Input                                                      | Answer                                 | Rejections of the handler |
+| ----------------- | ------- | ----------------------------------- | ---------------------------------------------------------- | -------------------------------------- | ------------------------- |
+| `create_playbook` | command | `POST /playbooks`                   | `playbook` (the id), `name`, `description` (default empty) | the playbook and `studio`, `201`       | `conflict`                |
+| `list_playbooks`  | query   | `GET /playbooks`                    | `include_retired` (default `false`)                        | `{ playbooks, welcome }`, sorted by id | none                      |
+| `get_playbook`    | query   | `GET /playbooks/{playbook}`         | `playbook`                                                 | the playbook, active or retired        | `not_found`               |
+| `update_playbook` | command | `PUT /playbooks/{playbook}`         | `playbook`, `name`, `description`, all required            | the playbook                           | `not_found`, `conflict`   |
+| `retire_playbook` | command | `POST /playbooks/{playbook}/retire` | `playbook`                                                 | the playbook                           | `not_found`, `conflict`   |
 
 - `create_playbook` meets `conflict` when an active or a retired playbook holds the id.
 - `update_playbook` meets `conflict` when the playbook is retired. An update that changes nothing succeeds and records nothing.
 - Retiring is permanent: there is no restore. Retiring a retired playbook succeeds and records nothing.
 - Every command also meets `conflict` when the org's playbooks changed while it decided.
 - `list_playbooks` lists only the playbooks the caller may access, and leaves out the retired ones unless `include_retired` is true. `include_retired` decodes from a JSON boolean and from the strings `true` and `false` of a query string.
+- `list_playbooks` of an org with no playbook at all, active or retired, to a caller who may make its first one, who acts on every playbook of the org (`*`) and holds `org:write`, answers `welcome` beside the empty `playbooks`, `welcomeOf` of `src/plain-language/playbook-words.ts`: what a playbook is, three ways to start and what Studio shows, ending with Studio's home where the call has `StudioLinks` of `@on.auto/operations/studio-links`. Its plain language relays it, so over MCP the result's text is the welcome, whole. A caller limited to some playbooks, or one that may only read, is answered the plain empty list, so it learns nothing of the org, and an org with a playbook answers no welcome.
+- `create_playbook` answers `studio`, the playbook's page in Studio, where the call has `StudioLinks`, and none where it has not (`withStudioLink`).
 
 Before a handler runs, the dispatcher rejects with `forbidden` a caller of another org, a caller without `org:read` for the queries or `org:write` for the commands, though `list_playbooks` is permitted by `playbook:read` as well, since it answers only the playbooks its caller may access, and a caller that may not access the playbook named by the `playbook` field of `create_playbook`, `get_playbook`, `update_playbook` or `retire_playbook`. So a caller limited to a list of playbooks creates, reads, updates and retires only those. The dispatcher rejects with `invalid_input` input that breaks the schema, including fields the operation does not know.
 
