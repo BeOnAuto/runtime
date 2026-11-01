@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.55.0](https://github.com/BeOnAuto/runtime/compare/v0.54.0...v0.55.0) (2026-11-01)
+
+
+### ⚠ BREAKING CHANGES
+
+* **operations:** content, shipped files and phrasing leave operations
+
+### Code Refactoring
+
+* **operations:** content, shipped files and phrasing leave operations ([e923cef](https://github.com/BeOnAuto/runtime/commit/e923cef35df6711c2700d5ecfe0a150910b83d2a))
+
 ## [0.54.0](https://github.com/BeOnAuto/runtime/compare/v0.53.0...v0.54.0) (2026-11-01)
 
 
