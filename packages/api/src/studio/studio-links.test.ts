@@ -1,6 +1,5 @@
 import { authenticatorFor } from '@on.auto/identity';
-import { defineQuery } from '@on.auto/operations';
-import { studioLinkTo, withStudioLink } from '@on.auto/operations/studio-links';
+import { defineQuery, studioLinkTo, withStudioLink } from '@on.auto/operations';
 import { Context, Effect, Option, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

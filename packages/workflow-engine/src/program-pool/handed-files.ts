@@ -1,6 +1,6 @@
 import { workerData } from 'node:worker_threads';
 
-import { shippedFileName, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
+import { shippedFileName, type ShippedFile, type ShippedFiles } from '@on.auto/shipped-files';
 import { Option, Schema } from 'effect';
 
 import { sandboxModuleFile } from '../instances/compiled-module.ts';

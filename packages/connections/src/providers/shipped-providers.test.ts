@@ -1,4 +1,3 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import {
   additionOfProvider,
   holdsAClientId,
@@ -8,6 +7,7 @@ import {
   type ProviderAddition,
   providersShippedRoots,
 } from '@on.auto/providers';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import {
   describedToolServers,
   isConnectionServerSettings,

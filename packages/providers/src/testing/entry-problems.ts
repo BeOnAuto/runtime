@@ -1,5 +1,5 @@
-import { shippedFileIn, shippedFileName, type ShippedFile } from '@on.auto/operations';
-import { shippedFilesInMemory } from '@on.auto/operations/testing';
+import { shippedFileIn, shippedFileName, type ShippedFile } from '@on.auto/shipped-files';
+import { shippedFilesInMemory } from '@on.auto/shipped-files/testing';
 import { Result, Schema, SchemaIssue } from 'effect';
 
 import { ProviderEntrySchema } from '../entry/provider-entry.ts';

@@ -1,4 +1,4 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import type { MachineOptions } from '@on.auto/workflow-engine';
 import { freshInstances, machineSandboxOf, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { defaultLimits, defaultSeed, testMachineOf } from '@on.auto/workflow-engine/testing';

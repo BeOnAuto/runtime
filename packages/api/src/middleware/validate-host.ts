@@ -1,4 +1,4 @@
-import { loopbackNames } from '@on.auto/operations';
+import { loopbackNames } from '@on.auto/identity';
 import type { MiddlewareHandler } from 'hono';
 
 import type { ApiEnv } from '../api-env.ts';

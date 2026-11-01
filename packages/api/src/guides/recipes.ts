@@ -1,4 +1,4 @@
-import { shippedFileIn, type ShippedFiles } from '@on.auto/operations';
+import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
 import { recipesFolder } from './guide-files.ts';
 import type { Guide, Recipe } from './guide-shelf.ts';

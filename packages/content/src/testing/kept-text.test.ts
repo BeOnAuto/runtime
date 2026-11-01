@@ -1,12 +1,11 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { keptTextOf } from '../testing/kept-text.ts';
-import { mostContentChunkBytes } from './content-chunks.ts';
-import { sha256Of } from './content-digest.ts';
-import { notTheBytesOfItsDigest } from './content-refusals.ts';
+import { mostContentChunkBytes } from '../content/content-chunks.ts';
+import { sha256Of } from '../content/content-digest.ts';
+import { textToKeep } from '../content/streamed-content.ts';
+import { keptTextOf } from './kept-text.ts';
 import { memoryRecordedContent } from './memory-content.ts';
-import { textToKeep } from './streamed-content.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -29,11 +28,5 @@ describe('the text a playbook recorded', () => {
     await expect(keptTextOf(content, alpha, sha256)).resolves.toBe(text);
     await expect(keptTextOf(content, alpha, sha256Of(''))).resolves.toBe('');
     await expect(keptTextOf(content, beta, sha256)).resolves.toBeUndefined();
-  });
-
-  it('names a content a read found to be other bytes than its digest names', () => {
-    expect(notTheBytesOfItsDigest('9f3e').message).toBe(
-      'The content kept under 9f3e is not the bytes that digest names',
-    );
   });
 });

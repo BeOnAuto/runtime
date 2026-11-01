@@ -17,9 +17,10 @@ import {
   type Capability,
   type SettleRun,
 } from '@on.auto/definitions';
+import { LedgerChores } from '@on.auto/ledger';
 import { Ledger, type Dispatcher, type DispatcherServices } from '@on.auto/operations';
 import type { Evaluations } from '@on.auto/workflow-engine';
-import type { HostOptions, WaitingOptions } from '@on.auto/workflow-host';
+import { choreWork, type DueWork, type HostOptions, type WaitingOptions } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
 import { inRuntime } from './in-runtime.ts';
@@ -97,4 +98,9 @@ export function hostWorkOf(
     reactions: { ...reactionsOf(runtime, dispatcher, { startVersion, names }), filters: evaluations.filters },
     waiting: waitingOf(runtime, capabilities),
   };
+}
+
+export async function orphansSweptIn(runtime: AppRuntime<LedgerChores>): Promise<DueWork> {
+  const { sweepOrphans } = await Effect.runPromise(inRuntime(runtime, Effect.service(LedgerChores)));
+  return choreWork({ name: 'orphaned content', perform: sweepOrphans });
 }

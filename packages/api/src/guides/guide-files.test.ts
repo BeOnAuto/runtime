@@ -1,4 +1,4 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { expect, it } from 'vitest';
 
 import { apiShippedRoots } from '../index.ts';

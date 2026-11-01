@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { defineCapability, type Capability, type CapabilityGuide } from '@on.auto/definitions';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 

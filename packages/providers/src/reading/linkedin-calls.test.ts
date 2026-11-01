@@ -1,11 +1,10 @@
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { required } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { serveFakeApi, type FakeApiServer } from '@on.auto/tool-servers/served-fakes';
 import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
-import { Effect, Result } from 'effect';
+import { Effect, Option, Result } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { providerNamed, readProviders, providersShippedRoots } from '../index.ts';
@@ -144,7 +143,7 @@ describe('the post linkedin creates', () => {
   it('is answered by its URN, which LinkedIn writes in the x-restli-id header of an empty answer', async () => {
     const created = { status: 201, headers: { 'x-restli-id': post }, body: '' };
 
-    const { called } = await calledAtTheFake(required(calls[1]), created);
+    const { called } = await calledAtTheFake(Option.getOrThrow(Option.fromNullishOr(calls[1])), created);
 
     expect(called).toMatchObject({
       success: {

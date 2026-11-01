@@ -1,4 +1,4 @@
-import { verifiedStream, type ContentStore, type StreamedContent } from '@on.auto/operations';
+import { verifiedStream, type ContentStore, type StreamedContent } from '@on.auto/content';
 import { Effect } from 'effect';
 
 import type { Bucket } from '../bucket/bucket.ts';

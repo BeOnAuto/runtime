@@ -1,7 +1,6 @@
-import { required } from '@on.auto/operations';
 import type { Conflict, Forbidden, InvalidInput } from '@on.auto/operations';
 import type { NamedWay, WayRefusal } from '@on.auto/tool-servers';
-import { Effect } from 'effect';
+import { Effect, Option } from 'effect';
 
 import { credentialUnnamedOf, takesConsentOf, wayRefusalOf, type WayRefused } from '../page/consent-words.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
@@ -77,7 +76,11 @@ function askedHowItAuthenticates(
   if (!isAskedHowItAuthenticates(addition)) {
     return Effect.succeed(addition);
   }
-  const asked: Asked = { addition, kind: given.credential?.kind ?? 'left_out', url: required(addition.entry.url) };
+  const asked: Asked = {
+    addition,
+    kind: given.credential?.kind ?? 'left_out',
+    url: Option.getOrThrow(Option.fromNullishOr(addition.entry.url)),
+  };
   return consent.namedWay({ url: asked.url, reaches: reachesUnder(policy, resolve) }).pipe(
     Effect.matchEffect({
       onSuccess: (named) => withTheWayNamed(asked, named),

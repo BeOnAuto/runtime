@@ -1,20 +1,12 @@
-import {
-  required,
-  capitalized,
-  counted,
-  listed,
-  quoted,
-  type LinkToOpen,
-  type Noun,
-  type OfferedLink,
-} from '@on.auto/operations';
+import { Conflict, type LinkToOpen, type OfferedLink } from '@on.auto/operations';
+import { capitalized, counted, listed, quoted, type Noun } from '@on.auto/phrasing';
 import { providerNamed, type ProviderList, type ScopeGroup } from '@on.auto/providers';
-import { Result } from 'effect';
+import { Option, Result } from 'effect';
 
 import { linkLastsMs } from '../links/link-token.ts';
 import { groupNamed } from '../providers/asking-more.ts';
 import type { Connection } from '../registry/connection.ts';
-import type { AddedConnection } from './connection-fields.ts';
+import type { AddedConnection, AdditionSchema } from './connection-fields.ts';
 import type { SecretKeeping } from './connection-services.ts';
 import { standingAfterTheLink } from './registry-access.ts';
 
@@ -24,6 +16,26 @@ const mostNamed = 20;
 
 export function connectionNamed({ name }: Pick<Connection, 'name'>): string {
   return `the connection ${quoted(name)}`;
+}
+
+export function additionAttempted({ name, provider }: Pick<typeof AdditionSchema.Type, 'name' | 'provider'>): string {
+  return name === undefined ? `connect the provider ${quoted(String(provider))}` : `add ${connectionNamed({ name })}`;
+}
+
+export function reconnectionAttempted({ id }: { readonly id: string }): string {
+  return `reconnect the connection ${quoted(id)}`;
+}
+
+export function moreHeldAlready(name: string, more: string): Conflict {
+  return new Conflict({
+    detail: `The connection ${name} holds every scope of ${quoted(more)} already, so a link for it would ask nothing more`,
+  });
+}
+
+export function moreUncovered(name: string, more: string, scope: string): Conflict {
+  return new Conflict({
+    detail: `The connection ${name} cannot be granted ${quoted(more)}, since no client set up here covers every scope its consent would ask, ${scope}`,
+  });
 }
 
 function shortly({ name, status }: Connection): string {
@@ -76,7 +88,7 @@ function doingOf({ provider, credential }: Linked): Doing {
   if (provider !== null || credential.kind !== 'authorization') {
     return givingTheCredential;
   }
-  const { host } = new URL(required(credential.issuer));
+  const { host } = new URL(Option.getOrThrow(Option.fromNullishOr(credential.issuer)));
   return { theyDo: `signs in at ${host}`, youDo: `sign in at ${host}` };
 }
 

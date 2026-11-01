@@ -1,4 +1,5 @@
-import { defineCommand, quoted } from '@on.auto/operations';
+import { defineCommand } from '@on.auto/operations';
+import { quoted } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import { playbookNamed, purposeOf } from '../plain-language/playbook-words.ts';

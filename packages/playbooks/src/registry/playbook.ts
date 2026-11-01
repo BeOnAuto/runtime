@@ -1,5 +1,4 @@
-import { PlaybookIdSchema, RecordedCallerSchema } from '@on.auto/operations';
-import { studioLinkField } from '@on.auto/operations/studio-links';
+import { PlaybookIdSchema, RecordedCallerSchema, studioLinkField } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 export const PlaybookSchema = Schema.Struct({

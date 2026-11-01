@@ -1,9 +1,11 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { lstat, readdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { cacheFolderProblem } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import { Function, Option, Schema } from 'effect';
+
+import { cacheFolderProblem } from './cache-folder.ts';
 
 export interface KeptAnswer {
   readonly key: string;
@@ -50,10 +52,6 @@ const partialName = /^\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 const fileMode = 0o600;
 
 const endOfHead = 0x0a;
-
-function sha256Of(bytes: Readonly<Uint8Array> | string): string {
-  return createHash('sha256').update(bytes).digest('hex');
-}
 
 function attempted(work: Promise<unknown>): Promise<void> {
   return work.then(Function.constVoid, Function.constVoid);

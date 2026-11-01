@@ -1,4 +1,4 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { pageFiltersOn } from '@on.auto/workflow-engine';
 import { handedWorkersOf, programPool, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 

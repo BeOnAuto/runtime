@@ -23,8 +23,11 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
+    "@on.auto/content": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
     "@on.auto/operations": "workspace:*",
+    "@on.auto/phrasing": "workspace:*",
+    "@on.auto/shipped-files": "workspace:*",
     "@on.auto/tool-servers": "workspace:*",
     "@on.auto/workflow-engine": "workspace:*",
     "effect": "catalog:",

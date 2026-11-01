@@ -1,5 +1,4 @@
-import { required } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { admitted } from '../authorization-testing/authorization-requests.ts';
@@ -93,7 +92,11 @@ describe('a revocation through Auto’s consent service that does not happen', (
     const client = consentClientThrough(connected);
     await Effect.runPromise(client.revoke(revokeAskedOf(connected)));
     const { access_token: accessToken, refresh_token: refreshToken, token_type: tokenType } = connected.first;
-    const unkeyed = { access_token: accessToken, refresh_token: required(refreshToken), token_type: tokenType };
+    const unkeyed = {
+      access_token: accessToken,
+      refresh_token: Option.getOrThrow(Option.fromNullishOr(refreshToken)),
+      token_type: tokenType,
+    };
 
     expect([
       await revokedBy(client, revokeAskedOf(connected)),

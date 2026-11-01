@@ -1,4 +1,3 @@
-import { required } from '@on.auto/operations';
 import {
   keptTokensIn,
   type ConnectionServer,
@@ -68,7 +67,9 @@ function refusedWordsOf({ kind, variable }: Credential): string {
   if (kind === 'none') {
     return servingWords.noneRefused;
   }
-  return kind === 'reference' ? servingWords.referenceRefused(required(variable)) : servingWords.keyRefused;
+  return kind === 'reference'
+    ? servingWords.referenceRefused(Option.getOrThrow(Option.fromNullishOr(variable)))
+    : servingWords.keyRefused;
 }
 
 export function credentialRefusedOf(serving: Serving, context: Context.Context<never>): ConnectionServer['refused'] {
@@ -122,7 +123,7 @@ function readNow({ kept, unreadable }: Serving, stored: KeptRow): Effect.Effect<
 
 function keptSecretOf(serving: Serving): Effect.Effect<KeptRow, ConnectionUnready> {
   const { name } = serving.kept.connection;
-  return serving.services.secrets.read(required(serving.kept.secretId)).pipe(
+  return serving.services.secrets.read(Option.getOrThrow(Option.fromNullishOr(serving.kept.secretId))).pipe(
     Effect.matchEffect({
       onFailure: (failure) => unavailableNow(serving, failure),
       onSuccess: (stored) =>
@@ -135,7 +136,7 @@ function keptSecretOf(serving: Serving): Effect.Effect<KeptRow, ConnectionUnread
 
 function referencedOf({ kept, services }: Serving): Given {
   const { credential, name } = kept.connection;
-  const variable = required(credential.variable);
+  const variable = Option.getOrThrow(Option.fromNullishOr(credential.variable));
   const value = services.variables.get(variable);
   return value === undefined
     ? Effect.fail(notAllowed(servingWords.unset(name, variable)))
@@ -163,7 +164,7 @@ function heldTokensOf(serving: Serving): Effect.Effect<HeldTokens, ConnectionUnr
 }
 
 function tokensOfTheRow(serving: Serving, context: Context.Context<never>): ConnectionTokens {
-  const secretId = required(serving.kept.secretId);
+  const secretId = Option.getOrThrow(Option.fromNullishOr(serving.kept.secretId));
   const { secrets } = serving.services;
   const { name } = serving.kept.connection;
   return {
@@ -186,7 +187,10 @@ export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | und
       Effect.catch((unheld) => ownClientUnservedOf(serving, unheld)),
     );
     const context = yield* Effect.context();
-    const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+    const client = {
+      client_id: Option.getOrThrow(Option.fromNullishOr(credential.client_id)),
+      client_source: Option.getOrThrow(Option.fromNullishOr(credential.client_source)),
+    };
     return {
       issuer: asked.way.issuer,
       client_id: client.client_id,

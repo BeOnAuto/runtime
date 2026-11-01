@@ -1,6 +1,6 @@
+import type { RecordedContent } from '@on.auto/content';
 import { Context } from 'effect';
 
-import type { RecordedContent } from '../content/recorded-content.ts';
 import type { ProjectionAdvancer, ProjectionReader } from '../projections/keyed-projection.ts';
 import type {
   AppendedFactsReader,

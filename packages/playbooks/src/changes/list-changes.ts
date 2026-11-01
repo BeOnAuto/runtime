@@ -1,6 +1,5 @@
 import {
   Caller,
-  listed,
   OrgReader,
   PlaybookReader,
   changeCatalogOf,
@@ -11,6 +10,7 @@ import {
   type ChangeNaming,
   type Presenter,
 } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
 import { Effect } from 'effect';
 
 import { ChangesInputSchema, changesOutputSchemaOf, factsReadAtOnce, heldChanges } from './held-changes.ts';

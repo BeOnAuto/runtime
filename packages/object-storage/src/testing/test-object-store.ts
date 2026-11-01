@@ -1,4 +1,4 @@
-import { CreateBucketCommand } from '@aws-sdk/client-s3';
+import { CreateBucketCommand, CreateMultipartUploadCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
 import { storageClientOf } from '../client/storage-client.ts';
 import {
@@ -46,6 +46,14 @@ export function keysIn(bucket: S3Bucket, prefix: string): Promise<readonly strin
 
 export async function openUploadsIn(bucket: S3Bucket, prefix: string): Promise<readonly string[]> {
   return (await listed(uploadsUnder(bucket, prefix))).map(({ key }) => key);
+}
+
+export async function uploadWritten(bucket: S3Bucket, key: string): Promise<void> {
+  await bucket.client().send(new PutObjectCommand({ Bucket: bucket.name, Key: key, Body: new Uint8Array(8) }));
+}
+
+export async function multipartUploadBegun(bucket: S3Bucket, key: string): Promise<void> {
+  await bucket.client().send(new CreateMultipartUploadCommand({ Bucket: bucket.name, Key: key }));
 }
 
 export async function emptied(bucket: S3Bucket, prefix: string): Promise<void> {

@@ -1,4 +1,5 @@
-import { capitalized, shippedFileIn, type Noun, type ShippedFiles } from '@on.auto/operations';
+import { capitalized, type Noun } from '@on.auto/phrasing';
+import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
 import type { DefinitionType } from '../mcp/instructions.ts';
 import { documentation } from './guide-files.ts';

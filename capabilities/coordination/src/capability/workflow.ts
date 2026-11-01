@@ -7,7 +7,8 @@ import {
   type DeclaringCapability,
   type RunContext,
 } from '@on.auto/definitions';
-import type { InvalidInput, Noun } from '@on.auto/operations';
+import type { InvalidInput } from '@on.auto/operations';
+import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
 import { checkedExpressions, type ExpressionCheck } from '../document/expression-check.ts';

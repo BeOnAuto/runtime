@@ -1,4 +1,4 @@
-import { dependencyFileOf, shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
+import { dependencyFileOf, shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/shipped-files';
 import { sandboxRemovals } from '@on.auto/workflow-engine/worker';
 import ts from 'typescript6';
 

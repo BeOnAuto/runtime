@@ -1,7 +1,7 @@
 import { playbookOwnNamesOf, defineStartVersion } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
 import { makeDispatcher } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import {
   filterSandboxOf,
   freshInstances,

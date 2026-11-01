@@ -26,6 +26,7 @@
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@on.auto/shipped-files": "workspace:*",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "catalog:",
     "pg": "8.23.1",

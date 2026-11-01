@@ -1,4 +1,3 @@
-import { Conflict, quoted } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { studioBaseFor } from '../links/connect-page.ts';
@@ -8,24 +7,13 @@ import { moreStillAskedOf, unnamedGroupOf, groupNamed, type AskedMore } from '..
 import type { Connection } from '../registry/connection.ts';
 import type { GroupOfMore } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
+import { moreHeldAlready, moreUncovered } from './connection-words.ts';
 import { foundConnection } from './registry-access.ts';
 
 type MoreAsking = Pick<ConnectionServices, 'providers' | 'consent' | 'pages'>;
 
 interface WithMore extends Connection {
   readonly more: readonly GroupOfMore[];
-}
-
-function heldAlready(name: string, more: string): Conflict {
-  return new Conflict({
-    detail: `The connection ${name} holds every scope of ${quoted(more)} already, so a link for it would ask nothing more`,
-  });
-}
-
-function uncovered(name: string, more: string, scope: string): Conflict {
-  return new Conflict({
-    detail: `The connection ${name} cannot be granted ${quoted(more)}, since no client set up here covers every scope its consent would ask, ${scope}`,
-  });
 }
 
 const askableMore = Effect.fnUntraced(function* (id: string, more: string, services: MoreAsking) {
@@ -35,12 +23,12 @@ const askableMore = Effect.fnUntraced(function* (id: string, more: string, servi
   }
   const asked = moreStillAskedOf(connection, services.providers).find(({ group }) => group.name === more);
   if (asked === undefined) {
-    return yield* Effect.fail(heldAlready(connection.name, more));
+    return yield* Effect.fail(moreHeldAlready(connection.name, more));
   }
   const sources = yield* services.consent.hadSources(studioBaseFor(services.pages));
   return isCoveredHere(connection, asked.scope, sources)
     ? asked
-    : yield* Effect.fail(uncovered(connection.name, more, asked.scope));
+    : yield* Effect.fail(moreUncovered(connection.name, more, asked.scope));
 });
 
 export const linkIssuedFor = Effect.fnUntraced(function* (id: string, more: string | undefined, services: MoreAsking) {

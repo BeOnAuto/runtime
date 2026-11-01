@@ -1,7 +1,7 @@
 import type { Stats } from 'node:fs';
 import { mkdir, stat } from 'node:fs/promises';
 
-export const cacheFolderMode = 0o700;
+const cacheFolderMode = 0o700;
 
 const writableByOthers = 0o022;
 

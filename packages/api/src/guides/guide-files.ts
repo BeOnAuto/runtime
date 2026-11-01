@@ -1,4 +1,4 @@
-import type { ShippedFile } from '@on.auto/operations';
+import type { ShippedFile } from '@on.auto/shipped-files';
 
 import { apiPackage, runtimePackage } from '../shipped-files/api-roots.ts';
 

@@ -1,4 +1,4 @@
-import { plainNumber } from '@on.auto/operations';
+import { plainNumber } from '@on.auto/phrasing';
 import { toolInWords } from '@on.auto/tool-servers';
 
 import type {

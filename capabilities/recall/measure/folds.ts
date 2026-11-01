@@ -1,5 +1,5 @@
 import { handedWorkersWithChecks, checkShippedRoots } from '@on.auto/definitions/check';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { programPool, type FoldRequest, type Json, type JsonObject } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result } from 'effect';
 

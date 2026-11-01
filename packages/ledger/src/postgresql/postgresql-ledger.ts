@@ -1,4 +1,4 @@
-import type { ContentStore } from '@on.auto/operations';
+import type { ContentStore } from '@on.auto/content';
 import { Effect, Layer } from 'effect';
 
 import { watchFailuresLoggedWith } from '../appended/append-watch.ts';

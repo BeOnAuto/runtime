@@ -1,4 +1,5 @@
-import { sha256Of, type PlaybookAddress } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
+import type { PlaybookAddress } from '@on.auto/operations';
 import type { Effect } from 'effect';
 
 import { cutToFailureBound } from '../bounds/call-bounds.ts';

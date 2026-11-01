@@ -1,6 +1,6 @@
 import { cpus } from 'node:os';
 
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import {
   freshInstances,
   programPool,

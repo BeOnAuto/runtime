@@ -1,5 +1,5 @@
 import { problem, type SettingProblem } from '@on.auto/config';
-import { namesTheLoopback } from '@on.auto/operations';
+import { namesTheLoopback } from '@on.auto/identity';
 import { JsonPointer, Redacted } from 'effect';
 
 import { toolServersSetting } from './server-entries.ts';

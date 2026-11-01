@@ -1,3 +1,4 @@
+import { textOfContent } from '@on.auto/content';
 import { Effect, Result, Schema } from 'effect';
 
 import {
@@ -9,7 +10,6 @@ import {
   defineQuery,
   ActedContextSchema,
   factOf,
-  textOfContent,
   type Decider,
   type RecordedSelection,
 } from '../index.ts';

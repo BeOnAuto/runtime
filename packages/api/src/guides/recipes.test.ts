@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { describe, expect, it } from 'vitest';
 
 import { apiShippedRoots } from '../index.ts';

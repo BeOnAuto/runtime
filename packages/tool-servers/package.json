@@ -20,10 +20,13 @@
   "dependencies": {
     "@modelcontextprotocol/client": "2.3.1",
     "@on.auto/config": "workspace:*",
+    "@on.auto/content": "workspace:*",
     "@on.auto/documents": "workspace:*",
+    "@on.auto/identity": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "@on.auto/outbound": "workspace:*",
+    "@on.auto/phrasing": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

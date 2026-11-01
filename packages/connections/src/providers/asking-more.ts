@@ -1,4 +1,5 @@
-import { Conflict, InvalidInput, alternatives, quoted } from '@on.auto/operations';
+import { Conflict, InvalidInput } from '@on.auto/operations';
+import { alternatives, quoted } from '@on.auto/phrasing';
 import { providerNamed, scopeWith, scopesIn, type ProviderList, type ScopeGroup } from '@on.auto/providers';
 import { Result } from 'effect';
 

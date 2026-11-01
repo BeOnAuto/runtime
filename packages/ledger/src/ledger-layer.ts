@@ -1,4 +1,5 @@
-import { Ledger, type ContentStore } from '@on.auto/operations';
+import type { ContentStore } from '@on.auto/content';
+import { Ledger } from '@on.auto/operations';
 import { Context, Effect, Layer, Semaphore } from 'effect';
 
 import { signalledOn, type AppendSignal } from './appends/append-signal.ts';

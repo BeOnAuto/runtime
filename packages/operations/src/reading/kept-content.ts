@@ -1,7 +1,6 @@
+import { leftUnread, textOfContent, type StreamedContent } from '@on.auto/content';
 import { Effect, Predicate } from 'effect';
 
-import { leftUnread } from '../content/content-intake.ts';
-import { textOfContent, type StreamedContent } from '../content/streamed-content.ts';
 import { PlaybookReader } from '../ledger/playbook-reader.ts';
 import type { KeptContent } from './presenter.ts';
 import type { RecordedFact } from './recorded-read.ts';

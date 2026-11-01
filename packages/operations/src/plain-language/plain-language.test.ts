@@ -1,7 +1,8 @@
+import { quoted } from '@on.auto/phrasing';
 import { Effect, Schema, SchemaTransformation } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { Conflict, defineCommand, quoted, Unavailable, type ConflictKind } from '../index.ts';
+import { Conflict, defineCommand, Unavailable, type ConflictKind } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { harness, toOrg } from '../testing/harness.ts';
 

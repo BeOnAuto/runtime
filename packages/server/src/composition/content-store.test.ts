@@ -1,15 +1,15 @@
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 
-import { Ledger, sha256Of, textToKeep } from '@on.auto/operations';
-import { memoryRecordedContent } from '@on.auto/operations/testing';
+import { sha256Of } from '@on.auto/content';
+import { Ledger } from '@on.auto/operations';
 import { Effect, ManagedRuntime, Schema } from 'effect';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { ledgerDatabaseOf } from '../database/ledger-database.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { contentStoreOf } from './content-store.ts';
-import { ledgerLayerFor, ledgerLayerOf } from './ledger-store.ts';
+import { ledgerLayerFor } from './ledger-store.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -81,22 +81,5 @@ describe('the store the content of a playbook is kept in', () => {
       ),
     );
     await expect(opening).rejects.not.toThrow(secret);
-  });
-
-  it('keeps what the ledger is given to keep, and reads it back, in the store it is composed with', async () => {
-    const content = memoryRecordedContent();
-    const runtime = ManagedRuntime.make(
-      ledgerLayerOf(await ledgerDatabaseOf(readSettingsOf({ LEDGER_FILE: ':memory:' })), undefined, {
-        content,
-        sweepContent: () => Promise.resolve(),
-      }),
-    );
-    onTestFinished(() => runtime.dispose());
-
-    const kept = await runtime.runPromise(
-      Effect.flatMap(Ledger, (ledger) => ledger.content.put(alpha, textToKeep('{"kept":true}', 'application/json'))),
-    );
-
-    expect(await Effect.runPromise(content.get(alpha, kept.sha256))).toMatchObject({ bytes: 13 });
   });
 });

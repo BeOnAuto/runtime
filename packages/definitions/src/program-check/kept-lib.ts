@@ -1,4 +1,4 @@
-import type { ShippedFile, ShippedRoots } from '@on.auto/operations';
+import type { ShippedFile, ShippedRoots } from '@on.auto/shipped-files';
 import type { HandedFile } from '@on.auto/workflow-engine/job-loop';
 
 import type { SandboxLib } from './sandbox-lib.ts';

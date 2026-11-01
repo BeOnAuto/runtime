@@ -1,5 +1,5 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { measuredEnvironment } from '@on.auto/operations/testing';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 
 import { sandboxModuleIn, sandboxShippedRoots } from '../instances/compiled-module.ts';
 import { freshInstances } from '../instances/fresh-instances.ts';

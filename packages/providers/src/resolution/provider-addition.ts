@@ -1,4 +1,5 @@
-import { alternatives, type Issue } from '@on.auto/operations';
+import type { Issue } from '@on.auto/operations';
+import { alternatives } from '@on.auto/phrasing';
 import type { WayOAuthClient } from '@on.auto/tool-servers';
 import { Option, Result } from 'effect';
 

@@ -1,11 +1,10 @@
 import { Effect } from 'effect';
 
-import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
-import { mostContentChunkBytes } from './content-chunks.ts';
-import { requireExpected, takenInChunks } from './content-intake.ts';
-import type { ContentRefused } from './content-refusals.ts';
-import type { ContentKept, RecordedContent } from './recorded-content.ts';
-import type { ContentToKeep, StreamedContent } from './streamed-content.ts';
+import { mostContentChunkBytes } from '../content/content-chunks.ts';
+import { requireExpected, takenInChunks } from '../content/content-intake.ts';
+import type { ContentRefused } from '../content/content-refusals.ts';
+import type { ContentKept, ContentOwner, RecordedContent } from '../content/recorded-content.ts';
+import type { ContentToKeep, StreamedContent } from '../content/streamed-content.ts';
 
 interface KeptBytes {
   readonly chunks: Blob;
@@ -38,6 +37,10 @@ function keptOn(shelf: Shelf, { sha256, kept }: Received): ContentKept {
   return { sha256, bytes: held.chunks.size, mediaType: held.mediaType };
 }
 
+function shelfKeyOf({ org, playbook }: ContentOwner): string {
+  return JSON.stringify([org, playbook]);
+}
+
 function readFrom(shelf: Shelf | undefined, sha256: string): StreamedContent | undefined {
   const kept = shelf?.get(sha256);
   return kept === undefined
@@ -53,8 +56,7 @@ export function memoryRecordedContent(): RecordedContent {
     return shelf;
   };
   return {
-    put: (playbook, content) =>
-      Effect.map(received(content), (taken) => keptOn(shelfOf(streamPrefixOfPlaybook(playbook)), taken)),
-    get: (playbook, sha256) => Effect.sync(() => readFrom(kept.get(streamPrefixOfPlaybook(playbook)), sha256)),
+    put: (playbook, content) => Effect.map(received(content), (taken) => keptOn(shelfOf(shelfKeyOf(playbook)), taken)),
+    get: (playbook, sha256) => Effect.sync(() => readFrom(kept.get(shelfKeyOf(playbook)), sha256)),
   };
 }

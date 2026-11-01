@@ -12,6 +12,7 @@ COPY packages/api/package.json packages/api/
 COPY packages/playbooks/package.json packages/playbooks/
 COPY packages/config/package.json packages/config/
 COPY packages/connections/package.json packages/connections/
+COPY packages/content/package.json packages/content/
 COPY packages/definitions/package.json packages/definitions/
 COPY packages/documents/package.json packages/documents/
 COPY packages/identity/package.json packages/identity/
@@ -21,8 +22,10 @@ COPY packages/meter/package.json packages/meter/
 COPY packages/object-storage/package.json packages/object-storage/
 COPY packages/operations/package.json packages/operations/
 COPY packages/outbound/package.json packages/outbound/
+COPY packages/phrasing/package.json packages/phrasing/
 COPY packages/providers/package.json packages/providers/
 COPY packages/secrets/package.json packages/secrets/
+COPY packages/shipped-files/package.json packages/shipped-files/
 COPY packages/tool-servers/package.json packages/tool-servers/
 COPY packages/workflow-engine/package.json packages/workflow-engine/
 COPY packages/workflow-host/package.json packages/workflow-host/
@@ -57,6 +60,7 @@ COPY packages/api/src packages/api/src
 COPY packages/playbooks/src packages/playbooks/src
 COPY packages/config/src packages/config/src
 COPY packages/connections/src packages/connections/src
+COPY packages/content/src packages/content/src
 COPY packages/definitions/src packages/definitions/src
 COPY packages/definitions/lib packages/definitions/lib
 COPY packages/documents/src packages/documents/src
@@ -67,8 +71,10 @@ COPY packages/meter/src packages/meter/src
 COPY packages/object-storage/src packages/object-storage/src
 COPY packages/operations/src packages/operations/src
 COPY packages/outbound/src packages/outbound/src
+COPY packages/phrasing/src packages/phrasing/src
 COPY packages/providers/src packages/providers/src
 COPY packages/secrets/src packages/secrets/src
+COPY packages/shipped-files/src packages/shipped-files/src
 COPY packages/server/src packages/server/src
 COPY packages/tool-servers/src packages/tool-servers/src
 COPY packages/workflow-engine/src packages/workflow-engine/src

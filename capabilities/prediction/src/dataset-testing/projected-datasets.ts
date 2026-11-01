@@ -1,4 +1,4 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import {
   filterSandboxOf,
   freshInstances,

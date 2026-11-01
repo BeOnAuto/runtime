@@ -1,9 +1,9 @@
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import type { Keeper } from '@on.auto/secrets';
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { type Settings } from '../settings/settings.ts';
+import type { Settings } from '../settings/settings.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { loadAwsAdapters, type AwsAdapters } from './aws-adapters.ts';
 import { keepersOf } from './secret-keepers.ts';

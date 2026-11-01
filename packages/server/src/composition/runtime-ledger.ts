@@ -1,6 +1,7 @@
 import type { AppRuntime } from '@on.auto/api';
+import type { RecordedContent } from '@on.auto/content';
 import type { ConversationLedger } from '@on.auto/interaction';
-import { Ledger, type DispatcherServices, type ProjectionReader, type RecordedContent } from '@on.auto/operations';
+import { Ledger, type DispatcherServices, type ProjectionReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { inRuntime } from '../workflows/in-runtime.ts';

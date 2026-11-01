@@ -1,4 +1,4 @@
-import type { ContentStore } from '@on.auto/operations';
+import type { ContentStore } from '@on.auto/content';
 
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
 import { formattedFor } from '../postgresql-reads/recorded-parts.ts';

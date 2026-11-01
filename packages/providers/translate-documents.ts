@@ -3,10 +3,10 @@ import { writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 
-import { providersShippedRoots } from './src/reading/shipped-providers.ts';
-import { documentsBesideTheEntries, translatedDocuments } from './src/translating/document-manifests.ts';
+import { documentsBesideTheEntries, providersShippedRoots } from './src/reading/shipped-providers.ts';
+import { translatedDocuments } from './src/translating/document-manifests.ts';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
 

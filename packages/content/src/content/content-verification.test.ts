@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { deliveredBeforeFailing, readThrough } from '../content-testing/content-samples.ts';
+import { deliveredBeforeFailing, readThrough } from '../testing/content-samples.ts';
 import { sha256Of } from './content-digest.ts';
 import { notTheBytesOfItsDigest } from './content-refusals.ts';
 import { verifiedStream } from './content-verification.ts';

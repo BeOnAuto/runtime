@@ -6,7 +6,7 @@ import {
   type ImplementationsProvided,
   type ProvidedImplementation,
 } from '@on.auto/definitions';
-import { listed } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
 import { makePredictionFunctionAdapter, predictionDefinitionType } from '@on.auto/prediction';
 import type { CapabilityFactory, CapabilityPorts, OwnSettings, ProvidedCapability } from '@on.auto/workflow-host';
 import { Predicate, Result } from 'effect';

@@ -4,9 +4,8 @@ import {
   type FetchLike,
   type OAuthClientInformationFull,
 } from '@modelcontextprotocol/client';
-import { required } from '@on.auto/operations';
 import { fetchWithin, type Reaches } from '@on.auto/outbound';
-import { Effect, Redacted } from 'effect';
+import { Effect, Option, Redacted } from 'effect';
 
 import {
   clientMetadataDocumentOf,
@@ -161,7 +160,7 @@ function dynamicallyRegistered(
   const place = { issuer: asked.way.issuer, server: originOf(handGivenUrlOf(asked.server)) };
   const registration = {
     place,
-    endpoint: required(server.registration_endpoint),
+    endpoint: Option.getOrThrow(Option.fromNullishOr(server.registration_endpoint)),
     returnAddress,
     tokenEndpointMethods: server.token_endpoint_auth_methods_supported,
     fetch,
@@ -180,7 +179,11 @@ function madeTakenFrom(
   }
   return source === 'dynamic'
     ? dynamicallyRegistered(taking, choosing)
-    : Effect.succeed(documentedActing(required(clientMetadataDocumentOf(choosing.publicUrl, asked.returnAddress))));
+    : Effect.succeed(
+        documentedActing(
+          Option.getOrThrow(Option.fromNullishOr(clientMetadataDocumentOf(choosing.publicUrl, asked.returnAddress))),
+        ),
+      );
 }
 
 function takenFrom(
@@ -191,7 +194,10 @@ function takenFrom(
   const { asked } = taking;
   if (source === 'registered') {
     return Effect.succeed(
-      registeredActing(required(registeredClientFor(choosing.registeredClients, asked.way)), asked.returnAddress),
+      registeredActing(
+        Option.getOrThrow(Option.fromNullishOr(registeredClientFor(choosing.registeredClients, asked.way))),
+        asked.returnAddress,
+      ),
     );
   }
   return source === 'own' ? Effect.succeed(ownActingOf(asked)) : madeTakenFrom(source, taking, choosing);

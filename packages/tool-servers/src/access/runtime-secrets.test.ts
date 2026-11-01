@@ -1,4 +1,4 @@
-import { keptTextOf } from '@on.auto/operations/testing';
+import { keptTextOf } from '@on.auto/content/testing';
 import { Effect, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 

@@ -1,4 +1,4 @@
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import { Effect, Redacted } from 'effect';
 import { CompactEncrypt, compactDecrypt, type DecryptOptions } from 'jose';
 

@@ -9,7 +9,8 @@ import {
   refusingForbiddenCharacters,
   type PlaybookOwnNames,
 } from '@on.auto/definitions';
-import { PlaybookContext, Caller, defineCommand, NotFound, quoted } from '@on.auto/operations';
+import { Caller, defineCommand, NotFound, PlaybookContext } from '@on.auto/operations';
+import { quoted } from '@on.auto/phrasing';
 import { jsonBytesOf, measureOf, mostValueDepth } from '@on.auto/workflow-engine';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { DateTime, Effect, Schema, SchemaTransformation } from 'effect';

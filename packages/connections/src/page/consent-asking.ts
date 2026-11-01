@@ -1,4 +1,3 @@
-import { required } from '@on.auto/operations';
 import {
   keptTokensIn,
   type ConsentServer,
@@ -54,16 +53,23 @@ export type Sources = Pick<HadSources, 'sourceOf'>;
 export type FinishedConsent = Effect.Success<ReturnType<ConsentServices['consent']['finish']>>;
 
 export function namedOf({ name, provider, credential, status }: RecordedConnection): ConsentNamed {
-  return { name, issuer: required(credential.issuer), provider, connected: status === 'connected' };
+  return {
+    name,
+    issuer: Option.getOrThrow(Option.fromNullishOr(credential.issuer)),
+    provider,
+    connected: status === 'connected',
+  };
 }
 
 function serverOf({ type, entry, provider }: RecordedConnection): ConsentServer {
-  return type === 'mcp' ? { type, url: required(entry.url), givenByHand: provider === null } : { type };
+  return type === 'mcp'
+    ? { type, url: Option.getOrThrow(Option.fromNullishOr(entry.url)), givenByHand: provider === null }
+    : { type };
 }
 
 function wayOf({ credential }: Pick<RecordedConnection, 'credential'>, scope: string | undefined): ConsentAsked['way'] {
   return {
-    issuer: required(credential.issuer),
+    issuer: Option.getOrThrow(Option.fromNullishOr(credential.issuer)),
     scope,
     parameters: credential.parameters,
     authorization_endpoint: credential.authorization_endpoint,
@@ -198,7 +204,10 @@ export function consentAskedForASignIn(
 function revokedWith(kept: KeptConnection, tokens: KeptTokens, services: Forgetting): Effect.Effect<void> {
   const { connection } = kept;
   const { credential } = connection;
-  const client = { client_id: required(credential.client_id), client_source: required(credential.client_source) };
+  const client = {
+    client_id: Option.getOrThrow(Option.fromNullishOr(credential.client_id)),
+    client_source: Option.getOrThrow(Option.fromNullishOr(credential.client_source)),
+  };
   return ownClientOf(heldClientOf(kept), services).pipe(
     Effect.flatMap((ownClient) =>
       services.consent

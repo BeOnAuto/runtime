@@ -1,5 +1,5 @@
 import { outputInWords } from '@on.auto/definitions';
-import { listed } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
 import { Option, Schema } from 'effect';
 
 import { methodNames, type MethodName } from '../forecast/methods.ts';

@@ -1,7 +1,8 @@
+import { sha256Of, textToKeep } from '@on.auto/content';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { PlaybookReader, keptContentOf, sha256Of, textToKeep, type RecordedEvent } from '../index.ts';
+import { PlaybookReader, keptContentOf, type RecordedEvent } from '../index.ts';
 import {
   playbookBoundAppendedFactsReader,
   playbookBoundProjectionReader,

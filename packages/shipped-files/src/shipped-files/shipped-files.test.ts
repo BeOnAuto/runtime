@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { shippedFilesInMemory } from './shipped-files-in-memory.ts';
+import { shippedFilesInMemory } from '../testing/shipped-files-in-memory.ts';
 import { shippedFilesOnDisk } from './shipped-files-on-disk.ts';
 import {
   dependencyFileOf,

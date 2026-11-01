@@ -1,4 +1,4 @@
-import { memoryRecordedContent } from '@on.auto/operations/testing';
+import { memoryRecordedContent } from '@on.auto/content/testing';
 import { makeReasoningFunctionAdapter } from '@on.auto/reasoning';
 import { scriptedLanguageModel } from '@on.auto/reasoning/testing';
 import { noToolServers } from '@on.auto/tool-servers/testing';

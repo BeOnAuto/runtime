@@ -1,4 +1,4 @@
-import { counted, quoted } from '@on.auto/operations';
+import { counted, quoted } from '@on.auto/phrasing';
 import type { KeptView, StallCause, ViewStall } from '@on.auto/workflow-host';
 
 import { recallBounds } from './recall-bounds.ts';

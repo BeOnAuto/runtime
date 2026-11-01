@@ -1,7 +1,7 @@
+import type { ContentStore } from '@on.auto/content';
 import { runOutcomeMapping } from '@on.auto/definitions';
 import { conversations, openRequests } from '@on.auto/interaction';
 import { ledgerLayoutSteps, type AppendSignal, type LayoutStep, type LedgerServices } from '@on.auto/ledger';
-import type { ContentStore } from '@on.auto/operations';
 import { predictionLayoutSteps } from '@on.auto/prediction';
 import { hostLayoutSteps } from '@on.auto/workflow-host';
 import { Effect, Layer } from 'effect';

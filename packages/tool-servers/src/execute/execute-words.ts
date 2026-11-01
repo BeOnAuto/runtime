@@ -1,4 +1,4 @@
-import { capitalized, quoted } from '@on.auto/operations';
+import { capitalized, quoted } from '@on.auto/phrasing';
 
 import { toolBounds } from '../bounds/call-bounds.ts';
 import { serverFailedText } from '../calls/call-replies.ts';

@@ -1,7 +1,8 @@
+import { textToKeep } from '@on.auto/content';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { messageIdOf, streamPrefixOfPlaybook, textToKeep } from '../index.ts';
+import { messageIdOf, streamPrefixOfPlaybook } from '../index.ts';
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 import { addNote, readNoteContent, readNoteEvent } from '../testing/notes.ts';

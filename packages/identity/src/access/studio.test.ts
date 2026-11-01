@@ -1,4 +1,4 @@
-import type { StudioPage } from '@on.auto/operations/studio-links';
+import type { StudioPage } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { defaultStudioOrigin, pageOriginsOf, studioBaseOf, studioLinkOf, type StudioSettings } from '../index.ts';

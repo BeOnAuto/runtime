@@ -1,5 +1,4 @@
 import {
-  capitalized,
   isKindWithType,
   problemTypeOf,
   reasonOfKind,
@@ -8,6 +7,7 @@ import {
   type RejectionBecause,
   type UnavailableKind,
 } from '@on.auto/operations';
+import { capitalized } from '@on.auto/phrasing';
 
 import {
   problemTypes,

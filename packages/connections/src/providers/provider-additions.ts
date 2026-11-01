@@ -1,4 +1,3 @@
-import { required } from '@on.auto/operations';
 import type { Conflict, Forbidden, InvalidInput, Issue } from '@on.auto/operations';
 import {
   additionOfProvider,
@@ -7,7 +6,7 @@ import {
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
-import { Effect, Result, type Redacted } from 'effect';
+import { Effect, Option, Result, type Redacted } from 'effect';
 
 import {
   additionIssuesOf,
@@ -40,11 +39,11 @@ const namedByTheServer: Credential = { kind: 'authorization' };
 
 function givenByHand(given: AdditionGiven): GivenAddition {
   return {
-    name: required(given.name),
-    type: required(given.type),
+    name: Option.getOrThrow(Option.fromNullishOr(given.name)),
+    type: Option.getOrThrow(Option.fromNullishOr(given.type)),
     provider: null,
     placeholders: null,
-    entry: required(given.entry),
+    entry: Option.getOrThrow(Option.fromNullishOr(given.entry)),
     credential: given.credential ?? namedByTheServer,
   };
 }

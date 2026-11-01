@@ -1,5 +1,4 @@
-import { required } from '@on.auto/operations';
-import { Redacted } from 'effect';
+import { Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';
@@ -120,7 +119,9 @@ describe('a renewal through Auto’s consent service that is refused', () => {
   it('breaks the connection in the words of an ended consent where the service refuses the refresh token its row still holds', async () => {
     const revoked = await connectedAt();
     const refusing = await connectedAt();
-    await postedTo(revoked.fake, '/revoke', { token: required(revoked.first.refresh_token) });
+    await postedTo(revoked.fake, '/revoke', {
+      token: Option.getOrThrow(Option.fromNullishOr(revoked.first.refresh_token)),
+    });
     refusing.service.refuseNext('refresh');
 
     expect([await renewed(revoked, sourceOf(revoked)), await renewed(refusing, sourceOf(refusing))]).toEqual([
@@ -149,7 +150,7 @@ describe('a renewal through Auto’s consent service without a key it knows', ()
     const { access_token: accessToken, refresh_token: refreshToken, token_type: tokenType } = connected.first;
     const row = rowHolding(connected, {
       access_token: accessToken,
-      refresh_token: required(refreshToken),
+      refresh_token: Option.getOrThrow(Option.fromNullishOr(refreshToken)),
       token_type: tokenType,
     });
 
@@ -205,9 +206,9 @@ describe('tokens renewed through Auto’s consent service that the store refuses
     const { access_token: accessToken, refresh_token: refreshToken, token_type: tokenType } = connected.first;
     const lean = keptValueOf({
       access_token: accessToken,
-      refresh_token: required(refreshToken),
+      refresh_token: Option.getOrThrow(Option.fromNullishOr(refreshToken)),
       token_type: tokenType,
-      connection_key: required(connected.first.connection_key),
+      connection_key: Option.getOrThrow(Option.fromNullishOr(connected.first.connection_key)),
     });
     const mostCharacters = Redacted.value(lean).length;
     const row = rowOf({ ...connected.connection, tokens: lean }, connected.clock.now, mostCharacters);

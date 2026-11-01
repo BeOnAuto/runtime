@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
 import { describedAccess, patientTiming } from '@on.auto/tool-servers/testing';
 import { Effect, Result } from 'effect';

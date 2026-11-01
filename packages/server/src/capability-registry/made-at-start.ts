@@ -1,5 +1,5 @@
-import type { ShippedFiles } from '@on.auto/operations';
 import { recallBounds } from '@on.auto/recall';
+import type { ShippedFiles } from '@on.auto/shipped-files';
 import { pageFiltersOn } from '@on.auto/workflow-engine';
 
 import { computationServedBy, type ProgramPoolOf, type ServedComputation } from '../composition/served-computation.ts';

@@ -1,5 +1,5 @@
 import * as releaseSync from '@jitl/quickjs-wasmfile-release-sync';
-import { dependencyFileOf, type ShippedFile, type ShippedFiles, type ShippedRoots } from '@on.auto/operations';
+import { dependencyFileOf, type ShippedFile, type ShippedFiles, type ShippedRoots } from '@on.auto/shipped-files';
 import { Schema } from 'effect';
 import { newQuickJSWASMModuleFromVariant, newVariant, type QuickJSSyncVariant } from 'quickjs-emscripten-core';
 

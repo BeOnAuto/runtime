@@ -1,8 +1,8 @@
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 
-import { sha256Of } from '@on.auto/operations';
-import { alpha, generated, refusalOf } from '@on.auto/operations/testing';
+import { sha256Of } from '@on.auto/content';
+import { alpha, generated, refusalOf } from '@on.auto/content/testing';
 import { Effect, Function, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

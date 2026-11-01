@@ -1,6 +1,6 @@
+import { sha256Of } from '@on.auto/content';
 import { plainPoolsOn, type PostgreSQLPools } from '@on.auto/ledger/postgresql';
 import { unreachableDatabase } from '@on.auto/ledger/testing';
-import { sha256Of } from '@on.auto/operations';
 import { Effect, Logger, type Context } from 'effect';
 import { describe, expect, it } from 'vitest';
 

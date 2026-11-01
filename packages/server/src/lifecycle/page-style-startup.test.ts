@@ -1,5 +1,5 @@
-import { shippedFileName, type ShippedFiles } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFileName, type ShippedFiles } from '@on.auto/shipped-files';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { describe, expect, it } from 'vitest';
 
 import { shippedRoots } from '../server-options/shipped-roots.ts';

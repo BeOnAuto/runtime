@@ -1,4 +1,4 @@
-import { Caller, OrgContext, defineCommand, quoted } from '@on.auto/operations';
+import { Caller, OrgContext, defineCommand } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { connectOf, studioBaseFor } from '../links/connect-page.ts';
@@ -7,7 +7,7 @@ import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { admittedAdditionOf } from './admitted-additions.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
-import { addedWordsOf, linkOffering } from './connection-words.ts';
+import { addedWordsOf, additionAttempted, linkOffering } from './connection-words.ts';
 import { additionOf, recordInRegistry, recordedCaller } from './registry-access.ts';
 
 const description = [
@@ -60,8 +60,7 @@ export function defineAddConnection({
     }),
     plainLanguage: {
       task: 'add a connection',
-      attempt: ({ name, provider }) =>
-        name === undefined ? `connect the provider ${quoted(String(provider))}` : `add the connection ${quoted(name)}`,
+      attempt: additionAttempted,
       outcome: (added) => addedWordsOf(added, serving.providers),
     },
     ...linkOffering(serving.secrets),

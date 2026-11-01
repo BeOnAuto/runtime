@@ -2,7 +2,7 @@ import { deepStrictEqual } from 'node:assert/strict';
 
 import { apiShippedRoots, guideShelfFrom } from '@on.auto/api';
 import { checkShippedRoots, handedWorkersWithChecks } from '@on.auto/definitions/check';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 
 function sizesOf(files: Readonly<Record<string, Readonly<Uint8Array>>>): readonly number[] {

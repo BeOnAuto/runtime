@@ -1,12 +1,12 @@
 import type {
   Conflict,
   InvalidInput,
-  Noun,
   PlaybookAddress,
   RunCancelled,
   Settlement,
   Unavailable,
 } from '@on.auto/operations';
+import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
 import type { CallEnd } from '../journal/call-numbering.ts';

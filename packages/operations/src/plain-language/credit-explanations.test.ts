@@ -1,8 +1,8 @@
+import { mostRefusalCharacters } from '@on.auto/phrasing';
 import { describe, expect, it } from 'vitest';
 
 import { explanationOf, rejected, unsuccessfulWords, type ExplainedRejection } from '../index.ts';
 import { internalTermsIn } from './internal-terms.ts';
-import { mostRefusalCharacters } from './word-bounds.ts';
 
 const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
   [

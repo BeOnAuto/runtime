@@ -1,3 +1,4 @@
+import { alternatives } from '@on.auto/phrasing';
 import { Effect, Predicate } from 'effect';
 
 import type { CallerIdentity } from '../caller/caller.ts';
@@ -8,7 +9,6 @@ import type { Runnable } from '../definition/registration.ts';
 import type { PlaybookRequest, OrgRequest } from '../dispatch/request.ts';
 import { PlaybookRegistry, type LivePlaybookStatus, type PlaybookStatus } from '../ledger/playbook-registry.ts';
 import { rejected, type Rejected } from '../outcome/outcome.ts';
-import { alternatives } from '../plain-language/phrasing.ts';
 
 export function permissionRefusalOf(
   permissions: CallerIdentity['permissions'],

@@ -1,10 +1,6 @@
 import type { CallToolResult } from '@modelcontextprotocol/server';
 import {
-  mostOutcomeCharacters,
-  mostRefusalCharacters,
-  mostRelayedCharacters,
   unsuccessfulWords,
-  withinCharacters,
   type Cancelled,
   type Failed,
   type OperationKind,
@@ -13,6 +9,12 @@ import {
   type Remedies,
   type Settled,
 } from '@on.auto/operations';
+import {
+  mostOutcomeCharacters,
+  mostRefusalCharacters,
+  mostRelayedCharacters,
+  withinCharacters,
+} from '@on.auto/phrasing';
 
 import { problemOfOutcome } from '../problem/outcome-problem.ts';
 

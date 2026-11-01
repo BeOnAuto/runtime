@@ -1,7 +1,6 @@
-import { required } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { readProviders, providersShippedRoots, type ProviderEntry } from '@on.auto/providers';
-import { Result, Schema } from 'effect';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import { Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { reconnectedFor } from '../testing/additions.ts';
@@ -30,7 +29,7 @@ const growing: readonly Growing[] = shipped.providers.flatMap(({ entry }) =>
 const connectedIdOf = Schema.decodeUnknownSync(Schema.Struct({ output: Schema.Struct({ id: Schema.String }) }));
 
 async function moreAskedOf({ entry, issuer, more }: Growing) {
-  const vendor = required(vendorsOfTheShippedWays[entry.name]);
+  const vendor = Option.getOrThrow(Option.fromNullishOr(vendorsOfTheShippedWays[entry.name]));
   const fake = await servedAsTheVendor(vendor);
   closing.push(fake.close);
   const h = harnessAtTheVendor(fake, vendor, { providers: shipped, registeredIssuer: issuer });

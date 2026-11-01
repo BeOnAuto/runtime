@@ -1,16 +1,11 @@
 import { readFileSync } from 'node:fs';
 
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import {
-  documentsBesideTheEntries,
-  manifestIn,
-  manifestNamesIn,
-  type DocumentManifest,
-} from '../translating/document-manifests.ts';
-import { providersShippedRoots } from './shipped-providers.ts';
+import { manifestIn, manifestNamesIn, type DocumentManifest } from '../translating/document-manifests.ts';
+import { documentsBesideTheEntries, providersShippedRoots } from './shipped-providers.ts';
 
 const providersOnDisk = shippedFilesOnDisk(providersShippedRoots());
 

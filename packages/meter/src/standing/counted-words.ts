@@ -1,4 +1,4 @@
-import type { Noun } from '@on.auto/operations';
+import type { Noun } from '@on.auto/phrasing';
 
 export const runs: Noun = { one: 'run', other: 'runs' };
 

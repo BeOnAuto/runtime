@@ -1,4 +1,4 @@
-import { StudioLinks, type StudioPage } from '@on.auto/operations/studio-links';
+import { StudioLinks, type StudioPage } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 

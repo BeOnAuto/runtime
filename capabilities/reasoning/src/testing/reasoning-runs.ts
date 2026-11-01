@@ -1,3 +1,4 @@
+import { memoryRecordedContent } from '@on.auto/content/testing';
 import type {
   CapabilityAnswer,
   CapabilityRejection,
@@ -12,8 +13,7 @@ import {
   recordingJournal,
   type RecordingJournal,
 } from '@on.auto/definitions/testing';
-import { allPermissions, type RecordedContent } from '@on.auto/operations';
-import { memoryRecordedContent } from '@on.auto/operations/testing';
+import { allPermissions } from '@on.auto/operations';
 import { noToolServers } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, type Exit, type Schema } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -30,6 +30,8 @@ export const moment = '2026-10-01T09:30:00.000Z';
 const anthropicOnly = { providers: ['anthropic'], aliases: [] };
 
 type Tools = ReasoningFunctionAdapterOptions['tools'];
+
+type Content = ReasoningFunctionAdapterOptions['content'];
 
 type Defaulted = 'tools' | 'content' | 'offered';
 
@@ -70,7 +72,7 @@ export type Run = Exit.Exit<CapabilityAnswer, CapabilityRejection>;
 
 export interface ReasoningRun {
   readonly capability: Capability;
-  readonly content: RecordedContent;
+  readonly content: Content;
   readonly journal: RecordingJournal;
   readonly requests: () => readonly ModelRequest[];
   readonly prepared: (source: string) => PreparedDefinition;
@@ -80,7 +82,7 @@ export interface ReasoningRun {
 export interface Reasoning {
   readonly tools?: Tools;
   readonly attempt?: RunAttempt;
-  readonly content?: RecordedContent;
+  readonly content?: Content;
   readonly admit?: ReasoningFunctionAdapterOptions['languageModel']['admit'];
   readonly cancelledAfter?: number;
 }

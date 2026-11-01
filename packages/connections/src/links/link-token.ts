@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
-import { Caller, sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
+import { Caller } from '@on.auto/operations';
 import { DateTime, Duration, Effect } from 'effect';
 
 import type { OpenLink } from '../registry/registry.ts';

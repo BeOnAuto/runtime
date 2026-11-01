@@ -18,11 +18,13 @@
     "@on.auto/definitions": "workspace:*",
     "@on.auto/json-schema": "workspace:*",
     "@on.auto/operations": "workspace:*",
+    "@on.auto/phrasing": "workspace:*",
     "@on.auto/workflow-engine": "workspace:*",
     "@on.auto/workflow-host": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@on.auto/shipped-files": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }

@@ -1,4 +1,5 @@
-import { memoryLedger, memoryRecordedContent } from '@on.auto/operations/testing';
+import { memoryRecordedContent } from '@on.auto/content/testing';
+import { memoryLedger } from '@on.auto/operations/testing';
 import { makeReasoningFunctionAdapter, readReasoningFunctionDefinition, resumesAfterMsOf } from '@on.auto/reasoning';
 import { scriptedLanguageModel } from '@on.auto/reasoning/testing';
 import { noToolServers } from '@on.auto/tool-servers/testing';

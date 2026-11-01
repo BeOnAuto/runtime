@@ -1,4 +1,3 @@
-import { required } from '@on.auto/operations';
 import { clientIdPlaceholder } from '@on.auto/providers';
 import {
   readEntry,
@@ -7,7 +6,7 @@ import {
   type ShippedDocument,
   type ToolServerSettingsContext,
 } from '@on.auto/tool-servers';
-import { JsonPointer, Redacted, Result, Schema } from 'effect';
+import { JsonPointer, Option, Redacted, Result, Schema } from 'effect';
 
 import { ConnectionEntrySchema, type ConnectionEntry, type ConnectionType } from '../registry/connection-entry.ts';
 import type { Credential } from '../registry/credential.ts';
@@ -93,7 +92,7 @@ function pointerOf(...path: readonly string[]): string {
 }
 
 function variableOf(credential: Credential): string {
-  return credential.kind === 'reference' ? required(credential.variable) : givenVariable;
+  return credential.kind === 'reference' ? Option.getOrThrow(Option.fromNullishOr(credential.variable)) : givenVariable;
 }
 
 function writtenValueOf(credential: Credential, variable: string): string {
@@ -102,8 +101,8 @@ function writtenValueOf(credential: Credential, variable: string): string {
 }
 
 function placedValue(entry: ConnectionEntry, credential: Credential, variable: string): PlacedCredential {
-  const placement = required(credential.in);
-  const name = required(credential.name);
+  const placement = Option.getOrThrow(Option.fromNullishOr(credential.in));
+  const name = Option.getOrThrow(Option.fromNullishOr(credential.name));
   return {
     written: { ...entry, ...placedIn[placement](entry, name, writtenValueOf(credential, variable)) },
     placedAt: new Map([['value', pointerOf(fieldsOfAPlacement[placement], name)]]),
@@ -120,8 +119,8 @@ function placedClientCredentials(
       ? { client_secret: reference }
       : { private_key: reference, algorithm: literalText(algorithm) };
   const scope = credential.scope === undefined ? {} : { scope: literalText(credential.scope) };
-  const issuer = literalText(required(credential.issuer));
-  const clientId = required(credential.client_id);
+  const issuer = literalText(Option.getOrThrow(Option.fromNullishOr(credential.issuer)));
+  const clientId = Option.getOrThrow(Option.fromNullishOr(credential.client_id));
   const auth = { issuer, client_id: literalText(clientId), ...scope, ...secret };
   const given = ['client_id', ...Object.keys(secret)];
   return {

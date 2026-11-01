@@ -1,6 +1,7 @@
 import { callMarginMs, defineSendRunEvent, makeWorkflowAdapter, type ExpressionCheck } from '@on.auto/coordination';
 import { defineStartVersion, type PlaybookOwnNames, type Capability, type CapabilityFacts } from '@on.auto/definitions';
-import { makeCatalog, makeDispatcher, type RouteRegistration, type ShippedFiles } from '@on.auto/operations';
+import { makeCatalog, makeDispatcher, type RouteRegistration } from '@on.auto/operations';
+import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 

@@ -1,5 +1,5 @@
+import { memoryRecordedContent } from '@on.auto/content/testing';
 import type { RecordedCall } from '@on.auto/definitions';
-import { memoryRecordedContent } from '@on.auto/operations/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 

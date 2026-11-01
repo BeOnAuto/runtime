@@ -1,4 +1,4 @@
-import { alternatives, asSentence, capitalized, counted, listed, quoted, type Noun } from '@on.auto/operations';
+import { alternatives, asSentence, capitalized, counted, listed, quoted, type Noun } from '@on.auto/phrasing';
 import { Option, Schema } from 'effect';
 
 import { defaultRunWords, type Capability, type RunWords } from '../capability/capability.ts';

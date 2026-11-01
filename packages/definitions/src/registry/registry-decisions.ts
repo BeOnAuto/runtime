@@ -1,4 +1,5 @@
-import { Conflict, plainNumber, type Context, type Rejection } from '@on.auto/operations';
+import { Conflict, type Context, type Rejection } from '@on.auto/operations';
+import { plainNumber } from '@on.auto/phrasing';
 import { Result } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';

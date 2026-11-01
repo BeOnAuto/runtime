@@ -1,5 +1,5 @@
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
-import { textToKeep } from '@on.auto/operations';
+import { textToKeep } from '@on.auto/content';
 import { Effect, Logger } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

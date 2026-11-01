@@ -1,6 +1,6 @@
 import type { AppRuntime, RegisterRoutes, RuntimeControl } from '@on.auto/api';
 import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identity';
-import type { ShippedFiles } from '@on.auto/operations';
+import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { Layer } from 'effect';
 
 import type { Settings } from '../settings/settings.ts';

@@ -1,4 +1,4 @@
-import { alternatives } from '@on.auto/operations';
+import { alternatives } from '@on.auto/phrasing';
 import { Result, type Schema } from 'effect';
 
 import type { OutputShape } from './output-shape.ts';

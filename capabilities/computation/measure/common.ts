@@ -1,5 +1,5 @@
 import { handedWorkersWithChecks, checkShippedRoots } from '@on.auto/definitions/check';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { programPool, type Json, type ProgramPool, type ProgramRequest } from '@on.auto/workflow-engine/dsl';
 
 import { computationBounds } from '../src/run/run-bounds.ts';

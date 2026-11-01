@@ -1,4 +1,4 @@
-import { capitalized, counted, type Noun } from '@on.auto/operations';
+import { capitalized, counted, type Noun } from '@on.auto/phrasing';
 import { Predicate, type Schema } from 'effect';
 
 import { isReadOnly, type ToolAnnotations } from '../bounds/tool-results.ts';

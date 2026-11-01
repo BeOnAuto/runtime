@@ -1,4 +1,5 @@
-import { InvalidInput, Unavailable, type ShippedFiles, type ShippedRoots } from '@on.auto/operations';
+import { InvalidInput, Unavailable } from '@on.auto/operations';
+import type { ShippedFiles, ShippedRoots } from '@on.auto/shipped-files';
 import {
   handedFilesOf,
   handedWorkersOf,

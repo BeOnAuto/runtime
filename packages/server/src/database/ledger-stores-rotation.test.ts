@@ -1,5 +1,6 @@
+import { sha256Of } from '@on.auto/content';
 import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
-import { randomUUIDv7, sha256Of } from '@on.auto/operations';
+import { randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

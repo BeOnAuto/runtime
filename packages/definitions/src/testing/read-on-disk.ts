@@ -1,5 +1,5 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { measuredEnvironment } from '@on.auto/operations/testing';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import type { PoolSettings } from '@on.auto/workflow-engine/dsl';
 import { handedFileIn, type HandedFile } from '@on.auto/workflow-engine/job-loop';
 

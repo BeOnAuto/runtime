@@ -2,7 +2,8 @@ import { Buffer } from 'node:buffer';
 
 import { mostResultBytes } from '@on.auto/definitions';
 import { issuesDetail } from '@on.auto/json-schema';
-import { capitalized, Conflict, Unavailable } from '@on.auto/operations';
+import { Conflict, Unavailable } from '@on.auto/operations';
+import { capitalized } from '@on.auto/phrasing';
 import { answerDocument, isReadOnly, toolInWords, type AnsweredOnce, type CalledOnce } from '@on.auto/tool-servers';
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result, Schema } from 'effect';

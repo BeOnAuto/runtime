@@ -1,7 +1,7 @@
+import type { RecordedContent } from '@on.auto/content';
+import { memoryRecordedContent } from '@on.auto/content/testing';
 import type { CallFact, RunAttempt } from '@on.auto/definitions';
 import { cancelledAfter, recordingJournal, type RecordingJournal } from '@on.auto/definitions/testing';
-import type { RecordedContent } from '@on.auto/operations';
-import { memoryRecordedContent } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 
 import type { ToolCallAnswer, ToolCallJob } from '../jobs/jobs.ts';

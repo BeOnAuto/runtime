@@ -1,7 +1,7 @@
 import { Readable } from 'node:stream';
 
-import { textToKeep } from '@on.auto/operations';
-import { alpha, deliveredBeforeFailing, octets, present, resultOf } from '@on.auto/operations/testing';
+import { textToKeep } from '@on.auto/content';
+import { alpha, deliveredBeforeFailing, octets, present, resultOf } from '@on.auto/content/testing';
 import { sdkStreamMixin } from '@smithy/core/serde';
 import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';

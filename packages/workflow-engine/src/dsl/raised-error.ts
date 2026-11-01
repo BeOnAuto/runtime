@@ -1,5 +1,4 @@
 import {
-  asSentence,
   IssueSchema,
   isKindWithType,
   problemTypeOf,
@@ -13,6 +12,7 @@ import {
   type Settlement,
   type UnavailableKind,
 } from '@on.auto/operations';
+import { asSentence } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import type { DslError } from '../machine/dsl-error.ts';

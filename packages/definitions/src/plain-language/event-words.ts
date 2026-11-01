@@ -1,4 +1,5 @@
-import { capitalized, explanationOf, plainNumber, quoted, type StartingTrigger } from '@on.auto/operations';
+import { explanationOf, type StartingTrigger } from '@on.auto/operations';
+import { capitalized, plainNumber, quoted } from '@on.auto/phrasing';
 import { answeredInWords, failedInWords, toolInWords, type CallFailedBecause } from '@on.auto/tool-servers';
 
 import { timeZoneOf, type ScheduleTrigger } from '../registry/definition-triggers.ts';

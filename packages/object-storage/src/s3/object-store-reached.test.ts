@@ -1,5 +1,5 @@
 import { CreateBucketCommand, S3ServiceException } from '@aws-sdk/client-s3';
-import { refusalOf, resultOf } from '@on.auto/operations/testing';
+import { refusalOf, resultOf } from '@on.auto/content/testing';
 import { describe, expect, it } from 'vitest';
 
 import { fakeBucket } from '../testing/fake-bucket.ts';

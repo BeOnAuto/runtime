@@ -1,13 +1,13 @@
 import {
   mostContentChunkBytes,
-  randomUUIDv7,
   requireExpected,
   takenInChunks,
   type ContentKept,
   type ContentRefused,
   type ContentToKeep,
   type Taken,
-} from '@on.auto/operations';
+} from '@on.auto/content';
+import { randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { Bucket, ObjectHead } from '../bucket/bucket.ts';

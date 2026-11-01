@@ -1,4 +1,4 @@
-import { textOfContent } from '@on.auto/operations';
+import { textOfContent } from '@on.auto/content';
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 

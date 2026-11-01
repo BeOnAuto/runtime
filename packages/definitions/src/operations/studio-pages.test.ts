@@ -1,5 +1,4 @@
-import { type DispatcherServices, type Outcome } from '@on.auto/operations';
-import { StudioLinks, type StudioPage } from '@on.auto/operations/studio-links';
+import { StudioLinks, type DispatcherServices, type Outcome, type StudioPage } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 

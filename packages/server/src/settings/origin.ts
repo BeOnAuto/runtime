@@ -1,5 +1,5 @@
-import { defaultStudioOrigin } from '@on.auto/identity';
-import { alternatives, loopbackNames, namesTheLoopback } from '@on.auto/operations';
+import { defaultStudioOrigin, loopbackNames, namesTheLoopback } from '@on.auto/identity';
+import { alternatives } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 function isOriginOf(text: string, protocols: readonly string[]): boolean {

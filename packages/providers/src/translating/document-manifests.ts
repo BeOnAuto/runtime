@@ -1,16 +1,14 @@
-import { listed, shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
+import { shippedFileIn, type ShippedFile, type ShippedFiles } from '@on.auto/shipped-files';
 import { documentInText } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
-import { shippedEntries } from '../reading/shipped-providers.ts';
 import { CutSchema } from './discovery-cuts.ts';
 import { GlobalParameterSchema, LeftOutParametersSchema, RequirementSchema } from './discovery-parameters.ts';
 import { OpenApiTranslationSchema } from './openapi-translation.ts';
 import { convertedDocumentOf, SwaggerConversionSchema } from './swagger-conversion.ts';
 import { translatedDiscoveryOf } from './translate-discovery.ts';
 import { curatedOpenApiOf } from './translate-openapi.ts';
-
-export const documentsBesideTheEntries: ShippedFile = shippedFileIn(shippedEntries, 'documents');
 
 const AuthorizationServerAddressSchema = Schema.String.annotate({
   description: 'The address of the metadata of the authorization server whose endpoints the oauth2 scheme names',

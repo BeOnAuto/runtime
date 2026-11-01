@@ -1,5 +1,5 @@
 import { withoutTrailingSlashes } from '@on.auto/config';
-import { counted, listed, type Noun } from '@on.auto/operations';
+import { counted, listed, type Noun } from '@on.auto/phrasing';
 
 import { aliasPatternOf } from '../model/model-alias.ts';
 import type { ModelEntry, ModelList } from './model-list.ts';

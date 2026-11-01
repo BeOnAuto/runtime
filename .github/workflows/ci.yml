@@ -85,6 +85,7 @@ jobs:
               - computation
               - config
               - connections
+              - content
               - coordination
               - definitions
               - documents
@@ -93,11 +94,13 @@ jobs:
               - json-schema
               - operations
               - outbound
+              - phrasing
               - playbooks
               - providers
               - reasoning
               - recall
               - secrets
+              - shipped-files
               - tool-servers
             services: false
     runs-on: ubuntu-latest

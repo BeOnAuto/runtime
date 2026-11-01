@@ -1,5 +1,5 @@
 import { SQL } from '@event-driven-io/dumbo';
-import { sha256Of, textOfContent, textToKeep } from '@on.auto/operations';
+import { sha256Of, textOfContent, textToKeep } from '@on.auto/content';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 

@@ -1,11 +1,11 @@
-import { Caller, OrgContext, defineCommand, quoted } from '@on.auto/operations';
+import { Caller, OrgContext, defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { connectOf } from '../links/connect-page.ts';
 import { adderRefusalOf, bindsPerson } from '../policy/policy-rules.ts';
 import { AddedSchema, ConnectionIdField } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
-import { linkOffering, reconnectedWordsOf } from './connection-words.ts';
+import { linkOffering, reconnectedWordsOf, reconnectionAttempted } from './connection-words.ts';
 import { linkIssuedFor } from './more-asked.ts';
 import { recordInRegistry, recordedCaller } from './registry-access.ts';
 import { shownConnection } from './shown-connections.ts';
@@ -58,7 +58,7 @@ export function defineReconnectConnection(services: Reconnecting) {
     }),
     plainLanguage: {
       task: 'reconnect a connection',
-      attempt: ({ id }) => `reconnect the connection ${quoted(id)}`,
+      attempt: reconnectionAttempted,
       outcome: (reconnected, { more }) => reconnectedWordsOf(reconnected, providers, more),
     },
     ...linkOffering(secrets),

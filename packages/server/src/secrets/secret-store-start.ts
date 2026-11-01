@@ -1,4 +1,3 @@
-import { required } from '@on.auto/operations';
 import {
   custodianProbed,
   keeperProbed,
@@ -8,7 +7,7 @@ import {
   type Keepers,
   type SecretStore,
 } from '@on.auto/secrets';
-import { Effect } from 'effect';
+import { Effect, Option } from 'effect';
 
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { InvalidSettingsError } from '../settings/invalid-settings-error.ts';
@@ -45,11 +44,13 @@ function custodianProbedAtStart(
 ): Effect.Effect<void, InvalidSettingsError> {
   const current = secrets?.current;
   return current?.from === 'kms'
-    ? Effect.mapError(custodianProbed(required(custodians).current), ({ detail }: Worded) =>
-        invalid(
-          current.setting,
-          `The KMS key ${required(custodians).current.kid} it names could not wrap and unwrap a data key at start: ${detail}`,
-        ),
+    ? Effect.mapError(
+        custodianProbed(Option.getOrThrow(Option.fromNullishOr(custodians)).current),
+        ({ detail }: Worded) =>
+          invalid(
+            current.setting,
+            `The KMS key ${Option.getOrThrow(Option.fromNullishOr(custodians)).current.kid} it names could not wrap and unwrap a data key at start: ${detail}`,
+          ),
       )
     : Effect.void;
 }
@@ -97,9 +98,9 @@ function startLogged(made: SecretsMade, given: SecretsGiven, { moved, resealed }
     ? logSecretsInParameterStore({ prefix: current.prefix, region: current.region, moved })
     : Effect.suspend(() =>
         logSecretStore({
-          kid: required(made.custodians).current.kid,
+          kid: Option.getOrThrow(Option.fromNullishOr(made.custodians)).current.kid,
           resealed,
-          keyFrom: required(given.secrets).current,
+          keyFrom: Option.getOrThrow(Option.fromNullishOr(given.secrets)).current,
           moved: previous === undefined ? undefined : moved,
         }),
       );

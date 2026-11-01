@@ -1,6 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import { Schema } from 'effect';
 
 import { aDatabaseFrom, theSQLiteFloor } from './database-floor.ts';

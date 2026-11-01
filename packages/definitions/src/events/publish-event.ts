@@ -1,4 +1,5 @@
-import { PlaybookWriter, InvalidInput, defineCommand, quoted, randomUUIDv7, type Issue } from '@on.auto/operations';
+import { defineCommand, InvalidInput, PlaybookWriter, randomUUIDv7, type Issue } from '@on.auto/operations';
+import { quoted } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
 import { commandMetadata } from '../operations/command-metadata.ts';

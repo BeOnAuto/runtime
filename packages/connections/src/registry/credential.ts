@@ -1,5 +1,5 @@
 import { variableNamePattern } from '@on.auto/config';
-import { articled, listed } from '@on.auto/operations';
+import { articled, listed } from '@on.auto/phrasing';
 import {
   consentEndpoints,
   consentIssuesOf,

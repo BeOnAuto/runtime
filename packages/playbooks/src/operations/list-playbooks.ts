@@ -1,5 +1,4 @@
-import { Caller, defineQuery, canAccessPlaybook, type CallerIdentity } from '@on.auto/operations';
-import { studioLinkTo } from '@on.auto/operations/studio-links';
+import { Caller, canAccessPlaybook, defineQuery, studioLinkTo, type CallerIdentity } from '@on.auto/operations';
 import { Effect, Order, Schema } from 'effect';
 
 import { playbooksListed, welcomeOf } from '../plain-language/playbook-words.ts';

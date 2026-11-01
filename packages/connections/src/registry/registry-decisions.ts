@@ -1,5 +1,5 @@
-import { Conflict, required, type Context, type Rejection } from '@on.auto/operations';
-import { Result } from 'effect';
+import { Conflict, type Context, type Rejection } from '@on.auto/operations';
+import { Option, Result } from 'effect';
 
 import type {
   CommandMetadata,
@@ -158,7 +158,7 @@ function unsetVariableOf(kept: KeptConnection, variablesSet: ReadonlySet<string>
     return undefined;
   }
   const { name, credential } = kept.connection;
-  const variable = required(credential.variable);
+  const variable = Option.getOrThrow(Option.fromNullishOr(credential.variable));
   return variablesSet.has(variable) ? undefined : new Conflict({ detail: variableUnset(name, variable) });
 }
 

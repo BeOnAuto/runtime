@@ -6,8 +6,6 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./shipped-files-on-disk": "./src/shipped-files/shipped-files-on-disk.ts",
-    "./studio-links": "./src/addresses/studio-links.ts",
     "./test-run-folder": "./src/process-testing/test-run-folder.ts",
     "./testing": "./src/testing/index.ts"
   },
@@ -17,6 +15,8 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
+    "@on.auto/content": "workspace:*",
+    "@on.auto/phrasing": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

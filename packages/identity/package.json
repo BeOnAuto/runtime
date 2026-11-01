@@ -16,6 +16,7 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
+    "@on.auto/content": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "effect": "catalog:",
     "jose": "catalog:"

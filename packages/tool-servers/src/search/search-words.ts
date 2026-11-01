@@ -1,4 +1,4 @@
-import { capitalized, counted, listed, quoted, type Noun } from '@on.auto/operations';
+import { capitalized, counted, listed, quoted, type Noun } from '@on.auto/phrasing';
 
 import { inWords, namesListed, toolInWords } from '../names/tool-words.ts';
 import { isUnready } from '../org-servers/connection-source.ts';

@@ -1,9 +1,9 @@
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { shippedFileIn } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { importedWithoutAnAddress } from '@on.auto/operations/testing';
+import { shippedFileIn } from '@on.auto/shipped-files';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 

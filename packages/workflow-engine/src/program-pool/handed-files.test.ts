@@ -1,5 +1,5 @@
-import { shippedFileName, type ShippedFile } from '@on.auto/operations';
-import { shippedFilesInMemory } from '@on.auto/operations/testing';
+import { shippedFileName, type ShippedFile } from '@on.auto/shipped-files';
+import { shippedFilesInMemory } from '@on.auto/shipped-files/testing';
 import { describe, expect, it } from 'vitest';
 
 import { sandboxModuleFile } from '../instances/compiled-module.ts';

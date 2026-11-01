@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { sha256Of } from '@on.auto/content';
 
 const LICENSE_KEY = /^alk\.[^.\s]+\.([^.\s]+)\.[^.\s]+$/u;
 
@@ -15,5 +15,5 @@ export function isLicenseKey(key: string): boolean {
 }
 
 export function keyDigestOf(key: string): string {
-  return createHash('sha256').update(key).digest('hex');
+  return sha256Of(key);
 }

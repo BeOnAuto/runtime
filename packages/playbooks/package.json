@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@on.auto/operations": "workspace:*",
+    "@on.auto/phrasing": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {

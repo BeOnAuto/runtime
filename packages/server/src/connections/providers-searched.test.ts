@@ -1,8 +1,7 @@
 import { plainTextIn, withMcpSession } from '@on.auto/api/testing';
-import { required } from '@on.auto/operations';
 import type { Provider } from '@on.auto/providers';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import { Effect } from 'effect';
+import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { secretIdOf, secretsKey, secretStoreInFile } from '../testing/records/kept-credentials.ts';
@@ -23,13 +22,15 @@ const addedByAToken = shippedProviders.filter(
   ({ entry }) => entry.placeholders === undefined && entry.credentials.some((way) => way.kind === byAToken.kind),
 );
 
-const listedWithoutAsking = required(addedByAToken.find(({ entry }) => entry.type === 'openapi'));
+const listedWithoutAsking = Option.getOrThrow(
+  Option.fromNullishOr(addedByAToken.find(({ entry }) => entry.type === 'openapi')),
+);
 
 const addedOverMcp = addedByAToken.filter(({ entry }) => entry.type === 'mcp');
 
-const pendingOne = required(addedOverMcp[0]);
+const pendingOne = Option.getOrThrow(Option.fromNullishOr(addedOverMcp[0]));
 
-const brokenOne = required(addedOverMcp[1]);
+const brokenOne = Option.getOrThrow(Option.fromNullishOr(addedOverMcp[1]));
 
 function nameOf({ entry }: Provider): string {
   return entry.name;
@@ -52,7 +53,9 @@ const searchOfAcme = '/v1/orgs/acme/tool-servers/search';
 
 async function forgottenIn(fileName: string, connection: string): Promise<void> {
   const store = await secretStoreInFile(fileName, secretsKey);
-  await Effect.runPromise(store.forget(required(await secretIdOf(fileName, 'acme', connection))));
+  await Effect.runPromise(
+    store.forget(Option.getOrThrow(Option.fromNullishOr(await secretIdOf(fileName, 'acme', connection)))),
+  );
   await store.close();
 }
 
@@ -76,7 +79,7 @@ async function served(environment: Readonly<Record<string, string>> = {}): Promi
 describe('the providers the search of an org lists to the local developer', () => {
   it('are, without terms, the providers it ships, by name, and with terms the best first', async () => {
     const server = await served();
-    const named = required(offeredByTheServer[0]);
+    const named = Option.getOrThrow(Option.fromNullishOr(offeredByTheServer[0]));
 
     const [whole, found] = await Promise.all([
       server.call('GET', searchOfAcme),

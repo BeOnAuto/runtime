@@ -1,4 +1,4 @@
-import { alternatives, articled, listed } from '@on.auto/operations';
+import { alternatives, articled, listed } from '@on.auto/phrasing';
 import { WayClientSourceSchema, WayPkceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 

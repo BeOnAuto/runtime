@@ -1,5 +1,5 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { readProviders, providersShippedRoots } from '@on.auto/providers';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { admitted, clockAt, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';

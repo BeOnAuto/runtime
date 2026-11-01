@@ -1,11 +1,6 @@
 import { SQL } from '@event-driven-io/dumbo';
-import {
-  streamPrefixOfPlaybook,
-  verifiedStream,
-  type PlaybookAddress,
-  type ContentKept,
-  type StreamedContent,
-} from '@on.auto/operations';
+import { verifiedStream, type ContentKept, type StreamedContent } from '@on.auto/content';
+import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { StatementExecutor } from '../event-store.ts';

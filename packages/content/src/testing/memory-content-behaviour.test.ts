@@ -1,7 +1,7 @@
 import { describe } from 'vitest';
 
-import { memoryRecordedContent } from '../content/memory-content.ts';
 import type { ContentEntry } from './content-entry.ts';
+import { memoryRecordedContent } from './memory-content.ts';
 import { recordedContentBehaviour } from './recorded-content-behaviour.ts';
 
 const inMemory: ContentEntry = {

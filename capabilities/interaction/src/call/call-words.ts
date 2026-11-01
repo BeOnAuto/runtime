@@ -1,5 +1,5 @@
 import { inWords } from '@on.auto/definitions';
-import { asSentence, counted } from '@on.auto/operations';
+import { asSentence, counted } from '@on.auto/phrasing';
 import { toolInWords } from '@on.auto/tool-servers';
 import { Option, Schema } from 'effect';
 

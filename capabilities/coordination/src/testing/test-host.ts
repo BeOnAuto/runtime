@@ -1,4 +1,4 @@
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { freshInstances, machineSandboxOf, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { recordedReactions, recordedWaiting, workflowHostOnALedger } from '@on.auto/workflow-host/testing';

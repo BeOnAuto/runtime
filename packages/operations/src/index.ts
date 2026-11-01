@@ -9,7 +9,7 @@ export {
   type BoundedPage,
   type Examined,
 } from './reading/page-bounds.ts';
-export { PlaybookReader } from './ledger/playbook-reader.ts';
+export { PlaybookReader, type PlaybookContentReader } from './ledger/playbook-reader.ts';
 export { isCalendarDay } from './reading/calendar-days.ts';
 export { PlaybookContext, type PlaybookAddress } from './caller/playbook-context.ts';
 export { PlaybookLifecycle } from './caller/playbook-lifecycle.ts';
@@ -111,28 +111,6 @@ export {
   type RunContext,
   type StartingTrigger,
 } from './ledger/context.ts';
-export type {
-  PlaybookContentReader,
-  ContentKept,
-  ContentStore,
-  Digested,
-  RecordedContent,
-} from './content/recorded-content.ts';
-export { mostContentChunkBytes } from './content/content-chunks.ts';
-export { leftUnread, requireExpected, takenInChunks, type Taken, type TakeChunk } from './content/content-intake.ts';
-export { ContentRefused, notTheBytesOfItsDigest, type ContentRefusedBecause } from './content/content-refusals.ts';
-export { verifiedStream } from './content/content-verification.ts';
-export {
-  contentOfBytes,
-  contentOfText,
-  textOfContent,
-  textToKeep,
-  type ContentToKeep,
-  type ExpectedContent,
-  type StreamedBytes,
-  type StreamedContent,
-} from './content/streamed-content.ts';
-export { sha256Digest, sha256Of, type Sha256Digest } from './content/content-digest.ts';
 export type { DispatcherServices } from './dispatch/dispatcher-services.ts';
 export { makeDispatcher, type Dispatcher, type PipelineStep } from './dispatch/dispatcher.ts';
 export { cursorOfParts, cursorWithin, partsOfCursor, type CursorPart } from './reading/cursor-parts.ts';
@@ -173,17 +151,6 @@ export type { HttpBody, OfferedLink } from './definition/definition.ts';
 export { OrgReader } from './ledger/org-reader.ts';
 export { explanationOf, unsuccessfulWords, type ExplainedRejection } from './plain-language/explanation.ts';
 export { refusalInWords } from './plain-language/refusal-words.ts';
-export {
-  alternatives,
-  articled,
-  asSentence,
-  capitalized,
-  counted,
-  listed,
-  plainNumber,
-  quoted,
-  type Noun,
-} from './plain-language/phrasing.ts';
 export type {
   Explanation,
   LinkToOpen,
@@ -191,12 +158,6 @@ export type {
   RegisteredPlainLanguage,
   Remedies,
 } from './plain-language/plain-language.ts';
-export {
-  mostOutcomeCharacters,
-  mostRefusalCharacters,
-  mostRelayedCharacters,
-  withinCharacters,
-} from './plain-language/word-bounds.ts';
 export { OrgContext, type OrgAddress } from './caller/org-context.ts';
 export { OrgWriter } from './ledger/org-writer.ts';
 export {
@@ -281,19 +242,17 @@ export {
   type RejectionBecause,
 } from './outcome/rejection-because.ts';
 export { Unavailable, UnavailableKindSchema, type UnavailableKind } from './outcome/unavailable.ts';
+export {
+  StudioLinks,
+  studioLinkField,
+  studioLinkTo,
+  withStudioLink,
+  type LinkedInStudio,
+  type StudioLinkTo,
+  type StudioPage,
+} from './addresses/studio-links.ts';
 export { uuidV5 } from './uuid/uuid-v5.ts';
 export { randomUUIDv7, uuidV7Before, uuidV7TimeOf } from './uuid/uuid-v7.ts';
-export { loopbackNames, namesTheLoopback } from './addresses/loopback-names.ts';
-export { required } from './values/required.ts';
-export { cacheFolderMode, cacheFolderProblem } from './folders/cache-folder.ts';
-export {
-  dependencyFileOf,
-  shippedFileIn,
-  shippedFileName,
-  type ShippedFile,
-  type ShippedFiles,
-  type ShippedRoots,
-} from './shipped-files/shipped-files.ts';
 export { changeKindOf, changingEvents, changingNothing, changingOne } from './changes/change-naming.ts';
 export type { ChangedFact, ChangeNaming, ChangesNamed, PlacedFact, ResourceChange } from './changes/change-naming.ts';
 export { changeCatalogOf, presentedChangeCatalogOf, type ChangeCatalog } from './changes/change-catalog.ts';

@@ -1,7 +1,6 @@
 import { calledOpeningLinks } from '@on.auto/api/testing';
-import { required } from '@on.auto/operations';
 import { hostAlternativesOf, operatorVariablesIn, type Provider } from '@on.auto/providers';
-import { Schema } from 'effect';
+import { Option, Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import { shippedList, shippedProviders } from '../testing/servers/connected-servers.ts';
@@ -21,10 +20,10 @@ function hostsOf(provider: Provider): readonly (readonly string[])[] {
   return provider.entry.credentials.flatMap((way) => hostAlternativesOf(provider, way));
 }
 
-const github = required(shippedProviders.find(({ entry }) => entry.name === 'github'));
+const github = Option.getOrThrow(Option.fromNullishOr(shippedProviders.find(({ entry }) => entry.name === 'github')));
 
 function wayOf({ entry }: Provider, kind: string) {
-  return required(entry.credentials.find((way) => way.kind === kind));
+  return Option.getOrThrow(Option.fromNullishOr(entry.credentials.find((way) => way.kind === kind)));
 }
 
 function placementOf(provider: Provider) {
@@ -94,7 +93,9 @@ describe('the providers a server lists over HTTP', () => {
   });
 
   it('are those the rules of its operator could allow', async () => {
-    const allowed = required(hostsOf(required(shippedProviders[0]))[0]);
+    const allowed = Option.getOrThrow(
+      Option.fromNullishOr(hostsOf(Option.getOrThrow(Option.fromNullishOr(shippedProviders[0])))[0]),
+    );
     const reached = shippedProviders.filter((provider) =>
       hostsOf(provider).some((hosts) => hosts.every((host) => allowed.includes(host))),
     );
@@ -153,7 +154,7 @@ function waysExpected(
     ...Object.fromEntries([...atGoogle, ...atMicrosoft].map((name) => [name, atGoogleAndMicrosoft])),
     ...ofTheOthers,
   };
-  return names.map((name) => [name, required(known[name])]);
+  return names.map((name) => [name, Option.getOrThrow(Option.fromNullishOr(known[name]))]);
 }
 
 const underTheOrgsOAuthClientAlone = `authorization offered ${alone}`;

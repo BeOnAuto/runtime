@@ -1,5 +1,4 @@
-import { PlaybookContext } from '@on.auto/operations';
-import { studioLinkField, withStudioLink, type LinkedInStudio } from '@on.auto/operations/studio-links';
+import { PlaybookContext, studioLinkField, withStudioLink, type LinkedInStudio } from '@on.auto/operations';
 import { Schema, type Effect } from 'effect';
 
 import { DefinitionSchema, type Definition } from '../registry/definition.ts';

@@ -1,6 +1,6 @@
+import type { RecordedContent } from '@on.auto/content';
+import { memoryRecordedContent } from '@on.auto/content/testing';
 import { documentsReadInProcess } from '@on.auto/documents/testing';
-import type { RecordedContent } from '@on.auto/operations';
-import { memoryRecordedContent } from '@on.auto/operations/testing';
 import { Effect, Function } from 'effect';
 
 import type { ServerMessage } from '../access/caller-context.ts';

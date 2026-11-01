@@ -1,4 +1,5 @@
-import { changingEvents, quoted, type KeptContent, type PresentedFact, type Presenter } from '@on.auto/operations';
+import { changingEvents, type KeptContent, type PresentedFact, type Presenter } from '@on.auto/operations';
+import { quoted } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import { toolBounds } from '../bounds/call-bounds.ts';

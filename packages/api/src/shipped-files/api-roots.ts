@@ -1,4 +1,4 @@
-import type { ShippedRoots } from '@on.auto/operations';
+import type { ShippedRoots } from '@on.auto/shipped-files';
 
 export const apiPackage = '@on.auto/api';
 

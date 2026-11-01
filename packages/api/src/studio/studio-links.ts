@@ -1,6 +1,5 @@
-import { studioLinkOf } from '@on.auto/identity';
-import { namesTheLoopback } from '@on.auto/operations';
-import { StudioLinks, type StudioLinkTo } from '@on.auto/operations/studio-links';
+import { namesTheLoopback, studioLinkOf } from '@on.auto/identity';
+import { StudioLinks, type StudioLinkTo } from '@on.auto/operations';
 import { Context } from 'effect';
 
 import type { ApiOptions } from '../api-options.ts';

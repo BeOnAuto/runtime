@@ -1,4 +1,4 @@
-import { asSentence, listed, quoted } from '@on.auto/operations';
+import { asSentence, listed, quoted } from '@on.auto/phrasing';
 import { Predicate, type Schema } from 'effect';
 
 import { charactersIn } from './characters.ts';

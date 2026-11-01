@@ -1,6 +1,5 @@
-import { required } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
 import { readProviders, providersShippedRoots } from '@on.auto/providers';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { clockAt, manualTimer } from '@on.auto/tool-servers/testing';
 import { Function, Option, Result, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -80,7 +79,7 @@ function parametersAsked(
 }
 
 async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: WayOfConsent, registered: boolean) {
-  const theVendor = required(vendor);
+  const theVendor = Option.getOrThrow(Option.fromNullishOr(vendor));
   const fake = await servedAsTheVendor(theVendor);
   closing.push(fake.close);
   const h = harnessAtTheVendor(fake, theVendor, {
@@ -110,7 +109,13 @@ async function consentOf({ name, placeholders, issuer, oauthClient, vendor }: Wa
 }
 
 function consentExpectedOf({ name, scope, vendor }: WayOfConsent, source: string) {
-  const { asked = scope ?? null, resource, parameters = {}, endpointsAt, metadata } = required(vendor);
+  const {
+    asked = scope ?? null,
+    resource,
+    parameters = {},
+    endpointsAt,
+    metadata,
+  } = Option.getOrThrow(Option.fromNullishOr(vendor));
   return {
     provider: name,
     authorization_endpoint: endpointsAt?.authorization ?? '<the fake>/authorize',
@@ -214,8 +219,8 @@ const refusedByLinkedIn = {
 };
 
 async function connectedAtLinkedIn() {
-  const way = required(waysOfConsent.find(({ name }) => name === 'linkedin'));
-  const vendor = required(way.vendor);
+  const way = Option.getOrThrow(Option.fromNullishOr(waysOfConsent.find(({ name }) => name === 'linkedin')));
+  const vendor = Option.getOrThrow(Option.fromNullishOr(way.vendor));
   const fake = await servedAsTheVendor(vendor);
   closing.push(fake.close);
   const h = harnessAtTheVendor(fake, vendor, { providers: shipped, registeredIssuer: way.issuer });

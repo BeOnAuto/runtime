@@ -1,6 +1,6 @@
+import { memoryRecordedContent } from '@on.auto/content/testing';
 import { Clock, Effect, Layer, Result, Schema } from 'effect';
 
-import { memoryRecordedContent } from '../content/memory-content.ts';
 import {
   Conflict,
   Ledger,

@@ -1,5 +1,5 @@
-import { shippedFileName } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFileName } from '@on.auto/shipped-files';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { freshInstances, sandboxAnswers, sandboxModuleIn, sandboxShippedRoots } from '@on.auto/workflow-engine/dsl';
 import { handedFileIn } from '@on.auto/workflow-engine/job-loop';
 import type { CheckJob } from '@on.auto/workflow-engine/worker';

@@ -1,4 +1,4 @@
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 
 import { writtenOf, type ToolReference } from './tool-reference.ts';
 

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type { ShippedFiles } from '@on.auto/operations';
+import type { ShippedFiles } from '@on.auto/shipped-files';
 
 import { iconOnDark, iconOnLight } from './auto-logo.ts';
 import { fontFacesOf } from './fonts.ts';

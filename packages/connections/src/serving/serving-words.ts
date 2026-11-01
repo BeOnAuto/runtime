@@ -1,4 +1,4 @@
-import { listed } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
 
 import { variableUnset } from '../registry/registry-decisions.ts';
 

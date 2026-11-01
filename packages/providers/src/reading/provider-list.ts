@@ -1,7 +1,6 @@
-import { required } from '@on.auto/operations';
 import type { Issue } from '@on.auto/operations';
 import type { ShippedDocument } from '@on.auto/tool-servers';
-import { Order, Result } from 'effect';
+import { Option, Order, Result } from 'effect';
 
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress } from '../entry/templates.ts';
@@ -18,10 +17,10 @@ export interface ProviderList {
 
 export function addressOf(entry: ProviderEntry, documentServer?: string): string {
   if (entry.type === 'mcp') {
-    return required(entry.url);
+    return Option.getOrThrow(Option.fromNullishOr(entry.url));
   }
-  const document = required(entry.document);
-  return entry.base_url ?? (isAddress(document) ? document : required(documentServer));
+  const document = Option.getOrThrow(Option.fromNullishOr(entry.document));
+  return entry.base_url ?? (isAddress(document) ? document : Option.getOrThrow(Option.fromNullishOr(documentServer)));
 }
 
 export function documentServerOf({ entry, address }: Provider): string | undefined {

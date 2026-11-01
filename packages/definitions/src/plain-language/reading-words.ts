@@ -1,4 +1,4 @@
-import { counted, listed, plainNumber, quoted, type Noun } from '@on.auto/operations';
+import { counted, listed, plainNumber, quoted, type Noun } from '@on.auto/phrasing';
 
 import type { RunStatus } from '../reading/run-status.ts';
 import type { DefinitionWords } from './definition-words.ts';

@@ -1,12 +1,6 @@
-import {
-  sha256Of,
-  textOfContent,
-  textToKeep,
-  type PlaybookAddress,
-  type ContentToKeep,
-  type RecordedContent,
-} from '@on.auto/operations';
-import { answerOfAbout, generatedStream, octets, readThrough } from '@on.auto/operations/testing';
+import { sha256Of, textOfContent, textToKeep, type ContentToKeep, type RecordedContent } from '@on.auto/content';
+import { answerOfAbout, generatedStream, octets, readThrough } from '@on.auto/content/testing';
+import type { PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { inTurn, timed, write } from './stores.ts';

@@ -1,4 +1,5 @@
-import { InvalidInput, PlaybookContext, articled, capitalized, type Unavailable } from '@on.auto/operations';
+import { InvalidInput, PlaybookContext, type Unavailable } from '@on.auto/operations';
+import { articled, capitalized } from '@on.auto/phrasing';
 import { Effect, Order, Struct } from 'effect';
 
 import type { Capability, DefinitionSummary } from '../capability/capability.ts';

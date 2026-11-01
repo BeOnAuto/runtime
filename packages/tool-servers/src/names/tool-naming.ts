@@ -1,5 +1,6 @@
 import { servesPlaybook } from '@on.auto/config';
-import { capitalized, type PlaybookAddress } from '@on.auto/operations';
+import type { PlaybookAddress } from '@on.auto/operations';
+import { capitalized } from '@on.auto/phrasing';
 import { Result } from 'effect';
 
 import { ToolNotOffered } from '../access/tool-not-offered.ts';

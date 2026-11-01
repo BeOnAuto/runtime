@@ -13,7 +13,7 @@ import {
   type ShippedFile,
   type ShippedFiles,
   type ShippedRoots,
-} from '@on.auto/operations';
+} from '@on.auto/shipped-files';
 import { isPinnableUrl, shippedDocumentOf, type ShippedDocument } from '@on.auto/tool-servers';
 import { Data, Option, Result, Schema, SchemaIssue, type StandardSchema } from 'effect';
 
@@ -49,6 +49,8 @@ export function providersShippedRoots(): ShippedRoots {
 }
 
 export const shippedEntries: ShippedFile = { package: providersPackage, path: 'src/entries' };
+
+export const documentsBesideTheEntries: ShippedFile = shippedFileIn(shippedEntries, 'documents');
 
 const entryYaml: YamlKind = {
   noun: "a provider's entry",

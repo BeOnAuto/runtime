@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
+import { keptTextOf } from '@on.auto/content/testing';
 import { CallFetch } from '@on.auto/operations';
-import { keptTextOf } from '@on.auto/operations/testing';
 import { Effect, Option } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';

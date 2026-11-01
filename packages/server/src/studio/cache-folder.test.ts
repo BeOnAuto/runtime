@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { cacheFolderProblem } from '../index.ts';
+import { cacheFolderProblem } from './cache-folder.ts';
 
 function scratchDirectory(): string {
   const directory = mkdtempSync(join(tmpdir(), 'auto-runtime-cache-folder-'));

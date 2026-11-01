@@ -1,4 +1,4 @@
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import { describe, expect, it } from 'vitest';
 
 import { secretsOf } from '../bounds/secrets.ts';

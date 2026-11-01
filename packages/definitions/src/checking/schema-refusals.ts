@@ -5,7 +5,8 @@ import {
   type FormatName,
   type FoundIssue,
 } from '@on.auto/json-schema';
-import { articled, asSentence, InvalidInput, type Issue } from '@on.auto/operations';
+import { InvalidInput, type Issue } from '@on.auto/operations';
+import { articled, asSentence } from '@on.auto/phrasing';
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine';
 import { Effect, JsonPointer, type Schema } from 'effect';
 

@@ -1,4 +1,4 @@
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 import { Effect, Option, Redacted } from 'effect';
 import { afterEach, describe, expect, it, onTestFinished } from 'vitest';

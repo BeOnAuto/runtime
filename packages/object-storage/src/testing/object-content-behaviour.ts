@@ -1,14 +1,6 @@
-import { CreateMultipartUploadCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { notTheBytesOfItsDigest, randomUUIDv7, sha256Of } from '@on.auto/operations';
-import {
-  alpha,
-  deliveredBeforeFailing,
-  generated,
-  json,
-  present,
-  refusalOf,
-  resultOf,
-} from '@on.auto/operations/testing';
+import { notTheBytesOfItsDigest, sha256Of } from '@on.auto/content';
+import { alpha, deliveredBeforeFailing, generated, json, present, refusalOf, resultOf } from '@on.auto/content/testing';
+import { randomUUIDv7 } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { objectContentOn } from '../content/object-content.ts';
@@ -16,7 +8,7 @@ import { objectKeysOf } from '../location/object-keys.ts';
 import { objectStoreReached, ObjectStoreUnreachable } from '../s3/object-store-reached.ts';
 import { bucketOnS3 } from '../s3/s3-bucket.ts';
 import type { ObjectStoreEntry, ObjectStoreUnderTest } from './object-store-entry.ts';
-import { keysIn, openUploadsIn } from './test-object-store.ts';
+import { keysIn, multipartUploadBegun, openUploadsIn, uploadWritten } from './test-object-store.ts';
 
 const longAgo = '00000000-0000-7000-8000-000000000001';
 
@@ -56,15 +48,10 @@ function misfiledRead(entry: ObjectStoreEntry): void {
 
 async function uploadsBegun(store: ObjectStoreUnderTest, fresh: string): Promise<void> {
   const keys = objectKeysOf(store.location);
-  const { client, name } = store.bucket;
-  const uploaded = (uploadId: string) =>
-    client().send(new PutObjectCommand({ Bucket: name, Key: keys.upload(uploadId), Body: new Uint8Array(8) }));
-  const begun = (uploadId: string) =>
-    client().send(new CreateMultipartUploadCommand({ Bucket: name, Key: keys.upload(uploadId) }));
-  await uploaded(longAgo);
-  await uploaded(fresh);
-  await begun(longAgo);
-  await begun(fresh);
+  await uploadWritten(store.bucket, keys.upload(longAgo));
+  await uploadWritten(store.bucket, keys.upload(fresh));
+  await multipartUploadBegun(store.bucket, keys.upload(longAgo));
+  await multipartUploadBegun(store.bucket, keys.upload(fresh));
 }
 
 function uploadsSwept(entry: ObjectStoreEntry): void {

@@ -1,4 +1,4 @@
-import type { ContentStore } from '@on.auto/operations';
+import type { ContentStore } from '@on.auto/content';
 import { awsCredentialChainOf } from '@on.auto/outbound';
 import { Effect } from 'effect';
 

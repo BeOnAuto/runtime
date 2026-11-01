@@ -1,5 +1,5 @@
 import type { ParsedTemplate } from '@on.auto/definitions/template';
-import { alternatives, quoted } from '@on.auto/operations';
+import { alternatives, quoted } from '@on.auto/phrasing';
 import { unavailableInWords, type RequestCarrier, type ToolServer } from '@on.auto/tool-servers';
 
 import { forAnAgent } from '../tool-blocks/tool-block-schemas.ts';

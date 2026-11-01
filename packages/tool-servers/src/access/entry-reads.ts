@@ -1,4 +1,4 @@
-import { sha256Of, textToKeep, type RecordedContent } from '@on.auto/operations';
+import { sha256Of, textToKeep, type RecordedContent } from '@on.auto/content';
 import { Effect, type Redacted } from 'effect';
 
 import { secretsOfServers, type Secrets } from '../bounds/secrets.ts';

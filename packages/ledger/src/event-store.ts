@@ -1,6 +1,6 @@
 import type { SQL } from '@event-driven-io/dumbo';
+import type { ContentStore } from '@on.auto/content';
 import type {
-  ContentStore,
   Context,
   ProjectionAdvancer,
   ProjectionReader,

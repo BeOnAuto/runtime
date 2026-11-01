@@ -1,16 +1,16 @@
 import { SQL } from '@event-driven-io/dumbo';
 import {
   mostContentChunkBytes,
-  randomUUIDv7,
   requireExpected,
   takenInChunks,
   type ContentKept,
-  type ContentStore,
   type ContentRefused,
+  type ContentStore,
   type ContentToKeep,
   type RecordedContent,
   type Taken,
-} from '@on.auto/operations';
+} from '@on.auto/content';
+import { randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { StatementExecutor, TransactionalPool } from '../event-store.ts';

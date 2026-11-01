@@ -1,6 +1,6 @@
 import { S3ServiceException } from '@aws-sdk/client-s3';
-import { mostContentChunkBytes, sha256Of, textToKeep } from '@on.auto/operations';
-import { alpha, generated, generatedStream, octets, refusalOf } from '@on.auto/operations/testing';
+import { mostContentChunkBytes, sha256Of, textToKeep } from '@on.auto/content';
+import { alpha, generated, generatedStream, octets, refusalOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 

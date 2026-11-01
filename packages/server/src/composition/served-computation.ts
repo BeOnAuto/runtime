@@ -1,7 +1,7 @@
 import { computationBounds, makeComputationFunctionAdapter } from '@on.auto/computation';
 import type { Capability } from '@on.auto/definitions';
 import { checkedAtSave, handedWorkersWithChecks } from '@on.auto/definitions/check';
-import type { ShippedFiles } from '@on.auto/operations';
+import type { ShippedFiles } from '@on.auto/shipped-files';
 import { programPool, type CheckJob, type HandedWorkers, type ProgramPool } from '@on.auto/workflow-engine/dsl';
 import { Effect, Layer } from 'effect';
 

@@ -1,4 +1,5 @@
-import { defineCommand, quoted } from '@on.auto/operations';
+import { defineCommand } from '@on.auto/operations';
+import { quoted } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
 import { forgottenClientsOf, forgottenCredentialOf } from '../page/consent-asking.ts';

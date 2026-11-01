@@ -3,16 +3,15 @@ import {
   InvalidInput,
   PagingInputFields,
   PagingOutputFields,
-  counted,
   cursorOfParts,
   defaultPageLimit,
   defineQuery,
   partsOfCursor,
-  plainNumber,
   type ProjectedCondition,
   type ProjectedKeyedRow,
   type ProjectedValue,
 } from '@on.auto/operations';
+import { counted, plainNumber } from '@on.auto/phrasing';
 import { Effect, Option, Schema } from 'effect';
 
 import { readingKeyOf } from '../conversations/conversation-keys.ts';

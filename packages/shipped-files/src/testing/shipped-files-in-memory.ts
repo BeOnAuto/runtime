@@ -1,4 +1,4 @@
-import { shippedFileName, type ShippedFile, type ShippedFiles } from './shipped-files.ts';
+import { shippedFileName, type ShippedFile, type ShippedFiles } from '../shipped-files/shipped-files.ts';
 
 type Content = string | Readonly<Uint8Array>;
 

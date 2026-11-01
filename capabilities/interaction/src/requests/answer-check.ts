@@ -2,7 +2,8 @@ import { Buffer } from 'node:buffer';
 
 import { wordedIssuesOf } from '@on.auto/definitions';
 import { compileJsonSchema } from '@on.auto/json-schema';
-import { asSentence, type Issue } from '@on.auto/operations';
+import type { Issue } from '@on.auto/operations';
+import { asSentence } from '@on.auto/phrasing';
 import { Result, type Schema } from 'effect';
 
 import { interactionBounds } from '../run/run-bounds.ts';

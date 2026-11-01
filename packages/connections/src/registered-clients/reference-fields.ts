@@ -1,5 +1,5 @@
 import { referencedVariablesOf } from '@on.auto/config';
-import { listed } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 export const referenceHoldingFields = ['client_secret', 'private_key'] as const;

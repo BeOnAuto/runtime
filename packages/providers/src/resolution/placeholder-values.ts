@@ -1,6 +1,7 @@
 import { credentialProblems, placeholdersReplaced } from '@on.auto/config';
-import { required, alternatives, listed, type Issue } from '@on.auto/operations';
-import { JsonPointer, Result } from 'effect';
+import type { Issue } from '@on.auto/operations';
+import { alternatives, listed } from '@on.auto/phrasing';
+import { JsonPointer, Option, Result } from 'effect';
 
 import { isRequired, patternOf, type Choice, type Placeholder } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
@@ -32,9 +33,9 @@ function pointerOf(name: string): string {
 }
 
 function patternIssueOf(name: string, { pattern, example }: Placeholder, value: string): string | undefined {
-  const written = required(pattern);
-  if (!required(patternOf(written)).test(value)) {
-    return `Expected a value that matches ${written}, such as ${required(example)}`;
+  const written = Option.getOrThrow(Option.fromNullishOr(pattern));
+  if (!Option.getOrThrow(Option.fromNullishOr(patternOf(written))).test(value)) {
+    return `Expected a value that matches ${written}, such as ${Option.getOrThrow(Option.fromNullishOr(example))}`;
   }
   return credentialProblems(name, value, '', [name]).length > 0 ? heldCredential : undefined;
 }
@@ -99,7 +100,7 @@ function issuesOfEach(names: Iterable<string>, detail: string): readonly Issue[]
 function roundTripIssuesOf(template: string, markedText: string, markers: Markers, values: Values): readonly Issue[] {
   const parsed = new URL(markedText);
   const shown = (marker: string, name: string): string => {
-    const value = required(values.given.get(name));
+    const value = Option.getOrThrow(Option.fromNullishOr(values.given.get(name)));
     return parsed.hostname.includes(marker) ? value.toLowerCase() : value;
   };
   const expected = [...markers].reduce(
@@ -118,7 +119,10 @@ function fieldIssuesOf({ text: template }: TemplatedField, values: Values): read
   const { text, markers } = marked(template, (name) => values.placed.get(name));
   const { hostname } = new URL(text);
   const positioned = [...markers].flatMap(([marker, name]: readonly [string, string]) => {
-    const issue = positionIssueOf(required(values.given.get(name)), hostname.includes(marker));
+    const issue = positionIssueOf(
+      Option.getOrThrow(Option.fromNullishOr(values.given.get(name))),
+      hostname.includes(marker),
+    );
     return issue === undefined ? [] : [{ pointer: pointerOf(name), detail: issue }];
   });
   return positioned.length > 0 ? positioned : roundTripIssuesOf(template, text, markers, values);

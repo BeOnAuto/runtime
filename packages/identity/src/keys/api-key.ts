@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
-import { CallerIdentitySchema, sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
+import { CallerIdentitySchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { CredentialOrgSchema, localDeveloperId } from '../access/local-org.ts';

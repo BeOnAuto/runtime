@@ -1,4 +1,5 @@
-import { counted, type Noun, type RecordedOrder } from '@on.auto/operations';
+import type { RecordedOrder } from '@on.auto/operations';
+import { counted, type Noun } from '@on.auto/phrasing';
 
 interface Feed {
   readonly events: readonly unknown[];

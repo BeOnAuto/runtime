@@ -1,4 +1,4 @@
-import { alternatives } from '@on.auto/operations';
+import { alternatives } from '@on.auto/phrasing';
 import { Schema } from 'effect';
 
 import { isJsonObject } from './discovery-document.ts';

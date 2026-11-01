@@ -16,8 +16,8 @@ import {
   type Catalog,
   type Dispatcher,
   type DispatcherServices,
-  type ShippedFiles,
 } from '@on.auto/operations';
+import type { ShippedFiles } from '@on.auto/shipped-files';
 
 import { logMcpError } from '../logging/logging.ts';
 import { release } from './release.ts';

@@ -1,5 +1,5 @@
+import { sha256Of } from '@on.auto/content';
 import { standingRenderClock } from '@on.auto/definitions/testing';
-import { sha256Of } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import type { CorpusCase } from './rendering-corpus.ts';

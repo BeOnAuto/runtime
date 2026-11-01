@@ -1,4 +1,4 @@
-import { listed } from '@on.auto/operations';
+import { listed } from '@on.auto/phrasing';
 import { JsonPointer, Option, Schema } from 'effect';
 
 import { isJsonList, isJsonObject } from './discovery-document.ts';

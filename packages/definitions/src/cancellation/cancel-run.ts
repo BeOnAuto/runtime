@@ -1,13 +1,13 @@
-import { PlaybookReader, PlaybookWriter, capitalized, defineCommand } from '@on.auto/operations';
+import { PlaybookReader, PlaybookWriter, defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import { refusingBlankText, refusingForbiddenCharacters } from '../events/cloud-event.ts';
 import { commandMetadata } from '../operations/command-metadata.ts';
 import { RunIdInputField } from '../operations/definition-fields.ts';
-import { definitionWordsFor } from '../plain-language/definition-words.ts';
+import { cancellingWordsFor } from '../plain-language/run-words.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
-import { RunSchema, type Run } from '../runs/run.ts';
+import { RunSchema } from '../runs/run.ts';
 import { runAfterItsAttemptHere } from './run-cancels.ts';
 
 const mostReasonLength = 1024;
@@ -47,9 +47,7 @@ const cancelled = Effect.fnUntraced(function* (id: string, reason: string | unde
 });
 
 export function defineCancelRun(capabilities: readonly Capability[]) {
-  const words = definitionWordsFor(capabilities);
-  const cancelling = ({ type, name }: Pick<Run, 'type' | 'name'>) =>
-    `${capitalized(words.named(type, name))} is being cancelled: it ends as cancelled within a moment, unless it finishes first, and how it ended can be looked up then.`;
+  const cancelling = cancellingWordsFor(capabilities);
   return defineCommand('playbook', {
     name: 'cancel_run',
     title: 'Cancel run',

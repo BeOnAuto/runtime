@@ -1,4 +1,4 @@
-import type { StudioPage } from '@on.auto/operations/studio-links';
+import type { StudioPage } from '@on.auto/operations';
 
 export const defaultStudioOrigin = 'https://studio.on.auto';
 

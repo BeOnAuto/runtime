@@ -1,4 +1,4 @@
-import type { TakeChunk } from '@on.auto/operations';
+import type { TakeChunk } from '@on.auto/content';
 import { Effect, Function } from 'effect';
 
 import type { Bucket } from '../bucket/bucket.ts';

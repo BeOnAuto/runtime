@@ -1,4 +1,4 @@
-import type { RecordedContent } from '@on.auto/operations';
+import type { RecordedContent } from '@on.auto/content';
 import { Effect } from 'effect';
 import { afterEach } from 'vitest';
 

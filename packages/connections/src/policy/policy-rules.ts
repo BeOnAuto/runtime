@@ -1,5 +1,5 @@
 import { isSignedInPerson } from '@on.auto/identity';
-import { Forbidden, articled, listed, type CallerIdentity } from '@on.auto/operations';
+import { Forbidden, type CallerIdentity } from '@on.auto/operations';
 import {
   loopbackHostOf,
   operatorMayNameHost,
@@ -10,6 +10,7 @@ import {
   type Reaches,
   type Resolve,
 } from '@on.auto/outbound';
+import { articled, listed } from '@on.auto/phrasing';
 import { wayAddresses } from '@on.auto/providers';
 import { Effect } from 'effect';
 

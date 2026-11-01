@@ -3,9 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { clientIdWrittenOut } from '@on.auto/config';
-import { required } from '@on.auto/operations';
 import type { ServerSettings } from '@on.auto/tool-servers';
-import { Redacted } from 'effect';
+import { Option, Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { shippedProviders } from '../testing/servers/connected-servers.ts';
@@ -106,7 +105,9 @@ function headersOf(server: ServerSettings | undefined): Readonly<Record<string, 
   );
 }
 
-const github = required(shippedProviders.find(({ entry }) => entry.name === 'github')).entry;
+const github = Option.getOrThrow(
+  Option.fromNullishOr(shippedProviders.find(({ entry }) => entry.name === 'github')),
+).entry;
 
 describe('an entry of the settings file that names a provider', () => {
   it('is the server of a provider the runtime ships, its credential the reference it gives, placed where the way says', () => {

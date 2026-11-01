@@ -1,4 +1,4 @@
-import { alternatives } from '@on.auto/operations';
+import { alternatives } from '@on.auto/phrasing';
 import { isPinnableTemplate, pinnedTemplateShape } from '@on.auto/providers';
 import {
   isSameIssuer,

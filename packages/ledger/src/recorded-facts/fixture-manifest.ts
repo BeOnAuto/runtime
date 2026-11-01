@@ -1,8 +1,8 @@
-import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { sha256Of } from '@on.auto/content';
 import { Schema } from 'effect';
 
 const manifestName = 'recorded-facts.json';
@@ -52,7 +52,7 @@ export function keyOf({ root }: FixtureManifest, path: string): string {
 }
 
 export function hashOf(path: string): string {
-  return createHash('sha256').update(readFileSync(path)).digest('hex');
+  return sha256Of(readFileSync(path));
 }
 
 function entriesKept({ path }: FixtureManifest): ManifestEntries {

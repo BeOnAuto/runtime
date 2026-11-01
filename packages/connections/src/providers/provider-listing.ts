@@ -1,6 +1,6 @@
 import { placeholdersIn, placeholdersReplaced } from '@on.auto/config';
-import { listed } from '@on.auto/operations';
 import { reservedHostKindOf } from '@on.auto/outbound';
+import { listed } from '@on.auto/phrasing';
 import {
   hostAlternativesOf,
   operatorVariablesOf,

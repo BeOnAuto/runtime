@@ -1,6 +1,6 @@
 import { PutObjectCommand, S3ServiceException } from '@aws-sdk/client-s3';
-import { sha256Of, textToKeep } from '@on.auto/operations';
-import { alpha, generated, octets, resultOf } from '@on.auto/operations/testing';
+import { sha256Of, textToKeep } from '@on.auto/content';
+import { alpha, generated, octets, resultOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 

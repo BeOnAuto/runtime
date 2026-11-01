@@ -1,5 +1,5 @@
 import { isFormatName } from '@on.auto/json-schema';
-import { alternatives } from '@on.auto/operations';
+import { alternatives } from '@on.auto/phrasing';
 import type { Schema } from 'effect';
 
 import { firstCharacters } from '../plain-language/characters.ts';

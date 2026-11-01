@@ -6,12 +6,9 @@ import {
   UnansweredKindSchema,
   RejectionBecauseSchema,
   UnavailableKindSchema,
-  asSentence,
-  capitalized,
-  counted,
   explanationOf,
-  quoted,
 } from '@on.auto/operations';
+import { asSentence, capitalized, counted, quoted } from '@on.auto/phrasing';
 import type { InputReceipt, RunLogEvent, Step } from '@on.auto/workflow-engine';
 import { Option, Schema } from 'effect';
 

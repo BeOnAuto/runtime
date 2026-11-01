@@ -7,8 +7,8 @@ import {
   withMcpSession,
   type LinkOpening,
 } from '@on.auto/api/testing';
+import { sha256Of } from '@on.auto/content';
 import { localDeveloper } from '@on.auto/identity/testing';
-import { sha256Of } from '@on.auto/operations';
 import { serveFakeMcp, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';

@@ -2,7 +2,7 @@ import { chmodSync, existsSync, readFileSync, statSync, writeFileSync } from 'no
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 

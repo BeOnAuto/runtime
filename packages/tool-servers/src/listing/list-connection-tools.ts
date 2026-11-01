@@ -4,14 +4,12 @@ import {
   OrgContext,
   PagingInputFields,
   PagingOutputFields,
-  counted,
   cursorOfParts,
   defaultPageLimit,
   defineQuery,
   partsOfCursor,
-  quoted,
-  type Noun,
 } from '@on.auto/operations';
+import { counted, quoted, type Noun } from '@on.auto/phrasing';
 import { Effect, Option, Order, Schema } from 'effect';
 
 import type { ToolAnnotations } from '../bounds/tool-results.ts';

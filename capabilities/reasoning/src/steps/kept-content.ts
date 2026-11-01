@@ -1,4 +1,5 @@
-import { textOfContent, textToKeep, type PlaybookAddress, type RecordedContent } from '@on.auto/operations';
+import { textOfContent, textToKeep, type RecordedContent } from '@on.auto/content';
+import type { PlaybookAddress } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 export type ContentStore = Pick<RecordedContent, 'put' | 'get'>;

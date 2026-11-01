@@ -1,7 +1,7 @@
 import type { LedgerChores, LedgerConnection } from '@on.auto/ledger';
 import type { LicensedFeatures, RuntimeLicense } from '@on.auto/meter';
 import type { DispatcherServices } from '@on.auto/operations';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 
 import { exitDeadlineMs, shutdownTimeoutMs } from '../lifecycle/shutdown.ts';
 import type { ServerOptions } from './server-options.ts';

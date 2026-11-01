@@ -1,6 +1,6 @@
 import { playbookOwnNamesOf, type PlaybookOwnNames } from '@on.auto/definitions';
 import { echo } from '@on.auto/definitions/testing';
-import { shippedFilesOnDisk } from '@on.auto/operations/shipped-files-on-disk';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import {
   reusedSandbox,
   type MachineOptions,

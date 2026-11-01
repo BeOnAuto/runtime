@@ -1,12 +1,12 @@
 import type { Environment } from '@on.auto/config';
 import {
   accessModeOf,
+  namesTheLoopback,
   type ApiKey,
   type DeclaredAccessMode,
   type SignInSettings,
   type StudioSettings,
 } from '@on.auto/identity';
-import { namesTheLoopback } from '@on.auto/operations';
 import type { AutoClients, ReturnKind } from '@on.auto/tool-servers';
 import { Config, ConfigProvider, Effect, Option } from 'effect';
 

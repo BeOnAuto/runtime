@@ -3,6 +3,8 @@ import {
   autoIdentityService,
   IssuerKeySetSchema,
   listensOnlyOnLoopback,
+  loopbackNames,
+  namesTheLoopback,
   readApiKeys,
   type ApiKey,
   type DeclaredAccessMode,
@@ -10,7 +12,7 @@ import {
   type SignInSettings,
   type StudioSettings,
 } from '@on.auto/identity';
-import { alternatives, loopbackNames, namesTheLoopback } from '@on.auto/operations';
+import { alternatives } from '@on.auto/phrasing';
 import { Config, ConfigProvider, Effect, Option, Schema } from 'effect';
 
 import type { LogFormat, LogLevelSetting } from '../logging/log-formats.ts';

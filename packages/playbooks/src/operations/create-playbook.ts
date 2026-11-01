@@ -1,5 +1,5 @@
-import { Caller, defineCommand, quoted, recordedCallerOf } from '@on.auto/operations';
-import { withStudioLink } from '@on.auto/operations/studio-links';
+import { Caller, defineCommand, recordedCallerOf, withStudioLink } from '@on.auto/operations';
+import { quoted } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
 import { playbookNamed, purposeOf } from '../plain-language/playbook-words.ts';

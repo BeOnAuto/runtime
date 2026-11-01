@@ -1,4 +1,5 @@
-import { capitalized, explanationOf, type ExplainedRejection, type PlainLanguage } from '@on.auto/operations';
+import { explanationOf, type ExplainedRejection, type PlainLanguage } from '@on.auto/operations';
+import { capitalized } from '@on.auto/phrasing';
 
 import type { Capability } from '../capability/capability.ts';
 import type { RunDetail } from '../runs/run.ts';
@@ -68,6 +69,12 @@ export function runWordsFor(capabilities: readonly Capability[]): (run: Describe
     const capability = capabilities.find(({ type }) => type === run.type);
     return wordsByStatus[run.status]({ named, capability, moment }, run);
   };
+}
+
+export function cancellingWordsFor(capabilities: readonly Capability[]): (run: DefinitionAddress) => string {
+  const words = definitionWordsFor(capabilities);
+  return ({ type, name }) =>
+    `${capitalized(words.named(type, name))} is being cancelled: it ends as cancelled within a moment, unless it finishes first, and how it ended can be looked up then.`;
 }
 
 export function runPlainLanguage(capabilities: readonly Capability[]): PlainLanguage<DefinitionAddress, DescribedRun> {

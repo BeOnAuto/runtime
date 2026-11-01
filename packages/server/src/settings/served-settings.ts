@@ -1,7 +1,7 @@
 import type { Environment, FileUse } from '@on.auto/config';
 import { makeProviderResolver } from '@on.auto/connections';
-import type { ShippedFiles } from '@on.auto/operations';
 import { readProviders, type ProviderList } from '@on.auto/providers';
+import type { ShippedFiles } from '@on.auto/shipped-files';
 import { Effect, Result } from 'effect';
 
 import {

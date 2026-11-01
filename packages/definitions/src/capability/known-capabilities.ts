@@ -1,4 +1,5 @@
-import { NotFound, alternatives, articled, type JsonSchemaDocument, type RouteRegistration } from '@on.auto/operations';
+import { NotFound, type JsonSchemaDocument, type RouteRegistration } from '@on.auto/operations';
+import { alternatives, articled } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
 import { isDefinitionTypeName, type Capability } from './capability.ts';

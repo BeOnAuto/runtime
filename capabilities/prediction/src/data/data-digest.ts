@@ -1,4 +1,4 @@
-import { sha256Of } from '@on.auto/operations';
+import { sha256Of } from '@on.auto/content';
 import type { Schema } from 'effect';
 
 import { isMapping } from '../document/checked-parts.ts';
