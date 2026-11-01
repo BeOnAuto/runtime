@@ -2,7 +2,7 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { consentClientWith, everyHost, failingAt, hostOf } from '../testing/index.ts';
+import { consentClientWith, cuttingTimeouts, everyHost, failingAt, hostOf } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import { serveFakeMcp, servedForConsent } from '../testing/served-fakes.ts';
 import type { ConsentClientOptions } from './consent-client.ts';
@@ -61,14 +61,16 @@ describe('a server given by hand whose answer names no protected resource metada
   it('is unanswered where its well-known paths answer a server error, fail on the network or do not answer in time', async () => {
     const bearing = await kept(serveFakeMcp({ bearer: 'files-token' }));
     const silent = await kept(serveOnLoopback(silentAtTheWellKnownPaths));
-    expect([
-      await refused(bearing.url, { fetch: failingAt(wellKnownPath) }),
-      await refused(bearing.url, { fetch: unreachableAtTheWellKnownPaths }),
-      await refused(`${silent.origin}/mcp`, { requestMs: 50 }),
-    ]).toMatchObject([
+    const { requestTimeout, cutWhen } = cuttingTimeouts();
+    const failing = await refused(bearing.url, { fetch: failingAt(wellKnownPath) });
+    const unreachable = await refused(bearing.url, { fetch: unreachableAtTheWellKnownPaths });
+    const stalled = refused(`${silent.origin}/mcp`, { requestTimeout });
+    await cutWhen(() => silent.heard().some(({ path }) => path === wellKnownPath));
+
+    expect([failing, unreachable, await stalled]).toMatchObject([
       unreadAt(hostOf(bearing), { status: 500, retryAfterMs: null }),
       unreadAt(hostOf(bearing), { failed: 'failing' }),
-      { refused: 'unanswered', call: { host: hostOf(silent), answer: { failed: 'timed_out' } } },
+      unreadAt(hostOf(silent), { failed: 'timed_out' }),
     ]);
     expect(silent.heard().map(({ path }) => path)).toEqual(['/mcp', wellKnownPath]);
   });

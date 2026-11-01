@@ -15,9 +15,11 @@ const wordType = 'application/vnd.openxmlformats-officedocument.wordprocessingml
 const outOfMemory =
   'It took more memory to read than a process that reads a document may take, so its reading was stopped';
 
-const theLongestRead = 120_000;
+const theLongestATimerWaitsMs = 2_147_483_647;
 
-const unbounded = { deadlineMs: 30_000, signal: undefined, textBytes: 1000 };
+const longerThanTheBombTakesOnABusyMachineMs = 600_000;
+
+const unbounded = { deadlineMs: theLongestATimerWaitsMs, signal: undefined, textBytes: 1000 };
 
 const pools: ProcessPool[] = [];
 
@@ -65,17 +67,14 @@ describe('a document read in a process of the pool that would take more memory t
       const read = documentsReadIn(poolForTheTest());
       const bomb = wordDocumentRepeating('a', 1_800_000);
 
-      const stopped = await read(
-        { bytes: bomb, mediaType: wordType, name: undefined },
-        { ...unbounded, deadlineMs: theLongestRead },
-      );
+      const stopped = await read({ bytes: bomb, mediaType: wordType, name: undefined }, unbounded);
       const next = await read(termsPdf(), unbounded);
 
       expect(bomb.byteLength).toBeLessThan(250_000);
       expect(stopped).toEqual({ read: false, because: outOfMemory, mediaType: wordType });
       expect(next).toMatchObject({ read: true });
     },
-    theLongestRead + 30_000,
+    longerThanTheBombTakesOnABusyMachineMs,
   );
 
   it('is stopped as out of memory where a reader meets an allocation that fails, never refused as broken', async () => {
