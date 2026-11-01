@@ -537,7 +537,8 @@ jobs:
             --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
           read_playbook before-restart.json
           grep --quiet '"id":"smoke"' before-restart.json
-          cmp created.json before-restart.json
+          test "$(jq --compact-output 'del(.studio)' created.json)" = "$(jq --compact-output . before-restart.json)"
+          test "$(jq --raw-output .studio created.json)" = 'https://studio.on.auto/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=smoke'
           stop_server first
           start_server second
           read_playbook after-restart.json
@@ -585,7 +586,7 @@ jobs:
             --header "authorization: Bearer $key" --header 'content-type: application/json' \
             --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
           read_playbook before-restart.json
-          cmp created.json before-restart.json
+          test "$(jq --compact-output 'del(.studio)' created.json)" = "$(jq --compact-output . before-restart.json)"
           docker stop ledger
           test "$(docker inspect ledger --format '{{.State.ExitCode}}')" = 0
           docker start ledger
@@ -704,7 +705,7 @@ jobs:
           }
           playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
           source="$(printf '%s\n' '---' 'model: anthropic/claude-sonnet-4-5' '---' 'Say hello to {{ input.name }}.')"
-          definition="$(jq --null-input --arg source "$source" '{name: "hello", source: $source}')"
+          definition="$(jq --null-input --arg source "$source" '{name: "hello", source: $source, diagram: "none"}')"
           test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
           test "$(call created.json --data "$definition" "$playbook/definitions/reasoning")" = 201
           test "$(call read.json "$playbook/definitions/reasoning/hello")" = 200
@@ -742,7 +743,7 @@ jobs:
             "  throw new Error('no rows');" '}')"
           test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
           for name in total raising; do
-            definition="$(jq --null-input --arg name "$name" --arg source "${!name}" '{name: $name, source: $source}')"
+            definition="$(jq --null-input --arg name "$name" --arg source "${!name}" '{name: $name, source: $source, diagram: "none"}')"
             test "$(call created.json --data "$definition" "$playbook/definitions/computation")" = 201
           done
           test "$(call totalled.json --data '{"input":{"rows":[{"cost_cents":1050},{"cost_cents":2075}]}}' \
@@ -776,7 +777,7 @@ jobs:
           source="$(printf '%s\n' '---' "to: '{{ input.owner }}'" 'expires: P1D' 'deliver: agent' 'output:' \
             '  schema: {type: object, required: [choice], properties: {choice: {type: string, enum: [approve, reject]}}}' \
             '---' 'Approve the brief for {{ input.campaign }}?')"
-          definition="$(jq --null-input --arg source "$source" '{name: "approve-brief", source: $source}')"
+          definition="$(jq --null-input --arg source "$source" '{name: "approve-brief", source: $source, diagram: "none"}')"
           test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
           test "$(call created.json --data "$definition" "$playbook/definitions/interaction")" = 201
           test "$(call asked.json --data '{"input":{"owner":"ada","campaign":"Spring"}}' \
@@ -823,7 +824,7 @@ jobs:
           source="$(printf '%s\n' '---' 'predicts:' '  target: visits' '  period: day' '  horizons: [1, 2]' \
             '  unit: visits' 'data:' '  events:' '    - type: visit.made' '  time: event' '  series: /store' \
             '  target: { of: /visits, as: sum }' '  window: 24' '---')"
-          definition="$(jq --null-input --arg source "$source" '{name: "daily-visits", source: $source}')"
+          definition="$(jq --null-input --arg source "$source" '{name: "daily-visits", source: $source, diagram: "none"}')"
           test "$(call playbook.json --data '{"playbook":"smoke","name":"Smoke test"}' http://127.0.0.1:5555/v1/orgs/demo/playbooks)" = 201
           test "$(call created.json --data "$definition" "$playbook/definitions/prediction")" = 201
           published=0
@@ -945,7 +946,7 @@ jobs:
           }
           playbook=http://127.0.0.1:5555/v1/orgs/demo/playbooks/smoke
           source="$(printf '%s\n' '---' 'model: anthropic/claude-sonnet-4-5' '---' 'Say hello to {{ input.name }}.')"
-          definition="$(jq --null-input --arg source "$source" '{name: "hello", source: $source}')"
+          definition="$(jq --null-input --arg source "$source" '{name: "hello", source: $source, diagram: "none"}')"
           test "$(call created.json --data "$definition" "$playbook/definitions/reasoning")" = 201
           test "$(call ran.json --data '{"input":{"name":"CI"}}' "$playbook/definitions/reasoning/hello/run")" = 503
           test "$(call analytics.json "$playbook/analytics")" = 200
@@ -978,7 +979,7 @@ jobs:
           source="$(printf '%s\n' '---' 'language: typescript' 'source:' '  events:' '    - type: run_succeeded' \
             '      subject: workflow/greet' 'view:' '  initial: []' '---' 'export function fold(view: any, event: any): any {' \
             '  return [...view, event.data.output?.greeting ?? "none"];' '}')"
-          definition="$(jq --null-input --arg source "$source" '{name: "greetings", source: $source}')"
+          definition="$(jq --null-input --arg source "$source" '{name: "greetings", source: $source, diagram: "none"}')"
           test "$(call created.json --data "$definition" "$playbook/definitions/recall")" = 201
           for attempt in $(seq 1 30); do
             test "$(call standing.json "$playbook/definitions/recall/greetings")" = 200
@@ -1097,7 +1098,7 @@ jobs:
             'export default function (input: any): Output {' \
             '  const total_cents = input.rows.reduce((sum: number, row: any) => sum + row.cost_cents, 0);' \
             '  return { total_cents, rows: input.rows.length };' '}')"
-          test "$(call created.json --data "$(jq --null-input --arg source "$total" '{name: "total", source: $source}')" \
+          test "$(call created.json --data "$(jq --null-input --arg source "$total" '{name: "total", source: $source, diagram: "none"}')" \
             "$playbook/definitions/computation")" = 201
           test "$(call totalled.json --data '{"input":{"rows":[{"cost_cents":1050},{"cost_cents":2075}]}}' \
             "$playbook/definitions/computation/total/run")" = 200
