@@ -1,5 +1,7 @@
+import { functionTypeOrder } from '@on.auto/definitions';
 import { isKeyHolder } from '@on.auto/identity';
 import type { CallerIdentity } from '@on.auto/operations';
+import { listed as listedInWords } from '@on.auto/phrasing';
 
 export type McpEndpoint = 'org' | 'playbook' | 'own org';
 
@@ -35,24 +37,62 @@ type Sentences = (serving: Serving) => readonly string[];
 
 const reasoningFunctionType = 'reasoning';
 
+const workflowType = 'workflow';
+
 const whatIsAskedOfAPlaybook = 'What the person asks the playbook to do is a workflow, its functions the steps';
 
-const purposesByType: Readonly<Record<string, Sentences>> = {
-  reasoning: () => ['A reasoning function has a prompt and calls a language model.'],
-  interaction: () => ['An interaction function asks a system and answers at once, or a person and answers started.'],
-  computation: () => ['A computation function runs a program: same input, same output.'],
-  recall: () => [
-    'Recall retrieves run results, definitions and events, never run inputs or tool calls.',
-    'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.',
-  ],
-  prediction: () => ['A prediction function forecasts a series from its own history, with a range.'],
-  workflow: ({ listed }) => [
-    'A workflow waits for input and can start on a schedule or event.',
-    listed('run_definition')
-      ? `${whatIsAskedOfAPlaybook}; run the workflow and show its result.`
-      : `${whatIsAskedOfAPlaybook}.`,
-  ],
+const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
+  reasoning: 'prompts a model',
+  interaction: 'exchanges information',
+  prediction: 'forecasts from history',
+  recall: 'retrieves run results',
+  computation: 'runs a program',
+  lookup: 'obtains information',
+  memory: 'remembers and recalls',
+  generation: 'produces assets',
 };
+
+const whatAFunctionTypeAlsoNeedsSaid: Readonly<Record<string, string>> = {
+  lookup: 'A lookup function fetches and a reasoning function interprets, never fetching its own input.',
+  recall: 'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.',
+  memory: 'Remember what the person wants kept in a memory function, not your notes.',
+};
+
+const familyOrder: readonly string[] = functionTypeOrder;
+
+function familyRankOf({ type }: DefinitionType): number {
+  const rank = familyOrder.indexOf(type);
+  return rank === -1 ? familyOrder.length : rank;
+}
+
+function inFamilyOrder(definitionTypes: readonly DefinitionType[]): readonly DefinitionType[] {
+  return definitionTypes.toSorted((one, other) => familyRankOf(one) - familyRankOf(other));
+}
+
+function functionTypesInWords(definitionTypes: readonly DefinitionType[]): readonly string[] {
+  return definitionTypes.flatMap(({ type }) => {
+    const purpose = purposeOfEachFunctionType[type];
+    return purpose === undefined ? [] : [`${type} ${purpose}`];
+  });
+}
+
+const functionTypes: Sentences = ({ definitionTypes }) => {
+  const inWords = functionTypesInWords(inFamilyOrder(definitionTypes));
+  return inWords.length === 0 ? [] : [`Its function types: ${listedInWords(inWords)}.`];
+};
+
+const whatTheFunctionTypesAlsoNeedSaid: Sentences = ({ definitionTypes }) =>
+  inFamilyOrder(definitionTypes).flatMap(({ type }) => whatAFunctionTypeAlsoNeedsSaid[type] ?? []);
+
+const workflows: Sentences = ({ definitionTypes, listed }) =>
+  definitionTypes.some(({ type }) => type === workflowType)
+    ? [
+        'A workflow waits for input and can start on a schedule or event.',
+        listed('run_definition')
+          ? `${whatIsAskedOfAPlaybook}; run the workflow and show its result.`
+          : `${whatIsAskedOfAPlaybook}.`,
+      ]
+    : [];
 
 export const whatThisServerIsFor = [
   'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer.',
@@ -86,9 +126,6 @@ const whatTheConnectionDoes: Readonly<Record<McpEndpoint, (serving: Serving) => 
   playbook: () => 'This connection acts inside one playbook.',
 };
 
-const purposes: Sentences = (serving) =>
-  serving.definitionTypes.flatMap(({ type }) => purposesByType[type]?.(serving) ?? []);
-
 const connection: Sentences = (serving) => [whatTheConnectionDoes[serving.endpoint](serving)];
 
 const modelsBeforeWriting: Sentences = ({ reasoning, listed }) =>
@@ -117,7 +154,9 @@ const answeringWhatRunsWaitOn: Sentences = ({ listed }) =>
 const closing: Sentences = () => [howToAnswer, whenAToolCannot];
 
 const orientation: readonly Sentences[] = [
-  purposes,
+  functionTypes,
+  whatTheFunctionTypesAlsoNeedSaid,
+  workflows,
   connection,
   modelsBeforeWriting,
   guides,

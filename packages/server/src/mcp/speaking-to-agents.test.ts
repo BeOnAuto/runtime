@@ -150,12 +150,12 @@ async function rememberedOverMcp(session: McpSession) {
 }
 
 describe('episode 4: asked to make the playbook remember what it posted today', () => {
-  it('finds what a recall function folds and never folds, and a recipe that says the function must answer what it posted', async () => {
+  it('finds what a recall function is for, and a recipe that says the function must answer what it posted', async () => {
     const prompt = Schema.decodeUnknownSync(PromptSchema)(
       await onMcp((session) => session.getPrompt('remember', { what: 'what it posted today' })),
     );
 
-    expect(sentenceNaming(surfaces.instructions, 'Recall retrieves')).toContain('never run inputs or tool calls.');
+    expect(sentenceNaming(surfaces.instructions, 'Its function types')).toContain('recall retrieves run results');
     expect(String(prompt.messages[0]?.content.text)).toContain(
       'a function whose job is to post must answer what it posted.',
     );

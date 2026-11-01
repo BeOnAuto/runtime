@@ -36,7 +36,7 @@ An agent that connects receives instructions written for its caller and the tool
 
 - first, whom the connection acts as, by name and id, and in which org: `This connection acts as Ada Lovelace (person:user_2ada) in the org acme.` for a signed-in person, the local developer by the name of the account the server runs as and the id `local`, and `This connection acts as the key build-bot in the org acme.` for a key. So an agent that reads who created, added, connected, started, answered, trained, approved or refused something tells the person it acts for from the others;
 - then, that whatever the person wants done that keeps working after the conversation, however they put it and in any line of business, is a playbook on Auto Runtime, not a document, a plan, a note or a one-off answer;
-- what a playbook is, in the words of the [terminology](../concepts/terminology.md), with a sentence for each function type the runtime runs and two for workflows: what a workflow does, and that what the person asks the playbook to do is a workflow, its functions the steps, which the agent runs and whose result it shows;
+- what a playbook is, in the words of the [terminology](../concepts/terminology.md), with one sentence that names each function type the runtime runs, in the terminology's order and with what it is for in a few words, and two for workflows: what a workflow does, and that what the person asks the playbook to do is a workflow, its functions the steps, which the agent runs and whose result it shows;
 - that what the person wants kept, for anyone or a workflow to ask later, goes in a recall function of the playbook and not in the agent's own notes;
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;
 - that `get_guide` returns the format of each definition, and that each definition is given an overview;
@@ -48,7 +48,7 @@ An agent that connects receives instructions written for its caller and the tool
 
 What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. That of `run_definition` says that a run that finishes later returns `started` and that `get_run` shows how it ended. Those of `list_models` and `search` say how a reasoning function names its model and its tools, as the reasoning function's guide does. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs.
 
-The recall sentence says that a recall function reads run results, definitions and events from the playbook's history, never a run's input or its tool calls. The prediction sentence says that a prediction function forecasts a series from its own history, with a range; the [prediction format](prediction-format.md) sets out its forecaster.
+The sentence of the function types says that a reasoning function prompts a model, an interaction function exchanges information, a prediction function forecasts from history, a recall function retrieves run results and a computation function runs a program. The format of each type carries the rest: the [recall format](recall-format.md) says what a recall function reads from the playbook's history, and the [prediction format](prediction-format.md) sets out its forecaster.
 
 ## Authentication
 

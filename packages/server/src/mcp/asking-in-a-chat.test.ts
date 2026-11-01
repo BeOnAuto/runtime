@@ -118,11 +118,11 @@ async function askedWhereNoToolServerIs(session: McpSession) {
 }
 
 describe('episode 9: asked to send the person a draft in the chat and take their approval', () => {
-  it('reads the interaction sentence, calls the tool that sends and the tool that reads, and saves one interaction function', async () => {
+  it('reads what an interaction function is for, calls the tool that sends and the tool that reads, and saves one interaction function', async () => {
     const seen = await meetings.onMcp(askedToSendADraft);
 
-    expect(sentenceNaming(meetings.surfaces.instructions, 'An interaction function')).toBe(
-      'An interaction function asks a system and answers at once, or a person and answers started.',
+    expect(sentenceNaming(meetings.surfaces.instructions, 'Its function types')).toContain(
+      'interaction exchanges information',
     );
     expect([seen.sent.structuredContent, seen.read.structuredContent]).toMatchObject([
       { outcome: 'result', text: namingTheMessage },
@@ -183,11 +183,11 @@ async function askedForTheRepliesOfAThread(session: McpSession) {
 }
 
 describe('episode 10: asked to put the replies of a thread into the weekly summary', () => {
-  it('reads the interaction sentence and the give-tools sentence, calls the tool, reads its answer, and saves one interaction function that calls it', async () => {
+  it('reads what an interaction function is for and the give-tools sentence, calls the tool, reads its answer, and saves one interaction function that calls it', async () => {
     const seen = await meetings.onMcp(askedForTheRepliesOfAThread);
 
-    expect(sentenceNaming(meetings.surfaces.instructions, 'An interaction function')).toBe(
-      'An interaction function asks a system and answers at once, or a person and answers started.',
+    expect(sentenceNaming(meetings.surfaces.instructions, 'Its function types')).toContain(
+      'interaction exchanges information',
     );
     expect(seen.recipe).toContain(
       "To read or act on a system, write an interaction function that calls the connection's tool with `call` instead",

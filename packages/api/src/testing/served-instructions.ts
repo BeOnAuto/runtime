@@ -76,6 +76,9 @@ export const definitionTypes: readonly DefinitionType[] = [
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];
 
+export const functionTypesSentence =
+  'Its function types: reasoning prompts a model, interaction exchanges information, prediction forecasts from history, recall retrieves run results, and computation runs a program.';
+
 export const recipes: readonly RecipeCalls[] = [
   {
     name: 'first-playbook',
