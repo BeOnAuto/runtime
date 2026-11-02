@@ -1,4 +1,4 @@
-import type { DocumentedOperation, ListedTool } from '@on.auto/api/testing';
+import { withEveryArgumentTyped, type DocumentedOperation, type ListedTool } from '@on.auto/api/testing';
 import { Schema } from 'effect';
 
 type JsonObject = Readonly<Record<string, unknown>>;
@@ -74,14 +74,19 @@ function fieldsIn(schema: JsonObject): readonly InputField[] {
   }));
 }
 
+function typedAsAnArgument(name: string, schema: unknown): unknown {
+  const { properties = {} } = objectOf(withEveryArgumentTyped({ properties: { [name]: schema } }));
+  return properties[name];
+}
+
 export function documentedInputOf(described: DocumentedOperation): unknown {
   if (methodsWithoutABody.has(described.method)) {
     return namedParametersOf(described)
       .filter((parameter) => parameter.in === 'query')
-      .map(({ name, required, schema }) => ({ name, required, schema }));
+      .map(({ name, required, schema }) => ({ name, required, schema: typedAsAnArgument(name, schema) }));
   }
   const { schema } = jsonBodyOf(described.operation.requestBody).content['application/json'];
-  return withoutKeywords(schema, ['$id', '$defs']);
+  return withEveryArgumentTyped(withoutKeywords(schema, ['$id', '$defs']));
 }
 
 export function inputOfToolsOf(described: DocumentedOperation, tools: readonly ListedTool[]): readonly unknown[] {
