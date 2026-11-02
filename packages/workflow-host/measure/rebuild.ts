@@ -8,7 +8,7 @@ import { ledgerConnectedOn, type DatabaseSettings } from '../src/ledger-testing/
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
 import { reviewsFold } from '../src/views-testing/campaign-reviews.ts';
-import { measuredViewOf, measuredViews, measuringPool, recallContentOf } from './measured-views.ts';
+import { measuredViewOf, measuredViews, measuringPool, viewContentOf } from './measured-views.ts';
 
 export interface Rebuild {
   readonly events: number;
@@ -61,16 +61,16 @@ async function recorded(database: HostDatabase, events: number): Promise<void> {
   const context = {
     by: 'acme-admin',
     at: '2026-10-06T09:00:00.000Z',
-    definitionType: 'recall',
+    definitionType: 'view',
     definitionName: 'reviews',
     definitionVersion: 1,
   };
   await database.store.append(
-    `${playbook}definitions/recall`,
+    `${playbook}definitions/view`,
     [
       {
         type: 'definition_created',
-        data: { content: recallContentOf('reviews', details), created_by: { id: 'acme-admin', name: 'acme-admin' } },
+        data: { content: viewContentOf('reviews', details), created_by: { id: 'acme-admin', name: 'acme-admin' } },
       },
     ],
     { expectedVersion: 0, context },
@@ -89,7 +89,7 @@ function counted(database: HostDatabase): Counted {
     database: {
       ...database,
       write: (statement) => {
-        counts.writes += statement.strings[0]?.startsWith('UPDATE recall_views SET view') === true ? 1 : 0;
+        counts.writes += statement.strings[0]?.startsWith('UPDATE page_views SET view') === true ? 1 : 0;
         return database.write(statement);
       },
       store: {

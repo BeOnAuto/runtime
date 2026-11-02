@@ -6,7 +6,7 @@ A playbook contains one brain and its workflows. The brain is the playbook's col
 
 ## Capabilities and resources
 
-There are seven capabilities: coordination, reasoning, lookup, interaction, prediction, recall and computation. A workflow expresses coordination. Each of the other six has a function type, listed in this order:
+There are six capabilities: coordination, reasoning, lookup, interaction, prediction and computation. A workflow expresses coordination. Each of the other five has a function type, listed in this order:
 
 | Capability   | Resource someone defines | Category                |
 | ------------ | ------------------------ | ----------------------- |
@@ -15,7 +15,6 @@ There are seven capabilities: coordination, reasoning, lookup, interaction, pred
 | Lookup       | Lookup function          | Functions → Lookup      |
 | Interaction  | Interaction function     | Functions → Interaction |
 | Prediction   | Prediction function      | Functions → Prediction  |
-| Recall       | Recall function          | Functions → Recall      |
 | Computation  | Computation function     | Functions → Computation |
 
 What each function type is for:
@@ -26,7 +25,6 @@ What each function type is for:
 | Lookup      | Obtain information that already exists outside the playbook, through one tool that only reads.                  |
 | Interaction | Exchange information with people or systems.                                                                    |
 | Prediction  | Predict a quantity from the playbook's own history, with a likely range.                                        |
-| Recall      | Answer from what the playbook keeps of its own history: its memory, not an agent's own notes.                   |
 | Computation | Run a TypeScript program to calculate or transform data exactly.                                                |
 
 Skill references and a separately managed tool library are still planned.
@@ -135,9 +133,9 @@ A prediction function, its dataset and the prediction a run returns are distinct
 | Event data      | The fact itself: what happened, and nothing of who acted, when, or the run it belongs to.                                                                                                                                                                                                                                                                                                                |
 | Event metadata  | Where an event is recorded, when it happened, who acted, and the definition, run and chain it belongs to.                                                                                                                                                                                                                                                                                                |
 | Published event | An event from outside the playbook, recorded with `publish_event`.                                                                                                                                                                                                                                                                                                                                       |
-| Projection      | Data derived from the playbook's events by a defined rule: a recall function's view, a page's views, or a prediction function's dataset.                                                                                                                                                                                                                                                                 |
-| View            | The value a recall function keeps, or one of the values a page keeps for `lately`, built from the playbook's events and kept up to date as they are recorded.                                                                                                                                                                                                                                            |
-| Fold            | The code of a recall function or a page that adds each event its filters name to its view, or to a page's views.                                                                                                                                                                                                                                                                                         |
+| Projection      | Data derived from the playbook's events by a defined rule: a page's views, or a prediction function's dataset.                                                                                                                                                                                                                                                                                           |
+| View            | One of the values a page keeps for `lately`, built from the playbook's events and kept up to date as they are recorded.                                                                                                                                                                                                                                                                                  |
+| Fold            | The code of a page that adds each event its filters name to its views.                                                                                                                                                                                                                                                                                                                                   |
 | Activity        | What an organization's playbooks did that a person may want to see: the requests that wait on a person, the definitions whose latest run broke, the runs, definitions and playbooks that are new, and the open comments. The runtime keeps it for the whole organization, one row for each item.                                                                                                         |
 | Seen            | A new item or a comment of the activity that the caller marked seen, or that lies at or before the place they marked everything seen through. A caller's own work and comments are seen from the start. Requests and broken definitions are never seen or unseen: they count until they are answered or resolved.                                                                                        |
 | Address         | One thing of a playbook named as text, such as `finance/runs/<run_id>` for a run or `finance/definitions/workflow/close-the-week/4/steps/do/1/review` for a step of a workflow. The activity names its rows by addresses, and a comment names what it is about by one. The runtime checks an address's form, not that the thing exists.                                                                  |

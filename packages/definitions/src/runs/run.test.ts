@@ -16,8 +16,6 @@ const functionRun: Run = {
 
 const computationRun: Run = { ...functionRun, type: 'computation', output: { total_spend_cents: 17_628 } };
 
-const recallRun: Run = { ...functionRun, type: 'recall', output: [{ verdict: 'approve' }] };
-
 const interactionRun: Run = { ...functionRun, type: 'interaction', output: { choice: 'approve' } };
 
 const predictionRun: Run = {
@@ -32,8 +30,8 @@ const predictionRun: Run = {
 const workflowRun: Run = { ...functionRun, type: 'workflow' };
 
 describe('a run', () => {
-  it('is a function run when it ran a reasoning, an interaction, a prediction, a recall or a computation function, and a workflow run when it ran a workflow', () => {
-    const runs = [functionRun, interactionRun, predictionRun, recallRun, computationRun, workflowRun];
+  it('is a function run when it ran a reasoning, an interaction, a prediction or a computation function, and a workflow run when it ran a workflow', () => {
+    const runs = [functionRun, interactionRun, predictionRun, computationRun, workflowRun];
 
     const functionRuns = runs.filter((run) => isFunctionRun(run));
     const workflowRuns = runs.filter((run) => isWorkflowRun(run));
@@ -41,7 +39,7 @@ describe('a run', () => {
     expectTypeOf(functionRuns).toEqualTypeOf<FunctionRun[]>();
     expectTypeOf(workflowRuns).toEqualTypeOf<WorkflowRun[]>();
     expect([functionRuns, workflowRuns]).toEqual([
-      [functionRun, interactionRun, predictionRun, recallRun, computationRun],
+      [functionRun, interactionRun, predictionRun, computationRun],
       [workflowRun],
     ]);
   });

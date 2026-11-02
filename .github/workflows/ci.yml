@@ -100,7 +100,6 @@ jobs:
               - playbooks
               - providers
               - reasoning
-              - recall
               - secrets
               - shipped-files
               - tool-servers
@@ -500,9 +499,6 @@ jobs:
       - name: Read the analytics of a playbook
         timeout-minutes: 2
         run: .github/smoke/analytics.sh 5555 onauto/runtime:ci
-      - name: Recall what the smoke workflows answered
-        timeout-minutes: 2
-        run: .github/smoke/recall.sh 5555 onauto/runtime:ci
 
       - name: Start a workflow by its event trigger and by its schedule
         timeout-minutes: 5

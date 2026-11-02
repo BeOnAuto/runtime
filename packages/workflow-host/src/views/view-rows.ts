@@ -9,7 +9,7 @@ import { ViewDetailsSchema, type ViewDetails } from './view-details.ts';
 
 export type StallCause = StallKind | 'time' | 'memory' | 'crash';
 
-export interface StalledEvent {
+interface StalledEvent {
   readonly id: string;
   readonly type: string;
   readonly time: string;

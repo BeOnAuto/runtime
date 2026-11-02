@@ -24,7 +24,7 @@ export function measuringPool(): ProgramPool {
   return programPool({ handed, instances: 'fresh', workers: 4, heapMegabytes: 256 });
 }
 
-export function recallContentOf(name: string, details: Schema.JsonObject): Schema.JsonObject {
+export function viewContentOf(name: string, details: Schema.JsonObject): Schema.JsonObject {
   return { source: name, details };
 }
 
@@ -43,7 +43,7 @@ export function measuredViews(pool: ProgramPool): ProjectorSettings {
   };
   return {
     folders: [
-      someFolder(viewsFolder({ definitionType: 'recall', pool, folding, overtimesBeforeStall: 20, rebuildsAtOnce: 4 })),
+      someFolder(viewsFolder({ definitionType: 'view', pool, folding, overtimesBeforeStall: 20, rebuildsAtOnce: 4 })),
     ],
     playbooksAtOnce: 4,
     pagesPerWake: 10,

@@ -2,7 +2,7 @@
 
 The HTTP API serves every operation of Auto Runtime. It covers playbooks, function and workflow definitions, runs and their history, and requests. It also covers events, analytics and the tool servers a playbook's functions may use. This page lists every route with its fields, limits and errors.
 
-The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `interaction`, `prediction`, `recall`, `computation` or `workflow`.
+The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `interaction`, `prediction`, `computation` or `workflow`.
 
 ## Requests and access
 
@@ -188,15 +188,13 @@ A definition names the caller who created it as `created_by`, by `id` and `name`
 
 - `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
 - `diagram` is how a function works as a picture, which Auto Studio draws under the overview. Every `create_definition` and `update_definition` of a function gives it, as one of two choices: Mermaid source of a flowchart or a state diagram, whose first line is `flowchart`, `graph` or `stateDiagram`, optionally with a direction such as `TD`, in at most 8,192 UTF-8 bytes; or the word `none`, when a picture would add nothing. Since Auto Studio draws it at full size in a column, a diagram reads best top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. The version keeps it as given. A version saved before functions took one has none.
-- `used_by` lists the active definitions of the playbook that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`; `remembers-runs` or `remembers-changes` for a recall function with a filter on its runs (by their `subject`) or on its changes (by their `source`). A definition that uses this one in two ways is listed for each.
+- `used_by` lists the active definitions of the playbook that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`.
 
-The interaction function `approve-brief` that a workflow calls in two steps and that two recall functions follow is returned with this `used_by`, shown here without its other fields:
+The interaction function `approve-brief` that a workflow calls in two steps is returned with this `used_by`, shown here without its other fields:
 
 ```json
 {
   "used_by": [
-    { "type": "recall", "name": "brief-answers", "relation": "remembers-runs" },
-    { "type": "recall", "name": "brief-changes", "relation": "remembers-changes" },
     {
       "type": "workflow",
       "name": "briefing",
@@ -335,22 +333,6 @@ A program cannot produce its output when it:
 
 The same input gives the same `unworkable` result again, unless the program reads the clock. Change the definition or the input rather than retrying.
 
-## Recall functions
-
-Recall functions use the operations of reasoning functions, with `recall` in place of `reasoning` in each route, such as `POST /definitions/recall` and `POST /definitions/recall/{name}/run`. The `source` is a [recall function document](recall-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
-
-A recall function keeps a view: a JSON value its module builds from the playbook's events, one event at a time. A run computes its answer from the view as it stands.
-
-- A playbook may have at most 32 active recall functions. Saving one more returns `conflict`.
-- A run finishes within the request that starts it.
-- `get_definition` adds the view's `standing`. `get_run` adds to the run's `record` the checkpoint the run read at, which says how far into the playbook's history the view had read. See [How the view is kept](recall-format.md#how-the-view-is-kept).
-
-| Case                                                | Response                                                     |
-| --------------------------------------------------- | ------------------------------------------------------------ |
-| The view of the latest version is still being built | `unavailable` with the kind `rebuilding` and a `Retry-After` |
-| The view has stalled                                | `conflict` with the kind `stalled`                           |
-| The module's `answer` cannot produce an output      | `conflict` with the kind `unworkable`                        |
-
 ## Pages
 
 Pages use the operations of reasoning functions that save and read definitions, with `page` in place of `reasoning` in each route, such as `POST /definitions/page` and `GET /definitions/page/{name}`. The `source` is a [page document](page-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions), except that a page takes no `overview` and no `diagram`.
@@ -469,7 +451,7 @@ Asking again before the run has ended records nothing more.
 
 These runs end within the request that started them, so they cannot be interrupted from outside:
 
-- the run of a computation or recall function;
+- the run of a computation function;
 - the run of an interaction function that calls a tool;
 - a prediction function's question.
 
@@ -509,7 +491,6 @@ A run's output and its record share that 1 MiB. Each type of definition makes ro
 | Reasoning               | What leaves room for the record. The record keeps less of the prompt to fit; an answer that leaves too little room ends `conflict`, `unworkable` |
 | Interaction with `call` | 1 MiB less the run's record, measured exactly                                                                                                    |
 | Computation             | 1,048,320 bytes: the function keeps 256 bytes for its record                                                                                     |
-| Recall                  | 1,046,528 bytes: the function keeps 2,048 bytes for its record, which also says where the view had read to                                       |
 | Workflow                | 1,048,574 bytes; a larger output ends the run `conflict` with the kind `oversized`                                                               |
 
 A function's output past its bound ends the run `conflict` with the kind `unworkable`. Each format page repeats the bound for its type.
@@ -628,7 +609,7 @@ The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_su
 
 A run of a reasoning function also records each call of its model: `model_call_started`, then `model_call_answered` with the tool calls the model asked for, or `model_call_failed` with `because`. [The run's model calls](reasoning-format.md#the-run-s-model-calls) gives their fields.
 
-The reserved attributes are the ones the playbook gives its own events; see [the playbook's events](recall-format.md#the-events). So a published event cannot claim a cause, a caller or a depth it does not have.
+The reserved attributes are the ones the playbook gives its own events; see [Event filters](workflow-format.md#event-filters). So a published event cannot claim a cause, a caller or a depth it does not have.
 
 ## Run history and playbook events
 
@@ -1841,7 +1822,7 @@ A problem document's `type` is a URI that names its kind of problem:
 | `https://on.auto/problems/internal`               | 500    | Something went wrong inside the server                                                                                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/unavailable`            | 503    | Something the server relies on cannot serve now                                                                                                                                                                                                                                                                                                            |
 | `https://on.auto/problems/tools_unfinished`       | 503    | A run called only tools marked `reads`, and could not finish; its `reason` is `unavailable`, and running it again under a new id is safe                                                                                                                                                                                                                   |
-| `https://on.auto/problems/rebuilding`             | 503    | The view of a recall function is still being built; its `reason` is `unavailable`; try again later                                                                                                                                                                                                                                                         |
+| `https://on.auto/problems/rebuilding`             | 503    | What a function keeps of the playbook's history is still being built; its `reason` is `unavailable`; try again later                                                                                                                                                                                                                                       |
 
 ### The refusals of the meter
 

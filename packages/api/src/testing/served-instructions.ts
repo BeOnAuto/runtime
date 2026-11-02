@@ -72,13 +72,12 @@ export const definitionTypes: readonly DefinitionType[] = [
   { type: 'lookup', noun: 'lookup function', guide: 'lookup-function' },
   { type: 'interaction', noun: 'interaction function', guide: 'interaction-function' },
   { type: 'computation', noun: 'computation function', guide: 'computation-function' },
-  { type: 'recall', noun: 'recall function', guide: 'recall-function' },
   { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];
 
 export const functionTypesSentence =
-  'Its function types: reasoning prompts a model, lookup obtains information, interaction exchanges information, prediction forecasts from history, recall retrieves run results, and computation runs a program.';
+  'Its function types: reasoning prompts a model, lookup obtains information, interaction exchanges information, prediction forecasts from history, and computation runs a program.';
 
 export const recipes: readonly RecipeCalls[] = [
   {

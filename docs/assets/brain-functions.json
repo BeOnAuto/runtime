@@ -31,13 +31,6 @@
       "description": "Predict a quantity from the playbook's own history, with a likely range."
     },
     {
-      "type": "recall",
-      "label": "Recall",
-      "singular": "recall function",
-      "plural": "recall functions",
-      "description": "Answer from what the playbook keeps of its own history."
-    },
-    {
       "type": "computation",
       "label": "Computation",
       "singular": "computation function",

@@ -9809,7 +9809,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, interaction, computation, recall, prediction, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong.",
+        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, interaction, computation, prediction, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -9831,7 +9831,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "page",
                 "workflow"
@@ -9892,7 +9891,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -10113,7 +10112,7 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
                     },
                     "page": {
                       "type": "object",
@@ -10133,86 +10132,55 @@
                     "used_by": {
                       "type": "array",
                       "items": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "calls"
-                                ],
-                                "description": "calls, for a workflow that runs this one in its steps"
-                              },
-                              "steps": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "number": {
-                                      "type": "integer",
-                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
-                                    },
-                                    "name": {
-                                      "type": "string",
-                                      "description": "The name of its task"
-                                    }
-                                  },
-                                  "required": [
-                                    "number",
-                                    "name"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                "description": "The steps of the workflow that call this one"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation",
-                              "steps"
-                            ],
-                            "additionalProperties": false
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition that uses this one"
                           },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "remembers-runs",
-                                  "remembers-changes"
-                                ],
-                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation"
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition that uses this one"
+                          },
+                          "relation": {
+                            "type": "string",
+                            "enum": [
+                              "calls"
                             ],
-                            "additionalProperties": false
+                            "description": "calls, for a workflow that runs this one in its steps"
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "number": {
+                                  "type": "integer",
+                                  "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "The name of its task"
+                                }
+                              },
+                              "required": [
+                                "number",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "The steps of the workflow that call this one"
                           }
-                        ]
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "relation",
+                          "steps"
+                        ],
+                        "additionalProperties": false
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it"
                     },
                     "studio": {
                       "type": "string",
@@ -10306,7 +10274,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "page",
                 "workflow"
@@ -10351,7 +10318,7 @@
                       "properties": {
                         "type": {
                           "type": "string",
-                          "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                          "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
                         },
                         "name": {
                           "type": "string",
@@ -10620,7 +10587,7 @@
       "get": {
         "operationId": "get_definition",
         "summary": "Get definition",
-        "description": "Reads one definition with its document, active or retired, with its version and the input and output its document declares. For a recall function or a page it also returns how its views stand: live, rebuilding, waiting or stalled. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition with a page answers page.lately; `render: true` previews a page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
+        "description": "Reads one definition with its document, active or retired, with its version and the input and output its document declares. For a page it also returns how its views stand: live, rebuilding, waiting or stalled. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition with a page answers page.lately; `render: true` previews a page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
         "tags": [
           "definitions"
         ],
@@ -10642,7 +10609,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "page",
                 "workflow"
@@ -10690,7 +10656,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -10911,7 +10877,7 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
                     },
                     "page": {
                       "type": "object",
@@ -10931,86 +10897,55 @@
                     "used_by": {
                       "type": "array",
                       "items": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "calls"
-                                ],
-                                "description": "calls, for a workflow that runs this one in its steps"
-                              },
-                              "steps": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "number": {
-                                      "type": "integer",
-                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
-                                    },
-                                    "name": {
-                                      "type": "string",
-                                      "description": "The name of its task"
-                                    }
-                                  },
-                                  "required": [
-                                    "number",
-                                    "name"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                "description": "The steps of the workflow that call this one"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation",
-                              "steps"
-                            ],
-                            "additionalProperties": false
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition that uses this one"
                           },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "remembers-runs",
-                                  "remembers-changes"
-                                ],
-                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation"
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition that uses this one"
+                          },
+                          "relation": {
+                            "type": "string",
+                            "enum": [
+                              "calls"
                             ],
-                            "additionalProperties": false
+                            "description": "calls, for a workflow that runs this one in its steps"
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "number": {
+                                  "type": "integer",
+                                  "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "The name of its task"
+                                }
+                              },
+                              "required": [
+                                "number",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "The steps of the workflow that call this one"
                           }
-                        ]
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "relation",
+                          "steps"
+                        ],
+                        "additionalProperties": false
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it"
                     }
                   },
                   "required": [
@@ -11078,7 +11013,7 @@
       "put": {
         "operationId": "update_definition",
         "summary": "Update definition",
-        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a recall function or a page builds its views again from the playbook's history.",
+        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a page builds its views again from the playbook's history.",
         "tags": [
           "definitions"
         ],
@@ -11100,7 +11035,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "page",
                 "workflow"
@@ -11165,7 +11099,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -11386,7 +11320,7 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
                     },
                     "page": {
                       "type": "object",
@@ -11406,86 +11340,55 @@
                     "used_by": {
                       "type": "array",
                       "items": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "calls"
-                                ],
-                                "description": "calls, for a workflow that runs this one in its steps"
-                              },
-                              "steps": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "number": {
-                                      "type": "integer",
-                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
-                                    },
-                                    "name": {
-                                      "type": "string",
-                                      "description": "The name of its task"
-                                    }
-                                  },
-                                  "required": [
-                                    "number",
-                                    "name"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                "description": "The steps of the workflow that call this one"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation",
-                              "steps"
-                            ],
-                            "additionalProperties": false
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition that uses this one"
                           },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "remembers-runs",
-                                  "remembers-changes"
-                                ],
-                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation"
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition that uses this one"
+                          },
+                          "relation": {
+                            "type": "string",
+                            "enum": [
+                              "calls"
                             ],
-                            "additionalProperties": false
+                            "description": "calls, for a workflow that runs this one in its steps"
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "number": {
+                                  "type": "integer",
+                                  "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "The name of its task"
+                                }
+                              },
+                              "required": [
+                                "number",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "The steps of the workflow that call this one"
                           }
-                        ]
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "relation",
+                          "steps"
+                        ],
+                        "additionalProperties": false
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it"
                     },
                     "studio": {
                       "type": "string",
@@ -11611,7 +11514,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -11832,7 +11735,7 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
                     },
                     "page": {
                       "type": "object",
@@ -11852,86 +11755,55 @@
                     "used_by": {
                       "type": "array",
                       "items": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "calls"
-                                ],
-                                "description": "calls, for a workflow that runs this one in its steps"
-                              },
-                              "steps": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "number": {
-                                      "type": "integer",
-                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
-                                    },
-                                    "name": {
-                                      "type": "string",
-                                      "description": "The name of its task"
-                                    }
-                                  },
-                                  "required": [
-                                    "number",
-                                    "name"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                "description": "The steps of the workflow that call this one"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation",
-                              "steps"
-                            ],
-                            "additionalProperties": false
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition that uses this one"
                           },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "remembers-runs",
-                                  "remembers-changes"
-                                ],
-                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation"
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition that uses this one"
+                          },
+                          "relation": {
+                            "type": "string",
+                            "enum": [
+                              "calls"
                             ],
-                            "additionalProperties": false
+                            "description": "calls, for a workflow that runs this one in its steps"
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "number": {
+                                  "type": "integer",
+                                  "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "The name of its task"
+                                }
+                              },
+                              "required": [
+                                "number",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "The steps of the workflow that call this one"
                           }
-                        ]
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "relation",
+                          "steps"
+                        ],
+                        "additionalProperties": false
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it"
                     }
                   },
                   "required": [
@@ -12023,7 +11895,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "page",
                 "workflow"
@@ -12068,7 +11939,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -12289,7 +12160,7 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
                     },
                     "page": {
                       "type": "object",
@@ -12309,86 +12180,55 @@
                     "used_by": {
                       "type": "array",
                       "items": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "calls"
-                                ],
-                                "description": "calls, for a workflow that runs this one in its steps"
-                              },
-                              "steps": {
-                                "type": "array",
-                                "items": {
-                                  "type": "object",
-                                  "properties": {
-                                    "number": {
-                                      "type": "integer",
-                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
-                                    },
-                                    "name": {
-                                      "type": "string",
-                                      "description": "The name of its task"
-                                    }
-                                  },
-                                  "required": [
-                                    "number",
-                                    "name"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                "description": "The steps of the workflow that call this one"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation",
-                              "steps"
-                            ],
-                            "additionalProperties": false
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "The type of the definition that uses this one"
                           },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "description": "The type of the definition that uses this one"
-                              },
-                              "name": {
-                                "type": "string",
-                                "description": "The name of the definition that uses this one"
-                              },
-                              "relation": {
-                                "type": "string",
-                                "enum": [
-                                  "remembers-runs",
-                                  "remembers-changes"
-                                ],
-                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
-                              }
-                            },
-                            "required": [
-                              "type",
-                              "name",
-                              "relation"
+                          "name": {
+                            "type": "string",
+                            "description": "The name of the definition that uses this one"
+                          },
+                          "relation": {
+                            "type": "string",
+                            "enum": [
+                              "calls"
                             ],
-                            "additionalProperties": false
+                            "description": "calls, for a workflow that runs this one in its steps"
+                          },
+                          "steps": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "number": {
+                                  "type": "integer",
+                                  "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "The name of its task"
+                                }
+                              },
+                              "required": [
+                                "number",
+                                "name"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "The steps of the workflow that call this one"
                           }
-                        ]
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "relation",
+                          "steps"
+                        ],
+                        "additionalProperties": false
                       },
-                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it"
                     }
                   },
                   "required": [
@@ -12480,7 +12320,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "workflow"
               ],
@@ -12538,7 +12377,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -12647,7 +12486,7 @@
                                 "dataset_not_ready",
                                 "meter_unavailable"
                               ],
-                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
+                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a function that answers from what it keeps of the history of the playbook while that is still being built, which trying again later may resolve"
                             },
                             "because": {
                               "type": "string",
@@ -12724,7 +12563,7 @@
                                 "license_invalid",
                                 "account_closed"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
                             "because": {
                               "type": "string",
@@ -12974,7 +12813,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -13083,7 +12922,7 @@
                                 "dataset_not_ready",
                                 "meter_unavailable"
                               ],
-                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
+                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a function that answers from what it keeps of the history of the playbook while that is still being built, which trying again later may resolve"
                             },
                             "because": {
                               "type": "string",
@@ -13160,7 +12999,7 @@
                                 "license_invalid",
                                 "account_closed"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
                             "because": {
                               "type": "string",
@@ -13376,7 +13215,7 @@
       "post": {
         "operationId": "cancel_run",
         "summary": "Cancel run",
-        "description": "Cancels a run that is still going, such as a workflow or a reasoning function, at the request of the person: the request is recorded on the run at once, and the run ends as cancelled within a moment, a reasoning function's before its next call, a workflow's steps stopped and the runs they wait for cancelled too. It cannot be undone, and what the run did before it ended stays done. Use it only when the person asks to stop that run; a run that ends within its call, as a computation or recall function does, a prediction function asked a question or an interaction function that calls a tool, cannot be cancelled. `run_id` is the run's id and `reason`, kept on the run, says why; asking again records nothing more, and get_run shows how it ended.",
+        "description": "Cancels a run that is still going, such as a workflow or a reasoning function, at the request of the person: the request is recorded on the run at once, and the run ends as cancelled within a moment, a reasoning function's before its next call, a workflow's steps stopped and the runs they wait for cancelled too. It cannot be undone, and what the run did before it ended stays done. Use it only when the person asks to stop that run; a run that ends within its call, as a computation function does, a prediction function asked a question or an interaction function that calls a tool, cannot be cancelled. `run_id` is the run's id and `reason`, kept on the run, says why; asking again records nothing more, and get_run shows how it ended.",
         "tags": [
           "runs"
         ],
@@ -13436,7 +13275,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -13545,7 +13384,7 @@
                                 "dataset_not_ready",
                                 "meter_unavailable"
                               ],
-                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve"
+                              "description": "What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a function that answers from what it keeps of the history of the playbook while that is still being built, which trying again later may resolve"
                             },
                             "because": {
                               "type": "string",
@@ -13622,7 +13461,7 @@
                                 "license_invalid",
                                 "account_closed"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
                             },
                             "because": {
                               "type": "string",
@@ -13844,7 +13683,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "workflow"
               ],
@@ -13947,7 +13785,7 @@
                         },
                         "type": {
                           "type": "string",
-                          "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
+                          "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow"
                         },
                         "name": {
                           "type": "string",
@@ -14541,7 +14379,6 @@
                 "lookup",
                 "interaction",
                 "computation",
-                "recall",
                 "prediction",
                 "workflow"
               ],
@@ -14802,7 +14639,7 @@
                         "properties": {
                           "type": {
                             "type": "string",
-                            "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
+                            "description": "The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow"
                           },
                           "name": {
                             "type": "string",
@@ -14927,7 +14764,7 @@
       "get": {
         "operationId": "list_playbook_events",
         "summary": "List playbook events",
-        "description": "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, and the events published to it, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a recall function or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before, to read on only as the person needs. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
+        "description": "Lists what happened in the playbook a page at a time, newest first: definitions saved and retired, runs started and how they ended, the steps of workflow runs, tool calls, and the events published to it, each with a summary in plain words, its fact as data with a large field as its size, and its metadata; get_event reads one event whole. Use it to follow the playbook's activity, to see what one run did, or to find the events a page or a workflow's schedule can take. `type` keeps one type of event, `run_id` one run and every run it started, `since` what was recorded from that time on, and `cursor` is the next_cursor of the page before, to read on only as the person needs. The playbook's own creation, update and retirement are not among the events; list_playbooks shows them.",
         "tags": [
           "events"
         ],
@@ -15304,7 +15141,7 @@
       "post": {
         "operationId": "publish_event",
         "summary": "Publish event",
-        "description": "Publishes an event to the playbook, where a workflow whose schedule names its type starts a run and a recall function that filters on it folds it, and returns its id and time. Use it when something outside the playbook happened that the playbook should react to or remember; send_run_event gives an event to one waiting run instead. `event` is a CloudEvents event with a `source` and a `type`, and publishing the same source and id again records nothing, so a call can be retried with its id. The playbook's own types and sources, such as those of its runs and definitions, and the lineage attributes it gives its own records, are refused.",
+        "description": "Publishes an event to the playbook, where a workflow whose schedule names its type starts a run and a page that filters on it folds it into its views, and returns its id and time. Use it when something outside the playbook happened that the playbook should react to or remember; send_run_event gives an event to one waiting run instead. `event` is a CloudEvents event with a `source` and a `type`, and publishing the same source and id again records nothing, so a call can be retried with its id. The playbook's own types and sources, such as those of its runs and definitions, and the lineage attributes it gives its own records, are refused.",
         "tags": [
           "events"
         ],
@@ -18383,7 +18220,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), computation-function (Computation function format), prediction-function (Prediction function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
@@ -18392,13 +18229,11 @@
                 "lookup-function",
                 "interaction-function",
                 "computation-function",
-                "recall-function",
                 "prediction-function",
                 "page",
                 "workflow",
                 "templates",
                 "first-playbook",
-                "remember",
                 "give-tools",
                 "schedule"
               ]

@@ -11,7 +11,7 @@ import {
   type LiveRead,
   type Resting,
 } from './folder-pass.ts';
-import { definitionTypesKeptBy, type ProjectorSettings } from './projector-settings.ts';
+import type { ProjectorSettings } from './projector-settings.ts';
 import type { KeptDefinitions } from './reconciled-rows.ts';
 
 export interface PassParts {
@@ -68,18 +68,14 @@ function sharedSteps(
 }
 
 function folderPartsOf({ database, settings, definitions, note, resting, firstSeen, trouble }: PassParts): FolderParts {
-  const keptAlong = settings.keptAlong ?? {};
   return {
     database,
     definitions,
-    keptAlong,
     note,
     resting,
     firstSeen,
     trouble,
-    definitionTypes: settings.folders.flatMap((some) =>
-      some((folder) => definitionTypesKeptBy(keptAlong, folder.definitionType)),
-    ),
+    definitionTypes: settings.folders.map((some) => some((folder) => folder.definitionType)),
   };
 }
 

@@ -32,8 +32,6 @@ function inStep(number: number, name: string) {
 
 const sendDraft = { type: 'interaction', name: 'send-draft' };
 
-const runsOfReviewBrief = { type: 'run_succeeded', subject: 'reasoning/review-brief' };
-
 const registries = new Map([
   [
     'workflow',
@@ -56,24 +54,6 @@ const registries = new Map([
     ),
   ],
   ['computation', registryOf(saved('campaign-pace'))],
-  [
-    'recall',
-    registryOf(
-      saved('review-history', { filters: [runsOfReviewBrief, { ...runsOfReviewBrief, type: 'run_failed' }] }),
-      saved('brief-changes', {
-        filters: [
-          { type: 'definition_updated', source: '/definitions/reasoning/review-brief' },
-          { type: 'definition_created', subject: 'reasoning/review-brief' },
-          { type: 'run_started', source: '/definitions/reasoning/review-brief' },
-        ],
-      }),
-      saved('every-run', { filters: [{ type: 'run_succeeded' }, { type: 'definition_retired' }] }),
-      saved('published-reviews', { filters: [{ type: 'brief.reviewed', subject: 'reasoning/review-brief' }] }),
-      saved('runs-and-changes', {
-        filters: [{ type: 'definition_retired', source: '/definitions/reasoning/review-brief' }, runsOfReviewBrief],
-      }),
-    ),
-  ],
   ['prediction', registryOf(saved('weekly-orders', { data_sha256: 'a'.repeat(64) }))],
   ['interaction', registryOf(saved('send-draft'), saved('review-brief'))],
   ['reasoning', registryOf(saved('review-brief'))],
@@ -82,12 +62,8 @@ const registries = new Map([
 ]);
 
 describe('the users of a definition', () => {
-  it('are the active definitions of every type that name it in its steps or a filter, by type in the order of the function types, workflows next, then by name', () => {
+  it('are the active definitions of every type that name it in their steps, by type in the order of the function types, workflows next, then by name', () => {
     expect(usersOf(registries, reviewBrief)).toEqual([
-      { type: 'recall', name: 'brief-changes', relation: 'remembers-changes' },
-      { type: 'recall', name: 'review-history', relation: 'remembers-runs' },
-      { type: 'recall', name: 'runs-and-changes', relation: 'remembers-changes' },
-      { type: 'recall', name: 'runs-and-changes', relation: 'remembers-runs' },
       {
         type: 'workflow',
         name: 'weekly-review',

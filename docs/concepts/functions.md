@@ -2,7 +2,7 @@
 
 A function is one reusable piece of your team's method, saved in a playbook. It defines what goes in, what comes out and what happens in between. A run carries it out once with particular inputs. Your agent can call a function directly, and the same function can be a step in several workflows.
 
-Each function has one of six types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not a seventh function type. [Terminology](terminology.md) defines these words.
+Each function has one of five types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not a sixth function type. [Terminology](terminology.md) defines these words.
 
 ## Choose a function type
 
@@ -12,24 +12,22 @@ Each function has one of six types, described below. Workflows coordinate functi
 | Lookup      | Read what another system holds right now           | Read a campaign's figures from the reporting tool    |
 | Interaction | Ask a person or a system, and take the answer      | Ask the brief's owner to approve the review          |
 | Prediction  | Predict a quantity from the playbook's own history | Forecast next week's sign-ups in each region         |
-| Recall      | Look up what the playbook has already recorded     | Bring back the last reviews of one campaign          |
 | Computation | Calculate or transform data exactly, with code     | Total a campaign's spend and its pace against budget |
 
-Choose a type by the function's job, not by how it does it. A function that looks up what the playbook has already recorded is recall. A function that reads what another system holds right now is lookup, and one that asks a system to do something is interaction. A function whose job is to forecast is prediction, even though its forecaster runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
+Choose a type by the function's job, not by how it does it. A function that reads what another system holds right now is lookup, and one that asks a system to do something is interaction. A function whose job is to forecast is prediction, even though its forecaster runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
 
-Real work often combines types. A budget review might recall the last decisions, compute the totals, reason about the options and then ask a person to approve. A workflow puts those steps in order; [Workflows and runs](workflows.md) explains how.
+Real work often combines types. A budget review might compute the totals, reason about the options and then ask a person to approve. A workflow puts those steps in order; [Workflows and runs](workflows.md) explains how.
 
 ## Availability
 
-Hosted Auto runs reasoning, lookup, interaction, prediction, recall and computation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
+Hosted Auto runs reasoning, lookup, interaction, prediction and computation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
 
-The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
+The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction and computation functions are available. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
 These are planned and not available yet:
 
 - Dream, an optional process that would revisit a playbook's history and suggest ideas worth testing. It would not be a function type.
 - Skill references in a reasoning function, and a separately managed tool library.
-- Recall over documents and other sources beyond the playbook's own history.
 - Starting one workflow run from several events that belong together.
 
 ## Reasoning
@@ -38,7 +36,7 @@ A reasoning function gives a language model a piece of work: interpret informati
 
 For example, "Review campaign brief" checks a brief against your team's criteria and recommends Ready or Revise. Each run fills the prompt with one brief, asks the model, and records the answer and the model's usage. The [first-playbook tutorial](../tutorials/first-playbook.md) builds it.
 
-Choose reasoning when the work needs judgment or language. Leave exact arithmetic to a computation function. A reasoning function does not remember earlier runs, so give it what it needs as input, or look it up first with a recall function. It can also use tools, as [described below](#tool-access-inside-a-reasoning-function).
+Choose reasoning when the work needs judgment or language. Leave exact arithmetic to a computation function. A reasoning function does not remember earlier runs, so give it what it needs as input. It can also use tools, as [described below](#tool-access-inside-a-reasoning-function).
 
 - [Give a function tools](../guides/tools.md) adds a tool to a reasoning function.
 - [Reasoning function format](../reference/reasoning-format.md) describes the document.
@@ -73,17 +71,6 @@ Choose prediction for a numeric question that comes back again and again, such a
 
 - [Forecast with a prediction function](../guides/forecast.md) shows how to forecast from your own playbook's events.
 - [Prediction function format](../reference/prediction-format.md) describes the document and the forecaster, and [Terminology](terminology.md#prediction) defines its words.
-
-## Recall
-
-A recall function looks up what the playbook has already recorded, so a later run can use what earlier runs decided. It keeps a view: a running summary of the events it cares about, which it updates as the playbook records each one. A run reads the view as it stands, within milliseconds.
-
-For example, a recall function can keep every review that "Review campaign brief" wrote. A workflow recalls the last reviews of one campaign and passes them to the reasoning function, so the next review knows what the last one said.
-
-Choose recall when a later run needs what earlier runs found or decided. Today a recall function reads only the playbook's own history; [History and events](history-and-dream.md) describes what that history holds.
-
-- [Make a playbook remember](../guides/remember.md) shows how to add a recall function to a playbook.
-- [Recall function format](../reference/recall-format.md) describes the document.
 
 ## Computation
 

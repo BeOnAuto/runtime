@@ -59,7 +59,7 @@ export {
   type SomeFolder,
   type Writing,
 } from './projector/folder.ts';
-export type { KeptAlong, KeptAlongBy, ProjectorSettings } from './projector/projector-settings.ts';
+export { projectorBounds, type ProjectorSettings } from './projector/projector-settings.ts';
 export { projectorWakeUp, type ProjectorParts } from './projector/projector.ts';
 export {
   foldedBeforeItRuns,
@@ -68,18 +68,8 @@ export {
   type FoldWaitBounds,
 } from './catching-up/folded-before-runs.ts';
 export { followerWakeUp, type FollowedParts, type FollowingParts } from './reactions/host-reactions.ts';
-export {
-  ViewDetailsSchema,
-  ViewFilterSchema,
-  viewDetailsOf,
-  type ViewDetails,
-  type ViewFilter,
-} from './views/view-details.ts';
 export { comparePoints, isAfter, pointIn, pointText, type Point } from './pages/history-points.ts';
-export type { FoldedEvent, KeptView, StallCause, StalledEvent, ViewStall } from './views/view-rows.ts';
-export { viewsFolder } from './views/views-folder.ts';
-export { pageViewsKept } from './views/page-views.ts';
-export type { FoldingSettings, ViewsFolding } from './views/views-folding.ts';
+export { pageFolding, pageViewsBounds, pageViewsFolder } from './views/page-views.ts';
 export { viewsPortOn, type ViewsPort } from './views/views-port.ts';
 export type { HostClock } from './loop/host-clock.ts';
 export {

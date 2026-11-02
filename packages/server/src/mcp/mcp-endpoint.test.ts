@@ -132,7 +132,6 @@ const definitionTypes = [
   { type: 'lookup', noun: 'lookup function', guide: 'lookup-function' },
   { type: 'interaction', noun: 'interaction function', guide: 'interaction-function' },
   { type: 'computation', noun: 'computation function', guide: 'computation-function' },
-  { type: 'recall', noun: 'recall function', guide: 'recall-function' },
   { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
   { type: 'page', noun: 'page', guide: 'page' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },

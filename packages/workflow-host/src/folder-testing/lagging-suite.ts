@@ -17,7 +17,7 @@ function liveCounting(counted: number): (row: TallyRow) => boolean {
 }
 
 export function laggingSuite(settingsOf: SettingsOf): void {
-  describe('a second folder and the views of recall functions at different checkpoints', () => {
+  describe('a second folder and the views at different checkpoints', () => {
     it('folds on alone while a views fold that overran rests, lets the views read alone from their own checkpoint at the next sweep, and shares one read with them again once both are caught up', async () => {
       const tallies = await tallyHarness(await settingsOf());
       const clock = steppedClock(Date.parse('2026-10-06T09:00:00.000Z'));

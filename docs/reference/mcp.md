@@ -38,7 +38,6 @@ An agent that connects receives instructions written for its caller and the tool
 - then, that whatever the person wants done that keeps working after the conversation, however they put it and in any line of business, is a playbook on Auto Runtime, not a document, a plan, a note or a one-off answer;
 - what a playbook is, in the words of the [terminology](../concepts/terminology.md), with one sentence that names each function type the runtime runs, in the terminology's order and with what it is for in a few words, and two for workflows: what a workflow does, and that what the person asks the playbook to do is a workflow, its functions the steps, which the agent runs and whose result it shows;
 - that a lookup function fetches what a reasoning function interprets;
-- that what the person wants kept, for anyone or a workflow to ask later, goes in a recall function of the playbook and not in the agent's own notes;
 - what the connection acts on: the caller's own org on `/mcp`, one org's playbooks on `/orgs/{org}/mcp`, or one playbook on `/orgs/{org}/playbooks/{playbook}/mcp`;
 - that `get_guide` returns the format of each definition, and that each function and workflow is given an overview;
 - where the runtime keeps pages, what a page is: how a workflow or a function shows its results to the person, run by run and over time;
@@ -50,7 +49,7 @@ An agent that connects receives instructions written for its caller and the tool
 
 What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. That of `run_definition` says that a run that finishes later returns `started` and that `get_run` shows how it ended. Those of `list_models` and `search` say how a reasoning function names its model and its tools, as the reasoning function's guide does. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs. Those of `list_comments` and `resolve_comment` say how to act on what people said in Studio, as [Comments](#comments) sets out.
 
-The sentence of the function types says that a reasoning function prompts a model, a lookup function obtains information, an interaction function exchanges information, a prediction function forecasts from history, a recall function retrieves run results and a computation function runs a program, and the next that a lookup function fetches what a reasoning function interprets. The format of each type carries the rest: the [lookup format](lookup-format.md) says that its tool is one marked `reads`, the [recall format](recall-format.md) says what a recall function reads from the playbook's history, and the [prediction format](prediction-format.md) sets out its forecaster.
+The sentence of the function types says that a reasoning function prompts a model, a lookup function obtains information, an interaction function exchanges information, a prediction function forecasts from history and a computation function runs a program, and the next that a lookup function fetches what a reasoning function interprets. The format of each type carries the rest: the [lookup format](lookup-format.md) says that its tool is one marked `reads`, and the [prediction format](prediction-format.md) sets out its forecaster.
 
 ## Authentication
 
@@ -80,7 +79,7 @@ Each tool runs one HTTP operation, and its section in the [HTTP reference](http.
 
 - A tool takes as arguments what its route takes in the path, the query string or the body, by the same names. Examples are a definition's `type` and `name`, a `run_id`, an `event_id`, or a `server` and a `tool`.
 - On `/mcp`, a tool that works inside a playbook also takes the playbook's id as `playbook`.
-- A definition's `type` is `reasoning`, `interaction`, `prediction`, `recall`, `computation` or `workflow`. Every runtime, whether started with npx or Docker, serves all six.
+- A definition's `type` is `reasoning`, `interaction`, `prediction`, `computation` or `workflow`. Every runtime, whether started with npx or Docker, serves all five.
 
 ### How a tool describes itself
 
@@ -119,7 +118,7 @@ Each playbook `list_playbooks` returns holds every field of the playbook, a reti
 
 `list_playbooks` of an organization with no playbook yet, active or retired, answers a caller who may make its first playbook, one who may act on every playbook of the org and holds `org:write`, a `welcome` beside the empty `playbooks`, which the agent relays to the person; over MCP the result's text is that welcome, whole, in place of the summary. It reads:
 
-> This organization has no playbooks yet. A playbook keeps work your team can use again. Its workflows coordinate functions that reason, interact, predict, recall and compute. Unless the person has already said what they want, ask what they want done, and offer three starts: set up a first playbook, connect a service they use, or hear what Auto can do for their team. In Studio, your team can review playbooks and run results. You can also manage workflows, connections, members and billing there.
+> This organization has no playbooks yet. A playbook keeps work your team can use again. Its workflows coordinate functions that reason, interact, predict and compute. Unless the person has already said what they want, ask what they want done, and offer three starts: set up a first playbook, connect a service they use, or hear what Auto can do for their team. In Studio, your team can review playbooks and run results. You can also manage workflows, connections, members and billing there.
 
 It ends with the link to Studio's home, as [Links to Studio](http.md#links-to-studio) sets out. A caller who may only read, or who acts on some playbooks alone, is answered the empty list and no `welcome`, so it learns nothing more of the organization; and an organization that has a playbook answers no `welcome` to anyone.
 
@@ -259,12 +258,12 @@ A connection is a tool server that a person adds to the org through their agent,
 
 `get_guide` returns one of the runtime's guides in full, by its name. Every endpoint serves the same guides. It also lists them as Markdown resources, `guide://<name>`, for clients that let a person or a model read them directly. Over HTTP, [`GET /v1/guides/{guide}`](http.md#the-openapi-document-the-guides-and-the-api-catalog) serves the same text.
 
-| Guide                                                                                                                                            | Contains                                                                                                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `terminology`                                                                                                                                    | What the words of a playbook mean, for the types of function the runtime runs                                                 |
-| `reasoning-function`, `lookup-function`, `interaction-function`, `prediction-function`, `recall-function`, `computation-function` and `workflow` | The reference page of each format, as the documentation publishes it. `reasoning-function` ends with what this runtime offers |
-| `templates`                                                                                                                                      | The filters every template may use, from [Templates](template.md)                                                             |
-| `first-playbook`, `remember`, `give-tools` and `schedule`                                                                                        | Recipes for common tasks, listed below                                                                                        |
+| Guide                                                                                                                         | Contains                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `terminology`                                                                                                                 | What the words of a playbook mean, for the types of function the runtime runs                                                 |
+| `reasoning-function`, `lookup-function`, `interaction-function`, `prediction-function`, `computation-function` and `workflow` | The reference page of each format, as the documentation publishes it. `reasoning-function` ends with what this runtime offers |
+| `templates`                                                                                                                   | The filters every template may use, from [Templates](template.md)                                                             |
+| `first-playbook`, `give-tools` and `schedule`                                                                                 | Recipes for common tasks, listed below                                                                                        |
 
 Two prompts, listed first, are for a person who does not yet know what to ask. Each is offered only where the connection lists every tool it asks for: `get-started` where `create_playbook`, `create_definition` and `run_definition` all are, so on `/mcp` alone, and `connect-a-service` where `add_connection` is, on `/mcp` and the org endpoint. A playbook endpoint offers neither, and a key that may only read gets neither. Each answers one message from the person, with nothing embedded:
 
@@ -277,12 +276,11 @@ A `connect-a-service` asked without `service` is the JSON-RPC error `-32602`, wh
 
 The recipes are also prompts, listed after those two. A connection offers a recipe's prompt only when it lists every tool the recipe's steps call, and the description of `get_guide` names the same recipes. So a playbook endpoint offers no `first-playbook`, the org endpoint offers none, and a key that may only read gets none.
 
-| Prompt           | Title                                | Arguments                            | What the recipe does                                                                                                                                           |
-| ---------------- | ------------------------------------ | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `first-playbook` | Create your first playbook           | None                                 | Creates a playbook with a first reasoning function, runs it once the person agrees, and, where the work should run on its own, saves the workflow that runs it |
-| `remember`       | Make the playbook remember something | `what` to remember                   | Keeps what the playbook's runs returned or its events recorded in a recall function                                                                            |
-| `give-tools`     | Give the playbook tools              | Optional `server`, a tool server     | Gives a reasoning function the tools of a tool server the playbook may use                                                                                     |
-| `schedule`       | Run a workflow on a schedule         | The `workflow`, and `when` to run it | Starts a workflow on a schedule or on an event, and reads how its runs went                                                                                    |
+| Prompt           | Title                        | Arguments                            | What the recipe does                                                                                                                                           |
+| ---------------- | ---------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `first-playbook` | Create your first playbook   | None                                 | Creates a playbook with a first reasoning function, runs it once the person agrees, and, where the work should run on its own, saves the workflow that runs it |
+| `give-tools`     | Give the playbook tools      | Optional `server`, a tool server     | Gives a reasoning function the tools of a tool server the playbook may use                                                                                     |
+| `schedule`       | Run a workflow on a schedule | The `workflow`, and `when` to run it | Starts a workflow on a schedule or on an event, and reads how its runs went                                                                                    |
 
 A prompt returns the recipe with the person's words filled in, followed by the format guide it needs.
 

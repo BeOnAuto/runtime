@@ -42,7 +42,7 @@ export function viewsReconciled(
   database: HostDatabase,
   rebuildsAtOnce: number,
 ): () => Promise<readonly ViewRow[]> {
-  const kept = { database, definitions: definitionsByType().of, keptAlong: {} };
+  const kept = { database, definitions: definitionsByType().of };
   const folder = viewsFolderOver(pool, rebuildsAtOnce);
   return () => Effect.runPromise(reconciledRows(folder, kept, alphaKey));
 }

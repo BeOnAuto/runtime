@@ -169,7 +169,9 @@ const hostTables: readonly Statement[] = [
   ...followerTables,
 ];
 
-export const hostLayoutSteps: readonly LayoutStep[] = [];
+export const hostLayoutSteps: readonly LayoutStep[] = [
+  { layout: 9, statements: [statement`DROP TABLE IF EXISTS recall_views`] },
+];
 
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {
   return connection.migrated([...hostTables, ...tables]);

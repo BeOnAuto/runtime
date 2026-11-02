@@ -223,7 +223,7 @@ input:
 - may name any other attribute of the event, such as `source`, `subject` or `caller`, written out: text, or a whole number from 1 for `depth`, `calldepth` and `definitionversion`;
 - may name `data` as a value, or as an expression over the event's data alone, read as `$data`: `data: '${ $data.region === "eu" }'`.
 
-A filter matches the playbook's events, the same events a [recall function](recall-format.md#the-events) folds:
+A filter matches the playbook's events:
 
 - events published with `publish_event`, and events workflows emit;
 - the playbook's facts about runs, `run_started`, `run_succeeded`, `run_rejected` and `run_failed`, and about definitions, `definition_created`, `definition_updated` and `definition_retired`.
@@ -232,7 +232,7 @@ The rest of the playbook's history, such as tool calls, steps, requests and answ
 
 - the `source` `/runs/<run id>`, and a `subject` that names the definition, as `reasoning/summarize`;
 - as its data: the `output` on `run_succeeded` (`output_bytes` when it is too large), the `reason` and `kind` on `run_rejected`, and nothing on `run_started`. So a filter never sees a run's input;
-- the attributes `caller` (who acted), `definitionversion`, `triggerkind` and `triggerreference` (the trigger that started the run) and `depth`, each where the run has it.
+- the attributes `caller` (who acted), `definitionversion`, `triggerkind` and `triggerreference` (the trigger that started the run), `depth` (how many reactions are above a run a reaction started), `calldepth` (how many calls are above a run a workflow's call started), `calledby` (the id of the run whose call started it), `causationid` (the id of the record that caused the fact) and `correlationid` (the id the records of one tree of runs share), each where the run has it.
 
 A filter names an attribute as it names `subject`, as `triggerkind: event`.
 
@@ -363,9 +363,9 @@ Each sentence is plain text, not an expression. Quote one that contains `: `, wh
 
 ### Calling a function
 
-`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`lookup`](lookup-format.md), [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`recall`](recall-format.md), [`computation`](computation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
+`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`lookup`](lookup-format.md), [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`computation`](computation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
 
-The task's output is that run's output: a reasoning function's text or JSON, what a lookup function's tool answered, an interaction function's answer from its tool or its request, a prediction function's series, what a recall function returned from its view, the value a computation function's program gave, or the output of the workflow it ran.
+The task's output is that run's output: a reasoning function's text or JSON, what a lookup function's tool answered, an interaction function's answer from its tool or its request, a prediction function's series, the value a computation function's program gave, or the output of the workflow it ran.
 
 Each time the task runs, including on a retry, it starts a separate run of the function, recorded under its own `run_id`. That run acts for the caller who started the workflow, with the permissions that caller had when the workflow started, and names that caller, by id and name, as its `started_by`.
 
@@ -377,7 +377,7 @@ Some runs finish within their call, and others later. A task waits for the longe
 | A lookup function                          | Within its call | 70 seconds                                                         |
 | An interaction function that calls a tool  | Within its call | 70 seconds                                                         |
 | An interaction function that asks a person | Later           | The `expires` of its document                                      |
-| A computation or recall function           | Within its call | 10 seconds                                                         |
+| A computation function                     | Within its call | 10 seconds                                                         |
 | A prediction function's question           | Within its call | 10 seconds                                                         |
 | A workflow                                 | Later           | The longest a run may last                                         |
 
@@ -436,7 +436,7 @@ A function that called tools may have changed something outside the playbook, so
 
 Other function types:
 
-- The refusals of a [lookup](lookup-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow), [recall](recall-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and which a retry may resolve, are under In a workflow on its page.
+- The refusals of a [lookup](lookup-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and which a retry may resolve, are under In a workflow on its page.
 - A prediction function's question counts every run that ended before it started, as in [this example](prediction-format.md#forecast-from-a-run-the-workflow-just-recorded).
 - A run that was cancelled raises `https://on.auto/problems/cancelled` with the kind of its cancellation: `requested`, `deadline`, `overrun` or `parent_ended` ([How a run ends](#how-a-run-ends)). Catch it on purpose, for example with `errors: { with: { type: https://on.auto/problems/cancelled } }` and `when: '${ $error.kind == "requested" }'`. Uncaught, it rejects the workflow as `invalid_input`, by its status 409, not as `cancelled`, since the workflow itself was not cancelled.
 - A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.

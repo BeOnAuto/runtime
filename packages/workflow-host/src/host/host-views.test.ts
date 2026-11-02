@@ -11,7 +11,7 @@ import { viewHarness } from '../views-testing/view-harness.ts';
 import { openWorkflowStore } from './workflow-store.ts';
 
 describe('a host given a store and the settings of its projector', () => {
-  it('keeps the views of recall functions on that store while it serves, and stops keeping them when it stops', async () => {
+  it('keeps the views on that store while it serves, and stops keeping them when it stops', async () => {
     const settings = await onSQLite();
     const views = await viewHarness(settings);
     await views.saved('runs', counting);

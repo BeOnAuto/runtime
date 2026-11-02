@@ -38,10 +38,6 @@ export function subjectIn(of: string): SubjectReading {
     : { refused: subjectWords };
 }
 
-export function pageViewsKeyOf(name: string): string {
-  return `${pageDefinitionType}:${name}`;
-}
-
 export function subjectNamed(type: string, name: string): string {
   return `${type}/${name}`;
 }

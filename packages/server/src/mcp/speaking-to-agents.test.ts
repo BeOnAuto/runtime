@@ -6,13 +6,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   descriptionIn,
-  sentenceNaming,
   sentencesOf,
   servingMeetings,
   type MeetingsServer,
   type Surfaces,
 } from '../testing/interaction-servers/meetings-server.ts';
-import { liveOverMcp } from '../testing/servers/recall-server.ts';
 
 let meetings: MeetingsServer;
 
@@ -89,85 +87,6 @@ describe('episode 3: asked to use Slack', () => {
     expect(plainTextIn(listed)).toContain(
       '“notes” did not accept the key this server gives it, so whoever runs this server can check that key.',
     );
-  });
-});
-
-const postingWhatItPosted = [
-  '---',
-  'model: anthropic/claude-sonnet-4-5',
-  'description: Posts the notes of a meeting to the team, and answers what it posted',
-  'output:',
-  '  format: json',
-  '  schema: {type: object, properties: {posted: {type: string}}, required: [posted]}',
-  '---',
-  'Post the notes of {{ input.meeting }}, and answer what you posted.',
-].join('\n');
-
-const rememberingWhatWasPosted = [
-  '---',
-  'description: What post-notes answered it posted, oldest first',
-  'language: typescript',
-  'source:',
-  '  events:',
-  '    - type: run_succeeded',
-  '      subject: reasoning/post-notes',
-  'view:',
-  '  initial: []',
-  '  schema: {type: array, items: {type: string}}',
-  '---',
-  'export function fold(view: View, event: Event): View {',
-  '  const data = event.data as { output: { posted: string } };',
-  '  return [...view, data.output.posted];',
-  '}',
-].join('\n');
-
-const inPosts = { playbook: 'posts' };
-
-async function rememberedOverMcp(session: McpSession) {
-  await session.callTool('create_playbook', { ...inPosts, name: 'Posts' });
-  await session.callTool('create_definition', {
-    ...inPosts,
-    type: 'reasoning',
-    name: 'post-notes',
-    source: postingWhatItPosted,
-    diagram: 'none',
-  });
-  await session.callTool('run_definition', {
-    ...inPosts,
-    type: 'reasoning',
-    name: 'post-notes',
-    input: { meeting: 'the standup' },
-  });
-  await session.callTool('create_definition', {
-    ...inPosts,
-    type: 'recall',
-    name: 'posted',
-    source: rememberingWhatWasPosted,
-    diagram: 'none',
-  });
-  await liveOverMcp(session, { ...inPosts, name: 'posted' }, 1);
-  return session.callTool('run_definition', { ...inPosts, type: 'recall', name: 'posted' });
-}
-
-describe('episode 4: asked to make the playbook remember what it posted today', () => {
-  it('finds what a recall function is for, and a recipe that says the function must answer what it posted', async () => {
-    const prompt = Schema.decodeUnknownSync(PromptSchema)(
-      await onMcp((session) => session.getPrompt('remember', { what: 'what it posted today' })),
-    );
-
-    expect(sentenceNaming(surfaces.instructions, 'Its function types')).toContain('recall retrieves run results');
-    expect(String(prompt.messages[0]?.content.text)).toContain(
-      'a function whose job is to post must answer what it posted.',
-    );
-  });
-
-  it('saves the recall function the recipe describes over the runs of the function that posts, which answers what was posted', async () => {
-    const recalled = await onMcp(rememberedOverMcp);
-
-    expect(recalled.structuredContent).toMatchObject({
-      status: 'succeeded',
-      output: ['The notes of the standup, to the team channel'],
-    });
   });
 });
 

@@ -31,7 +31,7 @@ function passedOver(note: NoteOf<'record_passed_over'>): Effect.Effect<void> {
   const { playbook, record } = note;
   return note.reason === 'unreadable'
     ? Effect.logWarning(
-        'A recorded event of a playbook could not be read as an event, so neither a recall function nor a dataset folds it',
+        'A recorded event of a playbook could not be read as an event, so neither a page nor a dataset folds it',
       ).pipe(Effect.annotateLogs({ playbook, record }))
     : Effect.logWarning(
         'A recorded event of a playbook was passed over by a projection whose filters it matched, since it holds what that projection cannot take',
@@ -40,8 +40,8 @@ function passedOver(note: NoteOf<'record_passed_over'>): Effect.Effect<void> {
 
 function viewStalled({ playbook, name, version }: NoteOf<'view_stalled'>): Effect.Effect<void> {
   return Effect.logWarning(
-    'The view of a recall function stopped at an event its fold could not take; saving a corrected version rebuilds it',
-  ).pipe(Effect.annotateLogs({ playbook, recall_function: name, version }));
+    'The views of a page stopped at an event its fold could not take; saving a corrected version rebuilds them',
+  ).pipe(Effect.annotateLogs({ playbook, page: name, version }));
 }
 
 function datasetStalled({ playbook, dataSha256, record, detail }: NoteOf<'dataset_stalled'>): Effect.Effect<void> {

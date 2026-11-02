@@ -30,7 +30,7 @@ The implementation is a function. The server calls it once during startup, befor
 | `features`         | `includes` checks whether an organization's license covers a [feature](../../self-host/licensing.md#features). `refusal` produces a `409` refusal with kind `feature_unlicensed` for unlicensed use. |
 | `settings`         | The extension's own settings, described below.                                                                                                                                                       |
 | `mostFunctions`    | The value of `PREDICTION_MAX_FUNCTIONS`.                                                                                                                                                             |
-| `triesBeforeStall` | The number of attempts an extension folder can make to process an event before stalling. This uses the same limit as recall views.                                                                   |
+| `triesBeforeStall` | The number of attempts an extension folder can make to process an event before stalling. This uses the same limit as the views of pages.                                                             |
 
 The database and feature ports become available after startup. Use them during the capability's work, not while constructing it.
 

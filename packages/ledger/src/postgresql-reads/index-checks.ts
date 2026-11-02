@@ -2,7 +2,7 @@ import { definitionStreamsStatement } from './postgresql-definition-streams.ts';
 
 export const definitionStreamsPlan = {
   explained: `EXPLAIN ${definitionStreamsStatement}`,
-  values: ['recall', 'emt:default'],
+  values: ['page', 'emt:default'],
   throughTheIndex: `Index Cond: ("substring"(stream_id, '^(?:[^/]*/){3}definitions/([^/]+)$'::text) = `,
 };
 

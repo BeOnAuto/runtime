@@ -46,7 +46,7 @@ describe('the notes of the workflow host', () => {
 });
 
 describe('the notes of the views the workflow host keeps', () => {
-  it('warn of a recorded event no recall function can fold, and of a view that stopped, naming the playbook', async () => {
+  it('warn of a recorded event no page can fold, and of views that stopped, naming the playbook', async () => {
     const lines = [
       ...(await linesLoggedBy(
         logHostNote({
@@ -57,21 +57,19 @@ describe('the notes of the views the workflow host keeps', () => {
         }),
       )),
       ...(await linesLoggedBy(
-        logHostNote({ kind: 'view_stalled', playbook: 'playbook/acme/alpha/', name: 'reviews', version: 2 }),
+        logHostNote({ kind: 'view_stalled', playbook: 'playbook/acme/alpha/', name: 'morning-posts', version: 2 }),
       )),
     ];
 
     expect(lines).toEqual([
       expect.stringContaining(
-        '"message":"A recorded event of a playbook could not be read as an event, so neither a recall function nor a dataset folds it","level":"WARN"',
+        '"message":"A recorded event of a playbook could not be read as an event, so neither a page nor a dataset folds it","level":"WARN"',
       ),
       expect.stringContaining(
-        '"message":"The view of a recall function stopped at an event its fold could not take; saving a corrected version rebuilds it","level":"WARN"',
+        '"message":"The views of a page stopped at an event its fold could not take; saving a corrected version rebuilds them","level":"WARN"',
       ),
     ]);
-    expect(lines[1]).toContain(
-      '"annotations":{"playbook":"playbook/acme/alpha/","recall_function":"reviews","version":2}',
-    );
+    expect(lines[1]).toContain('"annotations":{"playbook":"playbook/acme/alpha/","page":"morning-posts","version":2}');
   });
 });
 

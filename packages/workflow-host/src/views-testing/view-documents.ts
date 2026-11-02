@@ -19,6 +19,8 @@ export const alpha: Playbook = { org: 'acme', playbook: 'alpha' };
 
 export const alphaKey = streamPrefixOfPlaybook(alpha);
 
+export const viewedType = 'view';
+
 export const viewTestTimeoutMs = 60_000;
 
 export const succeeded = [{ type: 'run_succeeded' }];
@@ -51,13 +53,14 @@ export function foldingOf(): FoldingSettings {
 
 export interface ViewsProjecting extends Omit<ProjectorSettings, 'folders'>, ViewsFolding {
   readonly besides: readonly SomeFolder[];
+  readonly views?: SomeFolder;
 }
 
 export type ViewSettingsOf = (more?: Partial<ViewsProjecting>) => ProjectorSettings;
 
 export function viewsFolderOver(pool: ProgramPool, rebuildsAtOnce = 4) {
   return viewsFolder({
-    definitionType: 'recall',
+    definitionType: viewedType,
     pool,
     folding: foldingOf(),
     overtimesBeforeStall: 20,
@@ -68,7 +71,7 @@ export function viewsFolderOver(pool: ProgramPool, rebuildsAtOnce = 4) {
 export function settingsOver(pool: ProgramPool, appends: AppendSignal): ViewSettingsOf {
   return (more = {}) => {
     const settings: ViewsProjecting = {
-      definitionType: 'recall',
+      definitionType: viewedType,
       pool,
       folding: foldingOf(),
       playbooksAtOnce: 4,
@@ -86,10 +89,10 @@ export function settingsOver(pool: ProgramPool, appends: AppendSignal): ViewSett
       rebuildsAtOnce,
       pool: folded,
       besides,
+      views = someFolder(viewsFolder({ definitionType, pool: folded, folding, overtimesBeforeStall, rebuildsAtOnce })),
       ...projecting
     } = settings;
-    const views = viewsFolder({ definitionType, pool: folded, folding, overtimesBeforeStall, rebuildsAtOnce });
-    return { ...projecting, folders: [someFolder(views), ...besides] };
+    return { ...projecting, folders: [views, ...besides] };
   };
 }
 

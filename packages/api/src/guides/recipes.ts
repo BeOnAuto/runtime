@@ -103,8 +103,8 @@ const whereInteractionIsServed: AdditionsByRecipe = {
           ' Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither lists those that can.',
       },
       {
-        after: 'give it tools with the give-tools recipe',
-        words: ', ask someone through a connection and take their answer with an interaction function',
+        after: 'give it tools with the give-tools recipe.',
+        words: ' They can also ask someone through a connection and take their answer with an interaction function.',
       },
     ],
     calls: [],
@@ -147,7 +147,7 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
       },
       {
         after: 'what they can do next:',
-        words: ' change when it runs with the schedule recipe and the workflow guide,',
+        words: ' change when it runs with the schedule recipe and the workflow guide, or',
       },
     ],
     calls: ['publish_event', 'list_runs', 'get_run'],

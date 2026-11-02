@@ -5,7 +5,7 @@ import { streamPrefixOfPlaybook, type Context } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { ViewDetails } from '../views/view-details.ts';
-import { alpha, type Playbook } from './view-documents.ts';
+import { alpha, viewedType, type Playbook } from './view-documents.ts';
 
 interface RunOf {
   readonly at?: string;
@@ -111,8 +111,8 @@ export function playbookAppends(store: LedgerStreams, appends: AppendSignal): Pl
   const definitions = new Map<string, number>();
   return {
     append,
-    saved: savedBy(append, definitions, 'recall'),
-    retired: retiredBy(append, definitions, 'recall'),
+    saved: savedBy(append, definitions, viewedType),
+    retired: retiredBy(append, definitions, viewedType),
     savedPage: savedBy(append, definitions, 'page'),
     retiredPage: retiredBy(append, definitions, 'page'),
     ran,

@@ -1,6 +1,6 @@
-import { recallBounds } from '@on.auto/recall';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import { pageFiltersOn } from '@on.auto/workflow-engine';
+import { projectorBounds } from '@on.auto/workflow-host';
 
 import { computationServedBy, type ProgramPoolOf, type ServedComputation } from '../composition/served-computation.ts';
 import type { InstalledPackages } from '../extensions/extension-loading.ts';
@@ -33,7 +33,7 @@ export async function madeAtStart(
       pool: computation.pool,
       filters: pageFiltersOn(computation.pool.evaluations.filters),
       mostFunctions: settings.prediction.mostFunctions,
-      triesBeforeStall: recallBounds.overtimesBeforeStall,
+      triesBeforeStall: projectorBounds.triesBeforeStall,
     }),
   );
   return { registry: capabilityRegistryHeld(), extensions, computation, prediction };

@@ -8,7 +8,6 @@ import { renderClock } from '../template/render-clock.ts';
 import { definitionPresentedBy, pageDetailsIn, pageSubjectOf, publishedPageDetails } from './page-details.ts';
 import { parsePageDocument } from './page-parsing.ts';
 import { latelyShown, resultShown, type ReadMoment, type ViewsShown } from './page-rendering.ts';
-import { pageViewsKeyOf } from './page-subjects.ts';
 
 const readMoment: Effect.Effect<ReadMoment> = Effect.gen(function* () {
   const now = new Date(yield* Clock.currentTimeMillis).toISOString();
@@ -45,7 +44,7 @@ function pageLately(views: KeptViews) {
       return Effect.undefined;
     }
     const declared = document.data.views;
-    return Effect.all([views.viewOf(place, pageViewsKeyOf(page.name)), readMoment]).pipe(
+    return Effect.all([views.viewOf(place, page.name), readMoment]).pipe(
       Effect.map(([kept, moment]: readonly [KeptViewState | undefined, ReadMoment]) =>
         latelyShown(template, viewsShownOf(page, kept), { declared, subject }, moment),
       ),
@@ -68,10 +67,7 @@ export function pageStanding(views: KeptViews): Standing {
   return ({ org, playbook, name, version, status, details }) =>
     status === 'retired' || pageDetailsIn(details)?.data === undefined
       ? Effect.undefined
-      : Effect.all([
-          views.viewOf({ org, playbook }, pageViewsKeyOf(name)),
-          views.newestRecordAt({ org, playbook }),
-        ]).pipe(
+      : Effect.all([views.viewOf({ org, playbook }, name), views.newestRecordAt({ org, playbook })]).pipe(
           Effect.map(([kept, newestAt]: readonly [KeptViewState | undefined, string | undefined]) =>
             viewStandingOf(version, kept, newestAt),
           ),

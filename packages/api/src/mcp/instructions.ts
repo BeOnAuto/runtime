@@ -47,7 +47,6 @@ const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
   reasoning: 'prompts a model',
   interaction: 'exchanges information',
   prediction: 'forecasts from history',
-  recall: 'retrieves run results',
   computation: 'runs a program',
   lookup: 'obtains information',
   memory: 'remembers and recalls',
@@ -56,7 +55,6 @@ const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
 
 const whatAFunctionTypeAlsoNeedsSaid: Readonly<Record<string, string>> = {
   lookup: 'A lookup function fetches what a reasoning function interprets.',
-  recall: 'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.',
   memory: 'Remember what the person wants kept in a memory function, not your notes.',
 };
 

@@ -1,4 +1,3 @@
-import { campaignReviews } from '@on.auto/recall/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
@@ -10,6 +9,28 @@ const day = 86_400_000;
 const week = 7 * day;
 
 const weeksBefore = 10;
+
+const weeksRecorded = [
+  '---',
+  'description: How many weeks were recorded, store by store',
+  'of: computation/record-week',
+  'data:',
+  '  language: typescript',
+  '  source:',
+  '    events:',
+  '      - type: run_succeeded',
+  '        subject: computation/record-week',
+  '  views:',
+  '    by_store: categories',
+  '  module: |',
+  '    export function fold(view: View, event: Event): View {',
+  '      return { by_store: { values: [...(view.by_store?.values ?? []), { name: event.type, value: 1 }] } };',
+  '    }',
+  '---',
+  '{% result %}Recorded.{% endresult %}',
+  '',
+  '{% lately %}{% for value in views.by_store.values %}{{ value.name }}{% endfor %}{% endlately %}',
+].join('\n');
 
 const forecasts = 20;
 
@@ -76,7 +97,7 @@ function revenueOf(ago: number): number {
 
 async function created(server: ReasoningServer, type: string, name: string, source: string): Promise<void> {
   const answer = await server.call('POST', `${alpha}/definitions/${type}`, {
-    body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
+    body: { name, source, ...(type === 'workflow' || type === 'page' ? {} : { diagram: 'none' }) },
   });
   expect(answer.status).toBe(201);
 }
@@ -92,8 +113,8 @@ async function servingWeeks(): Promise<ReasoningServer> {
   const server = await servingWorkflows([]);
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  await created(server, 'recall', 'campaign-reviews', campaignReviews);
   await created(server, 'computation', 'record-week', recordWeek);
+  await created(server, 'page', 'weeks-recorded', weeksRecorded);
   await created(server, 'prediction', 'weekly-revenue', weeklyRevenue);
   await created(server, 'workflow', 'close-and-forecast', closeAndForecast);
   await Array.from({ length: weeksBefore }, (_, at) => weeksBefore + 1 - at).reduce(
@@ -115,7 +136,7 @@ async function lastObserved(server: ReasoningServer, revenue: number): Promise<u
   return settled.body;
 }
 
-describe('a workflow that records a week and forecasts from it in the next step, in a playbook that keeps a recall function', () => {
+describe('a workflow that records a week and forecasts from it in the next step, in a playbook that keeps a page', () => {
   it('forecasts from the week it just recorded every time, without asking again', { timeout: 120_000 }, async () => {
     const server = await servingWeeks();
     const revenues = Array.from({ length: forecasts }, (_, at) => 50_000 + at);

@@ -229,7 +229,6 @@ export {
   type InteractionFunctionDefinition,
   type LookupFunctionDefinition,
   type PredictionFunctionDefinition,
-  type RecallFunctionDefinition,
   type ReasoningFunctionDefinition,
   type WorkflowDefinition,
   type ListedDefinition,
@@ -263,7 +262,7 @@ export {
   type KeptViewStall,
   type KeptViews,
 } from './capability/view-standing.ts';
-export { pageDefinitionType, pageViewsKeyOf } from './page/page-subjects.ts';
+export { pageDefinitionType } from './page/page-subjects.ts';
 export { PageDetailsSchema, pageDetailsIn, type PageDetails } from './page/page-details.ts';
 export { shapedViewsSchemaOf } from './shapes/shaped-views.ts';
 export type {

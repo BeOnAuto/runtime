@@ -550,40 +550,6 @@ importers:
         specifier: 4.13.3
         version: 4.13.3(supports-color@8.1.1)
 
-  capabilities/recall:
-    dependencies:
-      '@on.auto/definitions':
-        specifier: workspace:*
-        version: link:../../packages/definitions
-      '@on.auto/json-schema':
-        specifier: workspace:*
-        version: link:../../packages/json-schema
-      '@on.auto/operations':
-        specifier: workspace:*
-        version: link:../../packages/operations
-      '@on.auto/phrasing':
-        specifier: workspace:*
-        version: link:../../packages/phrasing
-      '@on.auto/workflow-engine':
-        specifier: workspace:*
-        version: link:../../packages/workflow-engine
-      '@on.auto/workflow-host':
-        specifier: workspace:*
-        version: link:../../packages/workflow-host
-      effect:
-        specifier: 'catalog:'
-        version: 4.0.0
-    devDependencies:
-      '@on.auto/shipped-files':
-        specifier: workspace:*
-        version: link:../../packages/shipped-files
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 5.0.3(vitest@5.0.3)
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
-
   packages/activity:
     dependencies:
       '@on.auto/definitions':
@@ -1188,9 +1154,6 @@ importers:
       '@on.auto/reasoning':
         specifier: workspace:*
         version: link:../../capabilities/reasoning
-      '@on.auto/recall':
-        specifier: workspace:*
-        version: link:../../capabilities/recall
       '@on.auto/secrets':
         specifier: workspace:*
         version: link:../secrets

@@ -32,13 +32,11 @@ const reasoning = capabilityOf('reasoning', 'reasoning function', { name: 'reaso
 
 const computation = capabilityOf('computation', 'computation function', { name: 'computation-function' });
 
-const recall = capabilityOf('recall', 'recall function', { name: 'recall-function' });
-
 const prediction = capabilityOf('prediction', 'prediction function', { name: 'prediction-function' });
 
 const workflow = capabilityOf('workflow', 'workflow', { name: 'workflow' });
 
-const everyType = [reasoning, computation, recall, prediction, workflow];
+const everyType = [reasoning, computation, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
@@ -80,7 +78,6 @@ function outsideCode(text: string): string {
 const pages: Readonly<Record<string, string>> = {
   'reasoning-function': 'reference/reasoning-format.md',
   'computation-function': 'reference/computation-format.md',
-  'recall-function': 'reference/recall-format.md',
   'prediction-function': 'reference/prediction-format.md',
   workflow: 'reference/workflow-format.md',
   templates: 'reference/template.md',
@@ -89,24 +86,21 @@ const pages: Readonly<Record<string, string>> = {
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are the terminology, a guide per type, the templates and the four recipes', () => {
+  it('are the terminology, a guide per type, the templates and the three recipes it carries the format guides of', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
       'terminology',
       'reasoning-function',
       'computation-function',
-      'recall-function',
       'prediction-function',
       'workflow',
       'templates',
       'first-playbook',
-      'remember',
       'give-tools',
       'schedule',
     ]);
     expect(definitionTypes).toEqual([
       { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
       { type: 'computation', noun: 'computation function', guide: 'computation-function' },
-      { type: 'recall', noun: 'recall function', guide: 'recall-function' },
       { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
       { type: 'workflow', noun: 'workflow', guide: 'workflow' },
     ]);
@@ -132,7 +126,6 @@ describe('the titles and links of the guides of a server that runs every type of
     expect(guides.slice(1).map(({ title }) => title)).toEqual([
       'Reasoning function format',
       'Computation function format',
-      'Recall function format',
       'Prediction function format',
       'Workflow format',
       'Templates',
@@ -170,7 +163,6 @@ describe('the size and the words of the guides of a server', () => {
     expect(guides.slice(1).map(({ description }) => description)).toEqual([
       'How reasoning functions are written: their document, fields, examples and bounds.',
       'How computation functions are written: their document, fields, examples and bounds.',
-      'How recall functions are written: their document, fields, examples and bounds.',
       'How prediction functions are written: their document, fields, examples and bounds.',
       'How workflows are written: their document, fields, examples and bounds.',
       'The filters a template may use, the same in every template of every definition.',
@@ -196,13 +188,11 @@ describe('the recipes of a server', () => {
 
     expect([
       asked['first-playbook']?.({}),
-      asked['remember']?.({ what: 'what it posted today' }),
       asked['give-tools']?.({}),
       asked['give-tools']?.({ server: 'slack' }),
       asked['schedule']?.({ workflow: 'daily-digest', when: 'every weekday at 9:00' }),
     ]).toEqual([
       'Create my first playbook.',
-      'Make the playbook remember what it posted today.',
       'Give the playbook tools.',
       'Give the playbook the tools of the tool server slack.',
       'Run the workflow daily-digest every weekday at 9:00.',
@@ -224,7 +214,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3630, 3959,
+      3630, 3894,
     ]);
   });
 });
@@ -237,14 +227,14 @@ describe('the recipes of a server that serves interaction functions', () => {
       "5. Ask the person what the function should do with the tools, and which of them it needs. To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
     );
     expect(texts['first-playbook']).toContain(
-      'give it tools with the give-tools recipe, ask someone through a connection and take their answer with an interaction function, or make the playbook remember its answers',
+      'give it tools with the give-tools recipe. They can also ask someone through a connection and take their answer with an interaction function.',
     );
     expect([
-      bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
-      bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
+      bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
+      bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4332, 2327, 4219, 1741],
-      [3959, 2327, 3630, 1741],
+      [4281, 4219, 1741],
+      [3894, 3630, 1741],
     ]);
   });
 });

@@ -51,7 +51,6 @@
     "@on.auto/prediction": "workspace:*",
     "@on.auto/providers": "workspace:*",
     "@on.auto/reasoning": "workspace:*",
-    "@on.auto/recall": "workspace:*",
     "@on.auto/secrets": "workspace:*",
     "@on.auto/shipped-files": "workspace:*",
     "@on.auto/tool-servers": "workspace:*",

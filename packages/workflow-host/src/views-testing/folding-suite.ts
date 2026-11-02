@@ -97,16 +97,16 @@ function checkpointTests(settingsOf: SettingsOf): void {
 }
 
 function sourceTests(settingsOf: SettingsOf): void {
-  it('never folds the runs of its own recall function, and folds those of another', async () => {
+  it('never folds the runs of its own definition, and folds those of another', async () => {
     const views = await viewHarness(await settingsOf());
     const runs = [
-      { type: 'run_succeeded', subject: 'recall/self' },
-      { type: 'run_succeeded', subject: 'recall/other' },
+      { type: 'run_succeeded', subject: 'view/self' },
+      { type: 'run_succeeded', subject: 'view/other' },
     ];
     await views.saved('self', detailsOf(foldOf('return view + 1;'), runs, { initial: 0 }));
-    await views.ran('recall/self', 'its own answer');
-    await views.ran('recall/other', 'an answer of another');
-    await views.ran('recall/self', 'its own answer again');
+    await views.ran('view/self', 'its own answer');
+    await views.ran('view/other', 'an answer of another');
+    await views.ran('view/self', 'its own answer again');
     views.start();
 
     const kept = await views.until('self', liveFromSomewhere);

@@ -1,9 +1,6 @@
 import { Option, Order, Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
-import { isPlaybookRunEventType } from '../events/playbook-facts.ts';
-import { definitionSourcePrefix } from '../events/reserved-attributes.ts';
-import { isDefinitionEventType } from '../registry/definition-events.ts';
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import {
@@ -12,30 +9,22 @@ import {
   type CallingStep,
   type NamedDefinition,
 } from './called-definitions.ts';
-import type { DefinitionUser, NamingRelation } from './user-relations.ts';
+import type { DefinitionUser } from './user-relations.ts';
 
 export type PlaybookRegistries = ReadonlyMap<string, DefinitionRegistry>;
 
-const NamingFilterSchema = Schema.Struct({
-  type: Schema.String,
-  subject: Schema.optionalKey(Schema.Json),
-  source: Schema.optionalKey(Schema.Json),
-});
-
-type NamingFilter = typeof NamingFilterSchema.Type;
-
 const NamingDetailsSchema = Schema.Struct({
   calls: Schema.optionalKey(Schema.Array(CalledDefinitionSchema)),
-  filters: Schema.optionalKey(Schema.Array(NamingFilterSchema)),
 });
 
 type NamingDetails = typeof NamingDetailsSchema.Type;
 
 const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
 
-type Use =
-  | { readonly relation: 'calls'; readonly steps: readonly CallingStep[] }
-  | { readonly relation: NamingRelation };
+interface Use {
+  readonly relation: 'calls';
+  readonly steps: readonly CallingStep[];
+}
 
 const typeRanks: readonly string[] = [...functionTypeOrder, 'workflow'];
 
@@ -59,24 +48,12 @@ function usesOfCalls(calls: readonly CalledDefinition[]): readonly Use[] {
   return steps.length === 0 ? [] : [{ relation: 'calls', steps }];
 }
 
-function relationsOfFilter({ type, subject, source }: NamingFilter, used: NamedDefinition): readonly NamingRelation[] {
-  const named = `${used.type}/${used.name}`;
-  if (isPlaybookRunEventType(type)) {
-    return subject === named ? ['remembers-runs'] : [];
-  }
-  return isDefinitionEventType(type) && source === `${definitionSourcePrefix}${named}` ? ['remembers-changes'] : [];
-}
-
 function isNamed({ type, name }: NamedDefinition, used: NamedDefinition): boolean {
   return type === used.type && name === used.name;
 }
 
-function usesOf({ calls = [], filters = [] }: NamingDetails, used: NamedDefinition): readonly Use[] {
-  const uses: readonly Use[] = [
-    ...usesOfCalls(calls.filter((call) => isNamed(call, used))),
-    ...filters.flatMap((filter) => relationsOfFilter(filter, used)).map((relation) => ({ relation })),
-  ];
-  return uses.filter((use, index) => uses.findIndex((other) => other.relation === use.relation) === index);
+function usesOf({ calls = [] }: NamingDetails, used: NamedDefinition): readonly Use[] {
+  return usesOfCalls(calls.filter((call) => isNamed(call, used)));
 }
 
 function userOf(user: NamedDefinition, use: Use): DefinitionUser {

@@ -64,7 +64,7 @@ describe('readSettings', () => {
       reasoning: { mostInputTokens: 2_000_000 },
       workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
       computation: { workers: 4 },
-      recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
+      projection: { pageRebuildsAtOnce: 4, playbooksAtOnce: 4 },
       prediction: defaultPrediction,
       documents: { processes: 2, processMemoryMebibytes: 1280 },
       connections: { peopleMayAdd: true, allowedHosts: null, ...notLocal, credentialKinds: null, variables: [] },
@@ -148,7 +148,7 @@ const everySettingRead = {
   reasoning: { mostInputTokens: 500_000 },
   workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
   computation: { workers: 4 },
-  recall: { mostFunctions: 32, rebuildsAtOnce: 4, playbooksAtOnce: 4 },
+  projection: { pageRebuildsAtOnce: 4, playbooksAtOnce: 4 },
   prediction: defaultPrediction,
   documents: { processes: 2, processMemoryMebibytes: 1280 },
   connections: {

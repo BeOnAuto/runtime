@@ -7,14 +7,14 @@ import { computationVariables, readComputationSettings, type ComputationSettings
 import { documentVariables, readDocumentSettings, type DocumentSettings } from './document-settings.ts';
 import { interactionVariables, readInteractionSettings, type InteractionSettings } from './interaction-settings.ts';
 import { predictionVariables, readPredictionSettings, type PredictionSettings } from './prediction-settings.ts';
+import { projectionVariables, readProjectionSettings, type ProjectionSettings } from './projection-settings.ts';
 import { readReasoningSettings, reasoningVariables, type ReasoningSettings } from './reasoning-settings.ts';
-import { readRecallSettings, recallVariables, type RecallSettings } from './recall-settings.ts';
 
 export interface FunctionSettings extends ReasoningSettings {
   readonly computation: ComputationSettings;
-  readonly recall: RecallSettings;
   readonly interaction: InteractionSettings;
   readonly prediction: PredictionSettings;
+  readonly projection: ProjectionSettings;
   readonly documents: DocumentSettings;
   readonly extensions: readonly ExtensionEntry[];
 }
@@ -22,9 +22,9 @@ export interface FunctionSettings extends ReasoningSettings {
 export const functionVariables: readonly string[] = [
   ...reasoningVariables,
   ...computationVariables,
-  ...recallVariables,
   ...interactionVariables,
   ...predictionVariables,
+  ...projectionVariables,
   ...documentVariables,
   ...extensionVariables,
 ];
@@ -41,9 +41,9 @@ export function readFunctionSettings(
     toolServers,
     reasoning,
     computation: Effect.runSync(readComputationSettings(environment)),
-    recall: Effect.runSync(readRecallSettings(environment)),
     interaction: Effect.runSync(readInteractionSettings(environment)),
     prediction: Effect.runSync(readPredictionSettings(environment)),
+    projection: Effect.runSync(readProjectionSettings(environment)),
     documents: Effect.runSync(readDocumentSettings(environment)),
     extensions: readExtensionSettings(environment),
   };

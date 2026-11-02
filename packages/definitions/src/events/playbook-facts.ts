@@ -29,7 +29,7 @@ const decodePublished = recordedDecoder(EventPublishedSchema);
 
 const publishedEventsKind = 'events';
 
-export function isPlaybookRunEventType(type: string): boolean {
+function isPlaybookRunEventType(type: string): boolean {
   return runFactTypes.some((runType) => runType === type);
 }
 

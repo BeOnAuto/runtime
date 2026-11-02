@@ -8,7 +8,7 @@ import type { SomeFolder } from './folder.ts';
 import { playbookKeyOfDefinitions } from './playbook-definitions.ts';
 import { playbookPass, type PassParts } from './playbook-pass.ts';
 import { scheduleOf, type Schedule } from './projector-schedule.ts';
-import { definitionTypesKeptBy, type ProjectorSettings } from './projector-settings.ts';
+import type { ProjectorSettings } from './projector-settings.ts';
 
 export interface Projector {
   readonly stop: () => Promise<void>;
@@ -51,10 +51,13 @@ function discoveredFor(database: HostDatabase, schedule: Schedule, definitionTyp
 
 function discovered({ database, settings }: ProjectorParts, schedule: Schedule): Effect.Effect<void> {
   return Effect.forEach(
-    settings.folders.flatMap((some) =>
-      some((folder) => definitionTypesKeptBy(settings.keptAlong ?? {}, folder.definitionType)),
-    ),
-    (definitionType) => discoveredFor(database, schedule, definitionType),
+    settings.folders,
+    (some) =>
+      discoveredFor(
+        database,
+        schedule,
+        some((folder) => folder.definitionType),
+      ),
     { discard: true },
   );
 }

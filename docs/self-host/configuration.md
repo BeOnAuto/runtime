@@ -183,22 +183,21 @@ Reasoning functions call language models with these settings, all optional. [Set
 
 `OTEL_EXPORTER_OTLP_ENDPOINT` turns telemetry on, and `TELEMETRY_CONTENT=true` records content. [Send telemetry](telemetry.md#settings) lists these and the other `OTEL_` settings the server reads. Each is read from the environment only.
 
-### Computation and recall functions
+### Computation functions and pages
 
-Each run of a computation function, and each run and view of a recall function, runs in a worker thread the server keeps between runs.
+Each run of a computation function, and each fold of the views of a page, runs in a worker thread the server keeps between runs.
 
 - The server never keeps more workers alive than `COMPUTATION_WORKERS`.
-- It folds the views of recall functions in at most half of the workers at once, and at least one.
+- It folds the views of pages in at most half of the workers at once, and at least one.
 - It ends a worker after a run that ran past its time, used too much memory, was cancelled or broke.
 - It also ends a worker after its thousandth run, and after a minute without one.
 - A worker has a stack of 64 MiB and is stopped when its heap grows past 256 MiB. [Plan memory](production.md#plan-memory) sizes them.
 
-| Variable                   | Default | Purpose                                                                                                                                                      |
-| -------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `COMPUTATION_WORKERS`      | `4`     | The most worker threads the server keeps, and so the most runs it takes at once, from 1 to 64. A run that finds none free within 10 seconds is `unavailable` |
-| `RECALL_MAX_FUNCTIONS`     | `32`    | How many active recall functions a playbook may keep, from 1 to 1000. Lowering it below what a playbook already keeps refuses only that playbook's saves     |
-| `RECALL_MAX_REBUILDS`      | `4`     | How many views of one playbook are built at once, from 1 to 64. The others wait in the order they were saved                                                 |
-| `RECALL_PLAYBOOKS_AT_ONCE` | `4`     | How many playbooks the server folds at once, from 1 to 64                                                                                                    |
+| Variable                       | Default | Purpose                                                                                                                                                      |
+| ------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `COMPUTATION_WORKERS`          | `4`     | The most worker threads the server keeps, and so the most runs it takes at once, from 1 to 64. A run that finds none free within 10 seconds is `unavailable` |
+| `PAGE_MAX_REBUILDS`            | `4`     | How many views of the pages of one playbook are built at once, from 1 to 64. The others wait in the order they were saved                                    |
+| `PROJECTION_PLAYBOOKS_AT_ONCE` | `4`     | How many playbooks the server folds at once, into the views of their pages and the datasets of their prediction functions, from 1 to 64                      |
 
 ### Lookup functions
 
@@ -223,7 +222,7 @@ It may also read the replies to what it sent through another tool of that server
 
 ### Prediction functions
 
-A prediction function answers from the dataset it folds from the playbook's events, which the server keeps in its database beside the views of recall functions, and from the runtime's forecaster, within the request that asks, or from an [extension](#extensions) that fills `capability/prediction` in its place. It keeps no content of its own and needs no process. A value outside its range stops the server at start, naming the setting.
+A prediction function answers from the dataset it folds from the playbook's events, which the server keeps in its database beside the views of pages, and from the runtime's forecaster, within the request that asks, or from an [extension](#extensions) that fills `capability/prediction` in its place. It keeps no content of its own and needs no process. A value outside its range stops the server at start, naming the setting.
 
 | Variable                   | Default | Purpose                                                                                              |
 | -------------------------- | ------- | ---------------------------------------------------------------------------------------------------- |

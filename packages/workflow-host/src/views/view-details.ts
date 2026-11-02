@@ -1,11 +1,9 @@
 import { noStrippedForms, runnableAttributes, type StrippedForms } from '@on.auto/definitions';
 import { Option, Schema } from 'effect';
 
-export const ViewFilterSchema = Schema.StructWithRest(Schema.Struct({ type: Schema.String }), [
+const ViewFilterSchema = Schema.StructWithRest(Schema.Struct({ type: Schema.String }), [
   Schema.Record(Schema.String, Schema.Json),
 ]);
-
-export type ViewFilter = typeof ViewFilterSchema.Type;
 
 export const ViewDetailsSchema = Schema.Struct({
   language: Schema.Literal('typescript'),

@@ -26,7 +26,7 @@ export interface FoldedRow {
   readonly stall?: ViewStall;
 }
 
-export const viewsTable = statement`CREATE TABLE IF NOT EXISTS recall_views (
+export const viewsTable = statement`CREATE TABLE IF NOT EXISTS page_views (
     playbook_key TEXT NOT NULL,
     name TEXT NOT NULL,
     version BIGINT NOT NULL,
@@ -53,28 +53,28 @@ export function viewsOfPlaybook(playbookKey: string): Statement {
   return statement`SELECT playbook_key, name, version, saved, details, phase, checkpoint, checkpoint_at, last_event_id,
       last_event_at, folded, overtimes, stalled_event_id, stalled_event_type, stalled_event_at, stalled_kind,
       stalled_message, stalled_line
-    FROM recall_views WHERE playbook_key = ${playbookKey} ORDER BY saved, name`;
+    FROM page_views WHERE playbook_key = ${playbookKey} ORDER BY saved, name`;
 }
 
 export function viewToFold({ playbookKey, name, version, checkpointText }: ViewRow): Statement {
-  return statement`SELECT view FROM recall_views
+  return statement`SELECT view FROM page_views
     WHERE playbook_key = ${playbookKey} AND name = ${name} AND version = ${version} AND checkpoint = ${checkpointText}`;
 }
 
 export function viewNamed(playbookKey: string, name: string): Statement {
-  return statement`SELECT * FROM recall_views WHERE playbook_key = ${playbookKey} AND name = ${name}`;
+  return statement`SELECT * FROM page_views WHERE playbook_key = ${playbookKey} AND name = ${name}`;
 }
 
-export const playbooksWithViews = statement`SELECT DISTINCT playbook_key FROM recall_views ORDER BY playbook_key`;
+export const playbooksWithViews = statement`SELECT DISTINCT playbook_key FROM page_views ORDER BY playbook_key`;
 
 export function viewAdded({ playbookKey, name, version, saved, details, phase, view }: NewView): Statement {
-  return statement`INSERT INTO recall_views (playbook_key, name, version, saved, details, phase, view, checkpoint, folded, overtimes)
+  return statement`INSERT INTO page_views (playbook_key, name, version, saved, details, phase, view, checkpoint, folded, overtimes)
     VALUES (${playbookKey}, ${name}, ${version}, ${saved}, ${details}, ${phase}, ${view}, '', 0, 0)
     ON CONFLICT (playbook_key, name) DO NOTHING`;
 }
 
 export function viewRenewed({ playbookKey, name, version, saved, details, phase, view }: NewView): Statement {
-  return statement`UPDATE recall_views SET version = ${version}, saved = ${saved}, details = ${details},
+  return statement`UPDATE page_views SET version = ${version}, saved = ${saved}, details = ${details},
       phase = ${phase}, view = ${view}, checkpoint = '', checkpoint_at = NULL, last_event_id = NULL,
       last_event_at = NULL, folded = 0, overtimes = 0, stalled_event_id = NULL, stalled_event_type = NULL,
       stalled_event_at = NULL, stalled_kind = NULL, stalled_message = NULL, stalled_line = NULL
@@ -82,11 +82,11 @@ export function viewRenewed({ playbookKey, name, version, saved, details, phase,
 }
 
 export function viewDropped(playbookKey: string, name: string): Statement {
-  return statement`DELETE FROM recall_views WHERE playbook_key = ${playbookKey} AND name = ${name}`;
+  return statement`DELETE FROM page_views WHERE playbook_key = ${playbookKey} AND name = ${name}`;
 }
 
 export function phaseSet({ playbookKey, name, version }: ViewRow, phase: RowPhase): Statement {
-  return statement`UPDATE recall_views SET phase = ${phase}
+  return statement`UPDATE page_views SET phase = ${phase}
     WHERE playbook_key = ${playbookKey} AND name = ${name} AND version = ${version} AND phase IN ('waiting', 'rebuilding')`;
 }
 
@@ -101,7 +101,7 @@ function stallColumns(stall: ViewStall | undefined) {
 function movedWritten(read: ViewRow, folded: FoldedRow): Statement {
   const lastEvent = folded.lastEvent ?? noLastEvent;
   const stall = stallColumns(folded.stall);
-  return statement`UPDATE recall_views SET checkpoint = ${pointText(folded.checkpoint)},
+  return statement`UPDATE page_views SET checkpoint = ${pointText(folded.checkpoint)},
       checkpoint_at = ${folded.checkpointAt}, last_event_id = ${lastEvent.id}, last_event_at = ${lastEvent.time},
       folded = ${folded.folded}, overtimes = ${folded.overtimes}, phase = ${folded.phase},
       stalled_event_id = ${stall.id}, stalled_event_type = ${stall.type}, stalled_event_at = ${stall.time},
@@ -117,7 +117,7 @@ export function foldedWritten(read: ViewRow, folded: FoldedRow): Statement {
   }
   const lastEvent = folded.lastEvent ?? noLastEvent;
   const stall = stallColumns(folded.stall);
-  return statement`UPDATE recall_views SET view = ${JSON.stringify(folded.view)}, checkpoint = ${pointText(folded.checkpoint)},
+  return statement`UPDATE page_views SET view = ${JSON.stringify(folded.view)}, checkpoint = ${pointText(folded.checkpoint)},
       checkpoint_at = ${folded.checkpointAt}, last_event_id = ${lastEvent.id}, last_event_at = ${lastEvent.time},
       folded = ${folded.folded}, overtimes = ${folded.overtimes}, phase = ${folded.phase},
       stalled_event_id = ${stall.id}, stalled_event_type = ${stall.type}, stalled_event_at = ${stall.time},

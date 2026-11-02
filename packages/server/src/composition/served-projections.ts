@@ -1,14 +1,12 @@
-import type { Capability, DefinitionKind } from '@on.auto/definitions';
+import type { DefinitionKind } from '@on.auto/definitions';
 import { makePageAdapter } from '@on.auto/definitions/page';
 import { appendSignal, type AppendSignal, type ConnectionPorts } from '@on.auto/ledger';
-import { makeRecallFunctionAdapter, recallBounds, recallDefinitionType, recallFolding } from '@on.auto/recall';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import {
-  foldedBeforeItRuns,
   openWorkflowStore,
-  pageViewsKept,
+  pageViewsFolder,
+  projectorBounds,
   someFolder,
-  viewsFolder,
   viewsPortOn,
   type ProjectorSettings,
   type SomeFolder,
@@ -18,13 +16,12 @@ import {
 import type { Settings } from '../settings/settings.ts';
 
 interface ServedProjections {
-  readonly recall: Capability;
   readonly page: DefinitionKind;
   readonly store: WorkflowStore;
   readonly projector: ProjectorSettings;
 }
 
-interface ProjectedOn extends Pick<Settings, 'recall'> {
+interface ProjectedOn extends Pick<Settings, 'projection'> {
   readonly database: ConnectionPorts;
 }
 
@@ -37,32 +34,18 @@ export function projectionWiring(): ProjectionWiring {
   const appends = appendSignal();
   return {
     appends,
-    served: async ({ recall, database }, pool, besides) => {
-      const folder = viewsFolder({
-        definitionType: recallDefinitionType,
-        pool,
-        folding: recallFolding,
-        overtimesBeforeStall: recallBounds.overtimesBeforeStall,
-        rebuildsAtOnce: recall.rebuildsAtOnce,
-      });
-      const viewFolders = [someFolder(folder)];
-      const folders = [...viewFolders, ...besides];
+    served: async ({ projection, database }, pool, besides) => {
+      const pages = pageViewsFolder({ pool, rebuildsAtOnce: projection.pageRebuildsAtOnce });
+      const folders = [someFolder(pages), ...besides];
       const store = await openWorkflowStore(database, folders);
-      const views = viewsPortOn(store.database);
       return {
-        recall: foldedBeforeItRuns({
-          capability: makeRecallFunctionAdapter({ pool, views, mostFunctions: recall.mostFunctions }),
-          folders: viewFolders,
-          database: store.database,
-        }),
-        page: makePageAdapter({ pool, views }),
+        page: makePageAdapter({ pool, views: viewsPortOn(store.database) }),
         store,
         projector: {
           folders,
-          playbooksAtOnce: recall.playbooksAtOnce,
-          pagesPerWake: recallBounds.pagesPerWake,
+          playbooksAtOnce: projection.playbooksAtOnce,
+          pagesPerWake: projectorBounds.pagesPerWake,
           appends,
-          keptAlong: { [recallDefinitionType]: [pageViewsKept] },
         },
       };
     },

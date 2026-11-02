@@ -9,14 +9,13 @@ import {
 } from '../index.ts';
 
 describe('playbook function terminology', () => {
-  it('keeps the six function types in product order, without coordination or Dream', () => {
-    expect(functionTypeOrder).toEqual(['reasoning', 'lookup', 'interaction', 'prediction', 'recall', 'computation']);
+  it('keeps the five function types in product order, without coordination or Dream', () => {
+    expect(functionTypeOrder).toEqual(['reasoning', 'lookup', 'interaction', 'prediction', 'computation']);
     expect(functionTypeOrder.map((type) => functionCategoryLabels[type])).toEqual([
       'Reasoning',
       'Lookup',
       'Interaction',
       'Prediction',
-      'Recall',
       'Computation',
     ]);
     expect(Object.keys(functionCategoryLabels)).toEqual(functionTypeOrder);
@@ -30,7 +29,6 @@ describe('playbook function terminology', () => {
       { singular: 'lookup function', plural: 'lookup functions' },
       { singular: 'interaction function', plural: 'interaction functions' },
       { singular: 'prediction function', plural: 'prediction functions' },
-      { singular: 'recall function', plural: 'recall functions' },
       { singular: 'computation function', plural: 'computation functions' },
     ]);
     expect(functionTypeOrder.map((type) => functionDescriptions[type])).toEqual([
@@ -38,7 +36,6 @@ describe('playbook function terminology', () => {
       'Obtain information that already exists outside the playbook, through one tool that only reads.',
       'Exchange information with people or systems.',
       "Predict a quantity from the playbook's own history, with a likely range.",
-      'Answer from what the playbook keeps of its own history.',
       'Run defined code or expressions to calculate or transform data.',
     ]);
   });
@@ -48,7 +45,6 @@ describe('playbook function terminology', () => {
     expect(definitionResourceLabel('lookup')).toBe('lookup function');
     expect(definitionResourceLabel('interaction')).toBe('interaction function');
     expect(definitionResourceLabel('computation')).toBe('computation function');
-    expect(definitionResourceLabel('recall')).toBe('recall function');
     expect(definitionResourceLabel('prediction')).toBe('prediction function');
     expect(definitionResourceLabel('workflow')).toBe('workflow');
     expect(definitionResourceLabel('echo')).toBe('echo definition');

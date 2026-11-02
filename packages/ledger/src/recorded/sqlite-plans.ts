@@ -5,7 +5,7 @@ import type { RecordedStore } from '../event-store.ts';
 import { sqliteRecordedStore } from './sqlite-recorded.ts';
 
 export async function sqliteDefinitionStreamsIndexed(execute: SQLExecutor): Promise<boolean> {
-  const { rows } = await execute.query(SQL`EXPLAIN QUERY PLAN ${definitionStreamsQuery('recall')}`);
+  const { rows } = await execute.query(SQL`EXPLAIN QUERY PLAN ${definitionStreamsQuery('page')}`);
   return JSON.stringify(rows).includes('USING INDEX ledger_definition_streams');
 }
 

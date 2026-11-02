@@ -36,7 +36,7 @@ export const RunRejectionSchema = Schema.Union([
     kind: Schema.optionalKey(
       UnavailableKindSchema.annotate({
         description:
-          'What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a recall function whose view is still being built, which trying again later may resolve',
+          'What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a function that answers from what it keeps of the history of the playbook while that is still being built, which trying again later may resolve',
       }),
     ),
     because: Schema.optionalKey(
@@ -52,7 +52,7 @@ export const RunRejectionSchema = Schema.Union([
     kind: Schema.optionalKey(
       ConflictKindSchema.annotate({
         description:
-          'What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a recall function whose view stopped at an event its fold could not take, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record',
+          'What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record',
       }),
     ),
     because: Schema.optionalKey(
@@ -85,8 +85,7 @@ export type RunRejection = typeof RunRejectionSchema.Type;
 export const RunSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run id, a UUID' }),
   type: Schema.String.annotate({
-    description:
-      'The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow',
+    description: 'The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow',
   }),
   name: Schema.String.annotate({ description: 'The definition name' }),
   definition_version: Schema.Int.annotate({ description: 'The definition version that ran' }),

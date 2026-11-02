@@ -36,7 +36,7 @@ function rebuildTests(settingsOf: SettingsOf): void {
 }
 
 function discoveryTests(settingsOf: SettingsOf): void {
-  it('find the first recall function of a playbook and a playbook created after the projector started, woken by the append, without a restart', async () => {
+  it('find the first view of a playbook and a playbook created after the projector started, woken by the append, without a restart', async () => {
     const views = await viewHarness(await settingsOf());
     views.start({ sweepEveryMs: 60_000 });
     const beta = { org: 'acme', playbook: 'beta' };
@@ -55,7 +55,7 @@ function discoveryTests(settingsOf: SettingsOf): void {
 }
 
 export function versionsSuite(settingsOf: SettingsOf): void {
-  describe('the versions of a recall function', () => {
+  describe('the versions of a definition with a view', () => {
     rebuildTests(settingsOf);
     discoveryTests(settingsOf);
   });

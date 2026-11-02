@@ -121,7 +121,7 @@ The secrets need not rest in the ledger's database at all: with `SECRETS_KEEPER`
 
 ## Run it as an always-on service
 
-These all run inside the server: workflows, their timers and retries, the deliveries of interaction functions, and the folding of recall views.
+These all run inside the server: workflows, their timers and retries, the deliveries of interaction functions, the folding of the views of pages, and the folding of the datasets of prediction functions.
 
 - Run the server as a long-lived service with a restart policy.
 - Do not let your platform scale it to zero or pause it between requests. Waiting workflows stop moving until it wakes.
@@ -141,10 +141,10 @@ Size the container's memory limit from the parts you use:
 | Part                                              | Memory                                                                                                                                                                                                                                                |
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The server                                        | About 180 MiB idle, measured once with the arm64 image and no memory limit                                                                                                                                                                            |
-| Computation and recall workers                    | Up to `COMPUTATION_WORKERS` threads, 4 unless set. Each is stopped past a 256 MiB heap and has a 64 MiB stack: about 320 MiB each, 1.25 GiB for four at once                                                                                          |
+| Computation and page workers                      | Up to `COMPUTATION_WORKERS` threads, 4 unless set. Each is stopped past a 256 MiB heap and has a 64 MiB stack: about 320 MiB each, 1.25 GiB for four at once                                                                                          |
 | Processes that read the text of files tools fetch | Up to `DOCUMENT_PROCESSES`, 2 unless set, started only when a tool answers a file. Each is ended if it reserves more than `DOCUMENT_PROCESS_MEMORY`, 1,280 MiB unless set, or when the call runs out of its 30 seconds, and its read answers in words |
 
-Reasoning functions, workflows and the forecasts of prediction functions run in the server itself. Computation and recall functions add their workers, and the reading of a file its process, while they run. Watch the container's memory under your own load, and set the limit with room above the peak. The [configuration reference](configuration.md#settings) lists the settings that bound each part, with their defaults.
+Reasoning functions, workflows and the forecasts of prediction functions run in the server itself. Computation functions and the folds of pages' views add their workers, and the reading of a file its process, while they run. Watch the container's memory under your own load, and set the limit with room above the peak. The [configuration reference](configuration.md#settings) lists the settings that bound each part, with their defaults.
 
 ## Choose one server or a standby {#run-several-servers}
 

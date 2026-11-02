@@ -27,20 +27,11 @@ const predictionFunction: Definition = { ...reasoningFunction, type: 'prediction
 
 const computationFunction: Definition = { ...reasoningFunction, type: 'computation', source: '.a + 1' };
 
-const recallFunction: Definition = { ...reasoningFunction, type: 'recall', source: '. + 1' };
-
 const workflow: Definition = { ...reasoningFunction, type: 'workflow', media_type: 'application/yaml' };
 
 describe('a saved definition', () => {
-  it('is a playbook function when it is a reasoning, an interaction, a prediction, a recall or a computation function, and a workflow when it is a workflow', () => {
-    const definitions = [
-      reasoningFunction,
-      interactionFunction,
-      predictionFunction,
-      recallFunction,
-      computationFunction,
-      workflow,
-    ];
+  it('is a playbook function when it is a reasoning, an interaction, a prediction or a computation function, and a workflow when it is a workflow', () => {
+    const definitions = [reasoningFunction, interactionFunction, predictionFunction, computationFunction, workflow];
 
     const functions = definitions.filter((definition) => isPlaybookFunctionDefinition(definition));
     const workflows = definitions.filter((definition) => isWorkflowDefinition(definition));
@@ -48,7 +39,7 @@ describe('a saved definition', () => {
     expectTypeOf(functions).toEqualTypeOf<PlaybookFunctionDefinition[]>();
     expectTypeOf(workflows).toEqualTypeOf<WorkflowDefinition[]>();
     expect([functions, workflows]).toEqual([
-      [reasoningFunction, interactionFunction, predictionFunction, recallFunction, computationFunction],
+      [reasoningFunction, interactionFunction, predictionFunction, computationFunction],
       [workflow],
     ]);
   });

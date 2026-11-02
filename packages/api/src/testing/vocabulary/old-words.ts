@@ -32,6 +32,12 @@ export const oldWords: readonly string[] = [
   'mcp_server_failed',
   'mcp_server_not_configured',
   'mcp__',
+  'RecallFunction',
+  'recall-format',
+  'recall_views',
+  'RECALL_MAX_FUNCTIONS',
+  'RECALL_MAX_REBUILDS',
+  'RECALL_PLAYBOOKS_AT_ONCE',
 ];
 
 interface Found {

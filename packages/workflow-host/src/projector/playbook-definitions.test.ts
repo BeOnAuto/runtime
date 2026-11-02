@@ -13,14 +13,14 @@ function savedAs(name: string, content: object) {
     context: {
       by: 'acme-admin',
       at: '2026-10-06T09:00:00.000Z',
-      definitionType: 'recall',
+      definitionType: 'view',
       definitionName: name,
       definitionVersion: 1,
     },
   };
 }
 
-describe('the recall functions a playbook keeps', () => {
+describe('the definitions a playbook keeps', () => {
   it('counts an event it cannot read as a version of the stream, and keeps the functions as they were', () => {
     const definitions = definitionsAfter(
       noDefinitions,
@@ -46,7 +46,7 @@ describe('the recall functions a playbook keeps', () => {
           context: {
             by: 'acme-admin',
             at: 'now',
-            definitionType: 'recall',
+            definitionType: 'view',
             definitionName: 'runs',
             definitionVersion: 1,
           },
@@ -59,7 +59,7 @@ describe('the recall functions a playbook keeps', () => {
   });
 });
 
-describe('the fold a playbook keeps for a recall function', () => {
+describe('the fold a playbook keeps for a definition', () => {
   it('is the module and the filters its save stripped, and the details as written when it stripped none', () => {
     const typed = detailsOf(fold, [{ type: 'noted', data: '${ $data.n as number > 1 }' }]);
     const stripped = {

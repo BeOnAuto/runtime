@@ -24,22 +24,27 @@ const onAClosing = workflowSource(
   'schedule:\n  on: { one: { with: { type: com.acme.ledger.closed } } }\ndo:\n  - seen: { set: { seen: true } }\n',
 );
 
-const foldingWhatItSees = [
+const pageOfWhatItSees = [
   '---',
-  'description: The types of the events this view folds, oldest first',
-  'language: typescript',
-  'source:',
-  '  events:',
-  '    - type: tool_call_started',
-  '    - type: tool_call_answered',
-  '    - type: com.acme.ledger.closed',
-  'view:',
-  '  initial: []',
-  '  schema: {type: array, items: {type: string}}',
+  'description: The types of the events the page folds',
+  'of: workflow/on-a-closing',
+  'data:',
+  '  language: typescript',
+  '  source:',
+  '    events:',
+  '      - type: tool_call_started',
+  '      - type: tool_call_answered',
+  '      - type: com.acme.ledger.closed',
+  '  views:',
+  '    seen: categories',
+  '  module: |',
+  '    export function fold(view: View, event: Event): View {',
+  '      return { seen: { values: [...(view.seen?.values ?? []), { name: event.type, value: 1 }] } };',
+  '    }',
   '---',
-  'export function fold(view: View, event: Event): View {',
-  '  return [...view, event.type];',
-  '}',
+  '{% result %}Seen.{% endresult %}',
+  '',
+  '{% lately %}{% for value in views.seen.values %}{{ value.name }}{% endfor %}{% endlately %}',
 ].join('\n');
 
 const RunsSchema = Schema.Struct({ runs: Schema.Array(Schema.Struct({ status: Schema.String })) });
@@ -65,9 +70,7 @@ async function servingACalledPlaybook(): Promise<CalledPlaybook> {
   const saving = [
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-a-call', source: onACall } }),
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-a-closing', source: onAClosing } }),
-    await server.call('POST', `${alpha}/definitions/recall`, {
-      body: { name: 'seen', source: foldingWhatItSees, diagram: 'none' },
-    }),
+    await server.call('POST', `${alpha}/definitions/page`, { body: { name: 'seen', source: pageOfWhatItSees } }),
   ];
   return { server, saved: saving.map(({ status }) => status) };
 }
@@ -78,7 +81,7 @@ async function runsOf(server: ReasoningServer, name: string) {
 }
 
 describe('the calls made by hand in a playbook', () => {
-  it('reach no recall function and start no workflow, while the events after them do', async () => {
+  it('reach no page and start no workflow, while the events after them do', async () => {
     const { server, saved } = await servingACalledPlaybook();
 
     const called = await server.call('POST', `${alpha}/tool-servers/graph/tools/search/execute`, {
@@ -92,17 +95,17 @@ describe('the calls made by hand in a playbook', () => {
       expect(runs).toMatchObject([{ status: 'succeeded' }]);
       return runs;
     });
-    const recalled = await until(async () => {
-      const ran = await server.call('POST', `${alpha}/definitions/recall/seen/run`, { body: {} });
-      expect(ran.body).toMatchObject({ status: 'succeeded', output: ['com.acme.ledger.closed'] });
-      return ran.body;
+    const presented = await until(async () => {
+      const read = await server.call('GET', `${alpha}/definitions/page/seen`);
+      expect(read.body).toMatchObject({ standing: { state: 'live', folded: 1 } });
+      return server.call('GET', `${alpha}/definitions/workflow/on-a-closing`);
     });
 
     expect(saved).toEqual([201, 201, 201]);
     expect(called).toMatchObject({ status: 200, body: { outcome: 'result' } });
     expect(triggered).toHaveLength(1);
     expect(await runsOf(server, 'on-a-call')).toEqual([]);
-    expect(recalled).toMatchObject({ output: ['com.acme.ledger.closed'] });
+    expect(presented.body).toMatchObject({ page: { lately: 'com.acme.ledger.closed' } });
     expect(await runsOf(server, 'on-a-call')).toEqual([]);
   });
 });

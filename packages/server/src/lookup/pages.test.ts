@@ -1,4 +1,3 @@
-import { threadReplies } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -32,24 +31,6 @@ const throughEveryPage = `do:
       set: '\${ $context.items }'
 `;
 
-const keptReplies = [
-  '---',
-  'description: What the thread-replies function read, the last ten times',
-  'language: typescript',
-  'source:',
-  '  events:',
-  '    - type: run_succeeded',
-  '      subject: lookup/thread-replies',
-  'view:',
-  '  initial: []',
-  '  schema: { type: array, maxItems: 10 }',
-  '---',
-  'export function fold(view: View, event: Event): View {',
-  '  const data = event.data as { output: View[number] };',
-  '  return [...view, data.output].slice(-10);',
-  '}',
-].join('\n');
-
 const onReplies = workflowSource(
   'on-replies',
   `schedule:
@@ -75,26 +56,18 @@ describe('a workflow that reads every page of a tool that pages', () => {
   });
 });
 
-describe('what a call read, kept and reacted to', () => {
-  it('is folded by a recall function from the run that ended, and starts a workflow that listens for that ending', async () => {
+describe('what a call read and reacted to', () => {
+  it('starts a workflow that listens for the run that ended', async () => {
     const server = await lookingUp();
     await server.define('thread-replies');
-    await server.call('POST', `${alpha}/definitions/recall`, {
-      body: { name: 'kept-replies', source: keptReplies, diagram: 'none' },
-    });
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-replies', source: onReplies } });
 
     await server.runCall('thread-replies');
-    const kept = await until(
-      () => server.call('POST', `${alpha}/definitions/recall/kept-replies/run`, { body: { input: {} } }),
-      ({ text }) => text.includes('member-17'),
-    );
     const [reaction] = await until(
       async () => decodeRuns((await server.call('GET', `${alpha}/runs?type=workflow&name=on-replies`)).body).runs,
       (runs) => runs.some(({ status }) => status !== 'started'),
     );
 
-    expect(kept.body).toMatchObject({ status: 'succeeded', output: [threadReplies] });
     expect(await server.settled(String(reaction?.run_id))).toMatchObject({
       status: 'succeeded',
       output: { replies: 2 },

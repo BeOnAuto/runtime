@@ -1,9 +1,7 @@
 import { answers, jsonResult } from '@on.auto/reasoning/testing';
-import { foldOf, recallDocument } from '@on.auto/recall/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { inState, standingUntil } from '../testing/servers/recall-server.ts';
 import { settledRun, workflowSource } from '../testing/servers/workflow-server.ts';
 
 const definitions: readonly (readonly [string, string, string])[] = [
@@ -23,14 +21,6 @@ const definitions: readonly (readonly [string, string, string])[] = [
     'confirmed',
     '---\nto: owner\nexpires: P1D\ndeliver: agent\noutput:\n  schema:\n    type: object\n    required: [ok]\n    properties: { ok: { type: boolean } }\n---\nPlease confirm the note.',
   ],
-  [
-    'recall',
-    'counted',
-    recallDocument(
-      foldOf('return view + 1;'),
-      'language: typescript\nsource:\n  events:\n    - type: run_succeeded\nview:\n  initial: 0',
-    ),
-  ],
 ];
 
 const runIds: Readonly<Record<string, string>> = {
@@ -38,7 +28,6 @@ const runIds: Readonly<Record<string, string>> = {
   computation: '0199a3c4-7d2e-7c1a-9b3f-888888888882',
   workflow: '0199a3c4-7d2e-7c1a-9b3f-888888888883',
   interaction: '0199a3c4-7d2e-7c1a-9b3f-888888888884',
-  recall: '0199a3c4-7d2e-7c1a-9b3f-888888888885',
 };
 
 let server: ReasoningServer;
@@ -63,13 +52,9 @@ beforeAll(async () => {
       body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
     }),
   );
-  await inTurn(definitions.slice(0, 4), ([type, name]) =>
+  await inTurn(definitions, ([type, name]) =>
     server.call('POST', `${alpha}/definitions/${type}/${name}/run`, { body: { input: {}, run_id: runIds[type] } }),
   );
-  await standingUntil(server, 'counted', inState('live'));
-  await server.call('POST', `${alpha}/definitions/recall/counted/run`, {
-    body: { input: {}, run_id: runIds['recall'] },
-  });
   await inTurn(
     definitions.map(([type]) => type),
     readRun,
@@ -89,9 +74,8 @@ describe('the shape a run says its output takes', () => {
     ]);
   });
 
-  it('is none for a run of an interaction function or a recall function, whose definitions declare none', () => {
-    expect([runs['interaction'], runs['recall']]).toMatchObject([{ status: 'started' }, { status: 'succeeded' }]);
+  it('is none for a run of an interaction function, whose definition declares none', () => {
+    expect(runs['interaction']).toMatchObject({ status: 'started' });
     expect(runs['interaction']).not.toHaveProperty('output_shape');
-    expect(runs['recall']).not.toHaveProperty('output_shape');
   });
 });

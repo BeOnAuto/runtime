@@ -5,7 +5,7 @@ import { withoutSiteMarkup } from './site-markup.ts';
 const page = [
   '<div v-pre>',
   '',
-  '# Recall function format',
+  '# Page format',
   '',
   'This example keeps the reviews:',
   '',
@@ -26,7 +26,7 @@ describe('a page served as a guide', () => {
   it('loses the wrapper and the formatter lines the documentation site needs, and keeps its code as written', () => {
     expect(withoutSiteMarkup(page)).toBe(
       [
-        '# Recall function format',
+        '# Page format',
         '',
         'This example keeps the reviews:',
         '',

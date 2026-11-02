@@ -115,7 +115,6 @@ describe('workflows over MCP', () => {
       'lookup',
       'interaction',
       'computation',
-      'recall',
       'prediction',
       'page',
       'workflow',

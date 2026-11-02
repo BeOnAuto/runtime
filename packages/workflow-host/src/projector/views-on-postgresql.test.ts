@@ -65,7 +65,7 @@ async function aRunLeftOpen(connectionString: string, output: string): Promise<C
   return client;
 }
 
-describe.skipIf(skipped)(`the views of recall functions on PostgreSQL${notice}`, () => {
+describe.skipIf(skipped)(`the views of the projector on PostgreSQL${notice}`, () => {
   viewsSuites(onPostgreSQL);
 
   describe('an event committed late', () => {

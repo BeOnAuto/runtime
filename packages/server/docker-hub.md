@@ -1,6 +1,6 @@
 # Auto Runtime
 
-Auto Runtime runs the playbooks your agent builds: their reasoning, lookup, interaction, prediction, recall and computation functions, and the workflows that coordinate them. Your coding agent connects over MCP to build and run them, and [Auto Studio](https://studio.on.auto) lets you inspect and manage what it built.
+Auto Runtime runs the playbooks your agent builds: their reasoning, lookup, interaction, prediction and computation functions, and the workflows that coordinate them. Your coding agent connects over MCP to build and run them, and [Auto Studio](https://studio.on.auto) lets you inspect and manage what it built.
 
 **[Documentation](https://on.auto/docs/)** · **[Self-hosting guides](https://on.auto/docs/self-host)** · **[Source on GitHub](https://github.com/BeOnAuto/runtime)** · **[Release notes](https://github.com/BeOnAuto/runtime/releases)**
 

@@ -35,13 +35,11 @@ const guideNames = [
   'lookup-function',
   'interaction-function',
   'computation-function',
-  'recall-function',
   'prediction-function',
   'page',
   'workflow',
   'templates',
   'first-playbook',
-  'remember',
   'give-tools',
   'schedule',
 ];
@@ -100,7 +98,7 @@ const PromptSchema = Schema.Struct({
 });
 
 describe('the prompts of the server', () => {
-  it('are the two starting prompts and the four recipes, with their titles and arguments', async () => {
+  it('are the two starting prompts and the three recipes, with their titles and arguments', async () => {
     const { prompts } = Schema.decodeUnknownSync(PromptsSchema)(await onMcp((session) => session.listPrompts()));
 
     expect(
@@ -113,7 +111,6 @@ describe('the prompts of the server', () => {
       ['get-started', 'Get started with Auto', []],
       ['connect-a-service', 'Connect a service', [['service', true]]],
       ['first-playbook', 'Create your first playbook', []],
-      ['remember', 'Make the playbook remember something', [['what', true]]],
       ['give-tools', 'Give the playbook tools', [['server', false]]],
       [
         'schedule',
@@ -130,17 +127,17 @@ describe('the prompts of the server', () => {
     const {
       messages: [asked, embedded],
     } = Schema.decodeUnknownSync(PromptSchema)(
-      await onMcp((session) => session.getPrompt('remember', { what: 'what it posted today' })),
+      await onMcp((session) => session.getPrompt('schedule', { workflow: 'weekly-report', when: 'every Monday' })),
     );
 
     expect([asked.role, asked.content.type, embedded.role, embedded.content]).toEqual([
       'user',
       'text',
       'user',
-      { type: 'resource', resource: { uri: 'guide://recall-function', mimeType: 'text/markdown' } },
+      { type: 'resource', resource: { uri: 'guide://workflow', mimeType: 'text/markdown' } },
     ]);
     expect(asked.content.text).toMatch(
-      /^Make the playbook remember what it posted today\.\n\n# Make the playbook remember something\n/u,
+      /^Run the workflow weekly-report every Monday\.\n\n# Run a workflow on a schedule\n/u,
     );
   });
 });
@@ -184,7 +181,7 @@ describe('the prompts of a connection', () => {
     ]);
 
     expect([promptNamesIn(onAPlaybook), promptNamesIn(onAnOrg)]).toEqual([
-      ['remember', 'give-tools', 'schedule'],
+      ['give-tools', 'schedule'],
       ['connect-a-service'],
     ]);
   });

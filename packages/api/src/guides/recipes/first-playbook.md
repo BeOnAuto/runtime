@@ -9,4 +9,4 @@ A first playbook holds a first reasoning function that the person sees answer. R
 5. Once they agree, save it with create_definition, `type` reasoning. A name that is taken is refused; choose another with the person rather than changing the function that has it.
 6. Ask for an input, run the function with run_definition, and tell the person what it answered, in their words.
 
-Then tell the person what they can do next: give it tools with the give-tools recipe, or make the playbook remember its answers with the remember recipe.
+Then tell the person what they can do next: give it tools with the give-tools recipe.

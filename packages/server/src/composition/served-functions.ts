@@ -33,7 +33,7 @@ export async function functionsServedBy(
 ): Promise<ServedFunctions> {
   const { reasoning, lookup, interaction, toolOperations } = await toolUsersServedBy(runtime, settings, tools);
   const { capability, folders, operations, dueWork } = prediction.provided;
-  const projections = await wiring.served({ recall: settings.recall, database }, computation.pool, folders);
+  const projections = await wiring.served({ projection: settings.projection, database }, computation.pool, folders);
   await prediction.servedIn(runtime, projections.store.database);
   const forecaster = foldedBeforeItRuns({ capability, folders, database: projections.store.database });
   const capabilities = [
@@ -41,7 +41,6 @@ export async function functionsServedBy(
     lookup,
     interaction.capability,
     computation.capability,
-    projections.recall,
     forecaster,
     projections.page,
   ];

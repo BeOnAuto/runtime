@@ -1,8 +1,8 @@
 import { listedTools, withMcpSession, type McpSession } from '@on.auto/api/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { servingPages } from '../testing/servers/page-server.ts';
 import type { ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { servingRecall } from '../testing/servers/recall-server.ts';
 
 const greeter = [
   '---',
@@ -32,7 +32,7 @@ afterEach(async () => {
 });
 
 async function onAlpha<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
-  server = await servingRecall([]);
+  server = await servingPages([]);
   await withMcpSession('current revision', { url: `${server.origin}/orgs/acme/mcp`, headers: {} }, (session) =>
     session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' }),
   );

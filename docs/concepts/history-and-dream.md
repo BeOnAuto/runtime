@@ -1,6 +1,6 @@
 # History and events
 
-A playbook records what happens in it: the definitions it saves, the runs it carries out and the events it takes in from elsewhere. You read that history to see what a run did and why. Recall functions and event triggers read it too, so what the playbook recorded can shape later work.
+A playbook records what happens in it: the definitions it saves, the runs it carries out and the events it takes in from elsewhere. You read that history to see what a run did and why. Event triggers and the views of pages read it too, so what the playbook recorded can shape later work.
 
 ## What a playbook records
 
@@ -40,15 +40,11 @@ What the playbook records can start work:
 
 The playbook matches events in the order it recorded them. So the history explains each reaction: first the event, then the run it started, which names that event as its cause. When a trigger does not start a run, as when it reaches one of its limits, the playbook records that too. [Triggers](workflows.md#triggers) describes triggers.
 
-Triggers, waiting runs and recall functions see a run only as the fact that it started and how it ended, with its result when it succeeded. They never see the run's input or its tool calls; those stay in the run's own history. [The events](../reference/recall-format.md#the-events) lists what each of these facts carries.
+Triggers, waiting runs and the folds of pages see a run only as the fact that it started and how it ended, with its result when it succeeded. They never see the run's input or its tool calls; those stay in the run's own history. [Event filters](../reference/workflow-format.md#event-filters) lists what each of these facts carries.
 
 ## Using history in later runs
 
-A new run does not see earlier results by itself. Give a function what it needs as input, or use a recall function to look it up in the history.
-
-Every runtime runs recall functions over a playbook's own history. A recall function names the events it cares about, such as every review that succeeded. It keeps a view of them up to date as the playbook records them. A run reads the view as it stands, without waiting for it to catch up. So it may not yet show an event recorded a moment ago.
-
-See [Recall](functions.md#recall) for when to choose one, and [Make a playbook remember](../guides/remember.md) to add one. The [Recall function format](../reference/recall-format.md) describes the document.
+A new run does not see earlier results by itself. Give a function what it needs as input.
 
 ## Dream (planned)
 

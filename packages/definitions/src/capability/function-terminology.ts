@@ -1,11 +1,10 @@
-export type FunctionType = 'reasoning' | 'lookup' | 'interaction' | 'prediction' | 'recall' | 'computation';
+export type FunctionType = 'reasoning' | 'lookup' | 'interaction' | 'prediction' | 'computation';
 
 export const functionCategoryLabels = {
   reasoning: 'Reasoning',
   lookup: 'Lookup',
   interaction: 'Interaction',
   prediction: 'Prediction',
-  recall: 'Recall',
   computation: 'Computation',
 } satisfies Record<FunctionType, string>;
 
@@ -14,7 +13,6 @@ export const functionResourceLabels = {
   lookup: { singular: 'lookup function', plural: 'lookup functions' },
   interaction: { singular: 'interaction function', plural: 'interaction functions' },
   prediction: { singular: 'prediction function', plural: 'prediction functions' },
-  recall: { singular: 'recall function', plural: 'recall functions' },
   computation: { singular: 'computation function', plural: 'computation functions' },
 } satisfies Record<FunctionType, { readonly singular: string; readonly plural: string }>;
 
@@ -23,7 +21,6 @@ export const functionDescriptions = {
   lookup: 'Obtain information that already exists outside the playbook, through one tool that only reads.',
   interaction: 'Exchange information with people or systems.',
   prediction: "Predict a quantity from the playbook's own history, with a likely range.",
-  recall: 'Answer from what the playbook keeps of its own history.',
   computation: 'Run defined code or expressions to calculate or transform data.',
 } satisfies Record<FunctionType, string>;
 
@@ -32,7 +29,6 @@ export const functionTypeOrder: readonly FunctionType[] = [
   'lookup',
   'interaction',
   'prediction',
-  'recall',
   'computation',
 ];
 

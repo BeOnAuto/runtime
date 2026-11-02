@@ -33,16 +33,6 @@ export const DefinitionEventSchema = Schema.Union([
 
 export type RecordedDefinitionEvent = typeof DefinitionEventSchema.Type;
 
-const definitionEventTypes: Readonly<Record<RecordedDefinitionEvent['type'], true>> = {
-  definition_created: true,
-  definition_updated: true,
-  definition_retired: true,
-};
-
-export function isDefinitionEventType(type: string): boolean {
-  return Object.hasOwn(definitionEventTypes, type);
-}
-
 export type DefinitionEvent = Decided<RecordedDefinitionEvent>;
 
 export type DefinitionCreated = Extract<RecordedDefinitionEvent, { readonly type: 'definition_created' }>;

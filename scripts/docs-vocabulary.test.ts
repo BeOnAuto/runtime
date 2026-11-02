@@ -155,6 +155,17 @@ const allowances: readonly Allowance[] = [
     "['It folds a recollection.', 'recollection']",
   ].map((leak) => ({ text: leak, in: [internalTermsTest] })),
   { text: "**inference** names a model call and its provider's terms", in: ['CLAUDE.md'] },
+  { text: 'RecallFunctionDefinition', in: ['CLAUDE.md'] },
+  {
+    text: 'recall_views',
+    in: [
+      'packages/ledger/README.md',
+      'packages/server/src/database/database-floor-postgresql.json',
+      'packages/server/src/database/database-floor-sqlite.json',
+      'packages/workflow-host/README.md',
+      'packages/workflow-host/src/database/host-tables.ts',
+    ],
+  },
   {
     text: 'toPrimitive',
     in: ['packages/definitions/lib/sandbox.d.ts.txt', 'packages/workflow-engine/src/programs/sandbox-prelude.ts'],

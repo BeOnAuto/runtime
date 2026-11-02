@@ -117,7 +117,7 @@ describe('the definitions a workflow calls', () => {
   - both:
       fork:
         branches:
-          - left: { call: run_definition, with: { type: recall, name: review-history } }
+          - left: { call: run_definition, with: { type: prediction, name: review-history } }
   - chosen: { call: run_definition, with: { type: reasoning, name: '\${ $data.reviewer }' } }
   - typed: { call: run_definition, with: { type: '\${ $data.type }', name: review-brief } }
   - plain: { set: { done: true } }
@@ -136,7 +136,7 @@ describe('the definitions a workflow calls', () => {
         { type: 'computation', name: 'campaign-pace', steps: [{ number: 4, name: 'pace' }] },
         { type: 'interaction', name: 'ask-approval', steps: [{ number: 6, name: 'ask' }] },
         { type: 'workflow', name: 'note-failure', steps: [{ number: 7, name: 'note' }] },
-        { type: 'recall', name: 'review-history', steps: [{ number: 9, name: 'left' }] },
+        { type: 'prediction', name: 'review-history', steps: [{ number: 9, name: 'left' }] },
       ],
     });
   });

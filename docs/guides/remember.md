@@ -1,4 +1,5 @@
 ---
+search: false
 description: Write a recall function that keeps what earlier runs of a playbook returned, and give it to later runs so they know what was decided before.
 ---
 
@@ -29,7 +30,7 @@ A recall function reads the playbook's events, oldest first, and folds each one 
 | What your systems reported                      | Events published to the playbook or emitted by workflows | `type: <your event type>`                                                |
 | Which definitions changed                       | Definitions saved or retired                             | `type: definition_created`, `definition_updated` or `definition_retired` |
 
-Every run of a function counts, whether your agent, a workflow or a trigger started it. A fold never sees a run's input, its tool calls, a workflow's steps, or requests and answers. [The events](../reference/recall-format.md#the-events) lists every event and attribute.
+Every run of a function counts, whether your agent, a workflow or a trigger started it. A fold never sees a run's input, its tool calls, a workflow's steps, or requests and answers. The events lists every event and attribute.
 
 ### What that function must return
 
@@ -80,11 +81,11 @@ Approve it, and the agent saves it with `create_definition` and the type `recall
 ::: details What the document holds
 
 - `source.events` names the events. For a function's runs that is `type: run_succeeded` with its `subject`: the function's type and the name it is saved under, such as `reasoning/assess-campaign-brief`.
-- `view.initial` is the empty view, and `view.schema` bounds how large the view may grow, with `maxProperties` and `maxItems`. The fold drops the oldest entries and cuts long text, so the view stays under its size limit ([Bounds](../reference/recall-format.md#bounds)).
+- `view.initial` is the empty view, and `view.schema` bounds how large the view may grow, with `maxProperties` and `maxItems`. The fold drops the oldest entries and cuts long text, so the view stays under its size limit (Bounds).
 - `fold` takes the view and one event and returns the next view. It must cope with every output the function might return, since a fold that raises an error stops the view at that event. A missing field gets a default, and long text is cut.
 - `answer` returns the part of the view a run asks for, such as one campaign, and matches `output.schema`. Without `answer`, a run returns the whole view.
 
-[Recall function format](../reference/recall-format.md) describes every field.
+Recall function format describes every field.
 
 :::
 
@@ -250,8 +251,8 @@ In this document:
 - `source.events` takes every run of the "Assess campaign brief" function that succeeded.
 - `fold` reads the run's output from `output` in the event's data, and copes with any output. A review without a campaign counts under `unknown`, and a campaign's name is cut at 100 characters.
 - `fold` keeps only the words the function is meant to return. A recommendation other than `Ready` or `Revise` reads `unknown`. `unmet` keeps only the four criteria, each at most once and in a fixed order.
-- `view` starts empty, and its schema bounds it to the last 20 reviews of each of the 50 campaigns reviewed most recently, at most about 205 KiB. [Bound the size of the view](../reference/recall-format.md#bound-the-size-of-the-view) shows how to work out that largest size.
-- `fold` and `answer` read a campaign's reviews only when the view holds them itself, as [Look up keys with Object.hasOwn](../reference/recall-format.md#look-up-keys-with-object-hasown) explains.
+- `view` starts empty, and its schema bounds it to the last 20 reviews of each of the 50 campaigns reviewed most recently, at most about 205 KiB. Bound the size of the view shows how to work out that largest size.
+- `fold` and `answer` read a campaign's reviews only when the view holds them itself, as Look up keys with Object.hasOwn explains.
 - A run names a campaign and returns its last reviews, 5 unless the input gives `last`.
 
 :::
@@ -358,13 +359,13 @@ With the input `{"campaign": "autumn-reporting-trial"}`, the workflow ends `succ
 
 - **The output is an empty list.** No matching run has succeeded yet, or the key in the input differs from the one the function returned. The filter's `subject` must be exactly the function's type and name, such as `reasoning/assess-campaign-brief`. Runs that failed or were rejected are not kept by a `run_succeeded` filter. A run from a moment ago may take a second to appear.
 - **The run stays `unavailable` with the kind `rebuilding`.** A playbook builds at most four views at once, and the others wait their turn. Ask the agent to read the recall function with `get_definition`. Its `standing` says `rebuilding`, `waiting`, `live` or `stalled`, and how far the view has read.
-- **The run ends `conflict` with the kind `stalled`.** The fold failed on an event, or the view outgrew its size limit or its schema. The `standing` names the event, the kind of stall and the line of the fold, and [When a view stalls](../reference/recall-format.md#when-a-view-stalls) explains each kind. Save a corrected version, which builds the view again from the start.
+- **The run ends `conflict` with the kind `stalled`.** The fold failed on an event, or the view outgrew its size limit or its schema. The `standing` names the event, the kind of stall and the line of the fold, and When a view stalls explains each kind. Save a corrected version, which builds the view again from the start.
 - **A workflow that uses the recall function ends `rejected` with the reason `unavailable`.** The view was still being built after the step's last retry, so the step stopped the run. In the example, that is about 15 seconds after the run started, and the detail reads `The campaign's reviews could not be recalled, at the step give-up: The recall function was still unavailable after three retries.` Ask the agent to read the recall function with `get_definition`, wait until its `standing` says `live`, and run the workflow again.
 - **The run ends `conflict` with the kind `unworkable`.** `answer` raised an error, or its result does not match `output.schema`. The rejection names the line. Running it again gives the same result, so fix the document.
 - **Saving is refused.** Each problem names its line and what the type checker said. A playbook keeps at most 32 recall functions unless the operator sets another limit, and one more is refused with `conflict`.
 
 ## Next
 
-- [Recall function format](../reference/recall-format.md) has the events a view can fold, the module, how a view is kept and every bound. It also has a shorter example that keeps a function's whole output.
+- Recall function format has the events a view can fold, the module, how a view is kept and every bound. It also has a shorter example that keeps a function's whole output.
 - [Run a workflow on a schedule or event](triggers.md) shows how to start a workflow at set times, or when the playbook records an event such as a function's `run_succeeded`.
 - [Workflow format](../reference/workflow-format.md) describes calling a function from a workflow and catching its errors.

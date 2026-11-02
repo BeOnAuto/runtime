@@ -126,14 +126,14 @@ How edits affect the dataset:
 - An edit that leaves the rows alone changes nothing. A wider `window` is such an edit, since a question reads it from the same rows.
 - An edit that changes the rows (a filter, a pointer, an aggregation or the grain) starts a new dataset from the first event of the history. The old one is dropped once no active function names it.
 
-| Field         | Meaning                                                                                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `data.events` | 1 to 8 filters, as a recall function names its events: the event's `type`, any other attribute of the event written out, and optionally a `data` test over `$data` |
-| `data.time`   | `event` for the time of the event itself, or a JSON Pointer into its data that holds an ISO 8601 date, or date and time with its offset, such as `/placed_at`      |
-| `data.series` | A JSON Pointer to the value that names the series, text of 1 to 256 bytes                                                                                          |
-| `data.target` | `{ as, of }`. `as` is how the target is aggregated over a period: `count`, `sum`, `last` or `mean`. `of` points to the value; `count` leaves it out                |
+| Field         | Meaning                                                                                                                                                                                                                          |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data.events` | 1 to 8 filters, each naming its events by the event's `type`, any other attribute of the event written out, and optionally a `data` test over `$data`; see [The filters of the events](page-format.md#the-filters-of-the-events) |
+| `data.time`   | `event` for the time of the event itself, or a JSON Pointer into its data that holds an ISO 8601 date, or date and time with its offset, such as `/placed_at`                                                                    |
+| `data.series` | A JSON Pointer to the value that names the series, text of 1 to 256 bytes                                                                                                                                                        |
+| `data.target` | `{ as, of }`. `as` is how the target is aggregated over a period: `count`, `sum`, `last` or `mean`. `of` points to the value; `count` leaves it out                                                                              |
 
-A `time`, `series` or `target` pointer is refused at save when none of the named event types holds a value there, such as `/output/region` under `run_rejected`. A recall function's filters are checked the same way.
+A `time`, `series` or `target` pointer is refused at save when none of the named event types holds a value there, such as `/output/region` under `run_rejected`.
 
 For each event a filter takes, in the order the playbook recorded them, the dataset:
 
@@ -289,7 +289,7 @@ Its record, over 70 weeks of the region's history:
 
 ### A run that ended a moment ago
 
-A question counts every run that ended before it started. Before it reads the dataset, it waits until the dataset has folded what the playbook had recorded when the question started. That takes moments: the time it takes to fold a page, as the views of recall functions are kept, and up to a pass (a second) for an event another server recorded. A dataset that has not caught up within 3 seconds is read as far as it has folded, and the record's `dataset_checkpoint` says how far that was. So a question asked in the step after a run, in the same workflow, counts that run, and needs no wait or retry before it.
+A question counts every run that ended before it started. Before it reads the dataset, it waits until the dataset has folded what the playbook had recorded when the question started. That takes moments: the time it takes to fold a page, as the views of pages are kept, and up to a pass (a second) for an event another server recorded. A dataset that has not caught up within 3 seconds is read as far as it has folded, and the record's `dataset_checkpoint` says how far that was. So a question asked in the step after a run, in the same workflow, counts that run, and needs no wait or retry before it.
 
 Whether the run falls in the window depends on its period. The window ends at the origin, the period before the one the question is asked in. A run read with `time: event` falls in the period it ran in, which no question reads until that period has passed. A run about a period that has ended, such as last week, carries a date of that period in its output for `time` to read; [Forecast from a run the workflow just recorded](#forecast-from-a-run-the-workflow-just-recorded) shows one.
 

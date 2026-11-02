@@ -61,7 +61,7 @@ describe('the first-playbook recipe where the workflow guide is carried', () => 
 
   it('runs the workflow and tells the person what it answered and when it next runs or what starts it, publishes what they paste for an event, and names the schedule recipe and the workflow guide first of what comes next', () => {
     expect(withWorkflows?.text).toContain(
-      '\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from, and a moment later show what its run answered with list_runs, `type` workflow, and get_run.\n\nThen tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, give it tools with the give-tools recipe, or make the playbook remember its answers with the remember recipe.\n',
+      '\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from, and a moment later show what its run answered with list_runs, `type` workflow, and get_run.\n\nThen tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, or give it tools with the give-tools recipe.\n',
     );
   });
 
@@ -73,7 +73,7 @@ describe('the first-playbook recipe where the workflow guide is carried', () => 
 describe('the first-playbook recipe where the interaction-function guide is carried too', () => {
   it('names an interaction function among what comes next, after the schedule recipe and the tools', () => {
     expect(withWorkflowsAndInteraction?.text).toContain(
-      'Then tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, give it tools with the give-tools recipe, ask someone through a connection and take their answer with an interaction function, or make the playbook remember its answers with the remember recipe.\n',
+      'Then tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, or give it tools with the give-tools recipe. They can also ask someone through a connection and take their answer with an interaction function.\n',
     );
     expect(withWorkflowsAndInteraction?.calls).toEqual(withWorkflows?.calls);
   });
@@ -151,7 +151,18 @@ describe('the first-playbook recipe where the workflow guide is not carried', ()
   it('ends at the run of the function and what comes next, as its file has it, and calls only the tools of the function', () => {
     expect([withoutWorkflows?.text, withoutWorkflows?.calls]).toEqual([firstPlaybookFile, callsOfTheFunction]);
     expect(firstPlaybookFile).toContain(
-      'tell the person what it answered, in their words.\n\nThen tell the person what they can do next: give it tools with the give-tools recipe, or make the playbook remember its answers with the remember recipe.\n',
+      'tell the person what it answered, in their words.\n\nThen tell the person what they can do next: give it tools with the give-tools recipe.\n',
+    );
+  });
+});
+
+describe('the remember recipe', () => {
+  it('asks the person in their own words where the format guide it names is carried', async () => {
+    const recipes = await recipesFor(recipeFiles, guidesNamed(['recall-function']));
+    const remember = recipes.find(({ name }) => name === 'remember');
+
+    expect(remember?.request({ what: 'what it posted today' })).toBe(
+      'Make the playbook remember what it posted today.',
     );
   });
 });

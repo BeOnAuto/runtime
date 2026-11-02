@@ -10,7 +10,7 @@ import { TriggerSchema } from './definition-triggers.ts';
 const listedDefinitionFields = {
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one',
+      'The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one',
   }),
   name: Schema.String.annotate({
     description: 'The definition name, unique among definitions of its type in the playbook and never reused',
@@ -74,7 +74,7 @@ const listedDefinitionFields = {
 
 const StandingField = Schema.JsonObject.annotate({
   description:
-    'How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook',
+    'How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)',
 });
 
 export const ListedDefinitionSchema = Schema.Struct(listedDefinitionFields).annotate({
@@ -108,7 +108,7 @@ export const DefinitionSchema = Schema.Struct({
   used_by: Schema.optionalKey(
     Schema.Array(DefinitionUserSchema).annotate({
       description:
-        'The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes',
+        'The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it',
     }),
   ),
 }).annotate({ identifier: 'Definition', description: 'A saved definition, with its document' });
@@ -125,15 +125,12 @@ export type PredictionFunctionDefinition = Definition & { readonly type: 'predic
 
 export type ComputationFunctionDefinition = Definition & { readonly type: 'computation' };
 
-export type RecallFunctionDefinition = Definition & { readonly type: 'recall' };
-
 export type PlaybookFunctionDefinition =
   | ReasoningFunctionDefinition
   | LookupFunctionDefinition
   | InteractionFunctionDefinition
   | PredictionFunctionDefinition
-  | ComputationFunctionDefinition
-  | RecallFunctionDefinition;
+  | ComputationFunctionDefinition;
 
 const playbookFunctionTypes: ReadonlySet<string> = new Set<string>(functionTypeOrder);
 

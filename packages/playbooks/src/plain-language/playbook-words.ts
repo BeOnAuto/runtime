@@ -42,7 +42,7 @@ export function playbooksListed(playbooks: readonly Playbook[]): string {
 
 const welcomeSentences = [
   'This organization has no playbooks yet.',
-  'A playbook keeps work your team can use again. Its workflows coordinate functions that reason, interact, predict, recall and compute.',
+  'A playbook keeps work your team can use again. Its workflows coordinate functions that reason, interact, predict and compute.',
   'Unless the person has already said what they want, ask what they want done, and offer three starts: set up a first playbook, connect a service they use, or hear what Auto can do for their team.',
   'In Studio, your team can review playbooks and run results.',
   'You can also manage workflows, connections, members and billing there.',

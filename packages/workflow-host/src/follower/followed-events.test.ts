@@ -137,24 +137,24 @@ describe('a fact of a playbook that is none, or cannot be read, as the follower 
     ]).toEqual(['unreadable', 'none', 'none']);
   });
 
-  it('is none for the records of a call made by hand, which no recall function folds and no trigger takes, with no note', () => {
+  it('is none for the records of a call made by hand, which no view folds and no trigger takes, with no note', () => {
     const called = { call_id: 'c-1', server: 'graph', tool: 'search', arguments_bytes: 2 };
 
     expect([
       followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_started', data: called }), 'workflow'),
       followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_answered', data: called }), 'workflow'),
-      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_started' }), 'recall'),
+      followedEventOf(recordOf('tool-calls/c-1', { type: 'tool_call_started' }), 'page'),
     ]).toEqual(['none', 'none', 'none']);
   });
 });
 
 describe('the reads and tellings of a conversation, as the follower meets them', () => {
-  it('are none, which no recall function folds and no trigger takes', () => {
+  it('are none, which no view folds and no trigger takes', () => {
     const read = { call_id: 'c-1', server: 'chat', tool: 'thread_replies' };
 
     expect([
       followedEventOf(recordOf('conversation-calls/c-1', { type: 'replies_read', data: read }), 'workflow'),
-      followedEventOf(recordOf('conversation-calls/c-1', { type: 'telling_started', data: read }), 'recall'),
+      followedEventOf(recordOf('conversation-calls/c-1', { type: 'telling_started', data: read }), 'page'),
     ]).toEqual(['none', 'none']);
   });
 });

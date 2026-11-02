@@ -7,7 +7,7 @@ import { openWorkflowStore, type WorkflowStore } from '../src/host/workflow-stor
 import { ledgerConnectedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
 import { systemClock } from '../src/loop/host-clock.ts';
 import { startProjector } from '../src/projector/projector.ts';
-import { measuredViewOf, measuredViews, measuringPool, recallContentOf } from './measured-views.ts';
+import { measuredViewOf, measuredViews, measuringPool, viewContentOf } from './measured-views.ts';
 
 export interface IdleViews {
   readonly views: number;
@@ -31,16 +31,16 @@ async function saved(store: WorkflowStore, index: number): Promise<void> {
   const context = {
     by: 'acme-admin',
     at: '2026-10-06T09:00:00.000Z',
-    definitionType: 'recall',
+    definitionType: 'view',
     definitionName: name,
     definitionVersion: 1,
   };
   await store.database.store.append(
-    `${playbook}definitions/recall`,
+    `${playbook}definitions/view`,
     [
       {
         type: 'definition_created',
-        data: { content: recallContentOf(name, details), created_by: { id: 'acme-admin', name: 'acme-admin' } },
+        data: { content: viewContentOf(name, details), created_by: { id: 'acme-admin', name: 'acme-admin' } },
       },
     ],
     { expectedVersion: index, context },
@@ -84,7 +84,7 @@ export async function idleViewsOn(settings: DatabaseSettings, views: number, sec
   });
   await allLive(store, views);
   const view = JSON.stringify(Array.from({ length: 5000 }, (_, index) => ({ at: index, verdict: 'x'.repeat(80) })));
-  await Effect.runPromise(store.database.write(statement`UPDATE recall_views SET view = ${view}`));
+  await Effect.runPromise(store.database.write(statement`UPDATE page_views SET view = ${view}`));
   const before = performance.eventLoopUtilization();
   await setTimeout(seconds * 1000);
   const busy = performance.eventLoopUtilization(before);

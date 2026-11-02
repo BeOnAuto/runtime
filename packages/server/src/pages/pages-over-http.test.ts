@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { Option, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { answering, servingPages } from '../testing/servers/page-server.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { servingRecall, verdicts } from '../testing/servers/recall-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
 const pageFormat = readFileSync(new URL('../../../../docs/reference/page-format.md', import.meta.url), 'utf8');
@@ -45,7 +45,7 @@ afterEach(async () => {
 });
 
 async function playbookWithThePage(): Promise<string> {
-  server = await servingRecall(verdicts(morning));
+  server = await servingPages(answering(morning));
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await server.call('POST', `${alpha}/definitions/reasoning`, {
     body: { name: 'draft-posts', source: draftPosts, diagram: 'none' },

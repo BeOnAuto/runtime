@@ -2,14 +2,13 @@ import ts from 'typescript6';
 
 import type { Located } from './diagnostics.ts';
 
-export type Place = 'computation' | 'recall' | 'page';
+export type Place = 'computation' | 'page';
 
-export type EntryName = 'default' | 'fold' | 'answer';
+export type EntryName = 'default' | 'fold';
 
 export interface Entry {
   readonly name: EntryName;
   readonly contract: string;
-  readonly required: boolean;
 }
 
 export interface ExportedFunction {
@@ -26,18 +25,13 @@ export const holdsNothing =
 export const answersAtOnce = 'The program is a function that answers at once; it awaits nothing';
 
 export const placeEntries: Readonly<Record<Place, readonly Entry[]>> = {
-  computation: [{ name: 'default', contract: '(input: Input) => Output', required: true }],
-  recall: [
-    { name: 'fold', contract: '(view: View, event: Event) => View', required: true },
-    { name: 'answer', contract: '(view: View, input: Input) => Output', required: false },
-  ],
-  page: [{ name: 'fold', contract: '(view: View, event: Event) => View', required: true }],
+  computation: [{ name: 'default', contract: '(input: Input) => Output' }],
+  page: [{ name: 'fold', contract: '(view: View, event: Event) => View' }],
 };
 
 export const signatures: Readonly<Record<EntryName, string>> = {
   default: 'The program is a module whose default export is a function (input: Input): Output',
   fold: 'The program is a module that exports a function fold(view: View, event: Event): View',
-  answer: 'The program exports answer as a function answer(view: View, input: Input): Output',
 };
 
 function lineOf(node: ts.Node): number {
@@ -129,7 +123,7 @@ export function exportedFunctions(file: () => ts.SourceFile): readonly ExportedF
 
 function exportIssues(exported: readonly ExportedFunction[], place: Place): readonly Located[] {
   return placeEntries[place]
-    .filter(({ name, required }) => required && !exported.some((declared) => declared.name === name))
+    .filter(({ name }) => !exported.some((declared) => declared.name === name))
     .map(({ name }) => ({ line: 1, detail: signatures[name] }));
 }
 

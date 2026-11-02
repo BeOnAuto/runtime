@@ -48,7 +48,7 @@ const PublishedSchema = Schema.Struct({
 });
 
 const description = [
-  'Publishes an event to the playbook, where a workflow whose schedule names its type starts a run and a recall function that filters on it folds it,',
+  'Publishes an event to the playbook, where a workflow whose schedule names its type starts a run and a page that filters on it folds it into its views,',
   'and returns its id and time.',
   'Use it when something outside the playbook happened that the playbook should react to or remember; send_run_event gives an event to one waiting run instead.',
   '`event` is a CloudEvents event with a `source` and a `type`, and publishing the same source and id again records nothing, so a call can be retried with its id.',

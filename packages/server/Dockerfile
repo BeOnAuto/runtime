@@ -36,7 +36,6 @@ COPY capabilities/interaction/package.json capabilities/interaction/
 COPY capabilities/lookup/package.json capabilities/lookup/
 COPY capabilities/prediction/package.json capabilities/prediction/
 COPY capabilities/reasoning/package.json capabilities/reasoning/
-COPY capabilities/recall/package.json capabilities/recall/
 RUN pnpm install --frozen-lockfile --prod --no-optional --ignore-scripts --filter @on.auto/server...
 RUN --network=none npm_config_build_from_source=sqlite3 npm_config_nodedir=/usr/local \
   pnpm rebuild --filter @on.auto/server... sqlite3 \
@@ -88,7 +87,6 @@ COPY capabilities/interaction/src capabilities/interaction/src
 COPY capabilities/lookup/src capabilities/lookup/src
 COPY capabilities/prediction/src capabilities/prediction/src
 COPY capabilities/reasoning/src capabilities/reasoning/src
-COPY capabilities/recall/src capabilities/recall/src
 RUN apt-get update \
   && apt-get install --yes --no-install-recommends tini \
   && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \

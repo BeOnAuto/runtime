@@ -84,7 +84,7 @@ Beneath the request:
 | `tools/call <tool>`                                   | A tool of an MCP server called once, for an interaction function or for `execute`. It names the tool server and how the call ended                                                     |
 | `POST`, `GET` and the other methods                   | Each HTTP request the server sends, to a model provider, a gateway or a tool server. Every value of its query is replaced by `REDACTED`                                                |
 | `S3.GetObject`, `S3.PutObject` and the other commands | Each request to the bucket of the [object store](object-storage.md), naming the bucket and never a key                                                                                 |
-| `program <kind>`                                      | A job of the server's workers, with how it ended. A job is, for example, a computation, a recall function's answer, a fold of views or a check of a definition                         |
+| `program <kind>`                                      | A job of the server's workers, with how it ended. A job is, for example, a computation, a fold of a page's views or a check of a definition                                            |
 
 ### Workflow spans
 

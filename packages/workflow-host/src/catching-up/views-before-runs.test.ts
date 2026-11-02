@@ -6,7 +6,7 @@ import { counting, isLive, liveWith } from '../views-testing/view-documents.ts';
 import { viewHarness } from '../views-testing/view-harness.ts';
 import { answeredOnceFolded } from './answered-runs.ts';
 
-describe('a run of a recall function, whose view the projector folds', () => {
+describe('a run that waits for the views the projector folds', () => {
   it('waits until its view has folded every run that ended before it started', async () => {
     const views = await viewHarness(await onSQLite());
     await views.saved('runs', counting);

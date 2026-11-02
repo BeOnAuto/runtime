@@ -8,7 +8,7 @@ const packed: readonly PackedPackage[] = [
     directory: 'packages/ledger',
     exports: { '.': './src/index.ts', './sqlite3': './src/sqlite3.ts', './testing': './src/testing/index.ts' },
   },
-  { name: '@on.auto/recall', directory: 'capabilities/recall', exports: { '.': './src/index.ts' } },
+  { name: '@on.auto/prediction', directory: 'capabilities/prediction', exports: { '.': './src/index.ts' } },
   { name: '@on.auto/server', directory: 'packages/server', exports: {} },
 ];
 
@@ -18,12 +18,12 @@ describe('the subpaths of the package', () => {
       './ledger': './packages/ledger/src/index.ts',
       './ledger/sqlite3': './packages/ledger/src/sqlite3.ts',
       './ledger/testing': './packages/ledger/src/testing/index.ts',
-      './recall': './capabilities/recall/src/index.ts',
+      './prediction': './capabilities/prediction/src/index.ts',
     });
   });
 
   it('are aliased from the names of the packages that have entries', () => {
-    expect(aliasedNamesOf(packed)).toEqual(['ledger', 'recall']);
+    expect(aliasedNamesOf(packed)).toEqual(['ledger', 'prediction']);
   });
 });
 
@@ -31,12 +31,12 @@ describe('the README of the package', () => {
   it('holds, where it names the place of the alias, the names and the alias from each to its subpath', () => {
     const readme = ['Alias them:', '', aliasPlace, '', '## License'].join('\n');
 
-    expect(readmeWithAlias(readme, '@on.auto/runtime', ['ledger', 'recall'])).toBe(
+    expect(readmeWithAlias(readme, '@on.auto/runtime', ['ledger', 'prediction'])).toBe(
       [
         'Alias them:',
         '',
         '```js',
-        "const names = ['ledger', 'recall'];",
+        "const names = ['ledger', 'prediction'];",
         'const alias = Object.fromEntries(names.map((name) => [`@on.auto/${name}`, `@on.auto/runtime/${name}`]));',
         '```',
         '',

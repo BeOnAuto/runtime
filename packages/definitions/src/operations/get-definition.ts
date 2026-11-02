@@ -17,7 +17,7 @@ import { definitionRead } from './definition-read.ts';
 
 const description = [
   'Reads one definition with its document, active or retired, with its version and the input and output its document declares.',
-  'For a recall function or a page it also returns how its views stand: live, rebuilding, waiting or stalled.',
+  'For a page it also returns how its views stand: live, rebuilding, waiting or stalled.',
   'For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own.',
   'A definition with a page answers page.lately; `render: true` previews a page.',
   'Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type.',

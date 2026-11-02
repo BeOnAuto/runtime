@@ -1,5 +1,4 @@
 import type { CheckJob } from '@on.auto/workflow-engine/worker';
-import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { keptLibOnDisk } from '../testing/read-on-disk.ts';
@@ -10,31 +9,14 @@ import { holdsNothing, readsNothing, signatures } from './module-rules.ts';
 
 const check = checkerOf(sandboxLibFrom(keptLibOnDisk));
 
-const view: Schema.JsonObject = {
-  type: 'object',
-  additionalProperties: {
-    type: 'array',
-    items: { type: 'object', required: ['verdict'], properties: { verdict: { type: 'string' } } },
-  },
-};
-
-const input: Schema.JsonObject = {
-  type: 'object',
-  required: ['campaign'],
-  properties: { campaign: { type: 'string' } },
-};
-
-const output: Schema.JsonObject = { type: 'array', items: { type: 'string' } };
-
 const fold = [
   'export function fold(view: View, event: Event): View {',
-  "  const verdict = typeof event.data === 'string' ? event.data : event.type;",
-  "  return { ...view, [event.subject ?? 'none']: [...(view[event.subject ?? 'none'] ?? []), { verdict }] };",
+  "  return event.type === 'run_succeeded' ? view : { ...view };",
   '}',
 ].join('\n');
 
-function recall(source: string, filters: CheckJob['expressions'] = []): CheckJob {
-  return { module: { place: 'recall', source }, schemas: { view, input, output }, expressions: filters };
+function page(source: string, filters: CheckJob['expressions'] = []): CheckJob {
+  return { module: { place: 'page', source }, schemas: {}, expressions: filters };
 }
 
 function expressions(...checked: CheckJob['expressions']): CheckJob {
@@ -48,40 +30,29 @@ function issuesOf(job: CheckJob): readonly (readonly [number | 'module', number,
 
 const overData = ['$data'];
 
-describe('a recall function checked when it is saved', () => {
-  it('accepts a module with its fold and an answer over the view and the input', () => {
-    const answer = [
-      'export function answer(view: View, input: Input): Output {',
-      '  return (view[input.campaign] ?? []).map(({ verdict }) => verdict);',
-      '}',
-    ].join('\n');
-
-    expect(issuesOf(recall(`${fold}\n${answer}`, [{ source: ' $data.revenue > 100 ', names: overData }]))).toEqual([]);
+describe('the fold of a page checked when it is saved', () => {
+  it('accepts a module with its fold over the views and the event', () => {
+    expect(issuesOf(page(fold, [{ source: ' $data.revenue > 100 ', names: overData }]))).toEqual([]);
   });
 
-  it('refuses a module without its fold, an answer of another shape, and a misspelt attribute of the event', () => {
-    expect(issuesOf(recall('export function answer(view: View): number {\n  return 1;\n}'))).toEqual([
+  it('refuses a module without its fold, and a misspelt attribute of the event', () => {
+    expect(issuesOf(page('export function shown(view: View): View {\n  return view;\n}'))).toEqual([
       ['module', 1, signatures.fold],
-      [
-        'module',
-        1,
-        `${signatures.answer}: Type '(view: View) => number' is not assignable to type '(view: View, input: Input) => Output'. Type 'number' is not assignable to type 'Output'.`,
-      ],
     ]);
-    expect(issuesOf(recall(fold.replace('event.type;', 'event.typ;')))).toEqual([
+    expect(issuesOf(page(fold.replace('event.type ===', 'event.typ ===')))).toEqual([
       ['module', 2, "Property 'typ' does not exist on type 'Event'. Did you mean 'type'?"],
     ]);
   });
 
   it('refuses state kept between folds and names declared from outside', () => {
-    expect(issuesOf(recall(`let seen = 0;\ndeclare global {\n  var shared: number;\n}\n${fold}`))).toEqual([
+    expect(issuesOf(page(`let seen = 0;\ndeclare global {\n  var shared: number;\n}\n${fold}`))).toEqual([
       ['module', 1, holdsNothing],
       ['module', 2, readsNothing],
     ]);
   });
 
   it('refuses a filter that names anything but $data', () => {
-    expect(issuesOf(recall(fold, [{ source: ' $workflow.input.limit < $data.revenue ', names: overData }]))).toEqual([
+    expect(issuesOf(page(fold, [{ source: ' $workflow.input.limit < $data.revenue ', names: overData }]))).toEqual([
       [0, 1, "Cannot find name '$workflow'."],
     ]);
   });

@@ -2,15 +2,13 @@ import { checkedWorker } from '@on.auto/definitions';
 import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { someFolder } from '../projector/folder.ts';
 import { definitionsByType } from '../projector/projector-schedule.ts';
-import type { KeptAlongBy } from '../projector/projector-settings.ts';
 import { reconciledRows } from '../projector/reconciled-rows.ts';
 import type { SettingsOf } from '../testing/host-files.ts';
-import { pageViewsKept } from '../views/page-views.ts';
-import { alphaKey, counting, foldedAll, foldingOf, isStalled, liveAt, viewsFolderOver } from './view-documents.ts';
+import { pageViewsFolder } from '../views/page-views.ts';
+import { alphaKey, foldedAll, foldingOf, isStalled, liveAt } from './view-documents.ts';
 import { viewHarness, type ViewHarness } from './view-harness.ts';
-
-const keptAlong: KeptAlongBy = { recall: [pageViewsKept] };
 
 const countingPosts = [
   'export function fold(view, event) {',
@@ -21,6 +19,8 @@ const countingPosts = [
 
 const byChannel: Schema.JsonObject = { by_channel: 'categories' };
 
+const checkedFolding = { ...foldingOf(), worker: checkedWorker };
+
 function pageDetails(fold: string): Schema.JsonObject {
   return {
     of: 'workflow/morning-social-content',
@@ -29,33 +29,31 @@ function pageDetails(fold: string): Schema.JsonObject {
 }
 
 function started(views: ViewHarness) {
-  return views.start({ keptAlong, folding: { ...foldingOf(), worker: checkedWorker } });
+  return views.start({
+    views: someFolder(pageViewsFolder({ pool: views.pool, rebuildsAtOnce: 4, folding: checkedFolding })),
+  });
 }
 
 function folds(returned: string): string {
   return `export function fold(view, event) {\n  return ${returned};\n}`;
 }
 
-function reconciledWithPages(views: ViewHarness, rebuildsAtOnce: number) {
-  const kept = { database: views.store.database, definitions: definitionsByType().of, keptAlong };
-  return Effect.runPromise(reconciledRows(viewsFolderOver(views.pool, rebuildsAtOnce), kept, alphaKey));
+function reconciledPages(views: ViewHarness, rebuildsAtOnce: number) {
+  const kept = { database: views.store.database, definitions: definitionsByType().of };
+  const folder = pageViewsFolder({ pool: views.pool, rebuildsAtOnce, folding: checkedFolding });
+  return Effect.runPromise(reconciledRows(folder, kept, alphaKey));
 }
 
 function foldingTests(settingsOf: SettingsOf): void {
-  it('are folded from the playbook’s history beside the views of recall functions, kept under the page’s name', async () => {
+  it('are folded from the playbook’s history, kept under the page’s name', async () => {
     const views = await viewHarness(await settingsOf());
-    await views.saved('runs', counting);
     await views.savedPage('morning-posts', pageDetails(countingPosts));
     await views.ranEach('workflow/morning-social-content', [1, 2]);
     started(views);
 
-    const [page, recall] = await Promise.all([
-      views.until('page:morning-posts', foldedAll(2)),
-      views.until('runs', foldedAll(2)),
-    ]);
+    const page = await views.until('morning-posts', foldedAll(2));
 
     expect(page.view).toEqual({ by_channel: { unit: 'posts', values: [{ name: 'LinkedIn', value: 2 }] } });
-    expect(recall.view).toBe(2);
   });
 
   it('stall with the kind shape at a view that does not match its shape, or that data.views does not declare', async () => {
@@ -66,8 +64,8 @@ function foldingTests(settingsOf: SettingsOf): void {
     started(views);
 
     const [wrong, undeclared] = await Promise.all([
-      views.until('page:wrong-shape', isStalled),
-      views.until('page:undeclared', isStalled),
+      views.until('wrong-shape', isStalled),
+      views.until('undeclared', isStalled),
     ]);
 
     expect([wrong.stall?.kind, String(wrong.stall?.message).startsWith('/by_channel')]).toEqual(['shape', true]);
@@ -77,15 +75,17 @@ function foldingTests(settingsOf: SettingsOf): void {
     });
   });
 
-  it('share the views a playbook builds at once with recall functions', async () => {
+  it('build as many at once as the folder may, the others waiting in the order they were saved', async () => {
     const views = await viewHarness(await settingsOf());
-    await views.saved('runs', counting);
     await views.savedPage('morning-posts', pageDetails(countingPosts));
+    await views.savedPage('evening-posts', pageDetails(countingPosts));
 
-    const rows = await reconciledWithPages(views, 1);
+    const rows = await reconciledPages(views, 1);
 
-    expect(rows.map(({ phase }) => phase).toSorted()).toEqual(['rebuilding', 'waiting']);
-    expect(rows.map(({ name }) => name).toSorted()).toEqual(['page:morning-posts', 'runs']);
+    expect(rows.map(({ name, phase }) => [name, phase])).toEqual([
+      ['morning-posts', 'rebuilding'],
+      ['evening-posts', 'waiting'],
+    ]);
   });
 }
 
@@ -95,11 +95,11 @@ function versionTests(settingsOf: SettingsOf): void {
     await views.savedPage('morning-posts', pageDetails(countingPosts));
     await views.ran('workflow/morning-social-content', 1);
     started(views);
-    await views.until('page:morning-posts', foldedAll(1));
+    await views.until('morning-posts', foldedAll(1));
 
     await views.savedPage('morning-posts', pageDetails(folds("{ by_channel: { values: [{ name: 'X', value: 9 }] } }")));
 
-    expect((await views.until('page:morning-posts', liveAt(2))).view).toEqual({
+    expect((await views.until('morning-posts', liveAt(2))).view).toEqual({
       by_channel: { values: [{ name: 'X', value: 9 }] },
     });
   });
@@ -110,15 +110,12 @@ function versionTests(settingsOf: SettingsOf): void {
     await views.savedPage('playbook-page', pageDetails(countingPosts));
     await views.ran('workflow/morning-social-content', 1);
     started(views);
-    await views.until('page:morning-posts', foldedAll(1));
+    await views.until('morning-posts', foldedAll(1));
 
     await views.savedPage('morning-posts', { of: 'workflow/morning-social-content' });
     await views.retiredPage('playbook-page');
 
-    expect(await Promise.all([views.gone('page:morning-posts'), views.gone('page:playbook-page')])).toEqual([
-      true,
-      true,
-    ]);
+    expect(await Promise.all([views.gone('morning-posts'), views.gone('playbook-page')])).toEqual([true, true]);
   });
 }
 

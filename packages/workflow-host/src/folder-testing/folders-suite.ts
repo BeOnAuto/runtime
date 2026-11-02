@@ -32,7 +32,7 @@ function phasesOf(rows: readonly TallyRow[]): Readonly<Record<string, string>> {
 }
 
 function keptBy(tallies: TallyHarness): DefinitionsKept {
-  return { database: tallies.store.database, definitions: definitionsByType().of, keptAlong: {} };
+  return { database: tallies.store.database, definitions: definitionsByType().of };
 }
 
 function namedBy(rows: readonly TallyRow[], { counts }: TallyDetails): TallyRow | undefined {
@@ -52,7 +52,7 @@ function withOutputs(change: TallyChange, next: Partial<TallyChange['next']> = {
 }
 
 function sharingTests(settingsOf: SettingsOf): void {
-  it('folds in the host’s own process into a table of its own, beside the views of recall functions, and shares their one read a wake once both are caught up', async () => {
+  it('folds in the host’s own process into a table of its own, beside the views, and shares their one read a wake once both are caught up', async () => {
     const tallies = await tallyHarness(await settingsOf());
     await tallies.saved('runs', counting);
     await tallies.savedTally('succeeded', succeeded);
@@ -205,7 +205,7 @@ function tableTests(settingsOf: SettingsOf): void {
 }
 
 export function foldersSuite(settingsOf: SettingsOf): void {
-  describe('a second folder beside the views of recall functions', () => {
+  describe('a second folder beside the views', () => {
     sharingTests(settingsOf);
     phaseTests(settingsOf);
     restartTests(settingsOf);

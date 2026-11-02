@@ -209,11 +209,8 @@ function shapedViewDeclarations(schema: JsonObject | undefined): string {
 
 const placeTypes: Readonly<Record<Place, readonly (keyof CheckJob['schemas'])[]>> = {
   computation: ['input', 'output'],
-  recall: ['view', 'input', 'output'],
   page: [],
 };
-
-const foldingPlaces: ReadonlySet<Place | undefined> = new Set(['recall', 'page']);
 
 const typeNames: Readonly<Record<keyof CheckJob['schemas'], string>> = {
   input: 'Input',
@@ -224,7 +221,6 @@ const typeNames: Readonly<Record<keyof CheckJob['schemas'], string>> = {
 export function declarationsOf({ module, schemas }: CheckJob): string {
   const types =
     module === undefined ? [] : placeTypes[module.place].map((name) => declarationOf(typeNames[name], schemas[name]));
-  const views = module?.place === 'page' ? [shapedViewDeclarations(schemas.view)] : [];
-  const event = foldingPlaces.has(module?.place) ? [eventDeclaration] : [];
-  return [jsonType, ...types, ...views, ...event].join('\n');
+  const folds = module?.place === 'page' ? [shapedViewDeclarations(schemas.view), eventDeclaration] : [];
+  return [jsonType, ...types, ...folds].join('\n');
 }

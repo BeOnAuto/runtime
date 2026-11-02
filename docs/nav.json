@@ -53,10 +53,6 @@
             "link": "/guides/tools"
           },
           {
-            "text": "Make a playbook remember",
-            "link": "/guides/remember"
-          },
-          {
             "text": "Calculate with a computation function",
             "link": "/guides/computation"
           },
@@ -145,10 +141,6 @@
       {
         "text": "Prediction function format",
         "link": "/reference/prediction-format"
-      },
-      {
-        "text": "Recall function format",
-        "link": "/reference/recall-format"
       },
       {
         "text": "Computation function format",

@@ -1,7 +1,7 @@
 import { Schema } from 'effect';
 
 const CheckedModuleSchema = Schema.Struct({
-  place: Schema.Literals(['computation', 'recall', 'page']),
+  place: Schema.Literals(['computation', 'page']),
   source: Schema.String,
 });
 

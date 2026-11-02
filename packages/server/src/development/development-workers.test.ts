@@ -19,27 +19,32 @@ const echo = [
 
 const saidSoFar = [
   '---',
-  'language: typescript',
-  'source:',
-  '  events:',
-  '    - type: run_succeeded',
-  '      subject: computation/echo',
-  'view:',
-  '  initial: []',
-  '  schema: {type: array, items: {type: string}}',
+  'description: What the echo function was told, as it was told',
+  'of: computation/echo',
+  'data:',
+  '  language: typescript',
+  '  source:',
+  '    events:',
+  '      - type: run_succeeded',
+  '        subject: computation/echo',
+  '  views:',
+  '    said: categories',
+  '  module: |',
+  '    export function fold(view: View, event: Event): View {',
+  '      const fieldOf = (value: Json | undefined, name: string): Json | undefined =>',
+  "        typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;",
+  "      const said = fieldOf(fieldOf(event.data, 'output'), 'said');",
+  "      const name = typeof said === 'string' ? said.toUpperCase() : 'Other';",
+  '      return { said: { values: [...(view.said?.values ?? []), { name, value: 1 }] } };',
+  '    }',
   '---',
-  'export function fold(view: View, event: Event): View {',
-  '  const data = event.data as { output: { said: string } };',
-  '  return [...view, data.output.said];',
-  '}',
+  '{% result %}{{ output.said }}{% endresult %}',
   '',
-  'export function answer(view: View): Output {',
-  '  return view.map((said) => said.toUpperCase());',
-  '}',
+  '{% lately %}{% for value in views.said.values %}{{ value.name }}{% endfor %}{% endlately %}',
 ].join('\n');
 
 describe('the functions pnpm dev serves in worker threads', () => {
-  it('runs a computation function, folds its runs into the view of a recall function and answers from the view', async () => {
+  it('runs a computation function, and folds its runs into the views of a page that presents them', async () => {
     const development = startDevelopment(developmentFiles());
     const port = await untilListening(development);
     const call = (method: string, path: string, body?: unknown): Promise<TestResponse> =>
@@ -49,13 +54,13 @@ describe('the functions pnpm dev serves in worker threads', () => {
     await call('POST', `${meetings}/definitions/computation`, { name: 'echo', source: echo, diagram: 'none' });
     const echoed = await call('POST', `${meetings}/definitions/computation/echo/run`, { input: { said: 'hello' } });
     expect(echoed.body).toMatchObject({ status: 'succeeded', output: { said: 'hello' } });
-    await call('POST', `${meetings}/definitions/recall`, { name: 'said', source: saidSoFar, diagram: 'none' });
-    const recalled = await until(async () => {
-      const answered = await call('POST', `${meetings}/definitions/recall/said/run`, { input: {} });
-      expect(answered.status).toBe(200);
-      return answered;
+    await call('POST', `${meetings}/definitions/page`, { name: 'said', source: saidSoFar });
+    const presented = await until(async () => {
+      const read = await call('GET', `${meetings}/definitions/page/said`);
+      expect(read.body).toMatchObject({ standing: { state: 'live', folded: 1 } });
+      return call('GET', `${meetings}/definitions/computation/echo`);
     });
 
-    expect(recalled.body).toMatchObject({ status: 'succeeded', output: ['HELLO'] });
+    expect(presented.body).toMatchObject({ page: { lately: 'HELLO' } });
   });
 });

@@ -118,7 +118,7 @@ Since it began, the workflow has drafted {{ views.by_channel.values | sum: "valu
 {% endlately %}
 ````
 
-`View` is the two views as TypeScript types, each optional: `{ posts_per_day?: Series; by_channel?: Categories }`. `Series` and `Categories` are the [output shapes](output-shapes.md) of those names, and `Event` and `Json` are as a recall function has them. The runtime declares all of them for the module; see [The module](#the-module).
+`View` is the two views as TypeScript types, each optional: `{ posts_per_day?: Series; by_channel?: Categories }`. `Series` and `Categories` are the [output shapes](output-shapes.md) of those names, and `Event` and `Json` are the playbook's event and any JSON value. The runtime declares all of them for the module; see [The module](#the-module).
 
 To save the page, `create_definition` takes `type: "page"`, a `name` such as `morning-posts`, and the document as `source`. It takes no `overview` and no `diagram`. It also requires the playbook id unless the MCP connection is scoped to that playbook.
 
@@ -180,7 +180,7 @@ Since it began, the workflow has drafted 8 posts across 3 channels.
 
 ### Guard the fold
 
-The fold runs once for every run of the workflow that succeeds, whatever it returned. So it guards against every output it may meet, as a [recall function's fold](recall-format.md#guard-the-fold) does:
+The fold runs once for every run of the workflow that succeeds, whatever it returned. So it guards against every output it may meet:
 
 - An output that is not an object, or holds no list of posts, adds nothing. So does an output too large for its event, which then carries its size instead.
 - A post without a channel, or with one that is not text, counts for `Other`. A channel's name is cut at 64 characters, the most a category's name may hold. At most 50 posts of one run count.
@@ -263,14 +263,14 @@ Adding the figures instead would count a month twice. Add runs together only whe
 
 ## Fields
 
-| Field                | Purpose                                                                                                                                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description`        | Optional; 1 to 1,000 characters                                                                                                                                                          |
-| `of`                 | Required; the subject whose results the page presents: `<type>/<name>`, where the type is `workflow`, `reasoning`, `interaction`, `prediction`, `recall` or `computation`, or `playbook` |
-| `data.language`      | Required with `data`; `typescript`, the playbook's one language                                                                                                                          |
-| `data.source.events` | Required with `data`; 1 to 8 filters, each naming events the fold takes, as a [recall function's filters](recall-format.md#filters) do                                                   |
-| `data.views`         | Required with `data`; 1 to 8 views, each a name and the shape it takes: `series`, `categories`, `table` or `text`; see [The views](#the-views)                                           |
-| `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                                                             |
+| Field                | Purpose                                                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `description`        | Optional; 1 to 1,000 characters                                                                                                                                                |
+| `of`                 | Required; the subject whose results the page presents: `<type>/<name>`, where the type is `workflow`, `reasoning`, `interaction`, `prediction` or `computation`, or `playbook` |
+| `data.language`      | Required with `data`; `typescript`, the playbook's one language                                                                                                                |
+| `data.source.events` | Required with `data`; 1 to 8 filters, each naming events the fold takes; see [The filters of the events](#the-filters-of-the-events)                                           |
+| `data.views`         | Required with `data`; 1 to 8 views, each a name and the shape it takes: `series`, `categories`, `table` or `text`; see [The views](#the-views)                                 |
+| `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                                                   |
 
 - `data` is optional. A page without it has no views and no `lately`.
 - Unknown fields are refused with their line. Among them are the fields of a function that do not apply here: `model`, `language`, `input` and `output`.
@@ -290,17 +290,67 @@ Adding the figures instead would count a month twice. Add runs together only whe
 
 ## The views
 
-`data` is a projection, as a [recall function](recall-format.md) keeps one: filters that name the events it takes, and a module whose `fold` adds each of those events to the views. Where this page leaves a rule out, the `recall-function` guide gives it.
+`data` is a projection: filters that name the events it takes, and a module whose `fold` adds each of those events to the views.
 
 ### What the fold sees
 
-The fold sees what a recall function's fold sees, in the order the playbook recorded it, from the first event of its history:
+The fold sees the events of its own playbook, in the order the playbook recorded them, from the first event of its history:
 
 - the start and the end of every run of each function and workflow, with the output of each run that succeeded and fit its event, and the reason and kind of each run that was rejected;
 - the definitions saved, updated and retired, pages among them;
 - every event published to the playbook, or emitted by its workflows.
 
-It never sees a run's input or a tool call, although the playbook's history records both. [The events](recall-format.md#the-events) lists each event the fold sees, with its attributes.
+These events are not the whole of the playbook's history:
+
+| What                    | The events a fold sees                                                                                       | The playbook's history                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Who reads them          | A page's fold, and also a workflow's event triggers and `listen` filters and a prediction function's dataset | A person or an agent, with `list_playbook_events` and `get_event`                                                                             |
+| What they hold          | The facts in the table below, and the events published to the playbook or emitted by its workflows           | Everything recorded: those facts and events, each run's input on its `run_started`, tool calls, workflow steps, requests, answers, deliveries |
+| The shape of each event | A CloudEvent, with the attributes below                                                                      | `id`, `type`, `summary`, `data` and `metadata`                                                                                                |
+
+So `run_started` is in both, with the run's input in the history and with no data for a fold. A tool call, a step or an answer is in the history alone, and a fold never sees it. The events a fold sees:
+
+| Events                                                           | `source`                     | `subject`       | `data`                                                                                          |
+| ---------------------------------------------------------------- | ---------------------------- | --------------- | ----------------------------------------------------------------------------------------------- |
+| `run_started`, `run_failed`                                      | `/runs/<run id>`             | `<type>/<name>` | none                                                                                            |
+| `run_succeeded`                                                  | `/runs/<run id>`             | `<type>/<name>` | `output`; or `output_bytes`, its size, when the output would make the event larger than 240 KiB |
+| `run_rejected`                                                   | `/runs/<run id>`             | `<type>/<name>` | `reason`, and `kind` where the rejection has one                                                |
+| `definition_created`, `definition_updated`, `definition_retired` | `/definitions/<type>/<name>` | none            | none                                                                                            |
+| An event published to the playbook, of any other type            | as its publisher gave it     | as given        | as given; see [Publishing events](http.md#publishing-events)                                    |
+
+Each event is a CloudEvent with its `id`, `type`, `source`, `time` and `data`. Its `time` is when it happened, as the playbook recorded it. An event the playbook recorded as the effect of another names that one in `causationid`, and the run at the top of its chain in `correlationid`. The playbook's own events also carry extension attributes that say how they came about, each where the playbook has it:
+
+| Attribute           | Holds                                                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `caller`            | Who acted: a caller's id; or `playbook:` and the playbook's id, for a run a trigger started and the runs it calls |
+| `definitionversion` | The version of the definition the run runs or the event is about, a whole number from 1                           |
+| `depth`             | On a run a reaction started, how many reactions are above it, a whole number from 1                               |
+| `calldepth`         | On a run a workflow's call started, how many calls are above it, a whole number from 1                            |
+| `calledby`          | The id of the run whose call started the run                                                                      |
+| `triggerkind`       | The kind of the trigger that started the run: `event`, `cron` or `every`                                          |
+| `triggerreference`  | Where that trigger is in its workflow's document                                                                  |
+
+- No published event carries one of these attributes, nor `causationid` or `correlationid`, since `publish_event` refuses them.
+- An event the runtime cannot read, such as one whose data nests deeper than 512 levels, is passed over and reported to the operator once.
+
+### The filters of the events
+
+`data.source.events` names the events the fold takes, in 1 to 8 filters. Every value except `data` is written out, never computed:
+
+| Key                 | What an event must have                                                                                                                                                                  |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`              | Required; exactly this type                                                                                                                                                              |
+| `source`            | Optional; exactly this source                                                                                                                                                            |
+| `subject`           | Optional; exactly this subject, such as `workflow/morning-social-content` for the runs of one workflow                                                                                   |
+| Any other attribute | Optional; exactly this value, such as `triggerkind: event` or `caller: playbook:finance`: a whole number from 1 for `depth`, `calldepth` and `definitionversion`, and text for any other |
+| `data`              | Optional; data equal to this value, or data for which an expression such as `'${ $data.revenue > 100 }'` holds; the expression reads the event's data as `$data` and nothing else        |
+
+- An event is folded when it matches any of the filters, and once only.
+- A filter that names an attribute the event does not have does not match it. A filter for runs that no reaction or no call started therefore leaves `depth` or `calldepth` out.
+- A filter that names `depth`, `calldepth` or `definitionversion` as 0 is refused when the page is saved.
+- An expression holds unless it returns `false` or `null`.
+- An attribute is named as CloudEvents names it, in at most 20 lowercase letters and digits. Any other key is rejected, and so is a computed attribute.
+- A `data` expression that names anything but `$data` is refused when the page is saved, with the compiler's `Cannot find name`.
 
 ### The module
 
@@ -310,12 +360,41 @@ It never sees a run's input or a tool call, although the playbook's history reco
 | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `View`                                  | An object of the views `data.views` names, each optional and of its shape's type                 |
 | `Series`, `Categories`, `Table`, `Text` | The four [output shapes](output-shapes.md), `series`, `categories`, `table` and `text`, as types |
-| `Event`, `Json`                         | The playbook's event and any JSON value, as for a [recall function](recall-format.md#the-module) |
+| `Event`, `Json`                         | The playbook's event, described below, and any JSON value                                        |
 
 - The fold starts from `{}`, with no views. A view the fold leaves out has no data yet, and `lately` reads it as `null`.
-- The module is checked when the page is saved, and runs in the sandbox, as a recall function's module is; see [The module](recall-format.md#the-module) of a recall function.
 - A module that exports `answer` is refused, since a page never runs.
 - The module's lines are counted in the document, so a problem names the line of the page where it is.
+
+`Event` is the playbook's event. It has the CloudEvents attributes `specversion`, `id`, `type`, `source`, `subject`, `time`, `datacontenttype` and `dataschema`, and `data` as `Json`. It also has `causationid`, `correlationid` and the playbook's own extensions: `caller`, `definitionversion`, `depth`, `calldepth`, `calledby`, `triggerkind` and `triggerreference`. Each is optional except `id`, `type` and `source`. A fold reads the definition of a run's event from `event.subject`, and who acted from `event.caller`. `Event` names no other extension. Read another through a type that names it, such as `(event as Event & { region?: string }).region`, so that a misspelt attribute is refused rather than read as an extension.
+
+The module may declare types of its own and exported functions, and nothing else at the top level. A module that kept state between two folds would make the views depend on where a page of events ends. Write a helper inside the function that uses it, or export it.
+
+The module is checked when the page is saved, as a [computation function's program](computation-format.md#the-program) is: with the TypeScript compiler in strict mode with `exactOptionalPropertyTypes`, against these types and the sandbox's own library. Each problem is refused with its line and the compiler's words. The check refuses:
+
+- a module without `fold`, or a `fold` of another signature, with the signature it needs;
+- a top-level statement other than a type or an exported function, such as `let`, a class or a function the module does not export;
+- `import`, `require`, `eval`, `new Function`, `import()`, `import.meta` and declared names such as `declare global`;
+- `async`, `await` and an exported generator, since a fold returns at once;
+- an `enum`, a `namespace`, a parameter property or a decorator;
+- more than 500 assignments to variables in one function;
+- a name the sandbox lacks, as listed below.
+
+The module runs in the QuickJS sandbox that [computation functions](computation-format.md#the-sandbox) run in, with the same library and numbers:
+
+- The library is the language's own, ES2023 and more, such as `toSorted`, `Map.groupBy`, `Object.groupBy`, `Set.prototype.union`, the iterator helpers and `BigInt`.
+- Absent: `Math.random`, `eval`, `Function`, `WeakRef`, `FinalizationRegistry`, `Promise`, `console`, `fetch`, timers, `Intl`, modules and every local-time method of `Date`.
+- `new Date(number)`, `new Date(date)`, a date alone such as `new Date("2026-01-01")`, and a date and time with its offset work.
+- These raise: a `Date` from several numbers, a date and time without an offset, `Date` called without `new`, `String(date)` and `toLocaleString()`. Use `Date.UTC`, the `getUTC…` methods and `toISOString()`.
+- Strings compare and sort by UTF-16 code unit, and `localeCompare` reads no locale. An object keeps its keys in the order they were written.
+- Numbers are IEEE 754 doubles. Integers are exact up to 2^53, and `0.1 + 0.2` is not `0.3`. There is no decimal type, so keep amounts in whole minor units, such as cents. End a division with `Math.floor`, `Math.ceil` or `Math.round`.
+- The views are JSON. A `Date`, a `Map`, a `Set`, a class instance, a function, a `BigInt`, a symbol, `NaN`, `Infinity`, `undefined` and a cycle are not. A fold that returns one stalls the views.
+
+The views do not depend on where a page of events begins or ends:
+
+- In a fold, `Date.now()` and `new Date()` return the time of the event being folded, so a fold gives the same views on every server.
+- The views stay inside the fold's sandbox for a whole page of events. Each fold is given the views the fold before it returned, as JSON gives them back. What JSON does not keep never reaches the next fold: an object two members share, a negative zero, or a member keyed by a symbol.
+- The sandbox is frozen once the module is loaded, the prototypes of iterators and generators among it. So nothing a fold writes outside its views reaches the next fold, whether to `Math`, to a prototype or to the module.
 
 ### The views' rules
 
@@ -327,12 +406,28 @@ It never sees a run's input or a tool call, although the playbook's history reco
 
 ### How the views are kept
 
-The server that runs the playbook's workflows keeps the views, as it keeps a recall function's view; see [How the view is kept](recall-format.md#how-the-view-is-kept):
+The server that runs the playbook's workflows keeps the views:
 
-- The views follow the playbook as a recall function's view does, by up to a pass (a second) for an event another server recorded.
+- It is woken by every event the playbook records through it. The views follow the playbook by the time it takes to fold a page of events, and by up to a pass (a second) for an event another server recorded.
+- It reads the playbook's history in pages of up to 1,000 records. It folds each page in a worker apart from the server, kept ready between pages.
+- It writes the views once a page, so a restart folds at most one page again, to the same views.
 - Saving a page with `data`, or a new version of one, builds its views from the start of the playbook's history. Until they have caught up, `page.lately` is the one line that says so; see [Lines in place of a render](#lines-in-place-of-a-render).
-- Pages and recall functions share the four views a playbook builds at once, the setting `RECALL_MAX_REBUILDS`. The others wait in the order they were saved.
+- A playbook builds the views of at most four pages at once, the setting `PAGE_MAX_REBUILDS`. The others wait in the order they were saved.
 - A newer version replaces an older one that is being built, waiting or stalled.
+
+#### The standing of the views
+
+`get_definition` of a page with `data` adds its views' `standing`:
+
+| Field                         | What it says                                                                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`                       | `live` once caught up, `rebuilding` while they are built, `waiting` for their turn to be built, or `stalled`                                                  |
+| `version`                     | The version of the page the views are of                                                                                                                      |
+| `checkpoint`, `checkpoint_at` | Where in the playbook's history the views have read to, an opaque cursor, and when the playbook recorded the last record they read                            |
+| `last_event`, `folded`        | The `id` and `time` of the last event the views folded, `null` before the first, and how many events they have folded                                         |
+| `lag_ms`                      | How far the views are behind: the time of the playbook's newest record less `checkpoint_at`, to the second on SQLite                                          |
+| `newest_record_at`            | When the playbook last recorded anything                                                                                                                      |
+| `stalled`                     | For stalled views: the `event` they stopped at, with its `id`, `type` and `time`; the `kind` of stall; the fold's own `error`; and its `line` in the document |
 
 ### When the views stall
 
@@ -731,7 +826,7 @@ The example page shows:
 ```
 
 - A page has no `input_schema`, `output_schema`, `overview` or `diagram`. No definition uses a page, so it has no `used_by`.
-- `get_definition` of a page with `data` adds its views' `standing`, with the fields of [a recall function's standing](recall-format.md#the-standing-of-a-view): `state`, `version`, the checkpoint, `lag_ms`, and `stalled` for views that stalled.
+- `get_definition` of a page with `data` adds its views' `standing`; see [The standing of the views](#the-standing-of-the-views): `state`, `version`, the checkpoint, `lag_ms`, and `stalled` for views that stalled.
 - A page's saves are definition events like any other, `definition_created`, `definition_updated` and `definition_retired`, with the source `/definitions/page/<name>`.
 - A subject's `used_by` does not list its page. The subject's reads carry the page instead; see [What reads render](#what-reads-render).
 
@@ -792,7 +887,7 @@ Both answer the page as `get_definition` does, with `page.result` and `page.late
 - An update that changes `of`: a page belongs to its subject.
 - An unknown field, such as `model`, `input` or `output`, with its line: a page takes the fields above.
 - `data` without `language`, `source.events`, `views` or `module`; more than 8 views; a view's name not of the form above; or a shape that is not `series`, `categories`, `table` or `text`.
-- A filter that a recall function's filters refuse, or a module that a recall function's check refuses, with its line and the compiler's words; see [The module](recall-format.md#the-module) of a recall function.
+- A filter that [The filters of the events](#the-filters-of-the-events) refuse, or a module that [The module](#the-module) refuses, with its line and the compiler's words.
 - A module that exports `answer`: a page never runs.
 - `data` without `lately`, or `lately` without `data`: the views are kept for `lately` alone.
 - A body with neither block; a block written twice, inside another tag or with arguments; or text outside the blocks: a page shows its blocks and nothing else.
@@ -819,24 +914,24 @@ A page takes no `overview` and no `diagram`. Auto Studio shows the page itself w
 
 ## Limits
 
-| Bound                                 | Value                                                                                | When it is reached                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| Document                              | 65,536 bytes in UTF-8, as every definition                                           | Refused when saved                                   |
-| Templates                             | 32 KiB (32,768 bytes) in UTF-8, the two together                                     | Refused when saved                                   |
-| Names in tags and outputs             | 1,000 in each template, as in a reasoning function's                                 | Refused when saved                                   |
-| Views                                 | 8                                                                                    | Refused when saved                                   |
-| Filters                               | 8, as for a recall function                                                          | Refused when saved                                   |
-| The check at save                     | 2 seconds of the server's time on the check's own worker, as for a recall function   | `invalid_input`; `unavailable` with no checker ready |
-| The views together                    | 512 KiB as JSON, checked after every fold                                            | The views stall at that event, `size`                |
-| Work, memory and duration of one fold | 500 checkpoints, 64 MiB and 10 seconds, as for a recall function                     | The views stall at that event                        |
-| Views built at once                   | 4 a playbook, pages and recall functions together, the setting `RECALL_MAX_REBUILDS` | The save succeeds; the standing says `waiting`       |
-| Time to render                        | 200 ms for each block                                                                | The line in place of the block                       |
-| Memory a render may charge            | 5,000,000 characters or items                                                        | The line in place of the block                       |
-| A rendered block                      | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `lately`                        | The line in place of the block                       |
-| The headline                          | 200 characters                                                                       | A client cuts it there, with an ellipsis             |
-| `sample_output`                       | 256 KiB as JSON, nesting at most 512 levels, as a run's input                        | `invalid_input` at `/sample_output`                  |
-| Pages of a subject                    | 1 active                                                                             | `conflict`                                           |
-| Cells of a row                        | 2 to 4                                                                               | Refused when saved; a line says why when it renders  |
+| Bound                                 | Value                                                         | When it is reached                                   |
+| ------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
+| Document                              | 65,536 bytes in UTF-8, as every definition                    | Refused when saved                                   |
+| Templates                             | 32 KiB (32,768 bytes) in UTF-8, the two together              | Refused when saved                                   |
+| Names in tags and outputs             | 1,000 in each template, as in a reasoning function's          | Refused when saved                                   |
+| Views                                 | 8                                                             | Refused when saved                                   |
+| Filters                               | 8                                                             | Refused when saved                                   |
+| The check at save                     | 2 seconds of the server's time on the check's own worker      | `invalid_input`; `unavailable` with no checker ready |
+| The views together                    | 512 KiB as JSON, checked after every fold                     | The views stall at that event, `size`                |
+| Work, memory and duration of one fold | 500 checkpoints, 64 MiB and 10 seconds                        | The views stall at that event                        |
+| Views built at once                   | 4 pages a playbook, the setting `PAGE_MAX_REBUILDS`           | The save succeeds; the standing says `waiting`       |
+| Time to render                        | 200 ms for each block                                         | The line in place of the block                       |
+| Memory a render may charge            | 5,000,000 characters or items                                 | The line in place of the block                       |
+| A rendered block                      | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `lately` | The line in place of the block                       |
+| The headline                          | 200 characters                                                | A client cuts it there, with an ellipsis             |
+| `sample_output`                       | 256 KiB as JSON, nesting at most 512 levels, as a run's input | `invalid_input` at `/sample_output`                  |
+| Pages of a subject                    | 1 active                                                      | `conflict`                                           |
+| Cells of a row                        | 2 to 4                                                        | Refused when saved; a line says why when it renders  |
 
 ## Availability
 

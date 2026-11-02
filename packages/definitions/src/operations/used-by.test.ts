@@ -24,7 +24,7 @@ function detailing(type: string): Capability {
 }
 
 const { createDefinition, getDefinition, listDefinitions, retireDefinition, updateDefinition } =
-  definitionOperationsFor([probe().capability, detailing('workflow'), detailing('recall')]);
+  definitionOperationsFor([probe().capability, detailing('workflow')]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -38,10 +38,6 @@ function checkingPlain(name: string, ...steps: readonly number[]) {
       calls: [{ ...plain, steps: steps.map((number) => ({ number, name: `check-${number}` })) }],
     }),
   };
-}
-
-function rememberingPlain(name: string, type: string, attribute: object) {
-  return { type: 'recall', name, source: JSON.stringify({ filters: [{ type, ...attribute }] }), diagram: 'none' };
 }
 
 const weeklyReview = {
@@ -61,27 +57,12 @@ describe('the definitions get_definition says use a definition', () => {
     await call(createDefinition, toAlpha(acmeAdmin, checkingPlain('weekly-review', 1, 3)));
     await call(createDefinition, toAlpha(acmeAdmin, checkingPlain('stale', 2)));
     await call(retireDefinition, toAlpha(acmeAdmin, { type: 'workflow', name: 'stale' }));
-    await call(
-      createDefinition,
-      toAlpha(acmeAdmin, rememberingPlain('review-history', 'run_succeeded', { subject: 'probe/plain' })),
-    );
-    await call(
-      createDefinition,
-      toAlpha(
-        acmeAdmin,
-        rememberingPlain('plain-changes', 'definition_updated', { source: '/definitions/probe/plain' }),
-      ),
-    );
     await call(createDefinition, toPlaybook('acme', 'beta')(acmeAdmin, checkingPlain('elsewhere', 1)));
 
     expect(await call(getDefinition, toAlpha(acmeAdmin, plain))).toMatchObject({
       status: 'succeeded',
       output: {
-        used_by: [
-          { type: 'recall', name: 'plain-changes', relation: 'remembers-changes' },
-          { type: 'recall', name: 'review-history', relation: 'remembers-runs' },
-          weeklyReview,
-        ],
+        used_by: [weeklyReview],
       },
     });
   });

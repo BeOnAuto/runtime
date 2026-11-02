@@ -14,15 +14,12 @@ import { instructionsActingAs, instructionsFor, type DefinitionType } from './in
 const sevenFunctionTypesSentence =
   'Its function types: reasoning prompts a model, lookup obtains information, interaction exchanges information, prediction forecasts from history, computation runs a program, memory remembers and recalls, and generation produces assets.';
 
-const whatThePersonWantsKept =
-  'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.';
-
 const whatALookupLeavesToReasoning = 'A lookup function fetches what a reasoning function interprets.';
 
 const rememberingWhatThePersonWantsKept = 'Remember what the person wants kept in a memory function, not your notes.';
 
 const sevenServedTypes: readonly DefinitionType[] = [
-  ...definitionTypes.filter(({ type }) => type !== 'recall' && type !== 'workflow'),
+  ...definitionTypes.filter(({ type }) => type !== 'workflow'),
   { type: 'memory', noun: 'memory function', guide: 'memory-function' },
   { type: 'generation', noun: 'generation function', guide: 'generation-function' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
@@ -30,7 +27,7 @@ const sevenServedTypes: readonly DefinitionType[] = [
 
 describe('the instructions of a server that runs seven function types', () => {
   it.each(everyEndpoint)(
-    'stay within 2,000 characters on the %s endpoint, opening line included, for a server that runs seven function types, lookup, memory and generation functions among them and no recall function',
+    'stay within 2,000 characters on the %s endpoint, opening line included, for a server that runs seven function types, lookup, memory and generation functions among them',
     (endpoint, served) => {
       expect(
         instructionsActingAs(callerTheInstructionsHold, endpoint, served, sevenServedTypes).length,
@@ -68,11 +65,10 @@ describe('what the instructions say of the function types', () => {
     ).toEqual([]);
   });
 
-  it('say, where the server runs memory functions, that the agent remembers what the person wants kept in one, and not that it goes in a recall function', () => {
-    const served = instructionsFor('own org', withConnections(ownOrg), sevenServedTypes);
-
-    expect(served).toContain(rememberingWhatThePersonWantsKept);
-    expect(served).not.toContain(whatThePersonWantsKept);
+  it('say, where the server runs memory functions, that the agent remembers what the person wants kept in one', () => {
+    expect(instructionsFor('own org', withConnections(ownOrg), sevenServedTypes)).toContain(
+      rememberingWhatThePersonWantsKept,
+    );
   });
 
   it('say nothing of lookup or memory functions where the server runs neither', () => {
@@ -80,29 +76,6 @@ describe('what the instructions say of the function types', () => {
 
     expect(
       everyEndpoint.filter(([endpoint, served]) => /lookup|memory/u.test(instructionsFor(endpoint, served, neither))),
-    ).toEqual([]);
-  });
-});
-
-describe('what the instructions say of what the person wants kept', () => {
-  it("say on every endpoint, after the function types and what a lookup leaves to reasoning, that it goes in a recall function and not in the agent's own notes", () => {
-    expect(
-      everyEndpoint.filter(
-        ([endpoint, served]) =>
-          !instructionsFor(endpoint, served, definitionTypes).includes(
-            `${functionTypesSentence} ${whatALookupLeavesToReasoning} ${whatThePersonWantsKept}`,
-          ),
-      ),
-    ).toEqual([]);
-  });
-
-  it('say nothing of it where the server runs no recall function to keep it in', () => {
-    const withoutRecall = definitionTypes.filter(({ type }) => type !== 'recall');
-
-    expect(
-      everyEndpoint.filter(([endpoint, served]) =>
-        instructionsFor(endpoint, served, withoutRecall).includes('wants kept'),
-      ),
     ).toEqual([]);
   });
 });

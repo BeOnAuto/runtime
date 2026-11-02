@@ -5,7 +5,6 @@ import type { HostNote } from '../host/host-reports.ts';
 import { comparePoints, earliestOf, type Point } from '../pages/history-points.ts';
 import { readPage, typesToRead, type ReadPage } from '../pages/page-events.ts';
 import type { FoldedChanges, Folder, PassedChange, PassedRow } from './folder.ts';
-import { definitionTypesKeptBy } from './projector-settings.ts';
 import { hasFreeSlot, reconciledRows, type DefinitionsKept } from './reconciled-rows.ts';
 
 export interface Resting {
@@ -232,9 +231,7 @@ export function folderPassOf<Row extends PassedRow, Change extends PassedChange<
           );
           yield* troubled(passing, result);
           const after = yield* applied(passing, { rows: state.rows, pages: 0 }, result.changes);
-          state.rows = definitionTypesKeptBy(parts.keptAlong, folder.definitionType).some((type) =>
-            page.definitionsSeen.has(type),
-          )
+          state.rows = page.definitionsSeen.has(folder.definitionType)
             ? yield* reconciledRows(folder, parts, playbook)
             : after.rows;
           state.sharing = !(result.again || (result.complete && page.atTheEnd));
