@@ -29,6 +29,25 @@ export function threadEnded(thread: number): boolean {
   return ended.has(thread);
 }
 
+export interface ThreadStarts {
+  readonly counted: () => number;
+  readonly stop: () => void;
+}
+
+export function countedThreadStarts(): ThreadStarts {
+  const started = { threads: 0 };
+  const heard = (): void => {
+    started.threads += 1;
+  };
+  subscribe(threadStarts, heard);
+  return {
+    counted: () => started.threads,
+    stop: () => {
+      unsubscribe(threadStarts, heard);
+    },
+  };
+}
+
 export function nextThreadStarted(): Promise<number> {
   const { promise, resolve } = Promise.withResolvers<number>();
   const heard = (started: unknown): void => {

@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { Effect, Function, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { toolBounds } from '../bounds/call-bounds.ts';
+import { defaultTiming, toolBounds } from '../bounds/call-bounds.ts';
 import { reportingAccess } from '../testing/index.ts';
 import {
   calledOnce,
@@ -15,6 +15,7 @@ import {
   failedWith,
   unopenedWith,
 } from '../testing/one-calls.ts';
+import { longerThanTheTestMs } from '../testing/until.ts';
 
 const portOf = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
 
@@ -107,7 +108,7 @@ describe('one call through a tool this playbook is not offered', () => {
 });
 
 describe('one call to a server whose client never opens', () => {
-  it('fails at the open bound, as unreachable, with nothing sent', async () => {
+  it('fails at the open bound, as unreachable, with nothing sent, under a call bound longer than the test', async () => {
     const silent = createServer(Function.constVoid);
     silent.listen(0, '127.0.0.1');
     await once(silent, 'listening');
@@ -116,10 +117,16 @@ describe('one call to a server whose client never opens', () => {
       silent.close();
       await once(silent, 'close');
     });
-    const startedAt = Date.now();
 
     const ended = await calledOnce(
-      oneCallAccess(`http://127.0.0.1:${String(portOf(silent.address()).port)}/mcp`, {}, { openMs: 300 }),
+      oneCallAccess(
+        `http://127.0.0.1:${String(portOf(silent.address()).port)}/mcp`,
+        {},
+        {
+          openMs: 300,
+          callMs: longerThanTheTestMs,
+        },
+      ),
     );
 
     expect(ended).toEqual(
@@ -129,16 +136,17 @@ describe('one call to a server whose client never opens', () => {
         `${couldNotBeUsed}The tool server did not open a connection within 300 ms`,
       ),
     );
-    expect(Date.now() - startedAt).toBeLessThan(5000);
   });
 });
 
 describe('one call to a server that does not list its tools in time', () => {
-  it('fails at the open bound, as unreachable, with nothing sent', async () => {
+  it('fails at the open bound of production, as unreachable, with nothing sent, under a call bound longer than the test', async () => {
     const fake = await oneCallServer();
     fake.holdNextOf('tools/list');
 
-    expect(await calledOnce(oneCallAccess(fake.url, {}, { openMs: 300 }))).toEqual(
+    expect(
+      await calledOnce(oneCallAccess(fake.url, {}, { openMs: defaultTiming.openMs, callMs: longerThanTheTestMs })),
+    ).toEqual(
       unopenedWith('tool_server_failed', 'unreachable', `${couldNotBeUsed}The tool server did not answer in time`),
     );
     expect(fake.received()).toEqual([]);

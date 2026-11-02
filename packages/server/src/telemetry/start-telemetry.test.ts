@@ -31,19 +31,6 @@ async function exportedBy(environment: Environment): Promise<void> {
   await telemetry.shutdown();
 }
 
-describe('telemetry whose collector cannot be reached', () => {
-  it('stops within a second and a half, leaving behind what it could not send', async () => {
-    const gone = await receivingOtlp();
-    await gone.close();
-    const telemetry = startTelemetry(readSettingsOf({ OTEL_EXPORTER_OTLP_ENDPOINT: gone.endpoint }).telemetry);
-    trace.getTracer('test').startSpan('lost work').end();
-    const stopping = performance.now();
-    await telemetry.shutdown();
-
-    expect(performance.now() - stopping).toBeLessThan(1500);
-  });
-});
-
 describe('telemetry with no OTLP endpoint', () => {
   it('is no telemetry at all', () => {
     expect(startTelemetry(readSettingsOf({}).telemetry)).toBe(noTelemetry);

@@ -13,7 +13,7 @@ import { noTelemetry, type Telemetry } from './telemetry.ts';
 
 export { noTelemetry, type Telemetry } from './telemetry.ts';
 
-const longestShutdownMs = 1000;
+export const longestShutdownMs = 1000;
 
 export function startTelemetry(settings: TelemetrySettings | undefined): Telemetry {
   if (settings === undefined) {

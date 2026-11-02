@@ -6,6 +6,7 @@ import { type LoopbackServer } from '../testing/fetch-handler.ts';
 import { recordingCallJournal, reportingAccess, toolRun } from '../testing/index.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 import { serveFakeMcp } from '../testing/served-fakes.ts';
+import { longerThanTheTestMs } from '../testing/until.ts';
 
 const closing: (() => Promise<void>)[] = [];
 
@@ -45,14 +46,13 @@ async function silentOnListing(): Promise<LoopbackServer> {
 }
 
 describe('listing the tools of a server as a run opens them', () => {
-  it('takes at most the bound of opening a client, not the longer bound of a call', async () => {
+  it('takes at most the bound of opening a client, not the bound of a call, which is longer than the test', async () => {
     const server = await silentOnListing();
     const { access } = reportingAccess(
       { graph: { url: `${server.origin}/mcp`, org: 'acme' } },
-      { timing: { ...defaultTiming, openMs: 300, callMs: 20_000 } },
+      { timing: { ...defaultTiming, callMs: longerThanTheTestMs } },
     );
     closing.push(access.close);
-    const began = performance.now();
 
     const opened = await Effect.runPromise(
       Effect.result(access.open(toolRun(recordingCallJournal()), [{ server: 'graph', tool: 'search' }])),
@@ -62,6 +62,5 @@ describe('listing the tools of a server as a run opens them', () => {
       _tag: 'tool_server_failed',
       because: 'unreachable',
     });
-    expect(performance.now() - began).toBeLessThan(5000);
   });
 });

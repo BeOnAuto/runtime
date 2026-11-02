@@ -55,6 +55,18 @@ export const announcingEvaluations = moduleOfSource(
   ].join('\n'),
 );
 
+const roundsOfLoadingWork = 300_000_000;
+
+export const loadingAfterItsWork = moduleOfSource(
+  [
+    `import { serveEvaluations } from '${evaluationLoop}';`,
+    'const loading = { value: 0 };',
+    `for (let round = 0; round < ${roundsOfLoadingWork}; round += 1) { loading.value = (loading.value * 31 + round) % 1000003; }`,
+    'globalThis.loaded = loading.value;',
+    'serveEvaluations();',
+  ].join('\n'),
+);
+
 function nextAsked(kind: string): Promise<void> {
   const listening = new BroadcastChannel(asked);
   const { promise, resolve } = Promise.withResolvers<void>();

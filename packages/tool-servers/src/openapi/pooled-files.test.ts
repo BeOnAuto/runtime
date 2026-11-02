@@ -1,4 +1,4 @@
-import { documentsReadIn } from '@on.auto/documents';
+import { documentsReadIn, type DocumentReading, type ReadingBounds } from '@on.auto/documents';
 import { processPool } from '@on.auto/workflow-engine/dsl';
 import { describe, expect, it } from 'vitest';
 
@@ -13,25 +13,44 @@ const stopped: unknown = expect.stringMatching(
   /\]\n(?:It took longer to read than the \d\.\d s the call had left|It took more memory to read than a process that reads a document may take), so its reading was stopped$|\]\nThe call ended before it was read$/u,
 );
 
+function recordedReading(reading: DocumentReading): {
+  readonly documents: DocumentReading;
+  readonly bounds: readonly ReadingBounds[];
+} {
+  const bounds: ReadingBounds[] = [];
+  return {
+    documents: (given, bounded) => {
+      bounds.push(bounded);
+      return reading(given, bounded);
+    },
+    bounds,
+  };
+}
+
 async function pooledAccess(callMsOfTheTest = callMs) {
   const pool = processPool({ processes: 2, longJobs: 1, memoryBytes: 768 * mebibyte, path: process.env['PATH'] });
   closedAfter(() => pool.close());
   const fake = await fakeApi();
+  const { documents, bounds } = recordedReading(documentsReadIn(pool));
   const reporting = await describedAccess(
     { graph: { org: 'acme', ...keyed(fake) } },
     {
       environment: { GRAPH_API_KEY: apiKey },
       timing: { callMs: callMsOfTheTest, openMs: 20_000, longestRetryWaitMs: 1000 },
-      documents: documentsReadIn(pool),
+      documents,
     },
   );
   closedAfter(reporting.access.close);
-  return reporting.access;
+  return { access: reporting.access, bounds };
+}
+
+function boundOf({ deadlineMs, signal }: ReadingBounds) {
+  return { atMostTheCall: deadlineMs <= callMs, endingWithTheCall: signal !== undefined };
 }
 
 describe('a file a tool of an HTTP API fetches, read in a process of the pool', () => {
   it('answers its text', async () => {
-    const access = await pooledAccess(20_000);
+    const { access } = await pooledAccess(20_000);
 
     expect(await called(access, 'file', { fileName: 'terms.txt' })).toMatchObject({
       outcome: 'result',
@@ -44,21 +63,23 @@ describe('a file a tool of an HTTP API fetches, read in a process of the pool', 
   });
 
   it('stops a PDF that draws its drawings within one another, and a Word document that unpacks to far more, within what the call has left, answering in words', async () => {
-    const access = await pooledAccess();
-    const started = performance.now();
+    const { access, bounds } = await pooledAccess();
 
     const answers = await Promise.all([
       called(access, 'file', { fileName: 'nested.pdf' }),
       called(access, 'file', { fileName: 'unpacking.docx' }),
     ]);
-    const took = performance.now() - started;
+    const boundsOfTheReadings = bounds.map((bounded) => boundOf(bounded));
     const next = await called(access, 'file', { fileName: 'terms.txt' });
 
     expect(answers).toMatchObject([
       { outcome: 'result', answer: { content: [{ text: stopped }] } },
       { outcome: 'result', answer: { content: [{ text: stopped }] } },
     ]);
-    expect(took).toBeLessThan(callMs + 3000);
+    expect(boundsOfTheReadings).toEqual([
+      { atMostTheCall: true, endingWithTheCall: true },
+      { atMostTheCall: true, endingWithTheCall: true },
+    ]);
     expect(next).toMatchObject({ outcome: 'result' });
   });
 });

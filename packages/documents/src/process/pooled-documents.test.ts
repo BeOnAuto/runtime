@@ -33,6 +33,28 @@ function answering(outcome: ProcessOutcome): DocumentProcesses {
   return { run: () => Promise.resolve(outcome) };
 }
 
+interface ProcessRun {
+  readonly deadlineMs: number;
+  readonly ended: ProcessOutcome['ended'];
+}
+
+function recordedIn(pool: DocumentProcesses): {
+  readonly processes: DocumentProcesses;
+  readonly runs: readonly ProcessRun[];
+} {
+  const runs: ProcessRun[] = [];
+  return {
+    processes: {
+      run: async (job, signal) => {
+        const outcome = await pool.run(job, signal);
+        runs.push({ deadlineMs: job.deadlineMs, ended: outcome.ended });
+        return outcome;
+      },
+    },
+    runs,
+  };
+}
+
 function termsPdf() {
   return { bytes: pdfOfPages([['Supplier terms', 'Net 30']]), mediaType: 'application/pdf', name: undefined };
 }
@@ -74,12 +96,11 @@ describe('a document read in a process of the pool', () => {
 
 describe('a document read in a process of the pool past its time', () => {
   it('stops a PDF that draws its drawings within one another at the time the call has left, and reads the next', async () => {
-    const read = documentsReadIn(poolForTheTest());
+    const { processes, runs } = recordedIn(poolForTheTest());
+    const read = documentsReadIn(processes);
     const nested = nestedPdf();
-    const started = performance.now();
 
     const stopped = await read(nested, { ...unbounded, deadlineMs: 1500 });
-    const took = performance.now() - started;
     const next = await read(termsPdf(), unbounded);
 
     expect(nested.bytes.byteLength).toBeLessThan(2500);
@@ -88,7 +109,10 @@ describe('a document read in a process of the pool past its time', () => {
       because: 'It took longer to read than the 1.5 s the call had left, so its reading was stopped',
       mediaType: 'application/pdf',
     });
-    expect(took).toBeLessThan(4000);
+    expect(runs).toEqual([
+      { deadlineMs: 1500, ended: 'timed_out' },
+      { deadlineMs: unbounded.deadlineMs, ended: 'answered' },
+    ]);
     expect(next).toMatchObject({ read: true, text: 'Supplier terms\nNet 30' });
   });
 

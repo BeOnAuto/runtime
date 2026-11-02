@@ -1,6 +1,6 @@
 import { expect, vi } from 'vitest';
 
-const longerThanTheTestMs = 120_000;
+export const longerThanTheTestMs = 120_000;
 
 export function until(holds: () => boolean): Promise<void> {
   return vi.waitFor(

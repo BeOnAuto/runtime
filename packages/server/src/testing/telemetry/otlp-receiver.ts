@@ -16,7 +16,13 @@ export interface OtlpReceiver {
   readonly close: () => Promise<void>;
 }
 
-export async function receivingOtlp(): Promise<OtlpReceiver> {
+export interface OtlpReceiving {
+  readonly answers: boolean;
+}
+
+const answering: OtlpReceiving = { answers: true };
+
+export async function receivingOtlp({ answers }: OtlpReceiving = answering): Promise<OtlpReceiver> {
   const received: ReceivedExport[] = [];
   const receive = async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     const body = await buffer(request);
@@ -25,7 +31,9 @@ export async function receivingOtlp(): Promise<OtlpReceiver> {
       contentType: String(request.headers['content-type']),
       text: body.toString('utf8'),
     });
-    response.writeHead(200, { 'content-type': 'application/json' }).end('{}');
+    if (answers) {
+      response.writeHead(200, { 'content-type': 'application/json' }).end('{}');
+    }
   };
   const server = createServer((request, response) => {
     void receive(request, response);

@@ -1,13 +1,12 @@
 import { Effect } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { decidedOnce } from '../pool-testing/decided-once.ts';
-import { churn, evaluatedAt } from '../pool-testing/evaluation-workers.ts';
+import { churn, evaluatedAt, loadingAfterItsWork } from '../pool-testing/evaluation-workers.ts';
 import { machineOnTheThread, testPoolSettings } from '../pool-testing/test-pools.ts';
-import { threadsAlive } from '../pool-testing/threads-alive.ts';
+import { countedThreadStarts, threadsAlive, type ThreadStarts } from '../pool-testing/threads-alive.ts';
 import { longerThanTheTestMs } from '../pool-testing/waiting.ts';
 import type { Evaluation, ProgramRun } from '../programs/program-run.ts';
-import { answerGraceMs } from './evaluation-thread.ts';
 import { programPool } from './program-pool.ts';
 
 type ProgramPool = ReturnType<typeof programPool>;
@@ -15,8 +14,6 @@ type ProgramPool = ReturnType<typeof programPool>;
 type PoolSettings = Parameters<typeof programPool>[0];
 
 type Machine = ProgramPool['evaluations']['machine'];
-
-const severalTimesSlowerMs = 3000;
 
 const pools: ProgramPool[] = [];
 
@@ -54,10 +51,16 @@ function nested<Answer>(depth: number, then: () => Answer): Answer {
   return depth === 0 ? then() : nested(depth - 1, then);
 }
 
-async function timed<Answer>(work: () => Answer | Promise<Answer>): Promise<{ answer: Answer; ms: number }> {
+function timed<Answer>(work: () => Answer): { answer: Answer; ms: number } {
   const started = performance.now();
-  const answer = await work();
+  const answer = work();
   return { answer, ms: performance.now() - started };
+}
+
+function threadStartsOfTheTest(): ThreadStarts {
+  const starts = countedThreadStarts();
+  onTestFinished(starts.stop);
+  return starts;
 }
 
 describe('the evaluation worker of a pool asked before any reserve', () => {
@@ -69,12 +72,14 @@ describe('the evaluation worker of a pool asked before any reserve', () => {
 });
 
 describe('the evaluation worker of a pool, given native work that no checkpoint interrupts', () => {
-  it('ends the expression of a decision at the input deadline, within about 2.1 s, and decides the next input on a fresh worker', async () => {
+  it('ends the expression of a decision at the input deadline, by replacing the worker before its churn lets it answer, and decides the next input on the fresh worker', async () => {
     const { machine } = poolOf().evaluations;
     const churning = `do:\n  - churn: { set: { churned: '\${ ${churn} }' } }`;
     await Effect.runPromise(machine.reserve);
+    const starts = threadStartsOfTheTest();
 
-    const { answer: ended, ms } = await timed(() => decidedOnce(machine, churning, evaluatedAt));
+    const { answer: ended, ms } = timed(() => decidedOnce(machine, churning, evaluatedAt));
+    const startedByTheDecision = starts.counted();
     await Effect.runPromise(machine.reserve);
     const next = decidedOnce(machine, 'do:\n  - add: { set: { sum: "${ 1 + 1 }" } }', evaluatedAt);
 
@@ -83,8 +88,9 @@ describe('the evaluation worker of a pool, given native work that no checkpoint 
       'The program ran past its deadline: the expressions of one input may take 2000 ms',
     );
     expect(ms).toBeGreaterThan(2000);
-    expect(ms).toBeLessThan(2000 + answerGraceMs + severalTimesSlowerMs);
+    expect(startedByTheDecision).toBe(1);
     expect(next.outcome).toEqual({ kind: 'completed', output: { sum: 2 } });
+    expect(starts.counted()).toBe(1);
   });
 });
 
@@ -149,15 +155,17 @@ describe('the evaluation worker of a pool that cannot answer', () => {
     expect(threadsAlive()).toBe(before);
   });
 
-  it('ends an evaluation at its deadline while the worker it started has not loaded, and never ends a worker that is loading', async () => {
-    const broken = new URL(`data:text/javascript,${encodeURIComponent("throw new Error('broken on purpose');")}`);
-    const { machine } = poolOf({ evaluationWorker: () => broken }).evaluations;
+  it('ends an evaluation at its deadline while the worker it started has not loaded, before that worker has done the work it loads after, and never ends a worker that is loading', async () => {
+    const { machine } = poolOf({ evaluationWorker: loadingAfterItsWork }).evaluations;
+    const starts = threadStartsOfTheTest();
 
+    const { answer, ms } = timed(() => evaluatedIn(machine, '1 + 1', 200));
     await Effect.runPromise(machine.reserve);
-    const { answer, ms } = await timed(() => evaluatedIn(machine, '1 + 1', 200));
+    const next = evaluatedIn(machine, '1 + 1', longerThanTheTestMs);
 
     expect(answer).toMatchObject({ ran: 'exhausted', limit: 'deadline', work: 0 });
     expect(ms).toBeGreaterThan(150);
-    expect(ms).toBeLessThan(200 + answerGraceMs + severalTimesSlowerMs);
+    expect(next).toMatchObject({ ran: 'answered', text: '2' });
+    expect(starts.counted()).toBe(1);
   });
 });
