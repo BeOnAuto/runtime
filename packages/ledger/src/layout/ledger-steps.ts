@@ -10,4 +10,8 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
       statement`DROP TABLE IF EXISTS unstaged_runs`,
     ],
   },
+  {
+    layout: 8,
+    statements: [statement`DROP TABLE IF EXISTS run_outcomes_4`],
+  },
 ];

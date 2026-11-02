@@ -1,7 +1,6 @@
-import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineCapability, makeDefinitionOperations } from '../index.ts';
+import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 
@@ -16,31 +15,10 @@ function described(name: string): string {
 }
 
 describe('the description of create_definition', () => {
-  it('names each definition type the playbook runs and the kind of definition it is', () => {
+  it('names each definition type the server serves', () => {
     expect(described('create_definition')).toContain(
-      "`type` is the definition's type and `name` is how workflows and tools refer to it: echo, a greeting; probe, a probe.",
+      '`type` is echo or probe, and `name` how workflows and tools refer to it.',
     );
-  });
-});
-
-describe('the kind of definition create_definition names', () => {
-  it('takes an before a kind that begins with a vowel', () => {
-    const outlining = defineCapability({
-      type: 'outlining',
-      title: 'Outlining',
-      guide: { name: 'outline' },
-      noun: { one: 'outline', other: 'outlines' },
-      describeOutput: () => 'It outlined.',
-      mediaType: 'text/plain',
-      parse: () => Effect.succeed({}),
-      summarize: () => ({}),
-      run: () => Effect.succeed({ output: null, record: {} }),
-    });
-    const createDefinition = makeDefinitionOperations([outlining]).find(
-      ({ registration }) => registration.name === 'create_definition',
-    );
-
-    expect(createDefinition?.registration.description).toContain('outlining, an outline.');
   });
 });
 

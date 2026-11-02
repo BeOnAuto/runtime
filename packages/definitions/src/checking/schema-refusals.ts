@@ -7,7 +7,7 @@ import {
 } from '@on.auto/json-schema';
 import { InvalidInput, type Issue } from '@on.auto/operations';
 import { articled, asSentence } from '@on.auto/phrasing';
-import { measureOf, mostValueDepth } from '@on.auto/workflow-engine';
+import { measureOf, mostValueDepth, valueAtPointer } from '@on.auto/workflow-engine';
 import { Effect, JsonPointer, type Schema } from 'effect';
 
 import { trailingWords } from '../schema-words/schema-bounds.ts';
@@ -17,6 +17,7 @@ import {
   listOf,
   namesAt,
   placeAt,
+  typesOf,
   type JsonSchema,
   type PlaceStep,
   type SchemaPlace,
@@ -24,6 +25,22 @@ import {
 import { descriptionOf, examplesWordsOf, expectedWordsOf, givesAnExample } from '../schema-words/schema-words.ts';
 
 const kindKeywords = ['type', 'enum', 'const', 'anyOf', 'oneOf', 'properties', 'items', 'prefixItems'];
+
+const receivedNouns: ReadonlyMap<string, string> = new Map([
+  ['string', 'text'],
+  ['number', 'a number'],
+  ['boolean', 'yes or no'],
+  ['null', 'nothing'],
+  ['array', 'a list'],
+  ['object', 'a record'],
+]);
+
+interface Breached {
+  readonly schema: CompiledSchema;
+  readonly tokens: readonly string[];
+  readonly detail: string;
+  readonly received: Schema.Json | undefined;
+}
 
 function withoutFullStop(text: string): string {
   return text.trim().replace(/\.$/u, '');
@@ -100,7 +117,29 @@ function kindWords(schemas: readonly JsonSchema[], root: JsonSchema, detail: str
   return said === undefined ? asPhrase(detail) : `expected ${expectedWordsOf(said, root)}`;
 }
 
-function holderSentence({ document, what }: CompiledSchema, tokens: readonly string[], breach: Breach): string {
+function kindOfValue(value: Schema.Json | undefined): string {
+  if (value === null) {
+    return 'null';
+  }
+  return Array.isArray(value) ? 'array' : typeof value;
+}
+
+function kindsTakenBy(schema: JsonSchema): readonly string[] {
+  const choices = schema['const'] === undefined ? listOf(schema, 'enum') : [schema['const']];
+  return [
+    ...typesOf(schema).map((type) => (type === 'integer' ? 'number' : type)),
+    ...choices.map((choice) => kindOfValue(choice)),
+  ];
+}
+
+function receivedWords(schemas: readonly JsonSchema[], received: Schema.Json | undefined): string {
+  const taken = new Set(schemas.flatMap((schema) => kindsTakenBy(schema)));
+  const kind = kindOfValue(received);
+  const noun = receivedNouns.get(kind);
+  return noun === undefined || taken.size === 0 || taken.has(kind) ? '' : `; it was given ${noun}`;
+}
+
+function holderSentence({ schema: { document, what }, tokens }: Breached, breach: Breach): string {
   const place = placeAt(document, tokens);
   const holder = subjectOf(placeAt(document, tokens.slice(0, -1)), what);
   if (breach.rule === 'unexpected') {
@@ -122,18 +161,18 @@ function ruleWords(breach: Breach, field: SchemaPlace): string | undefined {
   return breach.rule === 'format' ? formWords(breach.format, field) : undefined;
 }
 
-function valueSentence({ document, what }: CompiledSchema, tokens: readonly string[], breach: Breach, detail: string) {
+function valueSentence({ schema: { document, what }, tokens, detail, received }: Breached, breach: Breach) {
   const place = placeAt(document, tokens);
   const rule = ruleWords(breach, place);
   return rule === undefined
-    ? `${subjectOf(place, what)}: ${kindWords(place.schemas, document, detail)}`
+    ? `${subjectOf(place, what)}: ${kindWords(place.schemas, document, detail)}${receivedWords(place.schemas, received)}`
     : `${subjectOf(place, what)}: expected ${rule}`;
 }
 
-function breachSentence(schema: CompiledSchema, tokens: readonly string[], breach: Breach, detail: string): string {
+function breachSentence(breached: Breached, breach: Breach): string {
   return breach.rule === 'missing' || breach.rule === 'unexpected'
-    ? holderSentence(schema, tokens, breach)
-    : valueSentence(schema, tokens, breach, detail);
+    ? holderSentence(breached, breach)
+    : valueSentence(breached, breach);
 }
 
 function nameSentence({ document, what }: CompiledSchema, tokens: readonly string[], { breach, detail }: FoundIssue) {
@@ -153,14 +192,14 @@ function nameSentence({ document, what }: CompiledSchema, tokens: readonly strin
     : `${name}: expected ${rule}`;
 }
 
-function sentenceOf(schema: CompiledSchema, issue: FoundIssue): string {
+function sentenceOf(schema: CompiledSchema, issue: FoundIssue, value: Schema.Json): string {
   const { pointer, detail, breach, ofTheName } = issue;
   const tokens = tokensOf(pointer);
   if (ofTheName === true) {
     return nameSentence(schema, tokens, issue);
   }
   if (breach !== undefined) {
-    return breachSentence(schema, tokens, breach, detail);
+    return breachSentence({ schema, tokens, detail, received: valueAtPointer(value, pointer) }, breach);
   }
   return pointer === '' ? detail : `${subjectOf(placeAt(schema.document, tokens), schema.what)}: ${asPhrase(detail)}`;
 }
@@ -168,7 +207,7 @@ function sentenceOf(schema: CompiledSchema, issue: FoundIssue): string {
 export function wordedIssuesOf(schema: CompiledSchema, value: Schema.Json): readonly Issue[] {
   return schema
     .issuesOf(value)
-    .map((issue) => ({ pointer: issue.pointer, detail: asSentence(sentenceOf(schema, issue)) }));
+    .map((issue) => ({ pointer: issue.pointer, detail: asSentence(sentenceOf(schema, issue, value)) }));
 }
 
 function sentencesOf(issues: readonly Issue[]): string {

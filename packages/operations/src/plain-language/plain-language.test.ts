@@ -116,6 +116,35 @@ const greetingShelf = defineCommand('org', {
   },
 });
 
+const shelvingByTitle = defineCommand('org', {
+  name: 'shelve_books',
+  title: 'Shelve books',
+  description: 'Shelves books.',
+  route: { method: 'POST', path: '/shelvings' },
+  inputSchema: Schema.Struct({ title: Title, books: Schema.Int }),
+  outputSchema: Shelf,
+  reasons: [],
+  handle: (shelf) => Effect.succeed(shelf),
+  plainLanguage: {
+    task: 'shelve books',
+    attempt: ({ title }) => `shelve books on the shelf ${quoted(title)}`,
+    attemptAsOffered: (input) => {
+      const title: unknown = Reflect.get(new Object(input), 'title');
+      return typeof title === 'string' ? `shelve books on the shelf ${quoted(title)}` : undefined;
+    },
+    outcome: ({ title }) => `Shelved books on ${title}.`,
+  },
+});
+
+describe('the attempt of input that does not decode', () => {
+  it('is named from the input as offered where the operation can, and is the task where it cannot', () => {
+    expect([
+      shelvingByTitle.registration.plainLanguage?.attempt({ title: 'Poetry', books: 'many' }),
+      shelvingByTitle.registration.plainLanguage?.attempt({ books: 'many' }),
+    ]).toEqual(['shelve books on the shelf “Poetry”', 'shelve books']);
+  });
+});
+
 describe('the words a registration relays', () => {
   it('are those the operation gives from the encoded output, none where the output holds none', () => {
     expect([

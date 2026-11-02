@@ -1,4 +1,10 @@
-import { PlaybookContext, studioLinkField, withStudioLink, type LinkedInStudio } from '@on.auto/operations';
+import {
+  PlaybookContext,
+  studioLinkField,
+  withStudioLink,
+  type DefinitionSaved,
+  type LinkedInStudio,
+} from '@on.auto/operations';
 import { Schema, type Effect } from 'effect';
 
 import { DefinitionSchema, type Definition } from '../registry/definition.ts';
@@ -23,9 +29,18 @@ export const RequestedRunSchema = Schema.Struct({
 
 export function withDefinitionPageInStudio(
   definition: Definition,
+  saved: DefinitionSaved | undefined,
 ): Effect.Effect<Definition & LinkedInStudio, never, PlaybookContext> {
+  const { type, name, version } = definition;
   return PlaybookContext.use(({ playbook }) =>
-    withStudioLink(definition, { kind: 'definition', playbook, type: definition.type, name: definition.name }),
+    withStudioLink(definition, {
+      kind: 'definition',
+      playbook,
+      type,
+      name,
+      version,
+      ...(saved === undefined ? {} : { saved }),
+    }),
   );
 }
 

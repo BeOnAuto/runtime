@@ -15,7 +15,7 @@ function compiledFor(schemas: readonly Json[]): readonly unknown[] {
       compiled.push(Reflect.get(new Object(schema), 'title'));
       return unchecked;
     },
-    view: () => () => 'never asked',
+    view: () => () => ({ kind: 'schema', detail: 'never asked' }),
   });
   for (const schema of schemas) {
     kept.outputCheck(schema);

@@ -102,7 +102,7 @@ Saving a recall function builds its view from the start of the playbook's histor
 
 Check that the output holds what earlier runs returned. Runs from before you saved the recall function are there too, because the view reads the whole history. From now on it keeps every matching run, whoever starts it. It sees nothing done outside the playbook.
 
-A run never waits for the view. It returns what the playbook has folded so far, which is usually less than a second behind.
+A run sees every run that ended before it started: it waits a moment, at most 3 seconds, for the view to fold them, so a workflow can record something and recall it in the next step.
 
 To see how the view is doing, ask the agent to read the recall function with `get_definition`. Its `standing` says `rebuilding`, `waiting`, `live` or `stalled`, and how far the view has read.
 

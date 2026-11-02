@@ -12,6 +12,7 @@ export interface Explanation {
 export interface PlainLanguage<Input, Output> {
   readonly task: string;
   readonly attempt: (input: Input) => string;
+  readonly attemptAsOffered?: (input: unknown) => string | undefined;
   readonly outcome: (output: Output, input: Input) => string;
   readonly relayed?: (output: Output) => string | undefined;
   readonly remedies?: Remedies;

@@ -67,12 +67,15 @@ async function aPlaybookWithRuns(): Promise<Harness> {
     definitions,
     'playbook/acme/alpha/runs/r1',
     started('triage', '2026-10-05T09:00:00.000Z'),
-    succeeded('2026-10-05T09:00:01.000Z', { usage }),
+    succeeded('2026-10-05T09:00:01.000Z', { usage, cost_usd: 0.0123 }),
   );
   await running(definitions, 'playbook/acme/alpha/runs/r2', started('triage', '2026-10-05T10:00:00.000Z'), {
     event: {
       type: 'run_rejected',
-      data: { rejection, record: { usage: { input: { total: 10, cache_read: 0 }, output: { total: 2 } } } },
+      data: {
+        rejection,
+        record: { usage: { input: { total: 10, cache_read: 0 }, output: { total: 2 } }, cost_usd: 0.0004 },
+      },
     },
     context: ofTheRun('triage', 'reasoning', '2026-10-05T10:00:00.500Z'),
   });
@@ -95,9 +98,13 @@ async function aPlaybookWithRuns(): Promise<Harness> {
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
+const noTokens = { input: 0, output: 0, cached: 0 };
+
+const triageTokens = { input: 1210, output: 302, cached: 1000 };
+
 function quietDay(day: string) {
   const runs = { total: 0, succeeded: 0, failed: 0, rejected: 0 };
-  return { day, runs, tokens: { input: 0, output: 0, cached: 0 }, duration_ms: null };
+  return { day, runs, tokens: noTokens, cost_usd: null, duration_ms: null };
 }
 
 const schemaRefusals: readonly (readonly [Readonly<Record<string, unknown>>, string])[] = [
@@ -121,7 +128,7 @@ describe('get_playbook_analytics', () => {
     });
   });
 
-  it('answers the last seven days by default, with every day, the runs that ended and what they used', async () => {
+  it('answers the last seven days by default, with every day, the runs that ended and what they used and cost', async () => {
     const definitions = await aPlaybookWithRuns();
 
     const read = await definitions.call(getPlaybookAnalytics, toAlpha(acmeReader), now);
@@ -131,26 +138,29 @@ describe('get_playbook_analytics', () => {
       output: {
         days: 7,
         runs: { total: 3, succeeded: 2, failed: 0, rejected: 1 },
-        tokens: { input: 1210, output: 302, cached: 1000 },
+        tokens: triageTokens,
+        cost_usd: 0.0127,
         duration_ms: { p50: 1000, p95: 2000 },
         by_day: [
           ...['2026-09-30', '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04'].map((day) => quietDay(day)),
           {
             day: '2026-10-05',
             runs: { total: 2, succeeded: 1, failed: 0, rejected: 1 },
-            tokens: { input: 1210, output: 302, cached: 1000 },
+            tokens: triageTokens,
+            cost_usd: 0.0127,
             duration_ms: { p50: 1000, p95: 1000 },
           },
           {
             day: '2026-10-06',
             runs: { total: 1, succeeded: 1, failed: 0, rejected: 0 },
-            tokens: { input: 0, output: 0, cached: 0 },
+            tokens: noTokens,
+            cost_usd: null,
             duration_ms: { p50: 2000, p95: 2000 },
           },
         ],
         by_function: [
-          { type: 'reasoning', name: 'triage', runs: 2 },
-          { type: 'workflow', name: 'approval', runs: 1 },
+          { type: 'reasoning', name: 'triage', runs: 2, tokens: triageTokens, cost_usd: 0.0127 },
+          { type: 'workflow', name: 'approval', runs: 1, tokens: noTokens, cost_usd: null },
         ],
       },
     });

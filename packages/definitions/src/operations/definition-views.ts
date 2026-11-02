@@ -2,9 +2,9 @@ import { InvalidInput, PlaybookContext, type Unavailable } from '@on.auto/operat
 import { articled, capitalized } from '@on.auto/phrasing';
 import { Effect, Order, Struct } from 'effect';
 
-import type { Capability, DefinitionSummary } from '../capability/capability.ts';
+import type { DefinitionSummary } from '../capability/capability.ts';
+import type { DefinitionKind } from '../capability/definition-kinds.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
-import type { StrippedForms } from '../capability/stripped-forms.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import {
   isPlaybookFunctionType,
@@ -17,21 +17,24 @@ import { rejectionOfSource, type Rejection } from './issue-pointers.ts';
 
 export const byName = Order.mapInput(Order.String, ({ name }: StoredDefinition) => name);
 
-function publishedDetails({ details }: StoredDefinition): Pick<Definition, 'details'> {
+function publishedDetails({ presents }: DefinitionKind, { details }: StoredDefinition): Pick<Definition, 'details'> {
+  if (presents !== undefined) {
+    return { details: presents.publishedDetails(details) };
+  }
   const shape = shapeNameIn(details);
   return shape === undefined ? {} : { details: { shape } };
 }
 
-export function definitionOf({ type, mediaType }: Capability, stored: StoredDefinition): Definition {
+export function definitionOf(capability: DefinitionKind, stored: StoredDefinition): Definition {
   return {
-    type,
-    media_type: mediaType,
+    type: capability.type,
+    media_type: capability.mediaType,
     ...Struct.omit(stored, ['details', 'stripped']),
-    ...publishedDetails(stored),
+    ...publishedDetails(capability, stored),
   };
 }
 
-export function listedDefinitionOf(capability: Capability, stored: StoredDefinition): ListedDefinition {
+export function listedDefinitionOf(capability: DefinitionKind, stored: StoredDefinition): ListedDefinition {
   return Struct.omit(definitionOf(capability, stored), ['source', 'overview', 'diagram']);
 }
 
@@ -53,15 +56,39 @@ function writtenContentOf({
   };
 }
 
-function refusedDiagram(detail: string): InvalidInput {
-  return new InvalidInput({ detail, issues: [{ detail, pointer: '/diagram' }] });
+function refusedAt(pointer: string, detail: string): InvalidInput {
+  return new InvalidInput({ detail, issues: [{ detail, pointer }] });
 }
 
-function whyNoDiagram(type: string): string {
+function refusedDiagram(detail: string): InvalidInput {
+  return refusedAt('/diagram', detail);
+}
+
+const showsItself = 'Auto Studio shows the page itself';
+
+function whyNoDiagram({ type, presents }: DefinitionKind): string {
+  if (presents !== undefined) {
+    return showsItself;
+  }
   return type === 'workflow' ? 'Auto Studio draws a workflow from its steps' : 'only a function has one';
 }
 
-function diagramChosen(type: string, { diagram }: WrittenDefinition): Effect.Effect<void, InvalidInput> {
+function overviewChosen(
+  { type, presents }: DefinitionKind,
+  { overview }: WrittenDefinition,
+): Effect.Effect<void, InvalidInput> {
+  return presents === undefined || overview === undefined
+    ? Effect.void
+    : Effect.fail(
+        refusedAt(
+          '/overview',
+          `${capitalized(articled(definitionResourceLabel(type)))} takes no overview, since ${showsItself}; leave overview out`,
+        ),
+      );
+}
+
+function diagramChosen(capability: DefinitionKind, { diagram }: WrittenDefinition): Effect.Effect<void, InvalidInput> {
+  const { type } = capability;
   const label = definitionResourceLabel(type);
   if (isPlaybookFunctionType(type)) {
     return diagram === undefined
@@ -76,7 +103,7 @@ function diagramChosen(type: string, { diagram }: WrittenDefinition): Effect.Eff
     ? Effect.void
     : Effect.fail(
         refusedDiagram(
-          `${capitalized(articled(label))} takes no diagram, since ${whyNoDiagram(type)}; leave diagram out`,
+          `${capitalized(articled(label))} takes no diagram, since ${whyNoDiagram(capability)}; leave diagram out`,
         ),
       );
 }
@@ -84,7 +111,7 @@ function diagramChosen(type: string, { diagram }: WrittenDefinition): Effect.Eff
 function contentFrom(
   written: WrittenDefinition,
   { description, inputSchema, outputSchema, warnings = [], triggers = [], details }: DefinitionSummary,
-  stripped: StrippedForms,
+  stripped: NonNullable<DefinitionContent['stripped']>,
 ): DefinitionContent {
   return {
     ...writtenContentOf(written),
@@ -103,7 +130,7 @@ function refusedSource(rejection: Rejection): Effect.Effect<never, InvalidInput>
 }
 
 function preparedContentOf(
-  capability: Capability,
+  capability: DefinitionKind,
   written: WrittenDefinition,
 ): Effect.Effect<DefinitionContent, InvalidInput | Unavailable, PlaybookContext> {
   return Effect.gen(function* () {
@@ -113,9 +140,12 @@ function preparedContentOf(
   }).pipe(Effect.catchTag('invalid_input', refusedSource));
 }
 
-export function contentOf(
-  capability: Capability,
+export function checkedContentOf(
+  capability: DefinitionKind,
   written: WrittenDefinition,
 ): Effect.Effect<DefinitionContent, InvalidInput | Unavailable, PlaybookContext> {
-  return diagramChosen(capability.type, written).pipe(Effect.andThen(preparedContentOf(capability, written)));
+  return overviewChosen(capability, written).pipe(
+    Effect.andThen(diagramChosen(capability, written)),
+    Effect.andThen(preparedContentOf(capability, written)),
+  );
 }

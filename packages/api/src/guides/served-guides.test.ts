@@ -50,6 +50,10 @@ const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoni
 
 const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning]);
 
+const pageKind = capabilityOf('page', 'page', { name: 'page' });
+
+const servedWithEverything = await guideShelfFrom(guideFiles, [...everyType, interaction, pageKind]);
+
 function recipeTextsOf({ recipes }: GuideShelf): Readonly<Record<string, string>> {
   return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
 }
@@ -153,12 +157,13 @@ describe('the text of the guides of a server', () => {
 describe('the size and the words of the guides of a server', () => {
   const { guides, recipes } = served;
 
-  it('stay under 64 KiB each, the guide of interaction functions among them, and each recipe under 4 KiB', () => {
-    const everyGuide = servedWithInteraction.guides;
+  it('stay under 64 KiB each, the guide of interaction functions among them, and each recipe under 5 KiB', () => {
+    const everyGuide = servedWithEverything.guides;
 
     expect(everyGuide.map(({ name }) => name)).toContain('interaction-function');
     expect(everyGuide.filter(({ text }) => byteLengthOf(text) > mostGuideBytes)).toEqual([]);
     expect(recipes.filter(({ text }) => byteLengthOf(text) > mostRecipeBytes)).toEqual([]);
+    expect(servedWithEverything.recipes.filter(({ text }) => byteLengthOf(text) > mostRecipeBytes)).toEqual([]);
   });
 
   it('describe each guide in a sentence for a person or a client that lists them', () => {
@@ -219,7 +224,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3423, 3715,
+      3641, 3933,
     ]);
   });
 });
@@ -238,8 +243,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4088, 2327, 4069, 1741],
-      [3715, 2327, 3423, 1741],
+      [4306, 2327, 4287, 1741],
+      [3933, 2327, 3641, 1741],
     ]);
   });
 });
@@ -259,11 +264,15 @@ function toolsNamedIn(text: string): readonly string[] {
 }
 
 describe('the tools a recipe calls', () => {
-  it('are every tool its steps name, on a server with or without workflows and interaction functions, but the guide tool, listed on every connection, list_models, add_connection and reconnect_connection, called only where they are listed, and the fields of a tool they name', () => {
+  it('are every tool its steps name, on a server with or without workflows, interaction functions and pages, but the guide tool, listed on every connection, list_models, add_connection and reconnect_connection, called only where they are listed, and the fields of a tool they name', () => {
     const { recipes } = served;
-    const onEveryServer = [served, servedWithInteraction, servedForReasoningAndWorkflows, servedForReasoning].flatMap(
-      (shelf) => shelf.recipes,
-    );
+    const onEveryServer = [
+      served,
+      servedWithInteraction,
+      servedWithEverything,
+      servedForReasoningAndWorkflows,
+      servedForReasoning,
+    ].flatMap((shelf) => shelf.recipes);
 
     expect(onEveryServer.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
       onEveryServer.map(({ name, calls }) => [name, calls.toSorted()]),

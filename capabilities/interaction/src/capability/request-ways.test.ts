@@ -22,13 +22,13 @@ const unsaid = approvalDocument([]);
 const theAgentWay =
   'deliver: agent holds the request for an agent, which reads it with list_interactions and answers it with answer_interaction';
 
-const sayHow = `Line 2, /deliver: Say how the owner is reached: deliver names the tool of a connection that sends the request, with replies naming its tool that reads the replies, or ${theAgentWay}.`;
+const sayHow = `Line 1, /deliver: Say how the owner is reached: deliver names the tool of a connection that sends the request, with replies naming its tool that reads the replies, or ${theAgentWay}.`;
 
 const throughTheChat =
-  'Line 2, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute once the person agrees.';
+  'Line 1, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute once the person agrees.';
 
 const forAnAgent =
-  'Line 2, /deliver: Write deliver: agent; an agent reads the request with list_interactions and answers it with answer_interaction.';
+  'Line 1, /deliver: Write deliver: agent; an agent reads the request with list_interactions and answers it with answer_interaction.';
 
 const throughAConnection = 'it goes through a connection, deliver naming the tool that sends it';
 
@@ -112,8 +112,8 @@ describe('a notification saved without a tool that sends it', () => {
 
     expect(await playbook.define('brief-out', notificationDocument([]))).toEqual(
       refusedNotification(
-        `Line 2, /deliver: Say how the owner is reached: a notification takes no answer, so ${throughAConnection}.`,
-        2,
+        `Line 1, /deliver: Say how the owner is reached: a notification takes no answer, so ${throughAConnection}.`,
+        1,
       ),
     );
   });

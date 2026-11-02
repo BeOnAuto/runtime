@@ -192,6 +192,18 @@ describe('what the instructions say of the definition types', () => {
     );
   });
 
+  it('say what a page is where the server keeps pages, and ask an overview of the functions and workflows alone', () => {
+    const withPages = [...definitionTypes, { type: 'page', noun: 'page', guide: 'page' }];
+    const instructions = instructionsFor('playbook', playbookEndpoint, withPages);
+
+    expect(instructions).toContain(
+      'run the workflow and show its result. A page shows the person the results of a workflow or function, run by run and over time. This connection acts inside one playbook.',
+    );
+    expect(instructions).toContain(
+      "Read a definition's format with get_guide; give a function or workflow an overview.",
+    );
+  });
+
   it('say nothing of the models where the server runs no reasoning function', () => {
     const withoutReasoning = definitionTypes.slice(1);
     const listingTheModels = { orgTools: ['list_playbooks', 'list_models', 'get_guide'], playbookTools: [] };

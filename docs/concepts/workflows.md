@@ -42,6 +42,8 @@ A run that a trigger starts acts for the playbook itself, not for a person. A tr
 
 [Run a workflow on a schedule or event](../guides/triggers.md) shows how to add a trigger, and [Triggers](../reference/workflow-format.md#triggers) in the workflow format gives the rules and limits.
 
+Every run counts toward the runtime's meter, and each function a step calls is a run of its own. A runtime you host without a license key has 100 runs, then 15 a UTC day and 75 a UTC month. Once those are spent, a run a trigger would start never starts and is not tried again. The playbook records a `reaction_refused` event instead. [Self-hosted licensing reference](../self-host/licensing.md) gives the rules.
+
 ## How a run waits
 
 A run can wait for a function that takes time, for a timer or for an event. It can wait for days without tying up Auto, and a restart does not lose its place.

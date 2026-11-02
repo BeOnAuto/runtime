@@ -3,7 +3,7 @@ import { capitalized } from '@on.auto/phrasing';
 
 import type { Capability } from '../capability/capability.ts';
 import type { RunDetail } from '../runs/run.ts';
-import { definitionWordsFor } from './definition-words.ts';
+import { definitionWordsFor, offeredAttemptFor } from './definition-words.ts';
 
 export type RunMoment = 'just started' | 'looked up';
 
@@ -77,12 +77,16 @@ export function cancellingWordsFor(capabilities: readonly Capability[]): (run: D
     `${capitalized(words.named(type, name))} is being cancelled: it ends as cancelled within a moment, unless it finishes first, and how it ended can be looked up then.`;
 }
 
-export function runPlainLanguage(capabilities: readonly Capability[]): PlainLanguage<DefinitionAddress, DescribedRun> {
+export function runPlainLanguage(
+  capabilities: readonly Capability[],
+  kept: readonly Capability[] = capabilities,
+): PlainLanguage<DefinitionAddress, DescribedRun> {
   const words = definitionWordsFor(capabilities);
   const runWords = runWordsFor(capabilities);
   return {
     task: `run a ${words.kinds}`,
     attempt: ({ type, name }) => `run ${words.named(type, name)}`,
+    attemptAsOffered: offeredAttemptFor(kept, () => 'run'),
     outcome: (run) => runWords(run, 'just started'),
   };
 }

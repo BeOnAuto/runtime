@@ -1,14 +1,14 @@
 import { defineQuery } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import type { Capability } from '../capability/capability.ts';
+import type { DefinitionKind } from '../capability/definition-kinds.ts';
+import { pageResultWith, RunReadSchema } from '../page/run-pages.ts';
 import { runWordsFor } from '../plain-language/run-words.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
-import { RunDetailSchema } from '../runs/run.ts';
 import { RunIdInputField } from './definition-fields.ts';
 import { loadRun } from './run-access.ts';
 
-export function defineGetRun(capabilities: readonly Capability[]) {
+export function defineGetRun(capabilities: readonly DefinitionKind[]) {
   const runWords = runWordsFor(capabilities);
   return defineQuery('playbook', {
     name: 'get_run',
@@ -18,13 +18,18 @@ export function defineGetRun(capabilities: readonly Capability[]) {
       'and its output or why it did not succeed, with the record its type keeps, such as the prompt and tokens of a reasoning function.',
       'A run is started until it ends as succeeded, rejected or failed.',
       'Use it to tell the person how a run ended; list_playbook_events with its run_id shows each step and tool call of the run.',
+      'A run whose definition has a page answers page.result.',
       '`run_id` is the id run_definition answered with or was given.',
     ].join(' '),
     route: { method: 'GET', path: '/runs/{run_id}' },
     inputSchema: Schema.Struct({ run_id: RunIdInputField }),
-    outputSchema: RunDetailSchema,
+    outputSchema: RunReadSchema,
     reasons: ['not_found'],
-    handle: ({ run_id: id }) => loadRun(id).pipe(Effect.flatMap((state) => runDetailOf(id, state))),
+    handle: ({ run_id: id }) =>
+      loadRun(id).pipe(
+        Effect.flatMap((state) => runDetailOf(id, state)),
+        Effect.flatMap((detail) => pageResultWith(capabilities, detail)),
+      ),
     plainLanguage: {
       task: 'look up a run',
       attempt: () => 'look up the run',

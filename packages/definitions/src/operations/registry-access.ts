@@ -17,6 +17,12 @@ import { definitionsDecider, definitionTypeStreamOf } from '../registry/definiti
 import { findDefinition } from '../registry/registry-lookup.ts';
 import { commandMetadata } from './command-metadata.ts';
 
+interface RegistryKind {
+  readonly type: string;
+  readonly mostActive: number;
+  readonly presents?: { readonly subjectOf: (details: StoredDefinition['details']) => string | undefined };
+}
+
 export interface DefinitionInRegistry {
   readonly registry: DefinitionRegistry;
   readonly stored: StoredDefinition;
@@ -63,18 +69,18 @@ export function versionOf(type: string, name: string, version: number) {
 }
 
 export const recordInRegistry = Effect.fnUntraced(function* (
-  { type, mostActive }: { readonly type: string; readonly mostActive: number },
+  { type, mostActive, presents }: RegistryKind,
   data: DefinitionCommandData,
 ) {
   const metadata = yield* commandMetadata;
-  const { state } = yield* (yield* PlaybookWriter).execute(
+  const { state, decidedOn } = yield* (yield* PlaybookWriter).execute(
     definitionTypeStreamOf(type),
-    definitionsDecider(type, mostActive),
+    definitionsDecider(type, mostActive, presents?.subjectOf),
     {
       ...data,
       ...metadata,
     },
   );
   const stored = yield* Effect.orDie(findDefinition(state, type, data.name));
-  return { registry: state, stored };
+  return { registry: state, stored, newVersion: decidedOn.get(data.name)?.version !== stored.version };
 });

@@ -3,15 +3,17 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
-const refusal = {
-  reason: 'invalid_input',
-  errors: [
-    {
-      pointer: '/type',
-      detail: 'Expected a type this server runs: reasoning, interaction, computation, recall, prediction, or workflow',
-    },
-  ],
-};
+function refusalNaming(detail: string) {
+  return { reason: 'invalid_input', errors: [{ pointer: '/type', detail }] };
+}
+
+const ofRuns = refusalNaming(
+  'Expected a type this server runs: reasoning, interaction, computation, recall, prediction, or workflow',
+);
+
+const ofDefinitions = refusalNaming(
+  'Expected a type of definition this server keeps: reasoning, interaction, computation, recall, prediction, page, or workflow',
+);
 
 let server: ReasoningServer;
 
@@ -25,7 +27,7 @@ afterAll(async () => {
 });
 
 describe('a type the server does not run', () => {
-  it('is refused at /type, naming the types it runs, by every operation that takes one over HTTP', async () => {
+  it('is refused at /type, naming the types it runs or keeps, by every operation that takes one over HTTP', async () => {
     const answers = await Promise.all([
       server.call('GET', `${alpha}/runs?type=forecast`),
       server.call('GET', `${alpha}/analytics?type=forecast`),
@@ -34,7 +36,7 @@ describe('a type the server does not run', () => {
     ]);
 
     expect(answers.map(({ status }) => status)).toEqual([422, 422, 422, 422]);
-    expect(answers.map(({ body }) => body)).toMatchObject([refusal, refusal, refusal, refusal]);
+    expect(answers.map(({ body }) => body)).toMatchObject([ofRuns, ofRuns, ofDefinitions, ofRuns]);
   });
 
   it('is refused the same way over MCP, as a result the agent can correct', async () => {

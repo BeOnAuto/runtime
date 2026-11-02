@@ -218,9 +218,30 @@ Other systems publish events over HTTP with `POST /v1/orgs/{org}/playbooks/{play
 
 :::
 
+## Show the runs on a page
+
+### 8. Give the workflow its page
+
+A run that a trigger starts does its work while you are away, so give the workflow a page: a headline for each run, and a chart of the runs so far. Auto Studio, a chat and your agent all show the same page. Ask:
+
+```text
+In my "<playbook name>" playbook, give the "<workflow name>" workflow a page:
+one plain sentence for each run that says what it did, and one chart of
+<the figure, such as the revenue of each month> over time. If a run is about
+a period, such as the month it closes, take the period from its output rather
+than from when it ran. Show me the page before saving it.
+```
+
+The agent saves a definition of the type `page` that names the workflow. [A minimal page](../reference/page-format.md#a-minimal-page) shows one, and explains why a run that is about a period takes its period from its output: runs made in one sitting, or late, still land on the periods they are about. Check that:
+
+- the newest run of the workflow shows the headline you asked for, in Auto Studio or when your agent reads the run;
+- the workflow shows the chart, with a point for each period its runs covered, in Auto Studio or when your agent reads the workflow.
+
+A new page builds its chart from the playbook's history, so the runs from before it was saved are on it too.
+
 ## Stop a trigger
 
-### 8. Save a version without it
+### 9. Save a version without it
 
 To stop a trigger, save a new version of the workflow without it:
 

@@ -133,7 +133,7 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 
 ### Links to Studio
 
-`create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the run's. The link opens the Studio the runtime names, `/studio/` on its own origin where it serves Studio and the Studio host, `STUDIO_ORIGIN`, otherwise, on the runtime the request reached, its `PUBLIC_URL` where it signs people in, as `server`, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`. A definition's page is named by its type and its name, as `reasoning=summarize-brief`. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
+`create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the run's. The link opens the Studio the runtime names, `/studio/` on its own origin where it serves Studio and the Studio host, `STUDIO_ORIGIN`, otherwise, on the runtime the request reached, its `PUBLIC_URL` where it signs people in, as `server`, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`. A definition's page is named by its type and its name, as `reasoning=summarize-brief`, then by `because`, `created` from `create_definition` and `updated` from `update_definition`, and by `version`, the version the call answers: `reasoning=summarize-brief&because=updated&version=3`. An `update_definition` that changes nothing records no version, so its link has no `because` and names the version that stands. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
 
 ## Models
 
@@ -323,6 +323,19 @@ A recall function keeps a view: a JSON value its module builds from the playbook
 | The view has stalled                                | `conflict` with the kind `stalled`                           |
 | The module's `answer` cannot produce an output      | `conflict` with the kind `unworkable`                        |
 
+## Pages
+
+Pages use the operations of reasoning functions that save and read definitions, with `page` in place of `reasoning` in each route, such as `POST /definitions/page` and `GET /definitions/page/{name}`. The `source` is a [page document](page-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions), except that a page takes no `overview` and no `diagram`.
+
+A page presents the results of its subject, a workflow, a function or the playbook, and never runs:
+
+- `POST /definitions/page/{name}/run`, `list_runs` and `get_playbook_analytics` refuse the type `page` as `invalid_input` at `/type`.
+- A subject has at most one active page. Saving another returns `conflict`. An update that names another subject returns `invalid_input` at `/of`, since a page keeps its subject.
+- `get_run` of a run of the subject adds `page.result`, and `get_definition` of the subject adds `page.lately`. `get_definition` of a page with views adds their `standing`.
+- `POST /definitions/page/{name}/render` renders the page now, with `page.result` and `page.lately`, over the subject's latest run or over an optional JSON body `{ "sample_output": … }`. It needs `playbook:read`, and is refused with `conflict` for a retired page.
+
+See [What reads render](page-format.md#what-reads-render).
+
 ## Prediction functions
 
 Prediction functions use the operations of reasoning functions, with `prediction` in place of `reasoning` in each route, such as `POST /definitions/prediction` and `POST /definitions/prediction/{name}/run`. The `source` is a [prediction function document](prediction-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
@@ -431,6 +444,8 @@ These runs end within the request that started them, so they cannot be interrupt
 - the run of a computation or recall function;
 - the run of an interaction function that calls a tool;
 - a prediction function's question.
+
+When the request that started one is lost, the run stays `started` until the workflow that waited for it cancels it, at its step's deadline or because it ended first. A cancel made once the run has been quiet for longer than it may take ends it `rejected` with the reason `cancelled` and the cancel's kind, a tool call it left unanswered ended as `interrupted`, and its `detail` says whether that call may have changed something. One made sooner is recorded alone, and a later cancel of the run ends it the same way.
 
 A cancelled run's rejection names the kind of its cancellation:
 
@@ -841,12 +856,14 @@ Authorization: Bearer <key>
   "days": 7,
   "runs": { "total": 12, "succeeded": 9, "failed": 1, "rejected": 2 },
   "tokens": { "input": 18400, "output": 2950, "cached": 12000 },
+  "cost_usd": 0.0874,
   "duration_ms": { "p50": 1840, "p95": 6210 },
   "by_day": [
     {
       "day": "2026-09-30",
       "runs": { "total": 0, "succeeded": 0, "failed": 0, "rejected": 0 },
       "tokens": { "input": 0, "output": 0, "cached": 0 },
+      "cost_usd": null,
       "duration_ms": null
     }
   ],
@@ -854,7 +871,9 @@ Authorization: Bearer <key>
     {
       "type": "reasoning",
       "name": "triage",
-      "runs": 12
+      "runs": 12,
+      "tokens": { "input": 18400, "output": 2950, "cached": 12000 },
+      "cost_usd": 0.0874
     }
   ]
 }
@@ -867,16 +886,18 @@ The example shortens `by_day`. It holds every day of the window, oldest first, i
 | `days`        | How many days the window covers                                                                                                                                                                                                                |
 | `runs`        | The runs that ended, by how they ended, and their `total`                                                                                                                                                                                      |
 | `tokens`      | The `input` and `output` tokens the models of reasoning functions used, a rejected run's included when its model answered before the rejection; `cached` is the part of `input` read from the provider's cache; `0` where nothing was recorded |
+| `cost_usd`    | What those model calls cost, in US dollars, a rejected run's included; `null` when no run of the period recorded a cost                                                                                                                        |
 | `duration_ms` | `p50` (the median) and `p95` (the 95th percentile) of how long the runs that succeeded or failed took, in milliseconds from their latest start to their end; `null` when no run of the period has a duration                                   |
-| `by_day`      | The same `runs`, `tokens` and `duration_ms` for each `day`                                                                                                                                                                                     |
-| `by_function` | Each definition by `type` and `name`, with `runs`, how many of its runs ended; the most runs first, then by `type` and `name`                                                                                                                  |
+| `by_day`      | The same `runs`, `tokens`, `cost_usd` and `duration_ms` for each `day`                                                                                                                                                                         |
+| `by_function` | Each definition by `type` and `name`, with `runs`, how many of its runs ended, and their `tokens` and `cost_usd`; the most runs first, then by `type` and `name`                                                                               |
 
 How runs are counted:
 
 - A run counts on the day it first started, also when it was started again later.
 - A run counts once it has ended: `succeeded`, `failed` or `rejected`. A run still going counts nowhere.
-- A run started again under its `run_id` counts once. Its tokens add up over every attempt that ended, while its duration is that of its last attempt.
-- Rejected runs count in `runs` and in `tokens`, never in `duration_ms`.
+- A run started again under its `run_id` counts once. Its tokens and its cost add up over every attempt that ended, while its duration is that of its last attempt.
+- Rejected runs count in `runs`, `tokens` and `cost_usd`, never in `duration_ms`.
+- `cost_usd` adds up the runs that recorded a cost and leaves out those that did not, so it is `null` only when no run did. A run records a cost when its model gateway answers one, in the header the gateway's `cost_header` names (see [Gateway fields](model-settings.md#gateway-fields)). A self-hosted runtime whose model gateway names no cost header records no cost, so the field is `null`.
 - Workflow runs count in `runs` and in `duration_ms`, from when the run started to when the workflow ended.
 - A percentile is the nearest rank: the duration at place ⌈p × n⌉ of the n durations in order.
 
@@ -1338,7 +1359,7 @@ A refusal of the input of a function or a workflow says each issue in its `detai
 }
 ```
 
-A nested field is named by its path, such as `address, then city`, and an item of a list by its place, such as `lines, then item 2`. A missing field is named at the field that holds it, such as `The input: expected the field month`. A workflow whose step refused its input is rejected with that step's `errors`, at the pointers the step saw.
+A nested field is named by its path, such as `address, then city`, and an item of a list by its place, such as `lines, then item 2`. A missing field is named at the field that holds it, such as `The input: expected the field month`. A value of another kind is told the kind it was given, such as `lines: expected a list of records; it was given text`. A workflow whose step refused its input is rejected with that step's `errors`, at the pointers the step saw.
 
 | Status | Common reason                              |
 | ------ | ------------------------------------------ |

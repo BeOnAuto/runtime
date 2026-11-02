@@ -22,6 +22,16 @@ export interface DefinitionWords {
 
 const unknownNoun: Noun = { one: 'item', other: 'items' };
 
+const offeredDefinitionOf = Schema.decodeUnknownOption(
+  Schema.Struct({ type: Schema.String, name: Schema.String, render: Schema.optionalKey(Schema.Unknown) }),
+);
+
+export interface OfferedDefinition {
+  readonly type: string;
+  readonly name: string;
+  readonly render?: unknown;
+}
+
 export function definitionWordsFor(capabilities: readonly Capability[]): DefinitionWords {
   const nounOf = (name: string) => capabilities.find((capability) => capability.type === name)?.noun ?? unknownNoun;
   return {
@@ -84,4 +94,19 @@ export function definitionsListed(noun: Noun, definitions: readonly ListedDefini
   return retired.length === 0
     ? inUse
     : `${inUse} Also listed, ${counted(retired.length, retiredNoun)}: ${namesOf(retired)}.`;
+}
+
+export function offeredAttemptFor(
+  capabilities: readonly Capability[],
+  verbOf: (offered: OfferedDefinition) => string,
+): (input: unknown) => string | undefined {
+  const words = definitionWordsFor(capabilities);
+  const types: ReadonlySet<string> = new Set(capabilities.map(({ type }) => type));
+  return (input) =>
+    Option.getOrUndefined(
+      Option.map(
+        Option.filter(offeredDefinitionOf(input), ({ type }) => types.has(type)),
+        (offered) => `${verbOf(offered)} ${words.named(offered.type, offered.name)}`,
+      ),
+    );
 }

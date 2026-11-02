@@ -23,6 +23,7 @@ export function postgresqlRunOutcomesReader(query: Query): RunOutcomesStore['rea
           coalesce(sum(input_tokens), 0)::float8 AS input_tokens,
           coalesce(sum(output_tokens), 0)::float8 AS output_tokens,
           coalesce(sum(cached_tokens), 0)::float8 AS cached_tokens,
+          sum(cost_micro_usd)::float8 AS cost_micro_usd,
           coalesce(json_agg(duration_ms) FILTER (WHERE duration_ms IS NOT NULL), '[]'::json) AS durations
         FROM ${runOutcomesTable}
         WHERE playbook_key = ${bind(playbookKey)} AND started_day BETWEEN ${bind(from)} AND ${bind(to)}${selected(bind, selection)}

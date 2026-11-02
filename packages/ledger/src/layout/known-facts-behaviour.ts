@@ -41,7 +41,7 @@ async function aDatabaseHoldingFacts(entry: LedgerEntry): Promise<string> {
 
 function reading(schemas: readonly FactSchemaRead[], kept = ledgerLayout): LayoutCarrying {
   const carriedTables = {
-    layout: 7,
+    layout: ledgerLayout + 1,
     statements: [statement`CREATE TABLE carried_notes (note TEXT NOT NULL)`],
   };
   return { kept, floor: ledgerLayoutFloor, steps: [carriedTables], facts: factsReadBy(schemas) };
@@ -100,7 +100,7 @@ function refusedBehaviour(entry: LedgerEntry): void {
   it('refuses a database it would carry forward before it takes any step', async () => {
     const database = await aDatabaseHoldingFacts(entry);
 
-    const refused = await refusalOf(entry, database, reading([BeganSchema], 7));
+    const refused = await refusalOf(entry, database, reading([BeganSchema], ledgerLayout + 1));
 
     expect(refused).toMatchObject({ unknown: ['run_ended', 'run_noted'] });
     expect((await entry.executedOn(database, (execute) => layoutFound(execute, entry.layout, []))).layout).toBe(

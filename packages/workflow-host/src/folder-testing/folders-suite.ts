@@ -32,7 +32,7 @@ function phasesOf(rows: readonly TallyRow[]): Readonly<Record<string, string>> {
 }
 
 function keptBy(tallies: TallyHarness): DefinitionsKept {
-  return { database: tallies.store.database, definitions: definitionsByType().of };
+  return { database: tallies.store.database, definitions: definitionsByType().of, keptAlong: {} };
 }
 
 function namedBy(rows: readonly TallyRow[], { counts }: TallyDetails): TallyRow | undefined {

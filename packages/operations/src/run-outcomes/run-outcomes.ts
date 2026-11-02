@@ -17,6 +17,7 @@ export interface RunOutcome {
   readonly inputTokens: number | null;
   readonly outputTokens: number | null;
   readonly cachedTokens: number | null;
+  readonly costMicroUsd: number | null;
 }
 
 export interface RunOutcomeMapping {
@@ -43,6 +44,7 @@ export interface RunOutcomeGroup {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly cachedTokens: number;
+  readonly costMicroUsd: number | null;
   readonly durations: readonly number[];
 }
 

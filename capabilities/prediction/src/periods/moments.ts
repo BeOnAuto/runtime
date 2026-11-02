@@ -2,7 +2,7 @@ import { civilOfDay, civilDay, daysInMonth, millisecondsInADay } from './civil-d
 import { periodOfDay, type Grain } from './grains.ts';
 
 const written =
-  /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})[Tt](?<hour>\d{2}):(?<minute>\d{2})(?::(?<second>\d{2})(?:\.(?<fraction>\d{1,9}))?)?(?:[Zz]|(?<sign>[+-])(?<hours>\d{2}):(?<minutes>\d{2}))$/u;
+  /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})(?:[Tt](?<hour>\d{2}):(?<minute>\d{2})(?::(?<second>\d{2})(?:\.(?<fraction>\d{1,9}))?)?(?:[Zz]|(?<sign>[+-])(?<hours>\d{2}):(?<minutes>\d{2})))?$/u;
 
 type Parts = Readonly<Record<string, string | undefined>>;
 

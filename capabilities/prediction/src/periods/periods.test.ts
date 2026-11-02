@@ -83,13 +83,15 @@ describe('a moment written in ISO 8601', () => {
     ['2026-10-12t10:00:00z', Date.UTC(2026, 9, 12, 10)],
     ['2026-10-12T10:00:00.5+02:00', Date.UTC(2026, 9, 12, 8, 0, 0, 500)],
     ['2026-10-12T10:00:00.123456789-02:30', Date.UTC(2026, 9, 12, 12, 30, 0, 123)],
-  ])('is read from %s', (text, moment) => {
+    ['2026-10-12', Date.UTC(2026, 9, 12)],
+    ['0000-01-01', Date.parse('0000-01-01T00:00:00Z')],
+  ])('is read from %s in UTC, a date alone at the start of its day', (text, moment) => {
     expect(momentOf(text)).toBe(moment);
   });
 
   it.each([
     '2016-12-31T23:59:60Z',
-    '2026-10-12',
+    '2026-02-30',
     '2026-02-30T00:00:00Z',
     '2026-10-12T24:00:00Z',
     '2026-10-12T10:60:00Z',
@@ -101,7 +103,7 @@ describe('a moment written in ISO 8601', () => {
     'October 12, 2026',
     '+002026-10-12T00:00:00Z',
   ])(
-    'is not read from %s, which names a leap second, a day without its time, no day of the calendar, no offset or no year from 0000 to 9999',
+    'is not read from %s, which names a leap second, no day of the calendar, a time without its offset or no year from 0000 to 9999',
     (text) => {
       expect(momentOf(text)).toBeUndefined();
     },

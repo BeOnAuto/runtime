@@ -80,3 +80,16 @@ export const InputField = Schema.Json.annotate({
 export const IncludeRetiredField = Schema.Boolean.annotate({
   description: 'Whether to list retired definitions as well; false when left out',
 });
+
+export const SampleOutputField = Schema.Json.annotate({
+  description: 'With render, an output to render result over, as of a run that succeeded',
+}).check(
+  Schema.makeFilter(fitsInInputLimit, { expected: `an output of at most ${mostInputBytes} bytes as JSON in UTF-8` }),
+  Schema.makeFilter((output: Schema.Json) => nestsWithin(output, mostInputDepth), {
+    expected: `an output that nests at most ${mostInputDepth} levels deep`,
+  }),
+);
+
+export const RenderField = Schema.Boolean.annotate({
+  description: 'For a page, true to render it now',
+});

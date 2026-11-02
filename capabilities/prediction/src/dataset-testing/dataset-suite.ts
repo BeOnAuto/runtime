@@ -10,7 +10,7 @@ import { alphaKey, projectedDatasets } from './projected-datasets.ts';
 const anyText: unknown = expect.any(String);
 
 const timeRefused =
-  'Its time at /placed_at is not an ISO 8601 time with its offset, on a day of the calendar from 0000 to 9999 and in no leap second';
+  'Its time at /placed_at is not an ISO 8601 date, or date and time with its offset, on a day of the calendar from 0000 to 9999 and in no leap second';
 
 const seriesRefused = 'Its series at /region is not text of 1 to 256 bytes';
 
@@ -34,7 +34,7 @@ const faultyOrders = [
   orderPlaced({ region: 7, at: '2026-10-06T10:00:00Z' }),
   orderPlaced({ region: '', at: '2026-10-06T10:00:00Z' }),
   orderPlaced({ region: 'north', at: 'yesterday' }),
-  orderPlaced({ region: 'north', at: '2026-10-06' }),
+  orderPlaced({ region: 'north', at: '2026-10-06T10:00:00' }),
   orderPlaced({ region: 'north', at: '2016-12-31T23:59:60Z' }),
   orderPlaced({ region: 'north', at: '2026-10-06T10:00:00Z', total: 'ten' }),
   orderPlaced({ region: 'north', at: '2026-10-06T10:00:00Z', total: null }),
@@ -66,7 +66,7 @@ function foldingTest(settingsOf: SettingsOf): void {
 }
 
 function passingOverTest(settingsOf: SettingsOf): void {
-  it('passes over an event whose series is not text, whose time is not one, is a day without its time or names a leap second, or whose value is not a finite number, counting and noting each', async () => {
+  it('passes over an event whose series is not text, whose time is not one, has no offset or names a leap second, or whose value is not a finite number, counting and noting each', async () => {
     const datasets = await projectedDatasets(await settingsOf());
     const { dataSha256 } = await datasets.saved('orders', summed);
     await datasets.published(faultyOrders);
@@ -81,6 +81,27 @@ function passingOverTest(settingsOf: SettingsOf): void {
       noted(dataSha256, timeRefused),
       noted(dataSha256, timeRefused),
       noted(dataSha256, 'Its target at /total is not a finite number'),
+    ]);
+  });
+}
+
+function dateAloneTest(settingsOf: SettingsOf): void {
+  it('reads a time written as a date alone as the start of that day in UTC, so a Sunday falls in its week and the Monday after in the next', async () => {
+    const datasets = await projectedDatasets(await settingsOf());
+    const { dataSha256 } = await datasets.saved('orders', weeklyOrders);
+    await datasets.published([
+      orderPlaced({ region: 'north', at: '2026-10-11' }),
+      orderPlaced({ region: 'north', at: '2026-10-12' }),
+      orderPlaced({ region: 'south', at: '2026-10-12' }),
+    ]);
+    datasets.start();
+    const row = await datasets.until(dataSha256, liveFolded(3));
+
+    expect(row).toMatchObject({ rows: 3, firstPeriod: '2026-W41', lastPeriod: '2026-W42', passedOver: 0 });
+    expect(await keptRowsOf(datasets.database, dataSha256)).toEqual([
+      { series: 'north', period: '2026-W41', target: 1, target_count: 1, events: 1 },
+      { series: 'north', period: '2026-W42', target: 1, target_count: 1, events: 1 },
+      { series: 'south', period: '2026-W42', target: 1, target_count: 1, events: 1 },
     ]);
   });
 }
@@ -109,6 +130,7 @@ export function datasetFoldingSuite(settingsOf: SettingsOf): void {
   describe('the dataset of a prediction function', () => {
     foldingTest(settingsOf);
     passingOverTest(settingsOf);
+    dateAloneTest(settingsOf);
     latestTest(settingsOf);
   });
 }

@@ -10,7 +10,7 @@ import {
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { knownCapabilities, type KnownCapabilities } from '../capability/known-capabilities.ts';
+import { knownRunningCapabilities, runningOf, type KnownCapabilities } from '../capability/known-capabilities.ts';
 import { RunsOfNameField } from '../operations/definition-fields.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { runsListed, runsToList } from '../plain-language/reading-words.ts';
@@ -47,7 +47,7 @@ const ListedRunsPage = Schema.Struct({
   ...PagingOutputFields,
 });
 
-function streamsOfRuns(type: string | undefined, name: string | undefined): RecordedSelection {
+export function streamsOfRuns(type: string | undefined, name: string | undefined): RecordedSelection {
   return {
     kind: 'runs',
     notBeginningWith: ['run_cancel_requested'],
@@ -73,8 +73,8 @@ function runsListedBy(byStatus: StoredTypesByStatus) {
 }
 
 export function defineListRuns(capabilities: readonly Capability[], byStatus: StoredTypesByStatus) {
-  const known = knownCapabilities(capabilities);
-  const words = definitionWordsFor(capabilities);
+  const known = knownRunningCapabilities(capabilities);
+  const words = definitionWordsFor(runningOf(capabilities));
   const listRuns = runsListedBy(byStatus);
   const operation = defineQuery('playbook', {
     name: 'list_runs',

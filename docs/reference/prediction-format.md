@@ -83,14 +83,14 @@ A run's input is a **question**, `{ series, horizon?, marks? }`:
 
 A question's output is the **prediction**, a [series](output-shapes.md#series) of the function's grain:
 
-| Field      | Value                                                                                                                                           |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `unit`     | `predicts.unit`                                                                                                                                 |
-| `period`   | `predicts.period`                                                                                                                               |
-| `origin`   | The last period of the window, the one before the period the question is asked in                                                               |
-| `lines[0]` | `observed`: the last `predicts.history` periods up to the origin, each value as the dataset's rows hold it; a period with no value is left out  |
-| `lines[1]` | `predicted`: one point for each horizon asked, the nearest first, each with its `value`, `low` and `high`; `total` with `accumulates`, as below |
-| `marks`    | The question's marks, when it gives them                                                                                                        |
+| Field      | Value                                                                                                                                                                                                                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `unit`     | `predicts.unit`                                                                                                                                                                                                                                                     |
+| `period`   | `predicts.period`                                                                                                                                                                                                                                                   |
+| `origin`   | The last period of the window, the one before the period the question is asked in                                                                                                                                                                                   |
+| `lines[0]` | `observed`: the last `predicts.history` periods up to the origin, each value as the dataset's rows hold it, a period without an event being 0 for a `count` or a `sum`; a period with no value, such as one without a reading for a `last` or a `mean`, is left out |
+| `lines[1]` | `predicted`: one point for each horizon asked, the nearest first, each with its `value`, `low` and `high`; `total` with `accumulates`, as below                                                                                                                     |
+| `marks`    | The question's marks, when it gives them                                                                                                                                                                                                                            |
 
 - Each `at` and the `origin` are in the ISO 8601 form of the grain: `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM`, `YYYY-Qn` or `YYYY`.
 - `value` is the forecaster's likely value. `low` and `high` are the range meant to hold the truth as often as `predicts.coverage` says, eight times in ten by default.
@@ -129,7 +129,7 @@ How edits affect the dataset:
 | Field         | Meaning                                                                                                                                                            |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `data.events` | 1 to 8 filters, as a recall function names its events: the event's `type`, any other attribute of the event written out, and optionally a `data` test over `$data` |
-| `data.time`   | `event` for the time of the event itself, or a JSON Pointer into its data that holds an ISO 8601 time, such as `/placed_at`                                        |
+| `data.time`   | `event` for the time of the event itself, or a JSON Pointer into its data that holds an ISO 8601 date, or date and time with its offset, such as `/placed_at`      |
 | `data.series` | A JSON Pointer to the value that names the series, text of 1 to 256 bytes                                                                                          |
 | `data.target` | `{ as, of }`. `as` is how the target is aggregated over a period: `count`, `sum`, `last` or `mean`. `of` points to the value; `count` leaves it out                |
 
@@ -137,18 +137,20 @@ A `time`, `series` or `target` pointer is refused at save when none of the named
 
 For each event a filter takes, in the order the playbook recorded them, the dataset:
 
-1. reads the time, in UTC, and finds its period. A week runs from Monday and is numbered as ISO 8601 numbers weeks, so `2026-W01` starts on 2025-12-29. A quarter is three calendar months.
+1. reads the time, in UTC, and finds its period. A date alone, such as `2026-10-25`, is the start of that day in UTC. A week runs from Monday and is numbered as ISO 8601 numbers weeks, so `2026-W01` starts on 2025-12-29. A quarter is three calendar months.
 2. reads the series, then the target.
 3. adds the event to the row of that series and period:
    - `count` adds one;
    - `sum` adds the value;
-   - `last` takes the value of the latest event by its time, whatever order the events were recorded in;
+   - `last` takes the value of the latest event by its time, whatever order the events were recorded in, and of events with the same time, the one recorded last;
    - `mean` keeps the sum and the count;
    - a value that is missing or null adds nothing.
 
+When each period has one value, such as the revenue of a week that a workflow records once a week, aggregate it as `last`, with `time` reading the period's own date from the run's output, such as `/output/week_start`. A run repeated for the same week, as when the week is recorded again after a correction, then replaces its value. `sum` adds every run's value, so a week recorded twice would count twice. Keep `sum` and `count` for events that each add something new, such as each order placed.
+
 The dataset passes over an event, counts it and notes it in the server's log, when:
 
-- its time is not an ISO 8601 time with its offset on a day of the calendar (a date alone among them), or names a leap second;
+- its time is not on a day of the calendar, names a leap second, or is neither an ISO 8601 date nor a date and time with its offset, as `2026-10-25T09:00:00` is not;
 - its series is not text of 1 to 256 bytes;
 - its target is a value that is not a finite number;
 - its data test fails.
@@ -279,6 +281,36 @@ Its record, over 70 weeks of the region's history:
 }
 ```
 
+### A run that ended a moment ago
+
+A question counts every run that ended before it started. Before it reads the dataset, it waits until the dataset has folded what the playbook had recorded when the question started. That takes moments: the time it takes to fold a page, as the views of recall functions are kept, and up to a pass (a second) for an event another server recorded. A dataset that has not caught up within 3 seconds is read as far as it has folded, and the record's `dataset_checkpoint` says how far that was. So a question asked in the step after a run, in the same workflow, counts that run, and needs no wait or retry before it.
+
+Whether the run falls in the window depends on its period. The window ends at the origin, the period before the one the question is asked in. A run read with `time: event` falls in the period it ran in, which no question reads until that period has passed. A run about a period that has ended, such as last week, carries a date of that period in its output for `time` to read; [Forecast from a run the workflow just recorded](#forecast-from-a-run-the-workflow-just-recorded) shows one.
+
+A run that has not ended when the question starts, such as one another workflow records at the same time, is not counted. Ask once it has ended.
+
+### The lines on a page
+
+A chart draws each line of a series under its name. A page that draws a prediction as it is shows `observed` and `predicted`, or `observed` and `total`, in the chart's legend. To show them in the person's words, rename them where the page reads the prediction. In a page's `result`, the `replace` filter renames them in the JSON the chart reads. This page of `weekly-orders` leads with the likely orders of the next week, and draws the weeks observed as `Orders` and the weeks ahead as `Forecast`:
+
+<!-- prettier-ignore -->
+````markdown
+---
+description: A region's orders, the weeks observed and the weeks ahead
+of: prediction/weekly-orders
+---
+{% result %}
+{% assign next = output.lines[1].points[0] %}
+About {{ next.value }} orders in {{ next.at }} ({{ next.low }} to {{ next.high }}).
+
+```chart line
+{{ output | json | replace: '"name":"observed"', '"name":"Orders"' | replace: '"name":"predicted"', '"name":"Forecast"' }}
+```
+{% endresult %}
+````
+
+Over the answer above, its headline is `About 140 orders in 2026-W42 (128 to 151).` A workflow whose output carries the prediction under a field, such as `forecast`, renames `output.forecast` the same way. A page's fold that keeps predictions in a view for `lately` names each line as it builds it; see [Page format](page-format.md).
+
 ## How a run ends
 
 A question ends within its call and cannot be cancelled while it runs:
@@ -308,10 +340,11 @@ A save is refused past these bounds:
 
 The data and the runs are bounded so:
 
-| Bound            | Value                       | When it is reached                                         |
-| ---------------- | --------------------------- | ---------------------------------------------------------- |
-| A series         | 1 to 256 bytes of text      | The event is passed over                                   |
-| A question's run | 10 seconds, within its call | A workflow's call waits for it that long and a minute more |
+| Bound                     | Value                       | When it is reached                                          |
+| ------------------------- | --------------------------- | ----------------------------------------------------------- |
+| A series                  | 1 to 256 bytes of text      | The event is passed over                                    |
+| A question's run          | 10 seconds, within its call | A workflow's call waits for it that long and a minute more  |
+| A question's wait to read | 3 seconds                   | The question reads the dataset as far as it has folded then |
 
 ## In a workflow
 
@@ -363,6 +396,70 @@ A run that does not succeed raises the error of its rejection:
 - A refusal raises status 503 for `unavailable` and 409 for `conflict`, with its `kind` and `because`.
 - A dataset still being built passes with time, so a retry on status 503 suits a question.
 - A `stalled` dataset does not change when tried again, nor does `history_too_short` before the period its detail names. So leave 409 out of a retry policy, and read `$error.because` in a `when` to leave out a stalled dataset.
+
+### Forecast from a run the workflow just recorded
+
+A workflow that records a period and then forecasts from it asks in the step after the record, as [A run that ended a moment ago](#a-run-that-ended-a-moment-ago) says. This prediction function, `weekly-revenue`, reads the weeks that the computation function `record-week` recorded. `record-week` returns what it is given, `{ store, week_start, revenue }`, where `week_start` is the Monday of the week, such as `2026-10-26`:
+
+<!-- prettier-ignore -->
+```markdown
+---
+description: Predicts the revenue of each store next week, from the weeks record-week recorded
+predicts:
+  target: revenue
+  period: week
+  horizons: [1]
+  unit: USD
+data:
+  events:
+    - type: run_succeeded
+      subject: computation/record-week
+  time: /output/week_start
+  series: /output/store
+  target: { of: /output/revenue, as: last }
+  window: 104
+---
+```
+
+This workflow records the week just ended, then forecasts the next one:
+
+```yaml
+document:
+  dsl: '1.0.3'
+  namespace: finance
+  name: close-and-forecast
+  version: '1.0.0'
+  summary: Records a store's revenue for the week just ended, then forecasts next week's from it.
+input:
+  schema:
+    document:
+      type: object
+      properties:
+        store: { type: string }
+        week_start: { type: string, format: date }
+        revenue: { type: number }
+      required: [store, week_start, revenue]
+do:
+  - record:
+      call: run_definition
+      with:
+        type: computation
+        name: record-week
+        input: '${ $data }'
+  - forecast:
+      call: run_definition
+      with:
+        type: prediction
+        name: weekly-revenue
+        input:
+          series: '${ $data.store }'
+          horizon: 1
+```
+
+- `record` runs `record-week`. Its run's end is the record `weekly-revenue` reads, and its output, what it recorded, is the data of the next step.
+- `forecast` asks for the next week. Its origin is the week before the one the workflow runs in: the week just ended, which the question counts, as `record` ended before it started.
+
+Run on Monday 2 November 2026 with `{"store": "north", "week_start": "2026-10-26", "revenue": 48210}`, the run succeeds with the prediction, whose last observed point is `{ "at": "2026-W44", "value": 48210 }`. An older week, as a backfill records, falls in the window too, and the forecast counts it in its own week.
 
 ## The overview
 

@@ -24,6 +24,18 @@ const withWorkflowsAndInteraction = await firstPlaybookCarrying('workflow', 'int
 
 const withoutWorkflows = await firstPlaybookCarrying();
 
+const withWorkflowsAndPages = await firstPlaybookCarrying('workflow', 'page');
+
+const withPagesAlone = await firstPlaybookCarrying('page');
+
+async function recipeCarrying(name: string, ...carried: readonly string[]): Promise<Recipe | undefined> {
+  const recipes = await recipesFor(recipeFiles, guidesNamed(carried));
+  return recipes.find((recipe) => recipe.name === name);
+}
+
+const modelSentence =
+  ' A reasoning function calls a model, so it runs only where the server can call one; on a server of their own, the person adds a model provider in its model settings: https://on.auto/docs/self-host/configuration#models.\n';
+
 const firstPlaybookFile = readFileSync(new URL('recipes/first-playbook.md', import.meta.url), 'utf8');
 
 const callsOfTheFunction = ['list_playbooks', 'create_playbook', 'create_definition', 'execute', 'run_definition'];
@@ -74,6 +86,41 @@ describe('the first-playbook recipe where the interaction-function guide is carr
   });
 });
 
+describe('the recipes whose function calls a model', () => {
+  it('say so at the top, and point to the model settings of a server of their own', async () => {
+    const giveTools = await recipeCarrying('give-tools', 'reasoning-function');
+
+    expect(firstPlaybookFile).toContain(`to give the person.${modelSentence}`);
+    expect(giveTools?.text).toContain(`before you write one.${modelSentence}`);
+  });
+});
+
+describe('the first-playbook recipe where the page guide is carried with the workflow guide', () => {
+  it('gives the workflow its page after its run, from the minimal page of the page guide, and shows the person its headline', () => {
+    expect(withWorkflowsAndPages?.text).toContain(
+      "and get_run.\n10. Read the page guide with get_guide and give the workflow its page, which shows the person what each run did and the runs so far: start from the guide's minimal page, a headline for each run and one chart, keyed by the period a run is about where its output carries one. Show the person the page, save it with create_definition, `type` page, once they agree, and show them the run's headline with get_run.\n\nThen tell the person",
+    );
+    expect(withWorkflowsAndPages?.calls).toEqual(withWorkflows?.calls);
+  });
+
+  it('gives no page where the workflow guide is not carried, since there is then no workflow to present', () => {
+    expect(withPagesAlone?.text).toBe(firstPlaybookFile);
+    expect(withWorkflows?.text).not.toContain('page guide');
+  });
+});
+
+describe('the schedule recipe', () => {
+  it('ends, where the page guide is carried, with a page for a workflow that has none, so the person sees its runs', async () => {
+    const withPages = await recipeCarrying('schedule', 'workflow', 'page');
+    const withoutPages = await recipeCarrying('schedule', 'workflow');
+
+    expect(withPages?.text).toMatch(
+      /and get_run for one run\.\n7\. Where the workflow has no page yet, give it one with the page guide, so the person sees what each run did while they were away: a headline for each run and one chart of the runs so far, from the guide's minimal page, keyed by the period a run is about where its output carries one\. Save it with create_definition, `type` page, once they agree\.\n$/u,
+    );
+    expect(withoutPages?.text).toMatch(/and get_run for one run\.\n$/u);
+  });
+});
+
 describe('the give-tools recipe', () => {
   it('sends an agent to reconnect_connection where search says a connection is broken and its words say to reconnect it', async () => {
     const recipes = await recipesFor(recipeFiles, guidesNamed(['reasoning-function']));
@@ -88,6 +135,14 @@ describe('the give-tools recipe', () => {
 
     expect(recipes.find(({ name }) => name === 'give-tools')?.text).toMatch(
       /the function can call only the tools it names\.\n9\. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
+    );
+  });
+
+  it('gives the workflow a page where it has none, where the page guide is carried too', async () => {
+    const giveTools = await recipeCarrying('give-tools', 'reasoning-function', 'workflow', 'page');
+
+    expect(giveTools?.text).toMatch(
+      /and tell the person what it answered and what they can do next\. Where the workflow has no page yet, give it one with the page guide, from its minimal page: a headline for each run and one chart of the runs so far\.\n$/u,
     );
   });
 });

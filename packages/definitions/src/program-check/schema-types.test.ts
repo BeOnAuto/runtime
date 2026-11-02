@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { declarationOf } from './schema-types.ts';
+import { shapedViewsSchemaOf } from '../shapes/shaped-views.ts';
+import { declarationOf, declarationsOf } from './schema-types.ts';
 
 describe('the types of a document’s schemas', () => {
   it('closes an object unless its schema opens it, and marks what it does not require optional', () => {
@@ -73,6 +74,27 @@ describe('the types of values and combinations', () => {
         'type Input_street$45$address = { next?: Input_street$45$address; };',
         'type Input = { home?: Input_street$45$address; city?: Input_city; };',
       ].join('\n'),
+    );
+  });
+});
+
+describe('the types of the views of a page', () => {
+  it('declares the four shapes, and the views as an object of them, each optional, with the event a fold takes', () => {
+    const declared = declarationsOf({
+      module: { place: 'page', source: '' },
+      schemas: { view: shapedViewsSchemaOf({ by_day: 'series', by_channel: 'categories' }) },
+      expressions: [],
+    });
+
+    expect(declared).toContain('type View = { by_day?: Series; by_channel?: Categories; };');
+    expect(declared).toMatch(/^type Series = \{ unit\?: string; period\?: /mu);
+    expect(declared).toMatch(/^type Text = \{ text: string; \};$/mu);
+    expect(declared).toContain('interface Event {');
+  });
+
+  it('declares no view of a page whose views are not given', () => {
+    expect(declarationsOf({ module: { place: 'page', source: '' }, schemas: {}, expressions: [] })).toContain(
+      'type View = {  };',
     );
   });
 });

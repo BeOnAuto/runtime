@@ -87,7 +87,7 @@ function aLedgerWithOneRun(tables: readonly string[]): Answers {
 }
 
 const keptRow =
-  'INSERT INTO run_outcomes_4 (playbook_key, row_key, started_day, started_at, last_started_at, definition_type, name, status, duration_ms, input_tokens, output_tokens, cached_tokens) VALUES ("playbook/acme/alpha/", "r1", "2026-10-01", "2026-10-01T09:00:00.000Z", "2026-10-01T09:00:00.000Z", "tally", "triage", "started", null, null, null, null) ON CONFLICT (playbook_key, row_key) DO UPDATE SET started_day = excluded.started_day,';
+  'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day, started_at, last_started_at, definition_type, name, status, duration_ms, input_tokens, output_tokens, cached_tokens, cost_micro_usd) VALUES ("playbook/acme/alpha/", "r1", "2026-10-01", "2026-10-01T09:00:00.000Z", "2026-10-01T09:00:00.000Z", "tally", "triage", "started", null, null, null, null, null) ON CONFLICT (playbook_key, row_key) DO UPDATE SET started_day = excluded.started_day,';
 
 describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens', () => {
   it("is created after the playbook's indexes, filled from the stored run streams, and analysed", async () => {
@@ -96,16 +96,16 @@ describe('the table of the outcomes of runs on PostgreSQL, as the ledger opens',
     await tallied.afterTheSchema({ execute });
 
     expect(commands.map((command) => command.split(' ').slice(0, 6).join(' '))).toEqual([
-      'CREATE TABLE IF NOT EXISTS run_outcomes_4',
-      'CREATE INDEX IF NOT EXISTS run_outcomes_4_by_playbook_and_day',
-      'INSERT INTO run_outcomes_4 (playbook_key, row_key, started_day,',
-      'ANALYZE run_outcomes_4',
+      'CREATE TABLE IF NOT EXISTS run_outcomes_5',
+      'CREATE INDEX IF NOT EXISTS run_outcomes_5_by_playbook_and_day',
+      'INSERT INTO run_outcomes_5 (playbook_key, row_key, started_day,',
+      'ANALYZE run_outcomes_5',
     ]);
     expect(commands[2]?.startsWith(keptRow)).toBe(true);
   });
 
   it('is left as it is when it is found, and never made by a ledger without the projection', async () => {
-    const found = recording(aLedgerWithOneRun(['run_outcomes_4']));
+    const found = recording(aLedgerWithOneRun(['run_outcomes_5']));
     const without = recording(aLedgerWithOneRun([]));
 
     await tallied.afterTheSchema({ execute: found.execute });
@@ -191,12 +191,15 @@ const group = {
   input_tokens: 42,
   output_tokens: 40,
   cached_tokens: 2,
+  cost_micro_usd: 1500,
   durations: [120, 80],
 };
 
+const unpriced = { ...group, status: 'rejected', runs: 1, cost_micro_usd: null, durations: [] };
+
 describe('the read of the outcomes of runs on PostgreSQL', () => {
   it('groups the rows of the playbook over the days of the window by day, function and status, in one statement', async () => {
-    const { query, asked } = answering([group]);
+    const { query, asked } = answering([group, unpriced]);
     const read = postgresqlRunOutcomesReader(query);
     const window = { from: '2026-10-01', to: '2026-10-07' };
 
@@ -213,8 +216,10 @@ describe('the read of the outcomes of runs on PostgreSQL', () => {
         inputTokens: 42,
         outputTokens: 40,
         cachedTokens: 2,
+        costMicroUsd: 1500,
         durations: [120, 80],
       },
+      expect.objectContaining({ status: 'rejected', costMicroUsd: null }),
     ]);
     expect(asked.map(({ values }) => values)).toEqual([
       ['playbook/acme/alpha/', '2026-10-01', '2026-10-07', 'tally', 'triage'],
@@ -224,6 +229,7 @@ describe('the read of the outcomes of runs on PostgreSQL', () => {
       'WHERE playbook_key = $1 AND started_day BETWEEN $2 AND $3 AND definition_type = $4 AND name = $5 GROUP BY started_day, definition_type, name, status',
     );
     expect(asked[1]?.text).toContain('BETWEEN $2 AND $3 GROUP BY');
+    expect(asked[0]?.text).toContain('sum(cost_micro_usd)::float8 AS cost_micro_usd');
   });
 });
 

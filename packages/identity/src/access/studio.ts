@@ -1,4 +1,4 @@
-import type { StudioPage } from '@on.auto/operations';
+import type { DefinitionSaved, StudioPage } from '@on.auto/operations';
 
 export const defaultStudioOrigin = 'https://studio.on.auto';
 
@@ -20,13 +20,17 @@ interface StudioOpening {
 
 type Parameter = [string, string];
 
+function becauseOf(saved: DefinitionSaved | undefined): Parameter[] {
+  return saved === undefined ? [] : [['because', saved]];
+}
+
 function pageParametersOf(page: StudioPage | undefined): Parameter[] {
   if (page === undefined) {
     return [];
   }
   const playbook: Parameter = ['playbook', page.playbook];
   if (page.kind === 'definition') {
-    return [playbook, [page.type, page.name]];
+    return [playbook, [page.type, page.name], ...becauseOf(page.saved), ['version', String(page.version)]];
   }
   return page.kind === 'run' ? [playbook, ['run', page.run]] : [playbook];
 }

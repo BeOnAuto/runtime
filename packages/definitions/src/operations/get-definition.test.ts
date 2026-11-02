@@ -34,7 +34,7 @@ describe('get_definition', () => {
       route: { method: 'GET', path: '/definitions/{type}/{name}' },
       pathParameters: ['type', 'name'],
       successStatus: 200,
-      reasons: ['not_found'],
+      reasons: ['not_found', 'invalid_input', 'conflict'],
     });
   });
 
@@ -75,7 +75,7 @@ describe('get_definition rejecting', () => {
       status: 'rejected',
       reason: 'invalid_input',
       detail: 'The input does not match the input schema',
-      issues: [{ pointer: '/type', detail: 'Expected a type this server runs: echo or probe' }],
+      issues: [{ pointer: '/type', detail: 'Expected a type of definition this server keeps: echo or probe' }],
     });
   });
 

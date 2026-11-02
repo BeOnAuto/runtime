@@ -246,6 +246,10 @@ export function isRunning({ run }: RecordedRunState): boolean {
   return run.status === 'started';
 }
 
+export function endsWithinItsCall(state: RecordedRunState): boolean {
+  return isRunning(state) && !takesSettlement(state) && !state.resumes;
+}
+
 export function lastCallOf(state: RunState): number {
   return state?.lastCall ?? 0;
 }

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { importedWithoutAnAddress, modulesReachedFrom } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
-import { outputShapeNamed } from '../index.ts';
+import { outputShapeNamed, shapedViewsSchemaOf } from '../index.ts';
 import * as checkedWorkerModule from './checked-worker.ts';
 import { outputCheckOf, valueChecks, viewCheckOf } from './value-checks.ts';
 import { checkedWorker } from './worker-url.ts';
@@ -57,10 +57,12 @@ describe('the check of a view against the view schema', () => {
     const check = viewCheckOf({ type: 'object', additionalProperties: { type: 'array', maxItems: 1 } });
 
     expect(check({ spring: [1] })).toBeUndefined();
-    expect(check([])).toBe('the view: Expected object');
-    expect(check({ spring: [1, 2], autumn: [1, 2] })).toBe(
-      '/spring: Expected a value with a length of at most 1; /autumn: Expected a value with a length of at most 1',
-    );
+    expect(check([])).toEqual({ kind: 'schema', detail: 'the view: Expected object' });
+    expect(check({ spring: [1, 2], autumn: [1, 2] })).toEqual({
+      kind: 'schema',
+      detail:
+        '/spring: Expected a value with a length of at most 1; /autumn: Expected a value with a length of at most 1',
+    });
   });
 
   it('names an entry of the view out of the form its schema names', () => {
@@ -68,7 +70,47 @@ describe('the check of a view against the view schema', () => {
 
     expect([check({ spring: '2026-04-01T09:30:00Z' }), check({ spring: 'April' })]).toEqual([
       undefined,
-      '/spring: Expected a string in the format date-time, such as 2026-04-01T09:30:00Z',
+      { kind: 'schema', detail: '/spring: Expected a string in the format date-time, such as 2026-04-01T09:30:00Z' },
+    ]);
+  });
+});
+
+describe('the check of the views of a page against their shapes', () => {
+  const check = viewCheckOf(shapedViewsSchemaOf({ by_day: 'series', by_channel: 'categories' }));
+
+  it('says nothing of views that match their shapes, or of views the fold has not given yet', () => {
+    expect([
+      check({}),
+      check({ by_channel: { values: [{ name: 'LinkedIn', value: 3 }] } }),
+      check({ by_day: { period: 'day', lines: [{ name: 'Posts', points: [{ at: '2026-11-01', value: 3 }] }] } }),
+    ]).toEqual([undefined, undefined, undefined]);
+  });
+
+  it('stalls with the kind shape on a view that does not match, with the rules a shape adds to its schema', () => {
+    const backwards = {
+      period: 'day',
+      lines: [
+        {
+          name: 'Posts',
+          points: [
+            { at: '2026-11-01', value: 3 },
+            { at: '2026-10-31', value: 2 },
+          ],
+        },
+      ],
+    };
+
+    expect(check({ by_day: backwards, by_channel: { values: [] } })).toEqual({
+      kind: 'shape',
+      detail:
+        '/by_day/lines/0/points/1/at: Expected a time later than the point before it; /by_channel/values: Expected a value with a length of at least 1',
+    });
+  });
+
+  it('stalls on views that are not an object, or that name a view data.views does not declare', () => {
+    expect([check([]), check({ by_week: null })]).toEqual([
+      { kind: 'shape', detail: 'The fold returns an object of named views, each of the shape data.views gives it' },
+      { kind: 'shape', detail: 'The fold returned by_week, which data.views does not declare' },
     ]);
   });
 });

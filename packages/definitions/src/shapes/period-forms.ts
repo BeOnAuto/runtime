@@ -99,3 +99,12 @@ export function timelineIn(period: Schema.Json | undefined): Timeline | undefine
   }
   return typeof period === 'string' ? periods.get(period) : undefined;
 }
+
+export function isTime(at: string): boolean {
+  return [instants, ...periods.values()].some((timeline) => timeline.momentOf(at) !== undefined);
+}
+
+export function chronologically(period: Schema.Json | undefined): (one: string, other: string) => number {
+  const timeline = timelineIn(period) ?? instants;
+  return (one, other) => Number(timeline.momentOf(one)) - Number(timeline.momentOf(other));
+}

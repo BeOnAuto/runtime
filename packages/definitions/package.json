@@ -9,6 +9,7 @@
     "./check": "./src/check.ts",
     "./check-handler": "./src/program-check/handed-checks.ts",
     "./document": "./src/document.ts",
+    "./page": "./src/page.ts",
     "./template": "./src/template.ts",
     "./testing": "./src/testing/index.ts",
     "./value-checks": "./src/checking/value-checks.ts"

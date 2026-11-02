@@ -78,7 +78,7 @@ describe('the front matter of a computation function definition', () => {
       'Line 1: A computation function definition starts with a line of three dashes (---) that opens its front matter of YAML',
     ]);
     expect(issuesIn(programDocument(functionOf('return input;'), 'description: Adds one'))).toEqual([
-      'Line 2, /language: language is required',
+      'Line 1, /language: language is required',
     ]);
   });
 

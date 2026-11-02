@@ -22,14 +22,14 @@ export const mostArgumentDescriptionCharacters = 300;
 export const mostToolsOnAConnection = 32;
 
 export const mostListingBytes: Readonly<Record<McpEndpoint, number>> = {
-  'own org': 48_000,
+  'own org': 48_200,
   org: 16_000,
   playbook: 40_000,
 };
 
 export const mostGuideBytes = 65_536;
 
-export const mostRecipeBytes = 4096;
+export const mostRecipeBytes = 5120;
 
 export function mostGuidesBeyondTheRecipes(definitionTypes: number): number {
   return definitionTypes + 2;

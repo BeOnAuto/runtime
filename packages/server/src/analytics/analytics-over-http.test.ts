@@ -80,7 +80,10 @@ afterEach(async () => {
 
 async function playbookWithThreeRuns(environment: Readonly<Record<string, string>>): Promise<void> {
   server = await servingReasoning(
-    [answers(textResult('Profits rose.', { usage: usageOf(1200, 1000, 80) })), () => Effect.fail(unusable)],
+    [
+      answers(textResult('Profits rose.', { usage: usageOf(1200, 1000, 80), cost_usd: 0.0021 })),
+      () => Effect.fail(unusable),
+    ],
     environment,
   );
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
@@ -133,7 +136,7 @@ function durationOf(body: unknown): { readonly p50: number; readonly p95: number
 
 describe.each(stores)('the analytics of a playbook over HTTP, on $store', ({ skipped, environment }) => {
   it.skipIf(skipped)(
-    'count the runs that ended today, by how they ended, and the tokens their models used',
+    'count the runs that ended today, by how they ended, and the tokens their models used and what those cost',
     async () => {
       await playbookWithThreeRuns(await environment());
 
@@ -149,7 +152,16 @@ describe.each(stores)('the analytics of a playbook over HTTP, on $store', ({ ski
           days: 7,
           runs: { total: 3, succeeded: 1, failed: 0, rejected: 2 },
           tokens: { input: 1500, output: 100, cached: 1000 },
-          by_function: [{ type: 'reasoning', name: 'summary', runs: 3 }],
+          cost_usd: 0.0021,
+          by_function: [
+            {
+              type: 'reasoning',
+              name: 'summary',
+              runs: 3,
+              tokens: { input: 1500, output: 100, cached: 1000 },
+              cost_usd: 0.0021,
+            },
+          ],
         },
       });
       expect([dayOf(readFrom), dayOf(readBy)]).toContain(lastDayOf(read.body));

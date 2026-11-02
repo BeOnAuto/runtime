@@ -114,6 +114,7 @@ describe('workflows over MCP', () => {
       'computation',
       'recall',
       'prediction',
+      'page',
       'workflow',
     ]);
   });
@@ -159,7 +160,9 @@ describe('a workflow whose input schema refuses the input, over MCP', () => {
         status: 422,
         reason: 'invalid_input',
         kind: 'input_schema',
-        errors: [{ pointer: '/input/expense', detail: 'expense, What was bought: expected text.' }],
+        errors: [
+          { pointer: '/input/expense', detail: 'expense, What was bought: expected text; it was given a number.' },
+        ],
       },
     });
     expect(server.modelCalls()).toBe(0);

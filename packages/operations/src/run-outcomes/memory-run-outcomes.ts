@@ -43,8 +43,13 @@ function emptyGroupOf({ startedDay: day, definitionType, name, status }: RunOutc
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    costMicroUsd: null,
     durations: [],
   };
+}
+
+function addedCost(kept: number | null, cost: number | null): number | null {
+  return kept === null || cost === null ? (kept ?? cost) : kept + cost;
 }
 
 function added(group: RunOutcomeGroup, row: RunOutcome): RunOutcomeGroup {
@@ -54,6 +59,7 @@ function added(group: RunOutcomeGroup, row: RunOutcome): RunOutcomeGroup {
     inputTokens: group.inputTokens + (row.inputTokens ?? 0),
     outputTokens: group.outputTokens + (row.outputTokens ?? 0),
     cachedTokens: group.cachedTokens + (row.cachedTokens ?? 0),
+    costMicroUsd: addedCost(group.costMicroUsd, row.costMicroUsd),
     durations: row.durationMs === null ? group.durations : [...group.durations, row.durationMs],
   };
 }

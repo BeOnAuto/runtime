@@ -1,4 +1,6 @@
 import {
+  eventFiltersOf,
+  filterExpressionsOf,
   frontMatterIn,
   issueAt,
   reportedIssues,
@@ -11,14 +13,13 @@ import {
 } from '@on.auto/definitions/document';
 import { compileJsonSchema, type CompiledSchema } from '@on.auto/json-schema';
 import { oneLanguage } from '@on.auto/workflow-engine';
-import { enclosedBody, jsonBytesOf, mostValueDepth } from '@on.auto/workflow-engine/dsl';
+import { jsonBytesOf, mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import type { ViewFilter } from '@on.auto/workflow-host';
 import { Result, type Schema } from 'effect';
 
 import { recallBounds } from '../run/recall-bounds.ts';
 import { decodeFrontMatter, recallFrontMatter, type RecallFrontMatter } from './front-matter.ts';
-import type { FilterExpression, RecallFunctionDefinitionDocument } from './recall-document.ts';
-import { filtersOf } from './source-filters.ts';
+import type { RecallFunctionDefinitionDocument } from './recall-document.ts';
 
 type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;
 
@@ -35,6 +36,10 @@ interface ViewPart {
 type ValueSection = { readonly schema?: Schema.JsonObject } | undefined;
 
 const language = 'typescript';
+
+const sourceEvents = '/source/events';
+
+const filtersPlace = { pointer: sourceEvents, noun: 'recall function', most: recallBounds.mostFilters };
 
 const exportedAnswer = /^export function answer\b/mu;
 
@@ -107,14 +112,6 @@ interface Parts {
   readonly fold: FoldPart;
 }
 
-function filterExpressionsOf(filters: readonly ViewFilter[], lines: SourceLines): readonly FilterExpression[] {
-  return filters.flatMap((filter, index) => {
-    const source = enclosedBody(filter['data']);
-    const pointer = `/source/events/${index}/data`;
-    return source === undefined ? [] : [{ source, pointer, line: issueAt(lines, pointer, '').line }];
-  });
-}
-
 function assembled(
   { description }: Pick<RecallFrontMatter, 'description'>,
   parts: Parts,
@@ -127,7 +124,7 @@ function assembled(
     input,
     output,
     answers: exportedAnswer.test(fold.fold),
-    filterExpressions: filterExpressionsOf(filters, lines),
+    filterExpressions: filterExpressionsOf(filters, sourceEvents, lines),
     details: {
       language,
       ...fold,
@@ -152,7 +149,7 @@ function documentFrom(
     input: contractOf(front.input, 'input', lines),
     output: contractOf(front.output, 'output', lines),
     view: viewOf(front, lines),
-    filters: filtersOf(front.source.events, lines),
+    filters: eventFiltersOf(front.source.events, filtersPlace, lines),
     fold: fold(),
   };
   const found = [

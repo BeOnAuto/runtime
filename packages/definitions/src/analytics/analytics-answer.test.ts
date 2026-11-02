@@ -13,6 +13,7 @@ function group(overrides: Partial<RunOutcomeGroup>): RunOutcomeGroup {
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    costMicroUsd: null,
     durations: [],
     ...overrides,
   };
@@ -50,40 +51,66 @@ describe('a percentile of the durations of runs', () => {
   });
 });
 
+const endedAndGoing = [
+  group({ runs: 2, inputTokens: 100, outputTokens: 40, cachedTokens: 60, durations: [300, 100] }),
+  group({ status: 'rejected', inputTokens: 10, outputTokens: 2, cachedTokens: 0 }),
+  group({ day: '2026-10-02', definitionType: 'workflow', name: 'approval', durations: [5000] }),
+  group({ day: '2026-10-02', status: 'failed', durations: [200] }),
+  group({ day: '2026-10-02', status: 'started', runs: 4, durations: [] }),
+  group({ day: '2026-10-02', name: 'draft', status: 'started' }),
+];
+
+const triageTokens = { input: 110, output: 42, cached: 60 };
+
 describe('the analytics of a playbook', () => {
   it('count the runs that ended and the tokens they used, by day and by function, leaving out runs still going', () => {
-    const groups = [
-      group({ runs: 2, inputTokens: 100, outputTokens: 40, cachedTokens: 60, durations: [300, 100] }),
-      group({ status: 'rejected', inputTokens: 10, outputTokens: 2, cachedTokens: 0 }),
-      group({ day: '2026-10-02', definitionType: 'workflow', name: 'approval', durations: [5000] }),
-      group({ day: '2026-10-02', status: 'failed', durations: [200] }),
-      group({ day: '2026-10-02', status: 'started', runs: 4, durations: [] }),
-      group({ day: '2026-10-02', name: 'draft', status: 'started' }),
-    ];
-
-    expect(analyticsOf(window, groups)).toEqual({
+    expect(analyticsOf(window, endedAndGoing)).toEqual({
       days: 3,
       runs: { total: 5, succeeded: 3, failed: 1, rejected: 1 },
-      tokens: { input: 110, output: 42, cached: 60 },
+      tokens: triageTokens,
+      cost_usd: null,
       duration_ms: { p50: 200, p95: 5000 },
       by_day: [
-        { day: '2026-09-30', runs: noRuns, tokens: noTokens, duration_ms: null },
+        { day: '2026-09-30', runs: noRuns, tokens: noTokens, cost_usd: null, duration_ms: null },
         {
           day: '2026-10-01',
           runs: { total: 3, succeeded: 2, failed: 0, rejected: 1 },
-          tokens: { input: 110, output: 42, cached: 60 },
+          tokens: triageTokens,
+          cost_usd: null,
           duration_ms: { p50: 100, p95: 300 },
         },
         {
           day: '2026-10-02',
           runs: { total: 2, succeeded: 1, failed: 1, rejected: 0 },
           tokens: noTokens,
+          cost_usd: null,
           duration_ms: { p50: 200, p95: 5000 },
         },
       ],
       by_function: [
-        { type: 'reasoning', name: 'triage', runs: 4 },
-        { type: 'workflow', name: 'approval', runs: 1 },
+        { type: 'reasoning', name: 'triage', runs: 4, tokens: triageTokens, cost_usd: null },
+        { type: 'workflow', name: 'approval', runs: 1, tokens: noTokens, cost_usd: null },
+      ],
+    });
+  });
+});
+
+describe('the cost in the analytics of a playbook', () => {
+  it('adds up, in US dollars, the runs that ended and recorded a cost, by day and by function, and is null where none did', () => {
+    const priced = [
+      group({ runs: 2, costMicroUsd: 1500 }),
+      group({ status: 'rejected', costMicroUsd: 250 }),
+      group({ status: 'failed' }),
+      group({ day: '2026-10-02', definitionType: 'workflow', name: 'approval' }),
+      group({ day: '2026-10-02', status: 'started', costMicroUsd: 999 }),
+    ];
+
+    expect(analyticsOf(window, priced)).toMatchObject({
+      cost_usd: 0.00175,
+      by_day: [{ cost_usd: null }, { cost_usd: 0.00175 }, { cost_usd: null }],
+      by_function: [
+        { name: 'triage', runs: 4, cost_usd: 0.00175 },
+        { name: 'approval', runs: 1, cost_usd: null },
       ],
     });
   });
@@ -109,9 +136,10 @@ describe('the functions in the analytics of a playbook', () => {
 
 describe('the analytics of a playbook whose runs are all still going', () => {
   it('answer every day with nothing, and no duration', () => {
-    expect(analyticsOf(window, [group({ status: 'started' })])).toMatchObject({
+    expect(analyticsOf(window, [group({ status: 'started', costMicroUsd: 10 })])).toMatchObject({
       runs: noRuns,
       tokens: noTokens,
+      cost_usd: null,
       duration_ms: null,
       by_function: [],
     });

@@ -2,15 +2,17 @@ import { PlaybookReader, defineHttpOperation } from '@on.auto/operations';
 import { Clock, Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { knownCapabilities, type KnownCapabilities } from '../capability/known-capabilities.ts';
+import { knownRunningCapabilities, type KnownCapabilities } from '../capability/known-capabilities.ts';
 import { RunsOfNameField } from '../operations/definition-fields.ts';
 import { analyticsOf, PlaybookAnalyticsSchema } from './analytics-answer.ts';
 import { DaysField, dayFieldOf, dayOf, longestWindowInDays, windowOf } from './analytics-window.ts';
 
 const description = [
   'Counts what the runs of the playbook did over a window of days in UTC: how many succeeded, failed or were rejected,',
-  'the tokens their models used, and how long they took at the median and the 95th percentile,',
-  'for the window, for each day of it and for each definition.',
+  'the tokens their models used, what those model calls cost in US dollars,',
+  'and how long they took at the median and the 95th percentile, for the window and for each day of it,',
+  'and the runs, tokens and cost of each definition.',
+  'The cost is null where no run recorded one, as when the model gateway answers no cost.',
   'Use it when the person asks how the playbook is doing; list_runs lists the runs themselves.',
   '`days` reads the last 7, 14 or 30 days, or `from` and `to` the days between them, and `type` and `name` keep the runs of one definition.',
 ].join(' ');
@@ -45,7 +47,7 @@ const readAnalytics = Effect.fnUntraced(function* (input: AnalyticsInput) {
 });
 
 export function defineGetPlaybookAnalytics(capabilities: readonly Capability[]) {
-  const known = knownCapabilities(capabilities);
+  const known = knownRunningCapabilities(capabilities);
   const operation = defineHttpOperation('playbook', 'query', {
     name: 'get_playbook_analytics',
     title: 'Get playbook analytics',

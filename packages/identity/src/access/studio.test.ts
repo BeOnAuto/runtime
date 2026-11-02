@@ -50,28 +50,39 @@ function atPage(studio: StudioSettings, page: StudioPage): string {
   return studioLinkOf(studio, { ownOrigin, openedFrom: 'agent', installId: undefined, page });
 }
 
+const atAlpha = 'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha';
+
 describe('the link that opens Studio on the runtime at a page', () => {
-  it("names the playbook of the page, and a definition's type and name or a run's id", () => {
+  it("names the playbook of the page, and a definition's type and name, why the link is given and the version, or a run's id", () => {
     expect([
       atPage(elsewhere, { kind: 'playbook', playbook: 'alpha' }),
-      atPage(elsewhere, { kind: 'definition', playbook: 'alpha', type: 'workflow', name: 'weekly-build' }),
+      atPage(elsewhere, {
+        kind: 'definition',
+        playbook: 'alpha',
+        type: 'workflow',
+        name: 'weekly-build',
+        version: 1,
+        saved: 'created',
+      }),
       atPage(elsewhere, { kind: 'run', playbook: 'alpha', run: '0190f5c2-run' }),
-    ]).toEqual([
-      'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha',
-      'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&workflow=weekly-build',
-      'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&run=0190f5c2-run',
-    ]);
+    ]).toEqual([atAlpha, `${atAlpha}&workflow=weekly-build&because=created&version=1`, `${atAlpha}&run=0190f5c2-run`]);
   });
 
   it('names a reasoning function by its type, as every definition is named', () => {
     expect(
       atPage(
         { ...elsewhere, served: true },
-        { kind: 'definition', playbook: 'alpha', type: 'reasoning', name: 'summary' },
+        { kind: 'definition', playbook: 'alpha', type: 'reasoning', name: 'summary', version: 3, saved: 'updated' },
       ),
     ).toBe(
-      'http://127.0.0.1:5555/studio/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&reasoning=summary',
+      'http://127.0.0.1:5555/studio/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha&reasoning=summary&because=updated&version=3',
     );
+  });
+
+  it("names a definition's version and no reason where the call saved nothing", () => {
+    expect(
+      atPage(elsewhere, { kind: 'definition', playbook: 'alpha', type: 'reasoning', name: 'summary', version: 2 }),
+    ).toBe(`${atAlpha}&reasoning=summary&version=2`);
   });
 });
 

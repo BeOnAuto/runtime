@@ -101,7 +101,7 @@ describe('the definition tools on a playbook endpoint', () => {
       type: 'echo',
       name: 'greeter',
       version: 1,
-      studio: inStudio('echo=greeter'),
+      studio: inStudio('echo=greeter&because=created&version=1'),
     });
     expect(ran.structuredContent).toMatchObject({
       status: 'succeeded',

@@ -49,7 +49,7 @@ export const testFoldWorker = foldingWorker({
     `import { issuesDetail, schemaCheckOf } from '${schemaChecks}';`,
     'const view = (schema) => {',
     `  const check = schemaCheckOf(schema, { what: 'view', nesting: ${mostValueDepth} });`,
-    "  return (value) => { const issues = check(value); return issues.length === 0 ? undefined : issuesDetail(issues, 'view'); };",
+    "  return (value) => { const issues = check(value); return issues.length === 0 ? undefined : { kind: 'schema', detail: issuesDetail(issues, 'view') }; };",
     '};',
   ],
   whenFolding: '',

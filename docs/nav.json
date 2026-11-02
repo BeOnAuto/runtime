@@ -153,6 +153,10 @@
       {
         "text": "Templates",
         "link": "/reference/template"
+      },
+      {
+        "text": "Page format",
+        "link": "/reference/page-format"
       }
     ]
   },

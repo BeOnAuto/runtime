@@ -1,4 +1,4 @@
-import { Conflict, type StreamWriter } from '@on.auto/operations';
+import { Conflict, Ledger } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -68,7 +68,8 @@ describe('a cancel request the stream refuses otherwise', () => {
       detail: 'The state changed while the command was decided',
       kind: 'concurrent_change',
     });
-    const changing: StreamWriter = { execute: () => Effect.fail(changed) };
+    const { ledger } = await withHandOn();
+    const changing = Ledger.of({ ...ledger.service, execute: () => Effect.fail(changed) });
 
     expect(await Effect.runPromise(Effect.flip(runCanceller(changing)(relayed, deadline, lineage)))).toBe(changed);
   });

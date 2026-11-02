@@ -110,6 +110,12 @@ describe('the time a render may take', () => {
     );
   });
 
+  it('is the bound named however deep in the template the clock ran out, an output among them', () => {
+    expect(renderingOn(renderClockOf(steppingClock(1000)), '{% for i in (1..3) %}{{ i }}{% endfor %}')).toEqual(
+      Result.fail({ reason: 'limit_exceeded', limit: 'time', line: 1 }),
+    );
+  });
+
   it('stops no render whose clock stands still, so the loop the moving clock stops renders on it', () => {
     expect(renderingOn(standingRenderClock, loopOf(400))).toEqual(Result.succeed('Hello\n'));
   });

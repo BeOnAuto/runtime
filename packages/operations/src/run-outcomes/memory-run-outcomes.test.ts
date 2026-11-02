@@ -23,8 +23,13 @@ function began(fn: string, at = '2026-10-01T09:00:00.000Z'): RunFact {
   return { type: 'run_began', data: { at, fn } };
 }
 
-function ended(status: 'succeeded' | 'failed' | 'rejected', ms: number | null, tokens: number | null = null): RunFact {
-  return { type: 'run_ended', data: { status, ms, tokens } };
+function ended(
+  status: 'succeeded' | 'failed' | 'rejected',
+  ms: number | null,
+  tokens: number | null = null,
+  cost?: number,
+): RunFact {
+  return { type: 'run_ended', data: { status, ms, tokens, ...(cost === undefined ? {} : { cost }) } };
 }
 
 function reading(
@@ -103,6 +108,23 @@ describe('the outcomes of runs in the in-memory ledger', () => {
       ['2026-10-01 draft started 1'],
       [],
       ['2026-10-01 triage started 1'],
+    ]);
+  });
+});
+
+describe('the cost in the outcomes of runs in the in-memory ledger', () => {
+  it('is the sum over the runs of a group that recorded one, and null when none did', async () => {
+    const ledger = memoryLedger(runTallies);
+    await noting(ledger, 'playbook/acme/alpha/runs/r1', began('triage'), ended('succeeded', 1, null, 1500));
+    await noting(ledger, 'playbook/acme/alpha/runs/r2', began('triage'), ended('succeeded', 1));
+    await noting(ledger, 'playbook/acme/alpha/runs/r3', began('triage'), ended('succeeded', 1, null, 250));
+    await noting(ledger, 'playbook/acme/alpha/runs/r4', began('triage'), ended('failed', 1));
+
+    const costs = (await reading(ledger)).map(({ status, costMicroUsd }) => [status, costMicroUsd]);
+
+    expect(costs).toEqual([
+      ['succeeded', 1750],
+      ['failed', null],
     ]);
   });
 });

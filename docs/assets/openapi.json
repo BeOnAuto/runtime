@@ -9128,7 +9128,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function or workflow from its document, without running it. Use it once the person agrees; update_definition changes one that exists, and a name is never reused. `type` is the definition's type and `name` is how workflows and tools refer to it: reasoning, a reasoning function; interaction, an interaction function; computation, a computation function; recall, a recall function; prediction, a prediction function; workflow, a workflow. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none, and a workflow takes no `diagram`. A document that does not fit its format is refused with the line and what is wrong.",
+        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, interaction, computation, recall, prediction, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -9151,6 +9151,7 @@
                 "computation",
                 "recall",
                 "prediction",
+                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -9209,7 +9210,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -9257,11 +9258,19 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "of": {
+                          "type": "string",
+                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
+                        },
+                        "views": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
-                      "required": [
-                        "shape"
-                      ],
                       "additionalProperties": false,
                       "description": "What the runtime declares of the definition beside its schemas"
                     },
@@ -9423,6 +9432,21 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "string",
+                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                        },
+                        "lately": {
+                          "type": "string",
+                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "What the page of the subject renders when it is read, each block it has"
                     },
                     "used_by": {
                       "type": "array",
@@ -9601,6 +9625,7 @@
                 "computation",
                 "recall",
                 "prediction",
+                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -9643,7 +9668,7 @@
                       "properties": {
                         "type": {
                           "type": "string",
-                          "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                          "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                         },
                         "name": {
                           "type": "string",
@@ -9691,11 +9716,19 @@
                             "shape": {
                               "type": "string",
                               "description": "The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws"
+                            },
+                            "of": {
+                              "type": "string",
+                              "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
+                            },
+                            "views": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string"
+                              },
+                              "description": "For a page with data, each view's name and the shape it takes"
                             }
                           },
-                          "required": [
-                            "shape"
-                          ],
                           "additionalProperties": false,
                           "description": "What the runtime declares of the definition beside its schemas"
                         },
@@ -9904,7 +9937,7 @@
       "get": {
         "operationId": "get_definition",
         "summary": "Get definition",
-        "description": "Reads one function or workflow definition with its document and returns it, active or retired, with its version and the input and output its document declares. For a recall function it also returns the standing of its view: live, rebuilding, waiting or stalled, the events it has folded and how far it lags the playbook. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
+        "description": "Reads one definition with its document, active or retired, with its version and the input and output its document declares. For a recall function or a page it also returns how its views stand: live, rebuilding, waiting or stalled. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition with a page answers page.lately; `render: true` previews a page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
         "tags": [
           "definitions"
         ],
@@ -9927,6 +9960,7 @@
                 "computation",
                 "recall",
                 "prediction",
+                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -9940,6 +9974,23 @@
               "type": "string",
               "description": "The definition name: 3 to 48 lowercase letters, digits and hyphens, starting with a letter",
               "pattern": "^[a-z][a-z0-9-]{2,47}$"
+            }
+          },
+          {
+            "name": "render",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "For a page, true to render it now"
+            }
+          },
+          {
+            "name": "sample_output",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "description": "With render, an output to render result over, as of a run that succeeded"
             }
           }
         ],
@@ -9955,7 +10006,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -10003,11 +10054,19 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "of": {
+                          "type": "string",
+                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
+                        },
+                        "views": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
-                      "required": [
-                        "shape"
-                      ],
                       "additionalProperties": false,
                       "description": "What the runtime declares of the definition beside its schemas"
                     },
@@ -10169,6 +10228,21 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "string",
+                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                        },
+                        "lately": {
+                          "type": "string",
+                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "What the page of the subject renders when it is read, each block it has"
                     },
                     "used_by": {
                       "type": "array",
@@ -10287,6 +10361,9 @@
           "405": {
             "$ref": "#/components/responses/method_not_allowed"
           },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
           "413": {
             "$ref": "#/components/responses/content_too_large"
           },
@@ -10317,7 +10394,7 @@
       "put": {
         "operationId": "update_definition",
         "summary": "Update definition",
-        "description": "Replaces the document of an active function or workflow and returns its new version, which every run uses from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time, Mermaid source of how it works or the word none, and a workflow takes no `diagram`. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a recall function builds its view again from the playbook's history.",
+        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a recall function or a page builds its views again from the playbook's history.",
         "tags": [
           "definitions"
         ],
@@ -10340,6 +10417,7 @@
                 "computation",
                 "recall",
                 "prediction",
+                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -10402,7 +10480,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -10450,11 +10528,19 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "of": {
+                          "type": "string",
+                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
+                        },
+                        "views": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
-                      "required": [
-                        "shape"
-                      ],
                       "additionalProperties": false,
                       "description": "What the runtime declares of the definition beside its schemas"
                     },
@@ -10616,6 +10702,21 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "string",
+                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                        },
+                        "lately": {
+                          "type": "string",
+                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "What the page of the subject renders when it is read, each block it has"
                     },
                     "used_by": {
                       "type": "array",
@@ -10769,11 +10870,11 @@
         ]
       }
     },
-    "/orgs/{org}/playbooks/{playbook}/definitions/{type}/{name}/retire": {
+    "/orgs/{org}/playbooks/{playbook}/definitions/page/{name}/render": {
       "post": {
-        "operationId": "retire_definition",
-        "summary": "Retire definition",
-        "description": "Retires a function or workflow definition for good and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it. Use it only when the person asks to retire that definition; update_definition changes it instead. `type` and `name` say which definition, and retiring one already retired changes nothing.",
+        "operationId": "render_page",
+        "summary": "Render page",
+        "description": "Renders a page now and answers it as get_definition does, with page.result and page.lately, so that it can be seen before its subject has run. `name` is the page's name, and `sample_output`, optional, an output of its subject to render result over, as a run that succeeded gave it. Without sample_output, result renders over the subject's latest run, and is left out when the subject has not run.",
         "tags": [
           "definitions"
         ],
@@ -10783,23 +10884,6 @@
           },
           {
             "$ref": "#/components/parameters/playbook"
-          },
-          {
-            "name": "type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "reasoning",
-                "interaction",
-                "computation",
-                "recall",
-                "prediction",
-                "workflow"
-              ],
-              "description": "The definition's type"
-            }
           },
           {
             "name": "name",
@@ -10818,10 +10902,14 @@
             "application/json": {
               "schema": {
                 "$schema": "https://json-schema.org/draft/2020-12/schema",
-                "$id": "https://on.auto/schemas/runtime/retire_definition/input",
+                "$id": "https://on.auto/schemas/runtime/render_page/input",
                 "type": "object",
                 "additionalProperties": false,
-                "properties": {}
+                "properties": {
+                  "sample_output": {
+                    "description": "With render, an output to render result over, as of a run that succeeded"
+                  }
+                }
               }
             }
           }
@@ -10833,12 +10921,12 @@
               "application/json": {
                 "schema": {
                   "$schema": "https://json-schema.org/draft/2020-12/schema",
-                  "$id": "https://on.auto/schemas/runtime/retire_definition/output",
+                  "$id": "https://on.auto/schemas/runtime/render_page/output",
                   "type": "object",
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -10886,11 +10974,19 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "of": {
+                          "type": "string",
+                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
+                        },
+                        "views": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
-                      "required": [
-                        "shape"
-                      ],
                       "additionalProperties": false,
                       "description": "What the runtime declares of the definition beside its schemas"
                     },
@@ -11052,6 +11148,477 @@
                     "standing": {
                       "type": "object",
                       "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "string",
+                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                        },
+                        "lately": {
+                          "type": "string",
+                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "What the page of the subject renders when it is read, each block it has"
+                    },
+                    "used_by": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "calls"
+                                ],
+                                "description": "calls, for a workflow that runs this one in its steps"
+                              },
+                              "steps": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "number": {
+                                      "type": "integer",
+                                      "description": "The step's number: its place among the workflow's tasks in the order of its document, nested ones included"
+                                    },
+                                    "name": {
+                                      "type": "string",
+                                      "description": "The name of its task"
+                                    }
+                                  },
+                                  "required": [
+                                    "number",
+                                    "name"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The steps of the workflow that call this one"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation",
+                              "steps"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "The type of the definition that uses this one"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "The name of the definition that uses this one"
+                              },
+                              "relation": {
+                                "type": "string",
+                                "enum": [
+                                  "remembers-runs",
+                                  "remembers-changes"
+                                ],
+                                "description": "remembers-runs or remembers-changes, for a recall function that folds its runs or its changes"
+                              }
+                            },
+                            "required": [
+                              "type",
+                              "name",
+                              "relation"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      },
+                      "description": "The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, a recall function that remembers its runs or its changes"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "name",
+                    "version",
+                    "status",
+                    "media_type",
+                    "created_at",
+                    "created_by",
+                    "updated_at",
+                    "source"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A saved definition, with its document"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/definitions/{type}/{name}/retire": {
+      "post": {
+        "operationId": "retire_definition",
+        "summary": "Retire definition",
+        "description": "Retires a function, workflow or page for good and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it. Use it only when the person asks to retire that definition; update_definition changes it instead. `type` and `name` say which definition, and retiring one already retired changes nothing.",
+        "tags": [
+          "definitions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "reasoning",
+                "interaction",
+                "computation",
+                "recall",
+                "prediction",
+                "page",
+                "workflow"
+              ],
+              "description": "The definition's type"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The definition name: 3 to 48 lowercase letters, digits and hyphens, starting with a letter",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/retire_definition/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/retire_definition/output",
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The definition name, unique among definitions of its type in the playbook and never reused"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "retired"
+                      ],
+                      "description": "active, or retired for good"
+                    },
+                    "media_type": {
+                      "type": "string",
+                      "description": "The media type of the definition document, set by its runtime adapter"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "What the definition does, as its document says"
+                    },
+                    "input_schema": {
+                      "type": "object",
+                      "description": "The JSON Schema of the input a run takes"
+                    },
+                    "output_schema": {
+                      "type": "object",
+                      "description": "The JSON Schema of the result a run produces"
+                    },
+                    "warnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "What the parser found that may not work everywhere, such as a schema some providers reject; the definition was accepted with these warnings"
+                    },
+                    "details": {
+                      "type": "object",
+                      "properties": {
+                        "shape": {
+                          "type": "string",
+                          "description": "The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws"
+                        },
+                        "of": {
+                          "type": "string",
+                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
+                        },
+                        "views": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For a page with data, each view's name and the shape it takes"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "What the runtime declares of the definition beside its schemas"
+                    },
+                    "triggers": {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "event"
+                                ]
+                              },
+                              "reference": {
+                                "type": "string"
+                              },
+                              "filters": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "reference": {
+                                      "type": "string",
+                                      "description": "Where the document names it, as a JSON pointer, which no later version renumbers"
+                                    },
+                                    "type": {
+                                      "type": "string",
+                                      "description": "The type of the events the filter takes"
+                                    },
+                                    "attributes": {
+                                      "type": "object",
+                                      "description": "What an event must have to match, as written: its type, and its source, subject and data when named"
+                                    }
+                                  },
+                                  "required": [
+                                    "reference",
+                                    "type",
+                                    "attributes"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                "description": "The filters of the events that start a run; an event that any of them matches starts one"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "reference",
+                              "filters"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "cron"
+                                ]
+                              },
+                              "reference": {
+                                "type": "string"
+                              },
+                              "expression": {
+                                "type": "string",
+                                "description": "The five fields of its times, read in its time zone"
+                              },
+                              "time_zone": {
+                                "type": "string",
+                                "description": "Its time zone, an IANA time zone name such as America/New_York; left out, UTC"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "reference",
+                              "expression"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "every"
+                                ]
+                              },
+                              "reference": {
+                                "type": "string"
+                              },
+                              "milliseconds": {
+                                "type": "integer",
+                                "description": "Its period, counted from when the trigger was saved as it is"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "reference",
+                              "milliseconds"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ],
+                        "description": "A condition that starts a run on its own: an event trigger, or a cron or every schedule"
+                      },
+                      "description": "For a definition that starts runs on its own, its triggers in the order its document names them: a workflow may have an event trigger, a cron schedule and an every schedule, each kept and matched on its own"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "When the definition was created, in ISO 8601 UTC"
+                    },
+                    "created_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the definition, by id and name"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "description": "When the definition last changed, in ISO 8601 UTC"
+                    },
+                    "retired_at": {
+                      "type": "string",
+                      "description": "When the definition was retired, in ISO 8601 UTC"
+                    },
+                    "source": {
+                      "type": "string",
+                      "description": "The definition document"
+                    },
+                    "overview": {
+                      "type": "string",
+                      "description": "The overview its author wrote: Markdown for the person who runs the business, kept as written with this version"
+                    },
+                    "diagram": {
+                      "type": "string",
+                      "description": "The diagram its author gave a function with this version: Mermaid source of a flowchart or a state diagram of how it works, or the word none where a picture would add nothing; left out for a workflow and for a version saved without one"
+                    },
+                    "triggers_since": {
+                      "type": "string",
+                      "description": "For an active definition with triggers, the id of the record that saved its current version: from that record on, what its triggers start is a run of this version"
+                    },
+                    "standing": {
+                      "type": "object",
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: for a recall function, the view it keeps, with its state (live, rebuilding, waiting or stalled), its version, its checkpoint, the events folded and how far it lags the playbook"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "string",
+                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                        },
+                        "lately": {
+                          "type": "string",
+                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "What the page of the subject renders when it is read, each block it has"
                     },
                     "used_by": {
                       "type": "array",
@@ -11680,7 +12247,7 @@
       "get": {
         "operationId": "get_run",
         "summary": "Get run",
-        "description": "Reads one run of the playbook by its id: the definition and version that ran, who started it and when, its status, and its output or why it did not succeed, with the record its type keeps, such as the prompt and tokens of a reasoning function. A run is started until it ends as succeeded, rejected or failed. Use it to tell the person how a run ended; list_playbook_events with its run_id shows each step and tool call of the run. `run_id` is the id run_definition answered with or was given.",
+        "description": "Reads one run of the playbook by its id: the definition and version that ran, who started it and when, its status, and its output or why it did not succeed, with the record its type keeps, such as the prompt and tokens of a reasoning function. A run is started until it ends as succeeded, rejected or failed. Use it to tell the person how a run ended; list_playbook_events with its run_id shows each step and tool call of the run. A run whose definition has a page answers page.result. `run_id` is the id run_definition answered with or was given.",
         "tags": [
           "runs"
         ],
@@ -12041,6 +12608,21 @@
                     "record": {
                       "type": "object",
                       "description": "What the runtime adapter recorded: of the run that succeeded, of what a rejected run did before it was rejected, such as the tokens a model call used, or of the work it started that finishes later"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "string",
+                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                        },
+                        "lately": {
+                          "type": "string",
+                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "What the page of the subject renders when it is read, each block it has"
                     }
                   },
                   "required": [
@@ -12053,7 +12635,7 @@
                     "started_by"
                   ],
                   "additionalProperties": false,
-                  "description": "One run of a definition with an input, how it ended, and what its runtime adapter recorded"
+                  "description": "One run as get_run reads it: how it ended, what its runtime adapter recorded, and its page where its definition has one"
                 }
               }
             }
@@ -13211,7 +13793,7 @@
       "get": {
         "operationId": "get_playbook_analytics",
         "summary": "Get playbook analytics",
-        "description": "Counts what the runs of the playbook did over a window of days in UTC: how many succeeded, failed or were rejected, the tokens their models used, and how long they took at the median and the 95th percentile, for the window, for each day of it and for each definition. Use it when the person asks how the playbook is doing; list_runs lists the runs themselves. `days` reads the last 7, 14 or 30 days, or `from` and `to` the days between them, and `type` and `name` keep the runs of one definition.",
+        "description": "Counts what the runs of the playbook did over a window of days in UTC: how many succeeded, failed or were rejected, the tokens their models used, what those model calls cost in US dollars, and how long they took at the median and the 95th percentile, for the window and for each day of it, and the runs, tokens and cost of each definition. The cost is null where no run recorded one, as when the model gateway answers no cost. Use it when the person asks how the playbook is doing; list_runs lists the runs themselves. `days` reads the last 7, 14 or 30 days, or `from` and `to` the days between them, and `type` and `name` keep the runs of one definition.",
         "tags": [
           "analytics"
         ],
@@ -13359,6 +13941,18 @@
                       "additionalProperties": false,
                       "description": "The tokens used by the runs that recorded them, a rejected run included; 0 where no run recorded a number"
                     },
+                    "cost_usd": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "What the model calls of the runs cost in US dollars, a rejected run included, summed over the runs that recorded a cost; null when none did, as where the model gateway answers no cost"
+                    },
                     "duration_ms": {
                       "anyOf": [
                         {
@@ -13456,6 +14050,18 @@
                             "additionalProperties": false,
                             "description": "The tokens used by the runs that recorded them, a rejected run included; 0 where no run recorded a number"
                           },
+                          "cost_usd": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What the model calls of the runs cost in US dollars, a rejected run included, summed over the runs that recorded a cost; null when none did, as where the model gateway answers no cost"
+                          },
                           "duration_ms": {
                             "anyOf": [
                               {
@@ -13489,6 +14095,7 @@
                           "day",
                           "runs",
                           "tokens",
+                          "cost_usd",
                           "duration_ms"
                         ],
                         "additionalProperties": false
@@ -13512,12 +14119,53 @@
                             "type": "integer",
                             "minimum": 0,
                             "description": "How many of its runs ended"
+                          },
+                          "tokens": {
+                            "type": "object",
+                            "properties": {
+                              "input": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "The input tokens the models used"
+                              },
+                              "output": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "The output tokens the models used"
+                              },
+                              "cached": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "description": "The part of input read from the model provider’s cache"
+                              }
+                            },
+                            "required": [
+                              "input",
+                              "output",
+                              "cached"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The tokens used by the runs that recorded them, a rejected run included; 0 where no run recorded a number"
+                          },
+                          "cost_usd": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What the model calls of the runs cost in US dollars, a rejected run included, summed over the runs that recorded a cost; null when none did, as where the model gateway answers no cost"
                           }
                         },
                         "required": [
                           "type",
                           "name",
-                          "runs"
+                          "runs",
+                          "tokens",
+                          "cost_usd"
                         ],
                         "additionalProperties": false
                       },
@@ -13528,6 +14176,7 @@
                     "days",
                     "runs",
                     "tokens",
+                    "cost_usd",
                     "duration_ms",
                     "by_day",
                     "by_function"
@@ -16391,7 +17040,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
@@ -16401,6 +17050,7 @@
                 "computation-function",
                 "recall-function",
                 "prediction-function",
+                "page",
                 "workflow",
                 "templates",
                 "first-playbook",

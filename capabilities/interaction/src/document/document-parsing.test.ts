@@ -38,7 +38,7 @@ describe('an interaction function definition', () => {
   it('reads a request that names no way to its party as one for an agent, keeping where the way is unsaid for its save', () => {
     const parsed = requestDocumentOf(approvalDocument([]));
 
-    expect([parsed.route, parsed.heldForAnAgent]).toEqual([undefined, { said: false, line: 2 }]);
+    expect([parsed.route, parsed.heldForAnAgent]).toEqual([undefined, { said: false, line: 1 }]);
   });
 
   it('refuses a deliver that is neither agent nor the block of a tool', () => {
@@ -93,11 +93,11 @@ describe('a definition that names neither the tool it calls nor the party it ask
       problemsOf('---\n---\nHello'),
     ]).toEqual([
       [
-        'Line 2, /to: to is required, the party the request goes to, unless the function asks a system with call',
-        'Line 2, /expires: expires is required, how long the request waits, unless the function asks a system with call',
+        'Line 1, /to: to is required, the party the request goes to, unless the function asks a system with call',
+        'Line 1, /expires: expires is required, how long the request waits, unless the function asks a system with call',
       ],
       [
-        'Line 2, /expires: expires is required, how long the request waits, unless the function asks a system with call',
+        'Line 1, /expires: expires is required, how long the request waits, unless the function asks a system with call',
       ],
       [
         'Line 2: The front matter is empty; it names at least the tool it calls, or the party it goes to and when it expires',

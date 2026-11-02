@@ -111,7 +111,7 @@ const runs: readonly (readonly [string, readonly Written[]])[] = [
       finished('run_failed', '2026-10-01T09:00:01.000Z'),
       started('triage', '2026-10-01T10:00:00.000Z'),
       finished('attempt_resumed', '2026-10-01T10:00:00.100Z', { attempt: 2 }),
-      finished('run_succeeded', '2026-10-01T10:00:00.250Z', { output: 'ok', record: { usage } }),
+      finished('run_succeeded', '2026-10-01T10:00:00.250Z', { output: 'ok', record: { usage, cost_usd: 0.0123 } }),
     ],
   ],
   [
@@ -132,7 +132,10 @@ const runs: readonly (readonly [string, readonly Written[]])[] = [
     'rejected-with-usage',
     [
       started('triage', '2026-10-01T13:00:00.000Z'),
-      finished('run_rejected', '2026-10-01T13:00:01.000Z', { rejection: unavailable, record: { usage } }),
+      finished('run_rejected', '2026-10-01T13:00:01.000Z', {
+        rejection: unavailable,
+        record: { usage, cost_usd: 0.0004 },
+      }),
     ],
   ],
   [
@@ -172,10 +175,10 @@ function withoutTheProjection(database: LedgerDatabase): Layer.Layer<Ledger> {
 }
 
 function lineOf(group: RunOutcomeGroup): string {
-  const { day, definitionType: type, name, status, inputTokens, outputTokens, cachedTokens } = group;
+  const { day, definitionType: type, name, status, inputTokens, outputTokens, cachedTokens, costMicroUsd } = group;
   const durations = group.durations.toSorted((left, right) => left - right).join(' ');
   const tokens = `${inputTokens} ${outputTokens} ${cachedTokens}`;
-  return `${day} ${type}/${name} ${status} ${group.runs} [${durations}] ${tokens}`;
+  return `${day} ${type}/${name} ${status} ${group.runs} [${durations}] ${tokens} ${String(costMicroUsd)}`;
 }
 
 async function outcomesIn(ledger: Ledger['Service']): Promise<readonly string[]> {
@@ -186,11 +189,11 @@ async function outcomesIn(ledger: Ledger['Service']): Promise<readonly string[]>
 }
 
 const kept = [
-  '2026-10-01 reasoning/triage rejected 2 [] 1200 300 1000',
-  '2026-10-01 reasoning/triage succeeded 3 [100 250 500] 1200 300 1000',
-  '2026-10-01 workflow/approval succeeded 1 [86400000] 0 0 0',
-  '2026-10-02 / failed 1 [] 0 0 0',
-  '2026-10-02 reasoning/draft started 1 [] 0 0 0',
+  '2026-10-01 reasoning/triage rejected 2 [] 1200 300 1000 400',
+  '2026-10-01 reasoning/triage succeeded 3 [100 250 500] 1200 300 1000 12300',
+  '2026-10-01 workflow/approval succeeded 1 [86400000] 0 0 0 null',
+  '2026-10-02 / failed 1 [] 0 0 0 null',
+  '2026-10-02 reasoning/draft started 1 [] 0 0 0 null',
 ];
 
 interface Store {

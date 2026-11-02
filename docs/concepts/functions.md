@@ -20,9 +20,9 @@ Real work often combines types. A budget review might recall the last decisions,
 
 ## Availability
 
-Hosted Auto runs reasoning, interaction, computation and recall functions, and workflows. Your agent lists the definition types its connection supports.
+Hosted Auto runs every function type, reasoning, interaction, prediction, recall and computation functions, and workflows, and pages present the results of both. Your agent lists the definition types its connection supports.
 
-The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
+The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
 These are planned and not available yet:
 
@@ -96,3 +96,13 @@ The person who runs Auto decides which tool servers each playbook may use. A too
 - [Give a function tools](../guides/tools.md) walks through finding a tool, trying it and naming it in a function.
 - [Reasoning function format](../reference/reasoning-format.md#tools) gives the rules for a run that calls tools, including when it is not run again.
 - The [MCP reference](../reference/mcp.md) covers the connection your agent uses to reach Auto.
+
+## Pages
+
+A page is not a function: it never runs. It says how a workflow, a function or the whole playbook presents its results to the person who runs the business, so Auto Studio, a chat and an agent show the same words. Its `result` shows one run, with a first line that serves as the run's headline, and its `lately` shows the runs so far, with charts, through views its fold keeps of the playbook's events.
+
+For example, a page of the workflow that drafts the morning's social posts lists each run's posts with a link to each, and charts the posts of each day and of each channel since the workflow began.
+
+Save a page for any workflow or function whose results the person will look at again and again. A subject has one page at a time.
+
+- [Page format](../reference/page-format.md) describes the document, its templates and its charts.

@@ -10,6 +10,7 @@ export const groupFields = {
   input_tokens: Schema.Number,
   output_tokens: Schema.Number,
   cached_tokens: Schema.Number,
+  cost_micro_usd: Schema.NullOr(Schema.Number),
 };
 
 export interface GroupRow {
@@ -21,6 +22,7 @@ export interface GroupRow {
   readonly input_tokens: number;
   readonly output_tokens: number;
   readonly cached_tokens: number;
+  readonly cost_micro_usd: number | null;
   readonly durations: readonly number[];
 }
 
@@ -34,6 +36,7 @@ export function groupOf(row: GroupRow): RunOutcomeGroup {
     inputTokens: row.input_tokens,
     outputTokens: row.output_tokens,
     cachedTokens: row.cached_tokens,
+    costMicroUsd: row.cost_micro_usd,
     durations: row.durations,
   };
 }

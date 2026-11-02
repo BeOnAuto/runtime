@@ -159,7 +159,7 @@ export function readFrontMatter(
     return Result.fail(rootIssue(firstLine, rejection));
   }
   const issues: DocumentIssue[] = [];
-  const lines = new Map<string, number>([['', firstLine]]);
+  const lines = new Map<string, number>([['', firstLine - 1]]);
   const value = objectOf(
     () => contents,
     { pointer: '', depth: 0, line: firstLine },

@@ -1,3 +1,4 @@
+import { lagOf } from '@on.auto/definitions';
 import { counted, quoted } from '@on.auto/phrasing';
 import type { KeptView, StallCause, ViewStall } from '@on.auto/workflow-host';
 
@@ -22,16 +23,10 @@ const wordsOfStall: Readonly<Record<StallCause, string>> = {
   crash: 'its fold broke the worker that ran it, every time it was tried',
   size: `the view it folded took more than the ${recallBounds.mostViewBytes} bytes a view may`,
   schema: "the view it folded did not match the view's schema",
+  shape: 'the views it folded did not match their shapes',
   unfit: 'its fold answered a view that is not JSON, or one nested deeper than 512 levels',
   refused: 'its module does not load on this server',
 };
-
-export function lagOf(newestAt: string | undefined, checkpointAt: string | null): number | undefined {
-  if (newestAt === undefined || checkpointAt === null) {
-    return undefined;
-  }
-  return Math.max(0, Date.parse(newestAt) - Date.parse(checkpointAt));
-}
 
 export function lagInWords(lag: number | undefined): string {
   const unit = units.find(({ per }) => lag !== undefined && lag >= per);

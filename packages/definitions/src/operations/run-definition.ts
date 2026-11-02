@@ -3,7 +3,7 @@ import { Effect, Option, Schema } from 'effect';
 
 import { attemptKeyOf, LiveAttempts } from '../attempts/live-attempts.ts';
 import type { Capability } from '../capability/capability.ts';
-import { knownCapabilities } from '../capability/known-capabilities.ts';
+import { knownRunningCapabilities, runningOf } from '../capability/known-capabilities.ts';
 import { runPlainLanguage } from '../plain-language/run-words.ts';
 import { RunIdInputField, InputField, DefinitionNameField } from './definition-fields.ts';
 import { newRunId } from './run-access.ts';
@@ -21,7 +21,7 @@ const description = [
 ].join(' ');
 
 export function defineRunDefinition(capabilities: readonly Capability[]) {
-  const known = knownCapabilities(capabilities);
+  const known = knownRunningCapabilities(capabilities);
   return known.publish(
     defineCommand('playbook', {
       name: 'run_definition',
@@ -53,7 +53,7 @@ export function defineRunDefinition(capabilities: readonly Capability[]) {
           : live.value.attempt(key, requested);
         return yield* withRunPageInStudio(attempted);
       }),
-      plainLanguage: runPlainLanguage(capabilities),
+      plainLanguage: runPlainLanguage(runningOf(capabilities), capabilities),
     }),
   );
 }

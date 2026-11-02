@@ -3,6 +3,7 @@ import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
+import { pagesRetiredWith } from '../page/subject-retirement.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { DefinitionSchema } from '../registry/definition.ts';
 import { DefinitionNameField } from './definition-fields.ts';
@@ -17,7 +18,7 @@ export function defineRetireDefinition(capabilities: readonly Capability[]) {
       name: 'retire_definition',
       title: 'Retire definition',
       description: [
-        'Retires a function or workflow definition for good and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it.',
+        'Retires a function, workflow or page for good and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it.',
         'Use it only when the person asks to retire that definition; update_definition changes it instead.',
         '`type` and `name` say which definition, and retiring one already retired changes nothing.',
       ].join(' '),
@@ -29,11 +30,9 @@ export function defineRetireDefinition(capabilities: readonly Capability[]) {
       reasons: ['not_found', 'conflict'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
-        return yield* answeredDefinition(
-          capability,
-          known.types,
-          yield* recordInRegistry(capability, { type: 'retire', name }),
-        );
+        const retired = yield* recordInRegistry(capability, { type: 'retire', name });
+        yield* pagesRetiredWith(capabilities, { type, name });
+        return yield* answeredDefinition(capability, known.usingTypes, retired);
       }),
       plainLanguage: {
         task: `retire a ${words.kinds}`,

@@ -112,7 +112,10 @@ describe('the runs of a reasoning function definition over HTTP', () => {
 
     expect(await running('summary', { input: { text: 7 } })).toMatchObject({
       status: 422,
-      body: { reason: 'invalid_input', errors: [{ pointer: '/input/text', detail: 'text: expected text.' }] },
+      body: {
+        reason: 'invalid_input',
+        errors: [{ pointer: '/input/text', detail: 'text: expected text; it was given a number.' }],
+      },
     });
     expect(server.modelCalls()).toBe(0);
   });

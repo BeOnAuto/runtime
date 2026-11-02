@@ -333,7 +333,7 @@ Saving a recall function, or a new version of one, builds its view from the star
 
 ### What a run read
 
-A run never waits for the view: it reads what the playbook has folded so far. Its record says where that is, so a caller who recorded an event a moment ago and does not see it can tell why:
+A run reads its view once the view has folded what the playbook had recorded when the run started, so it sees every run that ended before it, the one in the step before among them. That takes moments, and a view that has not caught up within 3 seconds is read as far as it has folded. A view still being built is refused as above, without waiting. Its record says how far the view had read:
 
 | Record field         | What it says                                                                   |
 | -------------------- | ------------------------------------------------------------------------------ |

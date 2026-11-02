@@ -32,7 +32,7 @@ function timeOf({ time }: DatasetData, { event }: PageEvent): Read<number> {
   }
   const where = time === eventTime ? 'as an event' : `at ${time}`;
   return {
-    refusal: `Its time ${where} is not an ISO 8601 time with its offset, on a day of the calendar from 0000 to 9999 and in no leap second`,
+    refusal: `Its time ${where} is not an ISO 8601 date, or date and time with its offset, on a day of the calendar from 0000 to 9999 and in no leap second`,
   };
 }
 

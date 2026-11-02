@@ -22,6 +22,7 @@ const EndedSchema = factOf(
     status: Schema.Literals(['succeeded', 'failed', 'rejected']),
     ms: Schema.NullOr(Schema.Int),
     tokens: Schema.NullOr(Schema.Int),
+    cost: Schema.optionalKey(Schema.Int),
     note: Schema.optionalKey(Schema.String),
   }),
   ActedContextSchema,
@@ -68,13 +69,15 @@ function tallied(row: RunOutcome | undefined, fact: typeof TalliedSchema.Type): 
       inputTokens: null,
       outputTokens: null,
       cachedTokens: null,
+      costMicroUsd: null,
     };
   }
   if (row === undefined) {
     return undefined;
   }
-  const { status, ms, tokens } = fact.data;
-  return { ...row, status, durationMs: ms, inputTokens: tokens, outputTokens: tokens, cachedTokens: tokens };
+  const { status, ms, tokens, cost = null } = fact.data;
+  const spent = { inputTokens: tokens, outputTokens: tokens, cachedTokens: tokens, costMicroUsd: cost };
+  return { ...row, status, durationMs: ms, ...spent };
 }
 
 export const runTallies: RunOutcomeMapping = {

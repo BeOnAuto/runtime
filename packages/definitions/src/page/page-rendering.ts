@@ -1,0 +1,83 @@
+import type { Schema } from 'effect';
+
+import type { RunRejectionShown, RunShown, SubjectShown } from '../capability/definition-kinds.ts';
+import { recordOf } from '../shapes/shape-values.ts';
+import type { RenderClock } from '../template/render-clock.ts';
+import type { ParsedTemplate } from '../template/template-parsing.ts';
+import type { PageViews } from './page-document.ts';
+import { shown } from './rendered-blocks.ts';
+
+export interface ReadMoment {
+  readonly today: string;
+  readonly now: string;
+  readonly clock: RenderClock;
+}
+
+export type ViewsShown =
+  | { readonly state: 'live'; readonly views: Schema.Json }
+  | { readonly state: 'building' }
+  | { readonly state: 'stalled' };
+
+export const viewsBeingBuilt = "The figures on this page are being worked out from the playbook's history.";
+
+export const viewsStalled =
+  'The figures on this page stopped at an event they could not take, and wait for a corrected page.';
+
+export const runFailed = 'The run failed inside the runtime.';
+
+function subjectVariables({ type, name, description, version }: SubjectShown): Schema.JsonObject {
+  return { type, name, description, version };
+}
+
+function rejectedWords({ reason, kind, detail }: RunRejectionShown): string {
+  const sentence = `The run was rejected as ${reason}${kind === undefined ? '' : `, ${kind}`}.`;
+  return detail === undefined ? sentence : `${sentence} ${detail}`;
+}
+
+export function resultShown(parsed: ParsedTemplate, run: RunShown, subject: SubjectShown, moment: ReadMoment): string {
+  if (run.status === 'failed') {
+    return runFailed;
+  }
+  if (run.status === 'rejected') {
+    return rejectedWords(run.rejection);
+  }
+  const variables = {
+    output: run.output,
+    run: { status: run.status, started: run.started, ended: run.ended, version: run.version },
+    subject: subjectVariables(subject),
+    today: moment.today,
+    now: moment.now,
+  };
+  return shown(parsed, { variables, clock: moment.clock, stopped: 'The page could not show this run:' });
+}
+
+function viewsOf(kept: Schema.Json, declared: PageViews): Schema.JsonObject {
+  const given = Object.entries(recordOf(kept));
+  return Object.fromEntries(
+    Object.keys(declared).map((name) => [
+      name,
+      given.find(([each]: readonly [string, Schema.Json]) => each === name)?.[1] ?? null,
+    ]),
+  );
+}
+
+export function latelyShown(
+  parsed: ParsedTemplate,
+  views: ViewsShown,
+  { declared, subject }: { readonly declared: PageViews; readonly subject: SubjectShown },
+  moment: ReadMoment,
+): string {
+  if (views.state === 'building') {
+    return viewsBeingBuilt;
+  }
+  if (views.state === 'stalled') {
+    return viewsStalled;
+  }
+  const variables = {
+    views: viewsOf(views.views, declared),
+    subject: subjectVariables(subject),
+    today: moment.today,
+    now: moment.now,
+  };
+  return shown(parsed, { variables, clock: moment.clock, stopped: 'The page could not show its figures:' });
+}

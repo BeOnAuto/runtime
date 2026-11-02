@@ -49,24 +49,28 @@ async function savedAndRun(served: typeof linked): Promise<readonly (string | un
       dispatch(updateDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: '{"greeting": "Hi"}' })),
     ),
   );
+  const unchanged = await run(
+    served(
+      dispatch(updateDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet', source: '{"greeting": "Hi"}' })),
+    ),
+  );
   const ran = await run(
     served(dispatch(runDefinition, toAlpha(acmeAdmin, { type: 'echo', name: 'greet', run_id: runId }))),
   );
-  return [created, updated, ran].map((outcome) => studioOf(outcome));
+  return [created, updated, unchanged, ran].map((outcome) => studioOf(outcome));
 }
 
 describe('the pages in Studio of what a playbook saves and runs', () => {
-  it("are a created and an updated definition's page in its playbook, and a run's page", async () => {
-    const definitionPage = pageOf({ kind: 'definition', playbook: 'alpha', type: 'echo', name: 'greet' });
-
+  it("are a definition's page at its version, saying whether it was created or updated and nothing where an update changed nothing, and a run's page", async () => {
     expect(await savedAndRun(linked)).toEqual([
-      definitionPage,
-      definitionPage,
+      pageOf({ kind: 'definition', playbook: 'alpha', type: 'echo', name: 'greet', version: 1, saved: 'created' }),
+      pageOf({ kind: 'definition', playbook: 'alpha', type: 'echo', name: 'greet', version: 2, saved: 'updated' }),
+      pageOf({ kind: 'definition', playbook: 'alpha', type: 'echo', name: 'greet', version: 2 }),
       pageOf({ kind: 'run', playbook: 'alpha', run: runId }),
     ]);
   });
 
   it("are left out where the server serving the call does not know Studio's address", async () => {
-    expect(await savedAndRun(asDispatched)).toEqual([undefined, undefined, undefined]);
+    expect(await savedAndRun(asDispatched)).toEqual([undefined, undefined, undefined, undefined]);
   });
 });

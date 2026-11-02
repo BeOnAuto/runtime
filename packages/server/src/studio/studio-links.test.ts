@@ -43,7 +43,12 @@ function studioOf(answer: unknown): string | undefined {
 
 function pagesOf(studioWithServer: string): readonly string[] {
   const playbook = `${studioWithServer}&src=agent&playbook=alpha`;
-  return [playbook, `${playbook}&reasoning=summary`, `${playbook}&reasoning=summary`, `${playbook}&run=${runId}`];
+  return [
+    playbook,
+    `${playbook}&reasoning=summary&because=created&version=1`,
+    `${playbook}&reasoning=summary&because=updated&version=2`,
+    `${playbook}&run=${runId}`,
+  ];
 }
 
 describe('the links to Studio in what the runtime answers over HTTP', () => {

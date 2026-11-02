@@ -93,4 +93,4 @@ The two workflow runs have different run ids and use the same saved definitions.
 - If a step fails, inspect its error and input before starting a new run. Check that each function works on its own.
 - If the agent cannot find the workflow, check the organization and playbook it is using.
 
-[Run a workflow on a schedule or event](../guides/triggers.md) shows how to start work automatically. [Workflows and runs](../concepts/workflows.md) explains how Auto records its progress.
+[Run a workflow on a schedule or event](../guides/triggers.md) shows how to start work automatically, and how to give the workflow a page that shows each run's result and the runs so far. [Workflows and runs](../concepts/workflows.md) explains how Auto records its progress.

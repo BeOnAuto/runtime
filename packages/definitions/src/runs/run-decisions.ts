@@ -1,6 +1,7 @@
 import { Conflict, NotFound, type RunCancelled, type Rejection } from '@on.auto/operations';
 import { Equal, Result } from 'effect';
 
+import { endingOfADeadAttempt } from '../cancellation/dead-attempt-endings.ts';
 import { cancelledAsAsked, decideAnswer, decideCall, decideWork, type AdmitsFact } from '../run-work/work-decisions.ts';
 import type {
   RunCancel,
@@ -18,6 +19,7 @@ import {
   awaitsSettlement,
   cancelBeforeStartOf,
   changedNothing,
+  endsWithinItsCall,
   hasFinalResult,
   isRunning,
   mayHaveChangedSomething,
@@ -252,10 +254,13 @@ function cancelOfARun(cancel: RunCancel, run: RecordedRunState): Decision {
   if (!isRunning(run)) {
     return Result.fail(endedBeforeCancelling);
   }
-  if (!takesSettlement(run) && !run.resumes && cancel.byItsCaller !== true) {
+  const withinItsCall = endsWithinItsCall(run);
+  if (withinItsCall && cancel.byItsCaller !== true) {
     return Result.fail(runsWithinItsCall);
   }
-  return run.cancel === undefined ? Result.succeed([cancelRequested(cancel)]) : nothingToRecord;
+  const asked = run.cancel === undefined ? [cancelRequested(cancel)] : [];
+  const ended = withinItsCall && cancel.attemptDied === true ? endingOfADeadAttempt(run, run.cancel ?? cancel) : [];
+  return Result.succeed([...asked, ...ended]);
 }
 
 function decideCancel(cancel: RunCancel, state: RunStreamState): Decision {

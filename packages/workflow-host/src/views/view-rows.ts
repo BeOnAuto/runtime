@@ -63,6 +63,7 @@ const StallCauseSchema = Schema.Literals([
   'unfit',
   'size',
   'schema',
+  'shape',
   'refused',
   'time',
   'memory',

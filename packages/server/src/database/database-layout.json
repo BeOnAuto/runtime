@@ -1,5 +1,5 @@
 {
-  "layout": 7,
+  "layout": 8,
   "catalog": [
     {
       "name": "conversations_3",
@@ -102,12 +102,12 @@
       "sql": "CREATE INDEX recorded_content_heads_by_upload ON recorded_content_heads (playbook_key, upload_id)"
     },
     {
-      "name": "run_outcomes_4",
-      "sql": "CREATE TABLE run_outcomes_4 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, started_day TEXT, started_at TEXT, last_started_at TEXT, definition_type TEXT, name TEXT, status TEXT, duration_ms INTEGER, input_tokens INTEGER, output_tokens INTEGER, cached_tokens INTEGER, PRIMARY KEY (playbook_key, row_key))"
+      "name": "run_outcomes_5",
+      "sql": "CREATE TABLE run_outcomes_5 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, started_day TEXT, started_at TEXT, last_started_at TEXT, definition_type TEXT, name TEXT, status TEXT, duration_ms INTEGER, input_tokens INTEGER, output_tokens INTEGER, cached_tokens INTEGER, cost_micro_usd INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "run_outcomes_4_by_playbook_and_day",
-      "sql": "CREATE INDEX run_outcomes_4_by_playbook_and_day ON run_outcomes_4 (playbook_key, started_day)"
+      "name": "run_outcomes_5_by_playbook_and_day",
+      "sql": "CREATE INDEX run_outcomes_5_by_playbook_and_day ON run_outcomes_5 (playbook_key, started_day)"
     },
     {
       "name": "workflow_calls",

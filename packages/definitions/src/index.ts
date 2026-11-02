@@ -1,6 +1,13 @@
 export { defineCancelRun } from './cancellation/cancel-run.ts';
 export { deferredCanceller, type SettleCancelled } from './cancellation/deferred-cancels.ts';
-export { runCanceller, type CancelRun, type CancelReceipt, type CancelRequest } from './cancellation/run-cancels.ts';
+export {
+  runCanceller,
+  type CancelOfALiveAttempt,
+  type CancelRun,
+  type CancelReceipt,
+  type CancelRequest,
+  type LookAgain,
+} from './cancellation/run-cancels.ts';
 export { defineCreateDefinition } from './operations/create-definition.ts';
 export { defineRunDefinition } from './operations/run-definition.ts';
 export { defineGetDefinition } from './operations/get-definition.ts';
@@ -248,3 +255,21 @@ export { publishedOutputOf } from './shapes/published-output.ts';
 export { seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
 export { rangeHolds } from './shapes/shape-values.ts';
 export type { CalledDefinition, CallingStep } from './used-by/called-definitions.ts';
+export {
+  lagOf,
+  viewStandingOf,
+  type KeptViewState,
+  type KeptViewStall,
+  type KeptViews,
+} from './capability/view-standing.ts';
+export { pageDefinitionType, pageViewsKeyOf } from './page/page-subjects.ts';
+export { PageDetailsSchema, pageDetailsIn, type PageDetails } from './page/page-details.ts';
+export { shapedViewsSchemaOf } from './shapes/shaped-views.ts';
+export type {
+  DefinitionKind,
+  PresentedDefinition,
+  PresentedPage,
+  Presenting,
+  RunShown,
+  SubjectShown,
+} from './capability/definition-kinds.ts';

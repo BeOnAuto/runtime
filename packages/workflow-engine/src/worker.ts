@@ -1,5 +1,5 @@
 export { mostValueDepth, type Json, type JsonObject } from './dsl/json.ts';
-export type { FoldHost, ViewCheck } from './folds/fold-page.ts';
+export type { FoldHost, ViewCheck, ViewRefusal } from './folds/fold-page.ts';
 export { foldAnswerOf, type FoldAnswerData } from './folds/fold-answer.ts';
 export { progressOf, type FoldProgress } from './folds/fold-progress.ts';
 export type { CheckAnswer, CheckIssue, CheckJob } from './jobs/check-messages.ts';

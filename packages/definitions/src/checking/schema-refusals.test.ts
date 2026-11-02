@@ -63,7 +63,7 @@ describe('the words of the rule a value broke', () => {
 });
 
 describe('the words of a value of another kind', () => {
-  it('says what a field of another kind takes, in the words of its schema', () => {
+  it('says what a field of another kind takes, in the words of its schema, then the kind it was given', () => {
     expect([
       fieldWords({ type: 'integer', minimum: 1, maximum: 100 }, 2.5),
       fieldWords({ type: 'number' }, 'many'),
@@ -75,13 +75,37 @@ describe('the words of a value of another kind', () => {
       fieldWords({ type: 'object', required: ['city'], properties: { city: { type: 'string' } } }, 'Paris'),
     ]).toEqual([
       'field: expected a whole number, from 1 to 100.',
-      'field: expected a number.',
-      'field: expected a date.',
-      'field: expected yes or no.',
-      'field: expected text or nothing.',
+      'field: expected a number; it was given text.',
+      'field: expected a date; it was given a number.',
+      'field: expected yes or no; it was given text.',
+      'field: expected text or nothing; it was given a number.',
       'field: expected exactly approve.',
-      'field, The total: expected a whole number.',
-      'field: expected a record with: city (text).',
+      'field, The total: expected a whole number; it was given text.',
+      'field: expected a record with: city (text); it was given text.',
+    ]);
+  });
+
+  it('names the kind of a value it was given, a list, a record, yes or no or nothing, where the schema takes none of that kind', () => {
+    const lines = { type: 'array', items: { type: 'object', properties: { amount: { type: 'integer' } } } };
+
+    expect([
+      fieldWords(lines, { lines: [{ amount: 1 }] }),
+      fieldWords(lines, '[{"amount": 1}]'),
+      fieldWords({ type: 'object' }, [1]),
+      fieldWords({ type: 'string' }, true),
+      fieldWords({ type: 'string' }, null),
+      fieldWords({ enum: ['draft', 'sent'] }, 2),
+      fieldWords({ enum: ['draft', 'sent'] }, 'paid'),
+      fieldWords({ const: 2 }, 3),
+    ]).toEqual([
+      'field: expected a list of records with: amount (a whole number, optional); it was given a record.',
+      'field: expected a list of records with: amount (a whole number, optional); it was given text.',
+      'field: expected a record; it was given a list.',
+      'field: expected text; it was given yes or no.',
+      'field: expected text; it was given nothing.',
+      'field: expected one of: draft, sent; it was given a number.',
+      'field: expected one of: draft, sent.',
+      'field: expected exactly 2.',
     ]);
   });
 });
@@ -153,7 +177,7 @@ describe('the refusal of a value whose fields do not fit', () => {
       }),
     ).toBe(
       'address, then city, The city: expected at least 2 characters. ' +
-        'lines, then item 2, then amount, The amount: expected a whole number. ' +
+        'lines, then item 2, then amount, The amount: expected a whole number; it was given text. ' +
         'totals, then june, A total in cents: expected a whole number.',
     );
     expect(refusalWordsOf(order, { month: 'April 2026', address: { city: 'Paris' }, pair: ['a'] })).toBe(
@@ -233,7 +257,7 @@ describe('the refusal of a value whose schema is read too deep for its words', (
 
 describe('the refusal of a value as a whole', () => {
   it('names the root as what the schema checks', () => {
-    expect(refusalWordsOf({ type: 'object' }, 'x', 'answer')).toBe('The answer: expected a record.');
+    expect(refusalWordsOf({ type: 'object' }, 'x', 'answer')).toBe('The answer: expected a record; it was given text.');
   });
 
   it('says a value is one where the schema allows none, at the field that holds it', () => {

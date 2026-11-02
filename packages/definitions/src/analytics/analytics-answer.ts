@@ -21,6 +21,11 @@ const TokensSchema = Schema.Struct({
     'The tokens used by the runs that recorded them, a rejected run included; 0 where no run recorded a number',
 });
 
+const CostSchema = Schema.NullOr(Schema.Finite.check(Schema.isGreaterThanOrEqualTo(0))).annotate({
+  description:
+    'What the model calls of the runs cost in US dollars, a rejected run included, summed over the runs that recorded a cost; null when none did, as where the model gateway answers no cost',
+});
+
 const DurationSchema = Schema.NullOr(
   Schema.Struct({
     p50: Count.annotate({ description: 'The median duration, in milliseconds' }),
@@ -35,6 +40,7 @@ const DaySchema = Schema.Struct({
   day: Schema.String.annotate({ description: 'The day in UTC, as YYYY-MM-DD' }),
   runs: RunsSchema,
   tokens: TokensSchema,
+  cost_usd: CostSchema,
   duration_ms: DurationSchema,
 });
 
@@ -44,12 +50,15 @@ const FunctionSchema = Schema.Struct({
   }),
   name: Schema.String.annotate({ description: 'The definition name' }),
   runs: Count.annotate({ description: 'How many of its runs ended' }),
+  tokens: TokensSchema,
+  cost_usd: CostSchema,
 });
 
 export const PlaybookAnalyticsSchema = Schema.Struct({
   days: Count.annotate({ description: 'How many days the window holds' }),
   runs: RunsSchema,
   tokens: TokensSchema,
+  cost_usd: CostSchema,
   duration_ms: DurationSchema,
   by_day: Schema.Array(DaySchema).annotate({
     description: 'Every day of the window, oldest first, one with no runs included',
@@ -68,7 +77,11 @@ type Runs = typeof RunsSchema.Type;
 
 type Tokens = typeof TokensSchema.Type;
 
+type Cost = typeof CostSchema.Type;
+
 type Duration = typeof DurationSchema.Type;
+
+const microsInADollar = 1_000_000;
 
 const noRuns: Runs = { total: 0, succeeded: 0, failed: 0, rejected: 0 };
 
@@ -104,6 +117,11 @@ function tokensOf(groups: readonly RunOutcomeGroup[]): Tokens {
   );
 }
 
+function costOf(groups: readonly RunOutcomeGroup[]): Cost {
+  const recorded = groups.flatMap(({ costMicroUsd }) => (costMicroUsd === null ? [] : [costMicroUsd]));
+  return recorded.length === 0 ? null : recorded.reduce((total, micros) => total + micros, 0) / microsInADollar;
+}
+
 function atRank(sorted: readonly number[], percent: number): number {
   const rank = Math.ceil((percent * sorted.length) / 100);
   return Math.max(...sorted.slice(rank - 1, rank));
@@ -114,13 +132,14 @@ export function durationOf(durations: readonly number[]): Duration {
   return sorted.length === 0 ? null : { p50: atRank(sorted, 50), p95: atRank(sorted, 95) };
 }
 
-type Summary = Pick<PlaybookAnalytics, 'runs' | 'tokens' | 'duration_ms'>;
+type Summary = Pick<PlaybookAnalytics, 'runs' | 'tokens' | 'cost_usd' | 'duration_ms'>;
 
 function summaryOf(groups: readonly RunOutcomeGroup[]): Summary {
   const ended = groups.filter(({ status }) => status !== 'started');
   return {
     runs: runsOf(groups),
     tokens: tokensOf(ended),
+    cost_usd: costOf(ended),
     duration_ms: durationOf(ended.flatMap(({ durations }) => durations)),
   };
 }
@@ -129,18 +148,28 @@ function dayIn(
   byDay: ReadonlyMap<string, readonly RunOutcomeGroup[]>,
   day: string,
 ): PlaybookAnalytics['by_day'][number] {
-  const { runs, tokens, duration_ms } = summaryOf(byDay.get(day) ?? []);
-  return { day, runs, tokens, duration_ms };
+  const { runs, tokens, cost_usd, duration_ms } = summaryOf(byDay.get(day) ?? []);
+  return { day, runs, tokens, cost_usd, duration_ms };
+}
+
+interface FunctionGroups {
+  readonly type: string;
+  readonly name: string;
+  readonly groups: readonly RunOutcomeGroup[];
+}
+
+function functionOf({ type, name, groups }: FunctionGroups): FunctionRuns {
+  return { type, name, runs: runsOf(groups).total, tokens: tokensOf(groups), cost_usd: costOf(groups) };
 }
 
 function byFunction(groups: readonly RunOutcomeGroup[]): PlaybookAnalytics['by_function'] {
-  const functions = new Map<string, FunctionRuns>();
-  for (const group of groups) {
+  const functions = new Map<string, FunctionGroups>();
+  for (const group of groups.filter(({ status }) => status !== 'started')) {
     const key = JSON.stringify([group.definitionType, group.name]);
-    const ended = group.status === 'started' ? 0 : group.runs;
-    functions.set(key, { type: group.definitionType, name: group.name, runs: (functions.get(key)?.runs ?? 0) + ended });
+    const kept = functions.get(key) ?? { type: group.definitionType, name: group.name, groups: [] };
+    functions.set(key, { ...kept, groups: [...kept.groups, group] });
   }
-  return [...functions.values()].filter(({ runs }) => runs > 0).toSorted((left, right) => mostRunsFirst(left, right));
+  return [...functions.values()].map((own) => functionOf(own)).toSorted((left, right) => mostRunsFirst(left, right));
 }
 
 export function analyticsOf(window: AnalyticsWindow, groups: readonly RunOutcomeGroup[]): PlaybookAnalytics {

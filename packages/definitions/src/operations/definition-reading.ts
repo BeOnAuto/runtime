@@ -1,7 +1,7 @@
 import type { NotFound, PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { Capability } from '../capability/capability.ts';
+import type { DefinitionKind } from '../capability/definition-kinds.ts';
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import type { Definition, StoredDefinition } from '../registry/definition.ts';
 import { findDefinition } from '../registry/registry-lookup.ts';
@@ -34,17 +34,20 @@ function withUsers(definition: Definition, users: readonly DefinitionUser[]): De
 }
 
 export function answeredDefinition(
-  capability: Capability,
+  capability: DefinitionKind,
   types: readonly string[],
   { registry, stored }: DefinitionInRegistry,
 ): Effect.Effect<Definition, never, PlaybookReader> {
+  if (capability.presents !== undefined) {
+    return Effect.succeed(definitionOf(capability, stored));
+  }
   return Effect.map(registriesWith(types, capability.type, registry), (registries) =>
     withUsers(definitionOf(capability, stored), usersOf(registries, { type: capability.type, name: stored.name })),
   );
 }
 
 export function readDefinition(
-  capability: Capability,
+  capability: DefinitionKind,
   types: readonly string[],
   name: string,
 ): Effect.Effect<ReadDefinition, NotFound, PlaybookReader> {

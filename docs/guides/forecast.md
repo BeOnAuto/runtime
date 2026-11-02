@@ -45,7 +45,7 @@ You should see a document of YAML front matter between `---` lines and nothing a
 ::: details What the document settles
 
 - `predicts`: the `target`, its `period`, its `horizons` (how many periods ahead a question may ask) and its `unit`. Name a `season` when the numbers repeat, such as 52 for weeks over a year or 7 for days over a week. For a total to the end of a period, name `accumulates` in place of `horizons`. `coverage` is how often each range is meant to hold the truth, 0.8 unless you name another.
-- `data`: the events, where each holds its time and its series, how the target is read and aggregated over a period, and the `window` of periods a question reads.
+- `data`: the events, where each holds its time and its series, how the target is read and aggregated over a period, and the `window` of periods a question reads. A number that each period has once, such as a week's revenue, is aggregated as `last`, so that a week recorded again replaces its value rather than adding to it.
 
 [A function document](../reference/prediction-format.md#a-function-document) shows a full example, and [Fields](../reference/prediction-format.md#fields) lists every field.
 
@@ -64,7 +64,7 @@ Ask the "<function name>" function in my "<playbook name>" playbook for
 <series>'s <number> <how many> <periods> ahead.
 ```
 
-The agent runs the function with a question, such as `{ "series": "north", "horizon": 1 }`, and the run returns the forecast at once. Without `horizon`, it forecasts every horizon the function names. The forecast is a series, which Auto Studio draws on the run's page. Read it like this:
+The agent runs the function with a question, such as `{ "series": "north", "horizon": 1 }`, and the run returns the forecast at once. Without `horizon`, it forecasts every horizon the function names. The forecast is a series, which Auto Studio draws on the run's page. A page can name its lines in your words; [The lines on a page](../reference/prediction-format.md#the-lines-on-a-page) shows how. Read it like this:
 
 - `origin` is the last observed period, the one before the period you asked in.
 - The `observed` line holds the last periods of the data up to the origin, twice the longest horizon unless the document's `predicts.history` says how many.
@@ -83,6 +83,7 @@ Nothing needs to be done: every question answers from the dataset as the playboo
 - **A question is refused `history_too_short`.** The series' history is too short for the forecaster to check its own forecasts on. The refusal names the periods the series has and the first period from which the same question answers, so ask again from then.
 - **A question is refused `dataset_not_ready`.** The dataset is still being built from the playbook's history, so ask again once `get_definition` shows it `live`. With `because: stalled`, it stopped at an event its data test could not take; `get_definition` names the event, and a corrected data part starts a dataset of its own.
 - **A question is refused at `/input/series`.** The dataset holds no row of that series in its window. Check the series' name, as the events spell it.
+- **A forecast leaves out a run that just ended.** A question reads the periods before the one it is asked in. A run read by the time it ran is in the current period, so it counts once that period has passed. A run about a period that has ended counts in any question started after the run ended, as [A run that ended a moment ago](../reference/prediction-format.md#a-run-that-ended-a-moment-ago) says, so a workflow that records the period asks in the next step, with no wait or retry. A run still going when the question starts is not counted.
 
 [How a run ends](../reference/prediction-format.md#how-a-run-ends) lists every refusal.
 

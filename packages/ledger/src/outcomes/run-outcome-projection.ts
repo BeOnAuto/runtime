@@ -7,7 +7,7 @@ import {
 } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-const runOutcomesVersion = 4;
+const runOutcomesVersion = 5;
 
 export const runOutcomesTable = `run_outcomes_${runOutcomesVersion}`;
 
@@ -22,6 +22,7 @@ const KeptOutcomeSchema = Schema.Struct({
   input_tokens: Schema.NullOr(Schema.Number),
   output_tokens: Schema.NullOr(Schema.Number),
   cached_tokens: Schema.NullOr(Schema.Number),
+  cost_micro_usd: Schema.NullOr(Schema.Number),
 });
 
 const decodeKept = Schema.decodeUnknownSync(KeptOutcomeSchema);
@@ -39,6 +40,7 @@ function outcomeOf(row: ProjectedRow): RunOutcome {
     inputTokens: kept.input_tokens,
     outputTokens: kept.output_tokens,
     cachedTokens: kept.cached_tokens,
+    costMicroUsd: kept.cost_micro_usd,
   };
 }
 
@@ -54,6 +56,7 @@ function rowOf(outcome: RunOutcome): ProjectedRow {
     input_tokens: outcome.inputTokens,
     output_tokens: outcome.outputTokens,
     cached_tokens: outcome.cachedTokens,
+    cost_micro_usd: outcome.costMicroUsd,
   };
 }
 
@@ -74,6 +77,7 @@ function runOutcomeProjectionOf({ types, rowAfter }: RunOutcomeMapping): KeyedPr
       { name: 'input_tokens', kind: 'integer' },
       { name: 'output_tokens', kind: 'integer' },
       { name: 'cached_tokens', kind: 'integer' },
+      { name: 'cost_micro_usd', kind: 'integer' },
     ],
     indexes: [{ name: 'by_playbook_and_day', columns: ['started_day'] }],
     rowAfter: (row, message) => {

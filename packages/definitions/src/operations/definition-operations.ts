@@ -1,10 +1,10 @@
 import type { Presenter, Registration, RouteRegistration } from '@on.auto/operations';
 
-import type { Capability } from '../capability/capability.ts';
+import type { DefinitionKind } from '../capability/definition-kinds.ts';
 import { runOperations } from '../reading/run-operations.ts';
 import type { CapabilityFacts } from '../run-work/declared-facts.ts';
 import { defineCreateDefinition } from './create-definition.ts';
-import { defineGetDefinition } from './get-definition.ts';
+import { definitionReadings } from './get-definition.ts';
 import { defineListDefinitions } from './list-definitions.ts';
 import { defineRetireDefinition } from './retire-definition.ts';
 import { defineRunDefinition } from './run-definition.ts';
@@ -19,14 +19,14 @@ interface ServedOperation {
 }
 
 export function makeDefinitionOperations(
-  capabilities: readonly Capability[],
+  capabilities: readonly DefinitionKind[],
   facts?: CapabilityFacts,
   presenters?: readonly Presenter[],
 ): readonly ServedOperation[] {
   return [
     defineCreateDefinition(capabilities),
     defineListDefinitions(capabilities),
-    defineGetDefinition(capabilities),
+    ...definitionReadings(capabilities),
     defineUpdateDefinition(capabilities),
     defineRetireDefinition(capabilities),
     defineRunDefinition(capabilities),

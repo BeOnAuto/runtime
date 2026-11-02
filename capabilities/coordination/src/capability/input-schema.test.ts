@@ -75,10 +75,14 @@ describe('a run a caller starts of a workflow whose input schema refuses the inp
         status: 'rejected',
         reason: 'invalid_input',
         kind: 'input_schema',
-        detail: 'seats, How many seats to hold: expected a whole number, at least 1. day: expected text.',
+        detail:
+          'seats, How many seats to hold: expected a whole number, at least 1; it was given text. day: expected text; it was given a number.',
         issues: [
-          { pointer: '/input/seats', detail: 'seats, How many seats to hold: expected a whole number, at least 1.' },
-          { pointer: '/input/day', detail: 'day: expected text.' },
+          {
+            pointer: '/input/seats',
+            detail: 'seats, How many seats to hold: expected a whole number, at least 1; it was given text.',
+          },
+          { pointer: '/input/day', detail: 'day: expected text; it was given a number.' },
         ],
       },
       {

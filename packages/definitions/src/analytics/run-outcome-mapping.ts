@@ -33,21 +33,35 @@ const statusOf: Readonly<Record<Finished['type'], RunOutcomeStatus>> = {
   run_rejected: 'rejected',
 };
 
-const noTokens = { inputTokens: null, outputTokens: null, cachedTokens: null };
+const unspent = { inputTokens: null, outputTokens: null, cachedTokens: null, costMicroUsd: null };
+
+const microsInADollar = 1_000_000;
 
 function dayOf(at: string): string {
   return new Date(Date.parse(at)).toISOString().slice(0, 10);
 }
 
-function countAt(record: unknown, path: readonly string[]): number | null {
-  const found = path.reduce<unknown>(
+function valueAt(record: unknown, path: readonly string[]): unknown {
+  return path.reduce<unknown>(
     (value, key) => (Predicate.isObject(value) && Predicate.hasProperty(value, key) ? value[key] : undefined),
     record,
   );
-  return typeof found === 'number' && Number.isSafeInteger(found) && found >= 0 ? found : null;
 }
 
-type Tokens = Pick<RunOutcome, 'inputTokens' | 'outputTokens' | 'cachedTokens'>;
+function wholeCountOf(value: unknown): number | null {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function countAt(record: unknown, path: readonly string[]): number | null {
+  return wholeCountOf(valueAt(record, path));
+}
+
+function microDollarsAt(record: unknown): number | null {
+  const dollars = valueAt(record, ['cost_usd']);
+  return typeof dollars === 'number' && dollars >= 0 ? wholeCountOf(Math.round(dollars * microsInADollar)) : null;
+}
+
+type Spent = Pick<RunOutcome, 'inputTokens' | 'outputTokens' | 'cachedTokens' | 'costMicroUsd'>;
 
 function sumOf(kept: number | null, spent: number | null): number | null {
   if (kept === null || spent === null) {
@@ -56,11 +70,12 @@ function sumOf(kept: number | null, spent: number | null): number | null {
   return kept + spent;
 }
 
-function tokensAfter(kept: Tokens, record: unknown): Tokens {
+function spentAfter(kept: Spent, record: unknown): Spent {
   return {
     inputTokens: sumOf(kept.inputTokens, countAt(record, ['usage', 'input', 'total'])),
     outputTokens: sumOf(kept.outputTokens, countAt(record, ['usage', 'output', 'total'])),
     cachedTokens: sumOf(kept.cachedTokens, countAt(record, ['usage', 'input', 'cache_read'])),
+    costMicroUsd: sumOf(kept.costMicroUsd, microDollarsAt(record)),
   };
 }
 
@@ -75,7 +90,7 @@ function started(row: RunOutcome | undefined, { context }: Started): RunOutcome 
   const { at, definitionType: type, definitionName: name } = context;
   const again: Attempt = { lastStartedAt: at, status: 'started', durationMs: null };
   return row === undefined
-    ? { startedDay: dayOf(at), startedAt: at, definitionType: type, name, ...again, ...noTokens }
+    ? { startedDay: dayOf(at), startedAt: at, definitionType: type, name, ...again, ...unspent }
     : { ...row, ...again };
 }
 
@@ -85,10 +100,10 @@ function finished(row: RunOutcome | undefined, fact: Finished): RunOutcome {
   const status = statusOf[fact.type];
   if (row === undefined) {
     const notStarted = { startedDay: dayOf(at), startedAt: at, lastStartedAt: at, definitionType: '', name: '' };
-    return { ...notStarted, status, durationMs: null, ...tokensAfter(noTokens, record) };
+    return { ...notStarted, status, durationMs: null, ...spentAfter(unspent, record) };
   }
   const durationMs = status === 'rejected' ? null : durationBetween(row.lastStartedAt, at);
-  return { ...row, status, durationMs, ...tokensAfter(row, record) };
+  return { ...row, status, durationMs, ...spentAfter(row, record) };
 }
 
 function afterTheFact(row: RunOutcome | undefined, fact: RunOutcomeFact): RunOutcome {

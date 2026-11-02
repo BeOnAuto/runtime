@@ -7,7 +7,7 @@ import type { Evaluation, ProgramFailure, ProgramRun } from '../programs/program
 import type { SandboxInstance } from '../programs/sandbox-session.ts';
 import { matchingOf, preparedFilters, type PreparedFilter, type Stopped } from './fold-filters.ts';
 
-export type StallKind = 'raised' | 'work' | 'memory' | 'unfit' | 'size' | 'schema' | 'refused';
+export type StallKind = 'raised' | 'work' | 'memory' | 'unfit' | 'size' | 'schema' | 'shape' | 'refused';
 
 export interface FoldStall {
   readonly at: number;
@@ -50,7 +50,12 @@ export interface FoldedPage {
   readonly views: readonly FoldedView[];
 }
 
-export type ViewCheck = (view: Json) => string | undefined;
+export interface ViewRefusal {
+  readonly kind: 'schema' | 'shape';
+  readonly detail: string;
+}
+
+export type ViewCheck = (view: Json) => ViewRefusal | undefined;
 
 export interface FoldHost {
   readonly now: () => number;
@@ -142,7 +147,7 @@ function answeredStep(text: string, { check }: Prepared, page: FoldPage): Step {
   }
   const value = jsonOfText(text);
   const refused = check?.(value);
-  return refused === undefined ? { view: value } : stalled('schema', refused);
+  return refused === undefined ? { view: value } : stalled(refused.kind, refused.detail);
 }
 
 function exhaustedStep(run: Stopped): Step {

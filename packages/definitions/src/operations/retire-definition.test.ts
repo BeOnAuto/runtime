@@ -94,7 +94,7 @@ describe('retire_definition rejecting', () => {
       status: 'rejected',
       reason: 'invalid_input',
       detail: 'The input does not match the input schema',
-      issues: [{ pointer: '/type', detail: 'Expected a type this server runs: echo or probe' }],
+      issues: [{ pointer: '/type', detail: 'Expected a type of definition this server keeps: echo or probe' }],
     });
   });
 

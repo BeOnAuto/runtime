@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { Json, JsonObject } from '../dsl/json.ts';
 import { foldAnswerOf, foldPageData } from '../folds/fold-answer.ts';
-import type { FoldPage } from '../folds/fold-page.ts';
+import type { FoldPage, ViewCheck } from '../folds/fold-page.ts';
 import { foldProgress, type FoldProgress } from '../folds/fold-progress.ts';
 import type { CheckJob } from '../jobs/check-messages.ts';
 import { answerOf, type OutputCheck } from '../jobs/program-answer.ts';
@@ -245,7 +245,10 @@ describe.each(sourcesUnderTest)('the output checks a loop keeps between jobs on 
       compiled.push(schema);
       return refusingEvery('refused by the check');
     };
-    const ask = served(name, { program: answerOf, checks: { output, view: () => () => 'never asked' } });
+    const ask = served(name, {
+      program: answerOf,
+      checks: { output, view: () => () => ({ kind: 'schema', detail: 'never asked' }) },
+    });
     const string = { context: { type: 'string' } };
     const echo = program('return input;');
 
@@ -266,16 +269,20 @@ describe.each(sourcesUnderTest)('the output checks a loop keeps between jobs on 
 describe.each(sourcesUnderTest)('the view checks a loop keeps between pages on $name instances', ({ name }) => {
   it('compiles the check of a schema once for each schema, and stalls every view that keeps one when it was given no checks', async () => {
     const compiled: Json[] = [];
-    const view = (schema: JsonObject): (() => string) => {
+    const view = (schema: JsonObject): ViewCheck => {
       compiled.push(schema);
-      return () => 'refused by the check';
+      return () => ({ kind: 'shape', detail: 'refused by the check' });
     };
     const ask = served(name, { fold: foldAnswerOf, checks: { output: () => refusingEvery('never asked'), view } });
     const integer = { schema: { type: 'integer' } };
 
     expect(await inTurn(ask, [foldJob(1, [integer, integer]), foldJob(2, [integer])])).toMatchObject([
-      { answer: { views: [{ stall: { message: 'refused by the check' } }, { stall: { kind: 'schema' } }] } },
-      { answer: { views: [{ stall: { kind: 'schema' } }] } },
+      {
+        answer: {
+          views: [{ stall: { kind: 'shape', message: 'refused by the check' } }, { stall: { kind: 'shape' } }],
+        },
+      },
+      { answer: { views: [{ stall: { kind: 'shape' } }] } },
     ]);
     expect(compiled).toEqual([{ type: 'integer' }]);
     expect(await served(name, { fold: foldAnswerOf })(foldJob(3, [integer]))).toMatchObject({

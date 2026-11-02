@@ -1,6 +1,10 @@
 import type { CheckJob } from '@on.auto/workflow-engine/dsl';
 import { Predicate, type Schema } from 'effect';
 
+import type { OutputShape } from '../shapes/output-shape.ts';
+import { outputShapeNames, outputShapeOf } from '../shapes/output-shapes.ts';
+import type { OutputShapeName } from '../shapes/shape-names.ts';
+import { shapedViewsIn, type ShapedViews } from '../shapes/shaped-views.ts';
 import type { Place } from './module-rules.ts';
 
 type Json = Schema.Json;
@@ -186,10 +190,30 @@ export function declarationOf(root: string, schema?: JsonObject): string {
   return [...definitions, `type ${root} = ${typeOf(schema, named)};`].join('\n');
 }
 
+const shapeTypeNames: Readonly<Record<OutputShapeName, string>> = {
+  series: 'Series',
+  categories: 'Categories',
+  table: 'Table',
+  text: 'Text',
+};
+
+const noShapedViews: ShapedViews = new Map();
+
+function shapedViewDeclarations(schema: JsonObject | undefined): string {
+  const shapes = outputShapeNames().map((name) => declarationOf(shapeTypeNames[name], outputShapeOf(name).schema));
+  const fields = [...(shapedViewsIn(schema) ?? noShapedViews)].map(
+    ([name, shape]: readonly [string, OutputShape]) => `${name}?: ${shapeTypeNames[shape.name]};`,
+  );
+  return [...shapes, `type View = { ${fields.join(' ')} };`].join('\n');
+}
+
 const placeTypes: Readonly<Record<Place, readonly (keyof CheckJob['schemas'])[]>> = {
   computation: ['input', 'output'],
   recall: ['view', 'input', 'output'],
+  page: [],
 };
+
+const foldingPlaces: ReadonlySet<Place | undefined> = new Set(['recall', 'page']);
 
 const typeNames: Readonly<Record<keyof CheckJob['schemas'], string>> = {
   input: 'Input',
@@ -200,6 +224,7 @@ const typeNames: Readonly<Record<keyof CheckJob['schemas'], string>> = {
 export function declarationsOf({ module, schemas }: CheckJob): string {
   const types =
     module === undefined ? [] : placeTypes[module.place].map((name) => declarationOf(typeNames[name], schemas[name]));
-  const event = module?.place === 'recall' ? [eventDeclaration] : [];
-  return [jsonType, ...types, ...event].join('\n');
+  const views = module?.place === 'page' ? [shapedViewDeclarations(schemas.view)] : [];
+  const event = foldingPlaces.has(module?.place) ? [eventDeclaration] : [];
+  return [jsonType, ...types, ...views, ...event].join('\n');
 }

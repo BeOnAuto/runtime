@@ -18,7 +18,7 @@ interface ShapeDeclaration {
   readonly further: FurtherCheck;
 }
 
-const shapeAddress = 'https://on.auto/shapes/';
+export const shapeAddress = 'https://on.auto/shapes/';
 
 const mostLabelCharacters = 64;
 

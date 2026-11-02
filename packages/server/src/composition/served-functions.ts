@@ -1,3 +1,5 @@
+import { foldedBeforeItRuns } from '@on.auto/workflow-host';
+
 import type { ProvidedOnceServed } from '../capability-registry/served-ports.ts';
 import type { Settings } from '../settings/settings.ts';
 import type { WorkflowParts } from '../workflows/workflows.ts';
@@ -33,12 +35,14 @@ export async function functionsServedBy(
   const { capability, folders, operations, dueWork } = prediction.provided;
   const projections = await wiring.served({ recall: settings.recall, database }, computation.pool, folders);
   await prediction.servedIn(runtime, projections.store.database);
+  const forecaster = foldedBeforeItRuns({ capability, folders, database: projections.store.database });
   const capabilities = [
     reasoning.capability,
     interaction.capability,
     computation.capability,
     projections.recall,
-    capability,
+    forecaster,
+    projections.page,
   ];
   const { facts, names, record } = factsComposedOf(runtime, capabilities);
   return {

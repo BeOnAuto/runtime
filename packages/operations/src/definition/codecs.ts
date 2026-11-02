@@ -67,7 +67,7 @@ export function outputEncoder<Out extends ObjectSchema>(
 }
 
 function registeredPlainLanguage<In extends ObjectSchema, Out extends ObjectSchema>(
-  { task, attempt, outcome, relayed, remedies = {} }: PlainLanguage<In['Type'], Out['Type']>,
+  { task, attempt, attemptAsOffered, outcome, relayed, remedies = {} }: PlainLanguage<In['Type'], Out['Type']>,
   inputSchema: In,
   outputSchema: Out,
 ): RegisteredPlainLanguage {
@@ -75,7 +75,8 @@ function registeredPlainLanguage<In extends ObjectSchema, Out extends ObjectSche
   const decodeAcceptedInput = Schema.decodeUnknownSync(Schema.toCodecJson(inputSchema));
   const decodeOutput = Schema.decodeUnknownSync(Schema.toCodecJson(outputSchema));
   return {
-    attempt: (input) => Option.match(decodeOfferedInput(input), { onNone: () => task, onSome: attempt }),
+    attempt: (input) =>
+      Option.match(decodeOfferedInput(input), { onNone: () => attemptAsOffered?.(input) ?? task, onSome: attempt }),
     outcome: (output, input) => outcome(decodeOutput(output), decodeAcceptedInput(input)),
     ...(relayed === undefined ? {} : { relayed: (output: unknown) => relayed(decodeOutput(output)) }),
     remedies,

@@ -74,7 +74,7 @@ function waitingOf(runtime: AppRuntime<DispatcherServices>, capabilities: readon
     cancel: (run, request, lineage) =>
       inRuntime(
         runtime,
-        Effect.flatMap(Effect.service(Ledger), (ledger) => runCanceller(ledger)(run, request, lineage)),
+        Effect.flatMap(Effect.service(Ledger), (ledger) => runCanceller(ledger, capabilities)(run, request, lineage)),
       ),
     cancelDeferred: (run, request, lineage) =>
       inRuntime(

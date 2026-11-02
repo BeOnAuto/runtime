@@ -1,8 +1,17 @@
 import { Context, Effect, Schema } from 'effect';
 
+export type DefinitionSaved = 'created' | 'updated';
+
 export type StudioPage =
   | { readonly kind: 'playbook'; readonly playbook: string }
-  | { readonly kind: 'definition'; readonly playbook: string; readonly type: string; readonly name: string }
+  | {
+      readonly kind: 'definition';
+      readonly playbook: string;
+      readonly type: string;
+      readonly name: string;
+      readonly version: number;
+      readonly saved?: DefinitionSaved;
+    }
   | { readonly kind: 'run'; readonly playbook: string; readonly run: string };
 
 export type StudioLinkTo = (page?: StudioPage) => string;

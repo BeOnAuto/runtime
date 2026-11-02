@@ -68,9 +68,9 @@ describe('the front matter of a recall function definition', () => {
     expect(issuesIn(adding)).toEqual([
       'Line 1: A recall function definition starts with a line of three dashes (---) that opens its front matter of YAML',
     ]);
-    expect(issuesIn(recallDocument(adding, 'language: typescript'))).toEqual(['Line 2, /source: source is required']);
+    expect(issuesIn(recallDocument(adding, 'language: typescript'))).toEqual(['Line 1, /source: source is required']);
     expect(issuesIn(recallDocument(adding, 'source: {events: [{type: x}]}'))).toEqual([
-      'Line 2, /language: language is required',
+      'Line 1, /language: language is required',
     ]);
   });
 

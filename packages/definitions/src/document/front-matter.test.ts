@@ -132,7 +132,7 @@ describe('the values of the front matter', () => {
 describe('the keys of the front matter', () => {
   it('are the ones its document takes, at every level, with the types each takes', () => {
     expect(issuesIn(documentOf('size: big\nprompt: hi\nextra:\n  other: 1'))).toEqual([
-      'Line 2, /title: title is required',
+      'Line 1, /title: title is required',
       'Line 2, /size: Expected number',
       'Line 3, /prompt: prompt is not a key of the front matter; it takes title, size, extra',
       'Line 5, /extra/other: other is not a key of extra; it takes anything, deeper',

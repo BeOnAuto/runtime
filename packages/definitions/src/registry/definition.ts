@@ -3,12 +3,14 @@ import { Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
 import type { StrippedForms } from '../capability/stripped-forms.ts';
+import { PageShownSchema } from '../page/page-shown.ts';
 import { DefinitionUserSchema } from '../used-by/user-relations.ts';
 import { TriggerSchema } from './definition-triggers.ts';
 
 const listedDefinitionFields = {
   type: Schema.String.annotate({
-    description: 'The type of the definition: reasoning, interaction, prediction, recall, computation or workflow',
+    description:
+      'The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one',
   }),
   name: Schema.String.annotate({
     description: 'The definition name, unique among definitions of its type in the playbook and never reused',
@@ -38,10 +40,22 @@ const listedDefinitionFields = {
   ),
   details: Schema.optionalKey(
     Schema.Struct({
-      shape: Schema.String.annotate({
-        description:
-          'The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws',
-      }),
+      shape: Schema.optionalKey(
+        Schema.String.annotate({
+          description:
+            'The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws',
+        }),
+      ),
+      of: Schema.optionalKey(
+        Schema.String.annotate({
+          description: 'For a page, the subject whose results it presents: <type>/<name>, or playbook',
+        }),
+      ),
+      views: Schema.optionalKey(
+        Schema.Record(Schema.String, Schema.String).annotate({
+          description: "For a page with data, each view's name and the shape it takes",
+        }),
+      ),
     }).annotate({ description: 'What the runtime declares of the definition beside its schemas' }),
   ),
   triggers: Schema.optionalKey(
@@ -90,6 +104,7 @@ export const DefinitionSchema = Schema.Struct({
     }),
   ),
   standing: Schema.optionalKey(StandingField),
+  page: Schema.optionalKey(PageShownSchema),
   used_by: Schema.optionalKey(
     Schema.Array(DefinitionUserSchema).annotate({
       description:
@@ -137,7 +152,7 @@ export type ListedDefinition = typeof ListedDefinitionSchema.Type;
 
 export type StoredDefinition = Omit<
   Definition,
-  'type' | 'media_type' | 'triggers_since' | 'standing' | 'used_by' | 'details'
+  'type' | 'media_type' | 'triggers_since' | 'standing' | 'used_by' | 'details' | 'page'
 > & {
   readonly details?: Schema.JsonObject;
   readonly stripped?: StrippedForms;

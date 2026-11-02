@@ -30,8 +30,9 @@ export function ended(
   status: 'succeeded' | 'failed' | 'rejected',
   ms: number | null,
   tokens: number | null = null,
+  cost?: number,
 ): RunFact {
-  return { type: 'run_ended', data: { status, ms, tokens } };
+  return { type: 'run_ended', data: { status, ms, tokens, ...(cost === undefined ? {} : { cost }) } };
 }
 
 function inOrder(groups: readonly RunOutcomeGroup[]): readonly RunOutcomeGroup[] {
@@ -56,7 +57,7 @@ export function runsOf(groups: readonly RunOutcomeGroup[]): readonly string[] {
 }
 
 export async function fourRuns(ledger: AnyLedger): Promise<void> {
-  await noting(ledger, 'playbook/acme/alpha/runs/r1', began('triage'), ended('succeeded', 120, 40));
+  await noting(ledger, 'playbook/acme/alpha/runs/r1', began('triage'), ended('succeeded', 120, 40, 1500));
   await noting(ledger, 'playbook/acme/alpha/runs/r2', began('triage'));
   await noting(ledger, 'playbook/acme/alpha/runs/r2', ended('succeeded', 80, 2));
   await noting(ledger, 'playbook/acme/alpha/runs/r3', began('triage'), ended('rejected', null));
@@ -73,6 +74,7 @@ export const fourRunsKept: readonly RunOutcomeGroup[] = [
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    costMicroUsd: null,
     durations: [],
   },
   {
@@ -84,6 +86,7 @@ export const fourRunsKept: readonly RunOutcomeGroup[] = [
     inputTokens: 42,
     outputTokens: 42,
     cachedTokens: 42,
+    costMicroUsd: 1500,
     durations: [80, 120],
   },
   {
@@ -95,6 +98,7 @@ export const fourRunsKept: readonly RunOutcomeGroup[] = [
     inputTokens: 0,
     outputTokens: 0,
     cachedTokens: 0,
+    costMicroUsd: null,
     durations: [],
   },
 ];

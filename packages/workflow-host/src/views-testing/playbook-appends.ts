@@ -20,6 +20,8 @@ export interface PlaybookAppends {
   readonly append: Append;
   readonly saved: (name: string, details?: ViewDetails, playbook?: Playbook) => Promise<void>;
   readonly retired: (name: string) => Promise<void>;
+  readonly savedPage: (name: string, details: Schema.JsonObject) => Promise<void>;
+  readonly retiredPage: (name: string) => Promise<void>;
   readonly ran: Ran;
   readonly ranEach: (subject: string, outputs: readonly Schema.Json[]) => Promise<unknown>;
   readonly ranInOneStream: (subject: string, outputs: readonly Schema.Json[]) => Promise<void>;
@@ -62,9 +64,11 @@ function ranBy(append: Append): Ran {
   };
 }
 
-function savedBy(append: Append, definitions: Map<string, number>): PlaybookAppends['saved'] {
+type Saved = (name: string, details?: Schema.JsonObject, playbook?: Playbook) => Promise<void>;
+
+function savedBy(append: Append, definitions: Map<string, number>, definitionType: string): Saved {
   return async (name, details, playbook = alpha) => {
-    const key = `${streamPrefixOfPlaybook(playbook)}${name}`;
+    const key = `${streamPrefixOfPlaybook(playbook)}${definitionType}/${name}`;
     const version = (definitions.get(key) ?? 0) + 1;
     definitions.set(key, version);
     const content = {
@@ -75,13 +79,29 @@ function savedBy(append: Append, definitions: Map<string, number>): PlaybookAppe
       version === 1
         ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
         : { type: 'definition_updated', data: { content } };
-    await append(`${streamPrefixOfPlaybook(playbook)}definitions/recall`, [saving], {
+    await append(`${streamPrefixOfPlaybook(playbook)}definitions/${definitionType}`, [saving], {
       by: 'acme-admin',
       at: savedAt,
-      definitionType: 'recall',
+      definitionType,
       definitionName: name,
       definitionVersion: version,
     });
+  };
+}
+
+function retiredBy(append: Append, definitions: Map<string, number>, definitionType: string) {
+  return async (name: string) => {
+    await append(
+      `${streamPrefixOfPlaybook(alpha)}definitions/${definitionType}`,
+      [{ type: 'definition_retired', data: {} }],
+      {
+        by: 'acme-admin',
+        at: savedAt,
+        definitionType,
+        definitionName: name,
+        definitionVersion: Number(definitions.get(`${streamPrefixOfPlaybook(alpha)}${definitionType}/${name}`)),
+      },
+    );
   };
 }
 
@@ -91,16 +111,10 @@ export function playbookAppends(store: LedgerStreams, appends: AppendSignal): Pl
   const definitions = new Map<string, number>();
   return {
     append,
-    saved: savedBy(append, definitions),
-    retired: async (name) => {
-      await append(`${streamPrefixOfPlaybook(alpha)}definitions/recall`, [{ type: 'definition_retired', data: {} }], {
-        by: 'acme-admin',
-        at: savedAt,
-        definitionType: 'recall',
-        definitionName: name,
-        definitionVersion: Number(definitions.get(`${streamPrefixOfPlaybook(alpha)}${name}`)),
-      });
-    },
+    saved: savedBy(append, definitions, 'recall'),
+    retired: retiredBy(append, definitions, 'recall'),
+    savedPage: savedBy(append, definitions, 'page'),
+    retiredPage: retiredBy(append, definitions, 'page'),
     ran,
     ranInOneStream: async (subject, outputs) => {
       const id = randomUUID();

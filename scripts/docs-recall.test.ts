@@ -20,5 +20,5 @@ await test('recall functions are available in every runtime, with their format b
   assert.ok(routes.indexOf('/reference/recall-format') < routes.indexOf('/reference/computation-format'));
   assert.ok(routes.indexOf('/reference/recall-format') < routes.indexOf('/reference/workflow-format'));
   assert.ok(format.includes('Recall functions are available in every runtime.'));
-  assert.ok(format.includes('A run never waits for the view'));
+  assert.ok(format.includes('so it sees every run that ended before it'));
 });

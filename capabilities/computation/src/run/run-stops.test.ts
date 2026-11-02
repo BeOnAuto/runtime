@@ -84,11 +84,13 @@ describe('the input of a run', () => {
     ).toEqual(
       Exit.fail(
         new InvalidInput({
-          detail: 'rows, then item 1, then cost_cents: expected a whole number, from 0 to 5,000,000.',
+          detail:
+            'rows, then item 1, then cost_cents: expected a whole number, from 0 to 5,000,000; it was given text.',
           issues: [
             {
               pointer: '/rows/0/cost_cents',
-              detail: 'rows, then item 1, then cost_cents: expected a whole number, from 0 to 5,000,000.',
+              detail:
+                'rows, then item 1, then cost_cents: expected a whole number, from 0 to 5,000,000; it was given text.',
             },
           ],
           kind: 'input_schema',

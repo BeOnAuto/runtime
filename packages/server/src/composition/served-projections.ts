@@ -1,9 +1,12 @@
-import type { Capability } from '@on.auto/definitions';
+import type { Capability, DefinitionKind } from '@on.auto/definitions';
+import { makePageAdapter } from '@on.auto/definitions/page';
 import { appendSignal, type AppendSignal, type ConnectionPorts } from '@on.auto/ledger';
 import { makeRecallFunctionAdapter, recallBounds, recallDefinitionType, recallFolding } from '@on.auto/recall';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import {
+  foldedBeforeItRuns,
   openWorkflowStore,
+  pageViewsKept,
   someFolder,
   viewsFolder,
   viewsPortOn,
@@ -16,6 +19,7 @@ import type { Settings } from '../settings/settings.ts';
 
 interface ServedProjections {
   readonly recall: Capability;
+  readonly page: DefinitionKind;
   readonly store: WorkflowStore;
   readonly projector: ProjectorSettings;
 }
@@ -34,27 +38,31 @@ export function projectionWiring(): ProjectionWiring {
   return {
     appends,
     served: async ({ recall, database }, pool, besides) => {
-      const views = viewsFolder({
+      const folder = viewsFolder({
         definitionType: recallDefinitionType,
         pool,
         folding: recallFolding,
         overtimesBeforeStall: recallBounds.overtimesBeforeStall,
         rebuildsAtOnce: recall.rebuildsAtOnce,
       });
-      const folders = [someFolder(views), ...besides];
+      const viewFolders = [someFolder(folder)];
+      const folders = [...viewFolders, ...besides];
       const store = await openWorkflowStore(database, folders);
+      const views = viewsPortOn(store.database);
       return {
-        recall: makeRecallFunctionAdapter({
-          pool,
-          views: viewsPortOn(store.database),
-          mostFunctions: recall.mostFunctions,
+        recall: foldedBeforeItRuns({
+          capability: makeRecallFunctionAdapter({ pool, views, mostFunctions: recall.mostFunctions }),
+          folders: viewFolders,
+          database: store.database,
         }),
+        page: makePageAdapter({ pool, views }),
         store,
         projector: {
           folders,
           playbooksAtOnce: recall.playbooksAtOnce,
           pagesPerWake: recallBounds.pagesPerWake,
           appends,
+          keptAlong: { [recallDefinitionType]: [pageViewsKept] },
         },
       };
     },

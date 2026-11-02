@@ -4,7 +4,7 @@ import { SettingsSchema } from './program-messages.ts';
 
 const StallSchema = Schema.Struct({
   at: Schema.Number,
-  kind: Schema.Literals(['raised', 'work', 'memory', 'unfit', 'size', 'schema', 'refused']),
+  kind: Schema.Literals(['raised', 'work', 'memory', 'unfit', 'size', 'schema', 'shape', 'refused']),
   message: Schema.String,
   line: Schema.NullOr(Schema.Number),
 });

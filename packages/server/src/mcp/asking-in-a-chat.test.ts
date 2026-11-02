@@ -221,7 +221,7 @@ const savingIt = {
 };
 
 const throughTheChat =
-  'Line 2, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute once the person agrees.';
+  'Line 1, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute once the person agrees.';
 
 const namingTheChatAndTheAgent: unknown = expect.stringMatching(
   /deliver: agent holds the request for an agent, .* This playbook can send a request and read its replies through the tool server chat \(post_message, thread_replies\); a connection can also be added with search and add_connection\.$/u,

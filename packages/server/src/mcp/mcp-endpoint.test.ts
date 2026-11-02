@@ -131,15 +131,17 @@ const definitionTypes = [
   { type: 'computation', noun: 'computation function', guide: 'computation-function' },
   { type: 'recall', noun: 'recall function', guide: 'recall-function' },
   { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
+  { type: 'page', noun: 'page', guide: 'page' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];
 
 const terminology = readFileSync(new URL('../../../../docs/concepts/terminology.md', import.meta.url), 'utf8');
 
 const resourcesOnTheTerminologyPage: ReadonlySet<string> = new Set(
-  [...terminology.matchAll(/^\| \w+ +\| ([A-Z][a-z]+(?: function)?) +\| /gmu)].map(
-    ([, resource = '']: readonly string[]) => resource.toLowerCase(),
-  ),
+  [
+    ...terminology.matchAll(/^\| \w+ +\| ([A-Z][a-z]+(?: function)?) +\| /gmu),
+    ...terminology.matchAll(/^\| (Page) +\| /gmu),
+  ].map(([, resource = '']: readonly string[]) => resource.toLowerCase()),
 );
 
 interface Connection {

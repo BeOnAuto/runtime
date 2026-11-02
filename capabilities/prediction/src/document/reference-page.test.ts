@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
 import { shapeNamed } from '@on.auto/definitions/testing';
+import { foldWaitBounds } from '@on.auto/workflow-host';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -69,6 +70,7 @@ describe('the bounds on the reference page of prediction functions', () => {
       valueOf('A series'),
       valueOf('Functions a playbook'),
       valueOf("A question's run"),
+      valueOf("A question's wait to read"),
     ]).toEqual([
       expect.stringContaining(`1 to ${bounds.mostHorizons}, each 1 to ${bounds.mostHorizon} periods`),
       expect.stringContaining(`0 to ${bounds.mostHistory} periods, at most the window`),
@@ -79,6 +81,7 @@ describe('the bounds on the reference page of prediction functions', () => {
       expect.stringContaining(`1 to ${bounds.mostSeriesBytes} bytes`),
       expect.stringContaining(`${bounds.mostFunctions} active`),
       expect.stringContaining(`${bounds.questionMs / 1000} seconds`),
+      expect.stringContaining(`${foldWaitBounds.mostMs / 1000} seconds`),
     ]);
   });
 });

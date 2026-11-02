@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
+import { pageOperations } from '../testing/page-ports.ts';
 
 const operations = makeDefinitionOperations([echo, probe().capability]);
 
@@ -154,5 +155,31 @@ describe('the plain language of retire_definition', () => {
       attemptOf('retire_definition', { type: 'echo', name: 'greet' }),
       attemptOf('retire_definition', {}),
     ]).toEqual(['retire the greeting “greet”', 'retire a greeting or probe']);
+  });
+});
+
+describe('the attempt of an operation asked of a page', () => {
+  const runOfAPage = pageOperations.runDefinition.registration.plainLanguage;
+  const readOfAPage = pageOperations.getDefinition.registration.plainLanguage;
+
+  it('names the one page asked, even where its input is refused', () => {
+    expect([
+      runOfAPage?.attempt({ type: 'page', name: 'morning-posts', input: {} }),
+      readOfAPage?.attempt({ type: 'page', name: 'morning-posts', render: true, sample_output: 'x'.repeat(262_145) }),
+      readOfAPage?.attempt({ type: 'page', name: 'morning-posts', render: true }),
+      readOfAPage?.attempt({ type: 'page', name: 'morning-posts' }),
+    ]).toEqual([
+      'run the page “morning-posts”',
+      'render the page “morning-posts”',
+      'render the page “morning-posts”',
+      'look up the page “morning-posts”',
+    ]);
+  });
+
+  it('falls back to the task where the input names no type the server keeps', () => {
+    expect([runOfAPage?.attempt({ type: 'forecast', name: 'morning-posts' }), readOfAPage?.attempt({})]).toEqual([
+      runOfAPage?.attempt(null),
+      readOfAPage?.attempt(null),
+    ]);
   });
 });

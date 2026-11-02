@@ -6,14 +6,18 @@ import {
   definitionsAfter,
   definitionStreamOf,
   noDefinitions,
+  type KeptFunction,
+  type KeptOf,
   type PlaybookDefinitions,
 } from './playbook-definitions.ts';
+import { keptAlongWith, type KeptAlong, type KeptAlongBy } from './projector-settings.ts';
 
 export type KeptDefinitions = (definitionType: string) => Map<string, PlaybookDefinitions>;
 
 export interface DefinitionsKept {
   readonly database: HostDatabase;
   readonly definitions: KeptDefinitions;
+  readonly keptAlong: KeptAlongBy;
 }
 
 interface Placed {
@@ -73,22 +77,48 @@ function phasedBySlots<Row extends PassedRow, Change extends PassedChange<Row>>(
   return rows.map((row) => (isBuilding(row) ? { ...row, phase: phaseIn(slots, folder.keyOf(row)) } : row));
 }
 
-function definitionsOf<Row extends PassedRow, Change extends PassedChange<Row>>(
-  folder: Folder<Row, Change>,
+function definitionsOfType(
   { database, definitions }: DefinitionsKept,
   playbook: string,
+  definitionType: string,
+  keptOf: KeptOf,
 ): Effect.Effect<PlaybookDefinitions> {
-  const kept = definitions(folder.definitionType);
+  const kept = definitions(definitionType);
   const known = kept.get(playbook) ?? noDefinitions;
-  return Effect.promise(() =>
-    database.store.read(definitionStreamOf(playbook, folder.definitionType), known.version),
-  ).pipe(
+  return Effect.promise(() => database.store.read(definitionStreamOf(playbook, definitionType), known.version)).pipe(
     Effect.map(({ messages }) => {
-      const next = definitionsAfter(known, messages, folder.keptOf);
+      const next = definitionsAfter(known, messages, keptOf);
       kept.set(playbook, next);
       return next;
     }),
   );
+}
+
+type KeptEntry = readonly [string, KeptFunction];
+
+function keptAlongOf(
+  kept: DefinitionsKept,
+  playbook: string,
+  { definitionType, keptOf, keyOf }: KeptAlong,
+): Effect.Effect<readonly KeptEntry[]> {
+  return Effect.map(definitionsOfType(kept, playbook, definitionType, keptOf), ({ functions }) =>
+    [...functions].map(([name, function_]: KeptEntry): KeptEntry => [keyOf(name), function_]),
+  );
+}
+
+function definitionsOf<Row extends PassedRow, Change extends PassedChange<Row>>(
+  folder: Folder<Row, Change>,
+  kept: DefinitionsKept,
+  playbook: string,
+): Effect.Effect<PlaybookDefinitions> {
+  const own = definitionsOfType(kept, playbook, folder.definitionType, folder.keptOf);
+  const along = Effect.forEach(keptAlongWith(kept.keptAlong, folder.definitionType), (each) =>
+    keptAlongOf(kept, playbook, each),
+  );
+  return Effect.zipWith(own, along, (definitions, entries: readonly (readonly KeptEntry[])[]) => ({
+    version: definitions.version,
+    functions: new Map([...definitions.functions, ...entries.flat()]),
+  }));
 }
 
 export function reconciledRows<Row extends PassedRow, Change extends PassedChange<Row>>(

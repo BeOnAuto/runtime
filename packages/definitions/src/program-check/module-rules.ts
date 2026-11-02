@@ -2,7 +2,7 @@ import ts from 'typescript6';
 
 import type { Located } from './diagnostics.ts';
 
-export type Place = 'computation' | 'recall';
+export type Place = 'computation' | 'recall' | 'page';
 
 export type EntryName = 'default' | 'fold' | 'answer';
 
@@ -31,6 +31,7 @@ export const placeEntries: Readonly<Record<Place, readonly Entry[]>> = {
     { name: 'fold', contract: '(view: View, event: Event) => View', required: true },
     { name: 'answer', contract: '(view: View, input: Input) => Output', required: false },
   ],
+  page: [{ name: 'fold', contract: '(view: View, event: Event) => View', required: true }],
 };
 
 export const signatures: Readonly<Record<EntryName, string>> = {

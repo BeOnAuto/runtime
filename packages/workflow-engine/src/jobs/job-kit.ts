@@ -54,7 +54,7 @@ export function keptFor(checks: ValueChecks | undefined): Kept {
         : remembered(outputs, JSON.stringify(schema), () => checks.output(schema)),
     viewCheck: (schema) =>
       checks === undefined
-        ? () => noViewSchemaChecked
+        ? () => ({ kind: 'schema', detail: noViewSchemaChecked })
         : remembered(views, JSON.stringify(schema), () => checks.view(schema)),
   };
 }

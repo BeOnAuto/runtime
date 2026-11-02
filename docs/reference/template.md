@@ -5,13 +5,16 @@
 These are [Liquid](https://shopify.github.io/liquid/) templates:
 
 - a reasoning function's prompt;
-- an interaction function's `to`, `from` and message, and the templates of the tools it names.
+- an interaction function's `to`, `from` and message, and the templates of the tools it names;
+- a page's `result` and `lately`, which render Markdown; see [Page format](page-format.md#the-templates).
 
 Each format says which variables its templates read. Every template may use the same filters.
 
 ## Filters
 
 Liquid's standard data and string filters are available: `abs`, `append`, `array_to_sentence_string`, `at_least`, `at_most`, `base64_decode`, `base64_encode`, `capitalize`, `ceil`, `compact`, `concat`, `default`, `divided_by`, `downcase`, `escape`, `escape_once`, `find`, `find_index`, `first`, `floor`, `group_by`, `has`, `join`, `json`, `last`, `lstrip`, `map`, `minus`, `modulo`, `newline_to_br`, `normalize_whitespace`, `number_of_words`, `plus`, `pop`, `prepend`, `push`, `raw`, `reject`, `remove`, `remove_first`, `remove_last`, `replace`, `replace_first`, `replace_last`, `reverse`, `round`, `rstrip`, `shift`, `size`, `slice`, `slugify`, `sort`, `sort_natural`, `split`, `squish`, `strip`, `strip_newlines`, `sum`, `times`, `to_integer`, `truncate`, `truncatewords`, `uniq`, `unshift`, `upcase`, `where` and `xml_escape`.
+
+`divided_by` keeps the fraction, even of two whole numbers: `{{ 13857781 | divided_by: 100 }}` is `138577.81`, where Shopify's Liquid gives `138577`. Add `| floor` for a whole number.
 
 The runtime adds three filters:
 
@@ -23,7 +26,7 @@ The runtime adds three filters:
 
 A template that names any other filter is refused when it is saved. Not available:
 
-- The date filters. They read the server's clock and time zone, so the same template would render differently on another server. Reasoning and interaction templates read `today` and `now` instead.
+- The date filters. They read the server's clock and time zone, so the same template would render differently on another server. Reasoning, interaction and page templates read `today` and `now` instead.
 - `sample`, which is random.
 - The digest filters, `strip_html` and the URL encoders.
 - The filters that evaluate an expression given as text, such as `where_exp`.

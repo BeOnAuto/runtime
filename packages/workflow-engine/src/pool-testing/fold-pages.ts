@@ -60,7 +60,7 @@ function entriesAtMost(schema: JsonObject): ViewCheck {
   const most = Number(schema['maxProperties']);
   return (view) =>
     typeof view === 'object' && view !== null && Object.keys(view).length > most
-      ? `the view: Expected a value with at most ${most} entry`
+      ? { kind: 'schema', detail: `the view: Expected a value with at most ${most} entry` }
       : undefined;
 }
 

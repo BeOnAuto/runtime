@@ -7,3 +7,10 @@ export {
   type ReadFrontMatter,
 } from './document/front-matter-keys.ts';
 export { DescriptionSchema, type ValueContract } from './document/function-fields.ts';
+export {
+  eventFiltersOf,
+  filterExpressionsOf,
+  type EventFilter,
+  type FilterExpression,
+  type FiltersPlace,
+} from './document/event-filters.ts';

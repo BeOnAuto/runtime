@@ -39,6 +39,8 @@ const reasoningFunctionType = 'reasoning';
 
 const workflowType = 'workflow';
 
+const pageType = 'page';
+
 const whatIsAskedOfAPlaybook = 'What the person asks the playbook to do is a workflow, its functions the steps';
 
 const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
@@ -94,6 +96,15 @@ const workflows: Sentences = ({ definitionTypes, listed }) =>
       ]
     : [];
 
+function servesPages({ definitionTypes }: Serving): boolean {
+  return definitionTypes.some(({ type }) => type === pageType);
+}
+
+const pages: Sentences = (serving) =>
+  servesPages(serving)
+    ? ['A page shows the person the results of a workflow or function, run by run and over time.']
+    : [];
+
 export const whatThisServerIsFor = [
   'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer.',
   'Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client.',
@@ -133,9 +144,13 @@ const modelsBeforeWriting: Sentences = ({ reasoning, listed }) =>
     ? ['list_models lists the models this server can call, which a reasoning function names.']
     : [];
 
-const guides: Sentences = ({ listed }) => [
-  listed('create_definition')
-    ? "Read a definition's format with get_guide; give it an overview."
+function overviewWords(serving: Serving): string {
+  return servesPages(serving) ? 'give a function or workflow an overview' : 'give it an overview';
+}
+
+const guides: Sentences = (serving) => [
+  serving.listed('create_definition')
+    ? `Read a definition's format with get_guide; ${overviewWords(serving)}.`
     : 'get_guide explains these words and the format of each definition.',
 ];
 
@@ -157,6 +172,7 @@ const orientation: readonly Sentences[] = [
   functionTypes,
   whatTheFunctionTypesAlsoNeedSaid,
   workflows,
+  pages,
   connection,
   modelsBeforeWriting,
   guides,

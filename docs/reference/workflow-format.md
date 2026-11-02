@@ -273,6 +273,8 @@ Each filter is held to its own bounds, and its failure affects no other workflow
 
 When a trigger does not start a run, the playbook records a `reaction_refused` event of its workflow, at most once a minute. The event counts the runs not started and gives the last reason, which names the trigger by its kind. `list_playbook_events` shows it beside the runs triggers started.
 
+The runtime's meter counts every run, and each function or workflow a step calls is a run of its own. A runtime you host without a license key has 100 runs, then 15 a UTC day and 75 a UTC month. When the meter refuses a run a trigger would start, because those runs or the organization's credits are spent, that run never starts. It is not tried again, and the playbook records a `reaction_refused` event. A step's call waits and asks again instead; see [When the runtime will not start the run for now](#when-the-runtime-will-not-start-the-run-for-now). [Self-hosted licensing reference](../self-host/licensing.md) gives every rule of the meter.
+
 ## Tasks
 
 Each item of a task list is a mapping with one key, the task's name. Its value defines the task, and the key it holds names the kind of task. A task is one step of the workflow.
@@ -309,7 +311,7 @@ A task takes the output of the task before it as its input. The first task takes
 
 - In a task's `if`, `timeout` and `input.from`, `$data` is the input it was handed. In the rest of the task, `$data` is its input after its own `input.from`, and `$input` is the same value.
 - In `output.as`, `$data` is what the task produced and `$input` is its input, so `${ ({ ...$input, review: $data }) }` keeps what came before and adds the new result.
-- In `export.as`, `$data` and `$output` are the task's output, and `$context` is the previous context.
+- `export.as` comes after `output.as`. In it, `$data` and `$output` are the task's output as `output.as` shaped it, `$input` is the task's input, `$task.output` is what the task produced before `output.as`, and `$context` is the context so far. Its result replaces `$context`.
 - A task whose `if` does not hold hands its input on unchanged, and the run continues with the next task; that task's `then` is not followed.
 
 The run's output is the output of its last task, or of the task that ended it, shaped by the document's `output.as`.
@@ -434,6 +436,7 @@ A function that called tools may have changed something outside the playbook, so
 Other function types:
 
 - The refusals of a [computation](computation-format.md#in-a-workflow), [recall](recall-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and which a retry may resolve, are under In a workflow on its page.
+- A prediction function's question counts every run that ended before it started, as in [this example](prediction-format.md#forecast-from-a-run-the-workflow-just-recorded).
 - A run that was cancelled raises `https://on.auto/problems/cancelled` with the kind of its cancellation: `requested`, `deadline`, `overrun` or `parent_ended` ([How a run ends](#how-a-run-ends)). Catch it on purpose, for example with `errors: { with: { type: https://on.auto/problems/cancelled } }` and `when: '${ $error.kind == "requested" }'`. Uncaught, it rejects the workflow as `invalid_input`, by its status 409, not as `cancelled`, since the workflow itself was not cancelled.
 - A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.
 
@@ -604,7 +607,7 @@ Expressions are TypeScript, the one language of the playbook. `evaluate.language
 | ----------------- | ----------------------------------------------------------------------------------- |
 | `$data`           | The data of the task: its input, or what it produced in `output.as`                 |
 | `$input`          | The task's input, in its body, `output.as` and `export.as`                          |
-| `$output`         | The task's output, in `export.as`                                                   |
+| `$output`         | The task's output as `output.as` shaped it, in `export.as`                          |
 | `$context`        | What earlier tasks exported; `{}` until a task exports                              |
 | `$task`           | `name`, `reference`, `definition`, `input`, `startedAt`, and `output` after it ran  |
 | `$workflow`       | `id` (the run's `run_id`), `definition`, `input` (before `input.from`), `startedAt` |
@@ -617,7 +620,10 @@ A name that `for.each`, `for.at` or `catch.as` gives is written without `$` and 
 Every expression is checked when the document is saved, as one file:
 
 - One that is not one expression, or that names what its place lacks, such as `$input` in an `if`, is refused at its line with the compiler's words, as `Line 8, column 23: at /do/1/read/set/n: Cannot find name '$nope'.`
-- An expression is checked for its syntax and its names, not its types, since a workflow carries no schema of its data.
+- An expression is checked as strict TypeScript. Its variables, such as `$data`, are of type `any`, since a workflow carries no schema of its data, so reading their fields passes.
+- A callback given to a method of an `any` value has no type to take, so a parameter without one is refused: `$data.items.map((each) => each.amount)` gives `Parameter 'each' implicitly has an 'any' type.` Type each parameter: `$data.items.map((each: { amount: number }) => each.amount)` passes, and so does `$data.items.reduce((sum: number, each: { amount: number }) => sum + each.amount, 0)`. Such a method returns `any` too, so each callback down a chain needs its types.
+- A value whose type the library knows is checked against it. `Object.values($data)` holds `unknown` values, so the compiler refuses a callback that types its parameter, as in `Object.values($data).map((each: { amount: number }) => each.amount)`. Name the type of the values instead: `Object.values<{ amount: number }>($data).map((each) => each.amount)` passes.
+- The types are checked only: the expression runs with them removed.
 - A save allows the check 2 seconds of the server's wall-clock time; a document whose check takes longer is refused `invalid_input`. A busy server may have slowed the check, so a document near the bound may pass when saved again.
 
 Expressions run in the QuickJS sandbox that [computation functions](computation-format.md#the-sandbox) run in, with the same library and rules, ES2023 without `Math.random`, `eval`, `Promise`, `fetch`, timers, `Intl` or the local-time methods of `Date`:
@@ -672,6 +678,8 @@ These are refused when a document is saved, each for the reason given:
 ## The overview
 
 `create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the workflow exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update. Unlike a function, a workflow takes no `diagram`, and a save that gives one is refused: Auto Studio draws a workflow from its steps, with the words in [Describing steps](#describing-steps).
+
+A person sees what the runs did through the workflow's page, a definition of the type `page` whose `of` names the workflow. Save one beside it, starting from [a minimal page](page-format.md#a-minimal-page): a headline for each run, and one chart of the runs so far.
 
 An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.
 

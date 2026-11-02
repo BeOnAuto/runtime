@@ -58,6 +58,7 @@ export type {
   FoldingView,
   StallKind,
   ViewCheck,
+  ViewRefusal,
 } from './folds/fold-page.ts';
 export { foldPageData } from './folds/fold-answer.ts';
 export type { FoldPlace } from './folds/fold-progress.ts';

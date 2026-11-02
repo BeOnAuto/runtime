@@ -269,6 +269,7 @@ export {
   studioLinkField,
   studioLinkTo,
   withStudioLink,
+  type DefinitionSaved,
   type LinkedInStudio,
   type StudioLinkTo,
   type StudioPage,

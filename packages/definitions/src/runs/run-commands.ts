@@ -107,6 +107,7 @@ export interface RunCancel extends CommandMetadata {
   readonly kind: CancelRequestKind;
   readonly reason: string;
   readonly byItsCaller?: true;
+  readonly attemptDied?: true;
 }
 
 export type RunCommand =

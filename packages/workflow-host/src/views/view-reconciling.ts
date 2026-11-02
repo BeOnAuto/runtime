@@ -49,6 +49,6 @@ export function plannedViews({ playbook, definitions }: Reconciling, rows: reado
     fresh: [...functions].flatMap(([name, kept]: readonly [string, KeptFunction]) =>
       freshOf(playbook, name, kept, byName.get(name)),
     ),
-    dropped: rows.filter(({ name }) => !functions.has(name)),
+    dropped: rows.filter(({ name }) => viewDetailsOf(functions.get(name)?.details) === undefined),
   };
 }

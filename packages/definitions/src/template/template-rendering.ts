@@ -36,7 +36,9 @@ function failureOf<Refusal>(
   if (missingVariable !== undefined) {
     return { reason: 'missing_variable', variable: missingVariable, line };
   }
-  const limit = exceededLimits.get(message);
+  const limit = [...exceededLimits].find(([words]: readonly [string, 'memory' | 'time']) =>
+    message.endsWith(words),
+  )?.[1];
   return limit === undefined ? { reason: 'failed', detail: message, line } : { reason: 'limit_exceeded', limit, line };
 }
 

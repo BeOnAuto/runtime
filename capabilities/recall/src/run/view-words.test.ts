@@ -1,8 +1,9 @@
+import { lagOf } from '@on.auto/definitions';
 import type { StallCause } from '@on.auto/workflow-host';
 import { describe, expect, it } from 'vitest';
 
 import { liveView } from '../testing/recall-runs.ts';
-import { lagInWords, lagOf, rebuildingDetail, stalledDetail } from './view-words.ts';
+import { lagInWords, rebuildingDetail, stalledDetail } from './view-words.ts';
 
 const stalledEvent = {
   id: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1b',
@@ -18,6 +19,7 @@ const stallWords: readonly (readonly [StallCause, string])[] = [
   ['crash', 'its fold broke the worker that ran it, every time it was tried'],
   ['size', 'the view it folded took more than the 524288 bytes a view may'],
   ['schema', "the view it folded did not match the view's schema"],
+  ['shape', 'the views it folded did not match their shapes'],
   ['unfit', 'its fold answered a view that is not JSON, or one nested deeper than 512 levels'],
   ['refused', 'its module does not load on this server'],
 ];

@@ -42,7 +42,7 @@ const formatGuides = [
 
 const listingEveryFormat: unknown = expect.arrayContaining(formatGuides);
 
-const anyJsonValue: ReadonlySet<string> = new Set(['input', 'answer']);
+const anyJsonValue: ReadonlySet<string> = new Set(['input', 'answer', 'sample_output']);
 
 const PropertiesSchema = Schema.Struct({
   properties: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown))),
@@ -105,19 +105,19 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('name each type of definition with the kind it is in create_definition, say that a function needs a diagram and a workflow takes none, at 786 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow and a page take none, at 657 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
-      'reasoning, a reasoning function; interaction, an interaction function; computation, a computation function; recall, a recall function; prediction, a prediction function; workflow, a workflow.',
+      '`type` is reasoning, interaction, computation, recall, prediction, page, or workflow, and `name` how workflows and tools refer to it.',
     );
     expect(description).toContain(
       "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
     );
     expect(description).toContain(
-      'A function needs `diagram` too, Mermaid source of how it works or the word none, and a workflow takes no `diagram`.',
+      'A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither.',
     );
-    expect([description.length, sentencesOf(description)]).toEqual([786, 6]);
+    expect([description.length, sentencesOf(description)]).toEqual([657, 6]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });

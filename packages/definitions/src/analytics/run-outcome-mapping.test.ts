@@ -45,7 +45,7 @@ const firstStart = {
   name: 'triage',
 };
 
-const noTokens = { inputTokens: null, outputTokens: null, cachedTokens: null };
+const unspent = { inputTokens: null, outputTokens: null, cachedTokens: null, costMicroUsd: null };
 
 describe('the outcome of a run', () => {
   it('reads the types of the run events that change it', () => {
@@ -53,15 +53,15 @@ describe('the outcome of a run', () => {
   });
 
   it('is started from its first start, with the definition of its context', () => {
-    expect(keptAfter(started)).toEqual({ ...firstStart, status: 'started', durationMs: null, ...noTokens });
+    expect(keptAfter(started)).toEqual({ ...firstStart, status: 'started', durationMs: null, ...unspent });
   });
 });
 
 describe('the outcome of a run that ended', () => {
-  it('takes the tokens a reasoning run recorded and its duration from start to end when it succeeds', () => {
+  it('takes the tokens and the cost a reasoning run recorded and its duration from start to end when it succeeds', () => {
     const succeeded = endedAt('2026-10-01T09:00:01.250Z', 'run_succeeded', {
       output: 'ok',
-      record: { usage, duration_ms: 900 },
+      record: { usage, duration_ms: 900, cost_usd: 0.00042 },
     });
 
     expect(keptAfter(started, succeeded)).toEqual({
@@ -71,6 +71,7 @@ describe('the outcome of a run that ended', () => {
       inputTokens: 1200,
       outputTokens: 300,
       cachedTokens: 1000,
+      costMicroUsd: 420,
     });
   });
 
@@ -85,7 +86,7 @@ describe('the outcome of a run that ended', () => {
       name: 'approval',
       status: 'succeeded',
       durationMs: 86_400_000,
-      ...noTokens,
+      ...unspent,
     });
   });
 
@@ -94,28 +95,37 @@ describe('the outcome of a run that ended', () => {
       ...firstStart,
       status: 'failed',
       durationMs: 2000,
-      ...noTokens,
+      ...unspent,
     });
   });
 });
 
 describe('the outcome of a rejected run', () => {
-  it('counts the tokens of a rejected run that recorded them, never a duration', () => {
+  it('counts the tokens and the cost of a rejected run that recorded them, never a duration', () => {
     const rejection = { reason: 'unavailable', detail: 'The answer is not JSON' };
     const at = '2026-10-01T09:00:03.000Z';
 
     expect([
-      keptAfter(started, endedAt(at, 'run_rejected', { rejection, record: { usage } })),
+      keptAfter(started, endedAt(at, 'run_rejected', { rejection, record: { usage, cost_usd: 0.012 } })),
       keptAfter(started, endedAt(at, 'run_rejected', { rejection })),
     ]).toEqual([
-      { ...firstStart, status: 'rejected', durationMs: null, inputTokens: 1200, outputTokens: 300, cachedTokens: 1000 },
-      { ...firstStart, status: 'rejected', durationMs: null, ...noTokens },
+      {
+        ...firstStart,
+        status: 'rejected',
+        durationMs: null,
+        inputTokens: 1200,
+        outputTokens: 300,
+        cachedTokens: 1000,
+        costMicroUsd: 12_000,
+      },
+      { ...firstStart, status: 'rejected', durationMs: null, ...unspent },
     ]);
   });
 });
 
-function spent(input: number, output: number) {
-  return { usage: { input: { total: input }, output: { total: output } } };
+function spent(input: number, output: number, cost?: number) {
+  const counted = { usage: { input: { total: input }, output: { total: output } } };
+  return cost === undefined ? counted : { ...counted, cost_usd: cost };
 }
 
 describe('the outcome of a run started again or measured oddly', () => {
@@ -125,8 +135,8 @@ describe('the outcome of a run started again or measured oddly', () => {
     const succeeded = endedAt('2026-10-02T10:00:05.000Z', 'run_succeeded', { output: 'ok', record: {} });
 
     expect([keptAfter(started, failed, again), keptAfter(started, failed, again, succeeded)]).toEqual([
-      { ...firstStart, lastStartedAt: '2026-10-02T10:00:00.000Z', status: 'started', durationMs: null, ...noTokens },
-      { ...firstStart, lastStartedAt: '2026-10-02T10:00:00.000Z', status: 'succeeded', durationMs: 5000, ...noTokens },
+      { ...firstStart, lastStartedAt: '2026-10-02T10:00:00.000Z', status: 'started', durationMs: null, ...unspent },
+      { ...firstStart, lastStartedAt: '2026-10-02T10:00:00.000Z', status: 'succeeded', durationMs: 5000, ...unspent },
     ]);
   });
 
@@ -145,6 +155,41 @@ describe('the outcome of a run started again or measured oddly', () => {
   });
 });
 
+function costing(cost: number): RunOutcome | undefined {
+  return keptAfter(
+    started,
+    endedAt('2026-10-01T09:00:01.000Z', 'run_succeeded', { output: 'ok', record: { cost_usd: cost } }),
+  );
+}
+
+function finishedWith(cost?: number): ProjectedMessage {
+  return endedAt('2026-10-01T10:00:00.300Z', 'run_succeeded', { output: 'ok', record: spent(100, 10, cost) });
+}
+
+describe('the cost of a run', () => {
+  it('is kept in millionths of a US dollar, rounded to the nearest, and a cost of nothing as 0', () => {
+    expect([costing(0.0123456), costing(0.0000004), costing(0)].map((row) => row?.costMicroUsd)).toEqual([
+      12_346, 0, 0,
+    ]);
+  });
+
+  it('adds up over every attempt that recorded one, and stays as it was after one that did not', () => {
+    const rejected = endedAt('2026-10-01T09:00:02.000Z', 'run_rejected', {
+      rejection: { reason: 'unavailable', detail: 'The answer is not JSON' },
+      record: spent(500, 40, 0.0015),
+    });
+    const again = startedAt('2026-10-01T10:00:00.000Z');
+
+    expect(
+      [
+        keptAfter(started, rejected, again),
+        keptAfter(started, rejected, again, finishedWith(0.0005)),
+        keptAfter(started, rejected, again, finishedWith()),
+      ].map((row) => row?.costMicroUsd),
+    ).toEqual([1500, 2000, 1500]);
+  });
+});
+
 describe('the outcome of a run with a finish it cannot measure', () => {
   it('is kept with the day of its finish when the finish comes without a start', () => {
     expect(keptAfter(endedAt('2026-10-03T23:59:59.999Z', 'run_failed'))).toEqual({
@@ -155,7 +200,7 @@ describe('the outcome of a run with a finish it cannot measure', () => {
       name: '',
       status: 'failed',
       durationMs: null,
-      ...noTokens,
+      ...unspent,
     });
   });
 
@@ -165,7 +210,7 @@ describe('the outcome of a run with a finish it cannot measure', () => {
       lastStartedAt: 'not a time',
       status: 'started',
       durationMs: null,
-      ...noTokens,
+      ...unspent,
     };
 
     expect(runOutcomeMapping.rowAfter(row, endedAt('2026-10-01T09:00:01.000Z', 'run_failed'))).toMatchObject({
@@ -184,6 +229,14 @@ const notTokens: readonly unknown[] = [
   { usage: { input: { total: '12', cache_read: -1 }, output: { total: 2.5 } } },
   { usage: { input: { total: Number.MAX_SAFE_INTEGER + 2 }, output: null } },
   { usage: { input: [12] } },
+];
+
+const notCosts: readonly unknown[] = [
+  { cost_usd: '0.01' },
+  { cost_usd: -0.01 },
+  { cost_usd: Number.MAX_VALUE },
+  { cost_usd: null },
+  { usage: { cost_usd: 0.01 } },
 ];
 
 const notRunEvents: readonly ProjectedMessage[] = [
@@ -219,7 +272,13 @@ describe('what the outcome of a run leaves as it is', () => {
   it.each(notTokens)('is the tokens of a record that holds no counts, %j', (record) => {
     const succeeded = endedAt('2026-10-01T09:00:01.000Z', 'run_succeeded', { output: 'ok', record });
 
-    expect(keptAfter(started, succeeded)).toMatchObject(noTokens);
+    expect(keptAfter(started, succeeded)).toMatchObject(unspent);
+  });
+
+  it.each(notCosts)('is the cost of a record that holds no cost in US dollars of at least 0, %j', (record) => {
+    const succeeded = endedAt('2026-10-01T09:00:01.000Z', 'run_succeeded', { output: 'ok', record });
+
+    expect(keptAfter(started, succeeded)).toMatchObject({ costMicroUsd: null });
   });
 
   it.each(notRunEvents)('is the row, for an event it does not measure, %j', (message) => {

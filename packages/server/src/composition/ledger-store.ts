@@ -12,7 +12,11 @@ import { factSchemasKnownWith } from './known-facts.ts';
 
 const projections = [openRequests, conversations];
 
-export const layoutSteps: readonly LayoutStep[] = [...ledgerLayoutSteps, ...hostLayoutSteps, ...predictionLayoutSteps];
+export const layoutSteps: readonly LayoutStep[] = [
+  ...ledgerLayoutSteps,
+  ...hostLayoutSteps,
+  ...predictionLayoutSteps,
+].toSorted((one, other) => one.layout - other.layout);
 
 interface LedgerOpening {
   readonly declared?: readonly DeclaredFact[];

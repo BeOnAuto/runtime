@@ -38,7 +38,7 @@ const summed = weeklyOrdersWith(
 const rootRefused = 'Its series at the root of its data is not text of 1 to 256 bytes';
 
 const yearRefused =
-  'Its time as an event is not an ISO 8601 time with its offset, on a day of the calendar from 0000 to 9999 and in no leap second';
+  'Its time as an event is not an ISO 8601 date, or date and time with its offset, on a day of the calendar from 0000 to 9999 and in no leap second';
 
 const timedOrders = [
   orderPlaced({ region: 'north', at: 20_261_006 }),

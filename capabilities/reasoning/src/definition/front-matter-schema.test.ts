@@ -19,7 +19,7 @@ describe('the keys of the front matter', () => {
   });
 
   it('need a model', () => {
-    expect(issuesIn(documentOf('description: Says hello'))).toEqual(['Line 2, /model: model is required']);
+    expect(issuesIn(documentOf('description: Says hello'))).toEqual(['Line 1, /model: model is required']);
   });
 });
 

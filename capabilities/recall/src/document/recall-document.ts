@@ -1,11 +1,5 @@
-import type { ValueContract } from '@on.auto/definitions/document';
+import type { FilterExpression, ValueContract } from '@on.auto/definitions/document';
 import type { ViewDetails } from '@on.auto/workflow-host';
-
-export interface FilterExpression {
-  readonly source: string;
-  readonly pointer: string;
-  readonly line: number;
-}
 
 export interface RecallFunctionDefinitionDocument {
   readonly description?: string;

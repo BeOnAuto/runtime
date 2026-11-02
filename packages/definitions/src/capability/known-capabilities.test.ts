@@ -19,9 +19,9 @@ describe('the type field of the definition operations', () => {
     expect([refusalOf('echo'), refusalOf('probe')]).toEqual(['accepted', 'accepted']);
   });
 
-  it('refuses a type no capability serves by naming the types the server runs, and a malformed one by its shape alone', () => {
+  it('refuses a type no capability serves by naming the types of definition the server keeps, and a malformed one by its shape alone', () => {
     expect([refusalOf('prediction'), refusalOf('Echo!')]).toEqual([
-      'SchemaError(Expected a type this server runs: echo or probe)',
+      'SchemaError(Expected a type of definition this server keeps: echo or probe)',
       'SchemaError(Expected a type: 3 to 32 lowercase letters, digits and hyphens, starting with a letter)',
     ]);
   });

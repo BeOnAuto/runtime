@@ -100,6 +100,7 @@ export type FilterDefinition = Parameters<Liquid['registerFilter']>[1];
 export interface EngineRegistrations {
   readonly filters?: Readonly<Record<string, FilterDefinition>>;
   readonly tags?: Readonly<Record<string, TagDefinition>>;
+  readonly withoutTags?: readonly string[];
 }
 
 export interface TemplateEngine {
@@ -130,8 +131,8 @@ function namesOf(liquid: () => Liquid, body: string): number {
   return names;
 }
 
-function tagsRemovedFrom(liquid: () => Liquid): void {
-  for (const name of removedTags) {
+function tagsRemovedFrom(liquid: () => Liquid, names: readonly string[]): void {
+  for (const name of names) {
     Reflect.deleteProperty(liquid().tags, name);
   }
 }
@@ -158,7 +159,7 @@ function engineOver(liquid: () => Liquid): TemplateEngine {
 }
 
 export function templateEngine(registrations: () => EngineRegistrations = noRegistrations): TemplateEngine {
-  const { filters = {}, tags = {} } = registrations();
+  const { filters = {}, tags = {}, withoutTags = [] } = registrations();
   const liquid = new Liquid({
     templates: {},
     strictFilters: true,
@@ -171,7 +172,7 @@ export function templateEngine(registrations: () => EngineRegistrations = noRegi
   for (const name of Object.keys(liquid.filters).filter((filter) => !keptFilters.has(filter))) {
     liquid.unregisterFilter(name);
   }
-  tagsRemovedFrom(() => liquid);
+  tagsRemovedFrom(() => liquid, [...removedTags, ...withoutTags]);
   for (const [name, filter] of Object.entries({ ...addedFilters, ...filters })) {
     liquid.registerFilter(name, filter);
   }

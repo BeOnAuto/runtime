@@ -186,21 +186,21 @@ describe('the guides a server carries', () => {
     );
   });
 
-  it('start the server with a recipe of 4,096 bytes, and refuse to start it with one of 4,097', () => {
+  it('start the server with a recipe of 5,120 bytes, and refuse to start it with one of 5,121', () => {
     expect(
       starting({
         guides: [notebookGuide],
-        recipes: [noteRecipeSaying('r'.repeat(4096))],
+        recipes: [noteRecipeSaying('r'.repeat(5120))],
         definitionTypes: notebookTypes,
       }),
     ).not.toThrow();
     expect(
       starting({
         guides: [notebookGuide],
-        recipes: [noteRecipeSaying('r'.repeat(4097))],
+        recipes: [noteRecipeSaying('r'.repeat(5121))],
         definitionTypes: notebookTypes,
       }),
-    ).toThrow('The recipe take-a-note: 4097 bytes, more than the 4096 allowed');
+    ).toThrow('The recipe take-a-note: 5121 bytes, more than the 5120 allowed');
   });
 });
 
