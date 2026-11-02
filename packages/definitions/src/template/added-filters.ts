@@ -1,3 +1,6 @@
+import { Option, Schema } from 'effect';
+import type { FilterImplOptions } from 'liquidjs';
+
 import { outputText } from './output-text.ts';
 
 const defaultClipLength = 400;
@@ -48,4 +51,56 @@ function words(value: unknown): number {
     .filter((word) => word !== '').length;
 }
 
-export const addedFilters = { money, clip, words };
+const RecalledMemorySchema = Schema.Struct({
+  id: Schema.String,
+  scope: Schema.String,
+  text: Schema.String,
+  written_at: Schema.String,
+  written_by: Schema.String,
+});
+
+const RecalledSchema = Schema.Union([
+  Schema.Struct({ memories: Schema.Array(RecalledMemorySchema) }),
+  Schema.Array(RecalledMemorySchema),
+]);
+
+type RecalledMemory = typeof RecalledMemorySchema.Type;
+
+const recalledOf = Schema.decodeUnknownOption(RecalledSchema);
+
+export const memoriesRecalled = 'memories_recalled';
+
+function escaped(text: string): string {
+  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+function attribute(name: string, value: string): string {
+  return `${name}="${escaped(value).replaceAll('"', '&quot;')}"`;
+}
+
+function memoryLine({ id, scope, text, written_at: writtenAt, written_by: writtenBy }: RecalledMemory): string {
+  const attributes = [
+    attribute('id', id),
+    attribute('scope', scope),
+    attribute('written_at', writtenAt),
+    attribute('written_by', writtenBy),
+  ];
+  return `<memory ${attributes.join(' ')}>${escaped(text)}</memory>`;
+}
+
+function listOf(recalled: typeof RecalledSchema.Type): readonly RecalledMemory[] {
+  return 'memories' in recalled ? recalled.memories : recalled;
+}
+
+const memories: FilterImplOptions = function memoriesOf(value: unknown): string {
+  const recalled = Option.getOrUndefined(recalledOf(value));
+  if (recalled === undefined) {
+    throw new TypeError('memories takes what a recall answers, or its list of memories');
+  }
+  this.context.setRegister(memoriesRecalled, true);
+  return listOf(recalled)
+    .map((memory) => memoryLine(memory))
+    .join('\n');
+};
+
+export const addedFilters = { money, clip, words, memories };

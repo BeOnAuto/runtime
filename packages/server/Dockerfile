@@ -34,6 +34,7 @@ COPY capabilities/computation/package.json capabilities/computation/
 COPY capabilities/coordination/package.json capabilities/coordination/
 COPY capabilities/interaction/package.json capabilities/interaction/
 COPY capabilities/lookup/package.json capabilities/lookup/
+COPY capabilities/memory/package.json capabilities/memory/
 COPY capabilities/prediction/package.json capabilities/prediction/
 COPY capabilities/reasoning/package.json capabilities/reasoning/
 RUN pnpm install --frozen-lockfile --prod --no-optional --ignore-scripts --filter @on.auto/server...
@@ -85,6 +86,7 @@ COPY capabilities/computation/src capabilities/computation/src
 COPY capabilities/coordination/src capabilities/coordination/src
 COPY capabilities/interaction/src capabilities/interaction/src
 COPY capabilities/lookup/src capabilities/lookup/src
+COPY capabilities/memory/src capabilities/memory/src
 COPY capabilities/prediction/src capabilities/prediction/src
 COPY capabilities/reasoning/src capabilities/reasoning/src
 RUN apt-get update \

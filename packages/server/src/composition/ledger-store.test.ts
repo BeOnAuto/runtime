@@ -7,7 +7,7 @@ import type { SchemaAST } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { knownFactSchemas } from './known-facts.ts';
-import { layoutSteps } from './ledger-store.ts';
+import { layoutSteps } from './layout-steps.ts';
 
 const repository = join(import.meta.dirname, '..', '..', '..', '..');
 
@@ -41,6 +41,6 @@ describe('the fact types the server gives the ledger to read', () => {
     const kept = [...new Set([...fixtureTypesUnder('packages'), ...fixtureTypesUnder('capabilities')])].toSorted();
 
     expect(factTypes).toEqual(kept);
-    expect(factTypes).toHaveLength(57);
+    expect(factTypes).toHaveLength(61);
   });
 });

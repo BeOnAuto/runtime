@@ -3,7 +3,7 @@ import { Schema } from 'effect';
 import type { Fallback } from '../licensing/signed-answers.ts';
 import { dayOf, monthOf } from '../standing/utc-periods.ts';
 
-const BasisSchema = Schema.Literals(['licensed', 'first_runs', 'free_rate', 'offline']);
+const BasisSchema = Schema.Literals(['licensed', 'first_runs', 'free_rate', 'offline', 'agent_action']);
 
 export type Basis = typeof BasisSchema.Type;
 
@@ -43,7 +43,7 @@ function talliedIn(tally: Tally | undefined, period: string): Tally {
 function countedBy(admitted: Admitted, basis: Basis, at: string): Admitted {
   if (basis === 'licensed') return { ...admitted, licensed: admitted.licensed + 1 };
   if (basis === 'first_runs') return { ...admitted, first_runs: admitted.first_runs + 1 };
-  if (basis === 'offline') return admitted;
+  if (basis === 'offline' || basis === 'agent_action') return admitted;
   return {
     ...admitted,
     free_day: talliedIn(admitted.free_day, dayOf(at)),

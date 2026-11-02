@@ -91,6 +91,12 @@ function timelineOf({ pattern, words, moment }: Form): Timeline {
 
 const instants = timelineOf(instant);
 
+const days = timelineOf(forms.day);
+
+export function isADayOfTheCalendar(text: string): boolean {
+  return days.momentOf(text) !== undefined;
+}
+
 const periods: ReadonlyMap<string, Timeline> = new Map(grains.map((grain) => [grain, timelineOf(forms[grain])]));
 
 export function timelineIn(period: Schema.Json | undefined): Timeline | undefined {

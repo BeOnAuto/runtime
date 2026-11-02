@@ -229,6 +229,29 @@ Saving a definition asks the tool server it names for its tools, and a run finis
 | A run whose tool its server no longer marks `reads`                                          | `unavailable` with the kind `tool_not_read_only`; nothing sent |
 | A run whose call was sent and could not finish                                               | `unavailable` with the kind `tools_unfinished`                 |
 
+## Memory functions
+
+Memory functions use the operations of reasoning functions, with `memory` in place of `reasoning` in each route, such as `POST /definitions/memory` and `POST /definitions/memory/{name}/run`. The `source` is a [memory function document](memory-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions). A run finishes within the request that starts it.
+
+The memories of a playbook have operations of their own, relative to `/v1/orgs/{org}/playbooks/{playbook}`:
+
+| Operation       | Method and route             | Permission       | Input                                                                   |
+| --------------- | ---------------------------- | ---------------- | ----------------------------------------------------------------------- |
+| `remember`      | `POST /memories`             | `playbook:write` | `text`, and optional `tags`, `scope`, `about`, `expires` and `replaces` |
+| `recall`        | `POST /memories/recall`      | `playbook:read`  | Optional `words`, `tags`, `scope` and `most_characters`                 |
+| `forget`        | `POST /memories/{id}/forget` | `playbook:write` | Memory id in path; optional `erase`                                     |
+| `move_memory`   | `POST /memories/{id}/move`   | `playbook:write` | Memory id in path; `to`, `playbook` or `organization`                   |
+| `list_memories` | `GET /memories`              | `playbook:read`  | Optional `limit` and `cursor`                                           |
+
+`GET /v1/orgs/{org}/memories`, `list_org_memories`, under `org:read`, lists the memories of the organization and of every playbook of it the caller may read. [Memory function format](memory-format.md#the-operations) has every field and answer.
+
+| Case                                                                                           | Response                                    |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| A text, a tag, a day or an expiry out of its bounds                                            | `invalid_input` at its field                |
+| `replaces`, `forget` or `move_memory` names a memory the scope lacks                           | `not_found`                                 |
+| `replaces` names a memory forgotten, erased or moved, or `move_memory` one forgotten or erased | `conflict`, in words that say which         |
+| The playbook, or its organization, keeps 10,000 memories                                       | `unavailable` with the kind `memories_full` |
+
 ## Interaction functions
 
 Interaction functions use the operations of reasoning functions, with `interaction` in place of `reasoning` in each route, such as `POST /definitions/interaction` and `POST /definitions/interaction/{name}/run`. The `source` is an [interaction function document](interaction-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions). A request whose document names no `deliver` is refused when saved, `invalid_input`, its issue naming the connections whose tools can send a request and read its replies, and `deliver: agent`, and so is a notification, which takes no answer and goes through a connection, that names no tool or `deliver: agent`, its issue naming the connections whose tools can send it; see [How a request reaches its party](interaction-format.md#how-a-request-reaches-its-party).

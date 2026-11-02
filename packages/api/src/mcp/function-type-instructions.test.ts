@@ -12,7 +12,7 @@ import {
 import { instructionsActingAs, instructionsFor, type DefinitionType } from './instructions.ts';
 
 const sevenFunctionTypesSentence =
-  'Its function types: reasoning prompts a model, lookup obtains information, interaction exchanges information, prediction forecasts from history, computation runs a program, memory remembers and recalls, and generation produces assets.';
+  'Its function types: reasoning prompts a model, lookup obtains information, memory remembers and recalls, interaction exchanges information, prediction forecasts from history, computation runs a program, and generation produces assets.';
 
 const whatALookupLeavesToReasoning = 'A lookup function fetches what a reasoning function interprets.';
 

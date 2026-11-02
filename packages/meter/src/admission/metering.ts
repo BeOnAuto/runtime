@@ -1,4 +1,4 @@
-import type { MeteredRun } from '@on.auto/definitions';
+import type { MeteredAction } from '@on.auto/definitions';
 import { Conflict, streamPrefixOfPlaybook, Unavailable, type Ledger } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
@@ -40,11 +40,11 @@ export function billingPageOf({ studio }: MeterOptions, org: string): string {
   return `${studio}/?settings=billing&org=${encodeURIComponent(org)}`;
 }
 
-export function runStreamOf({ org, playbook, run_id: runId }: MeteredRun): string {
+export function runStreamOf({ org, playbook, run_id: runId }: MeteredAction): string {
   return `${streamPrefixOfPlaybook({ org, playbook })}runs/${runId.toLowerCase()}`;
 }
 
-export function actionOf({ org, playbook, run_id: runId }: MeteredRun): string {
+export function actionOf({ org, playbook, run_id: runId }: MeteredAction): string {
   return `${org}/${playbook}/${runId.toLowerCase()}`;
 }
 
@@ -64,6 +64,6 @@ export function executed(metering: Metering, command: MeterCommand): Effect.Effe
   );
 }
 
-export function hasStarted({ ledger }: Pick<Metering, 'ledger'>, run: MeteredRun): Effect.Effect<boolean> {
+export function hasStarted({ ledger }: Pick<Metering, 'ledger'>, run: MeteredAction): Effect.Effect<boolean> {
   return Effect.map(firstStartIn(ledger, runStreamOf(run)), (first) => first !== undefined);
 }

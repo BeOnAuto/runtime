@@ -2,6 +2,7 @@ import { issuesDetail } from '@on.auto/json-schema';
 import type { Schema } from 'effect';
 
 import { categoriesShape } from './categories-shape.ts';
+import { memoriesShape } from './memories-shape.ts';
 import type { OutputShape } from './output-shape.ts';
 import { seriesShape } from './series-shape.ts';
 import type { OutputShapeName } from './shape-names.ts';
@@ -14,6 +15,7 @@ const shapesByName: Readonly<Record<OutputShapeName, OutputShape>> = {
   categories: categoriesShape,
   table: tableShape,
   text: textShape,
+  memories: memoriesShape,
 };
 
 const shapes: readonly OutputShape[] = Object.values(shapesByName);

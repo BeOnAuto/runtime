@@ -70,3 +70,16 @@ export async function toolServerToolsCalled(
     ['execute', await session.callTool('execute', inPlaybook(searchedFor))],
   ];
 }
+
+export async function memoriesCalled(
+  session: McpSession,
+  inPlaybook: InPlaybook,
+): Promise<readonly (readonly [string, ToolResult])[]> {
+  const kept = await session.callTool('remember', inPlaybook({ text: 'Deals close on Fridays', tags: ['deals'] }));
+  const id = String(kept.structuredContent?.['id']);
+  return [
+    ['remember', kept],
+    ['recall', await session.callTool('recall', inPlaybook({ tags: ['deals'] }))],
+    ['forget', await session.callTool('forget', inPlaybook({ id }))],
+  ];
+}

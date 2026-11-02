@@ -54,8 +54,8 @@ describe('the OpenAPI document of the server', () => {
     expect(unresolvedSchemasIn(document)).toEqual([]);
   });
 
-  it('describes the 56 operations of the catalog, the content and the guides, under the tags of their resources', () => {
-    expect(operationsIn(document)).toHaveLength(56);
+  it('describes the 62 operations of the catalog, the content and the guides, under the tags of their resources', () => {
+    expect(operationsIn(document)).toHaveLength(62);
     expect(Schema.decodeUnknownSync(TagsSchema)(document).tags.map(({ name }) => name)).toEqual([
       'playbooks',
       'changes',
@@ -63,6 +63,7 @@ describe('the OpenAPI document of the server', () => {
       'models',
       'tool-servers',
       'connections',
+      'memories',
       'providers',
       'license',
       'definitions',
@@ -75,7 +76,9 @@ describe('the OpenAPI document of the server', () => {
       'guides',
     ]);
   });
+});
 
+describe('the OpenAPI document the server serves, as it is kept and named', () => {
   it('is the kept document, docs/assets/openapi.json, at the version of the release; pnpm docs:openapi writes it again', () => {
     expect(document).toEqual(JSON.parse(readFileSync(keptDocument, 'utf8')));
     expect(document).toMatchObject({ info: { version: release.version } });
@@ -202,7 +205,7 @@ describe('the guides over HTTP', () => {
       ),
     );
 
-    expect(resources).toHaveLength(12);
+    expect(resources).toHaveLength(14);
     expect(overHttp).toEqual(resources);
   });
 });

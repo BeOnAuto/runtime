@@ -17,6 +17,13 @@
       "description": "Obtain information that already exists outside the playbook, through one tool that only reads."
     },
     {
+      "type": "memory",
+      "label": "Memory",
+      "singular": "memory function",
+      "plural": "memory functions",
+      "description": "Remember what the playbook learns, and recall it later."
+    },
+    {
       "type": "interaction",
       "label": "Interaction",
       "singular": "interaction function",

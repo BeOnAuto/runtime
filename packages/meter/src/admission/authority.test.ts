@@ -95,3 +95,14 @@ describe('a meter whose authority answers that the account of the org is closed'
     },
   );
 });
+
+describe('an action of an agent under a meter whose authority admits each action', () => {
+  it('is asked of the authority each time, under its operation and what it acts on, since no run of it starts', async () => {
+    const asking = authorityAnswering(admitting);
+    const metered = await cloudMetered(asking);
+    await metered.acted('memory-1');
+    await metered.acted('memory-1');
+
+    expect(asking.asked()).toEqual(['acme/alpha/remember:memory-1', 'acme/alpha/remember:memory-1']);
+  });
+});

@@ -1,20 +1,13 @@
 import type { ContentStore } from '@on.auto/content';
 import { runOutcomeMapping, type DeclaredFact } from '@on.auto/definitions';
-import { ledgerLayoutSteps, type AppendSignal, type LayoutStep, type LedgerServices } from '@on.auto/ledger';
-import { predictionLayoutSteps } from '@on.auto/prediction';
-import { hostLayoutSteps } from '@on.auto/workflow-host';
+import type { AppendSignal, LedgerServices } from '@on.auto/ledger';
 import { Effect, Layer } from 'effect';
 
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { contentStoreOf, type ContentStoreSettings } from './content-store.ts';
 import { keptProjections } from './kept-projections.ts';
 import { factSchemasKnownWith } from './known-facts.ts';
-
-export const layoutSteps: readonly LayoutStep[] = [
-  ...ledgerLayoutSteps,
-  ...hostLayoutSteps,
-  ...predictionLayoutSteps,
-].toSorted((one, other) => one.layout - other.layout);
+import { layoutSteps } from './layout-steps.ts';
 
 interface LedgerOpening {
   readonly declared?: readonly DeclaredFact[];

@@ -94,6 +94,7 @@ jobs:
               - interaction
               - json-schema
               - lookup
+              - memory
               - operations
               - outbound
               - phrasing

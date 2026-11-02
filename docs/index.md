@@ -18,7 +18,7 @@ Follow the [quick start](get-started/cloud.md) to connect your agent to `https:/
 
 ## Do a task
 
-The guides show how to [give a function tools](guides/tools.md), [run a workflow on a schedule or event](guides/triggers.md), [calculate with a computation function](guides/computation.md), [forecast with a prediction function](guides/forecast.md), [use Auto with Apollo](integrations/apollo.md) and connect [Zoom](integrations/zoom.md) or [Slack](integrations/slack.md) for your playbooks to use.
+The guides show how to [give a function tools](guides/tools.md), [run a workflow on a schedule or event](guides/triggers.md), [make a playbook remember](guides/remember.md), [calculate with a computation function](guides/computation.md), [forecast with a prediction function](guides/forecast.md), [use Auto with Apollo](integrations/apollo.md) and connect [Zoom](integrations/zoom.md) or [Slack](integrations/slack.md) for your playbooks to use.
 
 ## Work with your team
 

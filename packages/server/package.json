@@ -42,6 +42,7 @@
     "@on.auto/interaction": "workspace:*",
     "@on.auto/ledger": "workspace:*",
     "@on.auto/lookup": "workspace:*",
+    "@on.auto/memory": "workspace:*",
     "@on.auto/meter": "workspace:*",
     "@on.auto/object-storage": "workspace:*",
     "@on.auto/operations": "workspace:*",

@@ -263,14 +263,14 @@ Adding the figures instead would count a month twice. Add runs together only whe
 
 ## Fields
 
-| Field                | Purpose                                                                                                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `description`        | Optional; 1 to 1,000 characters                                                                                                                                                |
-| `of`                 | Required; the subject whose results the page presents: `<type>/<name>`, where the type is `workflow`, `reasoning`, `interaction`, `prediction` or `computation`, or `playbook` |
-| `data.language`      | Required with `data`; `typescript`, the playbook's one language                                                                                                                |
-| `data.source.events` | Required with `data`; 1 to 8 filters, each naming events the fold takes; see [The filters of the events](#the-filters-of-the-events)                                           |
-| `data.views`         | Required with `data`; 1 to 8 views, each a name and the shape it takes: `series`, `categories`, `table` or `text`; see [The views](#the-views)                                 |
-| `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                                                   |
+| Field                | Purpose                                                                                                                                                                                  |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description`        | Optional; 1 to 1,000 characters                                                                                                                                                          |
+| `of`                 | Required; the subject whose results the page presents: `<type>/<name>`, where the type is `workflow`, `reasoning`, `memory`, `interaction`, `prediction` or `computation`, or `playbook` |
+| `data.language`      | Required with `data`; `typescript`, the playbook's one language                                                                                                                          |
+| `data.source.events` | Required with `data`; 1 to 8 filters, each naming events the fold takes; see [The filters of the events](#the-filters-of-the-events)                                                     |
+| `data.views`         | Required with `data`; 1 to 8 views, each a name and the shape it takes: `series`, `categories`, `table`, `text` or `memories`; see [The views](#the-views)                               |
+| `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                                                             |
 
 - `data` is optional. A page without it has no views and no `lately`.
 - Unknown fields are refused with their line. Among them are the fields of a function that do not apply here: `model`, `language`, `input` and `output`.
@@ -356,11 +356,11 @@ Each event is a CloudEvent with its `id`, `type`, `source`, `time` and `data`. I
 
 `data.module` is one TypeScript module that exports `fold(view: View, event: Event): View`, and nothing else. The runtime declares these types for it:
 
-| Type                                    | What it is                                                                                       |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `View`                                  | An object of the views `data.views` names, each optional and of its shape's type                 |
-| `Series`, `Categories`, `Table`, `Text` | The four [output shapes](output-shapes.md), `series`, `categories`, `table` and `text`, as types |
-| `Event`, `Json`                         | The playbook's event, described below, and any JSON value                                        |
+| Type                                                | What it is                                                                                                   |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `View`                                              | An object of the views `data.views` names, each optional and of its shape's type                             |
+| `Series`, `Categories`, `Table`, `Text`, `Memories` | The five [output shapes](output-shapes.md), `series`, `categories`, `table`, `text` and `memories`, as types |
+| `Event`, `Json`                                     | The playbook's event, described below, and any JSON value                                                    |
 
 - The fold starts from `{}`, with no views. A view the fold leaves out has no data yet, and `lately` reads it as `null`.
 - A module that exports `answer` is refused, since a page never runs.
@@ -399,7 +399,7 @@ The views do not depend on where a page of events begins or ends:
 ### The views' rules
 
 - `data.views` names 1 to 8 views. A name is 1 to 32 lowercase letters, digits and underscores, beginning with a letter, so that a template reads it as `views.<name>`.
-- Each name takes the name of a shape: `series`, `categories`, `table` or `text`. [Output shapes](output-shapes.md) gives each shape's fields and rules.
+- Each name takes the name of a shape: `series`, `categories`, `table`, `text` or `memories`. [Output shapes](output-shapes.md) gives each shape's fields and rules.
 - After every fold, each view the fold returned must match its shape, with the rules the shape adds, such as the order of a series' points.
 - After every fold, the fold returns no name that `data.views` does not declare.
 - The views together take at most 512 KiB as JSON: 524,288 bytes in UTF-8, checked after every fold.
@@ -886,7 +886,7 @@ Both answer the page as `get_definition` does, with `page.result` and `page.late
 - A page whose subject already has an active page, `conflict`: a subject has one page at a time.
 - An update that changes `of`: a page belongs to its subject.
 - An unknown field, such as `model`, `input` or `output`, with its line: a page takes the fields above.
-- `data` without `language`, `source.events`, `views` or `module`; more than 8 views; a view's name not of the form above; or a shape that is not `series`, `categories`, `table` or `text`.
+- `data` without `language`, `source.events`, `views` or `module`; more than 8 views; a view's name not of the form above; or a shape that is not `series`, `categories`, `table`, `text` or `memories`.
 - A filter that [The filters of the events](#the-filters-of-the-events) refuse, or a module that [The module](#the-module) refuses, with its line and the compiler's words.
 - A module that exports `answer`: a page never runs.
 - `data` without `lately`, or `lately` without `data`: the views are kept for `lately` alone.

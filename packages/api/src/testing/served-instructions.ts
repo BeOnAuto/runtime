@@ -22,6 +22,9 @@ const insideAPlaybook = [
   'execute',
   'list_interactions',
   'answer_interaction',
+  'remember',
+  'recall',
+  'forget',
   'send_run_event',
   'get_guide',
 ];
@@ -93,10 +96,7 @@ export const recipes: readonly RecipeCalls[] = [
       'get_run',
     ],
   },
-  {
-    name: 'remember',
-    calls: ['list_definitions', 'create_definition', 'update_definition', 'publish_event', 'run_definition'],
-  },
+  { name: 'remember', calls: ['remember', 'recall', 'forget', 'create_definition'] },
   {
     name: 'give-tools',
     calls: ['search', 'introspect', 'execute', 'create_definition', 'run_definition', 'list_playbook_events'],

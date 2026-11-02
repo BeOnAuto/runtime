@@ -50,4 +50,5 @@ export const shapeNouns: Readonly<Record<OutputShapeName, string>> = {
   categories: 'categories',
   table: 'a table',
   text: 'text',
+  memories: 'memories',
 };

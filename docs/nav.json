@@ -53,6 +53,10 @@
             "link": "/guides/tools"
           },
           {
+            "text": "Make a playbook remember",
+            "link": "/guides/remember"
+          },
+          {
             "text": "Calculate with a computation function",
             "link": "/guides/computation"
           },
@@ -133,6 +137,10 @@
       {
         "text": "Lookup function format",
         "link": "/reference/lookup-format"
+      },
+      {
+        "text": "Memory function format",
+        "link": "/reference/memory-format"
       },
       {
         "text": "Interaction function format",

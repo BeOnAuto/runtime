@@ -158,7 +158,7 @@ describe('the first-playbook recipe where the workflow guide is not carried', ()
 
 describe('the remember recipe', () => {
   it('asks the person in their own words where the format guide it names is carried', async () => {
-    const recipes = await recipesFor(recipeFiles, guidesNamed(['recall-function']));
+    const recipes = await recipesFor(recipeFiles, guidesNamed(['memory-function']));
     const remember = recipes.find(({ name }) => name === 'remember');
 
     expect(remember?.request({ what: 'what it posted today' })).toBe(

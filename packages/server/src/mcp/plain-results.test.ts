@@ -16,6 +16,7 @@ import { commentsCalled, interactionsCalled } from '../testing/interaction-serve
 import { servingReasoning } from '../testing/servers/reasoning-server.ts';
 import {
   licenseActivated,
+  memoriesCalled,
   servingWithAToolServer,
   toolServerToolsCalled,
 } from '../testing/servers/tool-server-calls.ts';
@@ -251,6 +252,7 @@ describe('the plain words that lead each result over MCP', () => {
         ...(await workflowsCalled(session)),
         ...(await commentsCalled(session, server, inSales)),
         ...(await interactionsCalled(session, inSales)),
+        ...(await memoriesCalled(session, inSales)),
         ...(await toolServerToolsCalled(session, inSales, server)),
       ],
       errors: await errorsCalled(session),

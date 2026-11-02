@@ -1,4 +1,4 @@
-import type { MeteredRun } from '@on.auto/definitions';
+import { agentActionOf, type MeteredAgentAction, type MeteredRun } from '@on.auto/definitions';
 import { ActedContextSchema, type Decider } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 
@@ -37,6 +37,10 @@ export function runOf(run: string, playbook = 'alpha', org = 'acme'): MeteredRun
     trigger: null,
     started_by: 'person:ada',
   };
+}
+
+export function agentActionNamed(id: string): MeteredAgentAction {
+  return agentActionOf({ org: 'acme', playbook: 'alpha', type: 'memory', operation: 'remember', id, by: 'person:ada' });
 }
 
 export function runStreamOf(run: string, playbook = 'alpha', org = 'acme'): string {

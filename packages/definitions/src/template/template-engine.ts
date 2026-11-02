@@ -10,7 +10,7 @@ import {
   type Template,
 } from 'liquidjs';
 
-import { addedFilters } from './added-filters.ts';
+import { addedFilters, memoriesRecalled } from './added-filters.ts';
 import { renderDeadlineOn, type RenderClock } from './render-clock.ts';
 
 export const templateLimits = {
@@ -103,6 +103,10 @@ export interface EngineRegistrations {
   readonly withoutTags?: readonly string[];
 }
 
+export interface TemplateUse {
+  readonly recalledMemories: boolean;
+}
+
 export interface TemplateEngine {
   readonly parse: (body: string) => Template[];
   readonly namesIn: (body: string) => number;
@@ -112,7 +116,7 @@ export interface TemplateEngine {
     variables: Readonly<Record<string, Schema.Json>>,
     emitter: Readonly<Emitter>,
     clock: RenderClock,
-  ) => void;
+  ) => TemplateUse;
 }
 
 const namePattern = /[A-Za-z_][\w-]*/gu;
@@ -153,7 +157,9 @@ function engineOver(liquid: () => Liquid): TemplateEngine {
     namesIn: (body) => namesOf(liquid, body),
     analyze: (templates) => liquid().analyzeSync(templates(), { partials: false }),
     render: (templates, variables, emitter, clock) => {
-      toValueSync(liquid().renderer.renderTemplates(templates(), contextLimitedBy(clock, liquid, variables), emitter));
+      const context = contextLimitedBy(clock, liquid, variables);
+      toValueSync(liquid().renderer.renderTemplates(templates(), context, emitter));
+      return { recalledMemories: context.getRegister(memoriesRecalled, false) };
     },
   };
 }

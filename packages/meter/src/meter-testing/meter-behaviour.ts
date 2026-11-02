@@ -1,5 +1,6 @@
 import { describe } from 'vitest';
 
+import { agentActionBehaviour } from './agent-action-behaviour.ts';
 import { allocationsBehaviour } from './allocation-behaviour.ts';
 import {
   allowanceBehaviour,
@@ -28,6 +29,9 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
       laggingClockBehaviour(ledgerOf);
       defaultAllowanceBehaviour(ledgerOf);
       concurrencyBehaviour(ledgerOf);
+    });
+    describe('the actions of agents', () => {
+      agentActionBehaviour(ledgerOf);
     });
     describe('licenses', () => {
       licensesBehaviour(ledgerOf);

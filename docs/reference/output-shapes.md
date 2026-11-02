@@ -2,15 +2,17 @@
 
 # Output shapes
 
-A shape is a JSON Schema that the runtime owns, for what a definition produces: a series over time, values by category, a table or a text. A shape says what the data is, never what it measures. The shape fixes the fields; the playbook supplies the names, the labels and the units. Auto Studio draws any output that declares a shape, whatever its type and its domain.
+A shape is a JSON Schema that the runtime owns, for what a definition produces: a series over time, values by category, a table, a text or memories. A shape says what the data is, never what it measures. The shape fixes the fields; the playbook supplies the names, the labels and the units. Auto Studio draws any output that declares a shape, whatever its type and its domain.
 
 A reasoning function, a computation function and a workflow can declare one with `output.shape`. The shape's schema is then the definition's output schema, and the runtime checks each output against it, together with the rules a schema cannot state. A run says the shape its own output takes, as [What a run shows](#what-a-run-shows) sets out, and Auto Studio draws a run's output from it.
+
+A memory function declares no shape either: a run of its `recall` block answers `memories`, and a run of its `remember` block answers `{ id, version, scope }`, the memory it kept, as [Memory function format](memory-format.md#remembering) sets out.
 
 A prediction function declares no shape, and its questions answer a `series`: each question's answer is the observed periods and the periods ahead of its series, checked against the shape before it is answered, as [The input and the output](prediction-format.md#the-input-and-the-output) sets out, and the function shows the shape as a definition that declares it does. A function that predicts a total to the end of a period answers its total as one point of a line named `total`, at the last period of the grain that the enclosing period holds, since a series holds one grain; its run's record names the enclosing period.
 
 ## Declaring a shape
 
-`output.shape` names one of the four shapes: `series`, `categories`, `table` or `text`.
+`output.shape` names one of the five shapes: `series`, `categories`, `table`, `text` or `memories`.
 
 ```yaml
 output:
@@ -20,7 +22,7 @@ output:
 These are refused when the definition is saved, each with its line:
 
 - `output.schema` beside `output.shape`, at `/output/schema`, since the shape's schema is the output schema;
-- a name that is no shape, at `/output/shape`: `Expected the name of a shape: series, categories, table, or text`.
+- a name that is no shape, at `/output/shape`: `Expected the name of a shape: series, categories, table, text, or memories`.
 
 What the shape changes depends on the type, and a prediction function answers one without declaring it:
 
@@ -52,7 +54,7 @@ A reasoning function's shape is sent to the provider as an output schema of the 
 
 The run says its shape from the moment it starts, so a run that is rejected still says the shape its output would have taken.
 
-## The four shapes
+## The five shapes
 
 Each shape is a JSON Schema of draft 2020-12 whose every record takes the fields listed and no others. In all of them:
 
@@ -121,6 +123,21 @@ A text of Markdown.
 | Field  | Required | Value                                     |
 | ------ | -------- | ----------------------------------------- |
 | `text` | Yes      | Markdown of at most 65,536 bytes in UTF-8 |
+
+### memories
+
+Memories, newest first, as a recall answers them.
+
+| Field                   | Required | Value                                                                                  |
+| ----------------------- | -------- | -------------------------------------------------------------------------------------- |
+| `memories`              | Yes      | The memories, with at most 16,000 characters of text across them                       |
+| `memories[].id`         | Yes      | The memory's id                                                                        |
+| `memories[].scope`      | Yes      | Who keeps it: `playbook` or `organization`                                             |
+| `memories[].text`       | Yes      | What was remembered, 1 to 2,000 characters                                             |
+| `memories[].tags`       | Yes      | At most 8 tags, each 1 to 32 lowercase letters, digits and hyphens                     |
+| `memories[].about`      | No       | `from` and `to`, the days it is about, each as `YYYY-MM-DD`, `from` no later than `to` |
+| `memories[].written_at` | Yes      | When its latest version was written, in ISO 8601                                       |
+| `memories[].written_by` | Yes      | Who wrote it                                                                           |
 
 ## Examples
 

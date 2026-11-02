@@ -10,7 +10,7 @@ import { TriggerSchema } from './definition-triggers.ts';
 const listedDefinitionFields = {
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, lookup, interaction, prediction, computation or workflow, or page for a page that presents the results of one',
+      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one',
   }),
   name: Schema.String.annotate({
     description: 'The definition name, unique among definitions of its type in the playbook and never reused',
@@ -43,7 +43,7 @@ const listedDefinitionFields = {
       shape: Schema.optionalKey(
         Schema.String.annotate({
           description:
-            'The output shape its output_schema is: series, categories, table or text, each a JSON Schema the runtime owns, which Auto Studio draws',
+            'The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws',
         }),
       ),
       of: Schema.optionalKey(

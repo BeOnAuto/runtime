@@ -26,6 +26,7 @@ export interface FreeRateReached {
 export interface LocalRule {
   readonly kind: 'local';
   readonly key_sha256: string | undefined;
+  readonly agent_action: boolean;
   readonly allowance: number;
   readonly free_rate: Fallback;
   readonly refusal: (reached: FreeRateReached) => Conflict;

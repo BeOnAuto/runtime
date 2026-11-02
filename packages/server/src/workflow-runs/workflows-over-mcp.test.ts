@@ -71,6 +71,9 @@ const playbookTools = [
   'execute',
   'answer_interaction',
   'list_interactions',
+  'remember',
+  'recall',
+  'forget',
   'send_run_event',
 ];
 
@@ -106,13 +109,14 @@ function typesOfCreateDefinition(listing: unknown): readonly string[] {
 }
 
 describe('workflows over MCP', () => {
-  it('lists twenty-two tools on the endpoint of a playbook, and every capability in the definition tools', async () => {
+  it('lists twenty-five tools on the endpoint of a playbook, and every capability in the definition tools', async () => {
     const listing = await onAlpha([], (session) => session.listTools());
 
     expect(toolNamesIn(listing)).toEqual([...playbookTools, 'get_guide']);
     expect(typesOfCreateDefinition(listing)).toEqual([
       'reasoning',
       'lookup',
+      'memory',
       'interaction',
       'computation',
       'prediction',

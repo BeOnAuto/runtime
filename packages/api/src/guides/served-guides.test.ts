@@ -30,13 +30,15 @@ const onThisServer = 'On this server, a reasoning function names its model throu
 
 const reasoning = capabilityOf('reasoning', 'reasoning function', { name: 'reasoning-function', onThisServer });
 
+const memory = capabilityOf('memory', 'memory function', { name: 'memory-function' });
+
 const computation = capabilityOf('computation', 'computation function', { name: 'computation-function' });
 
 const prediction = capabilityOf('prediction', 'prediction function', { name: 'prediction-function' });
 
 const workflow = capabilityOf('workflow', 'workflow', { name: 'workflow' });
 
-const everyType = [reasoning, computation, prediction, workflow];
+const everyType = [reasoning, memory, computation, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
@@ -77,6 +79,7 @@ function outsideCode(text: string): string {
 
 const pages: Readonly<Record<string, string>> = {
   'reasoning-function': 'reference/reasoning-format.md',
+  'memory-function': 'reference/memory-format.md',
   'computation-function': 'reference/computation-format.md',
   'prediction-function': 'reference/prediction-format.md',
   workflow: 'reference/workflow-format.md',
@@ -86,20 +89,18 @@ const pages: Readonly<Record<string, string>> = {
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are the terminology, a guide per type, the templates and the three recipes it carries the format guides of', () => {
+  it('are the terminology, a guide per type, the templates and the four recipes it carries the format guides of', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
       'terminology',
-      'reasoning-function',
-      'computation-function',
-      'prediction-function',
-      'workflow',
-      'templates',
+      ...Object.keys(pages),
       'first-playbook',
+      'remember',
       'give-tools',
       'schedule',
     ]);
     expect(definitionTypes).toEqual([
       { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
+      { type: 'memory', noun: 'memory function', guide: 'memory-function' },
       { type: 'computation', noun: 'computation function', guide: 'computation-function' },
       { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
       { type: 'workflow', noun: 'workflow', guide: 'workflow' },
@@ -125,6 +126,7 @@ describe('the titles and links of the guides of a server that runs every type of
   it('title each type guide and the templates as their pages are titled', () => {
     expect(guides.slice(1).map(({ title }) => title)).toEqual([
       'Reasoning function format',
+      'Memory function format',
       'Computation function format',
       'Prediction function format',
       'Workflow format',
@@ -162,6 +164,7 @@ describe('the size and the words of the guides of a server', () => {
   it('describe each guide in a sentence for a person or a client that lists them', () => {
     expect(guides.slice(1).map(({ description }) => description)).toEqual([
       'How reasoning functions are written: their document, fields, examples and bounds.',
+      'How memory functions are written: their document, fields, examples and bounds.',
       'How computation functions are written: their document, fields, examples and bounds.',
       'How prediction functions are written: their document, fields, examples and bounds.',
       'How workflows are written: their document, fields, examples and bounds.',
@@ -188,11 +191,13 @@ describe('the recipes of a server', () => {
 
     expect([
       asked['first-playbook']?.({}),
+      asked['remember']?.({ what: 'who approves a budget' }),
       asked['give-tools']?.({}),
       asked['give-tools']?.({ server: 'slack' }),
       asked['schedule']?.({ workflow: 'daily-digest', when: 'every weekday at 9:00' }),
     ]).toEqual([
       'Create my first playbook.',
+      'Make the playbook remember who approves a budget.',
       'Give the playbook tools.',
       'Give the playbook the tools of the tool server slack.',
       'Run the workflow daily-digest every weekday at 9:00.',
@@ -230,11 +235,11 @@ describe('the recipes of a server that serves interaction functions', () => {
       'give it tools with the give-tools recipe. They can also ask someone through a connection and take their answer with an interaction function.',
     );
     expect([
-      bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
-      bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
+      bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
+      bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4281, 4219, 1741],
-      [3894, 3630, 1741],
+      [4281, 1665, 4219, 1741],
+      [3894, 1665, 3630, 1741],
     ]);
   });
 });
@@ -248,7 +253,9 @@ const fieldsNamed: ReadonlySet<string> = new Set(['input_schema']);
 function toolsNamedIn(text: string): readonly string[] {
   return [
     ...new Set(
-      text.replaceAll(/`[^`]*`/gu, '').match(/\b(?:[a-z]+(?:_[a-z]+)+|search|introspect|validate|execute)\b/gu),
+      text
+        .replaceAll(/`[^`]*`/gu, '')
+        .match(/\b(?:[a-z]+(?:_[a-z]+)+|search|introspect|validate|execute|remember|recall|forget)\b/gu),
     ),
   ].filter((name) => !calledWhereListed.has(name) && !fieldsNamed.has(name));
 }
@@ -274,16 +281,14 @@ describe('the tools a recipe calls', () => {
   });
 });
 
+const notRunThere = ['memory', 'computation', 'interaction', 'prediction'].map((type) => `${type} function`);
+
 describe('the terminology guide of a server', () => {
   it('names only the types of definition the server runs', () => {
     const [terminology] = servedForReasoningAndWorkflows.guides;
 
     expect(terminology?.text).toContain('- Reasoning: Reasoning function.');
     expect(terminology?.text).toContain('- Coordination: Workflow.');
-    expect(
-      ['recall function', 'computation function', 'interaction function', 'prediction function'].filter((type) =>
-        String(terminology?.text).toLowerCase().includes(type),
-      ),
-    ).toEqual([]);
+    expect(notRunThere.filter((type) => String(terminology?.text).toLowerCase().includes(type))).toEqual([]);
   });
 });

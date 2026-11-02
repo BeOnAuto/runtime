@@ -1,0 +1,12 @@
+{
+  "type": "action_admitted",
+  "data": {
+    "run": "playbook/acme/alpha/runs/remember:memory-1",
+    "until": "2026-10-29T10:10:00.000Z",
+    "basis": "agent_action"
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

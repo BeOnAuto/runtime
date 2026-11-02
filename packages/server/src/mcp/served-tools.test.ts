@@ -91,8 +91,8 @@ function hasNoConstraint({ name, keywords }: Argument): boolean {
 }
 
 describe('the descriptions of the tools of /mcp', () => {
-  it('are thirty-three, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(33);
+  it('are thirty-six, each under 800 characters, in three to eight sentences', () => {
+    expect(tools).toHaveLength(36);
     expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
     expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
   });
@@ -104,11 +104,11 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow and a page take none, at 657 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow and a page take none, at 665 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
-      '`type` is reasoning, lookup, interaction, computation, prediction, page, or workflow, and `name` how workflows and tools refer to it.',
+      '`type` is reasoning, lookup, memory, interaction, computation, prediction, page, or workflow, and `name` how workflows and tools refer to it.',
     );
     expect(description).toContain(
       "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
@@ -116,7 +116,7 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(description).toContain(
       'A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither.',
     );
-    expect([description.length, sentencesOf(description)]).toEqual([657, 6]);
+    expect([description.length, sentencesOf(description)]).toEqual([665, 6]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });
@@ -162,7 +162,7 @@ describe('the descriptions of the tools that find and connect a provider', () =>
 describe('the descriptions that say what the instructions leave to them', () => {
   it('name in get_guide the recipes the tools of /mcp can follow', () => {
     expect(descriptionOf('get_guide')).toContain(
-      'It holds the recipes first-playbook, give-tools and schedule, which the tools listed here can follow.',
+      'It holds the recipes first-playbook, remember, give-tools and schedule, which the tools listed here can follow.',
     );
   });
 
@@ -226,6 +226,9 @@ const served: Readonly<Record<string, Hints>> = {
   list_playbook_events: [true, false, true, false],
   get_event: [true, false, true, false],
   publish_event: [false, false, false, false],
+  remember: [false, false, false, false],
+  recall: [true, false, true, false],
+  forget: [false, true, true, false],
   search: [true, false, true, true],
   introspect: [true, false, true, true],
   dry_run: [true, false, true, true],

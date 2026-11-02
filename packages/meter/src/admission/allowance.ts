@@ -1,4 +1,4 @@
-import type { MeteredRun } from '@on.auto/definitions';
+import type { MeteredAction } from '@on.auto/definitions';
 import { Conflict, type Unavailable } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
@@ -13,7 +13,7 @@ function isMeterRefusal(refusal: unknown): boolean {
 
 export function admittedWithin(
   metering: Metering,
-  run: MeteredRun,
+  run: MeteredAction,
   { rule, installation }: Pick<Admitting, 'rule' | 'installation'>,
 ): Effect.Effect<void, Conflict | Unavailable> {
   return Effect.gen(function* () {

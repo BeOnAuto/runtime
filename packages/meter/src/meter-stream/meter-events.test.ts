@@ -86,10 +86,22 @@ const withFeatures: readonly (typeof MeterEventSchema.Type)[] = [
   },
 ];
 
+const withAgentActions: readonly (typeof MeterEventSchema.Type)[] = [
+  {
+    type: 'action_admitted',
+    data: {
+      run: 'playbook/acme/alpha/runs/remember:memory-1',
+      until: '2026-10-29T10:10:00.000Z',
+      basis: 'agent_action',
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the meter and of the allocations of credits it holds', () => {
   recordedFactsBehaviour({
     schema: MeterEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.47.0': withFeatures },
+    releases: { '0.46.0': baseline, '0.47.0': withFeatures, '0.56.0': withAgentActions },
   });
 });

@@ -19,16 +19,16 @@ const outlines: readonly RecipeOutline[] = [
     name: 'remember',
     title: 'Make the playbook remember something',
     description:
-      "Keeps what the playbook's runs answered or its events recorded in a recall function, so that the playbook can tell it later.",
+      'Keeps what the person wants kept as memories of the playbook or of its organization, which the playbook and its workflows recall later.',
     arguments: [
       {
         name: 'what',
-        description: "What the playbook should remember, in the person's words, such as what it posted today",
+        description: "What the playbook should remember, in the person's words, such as who approves a budget",
         required: true,
       },
     ],
-    formatGuide: 'recall-function',
-    calls: ['list_definitions', 'create_definition', 'update_definition', 'publish_event', 'run_definition'],
+    formatGuide: 'memory-function',
+    calls: ['remember', 'recall', 'forget', 'create_definition'],
     request: ({ what }) => `Make the playbook remember ${String(what)}.`,
   },
   {

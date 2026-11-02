@@ -8,7 +8,7 @@ import {
   type DeclaredFact,
 } from '@on.auto/definitions';
 import { InteractionRunFactSchema } from '@on.auto/interaction';
-import type { FactSchemaRead } from '@on.auto/ledger';
+import { MemoryFactSchema } from '@on.auto/memory';
 import { MeterEventSchema } from '@on.auto/meter';
 import { ConversationCallEventSchema, HandCallEventSchema } from '@on.auto/tool-servers';
 import { RunLogRecordSchema } from '@on.auto/workflow-engine';
@@ -21,6 +21,7 @@ export const knownFactSchemas = [
   DefinitionEventSchema,
   RunEventSchema,
   InteractionRunFactSchema,
+  MemoryFactSchema,
   RunLogRecordSchema,
   EventPublishedSchema,
   ReactionRefusedSchema,
@@ -33,6 +34,6 @@ export const knownFactSchemas = [
   CommentEventSchema,
 ];
 
-export function factSchemasKnownWith(declared: readonly DeclaredFact[]): readonly FactSchemaRead[] {
+export function factSchemasKnownWith(declared: readonly DeclaredFact[]) {
   return [...knownFactSchemas, ...declared.map(({ schema }) => schema)];
 }

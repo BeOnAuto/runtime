@@ -112,13 +112,13 @@ the run succeeds with this output, and its record shows that it spent 0 checkpoi
 
 ## Fields
 
-| Field           | Required | Value                                                                                                                                                             |
-| --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description`   | No       | Text of 1 to 1,000 characters                                                                                                                                     |
-| `language`      | Yes      | `typescript`, the playbook's one language                                                                                                                         |
-| `input.schema`  | No       | A JSON Schema of the input. The input may be any JSON value it allows                                                                                             |
-| `output.schema` | No       | A JSON Schema of the output. An output that does not match it ends the run as a conflict                                                                          |
-| `output.shape`  | No       | The name of an [output shape](output-shapes.md), `series`, `categories`, `table` or `text`, whose schema is the output schema. Not allowed beside `output.schema` |
+| Field           | Required | Value                                                                                                                                                                         |
+| --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description`   | No       | Text of 1 to 1,000 characters                                                                                                                                                 |
+| `language`      | Yes      | `typescript`, the playbook's one language                                                                                                                                     |
+| `input.schema`  | No       | A JSON Schema of the input. The input may be any JSON value it allows                                                                                                         |
+| `output.schema` | No       | A JSON Schema of the output. An output that does not match it ends the run as a conflict                                                                                      |
+| `output.shape`  | No       | The name of an [output shape](output-shapes.md), `series`, `categories`, `table`, `text` or `memories`, whose schema is the output schema. Not allowed beside `output.schema` |
 
 - Unknown fields are rejected. Among them are the fields of a reasoning function that do not apply here: `model`, `config`, `tools`, `output.format` and `input.default`.
 - The body after the front matter is the program. A document without one is rejected.

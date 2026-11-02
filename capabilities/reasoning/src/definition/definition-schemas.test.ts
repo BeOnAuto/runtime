@@ -143,7 +143,7 @@ describe('an output of a shape', () => {
       [
         'Line 4, /output/format: An output that names a shape is JSON of that shape: leave format out, or set it to json',
       ],
-      ['Line 4, /output/shape: Expected the name of a shape: series, categories, table, or text'],
+      ['Line 4, /output/shape: Expected the name of a shape: series, categories, table, text, or memories'],
     ]);
   });
 

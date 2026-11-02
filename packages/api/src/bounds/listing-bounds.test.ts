@@ -68,7 +68,10 @@ function tellingInTheOrg(name: string, description: string, argument: string) {
     title: 'Tell',
     description,
     route: { method: 'GET', path: `/${name.replaceAll('_', '-')}` },
-    inputSchema: Schema.Struct({ news: Schema.optionalKey(Schema.String.annotate({ description: argument })) }),
+    inputSchema: Schema.Struct({
+      news: Schema.optionalKey(Schema.String.annotate({ description: argument })),
+      since: Schema.optionalKey(Schema.String.annotate({ description: argument })),
+    }),
     outputSchema: Schema.Struct({ told: Schema.Boolean }),
     reasons: [],
     handle: () => Effect.succeed({ told: true }),
@@ -99,11 +102,11 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'own org',
     path: '/mcp',
-    most: 51_600,
+    most: 56_500,
     servingWith: (extra) => ({
       operations: [
-        ...orgToolsFilled(6, descriptionRoom * 6, longestArgument),
-        ...playbookToolsFilled(27, extra, longestArgument),
+        ...orgToolsFilled(8, descriptionRoom * 8, longestArgument),
+        ...playbookToolsFilled(28, extra, longestArgument),
       ],
     }),
   },

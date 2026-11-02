@@ -3,7 +3,7 @@ import type { Emitter } from 'liquidjs';
 
 import { engineFailureOf } from './engine-failure.ts';
 import { renderTimeExceeded, type RenderClock } from './render-clock.ts';
-import type { TemplateEngine } from './template-engine.ts';
+import type { TemplateEngine, TemplateUse } from './template-engine.ts';
 import type { ParsedTemplate } from './template-parsing.ts';
 
 export type RenderFailure =
@@ -46,11 +46,10 @@ export function renderedTemplate<Refusal>(
   engine: TemplateEngine,
   { templates, firstLine }: ParsedTemplate,
   { variables, emitter, refusalOf, clock }: TemplateRender<Refusal>,
-): Result.Result<void, RenderFailure | Refusal> {
+): Result.Result<TemplateUse, RenderFailure | Refusal> {
   try {
-    engine.render(templates, variables, emitter, clock);
+    return Result.succeed(engine.render(templates, variables, emitter, clock));
   } catch (error) {
     return Result.fail(failureOf(error, firstLine, refusalOf));
   }
-  return Result.void;
 }

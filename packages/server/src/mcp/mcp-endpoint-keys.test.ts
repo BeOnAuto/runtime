@@ -46,6 +46,7 @@ const readerToolsInsideAPlaybook = [
   'introspect',
   'dry_run',
   'list_interactions',
+  'recall',
 ];
 
 const commands = [
@@ -60,6 +61,8 @@ const commands = [
   'publish_event',
   'execute',
   'answer_interaction',
+  'remember',
+  'forget',
   'send_run_event',
   'activate_license',
 ];
@@ -201,7 +204,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
 });
 
 describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
-  it('lists the thirty-three tools and the playbooks of its org', async () => {
+  it('lists the thirty-six tools and the playbooks of its org', async () => {
     const outcome = await asKey(
       acmeAdmin.key,
       async (session) => ({
@@ -212,7 +215,7 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
       kind,
     );
 
-    expect(outcome.tools).toBe(33);
+    expect(outcome.tools).toBe(36);
     expect(outcome.playbooks.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });
 });

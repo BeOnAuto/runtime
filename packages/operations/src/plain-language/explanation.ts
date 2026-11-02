@@ -153,6 +153,10 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     why: 'the playbook already holds as many open requests as it may',
     remedy: 'Once some of them are answered, expire or are cancelled, it can be tried again.',
   },
+  memories_full: {
+    why: 'the playbook, or its organization, already keeps as many memories as it may',
+    remedy: 'Once some of them are forgotten, it can be tried again.',
+  },
   tools_unfinished: {
     why: 'it called tools but could not finish',
     remedy:

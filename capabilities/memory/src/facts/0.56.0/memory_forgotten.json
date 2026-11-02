@@ -1,0 +1,10 @@
+{
+  "type": "memory_forgotten",
+  "data": {
+    "version": 2
+  },
+  "context": {
+    "at": "2026-10-29T11:00:00.000Z",
+    "by": "person:user_2ada"
+  }
+}

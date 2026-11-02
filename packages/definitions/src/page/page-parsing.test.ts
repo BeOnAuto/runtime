@@ -53,7 +53,7 @@ describe('the subject of a page', () => {
 
   it('is required, and refused when it names no subject the page can present', () => {
     const notASubject =
-      'Line 2, /of: of names the subject whose results the page presents: <type>/<name>, where the type is workflow, reasoning, lookup, interaction, prediction or computation, or playbook';
+      'Line 2, /of: of names the subject whose results the page presents: <type>/<name>, where the type is workflow, reasoning, lookup, memory, interaction, prediction or computation, or playbook';
 
     expect(issuesIn('---\ndescription: No subject\n---\n{% result %}{% endresult %}\n')).toEqual([
       'Line 1, /of: of is required',
@@ -122,7 +122,7 @@ describe('the data of a page', () => {
     ]);
     expect(issuesIn(pageWithData({ views: 'By-Day: series\nby_week: chart' }))).toEqual([
       "Line 10, /data/views/By-Day: A view's name is 1 to 32 lowercase letters, digits and underscores, beginning with a letter, so that a template reads it as views.<name>",
-      'Line 11, /data/views/by_week: Expected the name of a shape: series, categories, table, or text',
+      'Line 11, /data/views/by_week: Expected the name of a shape: series, categories, table, text, or memories',
     ]);
   });
 });

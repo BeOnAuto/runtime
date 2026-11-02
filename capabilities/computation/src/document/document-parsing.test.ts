@@ -64,7 +64,7 @@ describe('the output of a computation function that names a shape', () => {
       ),
     ).toEqual([
       ["Line 5, /output/schema: An output that names a shape takes no schema: the shape's schema is its schema"],
-      ['Line 4, /output/shape: Expected the name of a shape: series, categories, table, or text'],
+      ['Line 4, /output/shape: Expected the name of a shape: series, categories, table, text, or memories'],
     ]);
   });
 });

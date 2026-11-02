@@ -60,7 +60,7 @@ A run that a schedule starts gets only the time it was due. A workflow that need
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Fill in the input              | The workflow's `input.from` puts fixed values in place of the schedule's input. Any other input passes through, so your agent can still run it as before | The workflow runs with the same input each time |
 | Add a small scheduled workflow | A new workflow holds the input and runs yours with it. The schedule goes on the new workflow, and yours stays as it is                                   | You want to leave the workflow unchanged        |
-| Read the data when it runs     | A step reads the data through a function's [tools](tools.md)                                                                                             | The data changes between runs                   |
+| Read the data when it runs     | A step recalls it from the playbook's [memories](remember.md), or reads it through a function's [tools](tools.md)                                        | The data changes between runs                   |
 
 Ask your agent:
 
@@ -359,3 +359,4 @@ do:
 
 - [Workflow format](../reference/workflow-format.md#triggers) has the filters, the trigger limits and the rules for new versions.
 - [Workflows and runs](../concepts/workflows.md) explains how runs start, wait and end.
+- [Make a playbook remember](remember.md) keeps what runs learn as memories, which later runs recall.
