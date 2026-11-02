@@ -9809,7 +9809,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, interaction, computation, recall, prediction, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong.",
+        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, interaction, computation, recall, prediction, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -9828,6 +9828,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -9891,7 +9892,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -10302,6 +10303,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -10349,7 +10351,7 @@
                       "properties": {
                         "type": {
                           "type": "string",
-                          "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                          "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                         },
                         "name": {
                           "type": "string",
@@ -10637,6 +10639,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -10687,7 +10690,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -11094,6 +11097,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -11161,7 +11165,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -11607,7 +11611,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -12016,6 +12020,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -12063,7 +12068,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one"
                     },
                     "name": {
                       "type": "string",
@@ -12472,6 +12477,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -12532,7 +12538,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -12633,6 +12639,7 @@
                               "enum": [
                                 "model_not_offered",
                                 "tool_not_offered",
+                                "tool_not_read_only",
                                 "tool_server_failed",
                                 "tools_unfinished",
                                 "rebuilding",
@@ -12967,7 +12974,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -13068,6 +13075,7 @@
                               "enum": [
                                 "model_not_offered",
                                 "tool_not_offered",
+                                "tool_not_read_only",
                                 "tool_server_failed",
                                 "tools_unfinished",
                                 "rebuilding",
@@ -13428,7 +13436,7 @@
                     },
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                      "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -13529,6 +13537,7 @@
                               "enum": [
                                 "model_not_offered",
                                 "tool_not_offered",
+                                "tool_not_read_only",
                                 "tool_server_failed",
                                 "tools_unfinished",
                                 "rebuilding",
@@ -13832,6 +13841,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -13937,7 +13947,7 @@
                         },
                         "type": {
                           "type": "string",
-                          "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                          "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
                         },
                         "name": {
                           "type": "string",
@@ -14014,6 +14024,7 @@
                                 "cursor_not_held",
                                 "model_not_offered",
                                 "tool_not_offered",
+                                "tool_not_read_only",
                                 "tool_server_failed",
                                 "tools_unfinished",
                                 "rebuilding",
@@ -14527,6 +14538,7 @@
               "type": "string",
               "enum": [
                 "reasoning",
+                "lookup",
                 "interaction",
                 "computation",
                 "recall",
@@ -14790,7 +14802,7 @@
                         "properties": {
                           "type": {
                             "type": "string",
-                            "description": "The type of the definition: reasoning, interaction, prediction, recall, computation or workflow"
+                            "description": "The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow"
                           },
                           "name": {
                             "type": "string",
@@ -18371,12 +18383,13 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), computation-function (Computation function format), recall-function (Recall function format), prediction-function (Prediction function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
                 "terminology",
                 "reasoning-function",
+                "lookup-function",
                 "interaction-function",
                 "computation-function",
                 "recall-function",
@@ -18604,6 +18617,7 @@
               "account_closed",
               "model_not_offered",
               "tool_not_offered",
+              "tool_not_read_only",
               "tool_server_failed",
               "tools_unfinished",
               "rebuilding",

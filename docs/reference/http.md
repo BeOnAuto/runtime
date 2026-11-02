@@ -218,6 +218,19 @@ A save is refused for its `diagram` in these cases, and nothing is saved:
 | A `diagram` that is neither a flowchart or state diagram nor `none`, or over 8,192 bytes | `invalid_input` at `/diagram`, which names the two choices or the bound                                                                                                                                 |
 | A workflow saved with `diagram`                                                          | `invalid_input` at `/diagram`: `A workflow takes no diagram, since Auto Studio draws a workflow from its steps; leave diagram out`                                                                      |
 
+## Lookup functions
+
+Lookup functions use the operations of reasoning functions, with `lookup` in place of `reasoning` in each route, such as `POST /definitions/lookup` and `POST /definitions/lookup/{name}/run`. The `source` is a [lookup function document](lookup-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
+
+Saving a definition asks the tool server it names for its tools, and a run finishes within the request that starts it, its output what the tool returned at `read`.
+
+| Case                                                                                         | Response                                                       |
+| -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| A save whose tool is marked `acts` or carries no mark, or names a server or tool not offered | `invalid_input` under `/source`, at the line of `call`         |
+| A save while the tool server cannot be asked for its tools                                   | `unavailable`, naming the server; nothing is saved             |
+| A run whose tool its server no longer marks `reads`                                          | `unavailable` with the kind `tool_not_read_only`; nothing sent |
+| A run whose call was sent and could not finish                                               | `unavailable` with the kind `tools_unfinished`                 |
+
 ## Interaction functions
 
 Interaction functions use the operations of reasoning functions, with `interaction` in place of `reasoning` in each route, such as `POST /definitions/interaction` and `POST /definitions/interaction/{name}/run`. The `source` is an [interaction function document](interaction-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions). A request whose document names no `deliver` is refused when saved, `invalid_input`, its issue naming the connections whose tools can send a request and read its replies, and `deliver: agent`, and so is a notification, which takes no answer and goes through a connection, that names no tool or `deliver: agent`, its issue naming the connections whose tools can send it; see [How a request reaches its party](interaction-format.md#how-a-request-reaches-its-party).
@@ -1864,7 +1877,7 @@ A `500` response contains an incident reference: its `instance` and the `x-reque
 
 `Retry-After` comes only with an `unavailable` response that a retry of the same request may resolve. It never comes:
 
-- with the kinds `tools_unfinished`, `tool_not_offered` or `model_not_offered`;
+- with the kinds `tools_unfinished`, `tool_not_offered`, `tool_not_read_only` or `model_not_offered`;
 - with `because` set to `stalled`, which no wait resolves;
 - with `cancelled`.
 

@@ -96,6 +96,10 @@ describe('problemResponse', () => {
     ]).toEqual([null, null, null]);
   });
 
+  it('asks for no retry of a tool no longer marked reads, which only a change of its mark or of the function resolves', () => {
+    expect(retryAfterOf({ kind: 'tool_not_read_only' })).toBeNull();
+  });
+
   it('asks for a retry of a tool server that could not be used, which a retry may find working', () => {
     expect(retryAfterOf({ kind: 'tool_server_failed', because: 'unreachable' })).toBe('5');
   });

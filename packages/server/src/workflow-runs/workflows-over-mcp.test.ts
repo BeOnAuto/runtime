@@ -112,6 +112,7 @@ describe('workflows over MCP', () => {
     expect(toolNamesIn(listing)).toEqual([...playbookTools, 'get_guide']);
     expect(typesOfCreateDefinition(listing)).toEqual([
       'reasoning',
+      'lookup',
       'interaction',
       'computation',
       'recall',

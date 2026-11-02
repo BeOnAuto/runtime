@@ -135,6 +135,10 @@
         "link": "/reference/reasoning-format"
       },
       {
+        "text": "Lookup function format",
+        "link": "/reference/lookup-format"
+      },
+      {
         "text": "Interaction function format",
         "link": "/reference/interaction-format"
       },

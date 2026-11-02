@@ -85,7 +85,8 @@ export type RunRejection = typeof RunRejectionSchema.Type;
 export const RunSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run id, a UUID' }),
   type: Schema.String.annotate({
-    description: 'The type of the definition: reasoning, interaction, prediction, recall, computation or workflow',
+    description:
+      'The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow',
   }),
   name: Schema.String.annotate({ description: 'The definition name' }),
   definition_version: Schema.Int.annotate({ description: 'The definition version that ran' }),

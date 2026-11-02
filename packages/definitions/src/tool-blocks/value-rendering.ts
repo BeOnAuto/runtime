@@ -1,11 +1,12 @@
 import { Buffer } from 'node:buffer';
 
-import { renderedTemplate, type ParsedTemplate, type RenderClock } from '@on.auto/definitions/template';
 import { Result, Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
-import { interactionEngine } from '../document/request-templates.ts';
-import type { TextFailure } from './text-rendering.ts';
+import type { RenderClock } from '../template/render-clock.ts';
+import type { ParsedTemplate } from '../template/template-parsing.ts';
+import { renderedTemplate } from '../template/template-rendering.ts';
+import { toolBlockEngine, type TextFailure } from './text-rendering.ts';
 
 const loneExpression = /^\{\{(?:[^}]|\}(?!\}))*\}\}$/su;
 
@@ -53,7 +54,7 @@ export function renderedValue(
 ): Result.Result<Schema.Json, TextFailure> {
   const emitter = valueEmitter();
   return Result.flatMap(
-    renderedTemplate<never>(interactionEngine, parsed, { variables, emitter, refusalOf: noRefusal, clock }),
+    renderedTemplate<never>(toolBlockEngine, parsed, { variables, emitter, refusalOf: noRefusal, clock }),
     () => checkedValue(emitter.values[0], mostBytes, parsed.firstLine),
   );
 }

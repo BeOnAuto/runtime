@@ -10,7 +10,7 @@ import { TriggerSchema } from './definition-triggers.ts';
 const listedDefinitionFields = {
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one',
+      'The type of the definition: reasoning, lookup, interaction, prediction, recall, computation or workflow, or page for a page that presents the results of one',
   }),
   name: Schema.String.annotate({
     description: 'The definition name, unique among definitions of its type in the playbook and never reused',
@@ -117,6 +117,8 @@ export type Definition = typeof DefinitionSchema.Type;
 
 export type ReasoningFunctionDefinition = Definition & { readonly type: 'reasoning' };
 
+export type LookupFunctionDefinition = Definition & { readonly type: 'lookup' };
+
 export type InteractionFunctionDefinition = Definition & { readonly type: 'interaction' };
 
 export type PredictionFunctionDefinition = Definition & { readonly type: 'prediction' };
@@ -127,6 +129,7 @@ export type RecallFunctionDefinition = Definition & { readonly type: 'recall' };
 
 export type PlaybookFunctionDefinition =
   | ReasoningFunctionDefinition
+  | LookupFunctionDefinition
   | InteractionFunctionDefinition
   | PredictionFunctionDefinition
   | ComputationFunctionDefinition

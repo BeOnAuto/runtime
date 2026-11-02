@@ -69,6 +69,7 @@ export const localDeveloper: CallerIdentity = { ...signedInAda, id: 'local', nam
 
 export const definitionTypes: readonly DefinitionType[] = [
   { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
+  { type: 'lookup', noun: 'lookup function', guide: 'lookup-function' },
   { type: 'interaction', noun: 'interaction function', guide: 'interaction-function' },
   { type: 'computation', noun: 'computation function', guide: 'computation-function' },
   { type: 'recall', noun: 'recall function', guide: 'recall-function' },
@@ -77,7 +78,7 @@ export const definitionTypes: readonly DefinitionType[] = [
 ];
 
 export const functionTypesSentence =
-  'Its function types: reasoning prompts a model, interaction exchanges information, prediction forecasts from history, recall retrieves run results, and computation runs a program.';
+  'Its function types: reasoning prompts a model, lookup obtains information, interaction exchanges information, prediction forecasts from history, recall retrieves run results, and computation runs a program.';
 
 export const recipes: readonly RecipeCalls[] = [
   {

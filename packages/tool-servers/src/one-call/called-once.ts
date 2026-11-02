@@ -38,9 +38,19 @@ interface Unopened<Refused extends string, Because extends string> {
   readonly detail: string;
 }
 
+export type ActingMark = Exclude<ToolMark, 'reads'>;
+
+export interface NotReadOnlyOnce {
+  readonly kind: 'unopened';
+  readonly refused: 'tool_not_read_only';
+  readonly mark: ActingMark;
+  readonly detail: string;
+}
+
 export type UnopenedOnce =
   | Unopened<'tool_not_offered', NotOfferedBecause>
-  | Unopened<'tool_server_failed', ServerFailedBecause>;
+  | Unopened<'tool_server_failed', ServerFailedBecause>
+  | NotReadOnlyOnce;
 
 export type CalledOnce = UnopenedOnce | AnsweredOnce;
 
@@ -71,8 +81,12 @@ export function answeredOnce(sent: SentCall, scrub: (text: string) => string, ma
     : { ...answered, outcome: done.outcome, answered: fact, detail: cutToFailureBound(resultText(done.scrubbed)) };
 }
 
+function refusalEndingOf(once: UnopenedOnce): Readonly<Record<string, string>> {
+  return refusedEnding(once.refused, once.refused === 'tool_not_read_only' ? once.mark : once.because);
+}
+
 function endingOf(once: CalledOnce): Readonly<Record<string, string>> {
-  return once.kind === 'unopened' ? refusedEnding(once.refused, once.because) : answeredEnding(once.outcome);
+  return once.kind === 'unopened' ? refusalEndingOf(once) : answeredEnding(once.outcome);
 }
 
 export function tracedOnce(

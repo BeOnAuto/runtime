@@ -10,6 +10,13 @@
       "description": "Use a prompt, skills, and tools to interpret information or produce a response."
     },
     {
+      "type": "lookup",
+      "label": "Lookup",
+      "singular": "lookup function",
+      "plural": "lookup functions",
+      "description": "Obtain information that already exists outside the playbook, through one tool that only reads."
+    },
+    {
       "type": "interaction",
       "label": "Interaction",
       "singular": "interaction function",

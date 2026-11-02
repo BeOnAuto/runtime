@@ -12,6 +12,7 @@
     "./page": "./src/page.ts",
     "./template": "./src/template.ts",
     "./testing": "./src/testing/index.ts",
+    "./tool-blocks": "./src/tool-blocks/index.ts",
     "./value-checks": "./src/checking/value-checks.ts"
   },
   "scripts": {

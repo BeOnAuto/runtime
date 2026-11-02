@@ -1,6 +1,6 @@
 # Auto Runtime
 
-Auto Runtime runs the playbooks your agent builds: their reasoning, interaction, prediction, recall and computation functions, and the workflows that coordinate them. [Auto Studio](https://studio.on.auto) lets you inspect and manage them.
+Auto Runtime runs the playbooks your agent builds: their reasoning, lookup, interaction, prediction, recall and computation functions, and the workflows that coordinate them. [Auto Studio](https://studio.on.auto) lets you inspect and manage them.
 
 For hosted Auto, connect your agent to `https://mcp.on.auto` and open Studio at `https://studio.on.auto`: the [quick start](https://on.auto/docs/get-started/cloud) needs nothing installed and no model key. This package runs Auto Runtime yourself, on a server for your team or on your own computer. It needs Node.js 26.10 or later, with its `npx`, on macOS or Linux.
 

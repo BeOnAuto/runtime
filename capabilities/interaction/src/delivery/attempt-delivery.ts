@@ -6,7 +6,7 @@ import { Effect, Result, type Schema } from 'effect';
 import type { DeliveringRecord } from '../run/request-record.ts';
 import type { DeliveryParts, DueRequest } from '../schedule/delivery-parts.ts';
 import { recordedCall } from '../schedule/request-ledger.ts';
-import { argumentsFailureWords, deliveryVariablesOf, renderedArguments } from '../tool-blocks/rendered-arguments.ts';
+import { deliveryArgumentsOf, undeliverableWords } from '../tool-blocks/delivery-arguments.ts';
 import { endOf, type AttemptEnd } from './attempt-end.ts';
 import { startedFact, type Attempting } from './attempt-facts.ts';
 
@@ -51,14 +51,14 @@ function deliveredOn(
 ): Effect.Effect<Delivered | undefined> {
   const { request, record, input } = plan;
   const asking = { input, runId: request.address.id, functionName: request.row.function };
-  const rendered = renderedArguments(record.deliver.with, deliveryVariablesOf(record, asking), clock);
+  const rendered = deliveryArgumentsOf(record.deliver.with, record, asking, clock);
   if (Result.isFailure(rendered)) {
     const { failure } = rendered;
     const end: AttemptEnd = {
       type: 'delivery_refused',
       data: {
         because: failure.reason === 'too_large' ? 'too_large' : 'unworkable',
-        detail: argumentsFailureWords(failure, 'the call that delivers the request'),
+        detail: undeliverableWords(failure),
       },
     };
     return Effect.map(recordedStart(parts, plan), (startedId): Delivered | undefined =>

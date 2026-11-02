@@ -2,27 +2,28 @@
 
 A function is one reusable piece of your team's method, saved in a playbook. It defines what goes in, what comes out and what happens in between. A run carries it out once with particular inputs. Your agent can call a function directly, and the same function can be a step in several workflows.
 
-Each function has one of five types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not a sixth function type. [Terminology](terminology.md) defines these words.
+Each function has one of six types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not a seventh function type. [Terminology](terminology.md) defines these words.
 
 ## Choose a function type
 
 | Type        | Use it to                                          | Example                                              |
 | ----------- | -------------------------------------------------- | ---------------------------------------------------- |
 | Reasoning   | Interpret, judge or write with a language model    | Review a campaign brief against your team's criteria |
+| Lookup      | Read what another system holds right now           | Read a campaign's figures from the reporting tool    |
 | Interaction | Ask a person or a system, and take the answer      | Ask the brief's owner to approve the review          |
 | Prediction  | Predict a quantity from the playbook's own history | Forecast next week's sign-ups in each region         |
 | Recall      | Look up what the playbook has already recorded     | Bring back the last reviews of one campaign          |
 | Computation | Calculate or transform data exactly, with code     | Total a campaign's spend and its pace against budget |
 
-Choose a type by the function's job, not by how it does it. A function that looks up what the playbook has already recorded is recall. A function that asks another system for what it holds right now is interaction, even when it only reads. A function whose job is to forecast is prediction, even though its forecaster runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
+Choose a type by the function's job, not by how it does it. A function that looks up what the playbook has already recorded is recall. A function that reads what another system holds right now is lookup, and one that asks a system to do something is interaction. A function whose job is to forecast is prediction, even though its forecaster runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
 
 Real work often combines types. A budget review might recall the last decisions, compute the totals, reason about the options and then ask a person to approve. A workflow puts those steps in order; [Workflows and runs](workflows.md) explains how.
 
 ## Availability
 
-Hosted Auto runs reasoning, interaction, prediction, recall and computation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
+Hosted Auto runs reasoning, lookup, interaction, prediction, recall and computation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
 
-The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
+The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
 These are planned and not available yet:
 
@@ -42,13 +43,21 @@ Choose reasoning when the work needs judgment or language. Leave exact arithmeti
 - [Give a function tools](../guides/tools.md) adds a tool to a reasoning function.
 - [Reasoning function format](../reference/reasoning-format.md) describes the document.
 
+## Lookup
+
+A lookup function obtains information that already exists outside the playbook, through one tool that only reads: the replies of a thread, a contact's record, this week's figures from a reporting tool. A run calls the tool once and returns the part of its result the function points at, at once.
+
+Choose lookup when the playbook needs what another system holds right now. A lookup function interprets nothing and changes nothing: it asks no model, and it calls only a tool marked `reads`, so running it again is always safe. A reasoning function then interprets what it read.
+
+- [Lookup function format](../reference/lookup-format.md) describes the document and the mark its tool needs.
+
 ## Interaction
 
-An interaction function exchanges information between the playbook and people or other systems. It can ask for an approval, send a notification, collect details from a person or ask another system what it holds right now.
+An interaction function exchanges information between the playbook and people or other systems. It can ask for an approval, send a notification, collect details from a person or have another system do something.
 
 It asks a system and takes the result straight back, or it asks a person and waits. A request reaches the person through a connection they chose, such as a chat message or an email, or is held for an agent they answer through, and their answer becomes the run's result. For example, once a brief is reviewed, an interaction function asks its owner to approve the review.
 
-Choose interaction when a person must decide or supply something, or when the playbook needs what another system holds right now. An interaction function does not interpret anything: no model reads the answer.
+Choose interaction when a person must decide or supply something, or when another system must act. An interaction function does not interpret anything: no model reads the answer.
 
 - [Interaction function format](../reference/interaction-format.md) describes the document, and [Terminology](terminology.md#interaction) defines request, delivery and answer.
 
@@ -80,7 +89,7 @@ Choose recall when a later run needs what earlier runs found or decided. Today a
 
 A computation function runs code you define to calculate or transform data. It gives the same output for the same input every time, unless the code reads the clock, which returns the moment the run started ([The sandbox](../reference/computation-format.md#the-sandbox) has the details). The work need not be mathematics: reshaping data counts too.
 
-For example, a workflow fetches a campaign's figures with an interaction function. A computation function then totals the spend and works out the pace exactly. Finally a reasoning function writes about the numbers.
+For example, a workflow fetches a campaign's figures with a lookup function. A computation function then totals the spend and works out the pace exactly. Finally a reasoning function writes about the numbers.
 
 Choose computation for arithmetic a language model should not do, and for any change to data that must come out the same every time. A computation function reaches nothing outside the playbook and calls no model. Your agent can write the code with you; once saved, the function runs that code as written.
 

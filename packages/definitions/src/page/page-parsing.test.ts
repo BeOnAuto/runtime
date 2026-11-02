@@ -53,7 +53,7 @@ describe('the subject of a page', () => {
 
   it('is required, and refused when it names no subject the page can present', () => {
     const notASubject =
-      'Line 2, /of: of names the subject whose results the page presents: <type>/<name>, where the type is workflow, reasoning, interaction, prediction, recall or computation, or playbook';
+      'Line 2, /of: of names the subject whose results the page presents: <type>/<name>, where the type is workflow, reasoning, lookup, interaction, prediction, recall or computation, or playbook';
 
     expect(issuesIn('---\ndescription: No subject\n---\n{% result %}{% endresult %}\n')).toEqual([
       'Line 1, /of: of is required',

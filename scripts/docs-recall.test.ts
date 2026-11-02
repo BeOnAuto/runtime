@@ -13,7 +13,9 @@ await test('recall functions are available in every runtime, with their format b
   const functions = readFileSync(join(docs, 'concepts/functions.md'), 'utf8');
   const history = readFileSync(join(docs, 'concepts/history-and-dream.md'), 'utf8');
   const format = readFileSync(join(docs, 'reference/recall-format.md'), 'utf8');
-  assert.ok(functions.includes('reasoning, interaction, prediction, recall and computation functions are available'));
+  assert.ok(
+    functions.includes('reasoning, lookup, interaction, prediction, recall and computation functions are available'),
+  );
   assert.ok(functions.includes('](../reference/recall-format.md)'));
   assert.ok(history.includes('Every runtime runs recall functions'));
   assert.ok(routes.indexOf('/reference/prediction-format') < routes.indexOf('/reference/recall-format'));

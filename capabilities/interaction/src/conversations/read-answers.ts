@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 
+import { textAt, valueAt } from '@on.auto/definitions/tool-blocks';
 import {
   answerDocument,
   toolBounds,
@@ -10,7 +11,6 @@ import {
 
 import { isBoundedPart } from '../delivery/sent-messages.ts';
 import type { Reply } from '../replies/reply-taking.ts';
-import { textAt, valueAt } from '../tool-blocks/json-pointers.ts';
 import type { Replies } from '../tool-blocks/tool-block-schemas.ts';
 
 type ReplyPointers = Replies['read']['each'];

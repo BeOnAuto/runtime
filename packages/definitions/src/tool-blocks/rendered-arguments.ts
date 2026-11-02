@@ -1,14 +1,13 @@
 import { Buffer } from 'node:buffer';
 
-import { parsedTemplate, type RenderClock } from '@on.auto/definitions/template';
 import { toolBounds } from '@on.auto/tool-servers';
 import { Result, type Schema } from 'effect';
 
-import { interactionEngine } from '../document/request-templates.ts';
-import type { RequestRecord } from '../run/request-record.ts';
-import { renderedText, type TextFailure } from '../run/text-rendering.ts';
-import { isLoneExpression, renderedValue } from '../run/value-rendering.ts';
+import type { RenderClock } from '../template/render-clock.ts';
+import { parsedTemplate } from '../template/template-parsing.ts';
 import { childrenOf, isJsonArray, isJsonParent, type JsonChild } from './json-children.ts';
+import { renderedText, toolBlockEngine, type TextFailure } from './text-rendering.ts';
+import { isLoneExpression, renderedValue } from './value-rendering.ts';
 
 export type Templates = Readonly<Record<string, Schema.Json>>;
 
@@ -30,7 +29,7 @@ function renderedString(
   variables: TemplateVariables,
   clock: RenderClock,
 ): Result.Result<Schema.Json, TextFailure> {
-  const parsed = parsedTemplate(interactionEngine, text, 1);
+  const parsed = parsedTemplate(toolBlockEngine, text, 1);
   if (Result.isFailure(parsed)) {
     return Result.fail({ reason: 'failed', detail: parsed.failure.map(({ detail }) => detail).join('; '), line: 1 });
   }
@@ -111,24 +110,6 @@ export function argumentsFailureWords(failure: ArgumentsFailure, call: string): 
     : `The argument ${failure.argument} of ${call} ${failureWords[failure.failure.reason]}`;
 }
 
-export interface DeliveryContext {
-  readonly input: Schema.Json;
-  readonly runId: string;
-  readonly functionName: string;
-}
-
 export function momentVariables(input: Schema.Json, at: string): TemplateVariables {
   return { input, today: at.slice(0, 10), now: at };
-}
-
-export function deliveryVariablesOf(record: RequestRecord, { input, runId, functionName }: DeliveryContext) {
-  return {
-    ...momentVariables(input, record.requested_at),
-    to: record.to,
-    message: record.message,
-    run_id: runId,
-    function: functionName,
-    expires_at: record.expires_at,
-    answer_schema: record.answer_schema ?? null,
-  };
 }

@@ -112,7 +112,7 @@ describe('the definition tools an agent sees', () => {
     const getGuide = tools.find(({ name }) => name === 'get_guide');
     const guide = await onAlpha((session) => session.callTool('get_guide', { guide: 'computation-function' }));
 
-    expect(createDefinition?.description).toContain('`type` is reasoning, interaction, computation, recall,');
+    expect(createDefinition?.description).toContain('`type` is reasoning, lookup, interaction, computation, recall,');
     expect(getGuide?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingTheComputationGuide } },
     });

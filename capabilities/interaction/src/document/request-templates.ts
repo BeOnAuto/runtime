@@ -1,13 +1,7 @@
 import type { DocumentIssue } from '@on.auto/definitions/document';
-import {
-  inputVariableIssues,
-  parsedTemplate,
-  templateEngine,
-  type ParsedTemplate,
-} from '@on.auto/definitions/template';
+import { inputVariableIssues, parsedTemplate, type ParsedTemplate } from '@on.auto/definitions/template';
+import { toolBlockEngine } from '@on.auto/definitions/tool-blocks';
 import { Result, type Schema } from 'effect';
-
-export const interactionEngine = templateEngine();
 
 export interface TemplatePlace {
   readonly line: number;
@@ -21,7 +15,7 @@ export function compiledTemplate(
   inputSchema: Schema.JsonObject | undefined,
 ): Result.Result<ParsedTemplate, readonly DocumentIssue[]> {
   return Result.flatMap(
-    Result.mapError(parsedTemplate(interactionEngine, text, line), (issues) =>
+    Result.mapError(parsedTemplate(toolBlockEngine, text, line), (issues) =>
       issues.map(({ line: at, detail }) => ({ line: at, pointer, detail })),
     ),
     (parsed) => {

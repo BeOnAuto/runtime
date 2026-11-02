@@ -97,6 +97,11 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     remedy:
       'This can be put right on your side: whoever runs the server decides which tool servers and tools this playbook may use, which search shows, so once it names only those, it can be tried again.',
   },
+  tool_not_read_only: {
+    why: 'the tool it reads through is no longer marked reads, so it was not called',
+    remedy:
+      'Once the tool is marked reads again, it can be tried again; a tool that may change something belongs to an interaction function.',
+  },
   tool_server_failed: {
     why: 'a tool server it needs could not be used',
     remedy:

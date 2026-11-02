@@ -200,11 +200,15 @@ Each run of a computation function, and each run and view of a recall function, 
 | `RECALL_MAX_REBUILDS`      | `4`     | How many views of one playbook are built at once, from 1 to 64. The others wait in the order they were saved                                                 |
 | `RECALL_PLAYBOOKS_AT_ONCE` | `4`     | How many playbooks the server folds at once, from 1 to 64                                                                                                    |
 
+### Lookup functions
+
+A lookup function needs nothing configured beyond its [tool server](#tool-servers) in `tool_servers`. It calls the one tool it names under `call`, which must be [marked](#the-mark-of-a-tool) `reads`, and returns its result. A tool that only reads and that its server leaves unmarked, such as a report an HTTP API serves by `POST`, can be marked `reads` in the `marks` of its entry.
+
 ### Interaction functions
 
 An interaction function needs nothing configured beyond its [tool server](#tool-servers) in `tool_servers`. It does one of these:
 
-- calls the tool it names under `call`, and returns its result;
+- calls the tool that acts it names under `call`, and returns its result;
 - sends its request through the tool it names under `deliver`;
 - holds its request for an agent, which reads it with `list_interactions` and answers it with `answer_interaction`, under `deliver: agent`.
 
@@ -319,6 +323,7 @@ Put the line where Auto reads its settings: in `~/.auto-runtime/.env` for the Au
 A tool server gives functions tools to call. It comes from one of two places: an entry under `tool_servers` in the configuration file, which this section describes, or a [connection](#connections) a person added to an org. Add an entry under `tool_servers`; `TOOL_SERVERS`, the same list as JSON, wins over it. [Add a tool server](tool-servers.md) walks through adding one and checking it.
 
 - A reasoning function that lists `tools` calls the tools of these servers.
+- A lookup function calls the tool marked `reads` it names in `call`.
 - An interaction function calls the tool it names in `call`, or sends its request through the tool it names in `deliver`.
 - The key of an entry is the name a function writes in `server/tool`. Nothing in a function says which kind of server it names.
 
@@ -533,7 +538,7 @@ Listing an HTTP API's tools asks the API nothing: the document is the list.
 
 ### The mark of a tool
 
-Every tool the runtime lists carries one mark, `reads`, `acts` or `unmarked`. The tool lists show it, and a run that calls tools and cannot finish reads it to say whether running it again is safe. A tool's mark is, in order:
+Every tool the runtime lists carries one mark, `reads`, `acts` or `unmarked`. The tool lists show it, a lookup function calls only a tool marked `reads`, and a run that calls tools and cannot finish reads it to say whether running it again is safe. A tool's mark is, in order:
 
 1. the one the entry's `marks` gives it, or, for a server a provider gives, the one the provider's entry gives;
 2. `reads`, where its server hints that it only reads (`readOnlyHint: true`), as the HTTP method of an operation of an HTTP API does for `GET` and `HEAD`;

@@ -1,33 +1,25 @@
 import { threadReplies } from '@on.auto/tool-servers/testing';
 import { describe, expect, it } from 'vitest';
 
-import { chatKey } from '../testing/interaction-servers/chat-deliveries.ts';
-import {
-  askingASystem,
-  systemRunId,
-  threadInput,
-  type HistoryEvent,
-} from '../testing/interaction-servers/system-calls.ts';
+import { askingASystem, systemRunId, type HistoryEvent } from '../testing/interaction-servers/system-calls.ts';
 import { withoutStudioLink } from '../testing/servers/http-client.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
-
-const aNumber: unknown = expect.any(Number);
 
 const aTime: unknown = expect.any(String);
 
 const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
 
-const scrubbedChannel: unknown = expect.stringMatching(/^\[redacted\] x{5000}$/u);
-
 const record = { server: 'chat', tool: 'thread', read: '/messages' };
+
+const acting = { thread: { readOnlyHint: false } };
 
 function keysOf(event: HistoryEvent | undefined): readonly string[] {
   return Object.keys(event?.data ?? {});
 }
 
-describe('an interaction function that asks a system, over HTTP', () => {
-  it('calls the tool once and answers at once with what it read, as get_run answers the run', async () => {
-    const server = await askingASystem();
+describe('an interaction function that calls a tool that acts, over HTTP', () => {
+  it('calls the tool once and answers at once with what it answered, as get_run answers the run', async () => {
+    const server = await askingASystem({ hints: acting });
     await server.define('thread-replies');
 
     const ran = await server.runCall('thread-replies');
@@ -55,11 +47,29 @@ describe('an interaction function that asks a system, over HTTP', () => {
       },
     ]);
   });
+
+  it('is refused when it is saved naming a tool marked reads, which a lookup function calls', async () => {
+    const server = await askingASystem();
+
+    expect(await server.define('thread-replies')).toMatchObject({
+      status: 422,
+      body: {
+        reason: 'invalid_input',
+        errors: [
+          {
+            pointer: '/source',
+            detail:
+              'Line 4, /call: The thread tool of chat is marked reads, and a function that only reads what a system holds is a lookup function: save this one with type lookup, with the same call, input.schema and output.schema, and keep interaction functions for tools that act',
+          },
+        ],
+      },
+    });
+  });
 });
 
-describe('the history of a run that asks a system', () => {
-  it('records the call on the run, its start under the id of the run, in the words of the history, with what it sent and what it read', async () => {
-    const server = await askingASystem();
+describe('the history of a run that calls a tool that acts', () => {
+  it('records the call on the run, its start under the id of the run, in the words of the history, with what it sent and what it answered', async () => {
+    const server = await askingASystem({ hints: acting });
     await server.define('thread-replies');
     await server.runCall('thread-replies');
 
@@ -71,27 +81,8 @@ describe('the history of a run that asks a system', () => {
       ['tool_call_answered', 'Tool call 1 answered.'],
       ['run_succeeded', 'A run finished.'],
     ]);
-    expect(history[1]?.data).toMatchObject({
-      call_id: systemRunId,
-      server: 'chat',
-      tool: 'thread',
-      arguments_sha256: aDigest,
-      arguments: { channel: 'C0123', ts: '1728379900.000050', limit: 100, inclusive: false },
-    });
-    expect(history[2]?.data).toMatchObject({ is_error: false, duration_ms: aNumber, result_sha256: aDigest });
-    expect(keysOf(history[2])).toContain('answer');
-  });
-
-  it('keeps the arguments scrubbed, shows their size past 2 KiB, and reads them whole as one event', async () => {
-    const server = await askingASystem();
-    await server.define('thread-replies');
-    await server.runCall('thread-replies', { ...threadInput, channel: `${chatKey} ${'x'.repeat(5000)}` });
-
-    const [, started] = await server.history(systemRunId);
-    const whole = await server.call('GET', `${alpha}/events/${String(started?.id)}`);
-
-    expect(keysOf(started)).not.toContain('arguments');
-    expect(started?.data['arguments_bytes']).toBeGreaterThan(5000);
-    expect(whole.body).toMatchObject({ data: { arguments: { channel: scrubbedChannel } } });
+    expect(history[1]?.data).toMatchObject({ call_id: systemRunId, server: 'chat', tool: 'thread' });
+    expect(keysOf(history[1])).not.toContain('read_only');
+    expect(history[2]?.data).toMatchObject({ is_error: false, result_sha256: aDigest });
   });
 });

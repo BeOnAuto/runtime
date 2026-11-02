@@ -31,13 +31,14 @@ export async function functionsServedBy(
   database: ProjectedDatabase,
   { projections: wiring, computation, prediction, ...tools }: ServedWiring,
 ): Promise<ServedFunctions> {
-  const { reasoning, interaction, toolOperations } = await toolUsersServedBy(runtime, settings, tools);
+  const { reasoning, lookup, interaction, toolOperations } = await toolUsersServedBy(runtime, settings, tools);
   const { capability, folders, operations, dueWork } = prediction.provided;
   const projections = await wiring.served({ recall: settings.recall, database }, computation.pool, folders);
   await prediction.servedIn(runtime, projections.store.database);
   const forecaster = foldedBeforeItRuns({ capability, folders, database: projections.store.database });
   const capabilities = [
     reasoning.capability,
+    lookup,
     interaction.capability,
     computation.capability,
     projections.recall,

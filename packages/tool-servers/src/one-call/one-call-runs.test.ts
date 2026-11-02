@@ -98,6 +98,72 @@ describe('a call its run records nothing of', () => {
   });
 });
 
+describe('a call that needs its tool marked reads', () => {
+  it('is sent and recorded when its server marks the tool reads', async () => {
+    const fake = await oneCallServer();
+    const journal = recordingCallJournal();
+    const searching = { reference: { server: 'graph', tool: 'search' }, input: { query: 'acme' } };
+
+    const called = await calledOnce(
+      oneCallAccess(fake.url),
+      { ...searching, requiredMark: 'reads' },
+      { callId, journal },
+    );
+
+    expect(called).toMatchObject({ kind: 'answered', outcome: 'result', mark: 'reads' });
+    expect(journal.facts().map(({ type }) => type)).toEqual(['tool_call_started', 'tool_call_answered']);
+  });
+
+  it('reads the mark the server lists the tool with at the call, so one marked acts since an earlier call is refused', async () => {
+    const fake = await oneCallServer();
+    const access = oneCallAccess(fake.url);
+    const searching = {
+      reference: { server: 'graph', tool: 'search' },
+      input: { query: 'acme' },
+      requiredMark: 'reads',
+    } as const;
+
+    const before = await calledOnce(access, searching);
+    fake.annotateTool('search', { readOnlyHint: false });
+    const after = await calledOnce(access, searching);
+
+    expect([before, after]).toMatchObject([
+      { kind: 'answered', outcome: 'result' },
+      { kind: 'unopened', refused: 'tool_not_read_only', mark: 'acts' },
+    ]);
+    expect(fake.received()).toHaveLength(1);
+  });
+});
+
+describe('a call that needs its tool marked reads, to a tool marked otherwise', () => {
+  it('is refused before its start is recorded or anything is sent, for a tool marked acts or carrying no mark, and lets its session go', async () => {
+    const fake = await oneCallServer({ hints: { denied: { readOnlyHint: false } } });
+    const access = oneCallAccess(fake.url);
+    const journal = recordingCallJournal();
+    const runCall = { callId, journal };
+
+    expect([
+      await calledOnce(access, { reference: { server: 'graph', tool: 'denied' }, requiredMark: 'reads' }, runCall),
+      await calledOnce(access, { requiredMark: 'reads' }, runCall),
+    ]).toEqual([
+      {
+        kind: 'unopened',
+        refused: 'tool_not_read_only',
+        mark: 'acts',
+        detail: 'The denied tool of graph is marked acts, and the call needs one marked reads, so it was not sent',
+      },
+      {
+        kind: 'unopened',
+        refused: 'tool_not_read_only',
+        mark: 'unmarked',
+        detail:
+          'The echo tool of graph carries no mark, which counts as acts, and the call needs one marked reads, so it was not sent',
+      },
+    ]);
+    expect([journal.facts(), fake.received(), fake.openSessions()]).toEqual([[], [], 0]);
+  });
+});
+
 describe('the wait a 429 asks for in one call', () => {
   it('is waited out within the wait its caller gives, and handed on when its caller gives none', async () => {
     const fake = await oneCallServer();

@@ -6,7 +6,7 @@ An interaction function is a definition of the type `interaction`. It takes one 
 
 | Shape                              | What a run does                                                                                                                                                            | Use it for                                                                |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Asks a system                      | Calls the tool named in `call` once, and returns part of the tool's result at once                                                                                         | What a system returns now, such as the replies of a thread                |
+| Asks a system                      | Calls the tool named in `call` once, and returns part of the tool's result at once                                                                                         | What a system does and answers now, such as adding a contact to a list    |
 | Asks a person through a connection | Renders a request to a party, with an expiry, and sends it through the tool of a connection named in `deliver`, such as a chat's post tool, and may read the replies to it | An approval, a choice, or a figure only someone else has, where they work |
 | Asks an agent                      | Renders the same request and holds it for an agent, `deliver: agent`, which reads it with `list_interactions` and answers it with `answer_interaction`                     | The same, answered by the person in a conversation with their agent       |
 
@@ -100,12 +100,14 @@ The run returns `status: started` with its `run_id`, and sends the review to the
 
 A function that asks a system names a tool in `call`, with the arguments the call takes. Its run makes one call and takes the part of the tool's answer that `read` points at. It checks that part against `output.schema` and ends with it as its output.
 
+A tool marked `reads` belongs to a lookup function, which takes the same `call`: an interaction function that names one is refused when it is saved and its server can be asked, in words that say to save it with the type `lookup`. See [Lookup function format](lookup-format.md).
+
 Such a function makes no request, sends no message and asks no model. So it has no `to`, `expires`, `deliver`, `replies` or body.
 
 Write a call from what the tool returns, not from memory:
 
 1. Call `search` to see the tool servers this playbook may use, the tools each offers and the mark of each. Call `introspect` for the `input_schema` a tool takes.
-2. Call the tool with `execute`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text. For example, a chat's tool that lists the replies of a thread returns the replies and a cursor to the next page.
+2. Once the person agrees, since the tool may change something, call it with `execute`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
 3. Write `call`:
    - `server` and `tool`, as `search` names them;
    - `with`, the arguments;
@@ -243,7 +245,7 @@ Other rules checked when saved:
 - Each pointer of `call.read`, `deliver.sent` and `replies.read` is a JSON Pointer such as `/messages`. It starts with a slash, writes `~` as `~0`, and writes a slash within a name as `~1`.
 - `read.order` is `oldest_first` or `newest_first`.
 - `wait` lies between `PT5S` and `PT1H`, and is `PT5S` when left out.
-- The server and the tool are not checked when the document is saved. A run whose server does not serve the playbook, or whose tool its operator does not allow, is `unavailable` with the kind `tool_not_offered`.
+- The server and the tool are not checked when the document is saved, but for the mark of the tool of `call` when its server can be asked: one it marks `reads` is refused, since it belongs to a lookup function. A document whose server cannot be asked just then, or does not serve the playbook, is saved. A run whose server does not serve the playbook, or whose tool its operator does not allow, is `unavailable` with the kind `tool_not_offered`.
 
 ## Tool blocks
 

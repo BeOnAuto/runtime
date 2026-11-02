@@ -1,7 +1,8 @@
-import { inWords } from '@on.auto/definitions';
 import { asSentence, counted } from '@on.auto/phrasing';
 import { toolInWords } from '@on.auto/tool-servers';
 import { Option, Schema } from 'effect';
+
+import { inWords } from '../plain-language/in-words.ts';
 
 const CallRecordSchema = Schema.Struct({
   server: Schema.String,

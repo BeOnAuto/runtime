@@ -1,9 +1,9 @@
 import { DescriptionSchema, type FrontMatterSection, type FrontMatterShape } from '@on.auto/definitions/document';
+import { CallBlockSchema } from '@on.auto/definitions/tool-blocks';
 import { Schema } from 'effect';
 
 import { WrittenRuleSchema } from '../replies/reply-rule.ts';
 import {
-  CallBlockSchema,
   DeliverBlockSchema,
   DeliverSchema,
   EachSchema,

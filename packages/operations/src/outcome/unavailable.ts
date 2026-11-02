@@ -5,6 +5,7 @@ import type { RejectionBecause } from './rejection-because.ts';
 export const UnavailableKindSchema = Schema.Literals([
   'model_not_offered',
   'tool_not_offered',
+  'tool_not_read_only',
   'tool_server_failed',
   'tools_unfinished',
   'rebuilding',

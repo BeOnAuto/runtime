@@ -173,7 +173,7 @@ async function askedForTheRepliesOfAThread(session: McpSession) {
   });
   const saved = await session.callTool('create_definition', {
     ...inMeetings,
-    type: 'interaction',
+    type: 'lookup',
     name: 'thread-replies',
     source: readingAThread,
     diagram: 'none',
@@ -183,15 +183,13 @@ async function askedForTheRepliesOfAThread(session: McpSession) {
 }
 
 describe('episode 10: asked to put the replies of a thread into the weekly summary', () => {
-  it('reads what an interaction function is for and the give-tools sentence, calls the tool, reads its answer, and saves one interaction function that calls it', async () => {
+  it('reads what a lookup function is for and the give-tools sentence, calls the tool, reads its answer, and saves one lookup function that calls it', async () => {
     const seen = await meetings.onMcp(askedForTheRepliesOfAThread);
 
     expect(sentenceNaming(meetings.surfaces.instructions, 'Its function types')).toContain(
-      'interaction exchanges information',
+      'lookup obtains information',
     );
-    expect(seen.recipe).toContain(
-      "To read or act on a system, write an interaction function that calls the connection's tool with `call` instead",
-    );
+    expect(seen.recipe).toContain('To read what a tool marked reads returns, write a lookup function instead.');
     expect(seen.called.structuredContent).toMatchObject({
       outcome: 'result',
       text: listingTheMessages,

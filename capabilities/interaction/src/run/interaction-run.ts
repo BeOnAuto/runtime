@@ -5,11 +5,11 @@ import {
   type CapabilityRejection,
   type RunContext,
 } from '@on.auto/definitions';
+import { momentVariables } from '@on.auto/definitions/tool-blocks';
 import type { Conflict, InvalidInput } from '@on.auto/operations';
 import { Clock, Effect, type Schema } from 'effect';
 
 import type { RequestDocument } from '../document/interaction-document.ts';
-import { momentVariables } from '../tool-blocks/rendered-arguments.ts';
 import { routeOf, toolsOf } from '../tool-blocks/routes.ts';
 import { checkedArguments, offered, roomFor, type InteractionPorts } from './request-reach.ts';
 import type { RequestRecord } from './request-record.ts';

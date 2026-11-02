@@ -255,6 +255,7 @@ const checkLines = defineCommand('playbook', {
 const becauseOfKind = {
   model_not_offered: { because: 'model_not_allowed' },
   tool_not_offered: { because: 'tool_not_listed' },
+  tool_not_read_only: {},
   tool_server_failed: { because: 'unreachable' },
   tools_unfinished: { because: 'model_unavailable' },
   rebuilding: {},

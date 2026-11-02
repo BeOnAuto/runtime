@@ -129,6 +129,7 @@ describe('the tools of /mcp', () => {
 
 const definitionTypes = [
   { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
+  { type: 'lookup', noun: 'lookup function', guide: 'lookup-function' },
   { type: 'interaction', noun: 'interaction function', guide: 'interaction-function' },
   { type: 'computation', noun: 'computation function', guide: 'computation-function' },
   { type: 'recall', noun: 'recall function', guide: 'recall-function' },

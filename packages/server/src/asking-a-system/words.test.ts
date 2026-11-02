@@ -2,6 +2,7 @@ import { plainTextIn, withMcpSession, type McpSession } from '@on.auto/api/testi
 import { internalTermsIn } from '@on.auto/operations/testing';
 import { describe, expect, it } from 'vitest';
 
+import { mayChange } from '../testing/interaction-servers/call-endings.ts';
 import { chatKey } from '../testing/interaction-servers/chat-deliveries.ts';
 import {
   askingASystem,
@@ -12,6 +13,8 @@ import {
 } from '../testing/interaction-servers/system-calls.ts';
 
 const longestName = `thread-${'x'.repeat(41)}`;
+
+const acting = { thread: mayChange, denied: mayChange };
 
 function onAlpha<T>(server: SystemServer, use: (session: McpSession) => Promise<T>): Promise<T> {
   return withMcpSession(
@@ -29,9 +32,9 @@ function saidOf(server: SystemServer, name: string, input: unknown = {}) {
   });
 }
 
-describe('the words of a run that asks a system, over MCP', () => {
+describe('the words of a run that calls a tool that acts, over MCP', () => {
   it('say what the tool answered, naming the tool in words', async () => {
-    const server = await askingASystem();
+    const server = await askingASystem({ hints: acting });
     await server.define('thread-replies');
 
     expect((await saidOf(server, 'thread-replies', threadInput)).ran).toBe(
@@ -40,7 +43,7 @@ describe('the words of a run that asks a system, over MCP', () => {
   });
 
   it('say why a run whose tool may have changed something did not go through, whole, with the longest name', async () => {
-    const server = await askingASystem({ hints: { denied: { readOnlyHint: false } } });
+    const server = await askingASystem({ hints: acting });
     await server.define(longestName, calling('denied'));
 
     const { ran, read } = await saidOf(server, longestName);
@@ -55,9 +58,9 @@ describe('the words of a run that asks a system, over MCP', () => {
   });
 });
 
-describe('the words of a run that asks a system, kept plain', () => {
+describe('the words of a run that calls a tool that acts, kept plain', () => {
   it('name no internal term, and an output carries no secret of the server', async () => {
-    const server = await askingASystem({ hints: { denied: { readOnlyHint: false } } });
+    const server = await askingASystem({ hints: acting });
     await server.define('thread-replies');
     await server.define('denying', calling('denied'));
     await server.define('echoing', { ...calling('echo', ["    said: '{{ input.said }}'"]), read: '/said' });
@@ -77,17 +80,5 @@ describe('the words of a run that asks a system, kept plain', () => {
     ).toEqual([]);
     expect(echoed.body).toMatchObject({ output: 'the key [redacted]' });
     expect(echoed.text).not.toContain(chatKey);
-  });
-
-  it('say that running again is safe for a run whose tools only read, and that nothing was changed', async () => {
-    const server = await askingASystem();
-    await server.define(longestName, calling('denied'));
-
-    const { ran, read } = await saidOf(server, longestName);
-
-    expect(ran).toBe(
-      `Could not run the interaction function “${longestName}”: it called tools but could not finish, because the tool answered an error, which the details below give. Nothing was changed. Every tool it called is marked reads, so running it again is safe: a new run, or a workflow's retry, may make it; its history shows what it called.`,
-    );
-    expect([read.length, ran.length]).toEqual([358, 363]);
   });
 });

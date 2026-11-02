@@ -1,4 +1,4 @@
-import { callDocument } from '@on.auto/interaction/testing';
+import { lookupDocument } from '@on.auto/lookup/testing';
 import { serveFakeApi } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -26,7 +26,7 @@ async function askingAnApi() {
     TOOL_SERVERS: JSON.stringify({ billing: { ...entry, request_id: 'x-request-id' } }),
   });
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-  const source = callDocument({
+  const source = lookupDocument({
     server: 'billing',
     tool: 'get_profiles_id',
     with: ["    id: '{{ input.id }}'"],
@@ -34,17 +34,17 @@ async function askingAnApi() {
     input: openInput,
     output: nameOutput,
   });
-  await server.call('POST', `${alpha}/definitions/interaction`, {
+  await server.call('POST', `${alpha}/definitions/lookup`, {
     body: { name: 'profile-name', source, diagram: 'none' },
   });
   return { billing, server };
 }
 
-describe('an interaction function that asks a system through an HTTP API', () => {
-  it('calls the operation once with the key of its entry, answers what it read, and records the call', async () => {
+describe('a lookup function that reads through an HTTP API', () => {
+  it('is saved for an operation reached by GET, calls it once with the key of its entry, answers what it read, and records the call', async () => {
     const { billing, server } = await askingAnApi();
 
-    const ran = await server.call('POST', `${alpha}/definitions/interaction/profile-name/run`, {
+    const ran = await server.call('POST', `${alpha}/definitions/lookup/profile-name/run`, {
       body: { input: { id: 'ada' }, run_id: systemRunId },
     });
     const { events } = decodeHistory((await server.call('GET', `${alpha}/runs/${systemRunId}/history`)).body);

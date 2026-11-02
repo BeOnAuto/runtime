@@ -157,7 +157,7 @@ Save the two functions first: `create_definition` takes each one's `type` (`reas
 2. Asks the owner to approve the review. The interaction function's run posts the request in the chat, and the workflow waits for the answer without using server resources. The owner answers by replying in the thread of the message, or through their agent with `answer_interaction`, such as `{ "verdict": "approve" }`; see [Interaction function format](interaction-format.md).
 3. Ends with the review and the answer, such as `{ "review": "...", "approval": { "verdict": "approve" } }`. When nobody answers before the request expires, the `catch` takes the `unanswered` error and the run ends with the verdict `revise`.
 
-An approval, or any other question for a person or a system, is an interaction function that the workflow calls, as here. A [`listen` task](#waiting-for-events) is for an event that is not the answer to a question.
+An approval, or any other question for a person or a system, is an interaction function that the workflow calls, as here; reading what a system already holds is a [lookup function](lookup-format.md). A [`listen` task](#waiting-for-events) is for an event that is not the answer to a question.
 
 ## Document fields
 
@@ -363,9 +363,9 @@ Each sentence is plain text, not an expression. Quote one that contains `: `, wh
 
 ### Calling a function
 
-`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`recall`](recall-format.md), [`computation`](computation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
+`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`lookup`](lookup-format.md), [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`recall`](recall-format.md), [`computation`](computation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
 
-The task's output is that run's output: a reasoning function's text or JSON, an interaction function's answer from its tool or its request, a prediction function's series, what a recall function returned from its view, the value a computation function's program gave, or the output of the workflow it ran.
+The task's output is that run's output: a reasoning function's text or JSON, what a lookup function's tool answered, an interaction function's answer from its tool or its request, a prediction function's series, what a recall function returned from its view, the value a computation function's program gave, or the output of the workflow it ran.
 
 Each time the task runs, including on a retry, it starts a separate run of the function, recorded under its own `run_id`. That run acts for the caller who started the workflow, with the permissions that caller had when the workflow started, and names that caller, by id and name, as its `started_by`.
 
@@ -374,6 +374,7 @@ Some runs finish within their call, and others later. A task waits for the longe
 | Definition                                 | Finishes        | The function's own maximum                                         |
 | ------------------------------------------ | --------------- | ------------------------------------------------------------------ |
 | A reasoning function                       | Within its call | Its model's deadline, or its tool loop's bound when it names tools |
+| A lookup function                          | Within its call | 70 seconds                                                         |
 | An interaction function that calls a tool  | Within its call | 70 seconds                                                         |
 | An interaction function that asks a person | Later           | The `expires` of its document                                      |
 | A computation or recall function           | Within its call | 10 seconds                                                         |
@@ -435,7 +436,7 @@ A function that called tools may have changed something outside the playbook, so
 
 Other function types:
 
-- The refusals of a [computation](computation-format.md#in-a-workflow), [recall](recall-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and which a retry may resolve, are under In a workflow on its page.
+- The refusals of a [lookup](lookup-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow), [recall](recall-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and which a retry may resolve, are under In a workflow on its page.
 - A prediction function's question counts every run that ended before it started, as in [this example](prediction-format.md#forecast-from-a-run-the-workflow-just-recorded).
 - A run that was cancelled raises `https://on.auto/problems/cancelled` with the kind of its cancellation: `requested`, `deadline`, `overrun` or `parent_ended` ([How a run ends](#how-a-run-ends)). Catch it on purpose, for example with `errors: { with: { type: https://on.auto/problems/cancelled } }` and `when: '${ $error.kind == "requested" }'`. Uncaught, it rejects the workflow as `invalid_input`, by its status 409, not as `cancelled`, since the workflow itself was not cancelled.
 - A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.

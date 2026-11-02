@@ -1,16 +1,18 @@
 import { callDocument, type CallOptions } from '@on.auto/interaction/testing';
-import type { Timing } from '@on.auto/tool-servers';
+import { lookupDocument } from '@on.auto/lookup/testing';
 import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
 import { expect, onTestFinished } from 'vitest';
 
 import type { TestResponse } from '../servers/http-client.ts';
 import { alpha } from '../servers/reasoning-server.ts';
-import type { LedgerOver } from '../servers/served-parts.ts';
+import type { LedgerOver, ServedParts } from '../servers/served-parts.ts';
 import { chatKey } from './chat-deliveries.ts';
 import { interactionServerOn, type InteractionServer } from './interaction-server.ts';
 
 type FakeHints = NonNullable<FakeMcpOptions['hints']>;
+
+export type CallingType = 'interaction' | 'lookup';
 
 export const threadInput = { channel: 'C0123', thread: '1728379900.000050' };
 
@@ -29,15 +31,17 @@ export function problemWith(fields: Readonly<Record<string, unknown>>): unknown 
 }
 
 export interface SystemOptions {
+  readonly type?: CallingType;
   readonly hints?: FakeHints;
   readonly entry?: Readonly<Record<string, unknown>>;
   readonly servers?: Readonly<Record<string, unknown>>;
-  readonly timing?: Timing;
+  readonly timing?: ServedParts['toolTiming'];
   readonly ledgerOver?: LedgerOver;
   readonly environment?: Readonly<Record<string, string>>;
 }
 
 export interface SystemServer extends InteractionServer {
+  readonly type: CallingType;
   readonly fake: FakeMcpServer;
   readonly define: (name: string, document?: CallOptions) => Promise<TestResponse>;
   readonly runCall: (name: string, input?: unknown, runId?: string) => Promise<TestResponse>;
@@ -59,7 +63,13 @@ export type HistoryEvent = (typeof HistorySchema.Type)['events'][number];
 
 const decodeHistory = Schema.decodeUnknownSync(HistorySchema);
 
+const documentsOf: Readonly<Record<CallingType, (document: CallOptions) => string>> = {
+  interaction: callDocument,
+  lookup: lookupDocument,
+};
+
 export async function askingASystem({
+  type = 'interaction',
   hints = {},
   entry = {},
   servers = {},
@@ -77,13 +87,18 @@ export async function askingASystem({
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   return {
     ...server,
+    type,
     fake,
     define: (name, document = {}) =>
-      server.call('POST', `${alpha}/definitions/interaction`, {
-        body: { name, source: callDocument(document), diagram: 'none' },
+      server.call('POST', `${alpha}/definitions/${type}`, {
+        body: { name, source: documentsOf[type](document), diagram: 'none' },
       }),
     runCall: (name, input = threadInput, runId = systemRunId) =>
-      server.call('POST', `${alpha}/definitions/interaction/${name}/run`, { body: { input, run_id: runId } }),
+      server.call('POST', `${alpha}/definitions/${type}/${name}/run`, { body: { input, run_id: runId } }),
     history: async (runId) => decodeHistory((await server.call('GET', `${alpha}/runs/${runId}/history`)).body).events,
   };
+}
+
+export function lookingUp(options: Omit<SystemOptions, 'type'> = {}): Promise<SystemServer> {
+  return askingASystem({ ...options, type: 'lookup' });
 }

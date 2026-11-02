@@ -88,7 +88,7 @@ const whereInteractionIsServed: AdditionsByRecipe = {
       {
         after: 'and which of them it needs.',
         words: [
-          " To read or act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once with what the tool answered and spends no model call, and the interaction-function guide says how to write it from the answer execute gave. Keep a reasoning function's `tools` for judgement over what the tools answer.",
+          " To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute gave. Keep a reasoning function's `tools` for judgement over what the tools answer.",
           " To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.",
         ].join(''),
       },
@@ -187,8 +187,21 @@ const wherePagesAreServed: AdditionsByRecipe = {
   },
 };
 
+const whereLookupIsServed: AdditionsByRecipe = {
+  'give-tools': {
+    insertions: [
+      {
+        after: 'and which of them it needs.',
+        words: ' To read what a tool marked reads returns, write a lookup function instead.',
+      },
+    ],
+    calls: [],
+  },
+};
+
 const additionsWhereServed: readonly AdditionsOfAGuide[] = [
   { guide: 'interaction-function', byRecipe: whereInteractionIsServed },
+  { guide: 'lookup-function', byRecipe: whereLookupIsServed },
   { guide: 'workflow', byRecipe: whereWorkflowsAreServed },
   { guide: 'page', byRecipe: wherePagesAreServed },
 ];

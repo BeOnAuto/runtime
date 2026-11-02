@@ -16,6 +16,17 @@ export interface Opened {
   readonly readOnly: boolean;
 }
 
+type OfferedEntry = Pick<Opened, 'slot' | 'tool'>;
+
+function strictestEntryOf(entries: readonly OfferedEntry[]): OfferedEntry {
+  return Option.getOrThrow(
+    Option.orElse(
+      Arr.findFirst(entries, ({ tool }) => !onlyReads(tool)),
+      () => Arr.head(entries),
+    ),
+  );
+}
+
 export async function openedFor(
   reference: ToolReference,
   link: ServerLink,
@@ -46,6 +57,6 @@ export async function openedFor(
     await listed.success.slot.release();
     return notOfferedOnce(notListed(unlisted));
   }
-  const { slot, tool } = Option.getOrThrow(Arr.head(offeredOn(listed.success, naming)));
+  const { slot, tool } = strictestEntryOf(offeredOn(listed.success, naming));
   return { slot, tool, readOnly: onlyReads(tool) };
 }

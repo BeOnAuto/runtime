@@ -5,6 +5,7 @@ import type { ConnectionSource, Timing } from '@on.auto/tool-servers';
 import type { CapabilityRegistry } from '../capability-registry/capability-registry.ts';
 import type { Settings } from '../settings/settings.ts';
 import { interactionServedBy, type ServedInteraction } from './served-interaction.ts';
+import { lookupServedBy, type ServedLookup } from './served-lookup.ts';
 import { reasoningServedBy, type ServedReasoning } from './served-reasoning.ts';
 import { toolAccessOf } from './served-tool-access.ts';
 import { toolOperationsOf, type ProvidersOffered, type ServedToolOperations } from './served-tool-operations.ts';
@@ -17,6 +18,7 @@ export interface ToolUsersWiring extends ProvidersOffered {
 
 export interface ServedToolUsers {
   readonly reasoning: ServedReasoning;
+  readonly lookup: ServedLookup;
   readonly interaction: ServedInteraction;
   readonly toolOperations: ServedToolOperations;
 }
@@ -32,6 +34,7 @@ export async function toolUsersServedBy(
       tools,
       telemetry: registry.modelTelemetry,
     }),
+    lookup: lookupServedBy(tools),
     interaction: interactionServedBy(runtime, settings, tools),
     toolOperations: toolOperationsOf(tools, { offering }),
   };

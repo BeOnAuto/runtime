@@ -1,9 +1,9 @@
 import { Buffer } from 'node:buffer';
 
 import { defaultRunWords, outputInWords, type RunAccount, type RunWords } from '@on.auto/definitions';
+import { callOutputInWords } from '@on.auto/definitions/tool-blocks';
 import type { Schema } from 'effect';
 
-import { callOutputInWords } from '../call/call-words.ts';
 import { isNotification, requestRecordOf, takesAnswer } from '../run/request-record.ts';
 import { interactionBounds } from '../run/run-bounds.ts';
 import { routeOf, throughWords } from '../tool-blocks/routes.ts';

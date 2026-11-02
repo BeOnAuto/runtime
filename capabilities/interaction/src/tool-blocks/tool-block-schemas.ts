@@ -1,3 +1,4 @@
+import { ToolUseSchema } from '@on.auto/definitions/tool-blocks';
 import { Schema } from 'effect';
 
 const Templates = Schema.Record(Schema.String, Schema.Json);
@@ -9,17 +10,6 @@ export const SentSchema = Schema.Struct({
   id: Schema.String.annotate({
     description: 'A JSON Pointer into what the tool answered, to the identity of the message',
   }),
-});
-
-const ArgumentsSchema = Templates.annotate({
-  description:
-    "The arguments of the call, named as the tool's input_schema names them; a number, boolean, null, list or object is sent as written, with the Liquid templates in its strings rendered; a string that is one {{ expression }} alone is sent as the value it reads; any other string is rendered as text",
-});
-
-const ToolUseSchema = Schema.Struct({
-  server: Schema.String.annotate({ description: 'The tool server, as search names it' }),
-  tool: Schema.String.annotate({ description: 'The tool of that server, as search lists it' }),
-  with: ArgumentsSchema,
 });
 
 export const DeliverBlockSchema = Schema.Struct({
@@ -38,17 +28,6 @@ export const DeliverSchema = Schema.Union([
   }),
   DeliverBlockSchema,
 ]).annotate({ expected: `${forAnAgent}, or the server, tool and with of the tool that sends the request` });
-
-export const CallBlockSchema = Schema.Struct({
-  ...ToolUseSchema.fields,
-  with: Schema.optionalKey(ArgumentsSchema),
-  read: Schema.optionalKey(
-    Schema.String.annotate({
-      description:
-        "A JSON Pointer into the document of the tool's answer, to the value the function answers with; the whole document when left out",
-    }),
-  ),
-});
 
 const ReadOrderSchema = Schema.Literals(['oldest_first', 'newest_first']);
 
@@ -108,7 +87,5 @@ export type DeliveredAs = typeof DeliveredAsSchema.Type;
 export type RepliesIn = typeof RepliesInSchema.Type;
 
 export type DeliverBlock = typeof DeliverBlockSchema.Type;
-
-export type CallBlock = typeof CallBlockSchema.Type;
 
 export type Replies = typeof RepliesSchema.Type;

@@ -254,7 +254,9 @@ await test('public workflows are available and link their format and tutorial, w
 await test('computation functions are available in every runtime, with their format beside the other formats', () => {
   const functions = readFileSync(join(docs, 'concepts/functions.md'), 'utf8');
   const format = readFileSync(join(docs, 'reference/computation-format.md'), 'utf8');
-  assert.ok(functions.includes('reasoning, interaction, prediction, recall and computation functions are available'));
+  assert.ok(
+    functions.includes('reasoning, lookup, interaction, prediction, recall and computation functions are available'),
+  );
   assert.ok(markdownDestinations(functions).includes('../reference/computation-format.md'));
   assert.ok(routes.indexOf('/reference/reasoning-format') < routes.indexOf('/reference/computation-format'));
   assert.ok(routes.indexOf('/reference/computation-format') < routes.indexOf('/reference/workflow-format'));

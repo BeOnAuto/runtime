@@ -20,8 +20,7 @@
     "@on.auto/phrasing": "workspace:*",
     "@on.auto/tool-servers": "workspace:*",
     "@on.auto/workflow-engine": "workspace:*",
-    "effect": "catalog:",
-    "liquidjs": "10.30.0"
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@on.auto/ledger": "workspace:*",

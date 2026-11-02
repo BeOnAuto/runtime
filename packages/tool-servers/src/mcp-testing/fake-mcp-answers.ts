@@ -10,6 +10,7 @@ import type { ClientRegistration } from '../authorization-testing/fake-clients.t
 import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
 import { fakeSessions, type FakeSessions } from './fake-sessions.ts';
+import { fakeToolChanges } from './fake-tool-changes.ts';
 import type { FakeHints, ReceivedCall } from './fake-tools.ts';
 
 export interface FakeMcpOptions {
@@ -56,6 +57,7 @@ export interface FakeMcpServer extends LoopbackServer {
   readonly forgetSessions: () => void;
   readonly revokeTokens: () => void;
   readonly removeTool: (name: string) => void;
+  readonly annotateTool: (name: string, hints: Readonly<Record<string, boolean>>) => void;
   readonly notifyToolsChanged: () => void;
 }
 
@@ -235,11 +237,11 @@ function guarded(
   return (request) => authorization?.answer(request) ?? checked(request);
 }
 
-function recordsOf(options: FakeMcpOptions, removed: ReadonlySet<string>, chat: FakeChat) {
+function recordsOf(options: FakeMcpOptions, removed: ReadonlySet<string>, chat: FakeChat, hints: FakeHints) {
   return {
     isRemoved: (tool: string) => removed.has(tool),
     annotated: options.annotated ?? true,
-    hints: options.hints ?? {},
+    hints,
     chat: options.chat === true ? chat : undefined,
     data: options.data === true,
   };
@@ -260,10 +262,10 @@ export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
   const seen: SeenRequest[] = [];
   const next = nextAnswers();
   const received: ReceivedCall[] = [];
-  const removed = new Set<string>();
+  const changes = fakeToolChanges(options.hints);
   const authorizations: FakeAuthorization[] = [];
   const chat = fakeChat(options.echoes);
-  const records = recordsOf(options, removed, chat);
+  const records = recordsOf(options, changes.removed, chat, changes.hints);
   const sessions = fakeSessions({ ...records, receive: (call) => received.push(call) }, options.issuesSessionIds);
   const endpoint = mcpEndpoint({
     sessions,
@@ -289,9 +291,8 @@ export function fakeMcpAnswers(options: FakeMcpOptions = {}): FakeMcpAnswers {
     answerNextCallAfterNoise: next.answerAfterNoise,
     holdNextOf: next.hold,
     forgetSessions: sessions.forget,
-    removeTool: (name) => {
-      removed.add(name);
-    },
+    removeTool: changes.removeTool,
+    annotateTool: changes.annotateTool,
     notifyToolsChanged: sessions.notifyToolsChanged,
   };
 }

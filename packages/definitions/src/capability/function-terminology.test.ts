@@ -9,10 +9,11 @@ import {
 } from '../index.ts';
 
 describe('playbook function terminology', () => {
-  it('keeps the five function types in product order, without coordination or Dream', () => {
-    expect(functionTypeOrder).toEqual(['reasoning', 'interaction', 'prediction', 'recall', 'computation']);
+  it('keeps the six function types in product order, without coordination or Dream', () => {
+    expect(functionTypeOrder).toEqual(['reasoning', 'lookup', 'interaction', 'prediction', 'recall', 'computation']);
     expect(functionTypeOrder.map((type) => functionCategoryLabels[type])).toEqual([
       'Reasoning',
+      'Lookup',
       'Interaction',
       'Prediction',
       'Recall',
@@ -26,6 +27,7 @@ describe('playbook function terminology', () => {
   it('uses countable resource names and describes each declared responsibility', () => {
     expect(functionTypeOrder.map((type) => functionResourceLabels[type])).toEqual([
       { singular: 'reasoning function', plural: 'reasoning functions' },
+      { singular: 'lookup function', plural: 'lookup functions' },
       { singular: 'interaction function', plural: 'interaction functions' },
       { singular: 'prediction function', plural: 'prediction functions' },
       { singular: 'recall function', plural: 'recall functions' },
@@ -33,6 +35,7 @@ describe('playbook function terminology', () => {
     ]);
     expect(functionTypeOrder.map((type) => functionDescriptions[type])).toEqual([
       'Use a prompt, skills, and tools to interpret information or produce a response.',
+      'Obtain information that already exists outside the playbook, through one tool that only reads.',
       'Exchange information with people or systems.',
       "Predict a quantity from the playbook's own history, with a likely range.",
       'Answer from what the playbook keeps of its own history.',
@@ -42,6 +45,7 @@ describe('playbook function terminology', () => {
 
   it('labels known resources without reclassifying custom runtime adapters as functions', () => {
     expect(definitionResourceLabel('reasoning')).toBe('reasoning function');
+    expect(definitionResourceLabel('lookup')).toBe('lookup function');
     expect(definitionResourceLabel('interaction')).toBe('interaction function');
     expect(definitionResourceLabel('computation')).toBe('computation function');
     expect(definitionResourceLabel('recall')).toBe('recall function');

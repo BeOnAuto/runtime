@@ -1,12 +1,12 @@
 import { renderClock } from '@on.auto/definitions/template';
+import { unworkable, type ArgumentsFailure } from '@on.auto/definitions/tool-blocks';
 import { Unavailable, type PlaybookAddress, type Conflict } from '@on.auto/operations';
 import { toolBounds, type ToolAccess, type ToolNotOffered } from '@on.auto/tool-servers';
 import type { ToolReference } from '@on.auto/tool-servers/policy';
 import { Effect, Result, type Schema } from 'effect';
 
-import { deliveryVariablesOf, renderedArguments, type ArgumentsFailure } from '../tool-blocks/rendered-arguments.ts';
+import { deliveryArgumentsOf } from '../tool-blocks/delivery-arguments.ts';
 import type { RequestRecord } from './request-record.ts';
-import { unworkable } from './request-rendering.ts';
 
 export interface InteractionPorts {
   readonly tools: Pick<ToolAccess, 'named' | 'configured' | 'callOnce' | 'listServers' | 'takesConnections'>;
@@ -71,7 +71,7 @@ export function checkedArguments(record: RequestRecord, asking: Asking): Effect.
   }
   const { deliver } = record;
   return Effect.flatMap(renderClock, (clock) =>
-    Result.match(renderedArguments(deliver.with, deliveryVariablesOf(record, asking), clock), {
+    Result.match(deliveryArgumentsOf(deliver.with, record, asking, clock), {
       onSuccess: () => Effect.void,
       onFailure: (failure) => Effect.fail(argumentsRefusal(failure)),
     }),

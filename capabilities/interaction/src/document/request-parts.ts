@@ -1,9 +1,9 @@
 import { issueAt, type DocumentParts, type SourceLines, type ValueContract } from '@on.auto/definitions/document';
 import type { ParsedTemplate } from '@on.auto/definitions/template';
+import type { DocumentReading } from '@on.auto/definitions/tool-blocks';
 import { Result } from 'effect';
 
 import type { ReplyRule } from '../replies/reply-rule.ts';
-import type { DocumentReading } from '../tool-blocks/compiled-tool-block.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { RequestDocument } from './interaction-document.ts';
 import { fromOf, replyOf } from './reply-parts.ts';

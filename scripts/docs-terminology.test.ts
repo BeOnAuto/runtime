@@ -7,14 +7,21 @@ const docs = resolve(import.meta.dirname, '../docs');
 const functions = readFileSync(join(docs, 'concepts/functions.md'), 'utf8');
 const terminology = readFileSync(join(docs, 'concepts/terminology.md'), 'utf8');
 
-await test('playbook terminology distinguishes five function types from workflows', () => {
-  const categories = [...functions.matchAll(/^## (Reasoning|Interaction|Prediction|Recall|Computation)$/gmu)].map(
+await test('playbook terminology distinguishes six function types from workflows', () => {
+  const categories = [
+    ...functions.matchAll(/^## (Reasoning|Lookup|Interaction|Prediction|Recall|Computation)$/gmu),
+  ].map((match: readonly string[]) => match[1]);
+  assert.deepEqual(categories, ['Reasoning', 'Lookup', 'Interaction', 'Prediction', 'Recall', 'Computation']);
+  assert.ok(readFileSync(join(docs, 'nav.json'), 'utf8').includes('"link": "/concepts/terminology"'));
+  assert.ok(terminology.includes('There are seven capabilities'));
+  assert.ok(terminology.includes('Sending an approval or other input to a waiting run answers that run'));
+});
+
+await test('terminology names the lookup family in its place, after reasoning', () => {
+  const families = [...terminology.matchAll(/^\| (\w+) +\| \w+ function +\| Functions → \w+ +\|$/gmu)].map(
     (match: readonly string[]) => match[1],
   );
-  assert.deepEqual(categories, ['Reasoning', 'Interaction', 'Prediction', 'Recall', 'Computation']);
-  assert.ok(readFileSync(join(docs, 'nav.json'), 'utf8').includes('"link": "/concepts/terminology"'));
-  assert.ok(terminology.includes('There are six capabilities'));
-  assert.ok(terminology.includes('Sending an approval or other input to a waiting run answers that run'));
+  assert.deepEqual(families, ['Reasoning', 'Lookup', 'Interaction', 'Prediction', 'Recall', 'Computation']);
 });
 
 await test('terminology distinguishes available and absent capabilities', () => {

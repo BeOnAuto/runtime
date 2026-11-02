@@ -97,7 +97,7 @@ describe('the definition tools an agent sees', () => {
     const guide = await onAlpha(server, (session) => session.callTool('get_guide', { guide: 'recall-function' }));
 
     expect(listedTools(everyTool)).toHaveLength(33);
-    expect(createDefinition?.description).toContain('`type` is reasoning, interaction, computation, recall,');
+    expect(createDefinition?.description).toContain('`type` is reasoning, lookup, interaction, computation, recall,');
     expect(getGuide?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingTheRecallGuide } },
     });

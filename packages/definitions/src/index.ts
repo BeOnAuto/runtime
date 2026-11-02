@@ -227,6 +227,7 @@ export {
   type PlaybookFunctionDefinition,
   type ComputationFunctionDefinition,
   type InteractionFunctionDefinition,
+  type LookupFunctionDefinition,
   type PredictionFunctionDefinition,
   type RecallFunctionDefinition,
   type ReasoningFunctionDefinition,

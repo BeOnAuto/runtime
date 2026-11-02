@@ -32,6 +32,7 @@ const TextSchema = Schema.Struct({ content: Schema.Array(Schema.Struct({ text: S
 const guideNames = [
   'terminology',
   'reasoning-function',
+  'lookup-function',
   'interaction-function',
   'computation-function',
   'recall-function',

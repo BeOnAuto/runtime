@@ -1,7 +1,8 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
+import type { DocumentReading } from '@on.auto/definitions/tool-blocks';
 import { Result, type Schema } from 'effect';
 
-import { compiledToolBlock, type DocumentReading, type WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
+import { compiledToolBlock, type WrittenRoute } from '../tool-blocks/compiled-tool-block.ts';
 import { forAnAgent, type DeliverBlock } from '../tool-blocks/tool-block-schemas.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { RequestDocument } from './interaction-document.ts';

@@ -25,7 +25,9 @@ const urlsInCode = (source: string): readonly string[] =>
 await test('interaction functions are available in every runtime, with their format beside the other formats', () => {
   const functions = readFileSync(join(docs, 'concepts/functions.md'), 'utf8');
   const format = readFileSync(join(docs, 'reference/interaction-format.md'), 'utf8');
-  assert.ok(functions.includes('reasoning, interaction, prediction, recall and computation functions are available'));
+  assert.ok(
+    functions.includes('reasoning, lookup, interaction, prediction, recall and computation functions are available'),
+  );
   assert.ok(markdownDestinations(functions).some((href) => href === '../reference/interaction-format.md'));
   assert.ok(routes.indexOf('/reference/reasoning-format') < routes.indexOf('/reference/interaction-format'));
   assert.ok(routes.indexOf('/reference/interaction-format') < routes.indexOf('/reference/prediction-format'));

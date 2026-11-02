@@ -1,18 +1,14 @@
-import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
-import {
-  inputVariableIssues,
-  parsedTemplate,
-  type ParsedTemplate,
-  type RenderClock,
-} from '@on.auto/definitions/template';
 import { Result, type Schema } from 'effect';
 
-import { interactionEngine } from '../document/request-templates.ts';
-import { renderedText } from '../run/text-rendering.ts';
-import { isLoneExpression } from '../run/value-rendering.ts';
+import { issueAt, type DocumentIssue, type SourceLines } from '../document/document-issue.ts';
+import type { RenderClock } from '../template/render-clock.ts';
+import { parsedTemplate, type ParsedTemplate } from '../template/template-parsing.ts';
+import { inputVariableIssues } from '../template/template-variables.ts';
 import { childrenOf, isJsonParent, type JsonParent } from './json-children.ts';
 import { notTextRemedy, type Templates } from './rendered-arguments.ts';
 import { nameOf, reads, type TemplateSet } from './template-sets.ts';
+import { renderedText, toolBlockEngine } from './text-rendering.ts';
+import { isLoneExpression } from './value-rendering.ts';
 
 export interface TemplatePlace {
   readonly lines: SourceLines;
@@ -59,7 +55,7 @@ function templateDetails(set: TemplateSet, text: string, place: TemplatePlace, r
   if (text.includes('${')) {
     return ['Expected no ${ in a template, which never holds a secret'];
   }
-  const parsed = parsedTemplate(interactionEngine, text, 1);
+  const parsed = parsedTemplate(toolBlockEngine, text, 1);
   if (Result.isFailure(parsed)) {
     return parsed.failure.map(({ detail }) => detail);
   }

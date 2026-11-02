@@ -1,3 +1,4 @@
+import { argumentsFailureWords, type ArgumentsFailure, type RenderedArguments } from '@on.auto/definitions/tool-blocks';
 import { randomUUIDv7 } from '@on.auto/operations';
 import { conversationCallIdKey } from '@on.auto/tool-servers/policy';
 import { Effect, Result } from 'effect';
@@ -5,11 +6,6 @@ import { Effect, Result } from 'effect';
 import { handledReply, type Reading } from '../replies/reply-handling.ts';
 import { nothingRead, readArguments, type ReadingState } from '../replies/reply-recording.ts';
 import type { KeptRequest } from '../replies/reply-taking.ts';
-import {
-  argumentsFailureWords,
-  type ArgumentsFailure,
-  type RenderedArguments,
-} from '../tool-blocks/rendered-arguments.ts';
 import { failedRead, readAnswerOf, type ReadAnswer } from './read-answers.ts';
 import { cursorOf } from './read-cadence.ts';
 import { recordedRead } from './read-records.ts';

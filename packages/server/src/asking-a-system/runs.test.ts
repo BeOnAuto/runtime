@@ -1,7 +1,9 @@
 import { callDocument } from '@on.auto/interaction/testing';
+import { lookupDocument } from '@on.auto/lookup/testing';
 import { fakeStdioServerPath } from '@on.auto/tool-servers/served-fakes';
 import { describe, expect, it } from 'vitest';
 
+import { mayChange } from '../testing/interaction-servers/call-endings.ts';
 import { interactionServerOn } from '../testing/interaction-servers/interaction-server.ts';
 import {
   askingASystem,
@@ -23,9 +25,9 @@ const withinItsCall =
 
 const callFacts = ['run_started', 'tool_call_started', 'tool_call_answered', 'run_succeeded'];
 
-describe('a run that asks a system whose session or process is gone', () => {
+describe('a run that calls a tool that acts whose session or process is gone', () => {
   it('opens a session its server forgot once more, and answers', async () => {
-    const server = await askingASystem();
+    const server = await askingASystem({ hints: { thread: mayChange } });
     await server.define('asking');
     server.fake.answerNextOf('tools/call', 404);
 
@@ -45,17 +47,19 @@ describe('a run that asks a system whose session or process is gone', () => {
       ...measured,
     });
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
-    const define = (name: string, tool: string, written: readonly string[] = []) =>
-      server.call('POST', `${alpha}/definitions/interaction`, {
-        body: { name, source: callDocument({ server: 'notes', ...calling(tool, written) }), diagram: 'none' },
-      });
-    await define('exiting', 'exit');
-    await define('searching', 'search', ['    query: acme']);
+    await server.call('POST', `${alpha}/definitions/interaction`, {
+      body: { name: 'exiting', source: callDocument({ server: 'notes', ...calling('exit') }), diagram: 'none' },
+    });
+    await server.call('POST', `${alpha}/definitions/lookup`, {
+      body: {
+        name: 'searching',
+        source: lookupDocument({ server: 'notes', ...calling('search', ['    query: acme']) }),
+        diagram: 'none',
+      },
+    });
 
     const exited = await server.call('POST', `${alpha}/definitions/interaction/exiting/run`, { body: { input: {} } });
-    const restarted = await server.call('POST', `${alpha}/definitions/interaction/searching/run`, {
-      body: { input: {} },
-    });
+    const restarted = await server.call('POST', `${alpha}/definitions/lookup/searching/run`, { body: { input: {} } });
 
     expect([exited.status, exited.body]).toEqual([
       409,
@@ -66,7 +70,7 @@ describe('a run that asks a system whose session or process is gone', () => {
 });
 
 async function sleeping(): Promise<SystemServer> {
-  const server = await askingASystem();
+  const server = await askingASystem({ hints: { sleep: mayChange } });
   await server.define('sleeping', calling('sleep', ['    ms: 1000']));
   return server;
 }
@@ -89,7 +93,7 @@ async function leftOnceCalled(server: SystemServer, url: string, { headers, body
   return gone;
 }
 
-describe('a run that asks a system while its call is in flight, over HTTP', () => {
+describe('a run that calls a tool that acts while its call is in flight, over HTTP', () => {
   it('goes on to its end when its caller goes away, records the answer, and is no request anyone can answer', async () => {
     const server = await sleeping();
     await leftOnceCalled(server, `${server.origin}${alpha}/definitions/interaction/sleeping/run`, {
@@ -110,7 +114,7 @@ describe('a run that asks a system while its call is in flight, over HTTP', () =
   });
 });
 
-describe('a run that asks a system while its call is in flight, over MCP', () => {
+describe('a run that calls a tool that acts while its call is in flight, over MCP', () => {
   it('goes on to its end when its caller goes away, records the answer, calls once and lets the session go', async () => {
     const server = await sleeping();
     const call = {
@@ -129,11 +133,11 @@ describe('a run that asks a system while its call is in flight, over MCP', () =>
     const ended = await settledRun(server, `${alpha}/runs/${systemRunId}`);
     const sessionsEnded = await until(
       () => Promise.resolve(server.fake.endedSessions()),
-      (count) => count === 1,
+      (count) => count === 2,
     );
 
     expect(ended.body).toMatchObject({ status: 'succeeded', output: 'Slept.' });
     expect((await server.history(systemRunId)).map(({ type }) => type)).toEqual(callFacts);
-    expect([server.fake.received().length, sessionsEnded]).toEqual([1, 1]);
+    expect([server.fake.received().length, sessionsEnded]).toEqual([1, 2]);
   });
 });

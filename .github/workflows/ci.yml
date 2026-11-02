@@ -93,6 +93,7 @@ jobs:
               - identity
               - interaction
               - json-schema
+              - lookup
               - operations
               - outbound
               - phrasing

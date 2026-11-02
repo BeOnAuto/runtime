@@ -23,7 +23,7 @@ Tell me which tools only read. Then show me the arguments the "<tool name>"
 tool takes.
 ```
 
-Check that the agent reports the server with its tools, and the mark of each: `reads` for a tool that only reads, `acts` for one that may change something, and `unmarked` for one nothing marks, which Auto counts as one that may change something. Where a server offers many tools, ask the agent to search with a few words of what you want done; it passes them to `search` as `terms`.
+Check that the agent reports the server with its tools, and the mark of each: `reads` for a tool that only reads, `acts` for one that may change something, and `unmarked` for one nothing marks, which Auto counts as one that may change something. A function whose job is only to fetch what a tool marked `reads` returns is a [lookup function](../reference/lookup-format.md), and a reasoning function then interprets what it fetched; a tool that acts is called by an interaction function, or by a reasoning function while it works. Where a server offers many tools, ask the agent to search with a few words of what you want done; it passes them to `search` as `terms`.
 
 If the agent finds no server, or none with the tool you need, [connect a provider](#connect-a-provider) that offers it, or [ask for a tool server](#ask-for-a-tool-server). A server that cannot be used is shown as unavailable, with a `because` field that says why; see [If something goes wrong](#if-something-goes-wrong).
 

@@ -1,15 +1,27 @@
 import { Buffer } from 'node:buffer';
 
-import { mostResultBytes } from '@on.auto/definitions';
-import { issuesDetail } from '@on.auto/json-schema';
+import { issuesDetail, type CompiledSchema } from '@on.auto/json-schema';
 import { Conflict, Unavailable } from '@on.auto/operations';
 import { capitalized } from '@on.auto/phrasing';
-import { answerDocument, onlyReads, toolInWords, type AnsweredOnce, type CalledOnce } from '@on.auto/tool-servers';
+import {
+  answerDocument,
+  onlyReads,
+  toolInWords,
+  type AnsweredOnce,
+  type CalledOnce,
+  type UnopenedOnce,
+} from '@on.auto/tool-servers';
 import { measureOf, mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import { Effect, Result, Schema } from 'effect';
 
-import type { CallDocument } from '../document/interaction-document.ts';
-import { valueAt } from '../tool-blocks/json-pointers.ts';
+import { mostResultBytes } from '../runs/recorded-size.ts';
+import type { CallBlock } from './call-block-schemas.ts';
+import { valueAt } from './json-pointers.ts';
+
+export interface CalledDocument {
+  readonly call: CallBlock;
+  readonly output: { readonly schema: CompiledSchema };
+}
 
 const isJson = Schema.is(Schema.Json);
 
@@ -18,13 +30,13 @@ interface CallFinished {
   readonly record: Schema.JsonObject;
 }
 
-type Ending = Effect.Effect<CallFinished, Unavailable | Conflict>;
+type CallEnding = Effect.Effect<CallFinished, Unavailable | Conflict>;
 
-function unworkable(detail: string): Ending {
+function unworkable(detail: string): CallEnding {
   return Effect.fail(new Conflict({ detail, kind: 'unworkable' }));
 }
 
-function recordOf({ call }: CallDocument): Schema.JsonObject {
+function recordOf({ call }: CalledDocument): Schema.JsonObject {
   const { server, tool, read } = call;
   return read === undefined ? { server, tool } : { server, tool, read };
 }
@@ -36,14 +48,14 @@ type Answered = Extract<AnsweredOnce, { readonly outcome: 'result' }>;
 interface Reading {
   readonly named: string;
   readonly at: string;
-  readonly unreadable: (detail: string) => Ending;
+  readonly unreadable: (detail: string) => CallEnding;
 }
 
-function unreadableAfter(answer: Answered): (detail: string) => Ending {
+function unreadableAfter(answer: Answered): (detail: string) => CallEnding {
   return (detail) => unworkable(onlyReads(answer) ? detail : `${detail}. ${mayHaveActed}`);
 }
 
-function checkedValue(document: CallDocument, value: Schema.Json, { named, at, unreadable }: Reading): Ending {
+function checkedValue(document: CalledDocument, value: Schema.Json, { named, at, unreadable }: Reading): CallEnding {
   const what = `What ${named} answered${at}`;
   const bytes = Buffer.byteLength(JSON.stringify({ output: value, record: recordOf(document) }), 'utf8');
   if (bytes > mostResultBytes) {
@@ -60,7 +72,7 @@ function checkedValue(document: CallDocument, value: Schema.Json, { named, at, u
   });
 }
 
-function answeredWith(document: CallDocument, answer: Answered): Ending {
+function answeredWith(document: CalledDocument, answer: Answered): CallEnding {
   const named = toolInWords(document.call);
   const read = document.call.read ?? '';
   const unreadable = unreadableAfter(answer);
@@ -81,7 +93,7 @@ function answeredWith(document: CallDocument, answer: Answered): Ending {
   return checkedValue(document, value, { named, at: read === '' ? '' : ` at ${read}`, unreadable });
 }
 
-function afterSending(called: AnsweredOnce, because: 'tool_error' | 'server_failed', detail: string): Ending {
+function afterSending(called: AnsweredOnce, because: 'tool_error' | 'server_failed', detail: string): CallEnding {
   const ending = {
     detail,
     because,
@@ -94,7 +106,7 @@ function afterSending(called: AnsweredOnce, because: 'tool_error' | 'server_fail
   );
 }
 
-function endedWith(document: CallDocument, called: AnsweredOnce): Ending {
+function endedWith(document: CalledDocument, called: AnsweredOnce): CallEnding {
   const named = toolInWords(document.call);
   if (called.outcome === 'result') {
     return answeredWith(document, called);
@@ -111,10 +123,12 @@ function endedWith(document: CallDocument, called: AnsweredOnce): Ending {
       );
 }
 
-export function endingOf(document: CallDocument, called: CalledOnce): Ending {
-  if (called.kind === 'unopened') {
-    const { refused, because, detail } = called;
-    return Effect.fail(new Unavailable({ detail, kind: refused, because }));
-  }
-  return endedWith(document, called);
+function unsentWith(called: UnopenedOnce): Unavailable {
+  return called.refused === 'tool_not_read_only'
+    ? new Unavailable({ detail: called.detail, kind: called.refused })
+    : new Unavailable({ detail: called.detail, kind: called.refused, because: called.because });
+}
+
+export function callEndingOf(document: CalledDocument, called: CalledOnce): CallEnding {
+  return called.kind === 'unopened' ? Effect.fail(unsentWith(called)) : endedWith(document, called);
 }

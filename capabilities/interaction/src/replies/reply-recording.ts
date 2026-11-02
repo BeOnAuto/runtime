@@ -1,9 +1,9 @@
 import { renderClock, type RenderClock } from '@on.auto/definitions/template';
+import { renderedArguments } from '@on.auto/definitions/tool-blocks';
 import { Effect, Result } from 'effect';
 
 import type { ReadingRoute } from '../conversations/conversation-parts.ts';
 import type { ConversationRow } from '../conversations/conversation-rows.ts';
-import { renderedArguments } from '../tool-blocks/rendered-arguments.ts';
 import type { KeptRequest } from './reply-taking.ts';
 
 export interface ReadingState {

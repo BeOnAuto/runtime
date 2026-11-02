@@ -1,25 +1,21 @@
 import { issueAt, type DocumentIssue, type SourceLines } from '@on.auto/definitions/document';
-import type { RenderClock } from '@on.auto/definitions/template';
-import { isServerName, isToolName, serverNameShape, toolNameShape } from '@on.auto/tool-servers/policy';
-import { readDuration } from '@on.auto/workflow-engine/dsl';
-import { JsonPointer, Result, type Schema } from 'effect';
-
-import { templateIssues, templatesIssues, type TemplatePlace } from './block-templates.ts';
-import { isJsonPointer } from './json-pointers.ts';
 import {
   argumentsFailureWords,
+  nameIssues,
+  placeOf,
+  pointerIssues,
   renderedArguments,
-  type ArgumentsFailure,
-  type Templates,
-} from './rendered-arguments.ts';
-import {
-  callTemplates,
-  conversationTemplates,
-  deliveryTemplates,
-  readingTemplates,
-  tellingTemplates,
-} from './template-sets.ts';
-import type { CallBlock, DeliverBlock, Replies } from './tool-block-schemas.ts';
+  templateIssues,
+  templatesIssues,
+  type DocumentReading,
+  type TemplatePlace,
+} from '@on.auto/definitions/tool-blocks';
+import { isServerName, isToolName, serverNameShape, toolNameShape } from '@on.auto/tool-servers/policy';
+import { readDuration } from '@on.auto/workflow-engine/dsl';
+import { Result, type Schema } from 'effect';
+
+import { conversationTemplates, deliveryTemplates, readingTemplates, tellingTemplates } from './template-sets.ts';
+import type { DeliverBlock, Replies } from './tool-block-schemas.ts';
 
 export interface WrittenRoute {
   readonly deliver: DeliverBlock;
@@ -28,40 +24,7 @@ export interface WrittenRoute {
 
 const replyWaitBounds = { leastMs: 5000, mostMs: 3_600_000 } as const;
 
-const pointerWords =
-  'Expected a JSON Pointer such as /messages: it starts with a slash, writes ~ as ~0 and a slash within a name as ~1';
-
 const waitWords = 'Expected an ISO 8601 duration from PT5S to PT1H, such as PT1M';
-
-export interface DocumentReading {
-  readonly lines: SourceLines;
-  readonly clock: RenderClock;
-}
-
-function placeOf(...path: readonly string[]): string {
-  return path.map((segment) => `/${JsonPointer.escapeToken(segment)}`).join('');
-}
-
-function nameIssues(
-  lines: SourceLines,
-  names: readonly (readonly [string, string | undefined])[],
-  valid: (name: string) => boolean,
-  shape: string,
-) {
-  return names
-    .filter(([, name]) => name !== undefined && !valid(name))
-    .map(([pointer]) => issueAt(lines, pointer, `Expected ${shape}`));
-}
-
-function isPointerIntoAnswer(pointer: string): boolean {
-  return pointer !== '' && isJsonPointer(pointer);
-}
-
-function pointerIssues(lines: SourceLines, pointers: readonly (readonly [string, string | undefined])[]) {
-  return pointers
-    .filter(([, pointer]) => pointer !== undefined && !isPointerIntoAnswer(pointer))
-    .map(([place]) => issueAt(lines, place, pointerWords));
-}
 
 function waitIssues(lines: SourceLines, written: string | undefined): readonly DocumentIssue[] {
   if (written === undefined) {
@@ -147,37 +110,4 @@ export function compiledToolBlock(
     ...(written.replies === undefined ? [] : readingIssues(written.replies, place)),
   ];
   return issues.length > 0 ? Result.fail(issues) : Result.succeed(written);
-}
-
-function isOversized(failure: ArgumentsFailure): boolean {
-  return failure.reason === 'too_large' || failure.failure.reason === 'too_long';
-}
-
-function callArgumentIssues(written: Templates, place: TemplatePlace): readonly DocumentIssue[] {
-  const pointer = placeOf('call', 'with');
-  const issues = templatesIssues(callTemplates, written, { ...place, pointer });
-  if (issues.length > 0) {
-    return issues;
-  }
-  const rendered = renderedArguments(written, callTemplates.sample, place.clock);
-  if (Result.isSuccess(rendered) || !isOversized(rendered.failure)) {
-    return [];
-  }
-  const { failure } = rendered;
-  const at = failure.reason === 'too_large' ? pointer : `${pointer}/${failure.argument}`;
-  return [issueAt(place.lines, at, argumentsFailureWords(failure, 'the call'))];
-}
-
-export function compiledCallBlock(
-  call: CallBlock,
-  { lines, clock }: DocumentReading,
-  inputSchema: Schema.JsonObject | undefined,
-): Result.Result<CallBlock, readonly DocumentIssue[]> {
-  const issues = [
-    ...nameIssues(lines, [[placeOf('call', 'server'), call.server]], isServerName, serverNameShape),
-    ...nameIssues(lines, [[placeOf('call', 'tool'), call.tool]], isToolName, toolNameShape),
-    ...callArgumentIssues(call.with ?? {}, { lines, pointer: '', inputSchema, clock }),
-    ...pointerIssues(lines, [[placeOf('call', 'read'), call.read]]),
-  ];
-  return issues.length > 0 ? Result.fail(issues) : Result.succeed(call);
 }

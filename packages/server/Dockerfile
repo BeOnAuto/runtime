@@ -33,6 +33,7 @@ COPY packages/workflow-host/package.json packages/workflow-host/
 COPY capabilities/computation/package.json capabilities/computation/
 COPY capabilities/coordination/package.json capabilities/coordination/
 COPY capabilities/interaction/package.json capabilities/interaction/
+COPY capabilities/lookup/package.json capabilities/lookup/
 COPY capabilities/prediction/package.json capabilities/prediction/
 COPY capabilities/reasoning/package.json capabilities/reasoning/
 COPY capabilities/recall/package.json capabilities/recall/
@@ -84,6 +85,7 @@ COPY packages/workflow-host/src packages/workflow-host/src
 COPY capabilities/computation/src capabilities/computation/src
 COPY capabilities/coordination/src capabilities/coordination/src
 COPY capabilities/interaction/src capabilities/interaction/src
+COPY capabilities/lookup/src capabilities/lookup/src
 COPY capabilities/prediction/src capabilities/prediction/src
 COPY capabilities/reasoning/src capabilities/reasoning/src
 COPY capabilities/recall/src capabilities/recall/src

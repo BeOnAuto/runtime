@@ -8,11 +8,11 @@ function refusalNaming(detail: string) {
 }
 
 const ofRuns = refusalNaming(
-  'Expected a type this server runs: reasoning, interaction, computation, recall, prediction, or workflow',
+  'Expected a type this server runs: reasoning, lookup, interaction, computation, recall, prediction, or workflow',
 );
 
 const ofDefinitions = refusalNaming(
-  'Expected a type of definition this server keeps: reasoning, interaction, computation, recall, prediction, page, or workflow',
+  'Expected a type of definition this server keeps: reasoning, lookup, interaction, computation, recall, prediction, page, or workflow',
 );
 
 let server: ReasoningServer;
@@ -48,7 +48,7 @@ describe('a type the server does not run', () => {
 
     expect(listed.isError).toBe(true);
     expect(JSON.stringify(listed.content)).toContain(
-      'Expected a type this server runs: reasoning, interaction, computation, recall, prediction, or workflow',
+      'Expected a type this server runs: reasoning, lookup, interaction, computation, recall, prediction, or workflow',
     );
   });
 });

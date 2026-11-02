@@ -55,7 +55,7 @@ const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
 };
 
 const whatAFunctionTypeAlsoNeedsSaid: Readonly<Record<string, string>> = {
-  lookup: 'A lookup function fetches and a reasoning function interprets, never fetching its own input.',
+  lookup: 'A lookup function fetches what a reasoning function interprets.',
   recall: 'What the person wants kept goes in a recall function for anyone or a workflow to ask later, not your notes.',
   memory: 'Remember what the person wants kept in a memory function, not your notes.',
 };

@@ -1,10 +1,9 @@
-import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
-import { inTurn, threadReplies } from '@on.auto/tool-servers/testing';
+import { inTurn } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { chatKey } from '../testing/interaction-servers/chat-deliveries.ts';
-import { askingASystem, calling, threadInput, type SystemServer } from '../testing/interaction-servers/system-calls.ts';
+import { mayChange } from '../testing/interaction-servers/call-endings.ts';
+import { askingASystem, calling, type SystemServer } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 
 const decodeRuns = Schema.decodeUnknownSync(Schema.Struct({ runs: Schema.Array(Schema.Unknown) }));
@@ -47,42 +46,29 @@ async function endedWorkflow(server: SystemServer, name: string, steps: string) 
   return server.settled(await server.workflow(name, steps));
 }
 
-describe('a workflow that asks a system in a step', () => {
-  it('takes what the tool answered at read as the output of the step', async () => {
-    const server = await askingASystem();
-    await server.define('thread-replies');
-    const input = `{ channel: ${threadInput.channel}, thread: '${threadInput.thread}' }`;
+const acting = { search: mayChange, strict: mayChange, broken: mayChange, denied: mayChange };
 
-    const ended = await endedWorkflow(
-      server,
-      'reading',
-      `do:\n  - read: { call: run_definition, with: { type: interaction, name: thread-replies, input: ${input} } }\n`,
-    );
-
-    expect(ended).toMatchObject({ status: 'succeeded', output: threadReplies });
-  });
-
+describe('a workflow that calls a tool that acts in a step', () => {
   it('retries on status 503 what is safe to try again, and neither what is wrong nor what may have changed something', async () => {
     const server = await askingASystem({
-      hints: { broken: { readOnlyHint: false } },
+      hints: acting,
       servers: { gone: { url: 'http://127.0.0.1:1/mcp', org: 'acme' } },
     });
     await server.define('unreachable', { ...calling('search'), server: 'gone' });
     await server.define('unlisted', calling('missing'));
-    await server.define('unfinished', calling('denied'));
     await server.define('unworkable', calling('strict', ["    limit: '15'"]));
     await server.define('unknown', calling('broken'));
 
-    const names = ['unreachable', 'unlisted', 'unfinished', 'unworkable', 'unknown'];
+    const names = ['unreachable', 'unlisted', 'unworkable', 'unknown'];
     await inTurn(names, (name) => endedWorkflow(server, `retrying-${name}`, retried(name, onStatus503)));
 
-    expect(await Promise.all(names.map((name) => runsOf(server, name)))).toEqual([3, 3, 3, 1, 1]);
+    expect(await Promise.all(names.map((name) => runsOf(server, name)))).toEqual([3, 3, 1, 1]);
   });
 });
 
 describe('a workflow that names effect_unknown on purpose', () => {
   it('retries it when its catch names the type of effect_unknown, or the kind in a when', async () => {
-    const server = await askingASystem({ hints: { broken: { readOnlyHint: false } } });
+    const server = await askingASystem({ hints: acting });
     await server.define('by-type', calling('broken'));
     await server.define('by-kind', calling('broken'));
 
@@ -100,20 +86,13 @@ describe('a workflow that names effect_unknown on purpose', () => {
     expect([await runsOf(server, 'by-type'), await runsOf(server, 'by-kind')]).toEqual([3, 3]);
   });
 
-  it('tells a tool that answered an error from a server that failed by because, after either ending', async () => {
-    const writer = await serveFakeMcp({ bearer: chatKey, data: true, hints: { denied: { readOnlyHint: false } } });
-    onTestFinished(writer.close);
-    const server = await askingASystem({
-      servers: { writer: { url: writer.url, headers: { Authorization: 'Bearer ${CHAT_KEY}' }, org: 'acme' } },
+  it('reads the because of a tool that answered an error, after an ending whose effect is unknown', async () => {
+    const server = await askingASystem({ hints: acting });
+    await server.define('may-write', calling('denied'));
+
+    expect(await endedWorkflow(server, 'writing-errors', catching('may-write'))).toMatchObject({
+      status: 'succeeded',
+      output: { kind: 'effect_unknown', because: 'tool_error' },
     });
-    await server.define('only-reads', calling('denied'));
-    await server.define('may-write', { ...calling('denied'), server: 'writer' });
-    expect([
-      await endedWorkflow(server, 'reading-errors', catching('only-reads')),
-      await endedWorkflow(server, 'writing-errors', catching('may-write')),
-    ]).toMatchObject([
-      { status: 'succeeded', output: { kind: 'tools_unfinished', because: 'tool_error' } },
-      { status: 'succeeded', output: { kind: 'effect_unknown', because: 'tool_error' } },
-    ]);
   });
 });

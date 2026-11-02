@@ -6,12 +6,13 @@ A playbook contains one brain and its workflows. The brain is the playbook's col
 
 ## Capabilities and resources
 
-There are six capabilities: coordination, reasoning, interaction, prediction, recall and computation. A workflow expresses coordination. Each of the other five has a function type, listed in this order:
+There are seven capabilities: coordination, reasoning, lookup, interaction, prediction, recall and computation. A workflow expresses coordination. Each of the other six has a function type, listed in this order:
 
 | Capability   | Resource someone defines | Category                |
 | ------------ | ------------------------ | ----------------------- |
 | Coordination | Workflow                 | Workflows               |
 | Reasoning    | Reasoning function       | Functions → Reasoning   |
+| Lookup       | Lookup function          | Functions → Lookup      |
 | Interaction  | Interaction function     | Functions → Interaction |
 | Prediction   | Prediction function      | Functions → Prediction  |
 | Recall       | Recall function          | Functions → Recall      |
@@ -22,6 +23,7 @@ What each function type is for:
 | Category    | Description                                                                                                     |
 | ----------- | --------------------------------------------------------------------------------------------------------------- |
 | Reasoning   | Use a prompt and a language model, with tools where configured, to interpret information or produce a response. |
+| Lookup      | Obtain information that already exists outside the playbook, through one tool that only reads.                  |
 | Interaction | Exchange information with people or systems.                                                                    |
 | Prediction  | Predict a quantity from the playbook's own history, with a likely range.                                        |
 | Recall      | Answer from what the playbook keeps of its own history: its memory, not an agent's own notes.                   |

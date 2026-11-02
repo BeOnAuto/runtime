@@ -2,7 +2,7 @@ import { threadReplies } from '@on.auto/tool-servers/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { askingASystem } from '../testing/interaction-servers/system-calls.ts';
+import { lookingUp } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 import { workflowSource } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
@@ -18,7 +18,7 @@ const paging = {
 const throughEveryPage = `do:
   - page:
       call: run_definition
-      with: { type: interaction, name: paging, input: { cursor: '\${ $context.next ?? "" }' } }
+      with: { type: lookup, name: paging, input: { cursor: '\${ $context.next ?? "" }' } }
       export:
         as: '\${ ({ items: [...($context.items ?? []), ...$data.items], next: $data.next }) }'
   - more:
@@ -39,7 +39,7 @@ const keptReplies = [
   'source:',
   '  events:',
   '    - type: run_succeeded',
-  '      subject: interaction/thread-replies',
+  '      subject: lookup/thread-replies',
   'view:',
   '  initial: []',
   '  schema: { type: array, maxItems: 10 }',
@@ -53,7 +53,7 @@ const keptReplies = [
 const onReplies = workflowSource(
   'on-replies',
   `schedule:
-  on: { one: { with: { type: run_succeeded, subject: interaction/thread-replies } } }
+  on: { one: { with: { type: run_succeeded, subject: lookup/thread-replies } } }
 do:
   - noted: { set: { replies: '\${ $data[0].data.output.length }' } }
 `,
@@ -65,7 +65,7 @@ const decodeRuns = Schema.decodeUnknownSync(
 
 describe('a workflow that reads every page of a tool that pages', () => {
   it('calls again with the cursor while there is one, each page a run of its own, keeping what it read', async () => {
-    const server = await askingASystem();
+    const server = await lookingUp();
     await server.define('paging', paging);
 
     const ended = await server.settled(await server.workflow('every-page', throughEveryPage));
@@ -77,7 +77,7 @@ describe('a workflow that reads every page of a tool that pages', () => {
 
 describe('what a call read, kept and reacted to', () => {
   it('is folded by a recall function from the run that ended, and starts a workflow that listens for that ending', async () => {
-    const server = await askingASystem();
+    const server = await lookingUp();
     await server.define('thread-replies');
     await server.call('POST', `${alpha}/definitions/recall`, {
       body: { name: 'kept-replies', source: keptReplies, diagram: 'none' },

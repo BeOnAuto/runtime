@@ -42,6 +42,7 @@ const retryAfterSeconds = '5';
 const resolvedOnlyByChange: ReadonlySet<RejectionKind> = new Set<UnavailableKind>([
   'tools_unfinished',
   'tool_not_offered',
+  'tool_not_read_only',
   'model_not_offered',
 ]);
 

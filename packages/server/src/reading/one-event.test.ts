@@ -2,7 +2,7 @@ import { withMcpSession, type ToolResult } from '@on.auto/api/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { askingASystem, calling, systemRunId, type SystemServer } from '../testing/interaction-servers/system-calls.ts';
+import { calling, lookingUp, systemRunId, type SystemServer } from '../testing/interaction-servers/system-calls.ts';
 import { alpha } from '../testing/servers/reasoning-server.ts';
 
 const kibibytes = 5120;
@@ -28,7 +28,7 @@ const decodeShown = Schema.decodeUnknownSync(Schema.Struct({ data: Schema.Record
 const wholeFields: ReadonlySet<string> = new Set(['result', 'answer']);
 
 async function answeredInFull(): Promise<{ readonly server: SystemServer; readonly answered: string }> {
-  const server = await askingASystem();
+  const server = await lookingUp();
   await server.define('large', calling('large', [`    kib: ${kibibytes}`]));
   await server.runCall('large');
   const history = await server.history(systemRunId);
@@ -64,7 +64,7 @@ describe('one event read whole by its id', () => {
   });
 
   it('answers not_found for an id the playbook does not hold, a step its record does not have, and an event of another playbook', async () => {
-    const server = await askingASystem();
+    const server = await lookingUp();
     await server.define('thread-replies');
     await server.runCall('thread-replies');
     const [started] = await server.history(systemRunId);

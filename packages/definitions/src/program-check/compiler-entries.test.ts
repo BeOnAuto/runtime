@@ -31,6 +31,7 @@ describe('the compiler', () => {
       'page.ts',
       'template.ts',
       'testing/index.ts',
+      'tool-blocks/index.ts',
       'checking/value-checks.ts',
     ]);
     expect(entries.filter((entry) => entry !== checkHandler).flatMap((entry) => compilersReachedFrom(entry))).toEqual(

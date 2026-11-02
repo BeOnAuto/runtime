@@ -1,8 +1,7 @@
 import { issueAt, type DocumentIssue, type DocumentParts, type SourceLines } from '@on.auto/definitions/document';
+import { compiledCallBlock, type CallBlock, type DocumentReading } from '@on.auto/definitions/tool-blocks';
 import { Predicate, Result } from 'effect';
 
-import { compiledCallBlock, type DocumentReading } from '../tool-blocks/compiled-tool-block.ts';
-import type { CallBlock } from '../tool-blocks/tool-block-schemas.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { CallDocument } from './interaction-document.ts';
 import { contractOf, issuesOf, type Checked } from './written-parts.ts';
@@ -67,6 +66,7 @@ export function callFrom(
         shape: 'call',
         ...(written.description === undefined ? {} : { description: written.description }),
         call,
+        callLine: issueAt(lines, '/call', '').line,
         ...contracts,
       }));
 }

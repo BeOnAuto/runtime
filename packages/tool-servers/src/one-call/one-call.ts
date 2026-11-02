@@ -8,6 +8,7 @@ import type { ToolReference } from '../names/tool-reference.ts';
 import type { OrgServer } from '../org-servers/org-servers.ts';
 import { openedFor } from './call-opening.ts';
 import { answeredOnce, refusedOnce, tracedOnce, type CalledOnce } from './called-once.ts';
+import { notReadOnlyOnce } from './not-read-only.ts';
 
 export interface OneCall {
   readonly org: string;
@@ -16,6 +17,7 @@ export interface OneCall {
   readonly input: Readonly<Record<string, unknown>>;
   readonly meta: Readonly<Record<string, string>>;
   readonly longestRetryWaitMs?: number;
+  readonly requiredMark?: 'reads';
 }
 
 export interface RunCall {
@@ -45,6 +47,10 @@ async function calledOnce(call: OneCall, link: ServerLink, { access, journalling
     return opened;
   }
   const { slot, tool, readOnly } = opened;
+  if (call.requiredMark === 'reads' && tool.mark !== 'reads') {
+    await slot.release();
+    return notReadOnlyOnce(call.reference, tool.mark);
+  }
   const recording = recordingOf(link.settings, access.secrets, access.keepIn(call));
   const { callMs } = access.timing;
   const longestRetryWaitMs = Math.min(call.longestRetryWaitMs ?? 0, access.timing.longestRetryWaitMs);

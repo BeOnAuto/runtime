@@ -1,11 +1,12 @@
 import type { DefinitionSummary } from '@on.auto/definitions';
 import { issueText } from '@on.auto/definitions/document';
 import { renderClock } from '@on.auto/definitions/template';
-import { InvalidInput } from '@on.auto/operations';
+import { InvalidInput, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
+import { callCheck } from './call-check.ts';
 import { wayCheck, type WayPorts } from './request-ways.ts';
 
 function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
@@ -44,5 +45,12 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
 }
 
 export function definitionReadingOf(tools: WayPorts) {
-  return { parse, check: wayCheck(tools), summarize };
+  const calls = callCheck(tools);
+  const ways = wayCheck(tools);
+  return {
+    parse,
+    check: (document: InteractionFunctionDefinitionDocument, source: string, place: PlaybookAddress) =>
+      document.shape === 'call' ? calls(document, place) : ways(document, source, place),
+    summarize,
+  };
 }

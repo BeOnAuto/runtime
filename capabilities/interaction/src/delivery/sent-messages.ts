@@ -2,13 +2,11 @@ import { Buffer } from 'node:buffer';
 
 import { refusingForbiddenCharacters } from '@on.auto/definitions';
 import { parsedTemplate, type RenderClock } from '@on.auto/definitions/template';
+import { renderedText, textAt, toolBlockEngine } from '@on.auto/definitions/tool-blocks';
 import { answerDocument, type CallAnswer } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
-import { interactionEngine } from '../document/request-templates.ts';
 import type { DeliveringRecord } from '../run/request-record.ts';
-import { renderedText } from '../run/text-rendering.ts';
-import { textAt } from '../tool-blocks/json-pointers.ts';
 import type { DeliveredAs, Replies, RepliesIn } from '../tool-blocks/tool-block-schemas.ts';
 
 const sentBounds = { partBytes: 256 } as const;
@@ -42,7 +40,7 @@ function partAt(document: Schema.Json, pointer: string, name: string): Result.Re
 const unkeyed = `The conversation's key renders to nothing, to more than ${sentBounds.partBytes} bytes or to a character a key may not hold`;
 
 function renderedKey(replies: Replies, party: string, sent: DeliveredAs, clock: RenderClock): string | undefined {
-  const parsed = parsedTemplate(interactionEngine, replies.conversation ?? firstConversation, 1);
+  const parsed = parsedTemplate(toolBlockEngine, replies.conversation ?? firstConversation, 1);
   if (Result.isFailure(parsed)) {
     return undefined;
   }

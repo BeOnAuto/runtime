@@ -1,16 +1,15 @@
 import { Buffer } from 'node:buffer';
 
-import {
-  outputText,
-  renderedTemplate,
-  type ParsedTemplate,
-  type RenderClock,
-  type RenderFailure,
-} from '@on.auto/definitions/template';
 import { Predicate, Result, type Schema } from 'effect';
 import { toValue } from 'liquidjs';
 
-import { interactionEngine } from '../document/request-templates.ts';
+import { outputText } from '../template/output-text.ts';
+import type { RenderClock } from '../template/render-clock.ts';
+import { templateEngine } from '../template/template-engine.ts';
+import type { ParsedTemplate } from '../template/template-parsing.ts';
+import { renderedTemplate, type RenderFailure } from '../template/template-rendering.ts';
+
+export const toolBlockEngine = templateEngine();
 
 type TextRefusal =
   | { readonly reason: 'not_text'; readonly line: number }
@@ -61,7 +60,7 @@ export function renderedText(
 ): Result.Result<string, TextFailure> {
   const emitter = textEmitter(mostBytes);
   return Result.map(
-    renderedTemplate(interactionEngine, parsed, { variables, emitter, refusalOf, clock }),
+    renderedTemplate(toolBlockEngine, parsed, { variables, emitter, refusalOf, clock }),
     () => emitter.buffer,
   );
 }

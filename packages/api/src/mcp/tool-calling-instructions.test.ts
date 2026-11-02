@@ -13,19 +13,19 @@ import {
 import { instructionsActingAs, instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,659 characters on /mcp, 1,624 on the org endpoint and 1,292 on the playbook endpoint after their opening line', () => {
+  it('take 1,751 characters on /mcp, 1,716 on the org endpoint and 1,384 on the playbook endpoint after their opening line', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1624, 1292, 1659]);
+    ).toEqual([1716, 1384, 1751]);
   });
 
-  it('take 1,789, 1,754 and 1,422 with the opening line of the person the bound holds, which takes 130 of them', () => {
+  it('take 1,881, 1,846 and 1,514 with the opening line of the person the bound holds, which takes 130 of them', () => {
     expect(
       everyEndpoint.map(
         ([endpoint, served]) =>
           instructionsActingAs(callerTheInstructionsHold, endpoint, served, definitionTypes).length,
       ),
-    ).toEqual([1754, 1422, 1789]);
+    ).toEqual([1846, 1514, 1881]);
   });
 });
 
@@ -65,7 +65,7 @@ describe('what the instructions say of calling a tool', () => {
       instructionsFor('playbook', { orgTools: [], playbookTools: queriesInsideAPlaybook }, definitionTypes),
     ];
 
-    expect(lengths.map(({ length }) => length)).toEqual([1195, 1195, 1280, 1172]);
+    expect(lengths.map(({ length }) => length)).toEqual([1287, 1287, 1372, 1264]);
   });
 });
 
