@@ -1,0 +1,32 @@
+{
+  "type": "asset_kept",
+  "data": {
+    "media_type": "image/png",
+    "bytes": 182044,
+    "sha256": "c1f5e9a7d3b2a8f4e6c0d9b7a5f3e1c2d4b6a8f0e2c4d6b8a0f2e4c6d8b0a2f4",
+    "kind": "image",
+    "model": "gateway/openai/gpt-image-1",
+    "prompt": "A studio photograph of a teapot on a white table.",
+    "parameters": {
+      "size": "1024x1024",
+      "quality": "high"
+    },
+    "references": [
+      {
+        "id": "019a4f2e-0000-7000-8000-000000000001",
+        "sha256": "c1f5e9a7d3b2a8f4e6c0d9b7a5f3e1c2d4b6a8f0e2c4d6b8a0f2e4c6d8b0a2f4"
+      }
+    ],
+    "cost_usd": 0.042,
+    "own_key": true,
+    "expires_at": "2027-01-30T10:00:00.000Z"
+  },
+  "context": {
+    "at": "2026-11-01T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e6f",
+    "definitionType": "generation",
+    "definitionName": "product-photo",
+    "definitionVersion": 3
+  }
+}

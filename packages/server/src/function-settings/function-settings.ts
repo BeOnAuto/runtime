@@ -1,31 +1,17 @@
 import type { Environment, FileUse } from '@on.auto/config';
 import type { ProviderResolver } from '@on.auto/tool-servers';
-import { Effect } from 'effect';
 
 import { extensionVariables, readExtensionSettings, type ExtensionEntry } from '../extensions/extension-settings.ts';
-import { computationVariables, readComputationSettings, type ComputationSettings } from './computation-settings.ts';
-import { documentVariables, readDocumentSettings, type DocumentSettings } from './document-settings.ts';
-import { interactionVariables, readInteractionSettings, type InteractionSettings } from './interaction-settings.ts';
-import { predictionVariables, readPredictionSettings, type PredictionSettings } from './prediction-settings.ts';
-import { projectionVariables, readProjectionSettings, type ProjectionSettings } from './projection-settings.ts';
+import { functionBoundsVariables, readFunctionBounds, type FunctionBounds } from './function-bounds.ts';
 import { readReasoningSettings, reasoningVariables, type ReasoningSettings } from './reasoning-settings.ts';
 
-export interface FunctionSettings extends ReasoningSettings {
-  readonly computation: ComputationSettings;
-  readonly interaction: InteractionSettings;
-  readonly prediction: PredictionSettings;
-  readonly projection: ProjectionSettings;
-  readonly documents: DocumentSettings;
+export interface FunctionSettings extends ReasoningSettings, FunctionBounds {
   readonly extensions: readonly ExtensionEntry[];
 }
 
 export const functionVariables: readonly string[] = [
   ...reasoningVariables,
-  ...computationVariables,
-  ...interactionVariables,
-  ...predictionVariables,
-  ...projectionVariables,
-  ...documentVariables,
+  ...functionBoundsVariables,
   ...extensionVariables,
 ];
 
@@ -40,11 +26,7 @@ export function readFunctionSettings(
     modelProviders,
     toolServers,
     reasoning,
-    computation: Effect.runSync(readComputationSettings(environment)),
-    interaction: Effect.runSync(readInteractionSettings(environment)),
-    prediction: Effect.runSync(readPredictionSettings(environment)),
-    projection: Effect.runSync(readProjectionSettings(environment)),
-    documents: Effect.runSync(readDocumentSettings(environment)),
+    ...readFunctionBounds(environment),
     extensions: readExtensionSettings(environment),
   };
 }

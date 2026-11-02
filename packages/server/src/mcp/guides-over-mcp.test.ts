@@ -37,6 +37,7 @@ const guideNames = [
   'interaction-function',
   'computation-function',
   'prediction-function',
+  'generation-function',
   'page',
   'workflow',
   'templates',

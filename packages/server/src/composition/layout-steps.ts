@@ -1,3 +1,4 @@
+import { generationLayoutSteps } from '@on.auto/generation';
 import { ledgerLayoutSteps, type LayoutStep } from '@on.auto/ledger';
 import { memoryLayoutSteps } from '@on.auto/memory';
 import { predictionLayoutSteps } from '@on.auto/prediction';
@@ -8,4 +9,5 @@ export const layoutSteps: readonly LayoutStep[] = [
   ...hostLayoutSteps,
   ...predictionLayoutSteps,
   ...memoryLayoutSteps,
+  ...generationLayoutSteps,
 ].toSorted((one, other) => one.layout - other.layout);

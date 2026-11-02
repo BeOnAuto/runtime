@@ -77,7 +77,7 @@ call_mcp /mcp '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"g
 grep --quiet '# Reasoning function format' guide.txt
 grep --quiet 'On this server, ' guide.txt
 call_mcp /mcp '{"jsonrpc":"2.0","id":10,"method":"resources/list"}' resources.txt
-test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 14
+test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 15
 grep --quiet '"uri":"guide://lookup-function"' resources.txt
 grep --quiet '"uri":"guide://memory-function"' resources.txt
 call_mcp /mcp '{"jsonrpc":"2.0","id":11,"method":"prompts/list"}' prompts.txt

@@ -1,0 +1,64 @@
+import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
+import { Result } from 'effect';
+import { describe, expect, it } from 'vitest';
+
+import { assetDecider } from './asset-decider.ts';
+import { AssetEventSchema, type AssetEvent } from './asset-facts.ts';
+
+const sha256 = 'c1f5e9a7d3b2a8f4e6c0d9b7a5f3e1c2d4b6a8f0e2c4d6b8a0f2e4c6d8b0a2f4';
+
+const kept: AssetEvent = {
+  type: 'asset_kept',
+  data: {
+    media_type: 'image/png',
+    bytes: 182_044,
+    sha256,
+    kind: 'image',
+    model: 'gateway/openai/gpt-image-1',
+    prompt: 'A studio photograph of a teapot on a white table.',
+    parameters: { size: '1024x1024', quality: 'high' },
+    references: [{ id: '019a4f2e-0000-7000-8000-000000000001', sha256 }],
+    cost_usd: 0.042,
+    own_key: true,
+    expires_at: '2027-01-30T10:00:00.000Z',
+  },
+  context: {
+    at: '2026-11-01T10:00:00.000Z',
+    by: 'key_7f3a',
+    runId: '019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e6f',
+    definitionType: 'generation',
+    definitionName: 'product-photo',
+    definitionVersion: 3,
+  },
+};
+
+const expired: AssetEvent = {
+  type: 'asset_expired',
+  data: { bytes: 182_044, content_removed: true },
+  context: { at: '2027-01-30T10:00:05.000Z', by: 'runtime' },
+};
+
+describe('the facts of an asset', () => {
+  recordedFactsBehaviour({
+    schema: AssetEventSchema,
+    folder: new URL('.', import.meta.url),
+    releases: { '0.56.0': [kept, expired] },
+  });
+});
+
+describe('the stream of an asset', () => {
+  it('records that it is kept once and that it expired once after, and refuses either out of turn', () => {
+    const keeping = { event: { type: kept.type, data: kept.data }, context: kept.context };
+    const expiring = { event: { type: expired.type, data: expired.data }, context: expired.context };
+
+    expect([
+      Result.isSuccess(assetDecider.decide(keeping, 'none')),
+      Result.isSuccess(assetDecider.decide(expiring, 'kept')),
+      Result.isFailure(assetDecider.decide(expiring, 'none')),
+      Result.isFailure(assetDecider.decide(keeping, 'kept')),
+      Result.isFailure(assetDecider.decide(expiring, 'expired')),
+    ]).toEqual([true, true, true, true, true]);
+    expect([assetDecider.evolve('none', kept), assetDecider.evolve('kept', expired)]).toEqual(['kept', 'expired']);
+    expect(assetDecider.context(keeping, 'none')).toBe(kept.context);
+  });
+});

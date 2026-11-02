@@ -43,6 +43,13 @@
       "singular": "computation function",
       "plural": "computation functions",
       "description": "Run defined code or expressions to calculate or transform data."
+    },
+    {
+      "type": "generation",
+      "label": "Generation",
+      "singular": "generation function",
+      "plural": "generation functions",
+      "description": "Produce an asset, such as an image or audio, from a prompt."
     }
   ]
 }

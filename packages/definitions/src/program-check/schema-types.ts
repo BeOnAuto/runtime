@@ -196,6 +196,7 @@ const shapeTypeNames: Readonly<Record<OutputShapeName, string>> = {
   table: 'Table',
   text: 'Text',
   memories: 'Memories',
+  asset: 'Asset',
 };
 
 const noShapedViews: ShapedViews = new Map();

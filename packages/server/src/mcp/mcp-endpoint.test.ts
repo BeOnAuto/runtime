@@ -137,6 +137,7 @@ const definitionTypes = [
   { type: 'interaction', noun: 'interaction function', guide: 'interaction-function' },
   { type: 'computation', noun: 'computation function', guide: 'computation-function' },
   { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
+  { type: 'generation', noun: 'generation function', guide: 'generation-function' },
   { type: 'page', noun: 'page', guide: 'page' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];

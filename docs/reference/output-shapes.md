@@ -2,7 +2,7 @@
 
 # Output shapes
 
-A shape is a JSON Schema that the runtime owns, for what a definition produces: a series over time, values by category, a table, a text or memories. A shape says what the data is, never what it measures. The shape fixes the fields; the playbook supplies the names, the labels and the units. Auto Studio draws any output that declares a shape, whatever its type and its domain.
+A shape is a JSON Schema that the runtime owns, for what a definition produces: a series over time, values by category, a table, a text, memories or an asset. A shape says what the data is, never what it measures. The shape fixes the fields; the playbook supplies the names, the labels and the units. Auto Studio draws any output that declares a shape, whatever its type and its domain.
 
 A reasoning function, a computation function and a workflow can declare one with `output.shape`. The shape's schema is then the definition's output schema, and the runtime checks each output against it, together with the rules a schema cannot state. A run says the shape its own output takes, as [What a run shows](#what-a-run-shows) sets out, and Auto Studio draws a run's output from it.
 
@@ -10,9 +10,11 @@ A memory function declares no shape either: a run of its `recall` block answers 
 
 A prediction function declares no shape, and its questions answer a `series`: each question's answer is the observed periods and the periods ahead of its series, checked against the shape before it is answered, as [The input and the output](prediction-format.md#the-input-and-the-output) sets out, and the function shows the shape as a definition that declares it does. A function that predicts a total to the end of a period answers its total as one point of a line named `total`, at the last period of the grain that the enclosing period holds, since a series holds one grain; its run's record names the enclosing period.
 
+A generation function declares no shape either, and each of its runs answers an `asset`: the reference to the image or the audio it made, as [The asset](generation-format.md#the-asset) sets out. The function shows the shape as a definition that declares it does. No definition may declare `asset`, since only a generation function makes one.
+
 ## Declaring a shape
 
-`output.shape` names one of the five shapes: `series`, `categories`, `table`, `text` or `memories`.
+`output.shape` names one of the five shapes a definition may declare: `series`, `categories`, `table`, `text` or `memories`.
 
 ```yaml
 output:
@@ -39,7 +41,7 @@ A reasoning function's shape is sent to the provider as an output schema of the 
 
 ## What a saved definition shows
 
-`get_definition`, `list_definitions`, `create_definition` and `update_definition` show the shape of a definition that declares one, and of every prediction function:
+`get_definition`, `list_definitions`, `create_definition` and `update_definition` show the shape of a definition that declares one, and of every prediction function and generation function:
 
 - `output_schema` is the shape's schema. Its `$id` is `https://on.auto/shapes/` followed by the shape's name, such as `https://on.auto/shapes/series`, and its `title` is the name.
 - `details.shape` is the shape's name: what the definition answers.
@@ -50,11 +52,12 @@ A reasoning function's shape is sent to the provider as an output schema of the 
 
 - A run of a reasoning function, a computation function or a workflow that declares `output.shape` says that shape.
 - A question to a prediction function says `series`.
+- A run of a generation function says `asset`.
 - A run of a definition that declares no shape says none.
 
 The run says its shape from the moment it starts, so a run that is rejected still says the shape its output would have taken.
 
-## The five shapes
+## The six shapes
 
 Each shape is a JSON Schema of draft 2020-12 whose every record takes the fields listed and no others. In all of them:
 
@@ -138,6 +141,19 @@ Memories, newest first, as a recall answers them.
 | `memories[].about`      | No       | `from` and `to`, the days it is about, each as `YYYY-MM-DD`, `from` no later than `to` |
 | `memories[].written_at` | Yes      | When its latest version was written, in ISO 8601                                       |
 | `memories[].written_by` | Yes      | Who wrote it                                                                           |
+
+### asset
+
+An asset a generation function made: an image or audio the playbook keeps until it expires.
+
+| Field           | Required | Value                                                                                                                               |
+| --------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | Yes      | The asset's id, a UUID, which another generation function takes as a reference                                                      |
+| `media_type`    | Yes      | The media type of its bytes, such as `image/png` or `audio/mpeg`                                                                    |
+| `bytes`         | Yes      | Its size in bytes                                                                                                                   |
+| `sha256`        | Yes      | The SHA-256 of its bytes, in lowercase hex                                                                                          |
+| `address`       | Yes      | A [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key, or `null` where the runtime signs none |
+| `address_until` | Yes      | When the address stops being answered, 15 minutes after the run at the most, or `null`                                              |
 
 ## Examples
 

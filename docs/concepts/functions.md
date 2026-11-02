@@ -14,6 +14,7 @@ Each function has one of six types, described below. Workflows coordinate functi
 | Interaction | Ask a person or a system, and take the answer      | Ask the brief's owner to approve the review          |
 | Prediction  | Predict a quantity from the playbook's own history | Forecast next week's sign-ups in each region         |
 | Computation | Calculate or transform data exactly, with code     | Total a campaign's spend and its pace against budget |
+| Generation  | Produce an image or audio from a prompt            | Make a picture of a product for its listing          |
 
 Choose a type by the function's job, not by how it does it. A function that reads what another system holds right now is lookup, and one that asks a system to do something is interaction. A function whose job is to forecast is prediction, even though its forecaster runs as code. Prompts, tools and models support functions, but they are not function types; [Terminology](terminology.md#supporting-assets) defines them.
 
@@ -21,9 +22,9 @@ Real work often combines types. A budget review might compute the totals, reason
 
 ## Availability
 
-Hosted Auto runs reasoning, lookup, memory, interaction, prediction and computation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
+Hosted Auto runs reasoning, lookup, memory, interaction, prediction, computation and generation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
 
-The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, memory, interaction, prediction and computation functions are available. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
+The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, memory, interaction, prediction and computation functions are available, and generation functions once a model gateway is set in `MODEL_GATEWAYS`. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
 These are planned and not available yet:
 
@@ -94,6 +95,16 @@ Choose computation for arithmetic a language model should not do, and for any ch
 
 - [Calculate with a computation function](../guides/computation.md) shows how to write and save one.
 - [Computation function format](../reference/computation-format.md) describes the document.
+
+## Generation
+
+A generation function produces an asset, an image or audio, from a prompt. A model the runtime reaches through a model gateway makes it, and the playbook keeps the asset until it expires, 90 days unless the function or the runtime says otherwise.
+
+For example, a workflow writes a product's description with a reasoning function, then a generation function makes a picture of the product from it. The run answers a reference to the picture: its id, its size and an address it can be read at for a few minutes. Another generation function can take that id as a reference, to place the same product in a new scene.
+
+Choose generation when the result is a picture or spoken words. Writing the text is reasoning's work. A generation function reaches outside the playbook, and each run asks the model again, so a second run of it makes a second asset.
+
+- [Generation function format](../reference/generation-format.md) describes the document, the models and the limits.
 
 ## Tool access inside a reasoning function
 

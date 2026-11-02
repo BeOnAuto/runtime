@@ -33,6 +33,8 @@ const reserved = [
   'telling_failed',
   'replies_read',
   'reading_failed',
+  'asset_kept',
+  'asset_expired',
   'workflow_input_applied',
   'step_started',
   'step_waiting',

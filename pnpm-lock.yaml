@@ -362,6 +362,58 @@ importers:
         specifier: 'catalog:'
         version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
 
+  capabilities/generation:
+    dependencies:
+      '@on.auto/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@on.auto/content':
+        specifier: workspace:*
+        version: link:../../packages/content
+      '@on.auto/definitions':
+        specifier: workspace:*
+        version: link:../../packages/definitions
+      '@on.auto/identity':
+        specifier: workspace:*
+        version: link:../../packages/identity
+      '@on.auto/json-schema':
+        specifier: workspace:*
+        version: link:../../packages/json-schema
+      '@on.auto/operations':
+        specifier: workspace:*
+        version: link:../../packages/operations
+      '@on.auto/phrasing':
+        specifier: workspace:*
+        version: link:../../packages/phrasing
+      '@on.auto/shipped-files':
+        specifier: workspace:*
+        version: link:../../packages/shipped-files
+      '@on.auto/workflow-engine':
+        specifier: workspace:*
+        version: link:../../packages/workflow-engine
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0
+      liquidjs:
+        specifier: 10.30.0
+        version: 10.30.0
+    devDependencies:
+      '@on.auto/ledger':
+        specifier: workspace:*
+        version: link:../../packages/ledger
+      '@types/pg':
+        specifier: 8.23.1
+        version: 8.23.1
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 5.0.3(vitest@5.0.3)
+      pg:
+        specifier: 8.23.1
+        version: 8.23.1
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
+
   capabilities/interaction:
     dependencies:
       '@on.auto/definitions':
@@ -1152,6 +1204,9 @@ importers:
       '@on.auto/documents':
         specifier: workspace:*
         version: link:../documents
+      '@on.auto/generation':
+        specifier: workspace:*
+        version: link:../../capabilities/generation
       '@on.auto/identity':
         specifier: workspace:*
         version: link:../identity

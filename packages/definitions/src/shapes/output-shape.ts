@@ -1,4 +1,4 @@
-import { schemaCheckOf, type FurtherCheck, type SchemaCheck } from '@on.auto/json-schema';
+import { issuesDetail, schemaCheckOf, type FurtherCheck, type SchemaCheck } from '@on.auto/json-schema';
 import { mostValueDepth } from '@on.auto/workflow-engine/worker';
 import type { Schema } from 'effect';
 
@@ -59,4 +59,9 @@ export function shapeOf({ name, properties, required, further }: ShapeDeclaratio
     additionalProperties: false,
   };
   return { name, schema, further, check: checkedWhenAsked(schema, further) };
+}
+
+export function shapeMismatchOf(shape: OutputShape, output: Schema.Json): string | undefined {
+  const issues = shape.check(output);
+  return issues.length === 0 ? undefined : issuesDetail(issues, 'output');
 }

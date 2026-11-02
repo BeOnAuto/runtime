@@ -10037,7 +10037,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, memory, interaction, computation, prediction, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong.",
+        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, memory, interaction, computation, prediction, generation, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too; a workflow and a page take none. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -10061,6 +10061,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "page",
                 "workflow"
               ],
@@ -10167,7 +10168,7 @@
                       "properties": {
                         "shape": {
                           "type": "string",
-                          "description": "The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws"
+                          "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
                         },
                         "of": {
                           "type": "string",
@@ -10481,7 +10482,7 @@
       "get": {
         "operationId": "list_definitions",
         "summary": "List definitions",
-        "description": "Lists the definitions of one type in the playbook, sorted by name, each with its version, its status and what its document says it does, without the document. Use it to find a function or workflow the person names, or to see which exist before one is made; get_definition reads one with its document. `type` is the type to list, and `include_retired` adds the retired definitions, which are left out otherwise.",
+        "description": "Lists the definitions of one type in the playbook, sorted by name, each with its version, its status and what its document says it does, without the document. Use it to find a function or workflow the person names, or to see which exist before one is made; get_definition reads one with its document. `type` is the type to list, and `include_retired` adds the retired definitions.",
         "tags": [
           "definitions"
         ],
@@ -10505,6 +10506,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "page",
                 "workflow"
               ],
@@ -10595,7 +10597,7 @@
                           "properties": {
                             "shape": {
                               "type": "string",
-                              "description": "The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws"
+                              "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
                             },
                             "of": {
                               "type": "string",
@@ -10841,6 +10843,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "page",
                 "workflow"
               ],
@@ -10934,7 +10937,7 @@
                       "properties": {
                         "shape": {
                           "type": "string",
-                          "description": "The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws"
+                          "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
                         },
                         "of": {
                           "type": "string",
@@ -11244,7 +11247,7 @@
       "put": {
         "operationId": "update_definition",
         "summary": "Update definition",
-        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a page builds its views again from the playbook's history.",
+        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time; a workflow and a page take none. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a page builds its views again from the playbook's history.",
         "tags": [
           "definitions"
         ],
@@ -11268,6 +11271,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "page",
                 "workflow"
               ],
@@ -11378,7 +11382,7 @@
                       "properties": {
                         "shape": {
                           "type": "string",
-                          "description": "The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws"
+                          "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
                         },
                         "of": {
                           "type": "string",
@@ -11793,7 +11797,7 @@
                       "properties": {
                         "shape": {
                           "type": "string",
-                          "description": "The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws"
+                          "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
                         },
                         "of": {
                           "type": "string",
@@ -12129,6 +12133,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "page",
                 "workflow"
               ],
@@ -12219,7 +12224,7 @@
                       "properties": {
                         "shape": {
                           "type": "string",
-                          "description": "The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws"
+                          "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
                         },
                         "of": {
                           "type": "string",
@@ -12555,6 +12560,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -12628,9 +12634,10 @@
                         "categories",
                         "table",
                         "text",
-                        "memories"
+                        "memories",
+                        "asset"
                       ],
-                      "description": "The output shape the output of this run takes, series, categories, table, text or memories, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
+                      "description": "The output shape the output of this run takes, series, categories, table, text, memories or asset, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series and a generation function an asset; left out otherwise"
                     },
                     "status": {
                       "type": "string",
@@ -12797,9 +12804,10 @@
                                 "credits_exhausted",
                                 "license_required",
                                 "license_invalid",
-                                "account_closed"
+                                "account_closed",
+                                "blocked_by_moderation"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record, or an asset a generation function made larger than the runtime keeps of one asset, or a playbook that already keeps all the assets it may; blocked_by_moderation for a generation function whose request the provider of its model refused under its moderation"
                             },
                             "because": {
                               "type": "string",
@@ -13066,9 +13074,10 @@
                         "categories",
                         "table",
                         "text",
-                        "memories"
+                        "memories",
+                        "asset"
                       ],
-                      "description": "The output shape the output of this run takes, series, categories, table, text or memories, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
+                      "description": "The output shape the output of this run takes, series, categories, table, text, memories or asset, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series and a generation function an asset; left out otherwise"
                     },
                     "status": {
                       "type": "string",
@@ -13235,9 +13244,10 @@
                                 "credits_exhausted",
                                 "license_required",
                                 "license_invalid",
-                                "account_closed"
+                                "account_closed",
+                                "blocked_by_moderation"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record, or an asset a generation function made larger than the runtime keeps of one asset, or a playbook that already keeps all the assets it may; blocked_by_moderation for a generation function whose request the provider of its model refused under its moderation"
                             },
                             "because": {
                               "type": "string",
@@ -13530,9 +13540,10 @@
                         "categories",
                         "table",
                         "text",
-                        "memories"
+                        "memories",
+                        "asset"
                       ],
-                      "description": "The output shape the output of this run takes, series, categories, table, text or memories, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
+                      "description": "The output shape the output of this run takes, series, categories, table, text, memories or asset, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series and a generation function an asset; left out otherwise"
                     },
                     "status": {
                       "type": "string",
@@ -13699,9 +13710,10 @@
                                 "credits_exhausted",
                                 "license_required",
                                 "license_invalid",
-                                "account_closed"
+                                "account_closed",
+                                "blocked_by_moderation"
                               ],
-                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record"
+                              "description": "What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record, or an asset a generation function made larger than the runtime keeps of one asset, or a playbook that already keeps all the assets it may; blocked_by_moderation for a generation function whose request the provider of its model refused under its moderation"
                             },
                             "because": {
                               "type": "string",
@@ -13925,6 +13937,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "workflow"
               ],
               "description": "Only the runs of this type"
@@ -14043,9 +14056,10 @@
                             "categories",
                             "table",
                             "text",
-                            "memories"
+                            "memories",
+                            "asset"
                           ],
-                          "description": "The output shape the output of this run takes, series, categories, table, text or memories, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise"
+                          "description": "The output shape the output of this run takes, series, categories, table, text, memories or asset, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series and a generation function an asset; left out otherwise"
                         },
                         "status": {
                           "type": "string",
@@ -14127,6 +14141,7 @@
                                 "license_required",
                                 "license_invalid",
                                 "account_closed",
+                                "blocked_by_moderation",
                                 "requested",
                                 "deadline",
                                 "overrun",
@@ -14624,6 +14639,7 @@
                 "interaction",
                 "computation",
                 "prediction",
+                "generation",
                 "workflow"
               ],
               "description": "Only the runs of this type"
@@ -15080,6 +15096,8 @@
                 "telling_failed",
                 "replies_read",
                 "reading_failed",
+                "asset_kept",
+                "asset_expired",
                 "workflow_input_applied",
                 "step_started",
                 "step_waiting",
@@ -19318,7 +19336,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), memory-function (Memory function format), interaction-function (Interaction function format), computation-function (Computation function format), prediction-function (Prediction function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), memory-function (Memory function format), interaction-function (Interaction function format), computation-function (Computation function format), prediction-function (Prediction function format), generation-function (Generation function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
@@ -19329,6 +19347,7 @@
                 "interaction-function",
                 "computation-function",
                 "prediction-function",
+                "generation-function",
                 "page",
                 "workflow",
                 "templates",
@@ -19550,6 +19569,7 @@
               "license_required",
               "license_invalid",
               "account_closed",
+              "blocked_by_moderation",
               "model_not_offered",
               "tool_not_offered",
               "tool_not_read_only",

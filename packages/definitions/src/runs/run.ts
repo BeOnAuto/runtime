@@ -52,7 +52,7 @@ export const RunRejectionSchema = Schema.Union([
     kind: Schema.optionalKey(
       ConflictKindSchema.annotate({
         description:
-          'What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record',
+          'What clashed, when it is known: unworkable for a definition that cannot run as written, such as a computation function whose program raised an error, gave no output or more than one, or did more work than a run may do, or an interaction function whose tool refused its arguments or answered nothing its output schema takes, which only changing the definition puts right; stalled for a function whose keeping of the history of the playbook stopped at a recorded event it could not take in, which a corrected version rebuilds; tools_called for a workflow whose step met a run of a function that may have called tools, which is not run again under its id; effect_unknown for a run that could not finish after calling a tool not marked reads, so whether the tool changed something is not known; oversized for a workflow whose output is larger than a run may record, or an asset a generation function made larger than the runtime keeps of one asset, or a playbook that already keeps all the assets it may; blocked_by_moderation for a generation function whose request the provider of its model refused under its moderation',
       }),
     ),
     because: Schema.optionalKey(
@@ -93,7 +93,7 @@ export const RunSchema = Schema.Struct({
   output_shape: Schema.optionalKey(
     OutputShapeNameSchema.annotate({
       description:
-        'The output shape the output of this run takes, series, categories, table, text or memories, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series; left out otherwise',
+        'The output shape the output of this run takes, series, categories, table, text, memories or asset, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series and a generation function an asset; left out otherwise',
     }),
   ),
   status: Schema.Literals(['started', 'succeeded', 'rejected', 'failed']).annotate({

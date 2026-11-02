@@ -1,6 +1,6 @@
-import { issuesDetail } from '@on.auto/json-schema';
 import type { Schema } from 'effect';
 
+import { assetShape } from './asset-shape.ts';
 import { categoriesShape } from './categories-shape.ts';
 import { memoriesShape } from './memories-shape.ts';
 import type { OutputShape } from './output-shape.ts';
@@ -16,7 +16,10 @@ const shapesByName: Readonly<Record<OutputShapeName, OutputShape>> = {
   table: tableShape,
   text: textShape,
   memories: memoriesShape,
+  asset: assetShape,
 };
+
+const answeredOnly: ReadonlySet<OutputShapeName> = new Set(['asset']);
 
 const shapes: readonly OutputShape[] = Object.values(shapesByName);
 
@@ -32,12 +35,11 @@ export function outputShapeNamed(name: string): OutputShape | undefined {
   return shapes.find((shape) => shape.name === name);
 }
 
+export function declarableShapeNames(): readonly OutputShapeName[] {
+  return outputShapeNames().filter((name) => !answeredOnly.has(name));
+}
+
 export function outputShapeOfSchema(schema: Schema.Json): OutputShape | undefined {
   const address = recordOf(schema)['$id'];
   return shapes.find((shape) => shape.schema['$id'] === address);
-}
-
-export function shapeMismatchOf(shape: OutputShape, output: Schema.Json): string | undefined {
-  const issues = shape.check(output);
-  return issues.length === 0 ? undefined : issuesDetail(issues, 'output');
 }

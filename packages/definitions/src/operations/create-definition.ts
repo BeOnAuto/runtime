@@ -21,7 +21,7 @@ export function defineCreateDefinition(capabilities: readonly Capability[]) {
         'Use it once the person agrees; update_definition changes one saved, and a name is never reused.',
         `\`type\` is ${known.typesInWords}, and \`name\` how workflows and tools refer to it.`,
         "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
-        'A function needs `diagram` too, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither.',
+        'A function needs `diagram` too; a workflow and a page take none.',
         'A document that does not fit its format is refused with the line and what is wrong.',
       ].join(' '),
       route: { method: 'POST', path: '/definitions/{type}' },

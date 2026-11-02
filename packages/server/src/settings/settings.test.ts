@@ -1,4 +1,5 @@
 import { InvalidPortError, type Environment } from '@on.auto/config';
+import { generationBounds } from '@on.auto/generation';
 import { createApiKey } from '@on.auto/identity';
 import { describe, expect, it } from 'vitest';
 
@@ -66,6 +67,7 @@ describe('readSettings', () => {
       computation: { workers: 4 },
       projection: { pageRebuildsAtOnce: 4, playbooksAtOnce: 4 },
       prediction: defaultPrediction,
+      generation: generationBounds,
       documents: { processes: 2, processMemoryMebibytes: 1280 },
       connections: { peopleMayAdd: true, allowedHosts: null, ...notLocal, credentialKinds: null, variables: [] },
       registeredClients: [],
@@ -150,6 +152,7 @@ const everySettingRead = {
   computation: { workers: 4 },
   projection: { pageRebuildsAtOnce: 4, playbooksAtOnce: 4 },
   prediction: defaultPrediction,
+  generation: generationBounds,
   documents: { processes: 2, processMemoryMebibytes: 1280 },
   connections: {
     peopleMayAdd: false,

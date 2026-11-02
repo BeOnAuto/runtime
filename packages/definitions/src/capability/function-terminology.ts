@@ -1,4 +1,11 @@
-export type FunctionType = 'reasoning' | 'lookup' | 'memory' | 'interaction' | 'prediction' | 'computation';
+export type FunctionType =
+  | 'reasoning'
+  | 'lookup'
+  | 'memory'
+  | 'interaction'
+  | 'prediction'
+  | 'computation'
+  | 'generation';
 
 export const functionCategoryLabels = {
   reasoning: 'Reasoning',
@@ -7,6 +14,7 @@ export const functionCategoryLabels = {
   interaction: 'Interaction',
   prediction: 'Prediction',
   computation: 'Computation',
+  generation: 'Generation',
 } satisfies Record<FunctionType, string>;
 
 export const functionResourceLabels = {
@@ -16,6 +24,7 @@ export const functionResourceLabels = {
   interaction: { singular: 'interaction function', plural: 'interaction functions' },
   prediction: { singular: 'prediction function', plural: 'prediction functions' },
   computation: { singular: 'computation function', plural: 'computation functions' },
+  generation: { singular: 'generation function', plural: 'generation functions' },
 } satisfies Record<FunctionType, { readonly singular: string; readonly plural: string }>;
 
 export const functionDescriptions = {
@@ -25,6 +34,7 @@ export const functionDescriptions = {
   interaction: 'Exchange information with people or systems.',
   prediction: "Predict a quantity from the playbook's own history, with a likely range.",
   computation: 'Run defined code or expressions to calculate or transform data.',
+  generation: 'Produce an asset, such as an image or audio, from a prompt.',
 } satisfies Record<FunctionType, string>;
 
 export const functionTypeOrder: readonly FunctionType[] = [
@@ -34,6 +44,7 @@ export const functionTypeOrder: readonly FunctionType[] = [
   'interaction',
   'prediction',
   'computation',
+  'generation',
 ];
 
 const resourceLabels: ReadonlyMap<string, string> = new Map([

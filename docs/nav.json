@@ -155,6 +155,10 @@
         "link": "/reference/computation-format"
       },
       {
+        "text": "Generation function format",
+        "link": "/reference/generation-format"
+      },
+      {
         "text": "Workflow format",
         "link": "/reference/workflow-format"
       },

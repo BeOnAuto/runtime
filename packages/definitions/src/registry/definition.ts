@@ -43,7 +43,7 @@ const listedDefinitionFields = {
       shape: Schema.optionalKey(
         Schema.String.annotate({
           description:
-            'The output shape its output_schema is: series, categories, table, text or memories, each a JSON Schema the runtime owns, which Auto Studio draws',
+            'The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws',
         }),
       ),
       of: Schema.optionalKey(
@@ -125,12 +125,15 @@ export type PredictionFunctionDefinition = Definition & { readonly type: 'predic
 
 export type ComputationFunctionDefinition = Definition & { readonly type: 'computation' };
 
+export type GenerationFunctionDefinition = Definition & { readonly type: 'generation' };
+
 export type PlaybookFunctionDefinition =
   | ReasoningFunctionDefinition
   | LookupFunctionDefinition
   | InteractionFunctionDefinition
   | PredictionFunctionDefinition
-  | ComputationFunctionDefinition;
+  | ComputationFunctionDefinition
+  | GenerationFunctionDefinition;
 
 const playbookFunctionTypes: ReadonlySet<string> = new Set<string>(functionTypeOrder);
 

@@ -57,6 +57,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       offering,
       computation: made.computation,
       prediction: made.prediction,
+      generation: { shippedFiles, contentAddressKey: ownKeys.contentAddressKey, ownOrigin },
     });
     const parts = {
       ledger,

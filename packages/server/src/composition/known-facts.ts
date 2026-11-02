@@ -7,9 +7,9 @@ import {
   RunEventSchema,
   type DeclaredFact,
 } from '@on.auto/definitions';
+import { AssetEventSchema } from '@on.auto/generation';
 import { InteractionRunFactSchema } from '@on.auto/interaction';
 import { MemoryFactSchema } from '@on.auto/memory';
-import { MeterEventSchema } from '@on.auto/meter';
 import { ConversationCallEventSchema, HandCallEventSchema } from '@on.auto/tool-servers';
 import { RunLogRecordSchema } from '@on.auto/workflow-engine';
 
@@ -29,7 +29,7 @@ export const knownFactSchemas = [
   RegistrationEventSchema,
   HandCallEventSchema,
   ConversationCallEventSchema,
-  MeterEventSchema,
+  AssetEventSchema,
   ...serverFactSchemas,
   CommentEventSchema,
 ];

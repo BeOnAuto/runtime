@@ -2,7 +2,7 @@ import { alternatives } from '@on.auto/phrasing';
 import { Result, type Schema } from 'effect';
 
 import type { OutputShape } from './output-shape.ts';
-import { outputShapeNamed, outputShapeNames } from './output-shapes.ts';
+import { declarableShapeNames, outputShapeOf } from './output-shapes.ts';
 
 export interface ShapeRefusal {
   readonly at: 'shape' | 'schema';
@@ -15,8 +15,9 @@ export function declaredShape(shape: Schema.Json, besideSchema: boolean): Result
   if (besideSchema) {
     return Result.fail({ at: 'schema', detail: shapeBesideSchema });
   }
-  const named = typeof shape === 'string' ? outputShapeNamed(shape) : undefined;
+  const declarable = declarableShapeNames();
+  const named = declarable.find((name) => name === shape);
   return named === undefined
-    ? Result.fail({ at: 'shape', detail: `Expected the name of a shape: ${alternatives(outputShapeNames())}` })
-    : Result.succeed(named);
+    ? Result.fail({ at: 'shape', detail: `Expected the name of a shape: ${alternatives(declarable)}` })
+    : Result.succeed(outputShapeOf(named));
 }

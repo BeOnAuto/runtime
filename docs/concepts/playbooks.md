@@ -41,7 +41,7 @@ Auto Runtime
 
 Tool servers let a playbook's functions reach other services, such as a CRM or a chat tool. Ask your agent to connect a service and approve the connection in your browser. A self-hosted runtime can also use tool servers configured by its operator. [Give a function tools](../guides/tools.md) explains how a function uses them.
 
-Auto Runtime runs playbooks, and Auto Studio lets you inspect and manage them. Your agent is a separate client. [Functions](functions.md) describes the six function types and when to choose each. [Workflows and runs](workflows.md) explains how workflows coordinate them.
+Auto Runtime runs playbooks, and Auto Studio lets you inspect and manage them. Your agent is a separate client. [Functions](functions.md) describes the seven function types and when to choose each. [Workflows and runs](workflows.md) explains how workflows coordinate them.
 
 ## The agent and the playbook
 

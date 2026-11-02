@@ -236,6 +236,7 @@ export {
   isWorkflowDefinition,
   type PlaybookFunctionDefinition,
   type ComputationFunctionDefinition,
+  type GenerationFunctionDefinition,
   type InteractionFunctionDefinition,
   type LookupFunctionDefinition,
   type PredictionFunctionDefinition,
@@ -257,9 +258,9 @@ export {
 } from './capability/function-terminology.ts';
 export { checkedInput, refusedByTheInputSchema, refusedInput, wordedIssuesOf } from './checking/schema-refusals.ts';
 export { checkedWorker } from './checking/worker-url.ts';
-export type { OutputShape } from './shapes/output-shape.ts';
+export { shapeMismatchOf, type OutputShape } from './shapes/output-shape.ts';
 export { OutputShapeNameSchema, type OutputShapeName } from './shapes/shape-names.ts';
-export { outputShapeNamed, outputShapeNames, outputShapeOf, shapeMismatchOf } from './shapes/output-shapes.ts';
+export { outputShapeNamed, outputShapeNames, outputShapeOf } from './shapes/output-shapes.ts';
 export { declaredShape, type ShapeRefusal } from './shapes/shape-declarations.ts';
 export { publishedOutputOf } from './shapes/published-output.ts';
 export { memoriesBounds, memoriesShape } from './shapes/memories-shape.ts';

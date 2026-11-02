@@ -9,8 +9,16 @@ import {
 } from '../index.ts';
 
 describe('playbook function terminology', () => {
-  it('keeps the six function types in product order, without coordination or Dream', () => {
-    expect(functionTypeOrder).toEqual(['reasoning', 'lookup', 'memory', 'interaction', 'prediction', 'computation']);
+  it('keeps the seven function types in product order, without coordination or Dream', () => {
+    expect(functionTypeOrder).toEqual([
+      'reasoning',
+      'lookup',
+      'memory',
+      'interaction',
+      'prediction',
+      'computation',
+      'generation',
+    ]);
     expect(functionTypeOrder.map((type) => functionCategoryLabels[type])).toEqual([
       'Reasoning',
       'Lookup',
@@ -18,6 +26,7 @@ describe('playbook function terminology', () => {
       'Interaction',
       'Prediction',
       'Computation',
+      'Generation',
     ]);
     expect(Object.keys(functionCategoryLabels)).toEqual(functionTypeOrder);
     expect(Object.keys(functionResourceLabels)).toEqual(functionTypeOrder);
@@ -32,6 +41,7 @@ describe('playbook function terminology', () => {
       { singular: 'interaction function', plural: 'interaction functions' },
       { singular: 'prediction function', plural: 'prediction functions' },
       { singular: 'computation function', plural: 'computation functions' },
+      { singular: 'generation function', plural: 'generation functions' },
     ]);
     expect(functionTypeOrder.map((type) => functionDescriptions[type])).toEqual([
       'Use a prompt, skills, and tools to interpret information or produce a response.',
@@ -40,6 +50,7 @@ describe('playbook function terminology', () => {
       'Exchange information with people or systems.',
       "Predict a quantity from the playbook's own history, with a likely range.",
       'Run defined code or expressions to calculate or transform data.',
+      'Produce an asset, such as an image or audio, from a prompt.',
     ]);
   });
 });
@@ -52,6 +63,7 @@ describe('the resource label of a definition', () => {
     expect(definitionResourceLabel('interaction')).toBe('interaction function');
     expect(definitionResourceLabel('computation')).toBe('computation function');
     expect(definitionResourceLabel('prediction')).toBe('prediction function');
+    expect(definitionResourceLabel('generation')).toBe('generation function');
     expect(definitionResourceLabel('workflow')).toBe('workflow');
     expect(definitionResourceLabel('echo')).toBe('echo definition');
     expect(definitionResourceLabel('agent')).toBe('agent definition');

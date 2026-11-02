@@ -112,6 +112,11 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     remedy:
       'This can be put right on your side: once its result keeps only what is needed, such as fewer or smaller values, it can be run again.',
   },
+  blocked_by_moderation: {
+    why: 'the provider of its model refused the request under its moderation',
+    remedy:
+      'This can be put right on your side: once what it asks for is something the provider allows, through its prompt, its input or its references, it can be run again.',
+  },
   ...predictionExplanations,
   ...connectionExplanations,
   ...creditExplanations,

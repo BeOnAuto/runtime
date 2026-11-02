@@ -1,0 +1,7 @@
+model: openai/gpt-4o-mini-tts
+kind: audio
+media_types: []
+limits:
+  voices: [alloy, ash, ballad, coral, echo, fable, nova, onyx, sage, shimmer, verse]
+  formats: [mp3, opus, aac, flac, wav]
+  prompt_characters: 4096

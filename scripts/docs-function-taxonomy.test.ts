@@ -41,7 +41,15 @@ await test('the published taxonomy comes from the runtime metadata in canonical 
       description: functionDescriptions[type],
     })),
   });
-  assert.deepEqual(functionTypeOrder, ['reasoning', 'lookup', 'memory', 'interaction', 'prediction', 'computation']);
+  assert.deepEqual(functionTypeOrder, [
+    'reasoning',
+    'lookup',
+    'memory',
+    'interaction',
+    'prediction',
+    'computation',
+    'generation',
+  ]);
   assert.ok(functionTaxonomyDocument.endsWith('\n'));
 });
 

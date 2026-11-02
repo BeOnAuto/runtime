@@ -1,0 +1,11 @@
+{
+  "type": "asset_expired",
+  "data": {
+    "bytes": 182044,
+    "content_removed": true
+  },
+  "context": {
+    "at": "2027-01-30T10:00:05.000Z",
+    "by": "runtime"
+  }
+}

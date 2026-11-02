@@ -1,0 +1,7 @@
+model: openai/tts-1
+kind: audio
+media_types: []
+limits:
+  voices: [alloy, echo, fable, onyx, nova, shimmer]
+  formats: [mp3, opus, aac, flac, wav]
+  prompt_characters: 4096

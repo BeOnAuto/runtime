@@ -120,6 +120,7 @@ describe('workflows over MCP', () => {
       'interaction',
       'computation',
       'prediction',
+      'generation',
       'page',
       'workflow',
     ]);

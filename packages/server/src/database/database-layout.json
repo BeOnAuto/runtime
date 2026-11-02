@@ -1,5 +1,5 @@
 {
-  "layout": 10,
+  "layout": 11,
   "catalog": [
     {
       "name": "activity_1",
@@ -36,6 +36,18 @@
     {
       "name": "activity_seen_1",
       "sql": "CREATE TABLE activity_seen_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, through_at INTEGER, through_playbook TEXT, through_key TEXT, marked TEXT, seen_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "asset_totals_1",
+      "sql": "CREATE TABLE asset_totals_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, bytes INTEGER, assets INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "assets_1",
+      "sql": "CREATE TABLE assets_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, media_type TEXT, bytes INTEGER, sha256 TEXT, kind TEXT, model TEXT, run TEXT, kept_at INTEGER, expires_at INTEGER, expired_at INTEGER, live INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "assets_1_expiring",
+      "sql": "CREATE INDEX assets_1_expiring ON assets_1 (expires_at) WHERE expires_at IS NOT NULL"
     },
     {
       "name": "comments_1",

@@ -58,6 +58,14 @@ const examples: Readonly<Record<OutputShapeName, Schema.Json>> = {
       },
     ],
   },
+  asset: {
+    id: '019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e6f',
+    media_type: 'image/png',
+    bytes: 4096,
+    sha256: 'a'.repeat(64),
+    address: 'https://runtime.example.com/v1/orgs/acme/playbooks/alpha/content/a?until=1&sig=b',
+    address_until: '2026-11-01T10:15:00.000Z',
+  },
 };
 
 function isRecord(value: Schema.Json): value is Schema.JsonObject {
@@ -71,8 +79,8 @@ function objectSchemasIn(schema: Schema.Json): readonly Schema.JsonObject[] {
 }
 
 describe('the output shapes', () => {
-  it('are series, categories, table, text and memories, each answered by its name and by nothing else', () => {
-    expect(outputShapeNames()).toEqual(['series', 'categories', 'table', 'text', 'memories']);
+  it('are series, categories, table, text, memories and asset, each answered by its name and by nothing else', () => {
+    expect(outputShapeNames()).toEqual(['series', 'categories', 'table', 'text', 'memories', 'asset']);
     expect(outputShapeNames().map((name) => outputShapeNamed(name)?.name)).toEqual(outputShapeNames());
     expect([outputShapeNamed('chart'), outputShapeNamed('Series')]).toEqual([undefined, undefined]);
     expect(outputShapeNames().map((name) => outputShapeOf(name))).toEqual(
@@ -100,7 +108,7 @@ describe('the output shapes', () => {
   it('close every record they describe', () => {
     const records = outputShapeNames().map((name) => objectSchemasIn(shapeNamed(name).schema));
 
-    expect(records.map((each) => each.length)).toEqual([4, 2, 2, 1, 3]);
+    expect(records.map((each) => each.length)).toEqual([4, 2, 2, 1, 3, 1]);
     expect(records.flat().map((record) => record['additionalProperties'])).toEqual(records.flat().map(() => false));
   });
 
@@ -181,5 +189,14 @@ describe('the shape an output declares', () => {
     });
 
     expect([declaredShape('chart', false), declaredShape(3, false)]).toEqual([refusal, refusal]);
+  });
+
+  it('is refused at its name when it names the asset, which only a generation function answers', () => {
+    expect(declaredShape('asset', false)).toEqual(
+      Result.fail({
+        at: 'shape',
+        detail: 'Expected the name of a shape: series, categories, table, text, or memories',
+      }),
+    );
   });
 });

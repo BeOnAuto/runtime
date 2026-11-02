@@ -21,7 +21,7 @@ export function defineUpdateDefinition(capabilities: readonly Capability[]) {
         'Replaces the document of an active definition and returns its new version, used from then on.',
         'Use it when the person changes a saved definition; a retired one cannot change.',
         '`type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays.',
-        'A function needs `diagram` each time, Mermaid source of how it works or the word none; a workflow takes no `diagram`, a page neither.',
+        'A function needs `diagram` each time; a workflow and a page take none.',
         'A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing.',
         "A new version of a page builds its views again from the playbook's history.",
       ].join(' '),
