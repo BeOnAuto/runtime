@@ -1,4 +1,4 @@
-import type { DefinitionSaved, StudioPage } from '@on.auto/operations';
+import type { CommentedPlace, DefinitionSaved, StudioPage } from '@on.auto/operations';
 
 export const defaultStudioOrigin = 'https://studio.on.auto';
 
@@ -24,6 +24,19 @@ function becauseOf(saved: DefinitionSaved | undefined): Parameter[] {
   return saved === undefined ? [] : [['because', saved]];
 }
 
+function namedIf(name: string, value: string | number | undefined): Parameter[] {
+  return value === undefined ? [] : [[name, String(value)]];
+}
+
+function placeParametersOf(place: CommentedPlace): Parameter[] {
+  if (place.kind === 'definition') {
+    return [[place.type, place.name], ['version', String(place.version)], ...namedIf('step', place.step)];
+  }
+  return place.kind === 'run'
+    ? [['run', place.run], ...namedIf('event', place.event), ...namedIf('block', place.block)]
+    : [];
+}
+
 function pageParametersOf(page: StudioPage | undefined): Parameter[] {
   if (page === undefined) {
     return [];
@@ -32,7 +45,21 @@ function pageParametersOf(page: StudioPage | undefined): Parameter[] {
   if (page.kind === 'definition') {
     return [playbook, [page.type, page.name], ...becauseOf(page.saved), ['version', String(page.version)]];
   }
+  if (page.kind === 'comment') {
+    return [playbook, ...placeParametersOf(page.on), ['comment', page.comment]];
+  }
   return page.kind === 'run' ? [playbook, ['run', page.run]] : [playbook];
+}
+
+function arrivalOf(
+  openedFrom: StudioOpenedFrom,
+  installId: string | undefined,
+  page: StudioPage | undefined,
+): Parameter[] {
+  if (page?.kind === 'comment') {
+    return [];
+  }
+  return [['src', openedFrom], ...(installId === undefined ? [] : [['install', installId] satisfies Parameter])];
 }
 
 export function studioBaseOf({ origin, served }: StudioSettings, ownOrigin: string): string {
@@ -45,8 +72,7 @@ export function studioLinkOf(
 ): string {
   const query = new URLSearchParams([
     ['server', ownOrigin],
-    ['src', openedFrom],
-    ...(installId === undefined ? [] : [['install', installId]]),
+    ...arrivalOf(openedFrom, installId, page),
     ...pageParametersOf(page),
   ]);
   return `${studioBaseOf(studio, ownOrigin)}?${query.toString()}`;

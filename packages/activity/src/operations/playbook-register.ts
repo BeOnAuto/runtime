@@ -28,6 +28,7 @@ function changeOf(fact: PlaybookFact): ActivityRow | undefined {
     form: 'playbook',
     position: { at, playbook: fact.data.playbook, key: playbookChangeKeyOf(at) },
     by: fact.type === 'playbook_created' ? fact.data.created_by.id : fact.context.by,
+    by_name: null,
     change: fact.type === 'playbook_created' ? 'created' : 'updated',
     trigger: null,
     definition: null,
@@ -39,6 +40,7 @@ function changeOf(fact: PlaybookFact): ActivityRow | undefined {
     status: null,
     waits_on: null,
     expires_at: null,
+    about: null,
   };
 }
 

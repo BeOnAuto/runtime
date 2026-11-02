@@ -161,4 +161,14 @@ describe('the catalogue of the changes of presented facts', () => {
         .streamKinds,
     ).toEqual(['shelves']);
   });
+
+  it('takes beside its presenters namings of facts no presenter presents, whose changes it names as theirs', () => {
+    const catalog = presentedChangeCatalogOf(
+      [presenterOf({ shelf_filled: [], note_added: [], shelf_dusted: [] }, shelves.changes)],
+      [labels],
+    );
+
+    expect(catalog.streamKinds).toEqual(['shelves', 'labels']);
+    expect(catalog.changesOf(factOf('labels/blue', 'label_added'))).toEqual([{ kind: 'shelf', shelf: 'blue' }]);
+  });
 });

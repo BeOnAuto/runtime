@@ -21,7 +21,7 @@
     },
     {
       "name": "activity",
-      "description": "What the playbooks of the org did that a person may want to see, the requests that wait on an answer, the broken definitions and what is new, and what each caller has seen of it"
+      "description": "What the playbooks of the org did that a person may want to see, the requests that wait on an answer, the broken definitions, what is new and the open comments, and what each caller has seen of it"
     },
     {
       "name": "models",
@@ -58,6 +58,10 @@
     {
       "name": "events",
       "description": "The events published to a playbook, and its history of events"
+    },
+    {
+      "name": "comments",
+      "description": "What people say in Studio about the things of a playbook, each at the address of what it is about, until it is resolved"
     },
     {
       "name": "interactions",
@@ -1064,7 +1068,7 @@
       "get": {
         "operationId": "list_activity",
         "summary": "List activity",
-        "description": "Lists the activity of the playbooks of the org the caller may access, newest first: the requests that wait on an answer, the definitions whose latest run broke, and the runs, definitions and playbooks that are new, the playbooks from the newest 100 changes of the org's register. Each new row says whether the caller has seen it, and the answer counts what waits on the caller and where they marked everything seen.",
+        "description": "Lists the activity of the playbooks of the org the caller may access, newest first: the requests that wait on an answer, the definitions whose latest run broke, the runs, definitions and playbooks that are new, the playbooks from the newest 100 changes of the org's register, and the open comments people made on them. Each new and comment row says whether the caller has seen it, and the answer counts what waits on the caller and where they marked everything seen.",
         "tags": [
           "activity"
         ],
@@ -1078,7 +1082,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "description": "One kind, needs_you, broken or new, or several separated by commas: keep the rows of those kinds"
+              "description": "One kind, needs_you, broken, new or comment, or several separated by commas: keep the rows of those kinds"
             }
           },
           {
@@ -1097,7 +1101,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "true keeps, of the new rows, those whose by is the caller, and leaves the other kinds as they are"
+              "description": "true keeps, of the new and comment rows, those whose by is the caller, and leaves the other kinds as they are"
             }
           },
           {
@@ -1190,12 +1194,17 @@
                         "new": {
                           "type": "integer",
                           "description": "The new rows the caller has not seen"
+                        },
+                        "comments": {
+                          "type": "integer",
+                          "description": "The open comments others made that the caller has not seen"
                         }
                       },
                       "required": [
                         "needs_you",
                         "broken",
-                        "new"
+                        "new",
+                        "comments"
                       ],
                       "additionalProperties": false,
                       "description": "What the caller has to look at, over every playbook the caller may access"
@@ -1244,9 +1253,10 @@
                           "enum": [
                             "needs_you",
                             "broken",
-                            "new"
+                            "new",
+                            "comment"
                           ],
-                          "description": "needs_you, broken or new"
+                          "description": "needs_you, broken, new or comment"
                         },
                         "address": {
                           "type": "string",
@@ -1266,7 +1276,18 @@
                         },
                         "by": {
                           "type": "string",
-                          "description": "The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked"
+                          "description": "The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked; for a comment, who made it"
+                        },
+                        "by_name": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For comment, the name of who made it, as the runtime names them; otherwise null"
                         },
                         "change": {
                           "anyOf": [
@@ -1333,7 +1354,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "The type, name and version of the definition; for broken, the version it broke on; null for a playbook"
+                          "description": "The type, name and version of the definition; for broken, the version it broke on; for comment, the one its address names; null for a playbook"
                         },
                         "run_id": {
                           "anyOf": [
@@ -1344,7 +1365,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "The run that asked, the latest run that broke, or the run that succeeded; otherwise null"
+                          "description": "The run that asked, the latest run that broke, or the run that succeeded; for comment, the run its address names; otherwise null"
                         },
                         "output_shape": {
                           "anyOf": [
@@ -1366,7 +1387,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "For needs_you, the first line of the request's message, at most 200 characters; otherwise null"
+                          "description": "For needs_you, the first line of the request's message, and for comment of the comment's text, at most 200 characters; otherwise null"
                         },
                         "answer_schema": {
                           "anyOf": [
@@ -1427,6 +1448,17 @@
                           ],
                           "description": "For needs_you, when the request expires unanswered, in ISO 8601 UTC; otherwise null"
                         },
+                        "about": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For comment, the address of what the comment is about; otherwise null"
+                        },
                         "seen": {
                           "anyOf": [
                             {
@@ -1436,7 +1468,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "For new, whether the caller has seen it; null for the other kinds"
+                          "description": "For new and comment, whether the caller has seen it; null for the other kinds"
                         }
                       },
                       "required": [
@@ -1446,6 +1478,7 @@
                         "playbook",
                         "at",
                         "by",
+                        "by_name",
                         "change",
                         "trigger",
                         "definition",
@@ -1457,6 +1490,7 @@
                         "status",
                         "waits_on",
                         "expires_at",
+                        "about",
                         "seen"
                       ],
                       "additionalProperties": false,
@@ -1519,7 +1553,7 @@
       "post": {
         "operationId": "mark_activity_seen",
         "summary": "Mark activity seen",
-        "description": "Records that the caller has seen new rows of the activity, by their address and at, everything through a cursor of a read, or both. It changes what the caller has seen alone, and answers the caller's counts and through after it.",
+        "description": "Records that the caller has seen new and comment rows of the activity, by their address and at, everything through a cursor of a read, or both. It changes what the caller has seen alone, and answers the caller's counts and through after it.",
         "tags": [
           "activity"
         ],
@@ -1559,7 +1593,7 @@
                       "additionalProperties": false
                     },
                     "maxItems": 200,
-                    "description": "The new rows the caller has seen, each its address and its at, at most 200"
+                    "description": "The new and comment rows the caller has seen, each its address and its at, at most 200"
                   },
                   "through": {
                     "type": "string",
@@ -1601,12 +1635,17 @@
                         "new": {
                           "type": "integer",
                           "description": "The new rows the caller has not seen"
+                        },
+                        "comments": {
+                          "type": "integer",
+                          "description": "The open comments others made that the caller has not seen"
                         }
                       },
                       "required": [
                         "needs_you",
                         "broken",
-                        "new"
+                        "new",
+                        "comments"
                       ],
                       "additionalProperties": false,
                       "description": "What the caller has to look at, over every playbook the caller may access"
@@ -15431,7 +15470,7 @@
       "get": {
         "operationId": "list_playbook_changes",
         "summary": "List playbook changes",
-        "description": "Answers which runs, interactions, definitions, and events of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
+        "description": "Answers which runs, interactions, definitions, events, and comments of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
         "tags": [
           "changes"
         ],
@@ -15575,6 +15614,28 @@
                             ],
                             "additionalProperties": false,
                             "description": "An event the feed of the playbook lists"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "comment"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              },
+                              "comment_id": {
+                                "type": "string",
+                                "description": "The id of the comment"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "comment_id"
+                            ],
+                            "additionalProperties": false,
+                            "description": "A comment made or resolved"
                           }
                         ]
                       },
@@ -15861,6 +15922,634 @@
           },
           "405": {
             "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/comments": {
+      "post": {
+        "operationId": "make_comment",
+        "summary": "Make a comment",
+        "description": "Records what a person says about something of the playbook, at its address: a definition at a version, a step, a run, an event, a block of a result, a request or the playbook. It answers the comment, open, with its place in Studio.",
+        "tags": [
+          "comments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/make_comment/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512,
+                    "description": "The address of what the comment is about, naming this playbook, at most 512 characters"
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  }
+                },
+                "required": [
+                  "address",
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/make_comment/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the comment, a UUIDv7 the runtime gives it"
+                    },
+                    "address": {
+                      "type": "string",
+                      "description": "The address of what the comment is about"
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "What the person said, in Markdown"
+                    },
+                    "by": {
+                      "type": "string",
+                      "description": "The id of the caller who made it"
+                    },
+                    "by_name": {
+                      "type": "string",
+                      "description": "The name of the caller who made it, as the runtime names them"
+                    },
+                    "at": {
+                      "type": "string",
+                      "description": "When it was made, in ISO 8601 UTC"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "true until it is resolved"
+                    },
+                    "resolved_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was resolved, in ISO 8601 UTC; null while it is open"
+                    },
+                    "resolved_by": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The id of the caller who resolved it; null while it is open"
+                    },
+                    "resolved_how": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "acted",
+                            "dismissed"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "acted, done as it asked, or dismissed, closed without acting; null while it is open"
+                    },
+                    "studio": {
+                      "type": "string",
+                      "description": "The comment's place in Studio, which opens its address and shows the comment beside it"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "address",
+                    "text",
+                    "by",
+                    "by_name",
+                    "at",
+                    "open",
+                    "resolved_at",
+                    "resolved_by",
+                    "resolved_how"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A comment a person made on something of the playbook"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      },
+      "get": {
+        "operationId": "list_comments",
+        "summary": "List comments",
+        "description": "Lists the comments people made in Studio on things of the playbook, newest first, the open ones unless `open` is false. Use it when the person says they left comments in Studio, or pastes comments copied from it: the open comments are what people said that nobody has acted on yet. Each names what it is about by its `address`, such as a step or a run, which get_definition or get_run reads and update_definition changes as the comment asks; a comment on an earlier version is read against the current document. `address` keeps the comments on one thing, and with `under` those on everything under it, such as the events of a run. Once a comment is acted on, resolve_comment closes it, and its `studio` is the place in Studio to give the person.",
+        "tags": [
+          "comments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "An address of this playbook: keep the comments on it"
+            }
+          },
+          {
+            "name": "under",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "true keeps the comments on address and on every address under it, such as the events of a run; it may then name a definition without its version"
+            }
+          },
+          {
+            "name": "open",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "true keeps the open comments, false the resolved ones; true when left out"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "How many comments a page holds, 1 to 200; 50 when left out"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "description": "The next_cursor of the page before, to read on only as the person needs"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_comments/output",
+                  "type": "object",
+                  "properties": {
+                    "comments": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/Comment"
+                      },
+                      "description": "The comments of the page, newest first"
+                    },
+                    "has_more": {
+                      "type": "boolean",
+                      "description": "Whether more remains to read after this page"
+                    },
+                    "next_cursor": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The cursor that reads the page after this one, null when nothing remains"
+                    }
+                  },
+                  "required": [
+                    "comments",
+                    "has_more",
+                    "next_cursor"
+                  ],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "Comment": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the comment, a UUIDv7 the runtime gives it"
+                        },
+                        "address": {
+                          "type": "string",
+                          "description": "The address of what the comment is about"
+                        },
+                        "text": {
+                          "type": "string",
+                          "description": "What the person said, in Markdown"
+                        },
+                        "by": {
+                          "type": "string",
+                          "description": "The id of the caller who made it"
+                        },
+                        "by_name": {
+                          "type": "string",
+                          "description": "The name of the caller who made it, as the runtime names them"
+                        },
+                        "at": {
+                          "type": "string",
+                          "description": "When it was made, in ISO 8601 UTC"
+                        },
+                        "open": {
+                          "type": "boolean",
+                          "description": "true until it is resolved"
+                        },
+                        "resolved_at": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "When it was resolved, in ISO 8601 UTC; null while it is open"
+                        },
+                        "resolved_by": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The id of the caller who resolved it; null while it is open"
+                        },
+                        "resolved_how": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "enum": [
+                                "acted",
+                                "dismissed"
+                              ]
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "acted, done as it asked, or dismissed, closed without acting; null while it is open"
+                        },
+                        "studio": {
+                          "type": "string",
+                          "description": "The comment's place in Studio, which opens its address and shows the comment beside it"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "address",
+                        "text",
+                        "by",
+                        "by_name",
+                        "at",
+                        "open",
+                        "resolved_at",
+                        "resolved_by",
+                        "resolved_how"
+                      ],
+                      "additionalProperties": false,
+                      "description": "A comment a person made on something of the playbook"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/comments/{id}/resolve": {
+      "post": {
+        "operationId": "resolve_comment",
+        "summary": "Resolve a comment",
+        "description": "Resolves a comment people made in Studio on the playbook, so it leaves the open comments and the activity. Use it once what the comment asked is done, with `how` acted, or with `how` dismissed when the person says to drop it. `id` is the id of the comment, as list_comments gives it. Resolving a comment resolved already records nothing and answers it as it stands. The person is told what was changed for each comment, and which were left open and why; make_comment is no tool, since a comment is what a person says and an agent reports its work to the person instead.",
+        "tags": [
+          "comments"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "The id of the comment, as list_comments gives it",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/resolve_comment/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "how": {
+                    "type": "string",
+                    "enum": [
+                      "acted",
+                      "dismissed"
+                    ],
+                    "description": "acted once what the comment asked is done, or dismissed to close it without acting"
+                  }
+                },
+                "required": [
+                  "how"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/resolve_comment/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the comment, a UUIDv7 the runtime gives it"
+                    },
+                    "address": {
+                      "type": "string",
+                      "description": "The address of what the comment is about"
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "What the person said, in Markdown"
+                    },
+                    "by": {
+                      "type": "string",
+                      "description": "The id of the caller who made it"
+                    },
+                    "by_name": {
+                      "type": "string",
+                      "description": "The name of the caller who made it, as the runtime names them"
+                    },
+                    "at": {
+                      "type": "string",
+                      "description": "When it was made, in ISO 8601 UTC"
+                    },
+                    "open": {
+                      "type": "boolean",
+                      "description": "true until it is resolved"
+                    },
+                    "resolved_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was resolved, in ISO 8601 UTC; null while it is open"
+                    },
+                    "resolved_by": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The id of the caller who resolved it; null while it is open"
+                    },
+                    "resolved_how": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "acted",
+                            "dismissed"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "acted, done as it asked, or dismissed, closed without acting; null while it is open"
+                    },
+                    "studio": {
+                      "type": "string",
+                      "description": "The comment's place in Studio, which opens its address and shows the comment beside it"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "address",
+                    "text",
+                    "by",
+                    "by_name",
+                    "at",
+                    "open",
+                    "resolved_at",
+                    "resolved_by",
+                    "resolved_how"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A comment a person made on something of the playbook"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
           },
           "413": {
             "$ref": "#/components/responses/content_too_large"

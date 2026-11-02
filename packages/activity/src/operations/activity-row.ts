@@ -3,15 +3,18 @@ import { Schema } from 'effect';
 import { addressOf, type ItemForm } from '../positions/activity-addresses.ts';
 import { cursorOf, type ActivityPosition } from '../positions/activity-position.ts';
 
-export type ActivityKind = 'needs_you' | 'broken' | 'new';
+export type ActivityKind = 'needs_you' | 'broken' | 'new' | 'comment';
 
-export const activityKinds: readonly ActivityKind[] = ['needs_you', 'broken', 'new'];
+export const activityKinds: readonly ActivityKind[] = ['needs_you', 'broken', 'new', 'comment'];
+
+export const seenKinds: ReadonlySet<ActivityKind> = new Set(['new', 'comment']);
 
 export interface ActivityRow {
   readonly kind: ActivityKind;
   readonly form: ItemForm;
   readonly position: ActivityPosition;
   readonly by: string;
+  readonly by_name: string | null;
   readonly change: 'created' | 'updated' | null;
   readonly trigger: { readonly kind: string; readonly reference: string } | null;
   readonly definition: { readonly type: string; readonly name: string; readonly version: number } | null;
@@ -23,12 +26,13 @@ export interface ActivityRow {
   readonly status: 'failed' | 'rejected' | null;
   readonly waits_on: string | null;
   readonly expires_at: number | null;
+  readonly about: string | null;
 }
 
 const NullableText = (description: string) => Schema.NullOr(Schema.String).annotate({ description });
 
 export const ActivityRowSchema = Schema.Struct({
-  kind: Schema.Literals(activityKinds).annotate({ description: 'needs_you, broken or new' }),
+  kind: Schema.Literals(activityKinds).annotate({ description: 'needs_you, broken, new or comment' }),
   address: Schema.String.annotate({ description: 'The address of the item, which mark_activity_seen takes' }),
   cursor: Schema.String.annotate({
     description: 'The place of the row in the activity, which since, cursor and through take',
@@ -37,8 +41,9 @@ export const ActivityRowSchema = Schema.Struct({
   at: Schema.String.annotate({ description: 'When the item came about, by its kind, in ISO 8601 UTC' }),
   by: Schema.String.annotate({
     description:
-      'The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked',
+      'The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked; for a comment, who made it',
   }),
+  by_name: NullableText('For comment, the name of who made it, as the runtime names them; otherwise null'),
   change: Schema.NullOr(Schema.Literals(['created', 'updated'])).annotate({
     description: 'For a version or a playbook, created or updated; otherwise null',
   }),
@@ -47,14 +52,16 @@ export const ActivityRowSchema = Schema.Struct({
   }),
   definition: Schema.NullOr(Schema.Struct({ type: Schema.String, name: Schema.String, version: Schema.Int })).annotate({
     description:
-      'The type, name and version of the definition; for broken, the version it broke on; null for a playbook',
+      'The type, name and version of the definition; for broken, the version it broke on; for comment, the one its address names; null for a playbook',
   }),
-  run_id: NullableText('The run that asked, the latest run that broke, or the run that succeeded; otherwise null'),
+  run_id: NullableText(
+    'The run that asked, the latest run that broke, or the run that succeeded; for comment, the run its address names; otherwise null',
+  ),
   output_shape: NullableText(
     'For a run that succeeded, the output shape its output takes, where it takes one; otherwise null',
   ),
   message: NullableText(
-    "For needs_you, the first line of the request's message, at most 200 characters; otherwise null",
+    "For needs_you, the first line of the request's message, and for comment of the comment's text, at most 200 characters; otherwise null",
   ),
   answer_schema: Schema.NullOr(Schema.JsonObject).annotate({
     description: 'For needs_you, the JSON Schema the answer takes, where it is at most 8 KiB as JSON; otherwise null',
@@ -67,8 +74,9 @@ export const ActivityRowSchema = Schema.Struct({
   }),
   waits_on: NullableText('For needs_you, the address the request names, in lower case, or any_member; otherwise null'),
   expires_at: NullableText('For needs_you, when the request expires unanswered, in ISO 8601 UTC; otherwise null'),
+  about: NullableText('For comment, the address of what the comment is about; otherwise null'),
   seen: Schema.NullOr(Schema.Boolean).annotate({
-    description: 'For new, whether the caller has seen it; null for the other kinds',
+    description: 'For new and comment, whether the caller has seen it; null for the other kinds',
   }),
 }).annotate({ identifier: 'ActivityRow', description: 'An item of the activity of the org' });
 

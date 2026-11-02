@@ -1,4 +1,11 @@
-import { changeKindOf, makeDispatcher, type PlacedFact, type Presenter } from '@on.auto/operations';
+import {
+  changeKindOf,
+  changingOne,
+  makeDispatcher,
+  type ChangeNaming,
+  type PlacedFact,
+  type Presenter,
+} from '@on.auto/operations';
 import { Effect, Fiber, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 
@@ -33,11 +40,17 @@ const pairs: Presenter = {
   },
 };
 
-export const listPlaybookChanges = defineListPlaybookChanges([
-  runs,
-  pairs,
-  presenterOf('notes', { added: 'note_added' }),
-]);
+const tagChanged = changeKindOf('tag', 'A tag that moved', { tag: 'The id of the tag' });
+
+const tags: ChangeNaming = {
+  streamKind: 'tags',
+  changes: changingOne(tagChanged, ['added'], ({ stream }) => [tagChanged.of({ tag: stream.slice('tags/'.length) })]),
+};
+
+export const listPlaybookChanges = defineListPlaybookChanges(
+  [runs, pairs, presenterOf('notes', { added: 'note_added' })],
+  [tags],
+);
 
 const ChangesSchema = Schema.Struct({
   status: Schema.Literal('succeeded'),

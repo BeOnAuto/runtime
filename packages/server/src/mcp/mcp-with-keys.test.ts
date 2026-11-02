@@ -33,6 +33,8 @@ const definitionTools = [
   'list_playbook_events',
   'get_event',
   'publish_event',
+  'list_comments',
+  'resolve_comment',
   'search',
   'introspect',
   'dry_run',

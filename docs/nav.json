@@ -72,6 +72,10 @@
           {
             "text": "Run a workflow on a schedule or event",
             "link": "/guides/triggers"
+          },
+          {
+            "text": "Act on comments from Studio",
+            "link": "/guides/comments"
           }
         ]
       },
@@ -117,6 +121,10 @@
       {
         "text": "HTTP API",
         "link": "/reference/http"
+      },
+      {
+        "text": "Addresses",
+        "link": "/reference/addresses"
       },
       {
         "text": "Sign-in and token reference",

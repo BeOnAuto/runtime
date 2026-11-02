@@ -123,10 +123,10 @@ describe('the description of an argument of one shape of a union input', () => {
 });
 
 describe('the tools on a connection', () => {
-  it('start the server at 32 with the guide tool, and refuse to start it at 33', () => {
-    expect(starting({ operations: askingTools(31) })).not.toThrow();
-    expect(starting({ operations: askingTools(32) })).toThrow(
-      'The own org endpoint: 33 tools, more than the 32 allowed',
+  it('start the server at 34 with the guide tool, and refuse to start it at 35', () => {
+    expect(starting({ operations: askingTools(33) })).not.toThrow();
+    expect(starting({ operations: askingTools(34) })).toThrow(
+      'The own org endpoint: 35 tools, more than the 34 allowed',
     );
   });
 });

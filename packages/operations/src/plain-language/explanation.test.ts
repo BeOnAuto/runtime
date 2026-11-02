@@ -190,6 +190,18 @@ describe('unsuccessfulWords of a run whose tools only read', () => {
   });
 });
 
+describe('unsuccessfulWords of an operation that explains a kind of refusal itself', () => {
+  it("says an operation's own why and remedy for a kind of refusal it explains itself", () => {
+    expect(
+      unsuccessfulWords('resolve the comment', 'command', rejected('conflict', 'x', undefined, 'retired'), {
+        explanations: { retired: { why: 'its playbook has been retired', remedy: 'Its comments can only be read.' } },
+      }),
+    ).toBe(
+      'Could not resolve the comment: its playbook has been retired. Nothing was changed. Its comments can only be read.',
+    );
+  });
+});
+
 describe('unsuccessfulWords', () => {
   it('says what could not be done, why, that nothing changed, and what to do, for a command', () => {
     expect(

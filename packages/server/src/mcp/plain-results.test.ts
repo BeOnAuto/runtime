@@ -12,7 +12,7 @@ import { answers, textResult, type ScriptedReply } from '@on.auto/reasoning/test
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { interactionsCalled } from '../testing/interaction-servers/interaction-calls.ts';
+import { commentsCalled, interactionsCalled } from '../testing/interaction-servers/interaction-calls.ts';
 import { servingReasoning } from '../testing/servers/reasoning-server.ts';
 import {
   licenseActivated,
@@ -249,6 +249,7 @@ describe('the plain words that lead each result over MCP', () => {
         ...(await playbooksCalled(session)),
         ...(await reasonFunctionsCalled(session)),
         ...(await workflowsCalled(session)),
+        ...(await commentsCalled(session, server, inSales)),
         ...(await interactionsCalled(session, inSales)),
         ...(await toolServerToolsCalled(session, inSales, server)),
       ],

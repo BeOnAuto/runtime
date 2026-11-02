@@ -12,6 +12,8 @@ const dryRunWords = defineDryRun(lookup).registration.plainLanguage;
 
 const asked = { server: 'graph', tool: 'search' };
 
+const introspectTerms = { remedies: introspectWords?.remedies };
+
 const takingTwo = {
   type: 'object',
   properties: { query: { type: 'string' }, maxRows: { type: 'integer' } },
@@ -47,15 +49,15 @@ describe('the plain words of introspect', () => {
         'describe the search tool of wiki',
         'query',
         { ...refusal, because: 'tool_server_not_configured' },
-        introspectWords?.remedies,
+        introspectTerms,
       ),
     ).toBe(
       'Could not describe the search tool of wiki: this server does not offer a tool it names, because whoever runs the server has not set up a tool server of that name for this playbook. This can be put right on your side: search shows the tool servers this playbook may use, so naming one of those can work.',
     );
     expect(
       [
-        unsuccessfulWords('x', 'query', { ...refusal, because: 'tool_not_allowed' }, introspectWords?.remedies),
-        unsuccessfulWords('x', 'query', { ...refusal, because: 'tool_not_listed' }, introspectWords?.remedies),
+        unsuccessfulWords('x', 'query', { ...refusal, because: 'tool_not_allowed' }, introspectTerms),
+        unsuccessfulWords('x', 'query', { ...refusal, because: 'tool_not_listed' }, introspectTerms),
       ].map((words) => words.slice(words.indexOf(' This can be put right'))),
     ).toEqual([
       ' This can be put right on your side: search shows the tools this playbook may use, which whoever runs the server allows, so naming one of those can work.',

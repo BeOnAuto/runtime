@@ -28,7 +28,7 @@ For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization 
 - A connection lists only the tools its key or token may call. A read-only key sees the tools that read, and none that creates or runs a function. A key that may only read inside some playbooks is offered `list_playbooks`, which lists those playbooks.
 - Which tools a connection lists depends on both the endpoint and the caller's permissions. A missing `create_definition` can mean either. The connection may be to the org endpoint, or its key or token may lack `playbook:write`.
 - The org and playbook a scoped endpoint names stay subject to the caller's access. Choosing a more specific endpoint grants no extra permission.
-- The five routes of Studio's page that connects a [connection](#connections), `read_link`, `approve`, `give_credential`, `start` and `finish`, are served only over [HTTP](http.md), and so is `list_providers`, which a page reads to show what a person may connect. So are five reads an agent does with another tool or leaves to Studio: `get_playbook`, since each playbook `list_playbooks` returns holds the same fields; `get_connection`, since each connection `list_connections` returns holds the same fields, its `status` among them; `get_run_history`, since `list_playbook_events` with a `run_id` returns the run's events and those of every run it started; `get_playbook_analytics`, which Studio presents; and `validate`, since `dry_run` reports the same check of the arguments in its `arguments` field. No endpoint offers any of them as a tool.
+- The five routes of Studio's page that connects a [connection](#connections), `read_link`, `approve`, `give_credential`, `start` and `finish`, are served only over [HTTP](http.md), and so is `list_providers`, which a page reads to show what a person may connect. So are five reads an agent does with another tool or leaves to Studio: `get_playbook`, since each playbook `list_playbooks` returns holds the same fields; `get_connection`, since each connection `list_connections` returns holds the same fields, its `status` among them; `get_run_history`, since `list_playbook_events` with a `run_id` returns the run's events and those of every run it started; `get_playbook_analytics`, which Studio presents; and `validate`, since `dry_run` reports the same check of the arguments in its `arguments` field. `make_comment` is served over HTTP alone too, since an agent does not comment on its own work. No endpoint offers any of them as a tool.
 
 ### What a connecting agent is told
 
@@ -47,7 +47,7 @@ An agent that connects receives instructions written for its caller and the tool
 - how to reply to the person: what was done and what they can do next, in the words of playbooks, functions, workflows and runs, not the tools' names, fields or rules. An id or a status appears only where the person needs it to act;
 - that a tool that cannot do what was asked says why and what to change.
 
-What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. That of `run_definition` says that a run that finishes later returns `started` and that `get_run` shows how it ended. Those of `list_models` and `search` say how a reasoning function names its model and its tools, as the reasoning function's guide does. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs.
+What the instructions leave out, the tools' descriptions say. The description of `get_guide` names the recipes the connection's tools can follow. That of `run_definition` says that a run that finishes later returns `started` and that `get_run` shows how it ended. Those of `list_models` and `search` say how a reasoning function names its model and its tools, as the reasoning function's guide does. Those of `execute` and `dry_run` say what each does. Those of `list_runs`, `list_playbook_events` and `list_interactions` say that their pages come one at a time and are read on only as the person needs. Those of `list_comments` and `resolve_comment` say how to act on what people said in Studio, as [Comments](#comments) sets out.
 
 The sentence of the function types says that a reasoning function prompts a model, an interaction function exchanges information, a prediction function forecasts from history, a recall function retrieves run results and a computation function runs a program. The format of each type carries the rest: the [recall format](recall-format.md) says what a recall function reads from the playbook's history, and the [prediction format](prediction-format.md) sets out its forecaster.
 
@@ -91,12 +91,12 @@ Every tool supplies a description and the JSON Schema of its input. No tool has 
 
 Each tool's annotations tell a client how careful to be:
 
-| Annotation        | Means                                                          | `true` for                                                                                                                                                                                           |
-| ----------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `readOnlyHint`    | The tool only reads                                            | Every tool that reads, including `dry_run`, although its HTTP route uses `POST`                                                                                                                      |
-| `destructiveHint` | What it does cannot be undone, or may change something outside | `retire_playbook`, `remove_connection`, `retire_definition`, `cancel_run` and `answer_interaction`; `run_definition` and `execute` while any tool server is configured or people may add connections |
-| `idempotentHint`  | Calling it again with the same input changes nothing           | Every tool that reads, and `update_playbook`, `retire_playbook`, `remove_connection`, `activate_license`, `update_definition`, `retire_definition`, `cancel_run` and `answer_interaction`            |
-| `openWorldHint`   | It reaches outside the runtime                                 | `list_models` and `run_definition`, which reach model providers; `search`, `introspect`, `dry_run` and `execute`, which reach tool servers; `activate_license`, which reaches Auto's account service |
+| Annotation        | Means                                                          | `true` for                                                                                                                                                                                                   |
+| ----------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `readOnlyHint`    | The tool only reads                                            | Every tool that reads, including `dry_run`, although its HTTP route uses `POST`                                                                                                                              |
+| `destructiveHint` | What it does cannot be undone, or may change something outside | `retire_playbook`, `remove_connection`, `retire_definition`, `cancel_run` and `answer_interaction`; `run_definition` and `execute` while any tool server is configured or people may add connections         |
+| `idempotentHint`  | Calling it again with the same input changes nothing           | Every tool that reads, and `update_playbook`, `retire_playbook`, `remove_connection`, `activate_license`, `update_definition`, `retire_definition`, `cancel_run`, `answer_interaction` and `resolve_comment` |
+| `openWorldHint`   | It reaches outside the runtime                                 | `list_models` and `run_definition`, which reach model providers; `search`, `introspect`, `dry_run` and `execute`, which reach tool servers; `activate_license`, which reaches Auto's account service         |
 
 `run_definition` is marked destructive while a tool server is configured or people may add connections, as they may by default, because a function's tools may then change something. An agent can ask the person before it runs a function.
 
@@ -178,6 +178,25 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 Over MCP, a result carries its output twice, as JSON text and as structured content. So `get_event` shows a large field in full only up to 64 KiB as JSON, and shows its size beyond that. The large fields are an input, an output, a record, an answer, a call's `arguments` and `result`, and a published event's data. Over HTTP, every field is whole.
 
 `list_playbook_events` with a run's `run_id` returns what the run and every run it started recorded: its steps, its tool calls and how it ended. [Publishing events](http.md#publishing-events) and [Run history and playbook events](http.md#run-history-and-playbook-events) give the fields, filters, paging and limits. The playbook's [analytics](http.md#analytics) are Studio's to present, over HTTP alone.
+
+### Comments
+
+People comment on what Studio shows of a playbook, where they see it: a step's prompt, a run's result, a run that never ended, a figure on a page. Each comment carries the [address](addresses.md) of what it is about, and stays open until it is resolved. These tools let an agent read what people said about its playbook and close what it acted on. They are listed on `/mcp` and a playbook endpoint, to every caller who may read the playbook. Their routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`.
+
+| Tool              | HTTP operation                | What it is for                                                                                     |
+| ----------------- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
+| `list_comments`   | `GET /comments`               | Read the playbook's open comments, newest first, or those on one address or under it               |
+| `resolve_comment` | `POST /comments/{id}/resolve` | Close a comment, `acted` once what it asked is done or `dismissed` when the person says to drop it |
+
+The descriptions of the two tools carry what an agent does with them:
+
+- When the person says they left comments in Studio, or pastes comments copied from it, call `list_comments` for the playbook. Its open comments are what people said and nobody has acted on yet.
+- Act on each comment where its address says: read the thing with the tool [From an address to a call](addresses.md#from-an-address-to-a-call) names, such as `get_definition` for a step or `get_run` for a run, and change it as the comment asks, such as with `update_definition`. A comment on an earlier version is read against the current document.
+- Once a comment is acted on, resolve it with `resolve_comment`, `how` `acted`. Dismiss one only when the person says to. Tell the person what was changed for each comment, and which were left open and why.
+- A retired playbook's comments can be read but not resolved, and nothing in it can be changed: report them to the person instead.
+- Never comment yourself. `make_comment` is not a tool: a comment is what a person says, and an agent reports its work to the person instead.
+
+`list_comments` takes `address`, `under`, `open`, `limit` and `cursor`, and `resolve_comment` takes `id` and `how`, each with the rules [Comments](http.md#comments) gives, with the fields of a comment. Each comment carries `studio`, its place in Studio, which the agent gives the person when it says what it did.
 
 ### Tool servers
 

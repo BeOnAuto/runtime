@@ -1,3 +1,4 @@
+import { CommentEventSchema } from '@on.auto/activity';
 import { ConnectionEventSchema, RegistrationEventSchema } from '@on.auto/connections';
 import {
   DefinitionEventSchema,
@@ -12,9 +13,8 @@ import { MeterEventSchema } from '@on.auto/meter';
 import { ConversationCallEventSchema, HandCallEventSchema } from '@on.auto/tool-servers';
 import { RunLogRecordSchema } from '@on.auto/workflow-engine';
 
-import { LicenseKeyEventSchema } from '../licensing/kept-license-key.ts';
-import { OwnKeyEventSchema } from '../secrets/own-keys.ts';
 import { orgFactSchemas } from './org-facts.ts';
+import { serverFactSchemas } from './server-facts.ts';
 
 export const knownFactSchemas = [
   ...orgFactSchemas,
@@ -29,8 +29,8 @@ export const knownFactSchemas = [
   HandCallEventSchema,
   ConversationCallEventSchema,
   MeterEventSchema,
-  OwnKeyEventSchema,
-  LicenseKeyEventSchema,
+  ...serverFactSchemas,
+  CommentEventSchema,
 ];
 
 export function factSchemasKnownWith(declared: readonly DeclaredFact[]): readonly FactSchemaRead[] {

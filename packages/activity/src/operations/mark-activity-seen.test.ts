@@ -25,7 +25,7 @@ describe('mark_activity_seen', () => {
     );
     const rows = listedOf(await list(ada)).rows;
 
-    expect(marked).toEqual({ counts: { needs_you: 1, broken: 1, new: 2 }, through: null });
+    expect(marked).toEqual({ counts: { needs_you: 1, broken: 1, new: 2, comments: 0 }, through: null });
     expect(rows.find(({ address }) => address === closed.address)).toMatchObject({ seen: true });
     expect(listedOf(await list(priya)).counts.new).toBe(2);
   });
@@ -39,7 +39,7 @@ describe('mark_activity_seen through a cursor', () => {
     const after = markedOf(await mark(ada, { through: String(second) }));
 
     expect(marked).toEqual({
-      counts: { needs_you: 1, broken: 1, new: 0 },
+      counts: { needs_you: 1, broken: 1, new: 0, comments: 0 },
       through: { cursor: newest, seen_at: '2026-11-01T18:30:00.000Z' },
     });
     expect(after).toEqual(marked);
@@ -60,6 +60,7 @@ describe('mark_activity_seen through a cursor', () => {
       needs_you: 2,
       broken: 1,
       new: 1,
+      comments: 0,
     });
   });
 });

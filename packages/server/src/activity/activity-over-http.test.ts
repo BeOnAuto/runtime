@@ -63,8 +63,13 @@ describe('the activity of the org over HTTP, for the local developer', () => {
     await alpha.refused('computation', 'tally', { fail: true });
     await asked();
 
-    expect((await read()).counts).toEqual({ needs_you: 3, broken: 1, new: 0 });
-    expect((await read('?address=dana%40example.com')).counts).toEqual({ needs_you: 3, broken: 1, new: 0 });
+    expect((await read()).counts).toEqual({ needs_you: 3, broken: 1, new: 0, comments: 0 });
+    expect((await read('?address=dana%40example.com')).counts).toEqual({
+      needs_you: 3,
+      broken: 1,
+      new: 0,
+      comments: 0,
+    });
   });
 });
 

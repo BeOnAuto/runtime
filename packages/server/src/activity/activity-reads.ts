@@ -12,7 +12,12 @@ const RowSchema = Schema.Struct({
   seen: Schema.NullOr(Schema.Boolean),
 });
 
-const CountsSchema = Schema.Struct({ needs_you: Schema.Int, broken: Schema.Int, new: Schema.Int });
+const CountsSchema = Schema.Struct({
+  needs_you: Schema.Int,
+  broken: Schema.Int,
+  new: Schema.Int,
+  comments: Schema.Int,
+});
 
 const ThroughSchema = Schema.NullOr(Schema.Struct({ cursor: Schema.String, seen_at: Schema.String }));
 

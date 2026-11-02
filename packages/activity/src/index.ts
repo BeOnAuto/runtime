@@ -1,8 +1,12 @@
 export { ActivitySeenSchema } from './facts/activity-seen.ts';
+export { CommentEventSchema } from './facts/comment-facts.ts';
 export { activityRows } from './projections/activity-rows.ts';
 export { brokenRows } from './projections/broken-rows.ts';
+export { commentRows } from './projections/comment-rows.ts';
 export { requestRows } from './projections/request-rows.ts';
 export { seenRows } from './projections/seen-rows.ts';
 export { activityProjections, activityOperations } from './composition/activity-composition.ts';
+export { commentOperations } from './composition/comment-composition.ts';
+export { commentChanges } from './comments/comment-changes.ts';
 export { listActivity } from './operations/list-activity.ts';
 export { markActivitySeen } from './operations/mark-activity-seen.ts';

@@ -34,13 +34,15 @@ const acmePlaybookReader = createApiKey({
   playbooks: '*',
 });
 
-const queriesInsideAPlaybook = [
+const readerToolsInsideAPlaybook = [
   'list_definitions',
   'get_definition',
   'get_run',
   'list_runs',
   'list_playbook_events',
   'get_event',
+  'list_comments',
+  'resolve_comment',
   'introspect',
   'dry_run',
   'list_interactions',
@@ -156,7 +158,7 @@ describe('the tool servers on /mcp, for a key limited to one playbook', () => {
 });
 
 describe('a read-only key on /mcp', () => {
-  it('is served its queries and offered no command', async () => {
+  it('is served its queries and resolve_comment, the command of a reader, and offered no other command', async () => {
     const outcome = await asKey(acmeReader.key, async (session) => ({
       tools: toolNamesIn(await session.listTools()),
       listed: await session.callTool('list_playbooks', {}),
@@ -168,7 +170,7 @@ describe('a read-only key on /mcp', () => {
       'search',
       'list_connection_tools',
       'list_connections',
-      ...queriesInsideAPlaybook,
+      ...readerToolsInsideAPlaybook,
       'get_guide',
     ]);
     expect(outcome.listed.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
@@ -182,14 +184,14 @@ describe('a read-only key on /mcp', () => {
 });
 
 describe('a key that may only read inside playbooks, on /mcp', () => {
-  it('lists the playbooks it may read, the queries inside a playbook and no command, and its instructions name no command', async () => {
+  it('lists the playbooks it may read, the queries inside a playbook and resolve_comment and no other command, and its instructions name no other command', async () => {
     const outcome = await asKey(acmePlaybookReader.key, async (session) => ({
       tools: toolNamesIn(await session.listTools()),
       instructions: String(session.instructions),
       listed: await session.callTool('list_playbooks', {}),
     }));
 
-    expect(outcome.tools).toEqual(['list_playbooks', 'search', ...queriesInsideAPlaybook, 'get_guide']);
+    expect(outcome.tools).toEqual(['list_playbooks', 'search', ...readerToolsInsideAPlaybook, 'get_guide']);
     expect(commands.filter((name) => new RegExp(`\\b${name}\\b`, 'u').test(outcome.instructions))).toEqual([]);
     expect(outcome.instructions).toContain(
       "The org is the caller's own: list_playbooks shows its playbooks. get_guide explains these words",
@@ -199,7 +201,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
 });
 
 describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
-  it('lists the thirty-one tools and the playbooks of its org', async () => {
+  it('lists the thirty-three tools and the playbooks of its org', async () => {
     const outcome = await asKey(
       acmeAdmin.key,
       async (session) => ({
@@ -210,7 +212,7 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
       kind,
     );
 
-    expect(outcome.tools).toBe(31);
+    expect(outcome.tools).toBe(33);
     expect(outcome.playbooks.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });
 });

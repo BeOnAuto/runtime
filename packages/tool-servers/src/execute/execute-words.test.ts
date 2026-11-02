@@ -81,12 +81,9 @@ const notOffered = (because: RejectionBecause) =>
 describe('the plain words of a call refused a tool it is not offered', () => {
   it('say why and what to do in one message for a tool server not set up for the playbook', () => {
     expect(
-      unsuccessfulWords(
-        'call the search tool of wiki',
-        'command',
-        notOffered('tool_server_not_configured'),
-        words?.remedies,
-      ),
+      unsuccessfulWords('call the search tool of wiki', 'command', notOffered('tool_server_not_configured'), {
+        remedies: words?.remedies,
+      }),
     ).toBe(
       'Could not call the search tool of wiki: this server does not offer a tool it names, because whoever runs the server has not set up a tool server of that name for this playbook. Nothing was changed. This can be put right on your side: search shows the tool servers this playbook may use, so naming one of those can work.',
     );

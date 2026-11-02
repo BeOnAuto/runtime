@@ -86,6 +86,54 @@ describe('the link that opens Studio on the runtime at a page', () => {
   });
 });
 
+describe('the link that opens Studio on the runtime at a comment', () => {
+  const atAlphaOfAComment = 'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&playbook=alpha';
+  const comment = '019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f';
+  const run = '019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e';
+
+  it('names the runtime, the playbook, each part of what the comment is about that its address has, and the comment, and no arrival from an agent', () => {
+    expect([
+      atPage(elsewhere, { kind: 'comment', playbook: 'alpha', comment, on: { kind: 'playbook' } }),
+      atPage(elsewhere, {
+        kind: 'comment',
+        playbook: 'alpha',
+        comment,
+        on: { kind: 'definition', type: 'workflow', name: 'close-the-week', version: 4 },
+      }),
+      atPage(elsewhere, { kind: 'comment', playbook: 'alpha', comment, on: { kind: 'run', run } }),
+    ]).toEqual([
+      `${atAlphaOfAComment}&comment=${comment}`,
+      `${atAlphaOfAComment}&workflow=close-the-week&version=4&comment=${comment}`,
+      `${atAlphaOfAComment}&run=${run}&comment=${comment}`,
+    ]);
+  });
+
+  it('names a step without its leading slash, URL-encoded, and the event or the block of a run', () => {
+    expect([
+      atPage(elsewhere, {
+        kind: 'comment',
+        playbook: 'alpha',
+        comment,
+        on: { kind: 'definition', type: 'workflow', name: 'close-the-week', version: 4, step: 'do/1/review' },
+      }),
+      atPage(elsewhere, { kind: 'comment', playbook: 'alpha', comment, on: { kind: 'run', run, event: `${run}_2` } }),
+      atPage(elsewhere, { kind: 'comment', playbook: 'alpha', comment, on: { kind: 'run', run, block: 2 } }),
+    ]).toEqual([
+      `${atAlphaOfAComment}&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=${comment}`,
+      `${atAlphaOfAComment}&run=${run}&event=${run}_2&comment=${comment}`,
+      `${atAlphaOfAComment}&run=${run}&block=2&comment=${comment}`,
+    ]);
+    expect(
+      studioLinkOf(elsewhere, {
+        ownOrigin,
+        openedFrom: 'agent',
+        installId: '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b',
+        page: { kind: 'comment', playbook: 'alpha', comment, on: { kind: 'playbook' } },
+      }),
+    ).toBe(`${atAlphaOfAComment}&comment=${comment}`);
+  });
+});
+
 describe('the origins a page may call the runtime from', () => {
   it("are the Studio host's and the allowed origins, where the runtime serves no Studio", () => {
     expect(pageOriginsOf({ studio: elsewhere, allowedOrigins: ['https://app.example'] }, ownOrigin)).toEqual([

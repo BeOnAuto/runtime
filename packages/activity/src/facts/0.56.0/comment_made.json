@@ -1,0 +1,15 @@
+{
+  "type": "comment_made",
+  "data": {
+    "address": "finance/definitions/workflow/close-the-week/4/steps/do/1/review",
+    "text": "Flag any entry over $10,000 for Priya before the week closes.",
+    "made_by": {
+      "id": "person:user_7kLm2",
+      "name": "Priya Raman"
+    }
+  },
+  "context": {
+    "at": "2026-11-02T10:14:03.218Z",
+    "by": "person:user_7kLm2"
+  }
+}

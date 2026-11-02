@@ -53,8 +53,8 @@ export function defineListOrgChanges(namings: readonly ChangeNaming<ChangedFact>
   });
 }
 
-export function defineListPlaybookChanges(presenters: readonly Presenter[]) {
-  const catalog = presentedChangeCatalogOf(presenters);
+export function defineListPlaybookChanges(presenters: readonly Presenter[], namings: readonly ChangeNaming[] = []) {
+  const catalog = presentedChangeCatalogOf(presenters, namings);
   const read = { most: factsReadAtOnce, dataOf: [] };
   return defineHttpOperation('playbook', 'query', {
     name: 'list_playbook_changes',

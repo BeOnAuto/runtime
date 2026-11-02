@@ -44,6 +44,20 @@ describe('list_playbook_changes', () => {
   });
 });
 
+describe('list_playbook_changes, of facts no presenter presents', () => {
+  it('names what a naming of their stream kind says they change', async () => {
+    const followed = followedPlaybook();
+    const now = changesOf(await followed.changes());
+    await followed.recording('tags/t1', 'added', 'a tag');
+    await followed.recording('tags/t1', 'hidden', 'nothing');
+
+    expect(changesOf(await followed.changes({ since: now.cursor, ...atOnce }))).toMatchObject({
+      changes: [{ kind: 'tag', tag: 't1' }],
+      more: false,
+    });
+  });
+});
+
 describe('list_playbook_changes, while nothing changed', () => {
   it('holds the request until the next change, and through facts that name nothing', async () => {
     const followed = followedPlaybook();

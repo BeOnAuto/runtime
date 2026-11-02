@@ -13,7 +13,7 @@ import {
   rowsInAPage,
 } from './activity-input.ts';
 import { pageOf } from './activity-page.ts';
-import { ActivityRowSchema, servedRow } from './activity-row.ts';
+import { ActivityRowSchema, seenKinds, servedRow } from './activity-row.ts';
 import { isSeenBy, throughOf, viewerOf } from './activity-viewer.ts';
 import { loadPlaybookRegister, mostPlaybookChanges, type PlaybookRegister } from './playbook-register.ts';
 
@@ -21,6 +21,7 @@ export const ActivityCountsSchema = Schema.Struct({
   needs_you: Schema.Int.annotate({ description: 'The requests that wait on the caller' }),
   broken: Schema.Int.annotate({ description: 'The broken definitions' }),
   new: Schema.Int.annotate({ description: 'The new rows the caller has not seen' }),
+  comments: Schema.Int.annotate({ description: 'The open comments others made that the caller has not seen' }),
 }).annotate({ description: 'What the caller has to look at, over every playbook the caller may access' });
 
 export const ThroughSchema = Schema.NullOr(
@@ -33,13 +34,15 @@ export const ThroughSchema = Schema.NullOr(
 const ListActivityInputSchema = Schema.Struct({
   kind: Schema.optionalKey(
     Schema.String.annotate({
-      description: 'One kind, needs_you, broken or new, or several separated by commas: keep the rows of those kinds',
+      description:
+        'One kind, needs_you, broken, new or comment, or several separated by commas: keep the rows of those kinds',
     }),
   ),
   playbook: Schema.optionalKey(PlaybookIdSchema.annotate({ description: 'Keep the rows of one playbook' })),
   mine: Schema.optionalKey(
     Schema.Boolean.annotate({
-      description: 'true keeps, of the new rows, those whose by is the caller, and leaves the other kinds as they are',
+      description:
+        'true keeps, of the new and comment rows, those whose by is the caller, and leaves the other kinds as they are',
     }),
   ),
   address: Schema.optionalKey(AddressField),
@@ -90,7 +93,7 @@ const listed = Effect.fnUntraced(function* (input: ListActivityInput) {
   });
   const last = page.rows.at(-1);
   return {
-    rows: page.rows.map((row) => servedRow(row, row.kind === 'new' ? isSeenBy(viewer, row) : null)),
+    rows: page.rows.map((row) => servedRow(row, seenKinds.has(row.kind) ? isSeenBy(viewer, row) : null)),
     has_more: page.hasMore,
     next_cursor: page.hasMore && last !== undefined ? cursorOf(last.position) : null,
     counts: yield* countsFor({ viewer, readable, changes: register.changes }),
@@ -104,8 +107,9 @@ export const listActivity = defineHttpOperation('org', 'query', {
   description: [
     'Lists the activity of the playbooks of the org the caller may access, newest first:',
     'the requests that wait on an answer, the definitions whose latest run broke,',
-    `and the runs, definitions and playbooks that are new, the playbooks from the newest ${mostPlaybookChanges} changes of the org's register.`,
-    'Each new row says whether the caller has seen it, and the answer counts what waits on the caller and where they marked everything seen.',
+    `the runs, definitions and playbooks that are new, the playbooks from the newest ${mostPlaybookChanges} changes of the org's register,`,
+    'and the open comments people made on them.',
+    'Each new and comment row says whether the caller has seen it, and the answer counts what waits on the caller and where they marked everything seen.',
   ].join(' '),
   route: { method: 'GET', path: '/activity' },
   permittedBy: ['org:read', 'playbook:read'],

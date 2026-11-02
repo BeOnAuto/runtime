@@ -40,7 +40,7 @@ describe('list_activity', () => {
       ],
       has_more: false,
       next_cursor: null,
-      counts: { needs_you: 1, broken: 1, new: 3 },
+      counts: { needs_you: 1, broken: 1, new: 3, comments: 0 },
       through: null,
     });
   });

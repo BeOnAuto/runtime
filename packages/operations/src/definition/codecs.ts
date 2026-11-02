@@ -67,7 +67,15 @@ export function outputEncoder<Out extends ObjectSchema>(
 }
 
 function registeredPlainLanguage<In extends ObjectSchema, Out extends ObjectSchema>(
-  { task, attempt, attemptAsOffered, outcome, relayed, remedies = {} }: PlainLanguage<In['Type'], Out['Type']>,
+  {
+    task,
+    attempt,
+    attemptAsOffered,
+    outcome,
+    relayed,
+    remedies = {},
+    explanations = {},
+  }: PlainLanguage<In['Type'], Out['Type']>,
   inputSchema: In,
   outputSchema: Out,
 ): RegisteredPlainLanguage {
@@ -80,6 +88,7 @@ function registeredPlainLanguage<In extends ObjectSchema, Out extends ObjectSche
     outcome: (output, input) => outcome(decodeOutput(output), decodeAcceptedInput(input)),
     ...(relayed === undefined ? {} : { relayed: (output: unknown) => relayed(decodeOutput(output)) }),
     remedies,
+    explanations,
   };
 }
 

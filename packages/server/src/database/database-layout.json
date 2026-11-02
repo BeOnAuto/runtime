@@ -38,6 +38,34 @@
       "sql": "CREATE TABLE activity_seen_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, through_at INTEGER, through_playbook TEXT, through_key TEXT, marked TEXT, seen_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
+      "name": "comments_1",
+      "sql": "CREATE TABLE comments_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, address TEXT, text TEXT, by TEXT, by_name TEXT, at INTEGER, open INTEGER, resolved_at INTEGER, resolved_by TEXT, resolved_how TEXT, about_run TEXT, about_version TEXT, about_definition TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "comments_1_about_definition",
+      "sql": "CREATE INDEX comments_1_about_definition ON comments_1 (playbook_key, about_definition, open, at, row_key)"
+    },
+    {
+      "name": "comments_1_about_run",
+      "sql": "CREATE INDEX comments_1_about_run ON comments_1 (playbook_key, about_run, open, at, row_key)"
+    },
+    {
+      "name": "comments_1_about_version",
+      "sql": "CREATE INDEX comments_1_about_version ON comments_1 (playbook_key, about_version, open, at, row_key)"
+    },
+    {
+      "name": "comments_1_address",
+      "sql": "CREATE INDEX comments_1_address ON comments_1 (playbook_key, address, open, at, row_key)"
+    },
+    {
+      "name": "comments_1_open",
+      "sql": "CREATE INDEX comments_1_open ON comments_1 (playbook_key, open, at, row_key)"
+    },
+    {
+      "name": "comments_1_open_by",
+      "sql": "CREATE INDEX comments_1_open_by ON comments_1 (playbook_key, open, by, at, row_key)"
+    },
+    {
       "name": "conversations_3",
       "sql": "CREATE TABLE conversations_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, server TEXT, tool TEXT, conversation TEXT, since TEXT, last_fact TEXT, joined_by TEXT, open INTEGER, active_at INTEGER, reads INTEGER, next_read_at INTEGER, due_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },

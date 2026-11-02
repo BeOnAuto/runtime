@@ -53,6 +53,8 @@ The playbook keeps the saved definitions and the recorded runs, whatever happens
 
 Auto Studio shows running work, history and operating controls. Authoring starts with the agent, and what it makes or runs comes back with a link to its page in Studio, which it gives you.
 
+Comments are the way back. When something in Studio looks wrong, such as a step's prompt, a run's result or a figure on a page, you comment on it where you see it. Your teammates see your comments, and you see theirs. Each comment carries the address of what it is about, so when you tell your agent you left comments, or paste them from Studio, it reads them, opens each place, makes the change and resolves the comment. The agent never comments itself; it tells you what it changed. [Comments](../reference/http.md#comments) gives the routes, and [Addresses](../reference/addresses.md) the forms an address takes.
+
 ## Authority and judgment
 
 A playbook should do only what your team would trust it to do. Decide which actions it may take on its own, and where a person must decide. A review function can recommend a budget change without being allowed to make one.

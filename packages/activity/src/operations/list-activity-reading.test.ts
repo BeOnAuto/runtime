@@ -14,8 +14,9 @@ describe('what list_activity counts as waiting on the caller', () => {
       needs_you: 2,
       broken: 1,
       new: 3,
+      comments: 0,
     });
-    expect(listedOf(await list(localDeveloper)).counts).toEqual({ needs_you: 2, broken: 1, new: 5 });
+    expect(listedOf(await list(localDeveloper)).counts).toEqual({ needs_you: 2, broken: 1, new: 5, comments: 0 });
   });
 
   it('counts the same whatever the filters and the page', async () => {
@@ -25,6 +26,7 @@ describe('what list_activity counts as waiting on the caller', () => {
       needs_you: 1,
       broken: 1,
       new: 3,
+      comments: 0,
     });
   });
 });
@@ -55,6 +57,7 @@ describe('the filters of list_activity', () => {
       needs_you: 0,
       broken: 0,
       new: 2,
+      comments: 0,
     });
   });
 });
@@ -71,7 +74,7 @@ describe('the playbooks of list_activity', () => {
       seen: false,
     });
     expect(rows.filter(({ address }) => /^(?:playbooks\/)?sales\//u.test(address))).toEqual([]);
-    expect(counts).toEqual({ needs_you: 1, broken: 1, new: 1 });
+    expect(counts).toEqual({ needs_you: 1, broken: 1, new: 1, comments: 0 });
     expect(listedOf(await list(priya, { playbook: 'sales' })).rows).toEqual([]);
   });
 

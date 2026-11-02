@@ -80,7 +80,10 @@ function unnamedTypeOf({ publicNames, changes }: Presenter): string | undefined 
   ].at(0);
 }
 
-export function presentedChangeCatalogOf(presenters: readonly Presenter[]): ChangeCatalog<PlacedFact> {
+export function presentedChangeCatalogOf(
+  presenters: readonly Presenter[],
+  namings: readonly ChangeNaming[] = [],
+): ChangeCatalog<PlacedFact> {
   for (const presenter of presenters) {
     const unnamed = unnamedTypeOf(presenter);
     if (unnamed !== undefined) {
@@ -89,5 +92,5 @@ export function presentedChangeCatalogOf(presenters: readonly Presenter[]): Chan
       );
     }
   }
-  return changeCatalogOf(presenters);
+  return changeCatalogOf([...presenters, ...namings]);
 }

@@ -49,7 +49,9 @@ export function kindsOf(kind: string | undefined): Effect.Effect<ReadonlySet<Act
   const kinds = asked.filter((each) => isKind(each));
   return kinds.length === asked.length && kinds.length > 0
     ? Effect.succeed(new Set(kinds))
-    : Effect.fail(refusedAt('/kind', 'Expected needs_you, broken or new, or several of them separated by commas'));
+    : Effect.fail(
+        refusedAt('/kind', 'Expected needs_you, broken, new or comment, or several of them separated by commas'),
+      );
 }
 
 export function addressOfCaller(address: string | undefined): Effect.Effect<string | undefined, InvalidInput> {

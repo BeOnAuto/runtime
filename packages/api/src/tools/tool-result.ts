@@ -6,7 +6,7 @@ import {
   type OperationKind,
   type RegisteredPlainLanguage,
   type Rejected,
-  type Remedies,
+  type RefusalTerms,
   type Settled,
 } from '@on.auto/operations';
 import {
@@ -27,21 +27,22 @@ function textOf(text: string): { readonly type: 'text'; readonly text: string } 
   return { type: 'text', text };
 }
 
-export interface RefusalWords {
+export interface RefusalWords extends RefusalTerms {
   readonly kind: OperationKind;
   readonly attempt: string;
-  readonly remedies?: Remedies;
 }
 
 export function unsuccessfulResultOf(
   settled: Rejected | Failed | Cancelled,
   clientClosedRequest: boolean,
-  { kind, attempt, remedies }: RefusalWords,
+  { kind, attempt, remedies, explanations }: RefusalWords,
 ): CallToolResult {
   return {
     isError: true,
     content: [
-      textOf(withinCharacters(unsuccessfulWords(attempt, kind, settled, remedies), mostRefusalCharacters)),
+      textOf(
+        withinCharacters(unsuccessfulWords(attempt, kind, settled, { remedies, explanations }), mostRefusalCharacters),
+      ),
       textOf(JSON.stringify(problemOfOutcome(settled, clientClosedRequest))),
     ],
   };
@@ -70,5 +71,6 @@ export function toolResultOf(
     kind,
     attempt: plainLanguage.attempt(input),
     remedies: plainLanguage.remedies,
+    explanations: plainLanguage.explanations,
   });
 }

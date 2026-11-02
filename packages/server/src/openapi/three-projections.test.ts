@@ -52,6 +52,7 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'mark_activity_seen',
   'list_playbook_changes',
   'render_page',
+  'make_comment',
   'get_content',
 ]);
 
@@ -84,14 +85,14 @@ describe('the operations of the document and the tools of the endpoints', () => 
     expect(servedAsTools().map((described) => toolsOf(described).map(({ description }) => description))).toEqual(
       servedAsTools().map(({ operation }) => [operation.description]),
     );
-    expect(servedAsTools()).toHaveLength(31);
+    expect(servedAsTools()).toHaveLength(33);
   });
 
   it('leave no tool of an endpoint without its operation, and give none to an operation served over HTTP alone', () => {
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(21);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(22);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

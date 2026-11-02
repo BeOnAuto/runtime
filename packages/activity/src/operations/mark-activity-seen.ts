@@ -35,7 +35,7 @@ const MarkActivitySeenInputSchema = Schema.Struct({
     Schema.Array(SeenItemSchema)
       .check(Schema.isMaxLength(mostRowsInAPage))
       .annotate({
-        description: `The new rows the caller has seen, each its address and its at, at most ${mostRowsInAPage}`,
+        description: `The new and comment rows the caller has seen, each its address and its at, at most ${mostRowsInAPage}`,
       }),
   ),
   through: Schema.optionalKey(cursorField('A cursor from a read: everything at or before it is seen')),
@@ -92,7 +92,7 @@ export const markActivitySeen = defineHttpOperation('org', 'command', {
   name: 'mark_activity_seen',
   title: 'Mark activity seen',
   description: [
-    'Records that the caller has seen new rows of the activity, by their address and at, everything through a cursor of a read, or both.',
+    'Records that the caller has seen new and comment rows of the activity, by their address and at, everything through a cursor of a read, or both.',
     "It changes what the caller has seen alone, and answers the caller's counts and through after it.",
   ].join(' '),
   route: { method: 'POST', path: '/activity/seen' },

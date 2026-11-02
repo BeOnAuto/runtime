@@ -10,7 +10,7 @@ import {
   creditExplanationsByBecause,
   limitedCreditExplanationOf,
 } from './credit-explanations.ts';
-import type { Explanation, Remedies } from './plain-language.ts';
+import type { Explanation, Explanations, RefusalTerms, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
 
 export type ExplainedRejection = Pick<Rejected, 'reason' | 'kind' | 'because' | 'limited_because'>;
@@ -208,12 +208,20 @@ const explanationByKindAndBecause: Readonly<
 
 const noRemedies: Remedies = {};
 
-export function explanationOf(rejection: ExplainedRejection, remedies: Remedies = noRemedies): Explanation {
+function explanationOfKind(kind: RejectionKind, explanations: Explanations | undefined): Explanation {
+  return explanations?.[kind] ?? explanationByKind[kind];
+}
+
+export function explanationOf(
+  rejection: ExplainedRejection,
+  remedies: Remedies = noRemedies,
+  explanations?: Explanations,
+): Explanation {
   const { reason, kind, because } = rejection;
   if (kind === undefined) {
     return explanationByReason[reason];
   }
-  const explanation = explanationByKind[kind];
+  const explanation = explanationOfKind(kind, explanations);
   const ofBoth =
     limitedCreditExplanationOf({ ...rejection, kind }) ??
     (because === undefined ? undefined : explanationByKindAndBecause[kind]?.[because]);
@@ -233,9 +241,9 @@ function rejectionWords(
   attempt: string,
   operationKind: OperationKind,
   rejection: Rejected,
-  remedies: Remedies,
+  { remedies, explanations }: RefusalTerms,
 ): string {
-  const { why, remedy, mayHaveChanged } = explanationOf(rejection, remedies);
+  const { why, remedy, mayHaveChanged } = explanationOf(rejection, remedies, explanations);
   const unchanged = operationKind === 'command' && mayHaveChanged === undefined ? ' Nothing was changed.' : '';
   return `Could not ${attempt}: ${why}.${unchanged} ${remedy}`;
 }
@@ -260,10 +268,10 @@ export function unsuccessfulWords(
   attempt: string,
   kind: OperationKind,
   outcome: Rejected | Failed | Cancelled,
-  remedies: Remedies = noRemedies,
+  terms: RefusalTerms = {},
 ): string {
   if (outcome.status === 'rejected') {
-    return rejectionWords(attempt, kind, outcome, remedies);
+    return rejectionWords(attempt, kind, outcome, terms);
   }
   return outcome.status === 'failed' ? failureWords(attempt, outcome) : cancellationWords(attempt, kind);
 }

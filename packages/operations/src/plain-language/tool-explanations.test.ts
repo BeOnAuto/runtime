@@ -151,7 +151,7 @@ describe('the remedies an operation gives of its own', () => {
   });
 
   it('end the words of a refusal for their because', () => {
-    expect(unsuccessfulWords('call the tool', 'command', notConfigured, ownRemedies)).toBe(
+    expect(unsuccessfulWords('call the tool', 'command', notConfigured, { remedies: ownRemedies })).toBe(
       `Could not call the tool: this server does not offer a tool it names, because whoever runs the server has not set up a tool server of that name for this playbook. Nothing was changed. ${serverNamed}`,
     );
   });

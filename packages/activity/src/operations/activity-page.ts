@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { resultKeyOf } from '../positions/activity-addresses.ts';
 import { newestFirst } from '../positions/activity-position.ts';
 import { activityName } from '../projections/activity-rows.ts';
-import type { ActivityKind, ActivityRow } from './activity-row.ts';
+import { seenKinds, type ActivityKind, type ActivityRow } from './activity-row.ts';
 import {
   activityTables,
   boundsOf,
@@ -36,7 +36,7 @@ interface TableRead {
 }
 
 function mineIn(table: ActivityTable, mine: string | undefined): readonly ProjectedCondition[] {
-  return table.kind === 'new' && mine !== undefined ? [{ column: 'by', equals: mine }] : [];
+  return seenKinds.has(table.kind) && mine !== undefined ? [{ column: 'by', equals: mine }] : [];
 }
 
 function rowsRead({ playbook, table, where }: TableRead, limit: number) {

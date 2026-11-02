@@ -1,3 +1,4 @@
+import { commentChanges, commentOperations } from '@on.auto/activity';
 import {
   definePublishEvent,
   makeDefinitionOperations,
@@ -21,8 +22,9 @@ export function playbookOperationsServing(
   return [
     ...makeDefinitionOperations(capabilities, facts, presenters),
     defineListPlaybookEvents(presenters),
-    defineListPlaybookChanges(presenters),
+    defineListPlaybookChanges(presenters, [commentChanges]),
     defineGetEvent(presenters),
     definePublishEvent(names),
+    ...commentOperations,
   ];
 }

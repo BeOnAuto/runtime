@@ -47,8 +47,13 @@ describe('what a caller has seen of the activity of the org, over HTTP', () => {
       false,
       false,
     ]);
-    expect(activity.counts).toEqual({ needs_you: 1, broken: 0, new: 5 });
-    expect((await read('?address=dana%40example.com')).counts).toEqual({ needs_you: 2, broken: 0, new: 5 });
+    expect(activity.counts).toEqual({ needs_you: 1, broken: 0, new: 5, comments: 0 });
+    expect((await read('?address=dana%40example.com')).counts).toEqual({
+      needs_you: 2,
+      broken: 0,
+      new: 5,
+      comments: 0,
+    });
     expect(activity.through).toBeNull();
   });
 
@@ -61,11 +66,14 @@ describe('what a caller has seen of the activity of the org, over HTTP', () => {
     const throughMarked = await marked({ through: newest });
 
     expect(ranAt).toHaveLength(1);
-    expect(itemMarked).toEqual({ counts: { needs_you: 1, broken: 0, new: 4 }, through: null });
+    expect(itemMarked).toEqual({ counts: { needs_you: 1, broken: 0, new: 4, comments: 0 }, through: null });
     expect(afterItem.rows.filter(({ seen }) => seen === true).map(({ address }) => address)).toEqual([
       `alpha/runs/${tallied}`,
     ]);
-    expect(throughMarked).toMatchObject({ counts: { needs_you: 1, broken: 0, new: 0 }, through: { cursor: newest } });
+    expect(throughMarked).toMatchObject({
+      counts: { needs_you: 1, broken: 0, new: 0, comments: 0 },
+      through: { cursor: newest },
+    });
     expect((await read()).rows.filter(({ seen }) => seen === false)).toEqual([]);
   });
 });

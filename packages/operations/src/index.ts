@@ -170,8 +170,10 @@ export { explanationOf, unsuccessfulWords, type ExplainedRejection } from './pla
 export { refusalInWords } from './plain-language/refusal-words.ts';
 export type {
   Explanation,
+  Explanations,
   LinkToOpen,
   PlainLanguage,
+  RefusalTerms,
   RegisteredPlainLanguage,
   Remedies,
 } from './plain-language/plain-language.ts';
@@ -274,6 +276,7 @@ export {
   studioLinkField,
   studioLinkTo,
   withStudioLink,
+  type CommentedPlace,
   type DefinitionSaved,
   type LinkedInStudio,
   type StudioLinkTo,

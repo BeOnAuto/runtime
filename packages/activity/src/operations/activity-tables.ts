@@ -1,16 +1,20 @@
 import type { ProjectedCondition, ProjectedKeyedRow } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
+import { commentKeyOf } from '../positions/activity-addresses.ts';
 import { isAfter, type ActivityPosition } from '../positions/activity-position.ts';
 import { activityName } from '../projections/activity-rows.ts';
 import { brokenName } from '../projections/broken-rows.ts';
+import { commentsName } from '../projections/comment-rows.ts';
 import { requestsName } from '../projections/request-rows.ts';
 import type { ActivityKind, ActivityRow } from './activity-row.ts';
+import { commentRowsOf } from './comment-activity-rows.ts';
 
 export interface ActivityTable {
   readonly kind: ActivityKind;
   readonly projection: string;
   readonly openColumn: string;
+  readonly rowKeyOf: (key: string) => string;
   readonly rowsOf: (playbook: string, kept: ProjectedKeyedRow) => readonly ActivityRow[];
 }
 
@@ -87,6 +91,7 @@ function requestOf(playbook: string, key: string, columns: RequestColumns): Acti
     form: 'request',
     position: { at: columns.at, playbook, key },
     by: columns.by,
+    by_name: null,
     change: null,
     trigger: columns.trigger,
     definition: definitionOf(columns),
@@ -98,6 +103,7 @@ function requestOf(playbook: string, key: string, columns: RequestColumns): Acti
     status: null,
     waits_on: columns.waits_on,
     expires_at: columns.expires_at,
+    about: null,
   };
 }
 
@@ -107,6 +113,7 @@ function brokenOf(playbook: string, key: string, columns: BrokenColumns): Activi
     form: 'broken',
     position: { at: columns.at, playbook, key },
     by: columns.ended_by,
+    by_name: null,
     change: null,
     trigger: columns.trigger,
     definition: { type: columns.definition_type, name: columns.definition_name, version: columns.version },
@@ -118,6 +125,7 @@ function brokenOf(playbook: string, key: string, columns: BrokenColumns): Activi
     status: columns.status,
     waits_on: null,
     expires_at: null,
+    about: null,
   };
 }
 
@@ -127,6 +135,7 @@ function newOf(playbook: string, key: string, columns: NewColumns): ActivityRow 
     form: columns.run_id === null ? 'version' : 'result',
     position: { at: columns.at, playbook, key },
     by: columns.by,
+    by_name: null,
     change: columns.change,
     trigger: columns.trigger,
     definition: definitionOf(columns),
@@ -138,13 +147,19 @@ function newOf(playbook: string, key: string, columns: NewColumns): ActivityRow 
     status: null,
     waits_on: null,
     expires_at: null,
+    about: null,
   };
+}
+
+function asKept(key: string): string {
+  return key;
 }
 
 const requestTable: ActivityTable = {
   kind: 'needs_you',
   projection: requestsName,
   openColumn: 'open',
+  rowKeyOf: asKept,
   rowsOf: (playbook, { key, row }) =>
     Option.toArray(requestColumnsOf(row)).map((columns) => requestOf(playbook, key, columns)),
 };
@@ -153,6 +168,7 @@ const brokenTable: ActivityTable = {
   kind: 'broken',
   projection: brokenName,
   openColumn: 'open',
+  rowKeyOf: asKept,
   rowsOf: (playbook, { key, row }) =>
     Option.toArray(brokenColumnsOf(row)).map((columns) => brokenOf(playbook, key, columns)),
 };
@@ -161,10 +177,19 @@ export const newTable: ActivityTable = {
   kind: 'new',
   projection: activityName,
   openColumn: 'listed',
+  rowKeyOf: asKept,
   rowsOf: (playbook, { key, row }) => Option.toArray(newColumnsOf(row)).map((columns) => newOf(playbook, key, columns)),
 };
 
-export const activityTables: readonly ActivityTable[] = [requestTable, brokenTable, newTable];
+export const commentTable: ActivityTable = {
+  kind: 'comment',
+  projection: commentsName,
+  openColumn: 'open',
+  rowKeyOf: (key) => key.slice(commentKeyOf('').length),
+  rowsOf: commentRowsOf,
+};
+
+export const activityTables: readonly ActivityTable[] = [requestTable, brokenTable, newTable, commentTable];
 
 export interface PageBounds {
   readonly cursor: ActivityPosition | undefined;

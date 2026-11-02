@@ -1,13 +1,12 @@
 import { OrgReader, type ProjectedCondition } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { itemOfAddress } from '../positions/activity-addresses.ts';
-import { activityName } from '../projections/activity-rows.ts';
+import { itemOfAddress, type ItemForm } from '../positions/activity-addresses.ts';
 import { brokenName } from '../projections/broken-rows.ts';
 import { anyMember, requestsName } from '../projections/request-rows.ts';
 import type { Mark } from '../projections/seen-rows.ts';
 import type { ActivityRow } from './activity-row.ts';
-import { newTable } from './activity-tables.ts';
+import { commentTable, newTable, type ActivityTable } from './activity-tables.ts';
 import { isSeenBy, type Viewer } from './activity-viewer.ts';
 
 const localDeveloper = 'local';
@@ -16,11 +15,20 @@ interface ActivityCounts {
   readonly needs_you: number;
   readonly broken: number;
   readonly new: number;
+  readonly comments: number;
 }
 
 const open: ProjectedCondition = { column: 'open', equals: true };
 
-const listed: ProjectedCondition = { column: 'listed', equals: true };
+const tablesOfForms: Readonly<Partial<Record<ItemForm, ActivityTable>>> = {
+  result: newTable,
+  version: newTable,
+  comment: commentTable,
+};
+
+function openIn(table: ActivityTable): ProjectedCondition {
+  return { column: table.openColumn, equals: true };
+}
 
 function needsYouIn(viewer: Viewer, playbook: string) {
   return Effect.gen(function* () {
@@ -36,14 +44,14 @@ function needsYouIn(viewer: Viewer, playbook: string) {
   });
 }
 
-function isCountedMark(viewer: Viewer, playbook: string, mark: Mark) {
+function isCountedMark(viewer: Viewer, table: ActivityTable, playbook: string, mark: Mark) {
   return Effect.gen(function* () {
     const item = itemOfAddress(mark.address);
-    if (item?.playbook !== playbook || (item.form !== 'result' && item.form !== 'version')) {
+    if (item?.playbook !== playbook || tablesOfForms[item.form] !== table) {
       return false;
     }
-    const [kept] = yield* (yield* OrgReader).readPlaybookRows(playbook, activityName, {
-      where: [listed, { column: 'row_key', equals: item.key }],
+    const [kept] = yield* (yield* OrgReader).readPlaybookRows(playbook, table.projection, {
+      where: [openIn(table), { column: 'row_key', equals: table.rowKeyOf(item.key) }],
       orderBy: [],
       order: 'asc',
       limit: 1,
@@ -53,31 +61,31 @@ function isCountedMark(viewer: Viewer, playbook: string, mark: Mark) {
   });
 }
 
-function unseenTiedIn(viewer: Viewer, playbook: string) {
+function unseenTiedIn(viewer: Viewer, table: ActivityTable, playbook: string) {
   return Effect.gen(function* () {
-    const tied = yield* (yield* OrgReader).readPlaybookRows(playbook, activityName, {
-      where: [listed, { column: 'at', equals: viewer.through.at }],
+    const tied = yield* (yield* OrgReader).readPlaybookRows(playbook, table.projection, {
+      where: [openIn(table), { column: 'at', equals: viewer.through.at }],
       orderBy: [],
       order: 'asc',
       limit: 1000,
     });
-    return tied.flatMap((each) => newTable.rowsOf(playbook, each)).filter((row) => !isSeenBy(viewer, row)).length;
+    return tied.flatMap((each) => table.rowsOf(playbook, each)).filter((row) => !isSeenBy(viewer, row)).length;
   });
 }
 
-function newIn(viewer: Viewer, playbook: string) {
+function unseenIn(viewer: Viewer, table: ActivityTable, playbook: string) {
   return Effect.gen(function* () {
     const reader = yield* OrgReader;
     const after: ProjectedCondition = { column: 'at', after: viewer.through.at };
-    const all = yield* reader.countPlaybookRows(playbook, activityName, [listed, after]);
-    const own = yield* reader.countPlaybookRows(playbook, activityName, [
-      listed,
+    const all = yield* reader.countPlaybookRows(playbook, table.projection, [openIn(table), after]);
+    const own = yield* reader.countPlaybookRows(playbook, table.projection, [
+      openIn(table),
       { column: 'by', equals: viewer.caller },
       after,
     ]);
     const marks = viewer.seen.marks.filter(({ at }) => at > viewer.through.at);
-    const marked = yield* Effect.forEach(marks, (mark) => isCountedMark(viewer, playbook, mark));
-    const tied = yield* unseenTiedIn(viewer, playbook);
+    const marked = yield* Effect.forEach(marks, (mark) => isCountedMark(viewer, table, playbook, mark));
+    const tied = yield* unseenTiedIn(viewer, table, playbook);
     return all - own - marked.filter(Boolean).length + tied;
   });
 }
@@ -88,7 +96,8 @@ function countsIn(viewer: Viewer, playbook: string) {
     const counted: ActivityCounts = {
       needs_you: yield* needsYouIn(viewer, playbook),
       broken: yield* reader.countPlaybookRows(playbook, brokenName, [open]),
-      new: yield* newIn(viewer, playbook),
+      new: yield* unseenIn(viewer, newTable, playbook),
+      comments: yield* unseenIn(viewer, commentTable, playbook),
     };
     return counted;
   });
@@ -110,6 +119,7 @@ export function countsFor({ viewer, readable, changes }: CountedActivity) {
       needs_you: each.reduce((sum, { needs_you: count }) => sum + count, 0),
       broken: each.reduce((sum, { broken }) => sum + broken, 0),
       new: each.reduce((sum, counted) => sum + counted.new, unseenChanges),
+      comments: each.reduce((sum, { comments }) => sum + comments, 0),
     };
     return counts;
   });

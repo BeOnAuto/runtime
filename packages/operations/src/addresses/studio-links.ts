@@ -12,7 +12,19 @@ export type StudioPage =
       readonly version: number;
       readonly saved?: DefinitionSaved;
     }
-  | { readonly kind: 'run'; readonly playbook: string; readonly run: string };
+  | { readonly kind: 'run'; readonly playbook: string; readonly run: string }
+  | { readonly kind: 'comment'; readonly playbook: string; readonly comment: string; readonly on: CommentedPlace };
+
+export type CommentedPlace =
+  | { readonly kind: 'playbook' }
+  | {
+      readonly kind: 'definition';
+      readonly type: string;
+      readonly name: string;
+      readonly version: number;
+      readonly step?: string;
+    }
+  | { readonly kind: 'run'; readonly run: string; readonly event?: string; readonly block?: number };
 
 export type StudioLinkTo = (page?: StudioPage) => string;
 
