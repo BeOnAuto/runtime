@@ -84,6 +84,7 @@ describe('execute over MCP', () => {
     const listed = await on(server, '/mcp', builder.key, async (session) => listedTools(await session.listTools()));
 
     expect(listed.find(({ name }) => name === 'execute')?.annotations).toEqual({
+      title: 'Execute a tool call',
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,

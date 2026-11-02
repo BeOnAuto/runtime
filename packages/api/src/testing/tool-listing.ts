@@ -4,6 +4,7 @@ import { withPlaybookArgument } from '../tools/playbook-argument.ts';
 
 const ListedToolSchema = Schema.Struct({
   name: Schema.String,
+  title: Schema.optionalKey(Schema.String),
   description: Schema.optionalKey(Schema.String),
   annotations: Schema.optionalKey(Schema.Record(Schema.String, Schema.Unknown)),
   inputSchema: Schema.Record(Schema.String, Schema.Unknown),

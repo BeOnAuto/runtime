@@ -132,15 +132,16 @@ describe('introspect and dry_run over MCP', () => {
     );
 
     expect(tools.filter(({ name }) => name === 'validate')).toEqual([]);
+    const onlyReading = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true };
     expect(
-      tools.filter(({ name }) => ['dry_run', 'introspect'].includes(name)).map(({ annotations }) => annotations),
-    ).toEqual(
-      Array.from({ length: 2 }, () => ({
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: true,
-      })),
-    );
+      Object.fromEntries(
+        tools
+          .filter(({ name }) => ['dry_run', 'introspect'].includes(name))
+          .map(({ name, annotations }) => [name, annotations]),
+      ),
+    ).toEqual({
+      dry_run: { title: 'Dry run a tool call', ...onlyReading },
+      introspect: { title: 'Introspect a tool', ...onlyReading },
+    });
   });
 });

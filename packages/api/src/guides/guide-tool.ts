@@ -30,6 +30,8 @@ function descriptionFollowing(recipes: Followed): string {
   return `${guideToolDescription} It holds ${held} ${inTurn(names)}, which the tools listed here can follow.`;
 }
 
+const guideToolTitle = 'Get guide';
+
 export const guideArgumentDescription =
   'The guide to read: terminology, a definition format, or a recipe for a common task';
 
@@ -39,7 +41,7 @@ const failureOf = SchemaIssue.makeFormatterStandardSchemaV1();
 
 export function guideToolDefinitionOf({ everyGuide }: GuideShelf, followed: Followed): ToolDefinition {
   return {
-    title: 'Get guide',
+    title: guideToolTitle,
     description: descriptionFollowing(followed),
     inputSchema: advertisedSchema({
       $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -50,7 +52,13 @@ export function guideToolDefinitionOf({ everyGuide }: GuideShelf, followed: Foll
       required: ['guide'],
       additionalProperties: false,
     }),
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    annotations: {
+      title: guideToolTitle,
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   };
 }
 

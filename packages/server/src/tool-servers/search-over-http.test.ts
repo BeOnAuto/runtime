@@ -179,6 +179,7 @@ describe('search over MCP', () => {
     }));
 
     expect(listedTools(tools).find(({ name }) => name === 'search')?.annotations).toEqual({
+      title: 'Search tools',
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,

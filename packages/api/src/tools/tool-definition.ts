@@ -9,7 +9,7 @@ import {
 } from '../bounds/served-bounds.ts';
 import { argumentDescriptionsIn } from './argument-descriptions.ts';
 import { withPlaybookArgument } from './playbook-argument.ts';
-import { advertisedSchema, selfContainedSchemaOf, type JsonSchema } from './tool-schema.ts';
+import { advertisedSchema, selfContainedSchemaOf, withEveryArgumentTyped, type JsonSchema } from './tool-schema.ts';
 
 export interface ToolDefinition {
   readonly title: string;
@@ -19,6 +19,7 @@ export interface ToolDefinition {
 }
 
 function annotationsOf({
+  title,
   kind,
   reachesOutside,
   mayChangeOutside,
@@ -26,6 +27,7 @@ function annotationsOf({
   repeatable,
 }: Registration): ToolAnnotations {
   return {
+    title,
     readOnlyHint: kind === 'query',
     destructiveHint: irreversible || mayChangeOutside,
     idempotentHint: kind === 'query' || repeatable,
@@ -50,7 +52,7 @@ function definitionWith(registration: Registration, inputSchema: Readonly<JsonSc
   return {
     title: registration.title,
     description: registration.description,
-    inputSchema: advertisedSchema(inputSchema),
+    inputSchema: advertisedSchema(withEveryArgumentTyped(inputSchema)),
     annotations: annotationsOf(registration),
   };
 }

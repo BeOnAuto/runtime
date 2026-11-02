@@ -71,6 +71,35 @@ export function selfContainedSchemaOf(document: JsonSchemaDocument): JsonSchema 
   return Object.keys(document.definitions).length === 0 ? root : { ...root, $defs: { ...document.definitions } };
 }
 
+const everyJsonType = ['object', 'array', 'string', 'number', 'boolean', 'null'];
+
+const keywordsThatSayWhatAValueIs = new Set(['type', '$ref', 'anyOf', 'oneOf', 'allOf', 'enum', 'const', 'not']);
+
+function saysWhatItIs(schema: Readonly<JsonSchema>): boolean {
+  return Object.keys(schema).some((keyword) => keywordsThatSayWhatAValueIs.has(keyword));
+}
+
+function typedArgument(schema: unknown): unknown {
+  if (!Predicate.isObject(schema)) {
+    return schema;
+  }
+  const typed = withEveryArgumentTyped(schema);
+  return saysWhatItIs(typed) ? typed : { type: everyJsonType, ...typed };
+}
+
+export function withEveryArgumentTyped(schema: Readonly<JsonSchema>): JsonSchema {
+  const { properties } = schema;
+  if (!Predicate.isObject(properties)) {
+    return { ...schema };
+  }
+  return {
+    ...schema,
+    properties: Object.fromEntries(
+      Object.entries(properties).map(([name, argument]: readonly [string, unknown]) => [name, typedArgument(argument)]),
+    ),
+  };
+}
+
 export function advertisedSchema(jsonSchema: Readonly<JsonSchema>): StandardSchemaWithJSON {
   return {
     '~standard': {
