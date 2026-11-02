@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { advertisedSchema, selfContainedSchemaOf, withoutUnreferencedDefinitions } from './tool-schema.ts';
+import {
+  advertisedSchema,
+  selfContainedSchemaOf,
+  withEveryArgumentTyped,
+  withoutUnreferencedDefinitions,
+  type JsonSchema,
+} from './tool-schema.ts';
 
 const dialect = 'https://json-schema.org/draft/2020-12/schema';
 
@@ -99,5 +105,48 @@ describe('advertisedSchema', () => {
       output: { $schema: dialect, type: 'object' },
       validated: { value: { anything: 1 } },
     });
+  });
+});
+
+describe('withEveryArgumentTyped', () => {
+  const everyJsonType = ['object', 'array', 'string', 'number', 'boolean', 'null'];
+
+  it('gives an argument that says nothing of what it takes every JSON type, nested arguments too', () => {
+    const schema = {
+      type: 'object',
+      properties: {
+        answer: { description: 'Any answer' },
+        event: { type: 'object', properties: { data: {} } },
+      },
+    };
+
+    expect(withEveryArgumentTyped(schema)).toEqual({
+      type: 'object',
+      properties: {
+        answer: { type: everyJsonType, description: 'Any answer' },
+        event: { type: 'object', properties: { data: { type: everyJsonType } } },
+      },
+    });
+  });
+
+  it.each<readonly [string, Readonly<JsonSchema>]>([
+    ['a type', { type: 'string' }],
+    ['a reference', { $ref: '#/$defs/Playbook' }],
+    ['a choice of schemas', { anyOf: [{ type: 'string' }, { type: 'null' }] }],
+    ['its values', { enum: ['first', 'second'] }],
+    ['a constant', { const: 'only' }],
+  ])('leaves an argument that names %s as it is', (_case, argument) => {
+    expect(withEveryArgumentTyped({ type: 'object', properties: { argument } })).toEqual({
+      type: 'object',
+      properties: { argument },
+    });
+  });
+
+  it('leaves a boolean schema and a schema without properties as they are', () => {
+    expect(withEveryArgumentTyped({ type: 'object', properties: { anything: true } })).toEqual({
+      type: 'object',
+      properties: { anything: true },
+    });
+    expect(withEveryArgumentTyped({ type: 'string' })).toEqual({ type: 'string' });
   });
 });

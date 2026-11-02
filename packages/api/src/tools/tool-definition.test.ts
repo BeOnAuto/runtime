@@ -49,6 +49,34 @@ describe('the read-only hint of a tool', () => {
   });
 });
 
+describe('the title annotation of a tool', () => {
+  it('is the title of its operation, so a directory shows a readable name', () => {
+    expect(toolDefinitionOf(askingWith({}).registration).annotations.title).toBe('Ask weather');
+  });
+});
+
+describe('an argument that takes any JSON value', () => {
+  it('is advertised with every JSON type, so a client that needs a type for each argument accepts it', () => {
+    const answering = defineQuery('org', {
+      name: 'ask_answer',
+      title: 'Ask answer',
+      description: 'Asks with any answer. Use it to send an answer. It answers nothing.',
+      route: { method: 'POST', path: '/answer' },
+      inputSchema: Schema.Struct({ answer: Schema.Json.annotate({ description: 'Any answer' }) }),
+      outputSchema: Nothing,
+      reasons: [],
+      handle: () => Effect.succeed({}),
+    });
+    const schema = toolDefinitionOf(answering.registration).inputSchema['~standard'].jsonSchema.input({
+      target: 'draft-2020-12',
+    });
+
+    expect(schema['properties']).toEqual({
+      answer: { type: ['object', 'array', 'string', 'number', 'boolean', 'null'], description: 'Any answer' },
+    });
+  });
+});
+
 describe('the destructive hint of a tool', () => {
   it('is true when its operation says it may change something outside the server, and false otherwise', () => {
     const changing = toolDefinitionOf(askingWith({ reachesOutside: true, mayChangeOutside: true }).registration);

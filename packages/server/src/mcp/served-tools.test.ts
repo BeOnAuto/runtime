@@ -42,8 +42,6 @@ const formatGuides = [
 
 const listingEveryFormat: unknown = expect.arrayContaining(formatGuides);
 
-const anyJsonValue: ReadonlySet<string> = new Set(['input', 'answer', 'sample_output']);
-
 const PropertiesSchema = Schema.Struct({
   properties: Schema.optionalKey(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown))),
 });
@@ -87,8 +85,8 @@ function isUndescribedOrLong({ description }: Argument): boolean {
   return typeof description !== 'string' || description.length >= 300;
 }
 
-function hasNoConstraint({ name, keywords }: Argument): boolean {
-  return keywords.length === 0 && !anyJsonValue.has(name);
+function hasNoConstraint({ keywords }: Argument): boolean {
+  return keywords.length === 0;
 }
 
 describe('the descriptions of the tools of /mcp', () => {
@@ -190,7 +188,7 @@ describe('the arguments of the tools of /mcp', () => {
     expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBe(223);
   });
 
-  it('each give their constraints as keywords, but an argument that takes any JSON value', () => {
+  it('each give their constraints as keywords, an argument that takes any JSON value every JSON type', () => {
     expect(
       everyArgument()
         .filter((argument) => hasNoConstraint(argument))
