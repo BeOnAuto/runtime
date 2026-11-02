@@ -12,7 +12,7 @@ export interface Viewer {
   readonly address: string | undefined;
   readonly seen: Seen;
   readonly through: ActivityPosition;
-  readonly marked: ReadonlySet<string>;
+  readonly marked: ReadonlyMap<string, number>;
 }
 
 export interface ServedThrough {
@@ -35,13 +35,18 @@ export const viewerOf = Effect.fnUntraced(function* (caller: string, address: st
     address,
     seen,
     through: seen.through ?? { at: now - unmarkedLookback, playbook: '', key: '' },
-    marked: new Set(seen.marks.map(({ address: marked }) => marked)),
+    marked: new Map(seen.marks.map(({ address: marked, at }) => [marked, at])),
   };
   return viewer;
 });
 
 export function isSeenBy(viewer: Viewer, row: ActivityRow): boolean {
-  return row.by === viewer.caller || viewer.marked.has(addressOfRow(row)) || !isAfter(row.position, viewer.through);
+  const markedAt = viewer.marked.get(addressOfRow(row));
+  return (
+    (row.reopenedBy ?? row.by) === viewer.caller ||
+    (markedAt !== undefined && markedAt >= row.position.at) ||
+    !isAfter(row.position, viewer.through)
+  );
 }
 
 export function throughOf({ through, seenAt }: Seen): ServedThrough | null {

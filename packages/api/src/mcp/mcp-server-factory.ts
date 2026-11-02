@@ -19,9 +19,16 @@ import {
   type OrgCall,
 } from '../hand-off/caller-hand-off.ts';
 import { toolCallbackOf, type AnsweringServing, type ToolLink } from '../tools/linked-answers.ts';
-import { playbookArgumentOf, withoutPlaybook } from '../tools/playbook-argument.ts';
+import { namesAPlaybook, playbookArgumentOf, withoutPlaybook } from '../tools/playbook-argument.ts';
 import type { Arguments, CalledTool, Dispatch } from '../tools/tool-callback.ts';
-import { toolDefinitionOf, toolDefinitionTakingPlaybookOf, type ToolDefinition } from '../tools/tool-definition.ts';
+import {
+  orgToolDefinitionsBeside,
+  toolDefinitionOf,
+  toolDefinitionTakingPlaybookOf,
+  twinsIn,
+  type ToolDefinition,
+  type Twins,
+} from '../tools/tool-definition.ts';
 import type { ServedTools } from './instructions.ts';
 import { connectionOf, serverOf, type Connection, type EveryTool, type McpServing } from './mcp-connection.ts';
 
@@ -109,16 +116,20 @@ function asGiven(input: Arguments): Arguments {
 function toolsOf<R extends Registration>(
   offers: readonly Offered<R>[],
   dispatchOf: (registration: R) => Dispatching,
-  operationInputOf: (input: Arguments) => Arguments = asGiven,
+  operationInputOf: (registration: R) => (input: Arguments) => Arguments = () => asGiven,
 ): readonly Tool[] {
   return offers.map(({ registration, definition, plainLanguage }) => ({
     name: registration.name,
     definition,
     kind: registration.kind,
     plainLanguage,
-    operationInputOf,
+    operationInputOf: operationInputOf(registration),
     ...dispatchOf(registration),
   }));
+}
+
+function orgInputBeside(twins: Twins): (registration: Registration<'org'>) => (input: Arguments) => Arguments {
+  return ({ name }) => (twins.has(name) ? withoutPlaybook : asGiven);
 }
 
 function dispatchingOf<R>(
@@ -168,12 +179,19 @@ function serverWithTools(connected: ConnectedCall, served: ServedTools, tools: r
 
 function orgDispatchOf(
   dispatcher: Dispatcher,
-  { caller, org }: OrgCall,
+  call: OrgCall,
+  twins: Twins,
 ): (registration: Registration<'org'>) => Dispatching {
+  const { caller, org } = call;
+  const dispatchToTwin = playbookArgumentDispatchTo(dispatcher, call);
   const dispatchTo =
     (registration: Registration<'org'>): Dispatch =>
-    (input) =>
-      dispatcher.dispatchToOrg(registration, { caller, org, input, encoding: 'json' });
+    (input) => {
+      const twin = twins.get(registration.name);
+      return twin !== undefined && namesAPlaybook(input)
+        ? dispatchToTwin(twin)(input)
+        : dispatcher.dispatchToOrg(registration, { caller, org, input, encoding: 'json' });
+    };
   return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
 }
 
@@ -188,28 +206,45 @@ function playbookDispatchOf(
   return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
 }
 
-function playbookArgumentDispatchOf(
+function playbookArgumentDispatchTo(
   dispatcher: Dispatcher,
   { caller, org }: OrgCall,
+): (registration: Registration<'playbook'>) => Dispatch {
+  return (registration) => (input) => {
+    const argument = playbookArgumentOf(input);
+    return Result.isFailure(argument)
+      ? Effect.succeed(argument.failure)
+      : dispatcher.dispatchToPlaybook(registration, { caller, org, ...argument.success, encoding: 'json' });
+  };
+}
+
+function playbookArgumentDispatchOf(
+  dispatcher: Dispatcher,
+  call: OrgCall,
 ): (registration: Registration<'playbook'>) => Dispatching {
-  const dispatchTo =
-    (registration: Registration<'playbook'>): Dispatch =>
-    (input) => {
-      const argument = playbookArgumentOf(input);
-      return Result.isFailure(argument)
-        ? Effect.succeed(argument.failure)
-        : dispatcher.dispatchToPlaybook(registration, { caller, org, ...argument.success, encoding: 'json' });
-    };
+  const dispatchTo = playbookArgumentDispatchTo(dispatcher, call);
   return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
 }
 
+interface OrgServing {
+  readonly registrations: readonly Registration<'org'>[];
+  readonly twins: Twins;
+  readonly offers: readonly Offered<Registration<'org'>>[];
+}
+
+function orgServingOf(serving: ToolServing): OrgServing {
+  const registrations = servedAsTools(serving.catalog.operationsIn('org'));
+  const twins = twinsIn(registrations, servedAsTools(serving.catalog.operationsIn('playbook')));
+  return { registrations, twins, offers: offered(registrations, orgToolDefinitionsBeside(twins)) };
+}
+
 export function orgServerFactory(serving: ToolServing): McpServerFactory {
-  const orgOffers = offered(servedAsTools(serving.catalog.operationsIn('org')), toolDefinitionOf);
+  const { twins, offers: orgOffers } = orgServingOf(serving);
   const connection = connectionOf('org', serving, everyToolOf(orgOffers, []));
   return (context) => {
     const call = orgCallOf(context);
     const listed = permittedTo(call.caller, orgOffers);
-    const tools = toolsOf(listed, orgDispatchOf(serving.dispatcher, call));
+    const tools = toolsOf(listed, orgDispatchOf(serving.dispatcher, call, twins), orgInputBeside(twins));
     return serverWithTools({ connection, serving, call }, servedTools(listed, []), tools);
   };
 }
@@ -234,8 +269,7 @@ function namedInPlaybookAlone(
 }
 
 export function catalogServerFactory(serving: ToolServing): McpServerFactory {
-  const orgRegistrations = servedAsTools(serving.catalog.operationsIn('org'));
-  const orgOffers = offered(orgRegistrations, toolDefinitionOf);
+  const { registrations: orgRegistrations, twins, offers: orgOffers } = orgServingOf(serving);
   const playbookOffers = offered(
     namedInPlaybookAlone(servedAsTools(serving.catalog.operationsIn('playbook')), orgRegistrations),
     toolDefinitionTakingPlaybookOf,
@@ -246,8 +280,8 @@ export function catalogServerFactory(serving: ToolServing): McpServerFactory {
     const listedInOrg = permittedTo(call.caller, orgOffers);
     const listedInPlaybook = permittedTo(call.caller, playbookOffers);
     const tools = [
-      ...toolsOf(listedInOrg, orgDispatchOf(serving.dispatcher, call)),
-      ...toolsOf(listedInPlaybook, playbookArgumentDispatchOf(serving.dispatcher, call), withoutPlaybook),
+      ...toolsOf(listedInOrg, orgDispatchOf(serving.dispatcher, call, twins), orgInputBeside(twins)),
+      ...toolsOf(listedInPlaybook, playbookArgumentDispatchOf(serving.dispatcher, call), () => withoutPlaybook),
     ];
     return serverWithTools({ connection, serving, call }, servedTools(listedInOrg, listedInPlaybook), tools);
   };

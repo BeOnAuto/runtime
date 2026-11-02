@@ -1,7 +1,7 @@
 import { InvalidInput } from '@on.auto/operations';
 import { Schema, SchemaTransformation } from 'effect';
 
-import { ResolvedHowSchema } from '../facts/comment-facts.ts';
+import { ResolvedHowSchema, isFraction } from '../facts/comment-facts.ts';
 import { mostAddressCharacters } from '../positions/comment-addresses.ts';
 
 const mostTextCharacters = 4000;
@@ -20,8 +20,24 @@ export const AddressInputField = Schema.String.check(
   Schema.isMinLength(1),
   Schema.isMaxLength(mostAddressCharacters),
 ).annotate({
-  description: `The address of what the comment is about, naming this playbook, at most ${mostAddressCharacters} characters`,
+  description: `The address of what the comment is about, a thing of the playbook, or of the organization for its own comments, at most ${mostAddressCharacters} characters`,
 });
+
+const FractionField = (description: string) => Schema.Finite.annotate({ description });
+
+export const AnchorInputField = Schema.Struct({
+  x: FractionField("From the thing's left edge to its right, 0 to 1 with at most 4 decimals"),
+  y: FractionField("From the thing's top to its bottom, 0 to 1 with at most 4 decimals"),
+})
+  .check(
+    Schema.makeFilter(({ x, y }: { readonly x: number; readonly y: number }) => isFraction(x) && isFraction(y), {
+      expected: 'x and y, each a number from 0 to 1 with at most 4 decimals',
+    }),
+  )
+  .annotate({
+    description:
+      "Where on the thing the person dropped the comment, as fractions of the thing's box; left out, or null, for a comment made without a pin, as a reply is",
+  });
 
 export const TextInputField = Schema.String.check(
   Schema.isMinLength(1),

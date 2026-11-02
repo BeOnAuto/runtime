@@ -10,7 +10,7 @@ import {
 import { DateTime, Effect, Schema } from 'effect';
 
 import { activityStreamOf, seenDecider, type SeenItem } from '../facts/activity-seen.ts';
-import { itemOfAddress } from '../positions/activity-addresses.ts';
+import { itemOfAddress, orgSegment, type ActivityItem } from '../positions/activity-addresses.ts';
 import { countsFor } from './activity-counts.ts';
 import {
   AddressField,
@@ -48,6 +48,15 @@ const MarkActivitySeenOutputSchema = Schema.Struct({ counts: ActivityCountsSchem
 
 const isoTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/u;
 
+const theOrgsComments =
+  "The caller may not mark the organization's comments, which only a caller who may access every playbook sees";
+
+function forbiddenDetailOf({ form, playbook }: ActivityItem): string {
+  return form === 'comment' && playbook === orgSegment
+    ? theOrgsComments
+    : `The caller may not access the playbook ${playbook}`;
+}
+
 function seenItemAt(
   caller: CallerIdentity,
   { address, at }: SeenItem,
@@ -62,7 +71,7 @@ function seenItemAt(
   }
   return canAccessPlaybook(caller.playbooks, item.playbook)
     ? Effect.succeed({ address, at: isoOf(time) })
-    : Effect.fail(new Forbidden({ detail: `The caller may not access the playbook ${item.playbook}` }));
+    : Effect.fail(new Forbidden({ detail: forbiddenDetailOf(item) }));
 }
 
 const marked = Effect.fnUntraced(function* ({ items = [], through: cursor, address: asked }: MarkActivitySeenInput) {
@@ -83,7 +92,7 @@ const marked = Effect.fnUntraced(function* ({ items = [], through: cursor, addre
   const viewer = yield* viewerOf(caller.id, address);
   const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
   return {
-    counts: yield* countsFor({ viewer, readable, changes: register.changes }),
+    counts: yield* countsFor({ viewer, readable, withTheOrg: caller.playbooks === '*', changes: register.changes }),
     through: throughOf(viewer.seen),
   };
 });

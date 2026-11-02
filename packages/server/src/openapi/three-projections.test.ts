@@ -32,6 +32,8 @@ afterAll(async () => {
 });
 
 const servedOverHttpAlone: ReadonlySet<string> = new Set([
+  'get_voice',
+  'transcribe',
   'get_playbook',
   'get_connection',
   'read_link',
@@ -53,6 +55,9 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'list_playbook_changes',
   'render_page',
   'make_comment',
+  'make_comment_in_org',
+  'reopen_comment',
+  'reopen_comment_in_org',
   'get_content',
   'move_memory',
   'list_memories',
@@ -88,14 +93,14 @@ describe('the operations of the document and the tools of the endpoints', () => 
     expect(servedAsTools().map((described) => toolsOf(described).map(({ description }) => description))).toEqual(
       servedAsTools().map(({ operation }) => [operation.description]),
     );
-    expect(servedAsTools()).toHaveLength(36);
+    expect(servedAsTools()).toHaveLength(38);
   });
 
   it('leave no tool of an endpoint without its operation, and give none to an operation served over HTTP alone', () => {
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(25);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(30);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

@@ -26,7 +26,7 @@ function listed(issues: readonly FailureIssue[]): string {
   return shown.length === 0 ? '' : ` (${shown.join('; ')})`;
 }
 
-function waitFor(retryAfterMs: number | undefined): string {
+export function waitFor(retryAfterMs: number | undefined): string {
   if (retryAfterMs === undefined) {
     return 'later';
   }
@@ -36,7 +36,7 @@ function waitFor(retryAfterMs: number | undefined): string {
 
 const counted = new Intl.NumberFormat('en');
 
-function saidBy(providerMessage: string | undefined): string {
+export function saidBy(providerMessage: string | undefined): string {
   return providerMessage === undefined ? '' : `. The provider said: ${providerMessage}`;
 }
 

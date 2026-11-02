@@ -50,32 +50,40 @@
       "sql": "CREATE INDEX assets_1_expiring ON assets_1 (expires_at) WHERE expires_at IS NOT NULL"
     },
     {
-      "name": "comments_1",
-      "sql": "CREATE TABLE comments_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, address TEXT, text TEXT, by TEXT, by_name TEXT, at INTEGER, open INTEGER, resolved_at INTEGER, resolved_by TEXT, resolved_how TEXT, about_run TEXT, about_version TEXT, about_definition TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "name": "comments_2",
+      "sql": "CREATE TABLE comments_2 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, address TEXT, text TEXT, anchor_x INTEGER, anchor_y INTEGER, by TEXT, by_name TEXT, at INTEGER, open INTEGER, resolved_at INTEGER, resolved_by TEXT, resolved_how TEXT, reopened_at INTEGER, reopened_by TEXT, listed_at INTEGER, listed_by TEXT, about_run TEXT, about_version TEXT, about_definition TEXT, about_thing TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "comments_1_about_definition",
-      "sql": "CREATE INDEX comments_1_about_definition ON comments_1 (playbook_key, about_definition, open, at, row_key)"
+      "name": "comments_2_about_definition",
+      "sql": "CREATE INDEX comments_2_about_definition ON comments_2 (playbook_key, about_definition, open, at, row_key)"
     },
     {
-      "name": "comments_1_about_run",
-      "sql": "CREATE INDEX comments_1_about_run ON comments_1 (playbook_key, about_run, open, at, row_key)"
+      "name": "comments_2_about_run",
+      "sql": "CREATE INDEX comments_2_about_run ON comments_2 (playbook_key, about_run, open, at, row_key)"
     },
     {
-      "name": "comments_1_about_version",
-      "sql": "CREATE INDEX comments_1_about_version ON comments_1 (playbook_key, about_version, open, at, row_key)"
+      "name": "comments_2_about_thing",
+      "sql": "CREATE INDEX comments_2_about_thing ON comments_2 (playbook_key, about_thing, open, at, row_key)"
     },
     {
-      "name": "comments_1_address",
-      "sql": "CREATE INDEX comments_1_address ON comments_1 (playbook_key, address, open, at, row_key)"
+      "name": "comments_2_about_version",
+      "sql": "CREATE INDEX comments_2_about_version ON comments_2 (playbook_key, about_version, open, at, row_key)"
     },
     {
-      "name": "comments_1_open",
-      "sql": "CREATE INDEX comments_1_open ON comments_1 (playbook_key, open, at, row_key)"
+      "name": "comments_2_address",
+      "sql": "CREATE INDEX comments_2_address ON comments_2 (playbook_key, address, open, at, row_key)"
     },
     {
-      "name": "comments_1_open_by",
-      "sql": "CREATE INDEX comments_1_open_by ON comments_1 (playbook_key, open, by, at, row_key)"
+      "name": "comments_2_listed",
+      "sql": "CREATE INDEX comments_2_listed ON comments_2 (playbook_key, open, listed_at, row_key)"
+    },
+    {
+      "name": "comments_2_listed_by",
+      "sql": "CREATE INDEX comments_2_listed_by ON comments_2 (playbook_key, open, listed_by, listed_at, row_key)"
+    },
+    {
+      "name": "comments_2_open",
+      "sql": "CREATE INDEX comments_2_open ON comments_2 (playbook_key, open, at, row_key)"
     },
     {
       "name": "content_references_1",

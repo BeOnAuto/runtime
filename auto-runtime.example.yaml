@@ -39,6 +39,11 @@ model_aliases:
 #   - anthropic/*
 #   - gateway/anthropic/claude-haiku-4-5
 
+# The model that writes out what a person says, which Studio offers beside each
+# comment field: openai/<model> with OPENAI_API_KEY set, or <gateway>/<model> for
+# an entry above whose gateway serves /audio/transcriptions. None when left out.
+# voice_model: gateway/whisper-1
+
 # The tool servers whose tools a function may name, a reasoning function in its
 # tools key and an interaction function in deliver, each bound to an org and,
 # optionally, to some of its playbooks. Each is one of three types, taken from

@@ -1,20 +1,21 @@
 import { Effect } from 'effect';
 
 import { modelCatalogOf } from '../catalog/model-catalog.ts';
-import type { LanguageModel } from '../model/language-model.ts';
 import { offeredModels, type OfferedModels } from '../model/offered-models.ts';
 import { resolvedLanguageModel } from '../model/resolved-language-model.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import { providerStatus, type ProviderStatus } from '../settings/provider-status.ts';
+import { transcriberOf } from '../voice/transcriber.ts';
 import { azureTokensFor, noEntraIdentity } from './entra-id.ts';
 import type { ModelAccessOptions } from './model-access-options.ts';
 import { modelFactories } from './model-factories.ts';
 
 export interface ModelAccess {
-  readonly languageModel: LanguageModel['Service'];
+  readonly languageModel: ReturnType<typeof resolvedLanguageModel>;
   readonly status: ProviderStatus;
   readonly offered: OfferedModels;
   readonly catalog: ReturnType<typeof modelCatalogOf>;
+  readonly voice: ReturnType<typeof transcriberOf>;
 }
 
 export const makeModelAccess = Effect.fnUntraced(function* (settings: ModelSettings, options: ModelAccessOptions = {}) {
@@ -33,6 +34,7 @@ export const makeModelAccess = Effect.fnUntraced(function* (settings: ModelSetti
     status,
     offered: offeredModels(status.configured, settings.aliases, settings.allowed),
     catalog: modelCatalogOf(settings, status, { ...options, fetch }),
+    voice: transcriberOf(settings, { ...options, fetch }),
   };
   return access;
 });

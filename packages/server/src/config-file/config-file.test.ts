@@ -19,6 +19,7 @@ const fileText = `model_gateways:
     api_key: \${GATEWAY_API_KEY}
 model_aliases:
   anthropic/*: gateway/anthropic/*
+voice_model: gateway/scribe-v2
 api_keys:
   - ${JSON.stringify(created.entry)}
 allowed_origins:
@@ -32,9 +33,13 @@ function fromOrigin(port: number, origin: string): Promise<number> {
 }
 
 describe('a server with a configuration file and no variable for its settings', () => {
-  it('takes its gateways, aliases, API keys and origins from the file, and says so once', async () => {
+  it('takes its gateways, aliases, voice model, API keys and origins from the file, and says so once', async () => {
     const { child, configFile } = configuredServer(fileText, { GATEWAY_API_KEY: gatewayKey });
     const port = await child.port;
+
+    const voice = await fetch(`http://127.0.0.1:${port}/v1/orgs/acme/voice`, {
+      headers: { authorization: `Bearer ${created.key}` },
+    }).then((answer) => answer.json());
 
     const unauthenticated = await rejectedRun(port);
     const rejected = await rejectedRun(port, created.key);
@@ -44,13 +49,14 @@ describe('a server with a configuration file and no variable for its settings', 
     };
     const stderr = await stoppedOutput(child);
 
-    expect({ unauthenticated: unauthenticated.status, rejected: rejected.body, origins }).toMatchObject({
+    expect({ unauthenticated: unauthenticated.status, rejected: rejected.body, origins, voice }).toMatchObject({
       unauthenticated: 401,
+      voice: { model: 'gateway/scribe-v2' },
       rejected: { detail: 'openai is not configured. Configured providers: gateway. Aliases: anthropic/*' },
       origins: { listed: 200, other: 403 },
     });
     expect(settingLines(stderr)).toEqual([
-      `Settings read from the configuration file ${configFile}: MODEL_GATEWAYS, MODEL_ALIASES, API_KEYS, ALLOWED_ORIGINS`,
+      `Settings read from the configuration file ${configFile}: MODEL_GATEWAYS, MODEL_ALIASES, VOICE_MODEL, API_KEYS, ALLOWED_ORIGINS`,
     ]);
     expect(stderr).not.toContain(gatewayKey);
   });
@@ -128,7 +134,7 @@ describe('a server with settings in the environment', () => {
       detail: 'openai is not configured. Configured providers: gateway. Aliases: house/fast',
     });
     expect(settingLines(stderr)).toEqual([
-      `Settings read from the configuration file ${configFile}: MODEL_GATEWAYS, ALLOWED_ORIGINS`,
+      `Settings read from the configuration file ${configFile}: MODEL_GATEWAYS, VOICE_MODEL, ALLOWED_ORIGINS`,
       "Set both in the environment and in the configuration file, so the environment's value is used: MODEL_ALIASES, API_KEYS",
     ]);
   });

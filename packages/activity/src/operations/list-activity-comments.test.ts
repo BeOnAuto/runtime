@@ -136,3 +136,87 @@ describe('the comments the activity counts', () => {
     ]);
   });
 });
+
+const connection = '019a3f10-2b4c-7d5e-8f60-718293a4b5c6';
+
+async function commentedInOrg() {
+  const scene = await commented();
+  const onConnection = await scene.madeInOrg(`org/connections/${connection}`, minute(3), priya);
+  const onOrg = await scene.madeInOrg('org', minute(2), reader);
+  return { ...scene, onConnection, onOrg };
+}
+
+describe("the organization's own comments in the activity", () => {
+  it("are listed to a caller who may access every playbook, with no playbook, merged with the playbooks' by at", async () => {
+    const { list, onConnection, onOrg, onBlock, onStep } = await commentedInOrg();
+    const read = outputOf(await list(ada, { kind: 'comment' }, later));
+
+    expect(listedOf(await list(ada, { kind: 'comment' }, later)).rows.map(({ address }) => address)).toEqual([
+      `org/comments/${onConnection}`,
+      `finance/comments/${onBlock}`,
+      `org/comments/${onOrg}`,
+      `finance/comments/${onStep}`,
+    ]);
+    expect(read).toMatchObject({
+      rows: [
+        {
+          kind: 'comment',
+          playbook: null,
+          by: priya.id,
+          definition: null,
+          run_id: null,
+          message: `About org/connections/${connection}`,
+          about: `org/connections/${connection}`,
+          seen: false,
+        },
+        {},
+        { playbook: null, about: 'org', seen: false },
+        {},
+      ],
+    });
+  });
+
+  it('are left out for a playbook asked, and for a caller who may access some playbooks alone', async () => {
+    const { list } = await commentedInOrg();
+    const addresses = async (caller: typeof ada, input: Readonly<Record<string, string>>) =>
+      listedOf(await list(caller, input, later)).rows.map(({ address }) => address);
+
+    expect(
+      [
+        ...(await addresses(ada, { kind: 'comment', playbook: 'finance' })),
+        ...(await addresses(reader, { kind: 'comment', playbook: 'finance' })),
+      ].filter((address) => address.startsWith('org/')),
+    ).toEqual([]);
+    expect(listedOf(await list(reader, { playbook: 'finance' }, later)).counts.comments).toBe(1);
+  });
+});
+
+describe("the organization's own comments in the counts and the cursors of the activity", () => {
+  it('are counted for a caller who may access every playbook, until marked seen or resolved', async () => {
+    const { list, mark, resolveInOrg, onConnection, onOrg } = await commentedInOrg();
+    const counted = listedOf(await list(ada, { playbook: 'finance' }, later)).counts.comments;
+    const marked = markedOf(
+      await mark(ada, { items: [{ address: `org/comments/${onConnection}`, at: minute(3) }] }, later),
+    );
+    const seen = listedOf(await list(ada, { kind: 'comment' }, later)).rows.map(({ seen: each }) => each);
+    await resolveInOrg(onOrg, 'acted');
+
+    expect([counted, marked.counts.comments]).toEqual([4, 3]);
+    expect(seen).toEqual([true, false, false, false]);
+    expect(listedOf(await list(ada, {}, later)).counts.comments).toBe(2);
+  });
+
+  it('read on through a cursor and are marked seen through one that names a row of the organization', async () => {
+    const { list, mark, onConnection, onOrg, onStep } = await commentedInOrg();
+    const first = listedOf(await list(ada, { kind: 'comment', limit: '3' }, later));
+    const rest = listedOf(await list(ada, { kind: 'comment', cursor: String(first.next_cursor) }, later));
+    const since = listedOf(await list(ada, { kind: 'comment', since: String(first.rows[2]?.cursor) }, later));
+    const marked = markedOf(await mark(ada, { through: String(first.rows[2]?.cursor) }, later));
+
+    expect(first.rows.at(-1)?.address).toBe(`org/comments/${onOrg}`);
+    expect(rest.rows.map(({ address }) => address)).toEqual([`finance/comments/${onStep}`]);
+    expect(since.rows).toHaveLength(2);
+    expect(since.rows[0]?.address).toBe(`org/comments/${onConnection}`);
+    expect(marked).toMatchObject({ counts: { comments: 2 }, through: { cursor: first.rows[2]?.cursor } });
+  });
+});

@@ -31,23 +31,43 @@ const decodePlaybookArgument = Schema.decodeUnknownResult(Schema.Struct({ playbo
 
 const failureOf = SchemaIssue.makeFormatterStandardSchemaV1();
 
+const optionalPlaybookProperty: JsonSchema = {
+  ...playbookProperty,
+  description: "The id of the playbook to act in; left out, the organization's own",
+};
+
+type WithPlaybook = (object: Readonly<JsonSchema>) => JsonSchema;
+
 function withPlaybookProperty(object: Readonly<JsonSchema>): JsonSchema {
   const { properties = {}, required = [] } = objectFieldsOf(object);
   return { ...object, properties: { playbook: playbookProperty, ...properties }, required: ['playbook', ...required] };
 }
 
-function withPlaybookOnEveryMember(schema: Readonly<JsonSchema>): JsonSchema {
+function withOptionalPlaybookProperty(object: Readonly<JsonSchema>): JsonSchema {
+  const { properties = {} } = objectFieldsOf(object);
+  return { ...object, properties: { playbook: optionalPlaybookProperty, ...properties } };
+}
+
+function withPlaybookOnEveryMember(schema: Readonly<JsonSchema>, withPlaybook: WithPlaybook): JsonSchema {
   return Option.match(unionOf(schema), {
-    onNone: () => withPlaybookProperty(schema),
+    onNone: () => withPlaybook(schema),
     onSome: ({ anyOf, $defs = {} }) => ({
       ...schema,
-      anyOf: anyOf.map((member) => withPlaybookProperty(inlinedRootOf({ schema: member, definitions: $defs }))),
+      anyOf: anyOf.map((member) => withPlaybook(inlinedRootOf({ schema: member, definitions: $defs }))),
     }),
   });
 }
 
 export function withPlaybookArgument(schema: Readonly<JsonSchema>): JsonSchema {
-  return withoutUnreferencedDefinitions(withPlaybookOnEveryMember(schema));
+  return withoutUnreferencedDefinitions(withPlaybookOnEveryMember(schema, withPlaybookProperty));
+}
+
+export function withOptionalPlaybookArgument(schema: Readonly<JsonSchema>): JsonSchema {
+  return withoutUnreferencedDefinitions(withPlaybookOnEveryMember(schema, withOptionalPlaybookProperty));
+}
+
+export function namesAPlaybook(input: Readonly<Record<string, unknown>>): boolean {
+  return Object.hasOwn(input, 'playbook');
 }
 
 export function withoutPlaybook(input: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {

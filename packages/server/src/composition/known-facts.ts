@@ -1,4 +1,3 @@
-import { CommentEventSchema } from '@on.auto/activity';
 import { ConnectionEventSchema, RegistrationEventSchema } from '@on.auto/connections';
 import {
   DefinitionEventSchema,
@@ -31,7 +30,6 @@ export const knownFactSchemas = [
   ConversationCallEventSchema,
   AssetEventSchema,
   ...serverFactSchemas,
-  CommentEventSchema,
 ];
 
 export function factSchemasKnownWith(declared: readonly DeclaredFact[]) {

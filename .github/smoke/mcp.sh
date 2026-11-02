@@ -94,6 +94,10 @@ call_mcp /orgs/demo/playbooks/smoke/mcp '{"jsonrpc":"2.0","id":19,"method":"tool
 grep --quiet '"structuredContent":{"id":"[0-9a-f-]*","version":1,"scope":"playbook"}' remembered.txt
 call_mcp /mcp '{"jsonrpc":"2.0","id":20,"method":"tools/call","params":{"name":"recall","arguments":{"playbook":"smoke","tags":["smoke"]}}}' recalled.txt
 grep --quiet '"text":"Smoke tests run on every change"' recalled.txt
+call_mcp /mcp '{"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"list_comments","arguments":{}}}' org-comments.txt
+grep --quiet '"structuredContent":{"comments":\[\],"has_more":false,"next_cursor":null}' org-comments.txt
+call_mcp /mcp '{"jsonrpc":"2.0","id":22,"method":"tools/call","params":{"name":"list_comments","arguments":{"playbook":"smoke"}}}' playbook-comments.txt
+grep --quiet '"structuredContent":{"comments":\[\],"has_more":false,"next_cursor":null}' playbook-comments.txt
 call_mcp /mcp '{"jsonrpc":"2.0","id":12,"method":"prompts/get","params":{"name":"first-playbook"}}' first-playbook.txt
 grep --quiet 'Create my first playbook.' first-playbook.txt
 docker stop mcp

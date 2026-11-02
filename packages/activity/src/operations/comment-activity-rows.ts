@@ -11,7 +11,8 @@ const CommentColumnsSchema = Schema.Struct({
   text: Schema.String,
   by: Schema.String,
   by_name: Schema.String,
-  at: Schema.Int,
+  listed_at: Schema.Int,
+  reopened_by: Schema.NullOr(Schema.String),
 });
 
 const commentColumnsOf = Schema.decodeUnknownOption(CommentColumnsSchema);
@@ -25,9 +26,7 @@ function definitionNamedBy(target: CommentTarget | undefined) {
 }
 
 function runNamedBy(target: CommentTarget | undefined): string | null {
-  return target === undefined || target.kind === 'playbook' || target.kind === 'definition' || target.kind === 'step'
-    ? null
-    : target.run;
+  return target !== undefined && 'run' in target ? target.run : null;
 }
 
 function commentOf(playbook: string, id: string, columns: CommentColumns): ActivityRow {
@@ -35,7 +34,7 @@ function commentOf(playbook: string, id: string, columns: CommentColumns): Activ
   return {
     kind: 'comment',
     form: 'comment',
-    position: { at: columns.at, playbook, key: commentKeyOf(id) },
+    position: { at: columns.listed_at, playbook, key: commentKeyOf(id) },
     by: columns.by,
     by_name: columns.by_name,
     change: null,
@@ -50,6 +49,7 @@ function commentOf(playbook: string, id: string, columns: CommentColumns): Activ
     waits_on: null,
     expires_at: null,
     about: columns.address,
+    ...(columns.reopened_by === null ? {} : { reopenedBy: columns.reopened_by }),
   };
 }
 

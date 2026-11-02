@@ -32,19 +32,19 @@ A reference without a `/`, or with nothing on one side of it, is invalid, and no
 
 Each entry of `model_gateways` in the [configuration file](../self-host/configuration.md), or of `MODEL_GATEWAYS`, is an OpenAI-compatible Chat Completions endpoint with its own provider prefix. [An internal OpenAI-compatible gateway](../self-host/models.md#an-internal-openai-compatible-gateway-with-a-custom-header) shows one in both forms.
 
-| Field                      | Required | Meaning                                                                                                                                                                                                               |
-| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`                     | Yes      | The provider prefix: 1 to 32 lowercase letters, digits and hyphens, starting with a letter. It is unique and is not one of the built-in prefixes                                                                      |
-| `base_url`                 | Yes      | The http or https URL that `/chat/completions` is appended to. Trailing slashes are dropped                                                                                                                           |
-| `api_key`                  | No       | The key, sent as `Authorization: Bearer <key>`. In the file, it is a reference to the variable that holds it, such as `${INTERNAL_LLM_KEY}`                                                                           |
-| `api_key_env`              | No       | In `MODEL_GATEWAYS` only, in place of `api_key`: the name of the variable that holds the key. That variable must be set. Setting both `api_key` and `api_key_env` stops the start                                     |
-| `headers`                  | No       | Headers sent with every request. Their values are treated as secrets. In the file, a header that carries a credential, such as `authorization`, is a reference                                                        |
-| `query_params`             | No       | Query parameters added to every request. Their values are treated as secrets                                                                                                                                          |
-| `structured_outputs`       | No       | `true` when the endpoint accepts `response_format: json_schema`. Otherwise JSON is asked for as `json_object`, and only the runtime checks the schema. Default `false`                                                |
-| `include_usage`            | No       | Asks for usage in streamed responses. Default `false`                                                                                                                                                                 |
-| `expose_provider_messages` | No       | `true` when the gateway's error messages are safe to show to the callers of a definition. Default `false`: see [Provider messages](#provider-messages)                                                                |
-| `allowed_provider_options` | No       | The top-level request body fields a definition may set for this gateway through `provider_options`, such as `["user", "metadata"]`. Default none; see [Provider options](reasoning-format.md#provider-options)        |
-| `cost_header`              | No       | A gateway entry names the header its gateway answers the call's cost in, in US dollars, or names none and no cost is kept. A run keeps the cost as `cost_usd` in its [record](reasoning-format.md#what-a-run-records) |
+| Field                      | Required | Meaning                                                                                                                                                                                                                                                                                             |
+| -------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                     | Yes      | The provider prefix: 1 to 32 lowercase letters, digits and hyphens, starting with a letter. It is unique and is not one of the built-in prefixes                                                                                                                                                    |
+| `base_url`                 | Yes      | The http or https URL that `/chat/completions` is appended to, and `/audio/transcriptions` where the entry serves the [voice model](#voice-model). Trailing slashes are dropped                                                                                                                     |
+| `api_key`                  | No       | The key, sent as `Authorization: Bearer <key>`. In the file, it is a reference to the variable that holds it, such as `${INTERNAL_LLM_KEY}`                                                                                                                                                         |
+| `api_key_env`              | No       | In `MODEL_GATEWAYS` only, in place of `api_key`: the name of the variable that holds the key. That variable must be set. Setting both `api_key` and `api_key_env` stops the start                                                                                                                   |
+| `headers`                  | No       | Headers sent with every request. Their values are treated as secrets. In the file, a header that carries a credential, such as `authorization`, is a reference                                                                                                                                      |
+| `query_params`             | No       | Query parameters added to every request. Their values are treated as secrets                                                                                                                                                                                                                        |
+| `structured_outputs`       | No       | `true` when the endpoint accepts `response_format: json_schema`. Otherwise JSON is asked for as `json_object`, and only the runtime checks the schema. Default `false`                                                                                                                              |
+| `include_usage`            | No       | Asks for usage in streamed responses. Default `false`                                                                                                                                                                                                                                               |
+| `expose_provider_messages` | No       | `true` when the gateway's error messages are safe to show to the callers of a definition. Default `false`: see [Provider messages](#provider-messages)                                                                                                                                              |
+| `allowed_provider_options` | No       | The top-level request body fields a definition may set for this gateway through `provider_options`, such as `["user", "metadata"]`. Default none; see [Provider options](reasoning-format.md#provider-options)                                                                                      |
+| `cost_header`              | No       | A gateway entry names the header its gateway answers the call's cost in, in US dollars, or names none and no cost is kept. A run keeps the cost as `cost_usd` in its [record](reasoning-format.md#what-a-run-records), and a transcription as `cost_usd` of its [`voice_transcribed`](#voice-model) |
 
 Rules for `allowed_provider_options`, each of which stops the start when broken:
 
@@ -326,13 +326,32 @@ A failure that only the operator can fix tells the caller what happened and that
 
 The server logs a hint for a provider certificate it does not trust, and for a setting that the provider's SDK found missing when it called the provider, in the SDK's words.
 
+## Voice model
+
+`voice_model` in the [configuration file](../self-host/configuration.md), or `VOICE_MODEL`, names the model that writes out what a person says, which Studio offers beside each comment field through [`transcribe`](http.md#voice). Left unset, the runtime has no voice model: `get_voice` answers `null`, and `transcribe` is refused as `unavailable`.
+
+It is a model reference, `provider/model`, split at its first `/` as a definition's is. Its provider is one of two:
+
+| Provider                 | The call                                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A gateway entry's `name` | `POST` to the entry's `base_url` followed by `/audio/transcriptions`, with the entry's `api_key`, `headers` and `query_params`, as its model calls are sent   |
+| `openai`                 | `POST` to `OPENAI_BASE_URL`, `https://api.openai.com/v1` unless it is set, followed by `/audio/transcriptions`, with `OPENAI_API_KEY`: OpenAI's Whisper route |
+
+Both take the multipart body of OpenAI's transcription route: `file`, the recording with its media type, named `recording.webm`, `recording.ogg`, `recording.mp4` or `recording.wav` by its type, and `model`, everything after the first `/` of the reference. The runtime reads `text` from the JSON answer. A gateway entry serves the voice model only where its gateway serves that route.
+
+- Any other provider, a value that is not `provider/model`, or `openai` without `OPENAI_API_KEY`, stops the start with `model_settings_invalid`, which names the setting and what it expects: `The model settings are invalid. VOICE_MODEL: Expected openai/<model> or <gateway>/<model> for a gateway of model_gateways`.
+- Aliases and `allowed_models` do not apply to it: they govern the models a definition names, and the voice model is named by the operator alone.
+- A call is tried again as a model call is ([Retries](#retries)), within 60 seconds for every attempt.
+- A failure is sorted into the kinds of [When a model call fails](#when-a-model-call-fails), and the caller of `transcribe` gets what the caller of a reasoning function gets for it: the provider's own words only under the rules of [Provider messages](#provider-messages), so a gateway's only where its entry sets `expose_provider_messages`.
+- Each call that reaches the model records one fact on the organization's ledger: `voice_transcribed` when the model answered, and `voice_refused`, with the failure's kind, when it did not ([Voice](http.md#voice)). The entry's `cost_header` fills the `cost_usd` of `voice_transcribed`, which is `null` where the entry names no header or the gateway answers none. The recording and its text are never recorded. A transcription is not a run, so it starts no run and the runtime's meter counts nothing for it.
+
 ## What is recorded, and what is never logged
 
 A run records what its model call did: the model as requested, as resolved and as the provider reported it, why the answer ended, the token usage, the provider's response id and warnings, and the duration. [What a run records](reasoning-format.md#what-a-run-records) lists the fields.
 
 The server never logs or returns:
 
-- the request or response bodies of a model call, or anything from an earlier attempt, since they hold the prompt or the answer;
+- the request or response bodies of a model call, or anything from an earlier attempt, since they hold the prompt or the answer, and the recording or the text of a transcription;
 - the text of an answer that failed to parse or validate;
 - an API key, token or secret header. Settings keep secrets redacted, and a settings error names the setting, never its value.
 

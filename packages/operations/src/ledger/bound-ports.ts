@@ -242,7 +242,7 @@ export function orgBoundAppendedFactsReader(ledger: AppendedFactsReader, org: Or
   const scopeOf = (streams: readonly string[]): Effect.Effect<AppendedScope> =>
     Effect.map(Effect.forEach(streams, wellFormed), (named: readonly string[]) => ({
       kind: 'streams',
-      streams: named.map((stream) => `${prefix}${stream}`),
+      streams: named.flatMap((stream) => [`${prefix}${stream}`, `${prefix}${stream}/`]),
     }));
   return {
     readAppendedFacts: (streams, request) => Effect.flatMap(scopeOf(streams), (scope) => read(scope, request)),

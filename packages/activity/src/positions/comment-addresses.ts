@@ -5,6 +5,8 @@ import {
   definitionsSegment,
   isDefinition,
   isPlaybookId,
+  isVersion,
+  orgSegment,
   playbooksSegment,
   runsSegment,
   uuidPattern,
@@ -18,9 +20,21 @@ const eventsSegment = 'events';
 
 const resultSegment = 'result';
 
+const partsSegment = 'parts';
+
+const connectionsSegment = 'connections';
+
+const membersSegment = 'members';
+
+const settingsSegment = 'settings';
+
 const workflowType = 'workflow';
 
 const eventIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:_[1-9][0-9]{0,8})?$/u;
+
+const partPattern = /^[a-z][a-z0-9-]{0,63}$/u;
+
+const memberPattern = /^[A-Za-z0-9_-]{1,64}$/u;
 
 const whiteSpace = /\s/u;
 
@@ -30,14 +44,26 @@ interface DefinitionAtVersion {
   readonly version: number;
 }
 
-export type CommentTarget =
-  | { readonly kind: 'playbook'; readonly playbook: string }
-  | ({ readonly kind: 'definition'; readonly playbook: string } & DefinitionAtVersion)
+interface Parted {
+  readonly part?: string;
+}
+
+type OfThePlaybook =
+  | ({ readonly kind: 'playbook'; readonly playbook: string } & Parted)
+  | ({ readonly kind: 'definition'; readonly playbook: string } & DefinitionAtVersion & Parted)
   | ({ readonly kind: 'step'; readonly playbook: string; readonly step: string } & DefinitionAtVersion)
-  | { readonly kind: 'run'; readonly playbook: string; readonly run: string }
+  | ({ readonly kind: 'run'; readonly playbook: string; readonly run: string } & Parted)
   | { readonly kind: 'event'; readonly playbook: string; readonly run: string; readonly event: string }
   | { readonly kind: 'block'; readonly playbook: string; readonly run: string; readonly block: number }
   | { readonly kind: 'request'; readonly playbook: string; readonly run: string };
+
+export type OfTheOrg =
+  | ({ readonly kind: 'org' } & Parted)
+  | ({ readonly kind: 'connection'; readonly connection: string } & Parted)
+  | ({ readonly kind: 'member'; readonly member: string } & Parted)
+  | ({ readonly kind: 'settings'; readonly page: string } & Parted);
+
+export type CommentTarget = OfThePlaybook | OfTheOrg;
 
 interface EveryVersion {
   readonly kind: 'every_version';
@@ -59,19 +85,29 @@ function isWellFormed(address: string): boolean {
   );
 }
 
+function partedOf(rest: readonly string[]): Parted | undefined {
+  const [parts, part = '', ...beyond] = rest;
+  if (parts === undefined) {
+    return {};
+  }
+  return parts === partsSegment && beyond.length === 0 && partPattern.test(part) ? { part } : undefined;
+}
+
+function parted<T extends ListedTarget>(target: T, rest: readonly string[]): (T & Parted) | undefined {
+  const part = partedOf(rest);
+  return part === undefined ? undefined : { ...target, ...part };
+}
+
 function isStep(step: readonly string[]): boolean {
   return step.length > 0 && bytesOfReference(`/${step.join('/')}`) <= mostReferenceBytes;
 }
 
 function atVersionPlace(playbook: string, type: string, name: string, [version = '', ...rest]: readonly string[]) {
   const atVersion = { playbook, type, name, version: Number(version) };
-  if (rest.length === 0) {
-    return { kind: 'definition', ...atVersion } satisfies ListedTarget;
-  }
   const [steps, ...step] = rest;
   return type === workflowType && steps === stepsSegment && isStep(step)
     ? ({ kind: 'step', ...atVersion, step: step.join('/') } satisfies ListedTarget)
-    : undefined;
+    : parted({ kind: 'definition', ...atVersion } satisfies ListedTarget, rest);
 }
 
 function versionsPlace(
@@ -84,22 +120,20 @@ function versionsPlace(
   if (rest.length === 0) {
     return { kind: 'every_version', playbook, type, name };
   }
-  return countPattern.test(version) ? atVersionPlace(playbook, type, name, rest) : undefined;
+  return isVersion(version) ? atVersionPlace(playbook, type, name, rest) : undefined;
 }
 
 const definitionPlace: Place = (playbook, [type = '', name = '', ...rest]) =>
   isDefinition(type, name) ? versionsPlace(playbook, type, name, rest) : undefined;
 
-function partOfRun(playbook: string, run: string, [part, id = '']: readonly string[]): ListedTarget | undefined {
-  if (part === undefined) {
-    return { kind: 'run', playbook, run };
-  }
+function partOfRun(playbook: string, run: string, rest: readonly string[]): ListedTarget | undefined {
+  const [part, id = ''] = rest;
   if (part === eventsSegment && eventIdPattern.test(id)) {
     return { kind: 'event', playbook, run, event: id };
   }
   return part === resultSegment && countPattern.test(id)
     ? { kind: 'block', playbook, run, block: Number(id) }
-    : undefined;
+    : parted({ kind: 'run', playbook, run } satisfies ListedTarget, rest);
 }
 
 const runPlace: Place = (playbook, [run = '', ...rest]) =>
@@ -112,13 +146,42 @@ function placeIn(playbook: string, [segment = '', ...segments]: readonly string[
   return place?.(playbook, segments);
 }
 
-function listedTargetIn([first = '', ...rest]: readonly string[]): ListedTarget | undefined {
+type OrgPlace = (id: string, rest: readonly string[]) => OfTheOrg | undefined;
+
+const theOrgItself = '';
+
+const orgPlaces: Readonly<Record<string, OrgPlace>> = {
+  [theOrgItself]: () => ({ kind: 'org' }),
+  [partsSegment]: (part, rest) => parted({ kind: 'org' }, [partsSegment, part, ...rest]),
+  [connectionsSegment]: (connection, rest) =>
+    uuidPattern.test(connection) ? parted({ kind: 'connection', connection }, rest) : undefined,
+  [membersSegment]: (member, rest) =>
+    memberPattern.test(member) ? parted({ kind: 'member', member }, rest) : undefined,
+  [settingsSegment]: (page, rest) => (partPattern.test(page) ? parted({ kind: 'settings', page }, rest) : undefined),
+};
+
+function orgPlaceOf([first, segment = theOrgItself]: readonly string[]): OrgPlace | undefined {
+  return first === orgSegment && Object.hasOwn(orgPlaces, segment) ? orgPlaces[segment] : undefined;
+}
+
+function playbookPlace(rest: readonly string[]): ListedTarget | undefined {
+  const [playbook = '', ...beyond] = rest;
+  return isPlaybookId(playbook) ? parted({ kind: 'playbook', playbook }, beyond) : undefined;
+}
+
+function listedTargetIn(segments: readonly string[]): ListedTarget | undefined {
+  const [first = '', ...rest] = segments;
   const [second = ''] = rest;
   if (rest.length === 1 && uuidPattern.test(second)) {
     return isPlaybookId(first) ? { kind: 'request', playbook: first, run: second } : undefined;
   }
+  const orgPlace = orgPlaceOf(segments);
+  if (orgPlace !== undefined) {
+    const [, id = '', ...beyond] = rest;
+    return orgPlace(id, beyond);
+  }
   if (first === playbooksSegment) {
-    return rest.length === 1 && isPlaybookId(second) ? { kind: 'playbook', playbook: second } : undefined;
+    return playbookPlace(rest);
   }
   return isPlaybookId(first) ? placeIn(first, rest) : undefined;
 }
@@ -130,6 +193,10 @@ export function listedTargetOf(address: string): ListedTarget | undefined {
 export function commentTargetOf(address: string): CommentTarget | undefined {
   const target = listedTargetOf(address);
   return target?.kind === 'every_version' ? undefined : target;
+}
+
+export function playbookOfTarget(target: ListedTarget): string | undefined {
+  return 'playbook' in target ? target.playbook : undefined;
 }
 
 function definitionAddressOf(playbook: string, { type, name, version }: DefinitionAtVersion): string {
@@ -153,7 +220,17 @@ function runTargetAddress(target: Extract<ListedTarget, { kind: 'run' | 'event' 
   return target.kind === 'block' ? `${run}/${resultSegment}/${target.block}` : run;
 }
 
-export function addressOfTarget(target: ListedTarget): string {
+function orgTargetAddress(target: OfTheOrg): string {
+  if (target.kind === 'connection') {
+    return `${orgSegment}/${connectionsSegment}/${target.connection}`;
+  }
+  if (target.kind === 'member') {
+    return `${orgSegment}/${membersSegment}/${target.member}`;
+  }
+  return target.kind === 'settings' ? `${orgSegment}/${settingsSegment}/${target.page}` : orgSegment;
+}
+
+function thingTargetAddress(target: ListedTarget): string {
   if (target.kind === 'playbook') {
     return `${playbooksSegment}/${target.playbook}`;
   }
@@ -163,7 +240,28 @@ export function addressOfTarget(target: ListedTarget): string {
   if (target.kind === 'every_version') {
     return `${target.playbook}/${definitionsSegment}/${target.type}/${target.name}`;
   }
-  return target.kind === 'definition' || target.kind === 'step'
-    ? definitionTargetAddress(target)
-    : runTargetAddress(target);
+  if (target.kind === 'definition' || target.kind === 'step') {
+    return definitionTargetAddress(target);
+  }
+  return target.kind === 'run' || target.kind === 'event' || target.kind === 'block'
+    ? runTargetAddress(target)
+    : orgTargetAddress(target);
+}
+
+function partOf(target: ListedTarget): string | undefined {
+  return 'part' in target ? target.part : undefined;
+}
+
+export function addressOfTarget(target: ListedTarget): string {
+  const part = partOf(target);
+  const thing = thingTargetAddress(target);
+  return part === undefined ? thing : `${thing}/${partsSegment}/${part}`;
+}
+
+export function thingAddressOf(target: ListedTarget): string {
+  return thingTargetAddress(target);
+}
+
+export function isPart(target: ListedTarget): boolean {
+  return partOf(target) !== undefined;
 }

@@ -1,6 +1,7 @@
 import { InvalidInput } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
+import { ofTheOrg } from '../positions/activity-addresses.ts';
 import { positionOfCursor, type ActivityPosition } from '../positions/activity-position.ts';
 import { activityKinds, type ActivityKind } from './activity-row.ts';
 import type { PlaybookRegister } from './playbook-register.ts';
@@ -35,7 +36,7 @@ export function positionAt(
     return Effect.undefined;
   }
   const position = positionOfCursor(cursor);
-  return position !== undefined && known.has(position.playbook)
+  return position !== undefined && (position.playbook === ofTheOrg || known.has(position.playbook))
     ? Effect.succeed(position)
     : Effect.fail(refusedAt(`/${field}`, `Expected a cursor of a row of the activity of this org in ${field}`));
 }

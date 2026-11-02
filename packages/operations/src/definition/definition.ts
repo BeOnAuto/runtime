@@ -99,6 +99,7 @@ interface HttpFields<
   readonly route: Route<K, P, M>;
   readonly body: B;
   readonly successStatus?: SuccessStatusByKind[K];
+  readonly repeatable?: boolean;
   readonly permittedBy?: readonly Permission[];
   readonly inputSchema: In;
   readonly reasons: readonly R[];

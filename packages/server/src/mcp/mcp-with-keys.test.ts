@@ -86,7 +86,7 @@ function postInitialize(path: string, headers: Readonly<Record<string, string>>)
 }
 
 describe('the org endpoint of the server', () => {
-  it('names the release under the title Auto Runtime and lists the four playbook tools, list_models, search and the five of connections', async () => {
+  it('names the release under the title Auto Runtime and lists the four playbook tools, the two of comments, list_models, search and the five of connections', async () => {
     const connected = await withMcpSession(
       'current revision',
       endpoint('/orgs/acme/mcp', acmeAdmin.key),
@@ -100,6 +100,8 @@ describe('the org endpoint of the server', () => {
       serverVersion: { ...release, title: 'Auto Runtime' },
       tools: [
         ...playbookTools,
+        'list_comments',
+        'resolve_comment',
         'list_models',
         'search',
         'list_connection_tools',
@@ -170,8 +172,10 @@ describe('the callers the MCP endpoints of the server reject before MCP', () => 
   });
 });
 
-const queriesOfTheOrg = [
+const readerToolsOfTheOrg = [
   'list_playbooks',
+  'list_comments',
+  'resolve_comment',
   'list_models',
   'search',
   'list_connection_tools',
@@ -180,7 +184,7 @@ const queriesOfTheOrg = [
 ];
 
 describe('the permissions and playbooks of a key over MCP', () => {
-  it('offer a read-only key the queries of the org and no command, and serve it a query', async () => {
+  it('offer a read-only key the queries of the org and resolve_comment, the command of a reader, and no other command, and serve it a query', async () => {
     const outcome = await withMcpSession(
       'current revision',
       endpoint('/orgs/acme/mcp', acmeReader.key),
@@ -190,7 +194,7 @@ describe('the permissions and playbooks of a key over MCP', () => {
       }),
     );
 
-    expect(outcome.tools).toEqual(queriesOfTheOrg);
+    expect(outcome.tools).toEqual(readerToolsOfTheOrg);
     expect(outcome.listed.structuredContent).toEqual({ playbooks: [] });
   });
 

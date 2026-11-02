@@ -1,23 +1,29 @@
 import {
+  OrgReader,
   PagingOutputFields,
   PlaybookContext,
   PlaybookReader,
   cursorOfParts,
   defineQuery,
   partsOfCursor,
+  type BoundProjectionReader,
   type InvalidInput,
+  type PlainLanguage,
   type ProjectedCondition,
 } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
-import { listedTargetOf, type ListedTarget } from '../positions/comment-addresses.ts';
+import { isPart, listedTargetOf, playbookOfTarget, type ListedTarget } from '../positions/comment-addresses.ts';
 import { commentsName } from '../projections/comment-rows.ts';
 import { AddressInputField, CursorField, LimitField, commentsInAPage, refusedAt } from './comment-fields.ts';
 import { CommentSchema, keptOfRow, shownComment } from './comment-shown.ts';
 
 const ListCommentsInputSchema = Schema.Struct({
   address: Schema.optionalKey(
-    AddressInputField.annotate({ description: 'An address of this playbook: keep the comments on it' }),
+    AddressInputField.annotate({
+      description:
+        'An address of a thing of the playbook, or of the organization for its own comments: keep the comments on it',
+    }),
   ),
   under: Schema.optionalKey(
     Schema.Boolean.annotate({
@@ -40,17 +46,31 @@ const CursorSchema = Schema.Tuple([Schema.String, Schema.Int, Schema.String]);
 
 const isCursor = Schema.is(CursorSchema);
 
-function afterOf(playbook: string, cursor: string | undefined) {
+const ofTheOrg = '';
+
+interface Owner {
+  readonly playbook: string | undefined;
+  readonly named: string;
+}
+
+function ownedBy(owner: Owner): string {
+  return owner.playbook ?? ofTheOrg;
+}
+
+function afterOf(owner: Owner, cursor: string | undefined) {
   if (cursor === undefined) {
     return Effect.undefined;
   }
   const parts = Option.getOrUndefined(partsOfCursor(cursor));
-  return isCursor(parts) && parts[0] === playbook
+  return isCursor(parts) && parts[0] === ownedBy(owner)
     ? Effect.succeed(parts.slice(1))
-    : Effect.fail(refusedAt('/cursor', 'Expected the next_cursor of a page of list_comments of this playbook'));
+    : Effect.fail(refusedAt('/cursor', `Expected the next_cursor of a page of list_comments of ${owner.named}`));
 }
 
 function underOf(target: ListedTarget, address: string): ProjectedCondition {
+  if (isPart(target)) {
+    return { column: 'address', equals: address };
+  }
   if (target.kind === 'run') {
     return { column: 'about_run', equals: target.run };
   }
@@ -59,11 +79,11 @@ function underOf(target: ListedTarget, address: string): ProjectedCondition {
   }
   return target.kind === 'every_version'
     ? { column: 'about_definition', equals: `${target.type}/${target.name}` }
-    : { column: 'address', equals: address };
+    : { column: 'about_thing', equals: address };
 }
 
 function addressedIn(
-  playbook: string,
+  owner: Owner,
   { address, under = false }: ListCommentsInput,
 ): Effect.Effect<readonly ProjectedCondition[], InvalidInput> {
   if (address === undefined) {
@@ -72,35 +92,49 @@ function addressedIn(
       : Effect.succeed([]);
   }
   const target = listedTargetOf(address);
-  if (target?.playbook !== playbook || (target.kind === 'every_version' && !under)) {
-    return Effect.fail(refusedAt('/address', `Expected the address of something of the playbook ${playbook}`));
+  if (
+    target === undefined ||
+    playbookOfTarget(target) !== owner.playbook ||
+    (target.kind === 'every_version' && !under)
+  ) {
+    return Effect.fail(refusedAt('/address', `Expected the address of something of ${owner.named}`));
   }
   return Effect.succeed([under ? underOf(target, address) : { column: 'address', equals: address }]);
 }
 
+function listedWith(reader: BoundProjectionReader, owner: Owner, input: ListCommentsInput) {
+  return Effect.gen(function* () {
+    const where = yield* addressedIn(owner, input);
+    const after = yield* afterOf(owner, input.cursor);
+    const limit = input.limit ?? commentsInAPage;
+    const rows = yield* reader.readProjectedRows(commentsName, {
+      where: [{ column: 'open', equals: input.open ?? true }, ...where],
+      orderBy: ['at'],
+      order: 'desc',
+      ...(after === undefined ? {} : { after }),
+      limit: limit + 1,
+    });
+    const page = rows.slice(0, limit);
+    const last = page.at(-1);
+    const hasMore = rows.length > limit && last !== undefined;
+    return {
+      comments: yield* Effect.forEach(
+        page.flatMap((row) => keptOfRow(row)),
+        (comment) => shownComment(comment),
+      ),
+      has_more: hasMore,
+      next_cursor: hasMore ? cursorOfParts([ownedBy(owner), Number(last.row['at']), last.key]) : null,
+    };
+  });
+}
+
 const listed = Effect.fnUntraced(function* (input: ListCommentsInput) {
   const { playbook } = yield* PlaybookContext;
-  const where = yield* addressedIn(playbook, input);
-  const after = yield* afterOf(playbook, input.cursor);
-  const limit = input.limit ?? commentsInAPage;
-  const rows = yield* (yield* PlaybookReader).readProjectedRows(commentsName, {
-    where: [{ column: 'open', equals: input.open ?? true }, ...where],
-    orderBy: ['at'],
-    order: 'desc',
-    ...(after === undefined ? {} : { after }),
-    limit: limit + 1,
-  });
-  const page = rows.slice(0, limit);
-  const last = page.at(-1);
-  const hasMore = rows.length > limit && last !== undefined;
-  return {
-    comments: yield* Effect.forEach(
-      page.flatMap((row) => keptOfRow(row)),
-      (comment) => shownComment(comment),
-    ),
-    has_more: hasMore,
-    next_cursor: hasMore ? cursorOfParts([playbook, Number(last.row['at']), last.key]) : null,
-  };
+  return yield* listedWith(yield* PlaybookReader, { playbook, named: `the playbook ${playbook}` }, input);
+});
+
+const listedInOrg = Effect.fnUntraced(function* (input: ListCommentsInput) {
+  return yield* listedWith(yield* OrgReader, { playbook: undefined, named: "the organization's own" }, input);
 });
 
 function commentsInWords(count: number, open: boolean | undefined): string {
@@ -111,6 +145,21 @@ function commentsInWords(count: number, open: boolean | undefined): string {
   return count === 1 ? `Found 1 ${kept} comment on this page.` : `Found ${count} ${kept} comments on this page.`;
 }
 
+const ListCommentsOutputSchema = Schema.Struct({
+  comments: Schema.Array(CommentSchema).annotate({ description: 'The comments of the page, newest first' }),
+  ...PagingOutputFields,
+});
+
+const listedInWords: PlainLanguage<ListCommentsInput, typeof ListCommentsOutputSchema.Type> = {
+  task: 'list the comments',
+  attempt: () => 'list the comments',
+  outcome: ({ comments }, { open }) => commentsInWords(comments.length, open),
+};
+
+const keptAndClosed = [
+  '`address` keeps the comments on one thing, and with `under` those on everything under it, such as the events of a run.',
+];
+
 export const listComments = defineQuery('playbook', {
   name: 'list_comments',
   title: 'List comments',
@@ -118,20 +167,32 @@ export const listComments = defineQuery('playbook', {
     'Lists the comments people made in Studio on things of the playbook, newest first, the open ones unless `open` is false.',
     'Use it when the person says they left comments in Studio, or pastes comments copied from it: the open comments are what people said that nobody has acted on yet.',
     'Each names what it is about by its `address`, such as a step or a run, which get_definition or get_run reads and update_definition changes as the comment asks; a comment on an earlier version is read against the current document.',
-    '`address` keeps the comments on one thing, and with `under` those on everything under it, such as the events of a run.',
+    ...keptAndClosed,
     'Once a comment is acted on, resolve_comment closes it, and its `studio` is the place in Studio to give the person.',
   ].join(' '),
   route: { method: 'GET', path: '/comments' },
   inputSchema: ListCommentsInputSchema,
-  outputSchema: Schema.Struct({
-    comments: Schema.Array(CommentSchema).annotate({ description: 'The comments of the page, newest first' }),
-    ...PagingOutputFields,
-  }),
+  outputSchema: ListCommentsOutputSchema,
   reasons: ['invalid_input'],
   handle: listed,
-  plainLanguage: {
-    task: 'list the comments',
-    attempt: () => 'list the comments',
-    outcome: ({ comments }, { open }) => commentsInWords(comments.length, open),
-  },
+  plainLanguage: listedInWords,
+});
+
+export const listCommentsInOrg = defineQuery('org', {
+  name: 'list_comments',
+  title: 'List comments',
+  description: [
+    "Lists the comments people made in Studio, newest first, the open ones unless `open` is false: with `playbook`, that playbook's, and without it, the organization's own, on its connections, members, Settings or itself.",
+    "Use it when the person says they left comments in Studio or pastes the line Studio copies; to act on all, read the organization's own and each playbook's.",
+    'Each names what it is about by its `address`, which says which tool reads and changes the thing, such as get_definition for a step or list_connections for a connection.',
+    ...keptAndClosed,
+    'Once one is acted on, resolve_comment closes it, with the same `playbook` or none; its `studio` is its place in Studio to give the person.',
+  ].join(' '),
+  route: { method: 'GET', path: '/comments' },
+  permittedBy: ['org:read', 'playbook:read'],
+  inputSchema: ListCommentsInputSchema,
+  outputSchema: ListCommentsOutputSchema,
+  reasons: ['invalid_input'],
+  handle: listedInOrg,
+  plainLanguage: listedInWords,
 });

@@ -229,3 +229,25 @@ model: anthropic/claude-sonnet-4-5
 ```
 
 Everything after the first `/` reaches the provider unchanged. Aliases and `allowed_models` apply before the call; [How a model reference is resolved](../reference/model-settings.md#how-a-model-reference-is-resolved) gives the order. If a run then fails, [When a model call fails](../reference/model-settings.md#when-a-model-call-fails) sorts each failure by who fixes it.
+
+## A voice model
+
+Where the runtime has a voice model, Studio offers a mic beside each comment field, and the runtime writes out what the person says with that model. Set `VOICE_MODEL`, or `voice_model` in the [configuration file](configuration.md), to a model reference whose provider is `openai` or one of your gateways:
+
+```sh
+OPENAI_API_KEY=sk-...
+VOICE_MODEL=openai/whisper-1
+```
+
+Through the gateway of [the example above](#an-internal-openai-compatible-gateway-with-a-custom-header), which must then serve OpenAI's transcription route:
+
+```yaml
+voice_model: internal/whisper-large-v3
+```
+
+- The runtime posts each recording to the gateway's `base_url` followed by `/audio/transcriptions`, with the entry's key, headers and query parameters, in the multipart body OpenAI's route takes. For `openai`, it posts to `OPENAI_BASE_URL` followed by the same path, or to OpenAI's own API.
+- Any other provider stops the start, and so does `openai` without `OPENAI_API_KEY`. Aliases and `allowed_models` do not apply to the voice model.
+- Check it with `GET /v1/orgs/{org}/voice`, which answers `{ "model": "openai/whisper-1" }`, or `{ "model": null }` where none is set. Studio says Voice input, with the model, under Settings, Runtime.
+- Each transcription is recorded on the organization's ledger as `voice_transcribed`, with its cost where the gateway answers one in the entry's `cost_header`. The recording and its text are not kept. Your provider or gateway bills the call.
+
+[Voice model](../reference/model-settings.md#voice-model) gives the rules, and [Voice](../reference/http.md#voice) the routes.

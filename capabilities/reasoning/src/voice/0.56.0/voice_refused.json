@@ -1,0 +1,15 @@
+{
+  "type": "voice_refused",
+  "data": {
+    "id": "019a4412-3c5e-7d10-9b2a-4e6f8a1c2d3e",
+    "model": "gateway/xai/scribe_v2",
+    "type": "audio/webm",
+    "audio_bytes": 24380,
+    "seconds": 6,
+    "because": "rate_limited"
+  },
+  "context": {
+    "at": "2026-11-02T09:14:03.000Z",
+    "by": "person:user_2ada"
+  }
+}

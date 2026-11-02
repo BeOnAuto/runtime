@@ -1,7 +1,12 @@
-import type { ProjectedCondition, ProjectedKeyedRow } from '@on.auto/operations';
-import { Option, Schema } from 'effect';
+import {
+  OrgReader,
+  type ProjectedCondition,
+  type ProjectedKeyedRow,
+  type ProjectedRowsQuery,
+} from '@on.auto/operations';
+import { Effect, Option, Schema } from 'effect';
 
-import { commentKeyOf } from '../positions/activity-addresses.ts';
+import { commentKeyOf, ofTheOrg } from '../positions/activity-addresses.ts';
 import { isAfter, type ActivityPosition } from '../positions/activity-position.ts';
 import { activityName } from '../projections/activity-rows.ts';
 import { brokenName } from '../projections/broken-rows.ts';
@@ -14,6 +19,8 @@ export interface ActivityTable {
   readonly kind: ActivityKind;
   readonly projection: string;
   readonly openColumn: string;
+  readonly atColumn: string;
+  readonly seenByColumn: string;
   readonly rowKeyOf: (key: string) => string;
   readonly rowsOf: (playbook: string, kept: ProjectedKeyedRow) => readonly ActivityRow[];
 }
@@ -159,6 +166,8 @@ const requestTable: ActivityTable = {
   kind: 'needs_you',
   projection: requestsName,
   openColumn: 'open',
+  atColumn: 'at',
+  seenByColumn: 'by',
   rowKeyOf: asKept,
   rowsOf: (playbook, { key, row }) =>
     Option.toArray(requestColumnsOf(row)).map((columns) => requestOf(playbook, key, columns)),
@@ -168,6 +177,8 @@ const brokenTable: ActivityTable = {
   kind: 'broken',
   projection: brokenName,
   openColumn: 'open',
+  atColumn: 'at',
+  seenByColumn: 'ended_by',
   rowKeyOf: asKept,
   rowsOf: (playbook, { key, row }) =>
     Option.toArray(brokenColumnsOf(row)).map((columns) => brokenOf(playbook, key, columns)),
@@ -177,6 +188,8 @@ export const newTable: ActivityTable = {
   kind: 'new',
   projection: activityName,
   openColumn: 'listed',
+  atColumn: 'at',
+  seenByColumn: 'by',
   rowKeyOf: asKept,
   rowsOf: (playbook, { key, row }) => Option.toArray(newColumnsOf(row)).map((columns) => newOf(playbook, key, columns)),
 };
@@ -185,21 +198,41 @@ export const commentTable: ActivityTable = {
   kind: 'comment',
   projection: commentsName,
   openColumn: 'open',
+  atColumn: 'listed_at',
+  seenByColumn: 'listed_by',
   rowKeyOf: (key) => key.slice(commentKeyOf('').length),
   rowsOf: commentRowsOf,
 };
 
 export const activityTables: readonly ActivityTable[] = [requestTable, brokenTable, newTable, commentTable];
 
+export function rowsOwnedBy(owner: string, projection: string, query: ProjectedRowsQuery) {
+  return Effect.gen(function* () {
+    const reader = yield* OrgReader;
+    return yield* owner === ofTheOrg
+      ? reader.readProjectedRows(projection, query)
+      : reader.readPlaybookRows(owner, projection, query);
+  });
+}
+
+export function rowsCountedOf(owner: string, projection: string, where: readonly ProjectedCondition[]) {
+  return Effect.gen(function* () {
+    const reader = yield* OrgReader;
+    return yield* owner === ofTheOrg
+      ? reader.countProjectedRows(projection, where)
+      : reader.countPlaybookRows(owner, projection, where);
+  });
+}
+
 export interface PageBounds {
   readonly cursor: ActivityPosition | undefined;
   readonly since: ActivityPosition | undefined;
 }
 
-export function boundsOf({ cursor, since }: PageBounds): readonly ProjectedCondition[] {
+export function boundsOf({ cursor, since }: PageBounds, { atColumn }: ActivityTable): readonly ProjectedCondition[] {
   return [
-    ...(cursor === undefined ? [] : [{ column: 'at', before: cursor.at }]),
-    ...(since === undefined ? [] : [{ column: 'at', after: since.at }]),
+    ...(cursor === undefined ? [] : [{ column: atColumn, before: cursor.at }]),
+    ...(since === undefined ? [] : [{ column: atColumn, after: since.at }]),
   ];
 }
 

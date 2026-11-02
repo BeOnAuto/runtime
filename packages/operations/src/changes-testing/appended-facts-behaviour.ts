@@ -44,6 +44,10 @@ function shapeOf({ facts }: AppendedFacts) {
   return facts.map(({ stream, type, data }) => ({ stream, type, data }));
 }
 
+function streamsOf({ facts }: AppendedFacts): readonly string[] {
+  return facts.map(({ stream }) => stream);
+}
+
 function typesOf({ facts }: AppendedFacts): readonly string[] {
   return facts.map(({ type }) => type);
 }
@@ -146,6 +150,27 @@ function readNamedStreams(entry: AppendedFactsEntry): void {
   });
 }
 
+function readStreamsOfAKind(entry: AppendedFactsEntry): void {
+  it('reads every stream of a kind of an org it names by its three segments and a slash, and wakes on an append to one', async () => {
+    const ledger = await entry.aLedger();
+    const ofAKind: AppendedScope = { kind: 'streams', streams: ['org/acme/playbooks', 'org/acme/comments/'] };
+    const start = await read(ledger, ofAKind, heads);
+    const waiting = waitedFor(ledger, ofAKind, start.through, 10_000);
+    await appended(ledger, 'org/acme/comments/first', opened('first'));
+    await appended(ledger, 'org/beta/comments/first', opened('elsewhere'));
+    await appended(ledger, 'org/acme/activity/first', opened('seen'));
+    await appended(ledger, 'org/acme/comments/second', opened('second'));
+    await appended(ledger, 'org/acme/playbooks', opened('made'));
+
+    expect((await waiting).waited).toBe('appended');
+    expect(streamsOf(await read(ledger, ofAKind, { ...heads, after: start.cursor }))).toEqual([
+      'org/acme/comments/first',
+      'org/acme/comments/second',
+      'org/acme/playbooks',
+    ]);
+  });
+}
+
 function refusedCursors(entry: AppendedFactsEntry): void {
   it('refuses a cursor it does not hold: malformed, of another scope, or naming a fact it does not hold', async () => {
     const ledger = await entry.aLedger();
@@ -220,6 +245,7 @@ export function appendedFactsBehaviour(entry: AppendedFactsEntry): void {
     readFromTheStart(entry);
     readAtMost(entry);
     readNamedStreams(entry);
+    readStreamsOfAKind(entry);
     refusedCursors(entry);
   });
 

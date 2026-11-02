@@ -89,7 +89,23 @@ export function documentedInputOf(described: DocumentedOperation): unknown {
   return withEveryArgumentTyped(withoutKeywords(schema, ['$id', '$defs']));
 }
 
+function documentedFieldsOf(described: DocumentedOperation): readonly string[] {
+  if (methodsWithoutABody.has(described.method)) {
+    return namedParametersOf(described).map(({ name }) => name);
+  }
+  return fieldsIn(jsonBodyOf(described.operation.requestBody).content['application/json'].schema).map(
+    ({ name }) => name,
+  );
+}
+
+function addedByItsTwin(described: DocumentedOperation): readonly string[] {
+  return described.operation.operationId.endsWith('_in_org') && !documentedFieldsOf(described).includes('playbook')
+    ? ['playbook']
+    : [];
+}
+
 export function inputOfToolsOf(described: DocumentedOperation, tools: readonly ListedTool[]): readonly unknown[] {
-  const inputs = tools.map(({ inputSchema }) => withoutFields(inputSchema, pathFieldsOf(described)));
+  const notDocumented = [...pathFieldsOf(described), ...addedByItsTwin(described)];
+  const inputs = tools.map(({ inputSchema }) => withoutFields(inputSchema, notDocumented));
   return methodsWithoutABody.has(described.method) ? inputs.map((input) => fieldsIn(input)) : inputs;
 }

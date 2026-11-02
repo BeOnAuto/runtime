@@ -14,6 +14,10 @@ export interface ActivityItem {
 
 export const playbooksSegment = 'playbooks';
 
+export const orgSegment = 'org';
+
+export const ofTheOrg = '';
+
 export const runsSegment = 'runs';
 
 export const definitionsSegment = 'definitions';
@@ -25,6 +29,10 @@ export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
 const definitionTypes: ReadonlySet<string> = new Set(['workflow', ...functionTypeOrder, pageDefinitionType]);
 
 export const countPattern = /^[1-9][0-9]{0,8}$/u;
+
+const versionPattern = /^[1-9][0-9]{0,9}$/u;
+
+const mostVersion = 2_147_483_646;
 
 export const isPlaybookId = Schema.is(PlaybookIdSchema);
 
@@ -55,9 +63,14 @@ export function playbookChangeKeyOf(at: number): string {
 }
 
 export function addressOf({ form, playbook, key }: ActivityItem): string {
-  return form === 'playbook'
-    ? `${playbooksSegment}/${playbook}/${key.slice(playbooksSegment.length + 1)}`
-    : `${playbook}/${key}`;
+  if (form === 'playbook') {
+    return `${playbooksSegment}/${playbook}/${key.slice(playbooksSegment.length + 1)}`;
+  }
+  return playbook === ofTheOrg ? `${orgSegment}/${key}` : `${playbook}/${key}`;
+}
+
+export function isVersion(version: string): boolean {
+  return versionPattern.test(version) && Number(version) <= mostVersion;
 }
 
 export function isDefinition(type: string, name: string): boolean {
@@ -79,7 +92,7 @@ const formTests: readonly (readonly [ItemForm, FormTest])[] = [
   [
     'version',
     ([definitions, type = '', name = '', version = '', ...rest]) =>
-      rest.length === 0 && definitions === definitionsSegment && isDefinition(type, name) && countPattern.test(version),
+      rest.length === 0 && definitions === definitionsSegment && isDefinition(type, name) && isVersion(version),
   ],
   [
     'comment',

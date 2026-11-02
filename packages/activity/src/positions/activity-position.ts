@@ -13,7 +13,7 @@ const mostKeyCharacters = 200;
 
 const PositionSchema = Schema.Struct({
   at: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
-  playbook: PlaybookIdSchema,
+  playbook: Schema.Union([PlaybookIdSchema, Schema.Literal('')]),
   key: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(mostKeyCharacters)),
 });
 

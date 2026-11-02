@@ -41,7 +41,7 @@ async function made(address: string) {
 }
 
 describe('the comment tools over MCP', () => {
-  it('are list_comments and resolve_comment on /mcp and on the playbook endpoint, and no tool makes a comment', async () => {
+  it('are list_comments and resolve_comment on every endpoint, and no tool makes a comment', async () => {
     const named = await Promise.all(
       ['/mcp', '/orgs/acme/playbooks/alpha/mcp', '/orgs/acme/mcp'].map((path) =>
         onMcp(path, async (session) =>
@@ -50,7 +50,11 @@ describe('the comment tools over MCP', () => {
       ),
     );
 
-    expect(named).toEqual([['list_comments', 'resolve_comment'], ['list_comments', 'resolve_comment'], []]);
+    expect(named).toEqual([
+      ['list_comments', 'resolve_comment'],
+      ['list_comments', 'resolve_comment'],
+      ['list_comments', 'resolve_comment'],
+    ]);
   });
 
   it('let an agent read the open comments of a playbook and resolve one it acted on', async () => {
@@ -82,6 +86,34 @@ describe('the comment tools over MCP', () => {
     );
 
     expect(commentsOf(listed.structuredContent).comments.map(({ address }) => address)).toEqual([addresses.event]);
+  });
+});
+
+describe("the comment tools over MCP, for the organization's own", () => {
+  it("let an agent read the organization's own comments without a playbook, and resolve one, on /mcp and on the org endpoint", async () => {
+    const { ofTheReader } = commented;
+    const connection = '019a3f10-2b4c-7d5e-8f60-718293a4b5c6';
+    const own = commentOf(
+      (
+        await ofTheReader.call('POST', '/v1/orgs/acme/comments', {
+          address: `org/connections/${connection}`,
+          text: 'Connect it again.',
+        })
+      ).body,
+    );
+    await made(addressesOn(commented).run);
+
+    const { listed, resolved } = await onMcp('/mcp', async (session) => ({
+      listed: await session.callTool('list_comments', {}),
+      resolved: await session.callTool('resolve_comment', { id: own.id, how: 'acted' }),
+    }));
+    const after = await onMcp('/orgs/acme/mcp', (session) => session.callTool('list_comments', { open: false }));
+
+    expect(commentsOf(listed.structuredContent).comments.map(({ address }) => address)).toEqual([
+      `org/connections/${connection}`,
+    ]);
+    expect(commentOf(resolved.structuredContent)).toMatchObject({ id: own.id, open: false, resolved_how: 'acted' });
+    expect(commentsOf(after.structuredContent).comments.map(({ id }) => id)).toEqual([own.id]);
   });
 });
 

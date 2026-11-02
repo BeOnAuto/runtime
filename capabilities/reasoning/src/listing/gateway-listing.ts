@@ -21,15 +21,15 @@ const gatewayEntries = wellFormedEntries(
 
 type GatewayEntry = ReturnType<typeof gatewayEntries>[number];
 
-function listUrl({ base_url: baseUrl, query_params: queryParams }: GatewaySettings): string {
-  const url = endpointUrl(baseUrl, '/models');
+export function gatewayUrl({ base_url: baseUrl, query_params: queryParams }: GatewaySettings, path: string): string {
+  const url = endpointUrl(baseUrl, path);
   if (queryParams.size > 0) {
     url.search = new URLSearchParams(revealed(queryParams)).toString();
   }
   return url.toString();
 }
 
-function headersOf({ api_key: apiKey, headers }: GatewaySettings): Readonly<Record<string, string>> {
+export function gatewayHeaders({ api_key: apiKey, headers }: GatewaySettings): Readonly<Record<string, string>> {
   return {
     ...(apiKey === null ? {} : { Authorization: `Bearer ${Redacted.value(apiKey)}` }),
     ...revealed(headers),
@@ -50,7 +50,7 @@ function modelsOf(gateway: string, entries: readonly unknown[]): readonly Listed
 export function gatewayListing(settings: GatewaySettings, fetch: Fetch): ProviderListing {
   const { name } = settings;
   return {
-    read: listingJson({ fetch, url: listUrl(settings), headers: headersOf(settings) }).pipe(
+    read: listingJson({ fetch, url: gatewayUrl(settings, '/models'), headers: gatewayHeaders(settings) }).pipe(
       Effect.flatMap(gatewayList),
       Effect.map(({ data }) => modelsOf(name, data)),
     ),

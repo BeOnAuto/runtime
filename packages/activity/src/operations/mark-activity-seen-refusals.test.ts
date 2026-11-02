@@ -33,6 +33,22 @@ describe('what mark_activity_seen refuses', () => {
   it('forbids marking an item of a playbook the caller may not access', async () => {
     const { mark } = await financeAndSales();
 
-    expect(await mark(salesReader, { items: [closed] })).toMatchObject({ status: 'rejected', reason: 'forbidden' });
+    expect(await mark(salesReader, { items: [closed] })).toEqual({
+      status: 'rejected',
+      reason: 'forbidden',
+      detail: 'The caller may not access the playbook finance',
+    });
+  });
+
+  it("forbids a caller limited to some playbooks marking the organization's comments, in words that name them", async () => {
+    const { mark } = await financeAndSales();
+    const ofTheOrg = { address: `org/comments/${runs.closed.runId}`, at: at('13:05') };
+
+    expect(await mark(salesReader, { items: [ofTheOrg] })).toEqual({
+      status: 'rejected',
+      reason: 'forbidden',
+      detail:
+        "The caller may not mark the organization's comments, which only a caller who may access every playbook sees",
+    });
   });
 });

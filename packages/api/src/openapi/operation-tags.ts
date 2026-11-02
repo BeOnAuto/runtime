@@ -8,15 +8,17 @@ export interface Tag {
 const descriptionsOfTags: Readonly<Record<string, string>> = {
   playbooks: 'The playbooks of the org: made, listed, read, renamed and retired',
   activity:
-    'What the playbooks of the org did that a person may want to see, the requests that wait on an answer, the broken definitions, what is new and the open comments, and what each caller has seen of it',
+    "What the playbooks of the org did that a person may want to see, the requests that wait on an answer, the broken definitions, what is new and the open comments, the organization's own among them, and what each caller has seen of it",
   models: 'The models this server can call, which a reasoning function names',
+  voice:
+    'The voice model this server transcribes a recording with, so a person speaks a comment in Studio rather than typing it',
   definitions: "A playbook's function and workflow definitions, and the runs they start",
   runs: "A playbook's runs: read, listed, cancelled, their history, and events sent to a waiting run",
   events: 'The events published to a playbook, and its history of events',
   analytics: 'How the runs of a playbook went, counted by day',
   interactions: 'The requests runs wait on, and their answers',
   comments:
-    'What people say in Studio about the things of a playbook, each at the address of what it is about, until it is resolved',
+    'What people say in Studio about the things of a playbook or of the organization, each at the address of what it is about and where on it the comment was dropped, until it is resolved',
   'tool-servers': 'The tool servers the functions of a playbook may use, and tests of their tools',
   connections:
     "The tool servers people add to the org, which its playbooks share, and the routes of Studio's page that approves them",

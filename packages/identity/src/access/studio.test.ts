@@ -134,6 +134,28 @@ describe('the link that opens Studio on the runtime at a comment', () => {
   });
 });
 
+describe('the link that opens Studio on the runtime at a comment of the organization', () => {
+  const atTheOrg = 'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555';
+  const comment = '019a4131-9d2e-7f40-8a51-6b7c8d9e0f12';
+
+  it('names no playbook: the comment alone for the organization, and the page of Settings for a thing on one', () => {
+    expect([
+      atPage(elsewhere, { kind: 'org_comment', comment }),
+      atPage(elsewhere, { kind: 'org_comment', comment, settings: 'connections' }),
+      studioLinkOf(elsewhere, {
+        ownOrigin,
+        openedFrom: 'agent',
+        installId: '6f1c2b8e-3d4a-4e5f-9a0b-1c2d3e4f5a6b',
+        page: { kind: 'org_comment', comment, settings: 'billing' },
+      }),
+    ]).toEqual([
+      `${atTheOrg}&comment=${comment}`,
+      `${atTheOrg}&settings=connections&comment=${comment}`,
+      `${atTheOrg}&settings=billing&comment=${comment}`,
+    ]);
+  });
+});
+
 describe('the origins a page may call the runtime from', () => {
   it("are the Studio host's and the allowed origins, where the runtime serves no Studio", () => {
     expect(pageOriginsOf({ studio: elsewhere, allowedOrigins: ['https://app.example'] }, ownOrigin)).toEqual([

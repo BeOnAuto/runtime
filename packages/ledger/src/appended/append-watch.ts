@@ -1,13 +1,14 @@
 import { Context, Effect } from 'effect';
 
-import type {
-  AppendListeners,
-  AppendWaited,
-  AppendWaitsStore,
-  FactScope,
-  LatestAppends,
-  ReadLatestAppends,
-  RecordedPoint,
+import {
+  isAKind,
+  type AppendListeners,
+  type AppendWaited,
+  type AppendWaitsStore,
+  type FactScope,
+  type LatestAppends,
+  type ReadLatestAppends,
+  type RecordedPoint,
 } from '../event-store.ts';
 import { signalOf, type StreamSignal } from '../signal/append-signal.ts';
 
@@ -74,8 +75,13 @@ export function inScope(scope: FactScope, appendedTo: string): boolean {
   if (scope.kind === 'playbook') {
     return appendedTo.startsWith(scope.playbookKey);
   }
-  const ofAKind = appendedTo.endsWith('/');
-  return scope.streams.some((stream) => stream === appendedTo || (ofAKind && stream.startsWith(appendedTo)));
+  const ofAKind = isAKind(appendedTo);
+  return scope.streams.some(
+    (stream) =>
+      stream === appendedTo ||
+      (ofAKind && stream.startsWith(appendedTo)) ||
+      (isAKind(stream) && appendedTo.startsWith(stream)),
+  );
 }
 
 function wokenBy({ latest }: LatestAppends, { scope, after }: Waiter): boolean {

@@ -1,6 +1,7 @@
 import { settingProblemText } from '@on.auto/config';
 import { Config, Data, Effect } from 'effect';
 
+import { voiceModelVariable, voiceReading, type VoiceModel } from '../voice/voice-settings.ts';
 import { aliasReading } from './alias-settings.ts';
 import { catalogReading } from './catalog-settings.ts';
 import { gatewayReading, type GatewaySettings } from './gateway-settings.ts';
@@ -44,6 +45,7 @@ export interface ModelSettings {
   readonly aliases: ReadonlyMap<string, string>;
   readonly declared: ReadonlyMap<string, readonly string[]>;
   readonly allowed: readonly string[] | null;
+  readonly voice?: VoiceModel;
   readonly providerSetup?: string | undefined;
 }
 
@@ -57,6 +59,7 @@ export const modelListVariables = {
   aliases: 'MODEL_ALIASES',
   declared: 'DECLARED_MODELS',
   allowed: 'ALLOWED_MODELS',
+  voice: voiceModelVariable,
 } as const;
 
 const sources = Config.all({
@@ -70,6 +73,7 @@ const sources = Config.all({
   aliases: optionalText(modelListVariables.aliases),
   declared: optionalText(modelListVariables.declared),
   allowed: optionalText(modelListVariables.allowed),
+  voice: optionalText(modelListVariables.voice),
 });
 
 function invalid(problems: readonly SettingProblem[]): ModelSettingsInvalid {
@@ -109,7 +113,8 @@ export const readModelSettings = Effect.fnUntraced(function* (environment: Envir
     providers: [...configuredOf(builtIns), ...gatewayNames],
     aliases: aliases.aliases,
   });
-  const problems = [anthropic, openai, google, bedrock, azure, vertex, gateways, aliases, catalog].flatMap(
+  const voice = voiceReading(source.voice, { gateways: gateways.gateways, openai: openai.availability });
+  const problems = [anthropic, openai, google, bedrock, azure, vertex, gateways, aliases, catalog, voice].flatMap(
     (reading) => reading.problems,
   );
   if (problems.length > 0) {
@@ -126,6 +131,7 @@ export const readModelSettings = Effect.fnUntraced(function* (environment: Envir
     aliases: aliases.aliases,
     declared: catalog.declared,
     allowed: catalog.allowed,
+    ...(voice.voice === null ? {} : { voice: voice.voice }),
   };
   return settings;
 });

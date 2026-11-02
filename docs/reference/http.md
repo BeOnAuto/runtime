@@ -2,7 +2,7 @@
 
 The HTTP API serves every operation of Auto Runtime. It covers playbooks, function and workflow definitions, runs and their history, and requests. It also covers events, analytics and the tool servers a playbook's functions may use. This page lists every route with its fields, limits and errors.
 
-The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `interaction`, `prediction`, `computation` or `workflow`.
+The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `lookup`, `memory`, `interaction`, `prediction`, `computation`, `workflow` or `page`.
 
 ## Requests and access
 
@@ -16,12 +16,12 @@ Send requests to the server's address, such as `https://auto.example.com`, the `
 
 Each API key belongs to one org and has permissions for a set of playbooks:
 
-| Permission       | Lets the caller                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `org:read`       | Read the org's playbooks and connections, list models and providers, search the org's tool servers, and read the org's activity and mark it seen |
-| `org:write`      | Create, update and retire playbooks, and add, reconnect and remove connections                                                                   |
-| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, search and read tools, and make, read and resolve comments                      |
-| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                   |
+| Permission       | Lets the caller                                                                                                                                                                                 |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `org:read`       | Read the org's playbooks and connections, list models and providers, search the org's tool servers, read the org's activity and mark it seen, and make, read and resolve the org's own comments |
+| `org:write`      | Create, update and retire playbooks, and add, reconnect and remove connections                                                                                                                  |
+| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, search and read tools, make, read and resolve comments, and transcribe a recording                                             |
+| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                                                                  |
 
 Each route table below names the permission a route needs.
 
@@ -42,8 +42,8 @@ These four need no key, and neither does [content at a signed address](#content-
 
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
-- Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `make_comment`, `list_org_changes`, `list_playbook_changes`, `list_activity`, `mark_activity_seen`, `activate_allocation` and `report_allocation`.
+- Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, and `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments. Its summary is its title. Its tag names the resource it acts on.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `make_comment` and `make_comment_in_org`, `reopen_comment` and `reopen_comment_in_org`, `list_org_changes`, `list_playbook_changes`, `list_activity`, `mark_activity_seen`, `transcribe`, `get_voice`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -135,20 +135,28 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 
 `create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the run's. A comment carries one too, to the place it is about. The link opens the Studio the runtime names, `/studio/` on its own origin where it serves Studio and the Studio host, `STUDIO_ORIGIN`, otherwise, on the runtime the request reached, its `PUBLIC_URL` where it signs people in, as `server`, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`. A definition's page is named by its type and its name, as `reasoning=summarize-brief`, then by `because`, `created` from `create_definition` and `updated` from `update_definition`, and by `version`, the version the call answers: `reasoning=summarize-brief&because=updated&version=3`. An `update_definition` that changes nothing records no version, so its link has no `because` and names the version that stands. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
 
-A comment's `studio`, which each [comment](#comments) carries, opens its [address](addresses.md) and shows the comment beside it. It opens a place rather than announcing what an agent made, so it carries `server` where the other links do, then the parameters Studio's own address takes, in this order, one for each part of the address, each URL-encoded, and only those the address has, with no `src` and no `because`:
+A comment's `studio`, which each [comment](#comments) carries, opens its [address](addresses.md) and shows the comment beside it. It opens a place rather than announcing what an agent made, so it carries `server` where the other links do, then the parameters Studio's own address takes, in this order, one for each segment of the address, each URL-encoded, and only those the address has, with no `src` and no `because`:
 
-| Parameter       | What it names                                                                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `playbook`      | The playbook, always                                                                                                                              |
-| `<type>=<name>` | The definition, by its type and its name, as the other links name it: `workflow=close-the-week`, `computation=total-spend` or `page=weekly-close` |
-| `version`       | The definition's version                                                                                                                          |
-| `step`          | The step of a workflow, its reference without its leading `/`: `step=do%2F1%2Freview`                                                             |
-| `run`           | The run, for a run, an event of a run, a block of its result and a request                                                                        |
-| `event`         | The event of the run                                                                                                                              |
-| `block`         | The place of a block of the run's result, from 1                                                                                                  |
-| `comment`       | The comment's id, always                                                                                                                          |
+| Parameter       | What it names                                                                                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `playbook`      | The playbook, for a thing of a playbook                                                                                                                                          |
+| `settings`      | The page of Settings, for a thing of the organization's other than `org` itself: the page `org/settings/<page>` names, `connections` for a connection and `members` for a member |
+| `<type>=<name>` | The definition, by its type and its name, as the other links name it: `workflow=close-the-week`, `computation=total-spend` or `page=weekly-close`                                |
+| `version`       | The definition's version                                                                                                                                                         |
+| `step`          | The step of a workflow, its reference without its leading `/`: `step=do%2F1%2Freview`                                                                                            |
+| `run`           | The run, for a run, an event of a run, a block of its result and a request                                                                                                       |
+| `event`         | The event of the run                                                                                                                                                             |
+| `block`         | The place of a block of the run's result, from 1                                                                                                                                 |
+| `comment`       | The comment's id, always                                                                                                                                                         |
 
 So a comment on a step opens `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f`, and one on the playbook `…&playbook=finance&comment=<id>`. Studio reads a resolved comment with `open=false`, so its link opens it too.
+
+A part adds no parameter: a comment on a part opens the page of its thing, and Studio finds the part there by the comment's address and shows it with the comment. A comment of the organization's own opens:
+
+- on `org`, Studio's home: `…?server=…&comment=<id>`;
+- on a page of Settings, Settings at that page: `…&settings=billing&comment=<id>`;
+- on a connection, Settings at Connections, with the connection's row: `…&settings=connections&comment=<id>`;
+- on a member, Settings at Members, with the member's row: `…&settings=members&comment=<id>`.
 
 ## Models
 
@@ -157,6 +165,55 @@ So a comment on a step opens `https://studio.on.auto/?server=https%3A%2F%2Frunti
 | `list_models` | `GET /v1/orgs/{org}/models` | `org:read` | Optional `provider` |
 
 `provider` is a provider prefix of 1 to 32 lowercase letters, digits or hyphens, starting with a letter. The result is the same over HTTP and MCP; [Model information](mcp.md#model-information) describes its fields, aliases, wildcard entries and incomplete lists.
+
+## Voice
+
+A person can speak a comment rather than type it. Studio records what they say and sends it to the runtime, which has it written out by the voice model its settings name. These two routes are served over HTTP alone; no MCP tool serves them. They are relative to `/v1/orgs/{org}`:
+
+| Operation    | Method and route             | Permission      | Input                         |
+| ------------ | ---------------------------- | --------------- | ----------------------------- |
+| `transcribe` | `POST /voice/transcriptions` | `playbook:read` | `audio`, `type` and `seconds` |
+| `get_voice`  | `GET /voice`                 | `playbook:read` | None                          |
+
+`get_voice` answers `{ model }`: the voice model as the runtime's settings name it, such as `openai/whisper-1`, or `null` where none is set. A client offers voice only where it answers a model. A runtime that answers `404` to it predates voice and has none.
+
+`transcribe` takes:
+
+- `audio`, the recording, in base64;
+- `type`, its media type: `audio/webm`, `audio/ogg`, `audio/mp4` or `audio/wav`;
+- `seconds`, how long the recording is, as the caller measured it: a whole number from 1 to 120.
+
+The body is held to the runtime's 1 MiB, as every body is, which holds two minutes of speech recorded as Opus. The runtime sends the recording to the voice model, as [Voice model](model-settings.md#voice-model) sets out, and answers `200` with `{ text }`, the transcription as the model gave it, without the white space around it. A recording in which the model heard nothing answers an empty `text`.
+
+A transcription is a model call, not a run: it starts no run, is in no playbook's history, and the runtime's meter does not count it. It is recorded on the organization's ledger, on a stream of its own, `org/<org>/voice/<id>`, `id` the transcription's, with `at` and `by`, who asked:
+
+| Fact                | When                                                                          | Fields                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `voice_transcribed` | The model answered                                                            | `id`, the transcription's id, a UUIDv7 the runtime gives it; `model`, the voice model as the settings name it; `type`, `audio_bytes` and `seconds`, the recording's media type, its size and its length as the caller gave it; `text_characters`, the length of the `text` answered; `cost_usd`, what the gateway answered in the entry's [`cost_header`](model-settings.md#gateway-fields), or `null` |
+| `voice_refused`     | The call reached the model and failed, or the model or its gateway refused it | `id`, `model`, `type`, `audio_bytes` and `seconds`, as above, and `because`, the kind of the failure, as [When a model call fails](model-settings.md#when-a-model-call-fails) names it                                                                                                                                                                                                                 |
+
+The text itself is never recorded, nor the recording. A request refused before the model is called, for its input or since no voice model is set, records nothing. A gateway that meters the organization's calls may refuse one before the model is called, with a `402` whose `error.type` is `credits_exhausted`, `account_closed`, `meter_unavailable` or `model_not_offered`: `transcribe` answers it in that kind and the gateway's own words, `conflict` for the first two, with its `resolve_at` and `because` where it gives them, and `unavailable` for the other two, and records nothing. Any other `402` is the gateway unable to serve the call, answered `unavailable`, "`<provider>` could not serve the request (HTTP 402); try again later", and recorded as `voice_refused` with `because` `provider_unavailable`.
+
+```http
+POST /v1/orgs/acme/voice/transcriptions
+Authorization: Bearer <key>
+Content-Type: application/json
+
+{ "audio": "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQRChYEC…", "type": "audio/webm", "seconds": 6 }
+```
+
+```json
+{ "text": "Flag any entry over ten thousand dollars for Priya before the week closes." }
+```
+
+| Case                                                                        | Response                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No voice model is set                                                       | `unavailable`, "This runtime has no voice model"                                                                                                                                                              |
+| A body over 1 MiB                                                           | `413` `content_too_large`                                                                                                                                                                                     |
+| An `audio` that is empty or not base64                                      | `invalid_input` at `/audio`                                                                                                                                                                                   |
+| A `type` other than the four above                                          | `invalid_input` at `/type`                                                                                                                                                                                    |
+| A `seconds` left out, or not a whole number from 1 to 120                   | `invalid_input` at `/seconds`                                                                                                                                                                                 |
+| The model or its gateway refuses the call, fails or does not answer in time | As a reasoning function's model call ([When a model call fails](model-settings.md#when-a-model-call-fails)), by its kind, and in the gateway's own words only where its entry sets `expose_provider_messages` |
 
 ## Reasoning functions
 
@@ -822,18 +879,19 @@ A page can contain fewer items than `limit`, or none, while `has_more` is `true`
 
 ## Comments
 
-A person comments on what Studio shows of a playbook, where they see it: a definition, a step of a workflow, a run, an event of a run, a block of a run's result, a request or the playbook itself. Each comment names what it is about by its [address](addresses.md), and stays open until a person or an agent resolves it. The person hands the open comments to their agent, which reads them, acts on each and resolves it. These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
+A person comments on what Studio shows, where they see it: of a playbook, a definition, a step of a workflow, a run, an event of a run, a block of a run's result, a request or the playbook itself; of the organization, a connection, a member, a page of Settings or the organization itself; and a [part](addresses.md#the-parts-of-a-thing) of most of these. Each comment names what it is about by its [address](addresses.md), and stays open until a person or an agent resolves it; a person can reopen a resolved one. A comment dropped on the thing carries its `anchor`, where on the thing it was dropped, and Studio draws it there as a pin. The person hands the open comments to their agent, which reads them, acts on each and resolves it. A playbook's comments have these routes, relative to `/v1/orgs/{org}/playbooks/{playbook}`, and the organization's own have the same four under `/v1/orgs/{org}` ([The organization's comments](#the-organization-s-comments)):
 
 | Operation         | Method and route              | Permission      | Input                                                     |
 | ----------------- | ----------------------------- | --------------- | --------------------------------------------------------- |
-| `make_comment`    | `POST /comments`              | `playbook:read` | `address` and `text`                                      |
+| `make_comment`    | `POST /comments`              | `playbook:read` | `address`, `text` and an optional `anchor`                |
 | `list_comments`   | `GET /comments`               | `playbook:read` | Optional `address`, `under`, `open`, `limit` and `cursor` |
 | `resolve_comment` | `POST /comments/{id}/resolve` | `playbook:read` | Comment id in path; `how`                                 |
+| `reopen_comment`  | `POST /comments/{id}/reopen`  | `playbook:read` | Comment id in path                                        |
 
-- Commenting and resolving are a reader's acts: anyone who may read the playbook may comment on it and resolve its comments, their own or anyone's.
-- `make_comment` is served over HTTP alone, so an agent does not comment on its own work. `list_comments` and `resolve_comment` are also [MCP tools](mcp.md#comments).
+- Commenting, resolving and reopening are a reader's acts: anyone who may read the playbook may comment on it, and resolve and reopen its comments, their own or anyone's.
+- `make_comment` and `reopen_comment` are served over HTTP alone, so an agent does not comment on its own work, and a person, not an agent, reopens a comment. `list_comments` and `resolve_comment` are also [MCP tools](mcp.md#comments).
 - A comment cannot be edited. A person corrects one by resolving it and commenting again, and replies by commenting on the same address.
-- A comment belongs to the playbook whose thing it is about. A retired playbook's comments stay readable, open or resolved, and `make_comment` and `resolve_comment` there are refused with `conflict` with the kind `retired`, as every change to it is: its open comments can be read and reported, never resolved or added to.
+- A comment belongs to the playbook whose thing it is about, and a comment on the organization's things to the organization. A retired playbook's comments stay readable, open or resolved, and `make_comment`, `resolve_comment` and `reopen_comment` there are refused with `conflict` with the kind `retired`, as every change to it is: its comments can be read and reported, never resolved, reopened or added to.
 
 ### A comment
 
@@ -844,13 +902,16 @@ Each operation answers a comment with these fields:
 | `id`           | The comment's id, a UUIDv7 the runtime gives it                                                                                                                              |
 | `address`      | The [address](addresses.md) of what it is about                                                                                                                              |
 | `text`         | What the person said, in Markdown                                                                                                                                            |
+| `anchor`       | Where on the thing the person dropped it, `{ x, y }`, as [Making a comment](#making-a-comment) sets out; `null` for a comment made without one, as a reply is                |
 | `by`           | The id of the caller who made it. An agent connected as a person comments as that person                                                                                     |
 | `by_name`      | The name of the caller who made it, as the runtime names them, as `created_by` of a definition gives it                                                                      |
 | `at`           | When it was made, in ISO 8601 UTC                                                                                                                                            |
-| `open`         | `true` until it is resolved                                                                                                                                                  |
-| `resolved_at`  | When it was resolved, in ISO 8601 UTC; `null` while it is open                                                                                                               |
-| `resolved_by`  | The id of the caller who resolved it; `null` while it is open                                                                                                                |
-| `resolved_how` | `acted`, done as it asked, or `dismissed`, closed without acting; `null` while it is open                                                                                    |
+| `open`         | `true` until it is resolved, and again once it is reopened                                                                                                                   |
+| `resolved_at`  | When it was resolved, in ISO 8601 UTC; `null` while it is open, a reopened one included                                                                                      |
+| `resolved_by`  | The id of the caller who resolved it; `null` while it is open, a reopened one included                                                                                       |
+| `resolved_how` | `acted`, done as it asked, or `dismissed`, closed without acting; `null` while it is open, a reopened one included                                                           |
+| `reopened_at`  | When it was last reopened, in ISO 8601 UTC; `null` until it is first reopened, and kept when it is resolved again                                                            |
+| `reopened_by`  | The id of the caller who last reopened it; `null` until it is first reopened, and kept when it is resolved again                                                             |
 | `studio`       | The comment's place in Studio, which opens its address and shows the comment beside it, as [Links to Studio](#links-to-studio) says; left out where Studio would not open it |
 
 Studio shows `text` as Markdown, and any HTML in it as text, as a page shows its Markdown ([Markdown, not HTML](page-format.md#markdown-not-html)).
@@ -860,7 +921,10 @@ Studio shows `text` as Markdown, and any HTML in it as text, as a page shows its
 `make_comment` takes:
 
 - `address`, the address of what the comment is about, in one of the [forms a comment takes](addresses.md#the-forms), naming this playbook, at most 512 characters;
-- `text`, Markdown of at most 4,000 characters as sent, counted before the white space around it is dropped, and stored without that white space; it cannot be empty or all white space, and holds no control character but a tab and a line break, no unpaired surrogate and no noncharacter.
+- `text`, Markdown of at most 4,000 characters as sent, counted before the white space around it is dropped, and stored without that white space; it cannot be empty or all white space, and holds no control character but a tab and a line break, no unpaired surrogate and no noncharacter;
+- `anchor`, optional, where on the thing the person dropped the comment: `{ x, y }`, each a number from 0 to 1 with at most 4 decimals, the fraction of the thing's box as Studio draws it, `x` from its left edge to its right and `y` from its top to its bottom. It is left out for a comment made without a pin, as a reply in a thread is, so the pins of a thread do not pile up, and an `anchor` of `null` is taken as left out. The runtime keeps it as given and never reads what it points at.
+
+An `anchor` out of that range or with more than 4 decimals is refused with `invalid_input` at `/anchor`, `Expected x and y, each a number from 0 to 1 with at most 4 decimals`, and one that is neither an object nor `null` there too, `Expected object | null`. One of another shape is refused at the field within it: a missing `x` or `y` at `/anchor/x` or `/anchor/y`, `Missing key`; an `x` or `y` that is not a number there, `Expected number`; and a key it does not take, such as `z`, at `/anchor/z`, `Expected no excess property`.
 
 It records one fact, `comment_made`, on the comment's own stream, `playbook/<org>/<playbook>/comments/<id>`, and answers `201` with the comment. The runtime checks the address's form, never that the thing exists, so a comment on a retired definition is still a comment ([What the runtime checks](addresses.md#what-the-runtime-checks)).
 
@@ -871,7 +935,8 @@ Content-Type: application/json
 
 {
   "address": "finance/definitions/workflow/close-the-week/4/steps/do/1/review",
-  "text": "Flag any entry over $10,000 for Priya before the week closes."
+  "text": "Flag any entry over $10,000 for Priya before the week closes.",
+  "anchor": { "x": 0.6125, "y": 0.4 }
 }
 ```
 
@@ -880,6 +945,7 @@ Content-Type: application/json
   "id": "019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f",
   "address": "finance/definitions/workflow/close-the-week/4/steps/do/1/review",
   "text": "Flag any entry over $10,000 for Priya before the week closes.",
+  "anchor": { "x": 0.6125, "y": 0.4 },
   "by": "person:user_7kLm2",
   "by_name": "Priya Raman",
   "at": "2026-11-02T10:14:03.218Z",
@@ -887,28 +953,31 @@ Content-Type: application/json
   "resolved_at": null,
   "resolved_by": null,
   "resolved_how": null,
+  "reopened_at": null,
+  "reopened_by": null,
   "studio": "https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f"
 }
 ```
 
 ### Listing comments
 
-`list_comments` returns `comments`, newest first by `at`, with `has_more` and `next_cursor`.
+`list_comments` returns `comments`, newest first by `at`, each with its `anchor` or `null`, with `has_more` and `next_cursor`.
 
 | Parameter | Rule                                                                                                                                                                                                                          |
 | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `address` | An address of this playbook: keep the comments on it. Left out, every comment of the playbook                                                                                                                                 |
+| `address` | An address of this playbook, or on the organization's routes of the organization's things: keep the comments on it. Left out, every comment of the playbook, or of the organization's own                                     |
 | `under`   | `true` keeps the comments on `address` and on what is under it, as the list below says; `false` when left out. With `under`, `address` may also name a definition without its version, `<playbook>/definitions/<type>/<name>` |
 | `open`    | `true` keeps the open comments, `false` the resolved ones; `true` when left out                                                                                                                                               |
 | `limit`   | 1 to 200, and 50 when left out                                                                                                                                                                                                |
 | `cursor`  | The `next_cursor` of the page before                                                                                                                                                                                          |
 
-- `under` on a run keeps the comments on the run, its events and the blocks of its result. The request of the run, `<playbook>/<run_id>`, is not under it.
-- `under` on a definition at a version keeps the comments on it and on each of its steps.
-- `under` on a definition without its version keeps the comments on every version of it and on their steps.
-- `under` on the playbook, `playbooks/<playbook>`, keeps the comments on the playbook itself, and none on what it holds.
-- `under` on any other address, a step among them, keeps the comments on that address alone: a step nested in it is not under it.
-- Pass `next_cursor` as `cursor` to read the next page, until `next_cursor` is `null`. Cursors are opaque, and each names its playbook: one of another playbook, or one that does not decode, is refused.
+- `under` on any address keeps the comments on it and on its parts, `<address>/parts/<part>`.
+- `under` on a run also keeps the comments on its events and the blocks of its result. The request of the run, `<playbook>/<run_id>`, is not under it.
+- `under` on a definition at a version also keeps the comments on each of its steps.
+- `under` on a definition without its version keeps the comments on every version of it, their parts and their steps.
+- `under` on the playbook, `playbooks/<playbook>`, keeps the comments on the playbook itself and its parts, and none on what it holds. `under` on `org` keeps those on the organization itself and its parts, and none on its connections, members or pages of Settings.
+- `under` on a step, an event, a block or a request, which take no parts, keeps the comments on that address alone: a step nested in it is not under it.
+- Pass `next_cursor` as `cursor` to read the next page, until `next_cursor` is `null`. Cursors are opaque, and each names its playbook, or the organization: one of another playbook, one of the organization's comments on a playbook's route or the reverse, or one that does not decode, is refused.
 - `open=false` lists the resolved comments, each with `open: false`, so a resolved comment stays readable here, as its link reads it. The [activity](#the-organization-s-activity) lists only open ones.
 
 ```http
@@ -923,6 +992,7 @@ Authorization: Bearer <key>
       "id": "019a4122-0c1d-7e2f-8a3b-4c5d6e7f8091",
       "address": "finance/runs/019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e/result/2",
       "text": "This total leaves out the refunds.",
+      "anchor": null,
       "by": "person:user_3pQr8",
       "by_name": "Tomás Ortega",
       "at": "2026-11-02T10:31:44.902Z",
@@ -930,6 +1000,8 @@ Authorization: Bearer <key>
       "resolved_at": null,
       "resolved_by": null,
       "resolved_how": null,
+      "reopened_at": null,
+      "reopened_by": null,
       "studio": "https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&run=019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e&block=2&comment=019a4122-0c1d-7e2f-8a3b-4c5d6e7f8091"
     }
   ],
@@ -942,8 +1014,9 @@ Authorization: Bearer <key>
 
 `resolve_comment` takes the comment's `id` in its path, a UUID read in lower case, so `019A4120-…` names the same comment as `019a4120-…`, and `how`: `acted` once what the comment asked is done, or `dismissed` to close it without acting. It records one fact, `comment_resolved`, on the comment's stream, and answers the comment, closed.
 
-- Resolving a comment that is resolved already records nothing and answers it as it stands, with the `how` it was first resolved with.
+- Resolving a comment that is resolved already records nothing and answers it as it stands, with the `how` it was resolved with.
 - A resolved comment leaves the activity: its row is no longer listed or counted.
+- A comment that was [reopened](#reopening-a-comment) is resolved again as any open comment is, with a new `comment_resolved`.
 
 ```http
 POST /v1/orgs/acme/playbooks/finance/comments/019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f/resolve
@@ -958,6 +1031,7 @@ Content-Type: application/json
   "id": "019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f",
   "address": "finance/definitions/workflow/close-the-week/4/steps/do/1/review",
   "text": "Flag any entry over $10,000 for Priya before the week closes.",
+  "anchor": { "x": 0.6125, "y": 0.4 },
   "by": "person:user_7kLm2",
   "by_name": "Priya Raman",
   "at": "2026-11-02T10:14:03.218Z",
@@ -965,24 +1039,113 @@ Content-Type: application/json
   "resolved_at": "2026-11-02T11:02:57.640Z",
   "resolved_by": "person:user_7kLm2",
   "resolved_how": "acted",
+  "reopened_at": null,
+  "reopened_by": null,
   "studio": "https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f"
 }
 ```
 
-A request with several faults is refused for the first: a retired playbook before any field, then the fields in the order the table lists them.
+A request with several faults is refused for the first: a retired playbook before any field, then the fields in the order the table lists them, except that the input is checked as a whole before the form of its `address`. So a request with both a bad `anchor` and an `address` of no form a comment takes is refused for the anchor, and `errors` names each field the check of the whole input refused, such as `/text` and `/anchor` together.
 
-| Case                                                                                                                                                                                  | Response                           |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `make_comment` or `resolve_comment` in a retired playbook                                                                                                                             | `conflict` with the kind `retired` |
-| An `address` that is not of a form a comment takes, names another playbook or is over 512 characters                                                                                  | `invalid_input` at `/address`      |
-| A `text` that is empty, all white space or over 4,000 characters as sent, or that holds a control character other than a tab or a line break, an unpaired surrogate or a noncharacter | `invalid_input` at `/text`         |
-| `under` without `address`                                                                                                                                                             | `invalid_input` at `/under`        |
-| A `limit` outside 1 to 200                                                                                                                                                            | `invalid_input` at `/limit`        |
-| A `cursor` that does not decode, or that names another playbook                                                                                                                       | `invalid_input` at `/cursor`       |
-| A `how` that is not `acted` or `dismissed`                                                                                                                                            | `invalid_input` at `/how`          |
-| An `id` that is not a UUID                                                                                                                                                            | `invalid_input` at `/id`           |
-| A UUID no comment of the playbook has                                                                                                                                                 | `not_found`                        |
-| A `resolve_comment` that meets another of the same comment at the same moment                                                                                                         | `conflict`; send it again          |
+| Case                                                                                                                                                                                                               | Response                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| `make_comment`, `resolve_comment` or `reopen_comment` in a retired playbook                                                                                                                                        | `conflict` with the kind `retired`                                                                      |
+| An `address` that is not of a form a comment takes, names another playbook, is the organization's on a playbook's route or a playbook's on the organization's, or is over 512 characters                           | `invalid_input` at `/address`                                                                           |
+| A `text` that is empty, all white space or over 4,000 characters as sent, or that holds a control character other than a tab or a line break, an unpaired surrogate or a noncharacter                              | `invalid_input` at `/text`                                                                              |
+| An `anchor` that is neither an object nor `null`, or whose `x` or `y` is not from 0 to 1 with at most 4 decimals; one with a missing `x` or `y`, an `x` or `y` that is not a number, or another key, at that field | `invalid_input` at `/anchor`; at `/anchor/x`, `/anchor/y` or the key's own pointer, such as `/anchor/z` |
+| `under` without `address`                                                                                                                                                                                          | `invalid_input` at `/under`                                                                             |
+| A `limit` outside 1 to 200                                                                                                                                                                                         | `invalid_input` at `/limit`                                                                             |
+| A `cursor` that does not decode, or that names another playbook, or the organization on a playbook's route or a playbook on the organization's                                                                     | `invalid_input` at `/cursor`                                                                            |
+| A `how` that is not `acted` or `dismissed`                                                                                                                                                                         | `invalid_input` at `/how`                                                                               |
+| An `id` that is not a UUID                                                                                                                                                                                         | `invalid_input` at `/id`                                                                                |
+| A UUID no comment of the playbook has                                                                                                                                                                              | `not_found`                                                                                             |
+| A `resolve_comment` or `reopen_comment` that meets another of either of the same comment at the same moment                                                                                                        | `conflict`; send it again                                                                               |
+
+### Reopening a comment
+
+`reopen_comment` takes the comment's `id` in its path, read as `resolve_comment` reads it, and no body. A person reopens a comment that was resolved before what it asked was done. It records one fact, `comment_reopened`, on the comment's stream, whose context says who reopened it and when and which holds no data, and answers the comment, open again: `open` is `true`, `resolved_at`, `resolved_by` and `resolved_how` are `null`, and `reopened_at` and `reopened_by` say when and by whom.
+
+- Reopening a comment that is open, one never resolved or one reopened already, records nothing and answers it as it stands.
+- A reopened comment is open as any other: `list_comments` lists it among the open ones, and `resolve_comment` resolves it again.
+- The [activity](#the-organization-s-activity) lists it again, at the time it was reopened, as new to everyone but who reopened it, as [Seen and counted](#seen-and-counted) says.
+- [`list_playbook_changes`](#changes) names it as a comment change, and `list_org_changes` one of the organization's own.
+- Its `text`, `anchor`, `by` and `at` stay as it was made: a comment is never edited.
+
+It is refused as `resolve_comment` is, by the table above: a retired playbook, an `id` that is not a UUID, a UUID no comment of the playbook has, and one that meets another change to the same comment at the same moment.
+
+```http
+POST /v1/orgs/acme/playbooks/finance/comments/019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f/reopen
+Authorization: Bearer <key>
+```
+
+```json
+{
+  "id": "019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f",
+  "address": "finance/definitions/workflow/close-the-week/4/steps/do/1/review",
+  "text": "Flag any entry over $10,000 for Priya before the week closes.",
+  "anchor": { "x": 0.6125, "y": 0.4 },
+  "by": "person:user_7kLm2",
+  "by_name": "Priya Raman",
+  "at": "2026-11-02T10:14:03.218Z",
+  "open": true,
+  "resolved_at": null,
+  "resolved_by": null,
+  "resolved_how": null,
+  "reopened_at": "2026-11-02T14:37:12.085Z",
+  "reopened_by": "person:user_3pQr8",
+  "studio": "https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f"
+}
+```
+
+### The organization's comments
+
+The organization's own comments, those on the [organization's things](addresses.md#the-organization-s-things) and their parts, have the same four operations, relative to `/v1/orgs/{org}`:
+
+| Operation         | Method and route              | Permission                    | Input                                                     |
+| ----------------- | ----------------------------- | ----------------------------- | --------------------------------------------------------- |
+| `make_comment`    | `POST /comments`              | `org:read` or `playbook:read` | `address`, `text` and an optional `anchor`                |
+| `list_comments`   | `GET /comments`               | `org:read` or `playbook:read` | Optional `address`, `under`, `open`, `limit` and `cursor` |
+| `resolve_comment` | `POST /comments/{id}/resolve` | `org:read` or `playbook:read` | Comment id in path; `how`                                 |
+| `reopen_comment`  | `POST /comments/{id}/reopen`  | `org:read` or `playbook:read` | Comment id in path                                        |
+
+They take, answer and refuse as a playbook's do, with these differences:
+
+- `make_comment` takes only an address of the organization's things: `org`, `org/connections/<connection>`, `org/members/<member>` or `org/settings/<page>`, each with or without `/parts/<part>`. It records `comment_made` on the comment's own stream, `org/<org>/comments/<id>`, `resolve_comment` records `comment_resolved` there and `reopen_comment` records `comment_reopened`.
+- `list_comments` without `address` lists the organization's own comments, and none of its playbooks'. An agent that reads every open comment reads these and each playbook's.
+- A comment of the organization's own belongs to no playbook, so none is refused as `retired`, and a caller who may act on some playbooks alone makes, reads, resolves and reopens them as any other.
+- `resolve_comment` or `reopen_comment` of an id the organization's own comments do not hold, a playbook's comment among them, is `not_found`.
+- On `/mcp`, `list_comments` and `resolve_comment` without `playbook` are these operations ([MCP reference](mcp.md#comments)).
+
+```http
+POST /v1/orgs/acme/comments
+Authorization: Bearer <key>
+Content-Type: application/json
+
+{
+  "address": "org/connections/019a3f10-2b4c-7d5e-8f60-718293a4b5c6",
+  "text": "The CRM stopped answering on Friday. Can you get it connected again?",
+  "anchor": { "x": 0.18, "y": 0.5 }
+}
+```
+
+```json
+{
+  "id": "019a4131-9d2e-7f40-8a51-6b7c8d9e0f12",
+  "address": "org/connections/019a3f10-2b4c-7d5e-8f60-718293a4b5c6",
+  "text": "The CRM stopped answering on Friday. Can you get it connected again?",
+  "anchor": { "x": 0.18, "y": 0.5 },
+  "by": "person:user_3pQr8",
+  "by_name": "Tomás Ortega",
+  "at": "2026-11-02T11:20:09.511Z",
+  "open": true,
+  "resolved_at": null,
+  "resolved_by": null,
+  "resolved_how": null,
+  "reopened_at": null,
+  "reopened_by": null,
+  "studio": "https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&settings=connections&comment=019a4131-9d2e-7f40-8a51-6b7c8d9e0f12"
+}
+```
 
 ## Changes
 
@@ -1007,7 +1170,7 @@ Each returns `cursor`, `changes` and `more`:
 ```
 
 - Without `since`, the response comes at once, with the cursor of now and no changes, so a client starts from now.
-- A change names only what the caller may read, as the routes that read it decide: `list_org_changes` names a playbook only to a caller that may access it, as `list_playbooks` lists it, and a connection only to a caller with `org:read`. What the caller may not read ends no held request, and a response that lists nothing and says no `more` gives back the cursor it was given, so the caller learns nothing of it.
+- A change names only what the caller may read, as the routes that read it decide: `list_org_changes` names a playbook only to a caller that may access it, as `list_playbooks` lists it, a connection only to a caller with `org:read`, and a comment of the organization's own to every caller, as its `list_comments` reads it for every caller, though the activity lists it only to a caller who may access every playbook. What the caller may not read ends no held request, and a response that lists nothing and says no `more` gives back the cursor it was given, so the caller learns nothing of it.
 - With `since`, the cursor of an earlier response, the response comes at once when something changed after it. Otherwise the runtime holds the request until the next change, or until `wait` seconds pass and it answers no changes with the cursor it was given. A server that stops answers every request it holds at once, the same way.
 - `wait` is 0 to 25 seconds, 25 when left out. A larger or negative `wait` returns `invalid_input` at `/wait`.
 - `cursor` is opaque: the ledger's point after the last change listed. Give it back as `since`. A cursor the ledger does not hold, such as one of another database or of another playbook, returns `invalid_input` of the type `https://on.auto/problems/cursor_not_held`; ask again without `since`.
@@ -1018,37 +1181,38 @@ Each returns `cursor`, `changes` and `more`:
 | ----------------------- | ------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `list_org_changes`      | `playbook`    | `playbook`     | A playbook created, updated or retired                                                                                                                                             |
 | `list_org_changes`      | `connection`  | `connection`   | A connection added, connected, broken or removed, or asked for more                                                                                                                |
+| `list_org_changes`      | `comment`     | `comment_id`   | A [comment of the organization's own](#the-organization-s-comments) made, resolved or reopened                                                                                     |
 | `list_playbook_changes` | `definition`  | `type`, `name` | A function or workflow saved or retired                                                                                                                                            |
 | `list_playbook_changes` | `run`         | `run_id`       | A run started, given an input or an event, or ended                                                                                                                                |
 | `list_playbook_changes` | `interaction` | `run_id`       | Everything the run of an interaction function records: its request opened, answered, expired, undelivered or cancelled, beside the run                                             |
 | `list_playbook_changes` | `event`       | `event_id`     | An event published to the playbook, a refusal of its reactions, a call of a tool by hand and a telling or a read of a conversation, by the `id` `list_playbook_events` lists it by |
-| `list_playbook_changes` | `comment`     | `comment_id`   | A [comment](#comments) made or resolved, so a client that shows it learns when someone resolves it                                                                                 |
+| `list_playbook_changes` | `comment`     | `comment_id`   | A [comment](#comments) made, resolved or reopened, so a client that shows it learns when someone resolves or reopens it                                                            |
 
 A run's own records, its steps and its tool calls name the run; read them with `list_playbook_events` given its `run_id`. A new link or consent of a connection names nothing until the connection is connected.
 
 ## The organization's activity
 
-The organization's activity is what its playbooks did that a person may want to see: the requests that wait on an answer, the definitions whose latest run broke, the runs, definitions and playbooks that are new, and the open [comments](#comments) people made on them. The runtime keeps it for the whole org, with what each caller has seen, so a client shows it with one read however many playbooks the org holds, and what a person marks seen on one device shows on every other. These two routes are served over HTTP alone; no MCP tool serves them. They are relative to `/v1/orgs/{org}`:
+The organization's activity is what its playbooks did that a person may want to see: the requests that wait on an answer, the definitions whose latest run broke, the runs, definitions and playbooks that are new, and the open [comments](#comments) people made on them and on the organization's own things. The runtime keeps it for the whole org, with what each caller has seen, so a client shows it with one read however many playbooks the org holds, and what a person marks seen on one device shows on every other. These two routes are served over HTTP alone; no MCP tool serves them. They are relative to `/v1/orgs/{org}`:
 
 | Operation            | Method and route      | Permission                    | Input                                                                         |
 | -------------------- | --------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
 | `list_activity`      | `GET /activity`       | `org:read` or `playbook:read` | Optional `kind`, `playbook`, `mine`, `address`, `since`, `limit` and `cursor` |
 | `mark_activity_seen` | `POST /activity/seen` | `org:read` or `playbook:read` | `items`, `through` or both, and optional `address`                            |
 
-Each reads and marks only the activity of the playbooks the caller may access, as `list_playbooks` lists them. What a caller marks seen is theirs alone and changes nothing for anyone else.
+Each reads and marks only the activity of the playbooks the caller may access, as `list_playbooks` lists them, and the organization's own comments, which belong to no playbook, only for a caller who may access every playbook of the org; a caller who may access some playbooks alone reads the organization's comments with `list_comments` on the org's route ([The organization's comments](#the-organization-s-comments)) and sees none of them in the activity, while [`list_org_changes`](#changes) names each of them to every caller, as that route reads them. What a caller marks seen is theirs alone and changes nothing for anyone else.
 
 ### The rows
 
 `list_activity` returns `rows`, newest first by `at`, with `has_more`, `next_cursor`, `counts` and `through`. Each row is one item of one of four kinds:
 
-| `kind`      | The item                                                                                                                                                                                                                                                                           | Its `at`                                                   | Listed                                                                                                                      |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `needs_you` | A request of an interaction function that takes an answer, a request a workflow's call made included                                                                                                                                                                               | When the request was made                                  | Until it is answered, expires or ends with its run                                                                          |
-| `broken`    | A definition whose latest run at its current version failed or was rejected. One row per definition, naming the version it broke on and its latest failing run. A cancelled run is neither a failure nor a success, and a request that expires unanswered closes its request alone | When its latest failing run ended                          | Until a run at that version or a later one succeeds, a new version of the definition is saved, or the definition is retired |
-| `new`       | A run no other run started that succeeded; a function, workflow or page saved, each version its own item; or a playbook created or updated, each change its own item                                                                                                               | When the run ended, or the version or the change was saved | Always                                                                                                                      |
-| `comment`   | A [comment](#comments) on something of the playbook                                                                                                                                                                                                                                | When it was made                                           | Until it is resolved                                                                                                        |
+| `kind`      | The item                                                                                                                                                                                                                                                                           | Its `at`                                                       | Listed                                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `needs_you` | A request of an interaction function that takes an answer, a request a workflow's call made included                                                                                                                                                                               | When the request was made                                      | Until it is answered, expires or ends with its run                                                                          |
+| `broken`    | A definition whose latest run at its current version failed or was rejected. One row per definition, naming the version it broke on and its latest failing run. A cancelled run is neither a failure nor a success, and a request that expires unanswered closes its request alone | When its latest failing run ended                              | Until a run at that version or a later one succeeds, a new version of the definition is saved, or the definition is retired |
+| `new`       | A run no other run started that succeeded; a function, workflow or page saved, each version its own item; or a playbook created or updated, each change its own item                                                                                                               | When the run ended, or the version or the change was saved     | Always                                                                                                                      |
+| `comment`   | A [comment](#comments) on something of a playbook, or of the organization's own                                                                                                                                                                                                    | When it was made, or, once reopened, when it was last reopened | Until it is resolved, and again from when it is reopened                                                                    |
 
-A run that a workflow's call started has no `new` or `broken` row of its own: the row of the workflow's run stands for what it did. A request, a broken definition or a comment is listed only while open, and nothing is served about it once it is resolved: the run's page says what became of a request, and `list_comments` reads a resolved comment. A definition that breaks again opens its row again, at the time of the new break.
+A run that a workflow's call started has no `new` or `broken` row of its own: the row of the workflow's run stands for what it did. A request, a broken definition or a comment is listed only while open, and nothing is served about it once it is resolved: the run's page says what became of a request, and `list_comments` reads a resolved comment. A definition that breaks again opens its row again, at the time of the new break, and a comment that is reopened opens its row again, at the time it was reopened.
 
 The rows of playbooks come from the org's register of playbooks, which `list_activity` reads beside the other rows and merges with them by `at`: the newest 100 changes of the register, so an older change has no row.
 
@@ -1059,9 +1223,9 @@ Each row has these fields:
 | `kind`          | `needs_you`, `broken`, `new` or `comment`                                                                                                                                                                                                                                                            |
 | `address`       | The item's address, which `mark_activity_seen` takes                                                                                                                                                                                                                                                 |
 | `cursor`        | The row's place in the activity, which `since`, `cursor` and `through` take                                                                                                                                                                                                                          |
-| `playbook`      | The id of the playbook the item belongs to                                                                                                                                                                                                                                                           |
+| `playbook`      | The id of the playbook the item belongs to; `null` for a comment of the organization's own                                                                                                                                                                                                           |
 | `at`            | When the item came about, by its kind, in ISO 8601 UTC                                                                                                                                                                                                                                               |
-| `by`            | The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked; for a comment, who made it                                                                                                                                       |
+| `by`            | The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked; for a comment, who made it, a reopened one's included                                                                                                            |
 | `by_name`       | For `comment`, the name of who made it, as the runtime names them; otherwise `null`                                                                                                                                                                                                                  |
 | `change`        | For a version or a playbook, `created` or `updated`; otherwise `null`                                                                                                                                                                                                                                |
 | `trigger`       | For a run a trigger started, its `kind`, `event`, `cron` or `every`, and its `reference` in the document; otherwise `null`                                                                                                                                                                           |
@@ -1077,7 +1241,7 @@ Each row has these fields:
 | `about`         | For `comment`, the [address](addresses.md) of what the comment is about; otherwise `null`. Its `definition` and `run_id` are read from this address, so a comment on a run names its run and no definition. Read the comment whole with [`list_comments`](#listing-comments)                         |
 | `seen`          | For `new` and `comment`, whether the caller has seen it, as [Seen and counted](#seen-and-counted) says; `null` for the other kinds, which nothing a caller marks seen changes                                                                                                                        |
 
-An address is the playbook and the row's key in the activity, in the forms [Addresses](addresses.md) sets out:
+An address is the playbook, or the organization, and the row's key in the activity, in the forms [Addresses](addresses.md) sets out:
 
 | Item                          | `address`                                                                    |
 | ----------------------------- | ---------------------------------------------------------------------------- |
@@ -1087,13 +1251,14 @@ An address is the playbook and the row's key in the activity, in the forms [Addr
 | A version saved               | `<playbook>/definitions/<type>/<name>/<version>`                             |
 | A playbook created or updated | `playbooks/<playbook>/<at>`, `at` in milliseconds since 1970-01-01T00:00:00Z |
 | A comment                     | `<playbook>/comments/<id>`                                                   |
+| A comment of the organization | `org/comments/<id>`                                                          |
 
 ### Reading the activity
 
 | Parameter  | Rule                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kind`     | One kind, or several separated by commas, such as `needs_you,broken`: keep the rows of those kinds; `comment` keeps the open comments                    |
-| `playbook` | A playbook id: keep the rows of one playbook                                                                                                             |
+| `playbook` | A playbook id: keep the rows of one playbook, which leaves out the organization's own comments                                                           |
 | `mine`     | `true` keeps, of the `new` and `comment` rows, those whose `by` is the caller, and leaves the rows of the other kinds as they are; `false` when left out |
 | `address`  | The caller's own email address, which decides which requests wait on the caller; it filters nothing and grants nothing                                   |
 | `since`    | A `cursor`: keep the rows newer than the row it names                                                                                                    |
@@ -1198,20 +1363,20 @@ Authorization: Bearer <key>
 
 ### Seen and counted
 
-Only `new` and `comment` rows are seen or unseen. Such a row is seen by the caller when its `by` is the caller; when the caller marked it seen; or when it is at or before the caller's `through`, the place they marked everything seen through. A caller who has never marked anything seen reads as if their `through` were 7 days before the read, so a first read shows the last week as new. Each caller has its own seen: a person, a key or the local developer.
+Only `new` and `comment` rows are seen or unseen. Such a row is seen by the caller when its `by` is the caller, or, for a comment that was reopened, when the caller is who last reopened it, whoever made it; when the caller marked it seen; or when it is at or before the caller's `through`, the place they marked everything seen through. So a reopened comment's row keeps its maker as its `by` and takes the reopening's time as its `at`: it is new again to everyone but who reopened it, its maker among them, since a mark of the row before names the `at` it had then, and the one who reopened it has seen it from the start. A caller who has never marked anything seen reads as if their `through` were 7 days before the read, so a first read shows the last week as new. Each caller has its own seen: a person, a key or the local developer.
 
 A request waits on the caller when its `waits_on` is `any_member`, or is the caller's address: the `address` the read gives, or a verified address the caller's identity carries where the runtime knows one. In local mode every client is the local developer, so every open request waits on them, whatever `address` says, and Auto Studio and an agent on that machine share one seen: what one marks seen, and the `through` it moves, are the other's too. A request that waits on someone else is listed all the same, to everyone who may read its playbook, as `list_interactions` lists it.
 
-`counts` holds what the caller has to look at, over every playbook the caller may access:
+`counts` holds what the caller has to look at, over every playbook the caller may access and, for a caller who may access them all, the organization's own comments:
 
-| Count       | The rows it counts                                         |
-| ----------- | ---------------------------------------------------------- |
-| `needs_you` | The requests that wait on the caller                       |
-| `broken`    | The `broken` rows                                          |
-| `new`       | The `new` rows the caller has not seen                     |
-| `comments`  | The open comments, made by others, the caller has not seen |
+| Count       | The rows it counts                                                                      |
+| ----------- | --------------------------------------------------------------------------------------- |
+| `needs_you` | The requests that wait on the caller                                                    |
+| `broken`    | The `broken` rows                                                                       |
+| `new`       | The `new` rows the caller has not seen                                                  |
+| `comments`  | The open comments the caller has not seen, each made, or last reopened, by someone else |
 
-Marking items seen never changes `needs_you` or `broken`: a request leaves them when it is answered or expires, and a broken definition when it is resolved. A comment leaves `comments` when the caller has seen it or anyone resolves it.
+Marking items seen never changes `needs_you` or `broken`: a request leaves them when it is answered or expires, and a broken definition when it is resolved. A comment leaves `comments` when the caller has seen it or anyone resolves it, and comes back when someone else reopens it.
 
 `through` is where the caller marked everything seen, its `cursor` and `seen_at`, when they marked it, or `null` before they first did.
 
@@ -1259,17 +1424,17 @@ To mark everything seen, send the `cursor` of the newest row read as `through`.
 
 A request with several faults is refused for the first, the fields in the order the table lists them. A field given twice, such as `kind` repeated in the query string, is `bad_request`, as for every route ([Requests and access](#requests-and-access)).
 
-| Case                                                                                                 | Response                                        |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| A `kind` that is not `needs_you`, `broken`, `new` or `comment`                                       | `invalid_input` at `/kind`                      |
-| A `limit` outside 1 to 200                                                                           | `invalid_input` at `/limit`                     |
-| An `address` that holds no `@`                                                                       | `invalid_input` at `/address`                   |
-| A `since`, `cursor` or `through` that does not decode, or that names a playbook of another org       | `invalid_input` at the field                    |
-| A `playbook` the org does not have                                                                   | `not_found`                                     |
-| A `playbook`, or an item of a playbook, the caller may not access                                    | `forbidden`                                     |
-| A `mark_activity_seen` with neither `items` nor `through`, or with an empty `items` and no `through` | `invalid_input` at `/items`                     |
-| More than 200 `items`                                                                                | `invalid_input` at `/items`                     |
-| An item whose `address` is not of a form above or whose `at` is not a time                           | `invalid_input` at the item, such as `/items/2` |
+| Case                                                                                                                                                                        | Response                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| A `kind` that is not `needs_you`, `broken`, `new` or `comment`                                                                                                              | `invalid_input` at `/kind`                                                                                                                  |
+| A `limit` outside 1 to 200                                                                                                                                                  | `invalid_input` at `/limit`                                                                                                                 |
+| An `address` that holds no `@`                                                                                                                                              | `invalid_input` at `/address`                                                                                                               |
+| A `since`, `cursor` or `through` that does not decode, or that names a playbook of another org                                                                              | `invalid_input` at the field                                                                                                                |
+| A `playbook` the org does not have                                                                                                                                          | `not_found`                                                                                                                                 |
+| A `playbook`, or an item of a playbook, the caller may not access; a comment of the organization's own, `org/comments/<id>`, for a caller who may not access every playbook | `forbidden`; for the comment, "The caller may not mark the organization's comments, which only a caller who may access every playbook sees" |
+| A `mark_activity_seen` with neither `items` nor `through`, or with an empty `items` and no `through`                                                                        | `invalid_input` at `/items`                                                                                                                 |
+| More than 200 `items`                                                                                                                                                       | `invalid_input` at `/items`                                                                                                                 |
+| An item whose `address` is not of a form above or whose `at` is not a time                                                                                                  | `invalid_input` at the item, such as `/items/2`                                                                                             |
 
 ## Analytics
 

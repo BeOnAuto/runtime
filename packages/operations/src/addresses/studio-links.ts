@@ -13,7 +13,8 @@ export type StudioPage =
       readonly saved?: DefinitionSaved;
     }
   | { readonly kind: 'run'; readonly playbook: string; readonly run: string }
-  | { readonly kind: 'comment'; readonly playbook: string; readonly comment: string; readonly on: CommentedPlace };
+  | { readonly kind: 'comment'; readonly playbook: string; readonly comment: string; readonly on: CommentedPlace }
+  | { readonly kind: 'org_comment'; readonly comment: string; readonly settings?: string };
 
 export type CommentedPlace =
   | { readonly kind: 'playbook' }

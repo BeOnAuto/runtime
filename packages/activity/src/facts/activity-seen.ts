@@ -3,7 +3,11 @@ import { Result, Schema } from 'effect';
 
 const SeenItemSchema = Schema.Struct({ address: Schema.String, at: Schema.String });
 
-const SeenThroughSchema = Schema.Struct({ at: Schema.String, playbook: PlaybookIdSchema, key: Schema.String });
+const SeenThroughSchema = Schema.Struct({
+  at: Schema.String,
+  playbook: Schema.Union([PlaybookIdSchema, Schema.Literal('')]),
+  key: Schema.String,
+});
 
 export const ActivitySeenSchema = factOf(
   'activity_seen',

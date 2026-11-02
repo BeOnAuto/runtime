@@ -4,14 +4,15 @@ import { Schema } from 'effect';
 import { sqliteAppended } from '../appended/sqlite-appended.ts';
 import { sqliteContentOn } from '../content/content-store.ts';
 import { sqliteDefinitionStreams } from '../definitions/sqlite-definition-streams.ts';
-import type {
-  AppendListeners,
-  AppendWaitsStore,
-  DefinitionStreamsStore,
-  OwnContentStore,
-  RecordedStore,
-  StreamAgesStore,
-  TransactionalPool,
+import {
+  isAKind,
+  type AppendListeners,
+  type AppendWaitsStore,
+  type DefinitionStreamsStore,
+  type OwnContentStore,
+  type RecordedStore,
+  type StreamAgesStore,
+  type TransactionalPool,
 } from '../event-store.ts';
 import {
   appendedFactsOver,
@@ -62,12 +63,10 @@ function recordsIn(selected: RecordsSelected, scope: ExaminationScope): SQL {
       scope,
     );
   }
-  const ofEachStream = selected.streams.map(
-    (stream) => SQL`SELECT * FROM (${recordsWhere(SQL`stream_id = ${stream}`, scope)})`,
+  const ofEachStream = selected.streams.map((stream) =>
+    isAKind(stream) ? SQL`${playbookKeyOfStream} = ${stream}` : SQL`stream_id = ${stream}`,
   );
-  return SQL`${SQL.merge(ofEachStream, ' UNION ALL ')}
-    ORDER BY position ${direction(scope)}
-    LIMIT ${scope.examineAtMost + 1}`;
+  return recordsWhere(SQL`(${SQL.merge(ofEachStream, ' OR ')})`, scope);
 }
 
 function examineRecords(execute: SQLExecutor): RecordedStatements['examineRecords'] {

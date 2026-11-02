@@ -37,6 +37,7 @@
     "zod": "4.6.6"
   },
   "devDependencies": {
+    "@on.auto/ledger": "workspace:*",
     "@types/json-schema": "7.0.15",
     "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"

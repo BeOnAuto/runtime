@@ -1,7 +1,9 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { DispatcherServices } from '@on.auto/operations';
 import {
+  defineGetVoice,
   defineListModels,
+  defineTranscribe,
   makeModelAccess,
   makeReasoningFunctionAdapter,
   offeredModels,
@@ -38,6 +40,8 @@ export interface ReasoningServices {
 export interface ServedReasoning {
   readonly capability: ReturnType<typeof makeReasoningFunctionAdapter>;
   readonly listModels: ReturnType<typeof defineListModels>;
+  readonly getVoice: ReturnType<typeof defineGetVoice>;
+  readonly transcribe: ReturnType<typeof defineTranscribe>;
 }
 
 type ReasoningSettings = Pick<Settings, 'models' | 'proxy' | 'reasoning' | 'providerSetup'>;
@@ -97,5 +101,7 @@ export async function reasoningServedBy(
       providerSetup: settings.providerSetup,
     }),
     listModels: defineListModels(catalog, settings.providerSetup),
+    getVoice: defineGetVoice(settings.models.voice?.reference ?? null),
+    transcribe: defineTranscribe(Effect.map(models, ({ voice }) => voice)),
   };
 }

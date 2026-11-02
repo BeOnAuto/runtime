@@ -79,6 +79,14 @@ export const fileSettings: readonly FileSetting[] = [
     asJson,
   ),
   fileSetting(
+    'VOICE_MODEL',
+    Schema.String.annotate({
+      description:
+        'The model that writes out what a person says, which Studio offers beside each comment field, as provider/model, its provider openai or the name of an entry of model_gateways, such as openai/whisper-1; none when left out. VOICE_MODEL wins over it',
+    }),
+    (model) => model,
+  ),
+  fileSetting(
     'TOOL_SERVERS',
     ToolServersSchema.annotate({
       description:

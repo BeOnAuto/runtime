@@ -625,6 +625,9 @@ importers:
         specifier: 4.6.6
         version: 4.6.6
     devDependencies:
+      '@on.auto/ledger':
+        specifier: workspace:*
+        version: link:../../packages/ledger
       '@types/json-schema':
         specifier: 7.0.15
         version: 7.0.15

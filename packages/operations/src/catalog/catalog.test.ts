@@ -1,7 +1,8 @@
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineCommand, defineQuery, makeCatalog } from '../index.ts';
+import type { Route } from '../definition/route.ts';
+import { defineCommand, defineHttpOperation, defineQuery, makeCatalog } from '../index.ts';
 import { addNote, getNote } from '../testing/notes.ts';
 import { getPlaybookLabel, labelPlaybook } from '../testing/playbook-labels.ts';
 
@@ -57,6 +58,44 @@ const replaceNoteInOrg = defineCommand('org', {
   handle: () => Effect.succeed({}),
 });
 
+const NoteNameSchema = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9-]{0,31}$/u));
+
+const NoteInputSchema = Schema.Struct({ name: NoteNameSchema });
+
+const KeptNoteSchema = Schema.Struct({ name: NoteNameSchema, text: Schema.String }).annotate({ identifier: 'Note' });
+
+const keptByOrg = {
+  name: 'get_note',
+  title: 'Get note',
+  description: 'Reads a note the org keeps.',
+  inputSchema: NoteInputSchema,
+  reasons: [],
+};
+
+const atTheNote: Route<'query', '/notes/{name}', 'GET'> = { method: 'GET', path: '/notes/{name}' };
+
+const getNoteKeptByOrg = defineQuery('org', {
+  ...keptByOrg,
+  route: atTheNote,
+  outputSchema: KeptNoteSchema,
+  handle: () => Effect.succeed({ name: 'a', text: 'b' }),
+});
+
+const getNoteAnsweredOtherwise = defineQuery('org', {
+  ...keptByOrg,
+  route: atTheNote,
+  outputSchema: Empty,
+  handle: () => Effect.succeed({}),
+});
+
+const getNoteOverHttpAlone = defineHttpOperation('org', 'query', {
+  ...keptByOrg,
+  route: atTheNote,
+  body: { kind: 'none' },
+  outputSchema: KeptNoteSchema,
+  handle: () => Effect.succeed({ name: 'a', text: 'b' }),
+});
+
 const getNoteOfPlaybook = defineQuery('org', {
   ...probe,
   name: 'get_note_of_playbook',
@@ -103,7 +142,25 @@ describe('a name used at both scopes', () => {
 
   it('is refused when the org operation takes no playbook, since it could not answer for the playbook of the other', () => {
     expect(() => makeCatalog([addNote, addNoteToOrg])).toThrow(
-      'The operation name add_note is used at both scopes, so the org operation must take the playbook it answers for',
+      'The operation name add_note is used at both scopes, so the org operation must take the playbook it answers for, or take, answer and be served as the playbook operation is',
+    );
+  });
+
+  it("names an org operation that takes no playbook beside the playbook operation, where it takes and answers what the playbook's does and is served alike", () => {
+    const catalog = makeCatalog([getNote, getNoteKeptByOrg]);
+
+    expect(catalog.operations.map(({ scope, name }) => `${scope}:${name}`)).toEqual([
+      'playbook:get_note',
+      'org:get_note',
+    ]);
+  });
+
+  it('is refused when an org operation that takes no playbook answers otherwise, or is served otherwise', () => {
+    expect(() => makeCatalog([getNote, getNoteAnsweredOtherwise])).toThrow(
+      'The operation name get_note is used at both scopes, so the org operation must take the playbook it answers for',
+    );
+    expect(() => makeCatalog([getNote, getNoteOverHttpAlone])).toThrow(
+      'The operation name get_note is used at both scopes, so the org operation must take the playbook it answers for',
     );
   });
 

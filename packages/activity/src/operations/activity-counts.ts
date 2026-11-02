@@ -1,12 +1,18 @@
 import { OrgReader, type ProjectedCondition } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { itemOfAddress, type ItemForm } from '../positions/activity-addresses.ts';
+import {
+  itemOfAddress,
+  ofTheOrg,
+  orgSegment,
+  type ActivityItem,
+  type ItemForm,
+} from '../positions/activity-addresses.ts';
 import { brokenName } from '../projections/broken-rows.ts';
 import { anyMember, requestsName } from '../projections/request-rows.ts';
 import type { Mark } from '../projections/seen-rows.ts';
 import type { ActivityRow } from './activity-row.ts';
-import { commentTable, newTable, type ActivityTable } from './activity-tables.ts';
+import { commentTable, newTable, rowsCountedOf, rowsOwnedBy, type ActivityTable } from './activity-tables.ts';
 import { isSeenBy, type Viewer } from './activity-viewer.ts';
 
 const localDeveloper = 'local';
@@ -44,27 +50,36 @@ function needsYouIn(viewer: Viewer, playbook: string) {
   });
 }
 
+function isOwnedBy(item: ActivityItem, owner: string): boolean {
+  return owner === ofTheOrg ? item.playbook === orgSegment && item.form === 'comment' : item.playbook === owner;
+}
+
 function isCountedMark(viewer: Viewer, table: ActivityTable, playbook: string, mark: Mark) {
   return Effect.gen(function* () {
     const item = itemOfAddress(mark.address);
-    if (item?.playbook !== playbook || tablesOfForms[item.form] !== table) {
+    if (item === undefined || !isOwnedBy(item, playbook) || tablesOfForms[item.form] !== table) {
       return false;
     }
-    const [kept] = yield* (yield* OrgReader).readPlaybookRows(playbook, table.projection, {
+    const [kept] = yield* rowsOwnedBy(playbook, table.projection, {
       where: [openIn(table), { column: 'row_key', equals: table.rowKeyOf(item.key) }],
       orderBy: [],
       order: 'asc',
       limit: 1,
     });
-    const at = kept?.row['at'];
-    return typeof at === 'number' && at > viewer.through.at && kept?.row['by'] !== viewer.caller;
+    const at = kept?.row[table.atColumn];
+    return (
+      typeof at === 'number' &&
+      at > viewer.through.at &&
+      at <= mark.at &&
+      kept?.row[table.seenByColumn] !== viewer.caller
+    );
   });
 }
 
 function unseenTiedIn(viewer: Viewer, table: ActivityTable, playbook: string) {
   return Effect.gen(function* () {
-    const tied = yield* (yield* OrgReader).readPlaybookRows(playbook, table.projection, {
-      where: [openIn(table), { column: 'at', equals: viewer.through.at }],
+    const tied = yield* rowsOwnedBy(playbook, table.projection, {
+      where: [openIn(table), { column: table.atColumn, equals: viewer.through.at }],
       orderBy: [],
       order: 'asc',
       limit: 1000,
@@ -75,12 +90,11 @@ function unseenTiedIn(viewer: Viewer, table: ActivityTable, playbook: string) {
 
 function unseenIn(viewer: Viewer, table: ActivityTable, playbook: string) {
   return Effect.gen(function* () {
-    const reader = yield* OrgReader;
-    const after: ProjectedCondition = { column: 'at', after: viewer.through.at };
-    const all = yield* reader.countPlaybookRows(playbook, table.projection, [openIn(table), after]);
-    const own = yield* reader.countPlaybookRows(playbook, table.projection, [
+    const after: ProjectedCondition = { column: table.atColumn, after: viewer.through.at };
+    const all = yield* rowsCountedOf(playbook, table.projection, [openIn(table), after]);
+    const own = yield* rowsCountedOf(playbook, table.projection, [
       openIn(table),
-      { column: 'by', equals: viewer.caller },
+      { column: table.seenByColumn, equals: viewer.caller },
       after,
     ]);
     const marks = viewer.seen.marks.filter(({ at }) => at > viewer.through.at);
@@ -106,12 +120,21 @@ function countsIn(viewer: Viewer, playbook: string) {
 export interface CountedActivity {
   readonly viewer: Viewer;
   readonly readable: readonly string[];
+  readonly withTheOrg: boolean;
   readonly changes: readonly ActivityRow[];
 }
 
-export function countsFor({ viewer, readable, changes }: CountedActivity) {
+function countsOfTheOrg(viewer: Viewer) {
+  return Effect.map(unseenIn(viewer, commentTable, ofTheOrg), (comments) => {
+    const counted: ActivityCounts = { needs_you: 0, broken: 0, new: 0, comments };
+    return counted;
+  });
+}
+
+export function countsFor({ viewer, readable, withTheOrg, changes }: CountedActivity) {
   return Effect.gen(function* () {
-    const each = yield* Effect.forEach(readable, (playbook) => countsIn(viewer, playbook));
+    const ofPlaybooks = yield* Effect.forEach(readable, (playbook) => countsIn(viewer, playbook));
+    const each = withTheOrg ? [...ofPlaybooks, yield* countsOfTheOrg(viewer)] : ofPlaybooks;
     const unseenChanges = changes.filter(
       (change) => readable.includes(change.position.playbook) && !isSeenBy(viewer, change),
     ).length;

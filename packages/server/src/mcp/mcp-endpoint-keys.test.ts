@@ -41,13 +41,13 @@ const readerToolsInsideAPlaybook = [
   'list_runs',
   'list_playbook_events',
   'get_event',
-  'list_comments',
-  'resolve_comment',
   'introspect',
   'dry_run',
   'list_interactions',
   'recall',
 ];
+
+const commentTools = ['list_comments', 'resolve_comment'];
 
 const commands = [
   'create_playbook',
@@ -169,6 +169,7 @@ describe('a read-only key on /mcp', () => {
 
     expect(outcome.tools).toEqual([
       'list_playbooks',
+      ...commentTools,
       'list_models',
       'search',
       'list_connection_tools',
@@ -194,7 +195,13 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
       listed: await session.callTool('list_playbooks', {}),
     }));
 
-    expect(outcome.tools).toEqual(['list_playbooks', 'search', ...readerToolsInsideAPlaybook, 'get_guide']);
+    expect(outcome.tools).toEqual([
+      'list_playbooks',
+      ...commentTools,
+      'search',
+      ...readerToolsInsideAPlaybook,
+      'get_guide',
+    ]);
     expect(commands.filter((name) => new RegExp(`\\b${name}\\b`, 'u').test(outcome.instructions))).toEqual([]);
     expect(outcome.instructions).toContain(
       "The org is the caller's own: list_playbooks shows its playbooks. get_guide explains these words",

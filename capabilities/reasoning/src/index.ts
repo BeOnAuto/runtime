@@ -110,3 +110,17 @@ export {
   type UnconfiguredProvider,
 } from './settings/provider-status.ts';
 export type { Environment, SettingProblem } from './settings/setting-values.ts';
+export { defineGetVoice } from './voice/get-voice.ts';
+export { defineTranscribe } from './voice/transcribe.ts';
+export {
+  AccountRefused,
+  voiceTypes,
+  type AccountRefusalKind,
+  type Recording,
+  type Transcriber,
+  type Transcription,
+  type TranscriptionFailure,
+  type VoiceType,
+} from './voice/transcription.ts';
+export { VoiceEventSchema, type RecordedVoiceEvent } from './voice/voice-facts.ts';
+export type { VoiceModel } from './voice/voice-settings.ts';

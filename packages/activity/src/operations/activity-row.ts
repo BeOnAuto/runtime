@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import { addressOf, type ItemForm } from '../positions/activity-addresses.ts';
+import { addressOf, ofTheOrg, type ItemForm } from '../positions/activity-addresses.ts';
 import { cursorOf, type ActivityPosition } from '../positions/activity-position.ts';
 
 export type ActivityKind = 'needs_you' | 'broken' | 'new' | 'comment';
@@ -27,6 +27,7 @@ export interface ActivityRow {
   readonly waits_on: string | null;
   readonly expires_at: number | null;
   readonly about: string | null;
+  readonly reopenedBy?: string;
 }
 
 const NullableText = (description: string) => Schema.NullOr(Schema.String).annotate({ description });
@@ -37,7 +38,9 @@ export const ActivityRowSchema = Schema.Struct({
   cursor: Schema.String.annotate({
     description: 'The place of the row in the activity, which since, cursor and through take',
   }),
-  playbook: Schema.String.annotate({ description: 'The id of the playbook the item belongs to' }),
+  playbook: Schema.NullOr(Schema.String).annotate({
+    description: "The id of the playbook the item belongs to; null for a comment of the organization's own",
+  }),
   at: Schema.String.annotate({ description: 'When the item came about, by its kind, in ISO 8601 UTC' }),
   by: Schema.String.annotate({
     description:
@@ -91,14 +94,14 @@ export function addressOfRow({ form, position: { playbook, key } }: ActivityRow)
 }
 
 export function servedRow(
-  { form, position, expires_at: expiresAt, ...row }: ActivityRow,
+  { form, position, expires_at: expiresAt, reopenedBy: _reopenedBy, ...row }: ActivityRow,
   seen: boolean | null,
 ): ServedActivityRow {
   return {
     ...row,
     address: addressOf({ form, playbook: position.playbook, key: position.key }),
     cursor: cursorOf(position),
-    playbook: position.playbook,
+    playbook: position.playbook === ofTheOrg ? null : position.playbook,
     at: isoOf(position.at),
     expires_at: expiresAt === null ? null : isoOf(expiresAt),
     seen,

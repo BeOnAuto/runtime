@@ -72,7 +72,7 @@ function retryAfterSeconds(value: string, now: number): number | null {
   return Number.isNaN(date) ? null : Math.max(0, date - now);
 }
 
-function retryAfterMs(headers: Readonly<Record<string, string>> | undefined, now: number): number | null {
+export function retryAfterMs(headers: Readonly<Record<string, string>> | undefined, now: number): number | null {
   const milliseconds = Number(headers?.['retry-after-ms']);
   if (Number.isFinite(milliseconds) && milliseconds >= 0) {
     return Math.ceil(milliseconds);

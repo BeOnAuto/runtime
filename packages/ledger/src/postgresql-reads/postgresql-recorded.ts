@@ -2,13 +2,14 @@ import { Schema } from 'effect';
 
 import { postgresqlAppended } from '../appended/postgresql-appended.ts';
 import { postgresqlContentOn, type ContentConnections } from '../content/postgresql-content.ts';
-import type {
-  AppendListeners,
-  AppendWaitsStore,
-  DefinitionStreamsStore,
-  OwnContentStore,
-  RecordedStore,
-  StreamAgesStore,
+import {
+  isAKind,
+  type AppendListeners,
+  type AppendWaitsStore,
+  type DefinitionStreamsStore,
+  type OwnContentStore,
+  type RecordedStore,
+  type StreamAgesStore,
 } from '../event-store.ts';
 import { dataAsJsonText } from '../postgresql/json-text.ts';
 import {
@@ -95,7 +96,8 @@ function recordsIn(selected: RecordsSelected, records: RecordsScope): string {
     return recordsWhere([playbook, { key: correlationOfMessage, value: selected.correlation }], records);
   }
   const ofEachStream = selected.streams.map(
-    (stream) => `(${recordsWhere([{ key: 'stream_id', value: stream }], records)})`,
+    (stream) =>
+      `(${recordsWhere([{ key: isAKind(stream) ? playbookKeyOfStream : 'stream_id', value: stream }], records)})`,
   );
   return `${ofEachStream.join(' UNION ALL ')} ORDER BY ${inOrder(records)} LIMIT ${records.limit}`;
 }

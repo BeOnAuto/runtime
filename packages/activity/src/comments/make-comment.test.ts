@@ -1,4 +1,5 @@
 import type { CommentedPlace } from '@on.auto/operations';
+import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { commentOf, commenting, minute, reader, run, step } from '../testing/commenting.ts';
@@ -32,6 +33,7 @@ describe('make_comment', () => {
       id,
       address: step,
       text,
+      anchor: null,
       by: reader.id,
       by_name: reader.name,
       at: minute(14),
@@ -39,6 +41,8 @@ describe('make_comment', () => {
       resolved_at: null,
       resolved_by: null,
       resolved_how: null,
+      reopened_at: null,
+      reopened_by: null,
       studio: studioPageOf({
         kind: 'comment',
         playbook: 'finance',
@@ -46,6 +50,75 @@ describe('make_comment', () => {
         on: { kind: 'definition', type: 'workflow', name: 'close-the-week', version: 4, step: 'do/1/review' },
       }),
     });
+  });
+});
+
+describe('make_comment with an anchor', () => {
+  it('keeps where on the thing the person dropped it, and answers it as given', async () => {
+    const { make, comments } = await commenting();
+    const anchor = { x: 0.6125, y: 0.4 };
+    const made = await make(reader, { address: step, text, anchor }, minute(14));
+
+    expect(outputOf(made)).toMatchObject({ address: step, anchor });
+    expect(outputOf(await comments())).toMatchObject({ comments: [{ address: step, anchor }] });
+  });
+});
+
+const outOfItsBox: readonly Schema.JsonObject[] = [
+  { x: 1.5, y: 0 },
+  { x: 0.12345, y: 0 },
+  { x: 0, y: -0.5 },
+];
+
+const notXAndY: readonly (readonly [Schema.JsonObject, string, string])[] = [
+  [{ x: 0.5 }, '/anchor/y', 'Missing key'],
+  [{ x: 0.5, y: 0.5, z: 0 }, '/anchor/z', 'Expected no excess property'],
+  [{ x: '0.5', y: 0.5 }, '/anchor/x', 'Expected number'],
+];
+
+describe('make_comment, given an anchor it cannot take', () => {
+  it('refuses an anchor out of its box or with over 4 decimals at /anchor', async () => {
+    const { make } = await commenting();
+    const refused = await Promise.all(outOfItsBox.map((anchor) => make(priya, { address: step, text, anchor })));
+
+    expect(refused).toEqual(
+      Array.from({ length: 3 }, () => ({
+        status: 'rejected',
+        reason: 'invalid_input',
+        detail: 'The input does not match the input schema',
+        issues: [{ pointer: '/anchor', detail: 'Expected x and y, each a number from 0 to 1 with at most 4 decimals' }],
+      })),
+    );
+  });
+
+  it('refuses an anchor of another shape at the field within it, and one that is no object at /anchor', async () => {
+    const { make } = await commenting();
+    const malformed = await Promise.all(notXAndY.map(([anchor]) => make(priya, { address: step, text, anchor })));
+    const notAnObject = await make(priya, { address: step, text, anchor: [] });
+
+    expect(malformed).toMatchObject(
+      notXAndY.map(([, pointer, detail]) => ({
+        status: 'rejected',
+        reason: 'invalid_input',
+        issues: [{ pointer, detail }],
+      })),
+    );
+    expect(notAnObject).toMatchObject({ issues: [{ pointer: '/anchor', detail: 'Expected object | null' }] });
+  });
+
+  it('checks the input as a whole before the form of the address, so a bad anchor is refused before a bad address', async () => {
+    const { make } = await commenting();
+
+    expect(await make(priya, { address: 'finance/somewhere', text, anchor: { x: 2, y: 0 } })).toMatchObject({
+      reason: 'invalid_input',
+      issues: [{ pointer: '/anchor' }],
+    });
+  });
+
+  it('takes an anchor of null as one left out', async () => {
+    const { make } = await commenting();
+
+    expect(outputOf(await make(priya, { address: step, text, anchor: null }))).toMatchObject({ anchor: null });
   });
 });
 
@@ -62,6 +135,8 @@ describe('the place in Studio of a comment', () => {
       [`finance/runs/${run}/events/${event}`, { kind: 'run', run, event }],
       [`finance/runs/${run}/result/2`, { kind: 'run', run, block: 2 }],
       [`finance/${run}`, { kind: 'run', run }],
+      ['playbooks/finance/parts/ledger', { kind: 'playbook' }],
+      [`finance/runs/${run}/parts/output`, { kind: 'run', run }],
     ];
     const outcomes = await Promise.all(places.map(([address]) => make(priya, { address, text })));
     const ids = outcomes.map((outcome) => commentOf(outcome).id);
@@ -76,23 +151,30 @@ describe('the place in Studio of a comment', () => {
 });
 
 describe('make_comment, given what it cannot take', () => {
-  it('refuses an address it cannot read, one of another playbook, and one over 512 characters, at /address', async () => {
+  it("refuses an address it cannot read, one of another playbook or of the organization's, and one over 512 characters, at /address", async () => {
     const { make } = await commenting();
     const refused = await Promise.all(
-      ['finance/somewhere', 'playbooks/sales', `sales/runs/${run}`, `finance/runs/${'a'.repeat(510)}`].map((address) =>
-        make(priya, { address, text }),
-      ),
+      [
+        'finance/somewhere',
+        'playbooks/sales',
+        `sales/runs/${run}`,
+        `finance/runs/${'a'.repeat(510)}`,
+        'org',
+        'org/settings/billing',
+      ].map((address) => make(priya, { address, text })),
     );
 
     expect(refused).toMatchObject(
-      Array.from({ length: 4 }, () => ({
+      Array.from({ length: 6 }, () => ({
         status: 'rejected',
         reason: 'invalid_input',
         issues: [{ pointer: '/address' }],
       })),
     );
   });
+});
 
+describe('make_comment, given text it cannot take or a retired playbook', () => {
   it('refuses text that is empty, all white space, over 4,000 characters or holding a control character, at /text', async () => {
     const { make } = await commenting();
     const refused = await Promise.all(

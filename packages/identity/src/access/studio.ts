@@ -41,6 +41,9 @@ function pageParametersOf(page: StudioPage | undefined): Parameter[] {
   if (page === undefined) {
     return [];
   }
+  if (page.kind === 'org_comment') {
+    return [...namedIf('settings', page.settings), ['comment', page.comment]];
+  }
   const playbook: Parameter = ['playbook', page.playbook];
   if (page.kind === 'definition') {
     return [playbook, [page.type, page.name], ...becauseOf(page.saved), ['version', String(page.version)]];
@@ -56,7 +59,7 @@ function arrivalOf(
   installId: string | undefined,
   page: StudioPage | undefined,
 ): Parameter[] {
-  if (page?.kind === 'comment') {
+  if (page?.kind === 'comment' || page?.kind === 'org_comment') {
     return [];
   }
   return [['src', openedFrom], ...(installId === undefined ? [] : [['install', installId] satisfies Parameter])];

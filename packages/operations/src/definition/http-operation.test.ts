@@ -31,6 +31,7 @@ const nameNote = defineHttpOperation('playbook', 'command', {
   description: 'Names a note.',
   route: { method: 'PUT', path: '/notes/{id}/name' },
   body: { kind: 'json' },
+  repeatable: true,
   inputSchema: Schema.Struct({ id: Schema.String, name: Schema.String }),
   outputSchema: Schema.Struct({ named: Schema.String }),
   reasons: [],
@@ -48,7 +49,9 @@ describe('an operation served over HTTP alone', () => {
       kind: 'command',
       permissions: ['playbook:write'],
       reachesOutside: false,
+      repeatable: true,
     });
+    expect(readNote.registration.repeatable).toBe(false);
   });
 
   it('is registered with the schema of its output', () => {

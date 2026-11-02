@@ -25,7 +25,8 @@ function inScope(scope: AppendedScope): (record: MemoryRecord) => boolean {
     return ({ stream }) => stream.startsWith(key);
   }
   const streams = new Set(scope.streams);
-  return ({ stream }) => streams.has(stream);
+  const kinds = scope.streams.filter((named) => named.endsWith('/'));
+  return ({ stream }) => streams.has(stream) || kinds.some((kind) => stream.startsWith(kind));
 }
 
 function cursorOf(record: MemoryRecord | undefined): string {

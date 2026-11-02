@@ -48,6 +48,7 @@ describe('list_comments', () => {
           id: anyText,
           address: `finance/runs/${otherRun}`,
           text: `About finance/runs/${otherRun}`,
+          anchor: null,
           by: priya.id,
           by_name: priya.name,
           at: minute(9),
@@ -55,6 +56,8 @@ describe('list_comments', () => {
           resolved_at: null,
           resolved_by: null,
           resolved_how: null,
+          reopened_at: null,
+          reopened_by: null,
           studio: inStudio,
         },
       ],
@@ -104,7 +107,29 @@ describe('the comments list_comments keeps', () => {
     expect(addressesIn(await comments({ address: step, under: 'true' }))).toEqual([step]);
     expect(addressesIn(await comments({ address: 'playbooks/finance', under: 'true' }))).toEqual(['playbooks/finance']);
   });
+});
 
+describe('the comments list_comments keeps under a thing that has parts', () => {
+  it('keeps those on a thing and its parts under it, and a part alone under a part', async () => {
+    const { comments, made } = await commenting();
+    await made('playbooks/finance', minute(1));
+    await made('playbooks/finance/parts/ledger', minute(2));
+    await made(`${theRun}/parts/output`, minute(3));
+    await made(`${version}/parts/source`, minute(4));
+
+    expect(addressesIn(await comments({ address: 'playbooks/finance', under: 'true' }))).toEqual([
+      'playbooks/finance/parts/ledger',
+      'playbooks/finance',
+    ]);
+    expect(addressesIn(await comments({ address: 'playbooks/finance/parts/ledger', under: 'true' }))).toEqual([
+      'playbooks/finance/parts/ledger',
+    ]);
+    expect(addressesIn(await comments({ address: theRun, under: 'true' }))).toEqual([`${theRun}/parts/output`]);
+    expect(addressesIn(await comments({ address: version, under: 'true' }))).toEqual([`${version}/parts/source`]);
+  });
+});
+
+describe('the resolved comments and those list_comments cannot place', () => {
   it('keeps the resolved comments with open=false, each closed', async () => {
     const { comments, made, resolve } = await commenting();
     const id = await made(theRun, minute(1));
@@ -138,10 +163,12 @@ describe('list_comments, given what it cannot take', () => {
       comments({ address: 'playbooks/sales' }),
       comments({ address: 'finance/somewhere' }),
       comments({ address: 'finance/definitions/workflow/close-the-week' }),
+      comments({ address: 'org' }),
     ]);
 
     expect(refused).toMatchObject([
       { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/under' }] },
+      { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/address' }] },
       { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/address' }] },
       { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/address' }] },
       { status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/address' }] },
@@ -177,6 +204,7 @@ describe('the plain words of list_comments', () => {
       id: run,
       address: theRun,
       text: 'Here.',
+      anchor: null,
       by: priya.id,
       by_name: priya.name,
       at: minute(1),
@@ -184,6 +212,8 @@ describe('the plain words of list_comments', () => {
       resolved_at: null,
       resolved_by: null,
       resolved_how: null,
+      reopened_at: null,
+      reopened_by: null,
     };
     const page = (count: number) => ({
       comments: Array.from({ length: count }, () => comment),

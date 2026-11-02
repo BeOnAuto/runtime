@@ -125,6 +125,10 @@ export type FactScope =
   | { readonly kind: 'playbook'; readonly playbookKey: string }
   | { readonly kind: 'streams'; readonly streams: readonly string[] };
 
+export function isAKind(stream: string): boolean {
+  return stream.endsWith('/');
+}
+
 export interface FactPlace {
   readonly point: RecordedPoint;
   readonly id: string;

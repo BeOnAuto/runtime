@@ -90,12 +90,15 @@ describe('the plain words of resolve_comment', () => {
       id: run,
       address: step,
       text: 'Here.',
+      anchor: null,
       by: priya.id,
       by_name: priya.name,
       at: minute(1),
       open: false,
       resolved_at: minute(2),
       resolved_by: priya.id,
+      reopened_at: null,
+      reopened_by: null,
     };
     const { plainLanguage } = resolveComment.registration;
 

@@ -8,7 +8,7 @@ import {
   requireTextWithin,
 } from '../bounds/served-bounds.ts';
 import { argumentDescriptionsIn } from './argument-descriptions.ts';
-import { withPlaybookArgument } from './playbook-argument.ts';
+import { withOptionalPlaybookArgument, withPlaybookArgument } from './playbook-argument.ts';
 import { advertisedSchema, selfContainedSchemaOf, withEveryArgumentTyped, type JsonSchema } from './tool-schema.ts';
 
 export interface ToolDefinition {
@@ -63,4 +63,27 @@ export function toolDefinitionOf(registration: Registration): ToolDefinition {
 
 export function toolDefinitionTakingPlaybookOf(registration: Registration<'playbook'>): ToolDefinition {
   return definitionWith(registration, withPlaybookArgument(selfContainedSchemaOf(registration.input)));
+}
+
+function toolDefinitionTakingPlaybookOrNoneOf(registration: Registration<'org'>): ToolDefinition {
+  return definitionWith(registration, withOptionalPlaybookArgument(selfContainedSchemaOf(registration.input)));
+}
+
+export type Twins = ReadonlyMap<string, Registration<'playbook'>>;
+
+export function twinsIn(
+  orgRegistrations: readonly Registration<'org'>[],
+  playbookRegistrations: readonly Registration<'playbook'>[],
+): Twins {
+  const named = new Set(orgRegistrations.filter(({ targetsPlaybook }) => !targetsPlaybook).map(({ name }) => name));
+  return new Map(
+    playbookRegistrations
+      .filter(({ name }) => named.has(name))
+      .map((registration) => [registration.name, registration]),
+  );
+}
+
+export function orgToolDefinitionsBeside(twins: Twins): (registration: Registration<'org'>) => ToolDefinition {
+  return (registration) =>
+    twins.has(registration.name) ? toolDefinitionTakingPlaybookOrNoneOf(registration) : toolDefinitionOf(registration);
 }

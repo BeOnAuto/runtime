@@ -7,6 +7,7 @@ import type { ServedWiring } from './function-wiring.ts';
 import { generationServedBy } from './served-generation.ts';
 import { memoryServedBy } from './served-memory.ts';
 import { orgOperationsOfPlaybooks } from './served-org-operations.ts';
+import type { ServedReasoning } from './served-reasoning.ts';
 import { toolUsersServedBy } from './served-tools.ts';
 
 type ProjectedDatabase = Parameters<ServedWiring['projections']['served']>[0]['database'];
@@ -18,6 +19,10 @@ export interface ServedFunctions {
     WorkflowParts,
     'ledger' | 'workflows' | 'identityIssuer' | 'retryStateKeys' | 'contentAddressKey' | 'shippedFiles'
   >;
+}
+
+function reasoningOperationsOf({ listModels, getVoice, transcribe }: ServedReasoning) {
+  return [listModels, getVoice, transcribe];
 }
 
 export async function functionsServedBy(
@@ -51,7 +56,7 @@ export async function functionsServedBy(
       names,
       orgOperations: [
         ...orgOperationsOfPlaybooks,
-        reasoning.listModels,
+        ...reasoningOperationsOf(reasoning),
         ...toolOperations.inOrg,
         ...memory.operations.inOrg,
       ],

@@ -55,7 +55,9 @@ const connectionTools = [
   'remove_connection',
 ];
 
-const orgTools = [...playbookTools, 'list_models', 'search', ...connectionTools, 'activate_license'];
+const commentTools = ['list_comments', 'resolve_comment'];
+
+const orgTools = [...playbookTools, ...commentTools, 'list_models', 'search', ...connectionTools, 'activate_license'];
 
 const insideAPlaybookAlone = definitionTools.filter((name) => !orgTools.includes(name));
 

@@ -44,9 +44,21 @@ function requireUniqueNames(registrations: readonly RouteRegistration[]): void {
   }
 }
 
+function isSameDocument(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function takesAndAnswersAlike(org: RouteRegistration, playbook: RouteRegistration): boolean {
+  return (
+    isSameDocument(org.input, playbook.input) &&
+    isSameDocument(org.output, playbook.output) &&
+    (org.servedOverHttpAlone === undefined) === (playbook.servedOverHttpAlone === undefined)
+  );
+}
+
 function twinProblem(org: RouteRegistration, playbook: RouteRegistration): string | undefined {
-  if (!org.targetsPlaybook) {
-    return 'so the org operation must take the playbook it answers for';
+  if (!org.targetsPlaybook && !takesAndAnswersAlike(org, playbook)) {
+    return 'so the org operation must take the playbook it answers for, or take, answer and be served as the playbook operation is';
   }
   return org.kind === playbook.kind ? undefined : `so both must be of one kind, and the org one is a ${org.kind}`;
 }

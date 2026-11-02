@@ -21,7 +21,9 @@ export const ActivityCountsSchema = Schema.Struct({
   needs_you: Schema.Int.annotate({ description: 'The requests that wait on the caller' }),
   broken: Schema.Int.annotate({ description: 'The broken definitions' }),
   new: Schema.Int.annotate({ description: 'The new rows the caller has not seen' }),
-  comments: Schema.Int.annotate({ description: 'The open comments others made that the caller has not seen' }),
+  comments: Schema.Int.annotate({
+    description: 'The open comments others made or reopened that the caller has not seen',
+  }),
 }).annotate({ description: 'What the caller has to look at, over every playbook the caller may access' });
 
 export const ThroughSchema = Schema.NullOr(
@@ -83,9 +85,11 @@ const listed = Effect.fnUntraced(function* (input: ListActivityInput) {
   const cursor = yield* positionAt('cursor', input.cursor, register);
   const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
   const viewer = yield* viewerOf(caller.id, address);
+  const withTheOrg = caller.playbooks === '*';
   const page = yield* pageOf(register, {
     kinds,
     playbooks: playbook === undefined ? readable : readable.filter((each) => each === playbook),
+    withTheOrg: withTheOrg && playbook === undefined,
     mine: input.mine === true ? caller.id : undefined,
     limit: input.limit ?? rowsInAPage,
     cursor,
@@ -96,7 +100,7 @@ const listed = Effect.fnUntraced(function* (input: ListActivityInput) {
     rows: page.rows.map((row) => servedRow(row, seenKinds.has(row.kind) ? isSeenBy(viewer, row) : null)),
     has_more: page.hasMore,
     next_cursor: page.hasMore && last !== undefined ? cursorOf(last.position) : null,
-    counts: yield* countsFor({ viewer, readable, changes: register.changes }),
+    counts: yield* countsFor({ viewer, readable, withTheOrg, changes: register.changes }),
     through: throughOf(viewer.seen),
   };
 });
@@ -108,7 +112,7 @@ export const listActivity = defineHttpOperation('org', 'query', {
     'Lists the activity of the playbooks of the org the caller may access, newest first:',
     'the requests that wait on an answer, the definitions whose latest run broke,',
     `the runs, definitions and playbooks that are new, the playbooks from the newest ${mostPlaybookChanges} changes of the org's register,`,
-    'and the open comments people made on them.',
+    "and the open comments people made on them and, for a caller who may access every playbook, on the organization's own things.",
     'Each new and comment row says whether the caller has seen it, and the answer counts what waits on the caller and where they marked everything seen.',
   ].join(' '),
   route: { method: 'GET', path: '/activity' },

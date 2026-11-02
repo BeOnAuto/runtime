@@ -1,5 +1,6 @@
 {
   "src/facts/0.56.0/activity_seen.json": "1310e9313fab03f3ff0387af7765c057b2db1faa1b13b3e2a75f94b7f9b66a4d",
-  "src/facts/0.56.0/comment_made.json": "8a5845ccd0b02b198dbbf5ff0dd0228f76ed415119a4790972057e78e0d4d1d3",
+  "src/facts/0.56.0/comment_made.json": "0ded1dce86d86367d72888f9b15d0202375b3baf94816991b60539bd92cd1cec",
+  "src/facts/0.56.0/comment_reopened.json": "d1a5f91ba8c7abea7ec0ba197ee1588d2bdd2d6bf561c6d3791d21d09d59976d",
   "src/facts/0.56.0/comment_resolved.json": "f3216383071c57b6fc97eeb17aa354b0524ca050ea06c76c10938e26dd61b959"
 }
