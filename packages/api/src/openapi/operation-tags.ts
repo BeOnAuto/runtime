@@ -7,6 +7,8 @@ export interface Tag {
 
 const descriptionsOfTags: Readonly<Record<string, string>> = {
   playbooks: 'The playbooks of the org: made, listed, read, renamed and retired',
+  activity:
+    'What the playbooks of the org did that a person may want to see, the requests that wait on an answer, the broken definitions and what is new, and what each caller has seen of it',
   models: 'The models this server can call, which a reasoning function names',
   definitions: "A playbook's function and workflow definitions, and the runs they start",
   runs: "A playbook's runs: read, listed, cancelled, their history, and events sent to a waiting run",

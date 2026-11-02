@@ -26,6 +26,12 @@ A notification takes no answer, so no agent holds it: it goes through a connecti
 
 Ask the person once where they want to be asked. `create_definition` and `update_definition` refuse a request that names no way with words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way, and refuse a notification that names no tool, or `agent`, with words that name each connection whose tools can send it. A tool server of the server's own settings is named a tool server. A playbook with none is told so, and why for each connection that cannot be used just now. Wherever no connection can carry it, it is told that one can be connected with `search` and `add_connection`, where the agent's tools include both. When the agent's MCP client answers forms, the server asks the person itself before it refuses, "Where should the owner be asked?", or "told?" for a notification, with each such connection, and for a request the agent way, to choose from. Once they choose, the refusal names the connection's sending tool and its reading tool, or says to write `deliver: agent`; the agent learns what each tool takes with `introspect`, calls the sending tool with `execute` once the person agrees, to see what it answers for `sent`, and writes `deliver` and `replies` from it.
 
+### Whom a request waits on
+
+A request waits on a member of the org when its party, its `to` as rendered, is an email address, one that holds an `@`: it waits on the member whose address that is, compared without regard to case. Any other party, such as a channel, a role or a name, waits on any member of the org, whether the request goes through a connection or is held for an agent, and any member may answer it.
+
+So write `to: "{{ input.reviewer }}"`, given the reviewer's address such as `priya@acme.example`, for a request one person should see as theirs. [The organization's activity](http.md#the-organization-s-activity) shows each open request as `needs_you`, with the address in lower case, or `any_member`, in `waits_on`, and counts it for the caller it waits on.
+
 ## A function document
 
 The source is Markdown with YAML front matter followed by the message. This example, `approve-campaign-brief`, asks a campaign's owner, in the team chat, to approve the review of their brief, and takes their answer from their reply in the thread of the message. Its answer is `{ verdict: approve | revise, note? }`:

@@ -8,6 +8,7 @@ import {
   streamPrefixOfPlaybook,
 } from '../ledger/bound-ports.ts';
 import type { Context } from '../ledger/context.ts';
+import type { ProjectedCondition } from './projected-conditions.ts';
 
 export type ProjectedValue = string | number | boolean | null;
 
@@ -58,11 +59,6 @@ export interface KeyedProjection {
   readonly keyOf?: (message: ProjectedMessage, stream: ProjectedStream) => string | undefined;
   readonly advanced?: readonly AdvancedColumn[];
   readonly rowAfter: (row: ProjectedRow | undefined, message: ProjectedMessage) => ProjectedRow | undefined;
-}
-
-export interface ProjectedCondition {
-  readonly column: string;
-  readonly equals: string | number | boolean;
 }
 
 export type ProjectedOrder = 'asc' | 'desc';
@@ -125,6 +121,19 @@ export interface BoundProjectionReader {
     query: ProjectedRowsQuery,
   ) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly countProjectedRows: (projection: string, where: readonly ProjectedCondition[]) => Effect.Effect<number>;
+}
+
+export interface OrgProjectionReader extends BoundProjectionReader {
+  readonly readPlaybookRows: (
+    playbook: string,
+    projection: string,
+    query: ProjectedRowsQuery,
+  ) => Effect.Effect<readonly ProjectedKeyedRow[]>;
+  readonly countPlaybookRows: (
+    playbook: string,
+    projection: string,
+    where: readonly ProjectedCondition[],
+  ) => Effect.Effect<number>;
 }
 
 export const rowKeyColumn = 'row_key';

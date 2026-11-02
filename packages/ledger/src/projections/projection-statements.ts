@@ -1,8 +1,10 @@
 import { SQL } from '@event-driven-io/dumbo';
 import {
+  comparedColumnOf,
   projectedTableOf,
   rowKeyColumn,
   type KeyedProjection,
+  type ProjectedComparison,
   type ProjectedCondition,
   type ProjectedIndex,
   type ProjectedRow,
@@ -140,15 +142,18 @@ export function columnOf(projection: KeyedProjection, name: string): string {
   return name;
 }
 
+const operators: Readonly<Record<ProjectedComparison, string>> = { equals: '=', after: '>', before: '<' };
+
 export function conditionsOf(
   dialect: ProjectionDialect,
   projection: KeyedProjection,
   where: readonly ProjectedCondition[],
 ) {
   return SQL.merge(
-    where.map(
-      ({ column, equals }) => SQL` AND ${SQL.plain(columnOf(projection, column))} = ${boundOf(dialect, equals)}`,
-    ),
+    where.map((condition) => {
+      const { column, comparison, value } = comparedColumnOf(projection, condition);
+      return SQL` AND ${SQL.plain(column)} ${SQL.plain(operators[comparison])} ${boundOf(dialect, value)}`;
+    }),
     '',
   );
 }

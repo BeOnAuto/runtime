@@ -7,14 +7,12 @@ import {
   advancedColumnsOf,
   checkedProjection,
   requireAdvancedColumns,
-  rowKeyColumn,
   rowKeyOf,
   streamPrefixOfAddress,
   type AddressedStream,
   type DueRowsQuery,
   type KeyedProjection,
   type ProjectedAddress,
-  type ProjectedCondition,
   type ProjectedKeyedRow,
   type ProjectedMessage,
   type ProjectedRow,
@@ -24,6 +22,7 @@ import {
   type ProjectionReader,
   type RowAdvance,
 } from './keyed-projection.ts';
+import { conditionsMetBy } from './projected-conditions.ts';
 
 export interface AppendedFact {
   readonly type: string;
@@ -83,11 +82,7 @@ function tupleCompared(left: readonly Ordered[], right: readonly Ordered[]): num
   return 0;
 }
 
-function matches({ row, key }: ProjectedKeyedRow, where: readonly ProjectedCondition[]): boolean {
-  return where.every(({ column, equals }) => (column === rowKeyColumn ? key : row[column]) === equals);
-}
-
-function rowsAt(rows: ReadonlyMap<string, ProjectedKeyedRow>, address: ProjectedAddress): readonly ProjectedKeyedRow[] {
+function rowsAt({ rows }: Table, address: ProjectedAddress): readonly ProjectedKeyedRow[] {
   return [...rows.values()].filter((kept) => kept.org === address.org && kept.playbook === address.playbook);
 }
 
@@ -219,9 +214,10 @@ function advancedIn(table: Table | undefined, { address, key, advance }: Advance
       return;
     }
     requireAdvancedColumns(table.projection, advance.set);
+    const unchanged = conditionsMetBy(table.projection, advance.when);
     const stored = `${streamPrefixOfAddress(address)}${key}`;
     const kept = table.rows.get(stored);
-    if (kept !== undefined && matches(kept, advance.when)) {
+    if (kept !== undefined && unchanged(kept)) {
       table.rows.set(stored, { ...kept, row: { ...kept.row, ...advance.set } });
     }
   });
@@ -242,15 +238,22 @@ function dueRowsIn(rows: ReadonlyMap<string, ProjectedKeyedRow>, { column, throu
 }
 
 function pageIn(
-  rows: readonly ProjectedKeyedRow[],
+  table: Table,
+  address: ProjectedAddress,
   { where, orderBy, order, after, limit }: ProjectedRowsQuery,
 ): readonly ProjectedKeyedRow[] {
   const sign = order === 'asc' ? 1 : -1;
-  return rows
-    .filter((kept) => matches(kept, where))
+  const met = conditionsMetBy(table.projection, where);
+  return rowsAt(table, address)
+    .filter((kept) => met(kept))
     .filter((kept) => after === undefined || sign * tupleCompared(orderedKeyOf(orderBy, kept), after) > 0)
     .toSorted((left, right) => sign * tupleCompared(orderedKeyOf(orderBy, left), orderedKeyOf(orderBy, right)))
     .slice(0, limit);
+}
+
+function countIn(table: Table, address: ProjectedAddress, where: ProjectedRowsQuery['where']): number {
+  const met = conditionsMetBy(table.projection, where);
+  return rowsAt(table, address).filter((kept) => met(kept)).length;
 }
 
 export function memoryProjections(projections: readonly KeyedProjection[]): MemoryProjections {
@@ -265,9 +268,15 @@ export function memoryProjections(projections: readonly KeyedProjection[]): Memo
     refold: refoldedOn(tables),
     advanceRow: (projection, address, key, advance) => advancedIn(tableNamed(projection), { address, key, advance }),
     readProjectedRows: (projection, address, query) =>
-      Effect.sync(() => pageIn(rowsAt(rowsOf(projection), address), query)),
+      Effect.sync(() => {
+        const table = tableNamed(projection);
+        return table === undefined ? [] : pageIn(table, address, query);
+      }),
     countProjectedRows: (projection, address, where) =>
-      Effect.sync(() => rowsAt(rowsOf(projection), address).filter((kept) => matches(kept, where)).length),
+      Effect.sync(() => {
+        const table = tableNamed(projection);
+        return table === undefined ? 0 : countIn(table, address, where);
+      }),
     readDueRows: (projection, query) => Effect.sync(() => dueRowsIn(rowsOf(projection), query)),
     nextDueOf: (projection, column, after) =>
       Effect.sync(() => {

@@ -53,10 +53,10 @@ export {
   type BoundProjectionReader,
   type DueRowsQuery,
   type KeyedProjection,
+  type OrgProjectionReader,
   type ProjectedAddress,
   type ProjectedColumn,
   type ProjectedColumnKind,
-  type ProjectedCondition,
   type ProjectedIndex,
   type ProjectedKeyedRow,
   type ProjectedMessage,
@@ -71,6 +71,11 @@ export {
   type StreamScope,
 } from './projections/keyed-projection.ts';
 export { playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
+export {
+  comparedColumnOf,
+  type ProjectedComparison,
+  type ProjectedCondition,
+} from './projections/projected-conditions.ts';
 export {
   isKindWithType,
   kindsWithTypes,

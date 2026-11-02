@@ -48,6 +48,8 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'report_allocation',
   'get_license',
   'list_org_changes',
+  'list_activity',
+  'mark_activity_seen',
   'list_playbook_changes',
   'render_page',
   'get_content',
@@ -89,7 +91,7 @@ describe('the operations of the document and the tools of the endpoints', () => 
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(19);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(21);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

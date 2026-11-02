@@ -3,6 +3,7 @@ import { Effect, Option, Schema } from 'effect';
 import { defineQuery } from '../definition/operation.ts';
 import { ActedContextSchema } from '../ledger/context.ts';
 import { factOf } from '../ledger/decider.ts';
+import { OrgReader } from '../ledger/org-reader.ts';
 import { PlaybookReader } from '../ledger/playbook-reader.ts';
 import type { KeyedProjection, ProjectedMessage, ProjectedRow } from './keyed-projection.ts';
 
@@ -93,5 +94,30 @@ export const readTallyRows = defineQuery('playbook', {
     const where = [{ column: 'open', equals: true }];
     const rows = yield* reader.readProjectedRows('run_tallies', { where, orderBy: ['began_at'], order: 'desc', limit });
     return { runs: rows.map(({ key }) => key), open: yield* reader.countProjectedRows('run_tallies', where) };
+  }),
+});
+
+export const readPlaybookTallyRows = defineQuery('org', {
+  name: 'read_playbook_tally_rows',
+  title: 'Read playbook tally rows',
+  description:
+    'Reads the rows of the runs of one playbook of the org that began after a time, newest first, and counts them.',
+  route: { method: 'GET', path: '/playbooks/{playbook}/tally-rows' },
+  inputSchema: Schema.Struct({ playbook: Schema.String, after: Schema.Int, limit: Schema.Int }),
+  outputSchema: Schema.Struct({ runs: Schema.Array(Schema.String), began: Schema.Int }),
+  reasons: [],
+  handle: Effect.fnUntraced(function* ({ playbook, after, limit }) {
+    const reader = yield* OrgReader;
+    const where = [{ column: 'began_at', after }];
+    const rows = yield* reader.readPlaybookRows(playbook, 'run_tallies', {
+      where,
+      orderBy: ['began_at'],
+      order: 'desc',
+      limit,
+    });
+    return {
+      runs: rows.map(({ key }) => key),
+      began: yield* reader.countPlaybookRows(playbook, 'run_tallies', where),
+    };
   }),
 });

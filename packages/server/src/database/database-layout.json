@@ -2,6 +2,42 @@
   "layout": 8,
   "catalog": [
     {
+      "name": "activity_1",
+      "sql": "CREATE TABLE activity_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, listed INTEGER, at INTEGER, by TEXT, change TEXT, definition_type TEXT, definition_name TEXT, definition_version INTEGER, run_id TEXT, trigger TEXT, output_shape TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "activity_1_listed",
+      "sql": "CREATE INDEX activity_1_listed ON activity_1 (playbook_key, listed, at, row_key)"
+    },
+    {
+      "name": "activity_1_listed_by",
+      "sql": "CREATE INDEX activity_1_listed_by ON activity_1 (playbook_key, listed, by, at, row_key)"
+    },
+    {
+      "name": "activity_broken_1",
+      "sql": "CREATE TABLE activity_broken_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, open INTEGER, at INTEGER, status TEXT, definition_type TEXT, definition_name TEXT, version INTEGER, current_version INTEGER, run_id TEXT, detail TEXT, ended_by TEXT, trigger TEXT, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "activity_broken_1_open",
+      "sql": "CREATE INDEX activity_broken_1_open ON activity_broken_1 (playbook_key, open, at, row_key)"
+    },
+    {
+      "name": "activity_requests_1",
+      "sql": "CREATE TABLE activity_requests_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, open INTEGER, at INTEGER, by TEXT, definition_type TEXT, definition_name TEXT, definition_version INTEGER, trigger TEXT, message TEXT, answer_schema TEXT, waits_on TEXT, expires_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "activity_requests_1_open",
+      "sql": "CREATE INDEX activity_requests_1_open ON activity_requests_1 (playbook_key, open, at, row_key)"
+    },
+    {
+      "name": "activity_requests_1_open_waits_on",
+      "sql": "CREATE INDEX activity_requests_1_open_waits_on ON activity_requests_1 (playbook_key, open, waits_on, at, row_key)"
+    },
+    {
+      "name": "activity_seen_1",
+      "sql": "CREATE TABLE activity_seen_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, through_at INTEGER, through_playbook TEXT, through_key TEXT, marked TEXT, seen_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
       "name": "conversations_3",
       "sql": "CREATE TABLE conversations_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, server TEXT, tool TEXT, conversation TEXT, since TEXT, last_fact TEXT, joined_by TEXT, open INTEGER, active_at INTEGER, reads INTEGER, next_read_at INTEGER, due_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },

@@ -9,15 +9,15 @@ import {
 import { InteractionRunFactSchema } from '@on.auto/interaction';
 import type { FactSchemaRead } from '@on.auto/ledger';
 import { MeterEventSchema } from '@on.auto/meter';
-import { PlaybookEventSchema } from '@on.auto/playbooks';
 import { ConversationCallEventSchema, HandCallEventSchema } from '@on.auto/tool-servers';
 import { RunLogRecordSchema } from '@on.auto/workflow-engine';
 
 import { LicenseKeyEventSchema } from '../licensing/kept-license-key.ts';
 import { OwnKeyEventSchema } from '../secrets/own-keys.ts';
+import { orgFactSchemas } from './org-facts.ts';
 
 export const knownFactSchemas = [
-  PlaybookEventSchema,
+  ...orgFactSchemas,
   DefinitionEventSchema,
   RunEventSchema,
   InteractionRunFactSchema,

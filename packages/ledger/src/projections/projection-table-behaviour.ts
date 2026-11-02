@@ -51,6 +51,18 @@ function anAppendThatBreaksDown(entry: LedgerEntry): void {
   });
 }
 
+function aReadOrderedByAnUndeclaredColumn(entry: LedgerEntry): void {
+  describe('a read of projected rows ordered by a column the projection does not declare', () => {
+    it('fails, naming the column', async () => {
+      const ledger = await aLedger(entry, undefined, undefined, [runTallyRows]);
+
+      await expect(
+        Effect.runPromise(ledger.readProjectedRows('run_tallies', alpha, { ...everyRow, orderBy: ['state'] })),
+      ).rejects.toThrow('The projection run_tallies has no column state');
+    });
+  });
+}
+
 function aTableNotThereYet(entry: LedgerEntry): void {
   describe('the table of a projection that is not there yet', () => {
     it('is made with its indexes and filled when the ledger opens, from every run stream, and earlier versions dropped', async () => {
@@ -202,6 +214,7 @@ export function projectionTableBehaviour(entry: LedgerEntry): void {
   runOutcomeTableBehaviour(entry);
   projectionsBehaviour((projections) => aLedger(entry, undefined, undefined, projections));
   anAppendThatBreaksDown(entry);
+  aReadOrderedByAnUndeclaredColumn(entry);
   aTableNotThereYet(entry);
   aKeyedTableNotThereYet(entry);
   aTableOfOrgsNotThereYet(entry);

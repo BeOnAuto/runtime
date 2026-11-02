@@ -81,6 +81,7 @@ jobs:
           - packages: [ledger, meter, workflow-host, prediction, object-storage, workflow-engine]
             services: true
           - packages:
+              - activity
               - api
               - computation
               - config

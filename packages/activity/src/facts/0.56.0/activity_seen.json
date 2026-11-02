@@ -1,0 +1,20 @@
+{
+  "type": "activity_seen",
+  "data": {
+    "items": [
+      {
+        "address": "finance/runs/019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e",
+        "at": "2026-11-01T17:02:41.512Z"
+      }
+    ],
+    "through": {
+      "at": "2026-11-01T17:02:41.512Z",
+      "playbook": "finance",
+      "key": "runs/019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e"
+    }
+  },
+  "context": {
+    "at": "2026-11-01T17:05:00.000Z",
+    "by": "person:user_7kLm2"
+  }
+}

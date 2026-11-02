@@ -3,7 +3,12 @@ import { Effect, Option } from 'effect';
 import type { OrgAddress } from '../caller/org-context.ts';
 import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import { InvalidInput } from '../outcome/invalid-input.ts';
-import type { BoundProjectionReader, ProjectedAddress, ProjectionReader } from '../projections/keyed-projection.ts';
+import type {
+  BoundProjectionReader,
+  OrgProjectionReader,
+  ProjectedAddress,
+  ProjectionReader,
+} from '../projections/keyed-projection.ts';
 import { isCalendarDay } from '../reading/calendar-days.ts';
 import { mostExaminedInAPage, mostRecordsInAPage } from '../reading/page-bounds.ts';
 import type {
@@ -175,8 +180,13 @@ export function playbookBoundProjectionReader(
   return boundProjectionReader(ledger, { org, playbook });
 }
 
-export function orgBoundProjectionReader(ledger: ProjectionReader, { org }: OrgAddress): BoundProjectionReader {
-  return boundProjectionReader(ledger, { org });
+export function orgBoundProjectionReader(ledger: ProjectionReader, { org }: OrgAddress): OrgProjectionReader {
+  const ofPlaybook = (playbook: string) => boundProjectionReader(ledger, { org, playbook });
+  return {
+    ...boundProjectionReader(ledger, { org }),
+    readPlaybookRows: (playbook, projection, query) => ofPlaybook(playbook).readProjectedRows(projection, query),
+    countPlaybookRows: (playbook, projection, where) => ofPlaybook(playbook).countProjectedRows(projection, where),
+  };
 }
 
 export function playbookBoundRunOutcomesReader(

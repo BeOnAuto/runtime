@@ -16,12 +16,12 @@ Send requests to the server's address, such as `https://auto.example.com`, the `
 
 Each API key belongs to one org and has permissions for a set of playbooks:
 
-| Permission       | Lets the caller                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `org:read`       | Read the org's playbooks and connections, list models and providers, and search the org's tool servers                         |
-| `org:write`      | Create, update and retire playbooks, and add, reconnect and remove connections                                                 |
-| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, and search and read tools                                     |
-| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool |
+| Permission       | Lets the caller                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `org:read`       | Read the org's playbooks and connections, list models and providers, search the org's tool servers, and read the org's activity and mark it seen |
+| `org:write`      | Create, update and retire playbooks, and add, reconnect and remove connections                                                                   |
+| `playbook:read`  | Read definitions, runs, history, events, requests and analytics, and search and read tools                                                       |
+| `playbook:write` | Create, change, retire or run a function or workflow, cancel a run, send or publish an event, answer a request and call a tool                   |
 
 Each route table below names the permission a route needs.
 
@@ -43,7 +43,7 @@ These four need no key, and neither does [content at a signed address](#content-
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `list_org_changes`, `list_playbook_changes`, `activate_allocation` and `report_allocation`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `list_org_changes`, `list_playbook_changes`, `list_activity`, `mark_activity_seen`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -828,6 +828,240 @@ Each returns `cursor`, `changes` and `more`:
 | `list_playbook_changes` | `event`       | `event_id`     | An event published to the playbook, a refusal of its reactions, a call of a tool by hand and a telling or a read of a conversation, by the `id` `list_playbook_events` lists it by |
 
 A run's own records, its steps and its tool calls name the run; read them with `list_playbook_events` given its `run_id`. A new link or consent of a connection names nothing until the connection is connected.
+
+## The organization's activity
+
+The organization's activity is what its playbooks did that a person may want to see: the requests that wait on an answer, the definitions whose latest run broke, and the runs, definitions and playbooks that are new. The runtime keeps it for the whole org, with what each caller has seen, so a client shows it with one read however many playbooks the org holds, and what a person marks seen on one device shows on every other. These two routes are served over HTTP alone; no MCP tool serves them. They are relative to `/v1/orgs/{org}`:
+
+| Operation            | Method and route      | Permission                    | Input                                                                         |
+| -------------------- | --------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
+| `list_activity`      | `GET /activity`       | `org:read` or `playbook:read` | Optional `kind`, `playbook`, `mine`, `address`, `since`, `limit` and `cursor` |
+| `mark_activity_seen` | `POST /activity/seen` | `org:read` or `playbook:read` | `items`, `through` or both, and optional `address`                            |
+
+Each reads and marks only the activity of the playbooks the caller may access, as `list_playbooks` lists them. What a caller marks seen is theirs alone and changes nothing for anyone else.
+
+### The rows
+
+`list_activity` returns `rows`, newest first by `at`, with `has_more`, `next_cursor`, `counts` and `through`. Each row is one item of one of three kinds:
+
+| `kind`      | The item                                                                                                                                                                                                                                                                           | Its `at`                                                   | Listed                                                                                                                      |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `needs_you` | A request of an interaction function that takes an answer, a request a workflow's call made included                                                                                                                                                                               | When the request was made                                  | Until it is answered, expires or ends with its run                                                                          |
+| `broken`    | A definition whose latest run at its current version failed or was rejected. One row per definition, naming the version it broke on and its latest failing run. A cancelled run is neither a failure nor a success, and a request that expires unanswered closes its request alone | When its latest failing run ended                          | Until a run at that version or a later one succeeds, a new version of the definition is saved, or the definition is retired |
+| `new`       | A run no other run started that succeeded; a function, workflow or page saved, each version its own item; or a playbook created or updated, each change its own item                                                                                                               | When the run ended, or the version or the change was saved | Always                                                                                                                      |
+
+A run that a workflow's call started has no `new` or `broken` row of its own: the row of the workflow's run stands for what it did. A request or a broken definition is listed only while open, and nothing is served about it once it is resolved: the run's page says what became of it. A definition that breaks again opens its row again, at the time of the new break.
+
+The rows of playbooks come from the org's register of playbooks, which `list_activity` reads beside the other rows and merges with them by `at`: the newest 100 changes of the register, so an older change has no row.
+
+Each row has these fields:
+
+| Field           | Contents                                                                                                                                                                                                                                                                      |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`          | `needs_you`, `broken` or `new`                                                                                                                                                                                                                                                |
+| `address`       | The item's address, which `mark_activity_seen` takes                                                                                                                                                                                                                          |
+| `cursor`        | The row's place in the activity, which `since`, `cursor` and `through` take                                                                                                                                                                                                   |
+| `playbook`      | The id of the playbook the item belongs to                                                                                                                                                                                                                                    |
+| `at`            | When the item came about, by its kind, in ISO 8601 UTC                                                                                                                                                                                                                        |
+| `by`            | The id of the caller who started the run, saved the version or changed the playbook; for a request, who started the run that asked                                                                                                                                            |
+| `change`        | For a version or a playbook, `created` or `updated`; otherwise `null`                                                                                                                                                                                                         |
+| `trigger`       | For a run a trigger started, its `kind`, `event`, `cron` or `every`, and its `reference` in the document; otherwise `null`                                                                                                                                                    |
+| `definition`    | The `type`, `name` and `version` of the definition: the run's, the version saved, or for `broken` the version it broke on; `null` for a playbook                                                                                                                              |
+| `run_id`        | The run that asked, the latest run that broke, or the run that succeeded; `null` for a version or a playbook                                                                                                                                                                  |
+| `output_shape`  | For a run that succeeded, the [output shape](output-shapes.md#what-a-run-shows) its output takes, where it takes one; otherwise `null`. Read the run with `get_run` for its result and headline                                                                               |
+| `message`       | For `needs_you`, the first line of the request's message, cut, where it is longer, to 200 characters: 199 and an ellipsis (`…`); otherwise `null`                                                                                                                             |
+| `answer_schema` | For `needs_you`, the JSON Schema the answer takes, as the request carries it, where it is at most 8 KiB as JSON, so a client can answer a yes or no, a choice or a line in the row; `null` for a larger one, which the run's request holds whole, and for the other kinds     |
+| `detail`        | For `broken`, the `detail` of the latest failing run's rejection, cut, where it is longer, to 200 characters: 199 and an ellipsis; `null` for a run that failed inside the runtime or a rejection without one, and for the other kinds                                        |
+| `status`        | For `broken`, how the latest failing run ended: `failed`, a run that failed inside the runtime, or `rejected`; otherwise `null`                                                                                                                                               |
+| `waits_on`      | For `needs_you`, whom the request waits on: the address its party names, in lower case, where the party is one, holding an `@`; or `any_member` where it names none. See [Whom a request waits on](interaction-format.md#whom-a-request-waits-on). `null` for the other kinds |
+| `expires_at`    | For `needs_you`, when the request expires unanswered, in ISO 8601 UTC; otherwise `null`                                                                                                                                                                                       |
+| `seen`          | For `new`, whether the caller has seen it, as [Seen and counted](#seen-and-counted) says; `null` for the other kinds, which nothing a caller marks seen changes                                                                                                               |
+
+An address is the playbook and the row's key in the activity:
+
+| Item                          | `address`                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------- |
+| A request                     | `<playbook>/<run_id>`                                                        |
+| A broken definition           | `<playbook>/<type>/<name>`                                                   |
+| A run that succeeded          | `<playbook>/runs/<run_id>`                                                   |
+| A version saved               | `<playbook>/definitions/<type>/<name>/<version>`                             |
+| A playbook created or updated | `playbooks/<playbook>/<at>`, `at` in milliseconds since 1970-01-01T00:00:00Z |
+
+### Reading the activity
+
+| Parameter  | Rule                                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `kind`     | One kind, or several separated by commas, such as `needs_you,broken`: keep the rows of those kinds                                         |
+| `playbook` | A playbook id: keep the rows of one playbook                                                                                               |
+| `mine`     | `true` keeps, of the `new` rows, those whose `by` is the caller, and leaves the rows of the other kinds as they are; `false` when left out |
+| `address`  | The caller's own email address, which decides which requests wait on the caller; it filters nothing and grants nothing                     |
+| `since`    | A `cursor`: keep the rows newer than the row it names                                                                                      |
+| `limit`    | 1 to 200, and 50 when left out                                                                                                             |
+| `cursor`   | The `next_cursor` of the page before                                                                                                       |
+
+- Pass `next_cursor` as `cursor` to read the next page, until `next_cursor` is `null`.
+- Cursors are opaque. One that does not decode, or that names a playbook of another org, is refused.
+- A caller who may access only some playbooks names one of them in `playbook`; a read that names none answers `forbidden`. A caller who may access every playbook of the org reads them all without it.
+- A retired playbook has no rows: `playbook` naming one answers no rows.
+- `counts` and `through` are the same whatever the filters and the page.
+- The rows are kept as each fact is recorded, so a read is as current as the playbooks' history. A client reads again when it wants the counts current; [`list_org_changes`](#changes) does not name the activity.
+
+```http
+GET /v1/orgs/acme/activity?limit=3&address=priya%40acme.example
+Authorization: Bearer <key>
+```
+
+```json
+{
+  "rows": [
+    {
+      "kind": "new",
+      "address": "finance/runs/019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e",
+      "cursor": "eyJhdCI6MTc5MzU1MjU2MTUxMiwicGxheWJvb2siOiJmaW5hbmNlIiwia2V5IjoicnVucy8wMTlhNDAxMi03YzNlLTdkMTAtOWIyYS00ZTZmOGExYzJkM2UifQ",
+      "playbook": "finance",
+      "at": "2026-11-01T17:02:41.512Z",
+      "by": "person:user_7kLm2",
+      "change": null,
+      "trigger": null,
+      "definition": { "type": "workflow", "name": "close-the-week", "version": 4 },
+      "run_id": "019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e",
+      "output_shape": "table",
+      "message": null,
+      "answer_schema": null,
+      "detail": null,
+      "status": null,
+      "waits_on": null,
+      "expires_at": null,
+      "seen": false
+    },
+    {
+      "kind": "needs_you",
+      "address": "finance/019a400e-1f2b-7a44-8c5d-6b7e9f0a1b2c",
+      "cursor": "eyJhdCI6MTc5MzU1MjI5MjIwNCwicGxheWJvb2siOiJmaW5hbmNlIiwia2V5IjoiMDE5YTQwMGUtMWYyYi03YTQ0LThjNWQtNmI3ZTlmMGExYjJjIn0",
+      "playbook": "finance",
+      "at": "2026-11-01T16:58:12.204Z",
+      "by": "person:user_7kLm2",
+      "change": null,
+      "trigger": null,
+      "definition": { "type": "interaction", "name": "approve-payment", "version": 2 },
+      "run_id": "019a400e-1f2b-7a44-8c5d-6b7e9f0a1b2c",
+      "output_shape": null,
+      "message": "Approve the payment of $4,200 to Northwind Supplies?",
+      "answer_schema": {
+        "type": "object",
+        "required": ["choice"],
+        "properties": { "choice": { "type": "string", "enum": ["approve", "reject"] } }
+      },
+      "detail": null,
+      "status": null,
+      "waits_on": "priya@acme.example",
+      "expires_at": "2026-11-03T16:58:12.204Z",
+      "seen": null
+    },
+    {
+      "kind": "broken",
+      "address": "finance/reasoning/categorize-invoice",
+      "cursor": "eyJhdCI6MTc5MzU0NzYwNzg4MSwicGxheWJvb2siOiJmaW5hbmNlIiwia2V5IjoicmVhc29uaW5nL2NhdGVnb3JpemUtaW52b2ljZSJ9",
+      "playbook": "finance",
+      "at": "2026-11-01T15:40:07.881Z",
+      "by": "person:user_7kLm2",
+      "change": null,
+      "trigger": null,
+      "definition": { "type": "reasoning", "name": "categorize-invoice", "version": 7 },
+      "run_id": "0199fe31-2a4b-7c5d-8e6f-7a8b9c0d1e2f",
+      "output_shape": null,
+      "message": null,
+      "answer_schema": null,
+      "detail": "The tool ledger/post_entry is not offered to this playbook.",
+      "status": "rejected",
+      "waits_on": null,
+      "expires_at": null,
+      "seen": null
+    }
+  ],
+  "has_more": true,
+  "next_cursor": "eyJhdCI6MTc5MzU0NzYwNzg4MSwicGxheWJvb2siOiJmaW5hbmNlIiwia2V5IjoicmVhc29uaW5nL2NhdGVnb3JpemUtaW52b2ljZSJ9",
+  "counts": { "needs_you": 1, "broken": 1, "new": 6 },
+  "through": {
+    "cursor": "eyJhdCI6MTc5MzUyMzYwMzExNywicGxheWJvb2siOiJmaW5hbmNlIiwia2V5IjoicnVucy8wMTk5ZmUzMS0yYTRiLTdjNWQtOGU2Zi03YThiOWMwZDFlMmYifQ",
+    "seen_at": "2026-11-01T09:14:55.020Z"
+  }
+}
+```
+
+### Seen and counted
+
+Only `new` rows are seen or unseen. A `new` row is seen by the caller when its `by` is the caller; when the caller marked it seen; or when it is at or before the caller's `through`, the place they marked everything seen through. A caller who has never marked anything seen reads as if their `through` were 7 days before the read, so a first read shows the last week as new. Each caller has its own seen: a person, a key or the local developer.
+
+A request waits on the caller when its `waits_on` is `any_member`, or is the caller's address: the `address` the read gives, or a verified address the caller's identity carries where the runtime knows one. In local mode every client is the local developer, so every open request waits on them, whatever `address` says, and Auto Studio and an agent on that machine share one seen: what one marks seen, and the `through` it moves, are the other's too. A request that waits on someone else is listed all the same, to everyone who may read its playbook, as `list_interactions` lists it.
+
+`counts` holds what the caller has to look at, over every playbook the caller may access:
+
+| Count       | The rows it counts                     |
+| ----------- | -------------------------------------- |
+| `needs_you` | The requests that wait on the caller   |
+| `broken`    | The `broken` rows                      |
+| `new`       | The `new` rows the caller has not seen |
+
+Marking items seen never changes `needs_you` or `broken`: a request leaves them when it is answered or expires, and a broken definition when it is resolved.
+
+`through` is where the caller marked everything seen, its `cursor` and `seen_at`, when they marked it, or `null` before they first did.
+
+### Marking items seen
+
+`mark_activity_seen` takes:
+
+- `items`, the `new` rows the caller has seen, each its `address` and its `at` as the row gives them, at most 200;
+- `through`, a `cursor` from a read: everything at or before it is seen;
+- `address`, optional, the caller's own email address, as `list_activity` takes it, so the `counts` it answers are those of the read.
+
+It records one fact, `activity_seen`, on the caller's own stream, and answers `counts` and `through` after it, as `list_activity` gives them. It answers `200`, and `conflict` when another mark of the same caller is recorded at the same moment; send it again.
+
+- An item the activity holds no `new` row for, such as a request, an item whose `at` is not its row's, or an item of a playbook the org does not hold, is accepted: the mark is recorded and marks nothing.
+- A `through` older than the caller's own is accepted and leaves theirs unchanged, and the answer gives the one kept: `through` never moves back.
+- Each request is recorded, even one that repeats an earlier one.
+- The runtime keeps, for each caller, their `through` and the 1,000 items they marked seen last after it. An item at or before `through` is seen by `through` alone.
+
+```http
+POST /v1/orgs/acme/activity/seen
+Authorization: Bearer <key>
+Content-Type: application/json
+
+{
+  "items": [
+    {
+      "address": "finance/runs/019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e",
+      "at": "2026-11-01T17:02:41.512Z"
+    }
+  ]
+}
+```
+
+```json
+{
+  "counts": { "needs_you": 1, "broken": 1, "new": 5 },
+  "through": {
+    "cursor": "eyJhdCI6MTc5MzUyMzYwMzExNywicGxheWJvb2siOiJmaW5hbmNlIiwia2V5IjoicnVucy8wMTk5ZmUzMS0yYTRiLTdjNWQtOGU2Zi03YThiOWMwZDFlMmYifQ",
+    "seen_at": "2026-11-01T09:14:55.020Z"
+  }
+}
+```
+
+To mark everything seen, send the `cursor` of the newest row read as `through`.
+
+A request with several faults is refused for the first. A field given twice, such as `kind` repeated in the query string, is `bad_request`, as for every route ([Requests and access](#requests-and-access)).
+
+| Case                                                                                                 | Response                                        |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| A `kind` that is not `needs_you`, `broken` or `new`                                                  | `invalid_input` at `/kind`                      |
+| A `limit` outside 1 to 200                                                                           | `invalid_input` at `/limit`                     |
+| An `address` that holds no `@`                                                                       | `invalid_input` at `/address`                   |
+| A `since`, `cursor` or `through` that does not decode, or that names a playbook of another org       | `invalid_input` at the field                    |
+| A `playbook` the org does not have                                                                   | `not_found`                                     |
+| A `playbook`, or an item of a playbook, the caller may not access                                    | `forbidden`                                     |
+| A `mark_activity_seen` with neither `items` nor `through`, or with an empty `items` and no `through` | `invalid_input` at `/items`                     |
+| More than 200 `items`                                                                                | `invalid_input` at `/items`                     |
+| An item whose `address` is not of a form above or whose `at` is not a time                           | `invalid_input` at the item, such as `/items/2` |
 
 ## Analytics
 

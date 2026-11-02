@@ -12,6 +12,7 @@ import {
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { comparedRowsBehaviour } from './compared-rows-behaviour.ts';
 import { orgProjectionsBehaviour } from './org-projections-behaviour.ts';
 
 type AnyLedger = Ledger['Service'];
@@ -282,6 +283,7 @@ function rowsAdvancedWhileUnchanged(open: ProjectingLedger): void {
 export function projectionsBehaviour(open: ProjectingLedger): void {
   rowsKept(open);
   rowsOfAPlaybook(open);
+  comparedRowsBehaviour(open);
   dueRows(open);
   rowsKeyedByTheirMapping(open);
   rowsAdvanced(open);
