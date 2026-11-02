@@ -1,4 +1,4 @@
-import type { KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
+import type { ContentHolders, KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
 import { Pool } from 'pg';
 
 import type { AppendListeners } from '../event-store.ts';
@@ -19,6 +19,7 @@ export interface PostgreSQLOptions extends AppendListeners {
   readonly pools: PostgreSQLPools;
   readonly runOutcomes?: RunOutcomeMapping;
   readonly projections?: readonly KeyedProjection[];
+  readonly holders?: ContentHolders;
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];
 }

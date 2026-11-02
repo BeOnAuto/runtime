@@ -1,10 +1,7 @@
-import type { ContentStore } from '@on.auto/content';
-
-import type { InTransaction, StatementExecutor } from '../event-store.ts';
+import type { InTransaction, OwnContentStore, StatementExecutor } from '../event-store.ts';
 import { formattedFor } from '../postgresql-reads/recorded-parts.ts';
 import { postgresqlContent } from './content-dialects.ts';
-import { recordedContentOn } from './content-store.ts';
-import { contentSweepOn } from './content-sweep.ts';
+import { contentStoreOn } from './content-store.ts';
 
 interface Answer {
   readonly rows: readonly unknown[];
@@ -44,10 +41,6 @@ export function inTransactionOn(connections: ContentConnections): InTransaction 
   };
 }
 
-export function postgresqlContentOn(connections: ContentConnections): ContentStore {
-  const execute = executorOn(connections);
-  return {
-    content: recordedContentOn({ execute, inTransaction: inTransactionOn(connections) }, postgresqlContent),
-    sweepContent: contentSweepOn(execute),
-  };
+export function postgresqlContentOn(connections: ContentConnections): OwnContentStore {
+  return contentStoreOn(executorOn(connections), postgresqlContent);
 }

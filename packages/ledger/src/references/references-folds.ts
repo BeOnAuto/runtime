@@ -1,0 +1,191 @@
+import {
+  addressedStreamOf,
+  digestsChanged,
+  digestsTouchedBy,
+  heldOver,
+  releasesEverything,
+  type ContentHolders,
+  type HeldDigests,
+  type TypedEvent,
+} from '@on.auto/operations';
+
+import type { StatementExecutor } from '../event-store.ts';
+import { inTurn, type InlineProjection } from '../projections/inline-projection.ts';
+import type { ProjectionDialect, StreamsInOrder } from '../projections/projection-dialect.ts';
+import { messagesInABatch } from '../projections/projection-fill.ts';
+import { orderedMessagesIn } from '../projections/projection-statements.ts';
+import {
+  digestsLocked,
+  heldDeleted,
+  heldInTheStream,
+  heldOfTheDigests,
+  heldWritten,
+  type ReferencesPlace,
+} from './references-table.ts';
+
+export interface ReferencesKeeping {
+  readonly dialect: ProjectionDialect;
+  readonly holders: ContentHolders;
+}
+
+type Locking = 'locked' | 'unlocked';
+
+interface PlacedFact {
+  readonly place: ReferencesPlace;
+  readonly fact: TypedEvent;
+}
+
+function placeOf(stream: string): ReferencesPlace | undefined {
+  const named = addressedStreamOf(stream);
+  return named?.scope === 'playbook' ? { prefix: named.prefix, stream: `${named.kind}/${named.id}` } : undefined;
+}
+
+function placedOf(stream: string, fact: TypedEvent): readonly PlacedFact[] {
+  const place = placeOf(stream);
+  return place === undefined ? [] : [{ place, fact }];
+}
+
+function heldBefore(
+  { dialect, holders }: ReferencesKeeping,
+  execute: StatementExecutor,
+  place: ReferencesPlace,
+  facts: readonly TypedEvent[],
+): Promise<HeldDigests> {
+  if (facts.some((fact) => releasesEverything(holders, fact))) {
+    return heldInTheStream(execute, dialect, place);
+  }
+  const digests = [...new Set(facts.flatMap((fact) => digestsTouchedBy(holders, fact)))];
+  return heldOfTheDigests(execute, dialect, place, digests);
+}
+
+async function changesWritten(
+  { dialect }: ReferencesKeeping,
+  execute: StatementExecutor,
+  place: ReferencesPlace,
+  [before, after, locking]: readonly [HeldDigests, HeldDigests, Locking],
+): Promise<void> {
+  const changed = digestsChanged(before, after);
+  if (locking === 'locked') {
+    await digestsLocked(execute, dialect, place.prefix, changed);
+  }
+  const held = changed.flatMap((sha256) => {
+    const count = after.get(sha256) ?? 0;
+    return count > 0 ? [{ sha256, held: count }] : [];
+  });
+  await heldWritten(execute, dialect, place, held);
+  await heldDeleted(
+    execute,
+    place,
+    changed.filter((sha256) => !after.has(sha256)),
+  );
+}
+
+async function streamFolded(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  place: ReferencesPlace,
+  [facts, locking]: readonly [readonly TypedEvent[], Locking],
+): Promise<void> {
+  const before = await heldBefore(keeping, execute, place, facts);
+  await changesWritten(keeping, execute, place, [before, heldOver(keeping.holders, facts, before), locking]);
+}
+
+interface FactsOfAStream {
+  readonly place: ReferencesPlace;
+  readonly facts: readonly TypedEvent[];
+}
+
+function byStream(placed: readonly PlacedFact[]): readonly FactsOfAStream[] {
+  const streams = new Map<string, FactsOfAStream>();
+  for (const { place, fact } of placed) {
+    const key = `${place.prefix}${place.stream}`;
+    streams.set(key, { place, facts: [...(streams.get(key)?.facts ?? []), fact] });
+  }
+  return [...streams.values()];
+}
+
+function placedFolded(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  placed: readonly PlacedFact[],
+  locking: Locking,
+): Promise<void> {
+  return inTurn(byStream(placed), ({ place, facts }) => streamFolded(keeping, execute, place, [facts, locking]));
+}
+
+export function keepingReferences(keeping: ReferencesKeeping): InlineProjection {
+  return {
+    types: [...keeping.holders.keys()],
+    handle: (messages, execute) =>
+      placedFolded(
+        keeping,
+        execute,
+        messages.flatMap(({ stream, type, data }) =>
+          placedOf(stream, { type, data: keeping.dialect.appendedData(data) }),
+        ),
+        'locked',
+      ),
+  };
+}
+
+type OrderedMessage = Awaited<ReturnType<typeof orderedMessagesIn>>[number];
+
+interface BatchFolding {
+  readonly streams: StreamsInOrder;
+  readonly fold: (messages: readonly OrderedMessage[]) => Promise<void>;
+}
+
+async function foldedInBatches(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  { streams, fold }: BatchFolding,
+  after?: string,
+): Promise<void> {
+  const messages = await orderedMessagesIn(
+    execute,
+    keeping.dialect.messagesInOrderAfter(after, messagesInABatch, streams, [...keeping.holders.keys()]),
+  );
+  await fold(messages);
+  const last = messages.at(-1);
+  if (last !== undefined && messages.length === messagesInABatch) {
+    await foldedInBatches(keeping, execute, { streams, fold }, last.point);
+  }
+}
+
+function factOf({ dialect }: ReferencesKeeping, { type, data }: OrderedMessage): TypedEvent {
+  return { type, data: dialect.filledData(data) };
+}
+
+export function referencesFilled(keeping: ReferencesKeeping, execute: StatementExecutor): Promise<void> {
+  return foldedInBatches(keeping, execute, {
+    streams: { of: 'every' },
+    fold: (messages) =>
+      placedFolded(
+        keeping,
+        execute,
+        messages.flatMap((message) => placedOf(message.stream, factOf(keeping, message))),
+        'unlocked',
+      ),
+  });
+}
+
+export async function referencesRefolded(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  stream: string,
+): Promise<void> {
+  const place = placeOf(stream);
+  if (place === undefined) {
+    return;
+  }
+  const facts: TypedEvent[] = [];
+  await foldedInBatches(keeping, execute, {
+    streams: { of: 'lane', lane: { by: 'stream', key: stream } },
+    fold: (messages) => {
+      facts.push(...messages.map((message) => factOf(keeping, message)));
+      return Promise.resolve();
+    },
+  });
+  const before = await heldInTheStream(execute, keeping.dialect, place);
+  await changesWritten(keeping, execute, place, [before, heldOver(keeping.holders, facts), 'locked']);
+}

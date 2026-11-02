@@ -1,6 +1,7 @@
 import {
   Ledger,
   checkedContext,
+  keptContentGraceMs,
   recordingOf,
   type Conflict,
   type Context,
@@ -13,11 +14,11 @@ import {
   type StreamState,
   type StreamWriter,
 } from '@on.auto/operations';
-import { Effect, Result } from 'effect';
+import { Clock, Effect, Result } from 'effect';
 
 import { appendedFactsReaderOf } from './appended/appended-reader.ts';
 import { eventAppenderOf } from './event-appender.ts';
-import type { LedgerStore, Streams } from './event-store.ts';
+import type { LedgerContent, LedgerStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
 import { runOutcomesReaderOf } from './outcomes/run-outcomes-reader.ts';
 import { recordedEventReaderOf, recordedReaderOf } from './recorded/recorded-reader.ts';
@@ -106,7 +107,15 @@ export function streamPortsOf(streams: Streams): StreamReader & StreamWriter {
   };
 }
 
-export function makeLedger(store: LedgerStore): Ledger['Service'] {
+export function ownContentOf(store: LedgerStore): LedgerContent {
+  return {
+    content: store.content,
+    removedKeptBefore: (playbook, sha256, before) =>
+      Effect.promise(() => store.unlessHeld(playbook, sha256, store.removalWithin(playbook, sha256, before))),
+  };
+}
+
+export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentOf(store)): Ledger['Service'] {
   return Ledger.of({
     ...streamPortsOf(store),
     scrubFact: store.scrubFact,
@@ -120,6 +129,10 @@ export function makeLedger(store: LedgerStore): Ledger['Service'] {
     readDueRows: store.readDueRows,
     nextDueOf: store.nextDueOf,
     advanceRow: store.advanceRow,
-    content: store.content,
+    content: kept.content,
+    removeUnheld: (playbook, sha256) =>
+      Effect.flatMap(Clock.currentTimeMillis, (now) =>
+        kept.removedKeptBefore(playbook, sha256, now - keptContentGraceMs),
+      ),
   });
 }

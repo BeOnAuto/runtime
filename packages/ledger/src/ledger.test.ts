@@ -40,8 +40,9 @@ const onSQLite: LedgerEntry = {
     onTestFinished(remove);
     return Promise.resolve(fileName);
   },
-  ledgerOn: (fileName, runOutcomes, projections = []) =>
-    ledgerLayer({ fileName, projections, ...(runOutcomes === undefined ? {} : { runOutcomes }) }),
+  ledgerOn: (fileName, runOutcomes, projections = [], holders) =>
+    ledgerLayer({ fileName, projections, runOutcomes, holders }),
+  ledgerOutsideOn: (fileName, holders, content) => ledgerLayer({ fileName, holders, content }),
   ledgerRaisingOn: (fileName, appended) => ledgerLayer({ fileName, appended }),
   storeOn: (fileName) => openedOn(fileName).store,
   openedOn,

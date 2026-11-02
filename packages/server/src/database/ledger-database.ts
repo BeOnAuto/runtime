@@ -12,7 +12,7 @@ import {
   type LayoutStep,
   type LedgerServices,
 } from '@on.auto/ledger';
-import type { KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
+import type { ContentHolders, KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
 import type { SecretRows } from '@on.auto/secrets';
 import { Cause, Effect, Layer, type Context } from 'effect';
 
@@ -24,6 +24,7 @@ import { ledgerOfUnknownFacts } from './ledger-of-unknown-facts.ts';
 interface KeptByTheLedger {
   readonly runOutcomes?: RunOutcomeMapping;
   readonly projections?: readonly KeyedProjection[];
+  readonly holders?: ContentHolders;
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];
   readonly appends?: AppendSignal;

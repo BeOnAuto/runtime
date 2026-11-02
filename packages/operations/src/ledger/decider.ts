@@ -1,5 +1,6 @@
 import { Schema, type Option, type Result } from 'effect';
 
+import { heldContentAnnotation, type FactDeclaration } from '../held-content/content-declaration.ts';
 import type { DeclarableReason, Rejection } from '../outcome/rejection.ts';
 import type { Context } from './context.ts';
 
@@ -41,8 +42,10 @@ export function factOf<const Type extends string, Data extends Schema.Top, Event
   type: Type,
   data: Data,
   context: EventContext,
+  { content }: FactDeclaration = {},
 ) {
-  return Schema.Struct({ type: Schema.Literal(type), data, context });
+  const fact = Schema.Struct({ type: Schema.Literal(type), data, context });
+  return content === undefined ? fact : fact.annotate({ [heldContentAnnotation]: content });
 }
 
 export function recordingOf<Event extends Recorded>(

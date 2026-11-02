@@ -1,5 +1,5 @@
 import { firstLineOf, type DeclaredFact } from '@on.auto/definitions';
-import { factTypesOf } from '@on.auto/operations';
+import { contentHoldersOf, factTypesOf } from '@on.auto/operations';
 import type { ProvidedCapability, SomeFolder } from '@on.auto/workflow-host';
 import { Predicate, Result, Schema, SchemaIssue, type SchemaAST } from 'effect';
 
@@ -152,15 +152,22 @@ const typesTheRuntimeReads: ReadonlySet<string> = new Set(
   knownFactSchemas.flatMap((schema: { readonly ast: SchemaAST.AST }) => factTypesOf(schema)),
 );
 
+function holdsWhatTheRuntimeReads(schema: DeclaredFact['schema']): boolean {
+  return Result.isSuccess(Result.try(() => contentHoldersOf([schema])));
+}
+
 function declaredFactProblem({ type, schema }: DeclaredFact, at: number): string | undefined {
   const declaring = `its capability.facts.onRuns[${at}] declares the fact ${type}`;
   if (typesTheRuntimeReads.has(type)) {
     return `${declaring}, a type the runtime reads as a fact of its own`;
   }
   const [read, ...others] = factTypesOf(schema);
-  return read === type && others.length === 0
+  if (read !== type || others.length > 0) {
+    return `${declaring} with a schema that does not read facts of the type ${type} alone`;
+  }
+  return holdsWhatTheRuntimeReads(schema)
     ? undefined
-    : `${declaring} with a schema that does not read facts of the type ${type} alone`;
+    : `${declaring} with a declaration of the content it holds or releases that the runtime does not read`;
 }
 
 function shapeProblem({ capability, folders = [] }: ProvidedCapability): string | undefined {

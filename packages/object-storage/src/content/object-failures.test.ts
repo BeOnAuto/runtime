@@ -44,7 +44,7 @@ describe('a put on object storage that is refused', () => {
       expect.objectContaining({ because: 'not_its_digest' }),
       expect.objectContaining({ because: 'not_its_size' }),
     ]);
-    expect(store.bucket.asked().toSorted()).toEqual(['DeleteObjects', 'HeadObject', 'PutObject']);
+    expect(store.bucket.asked().toSorted()).toEqual(['DeleteObjects', 'PutObject']);
     expect(store.bucket.keys()).toEqual([]);
   });
 
@@ -93,7 +93,7 @@ describe('a put on object storage that its store fails', () => {
     const refusing = fakeContentStore(location);
     const unreachable = fakeContentStore(location);
     refusing.bucket.intercepting('GetObjectCommand', () => Promise.reject(forbidden));
-    unreachable.bucket.intercepting('HeadObjectCommand', () => Promise.reject(new TypeError('fetch failed')));
+    unreachable.bucket.intercepting('PutObjectCommand', () => Promise.reject(new TypeError('fetch failed')));
 
     const reads = [
       Effect.runPromise(refusing.content.get(alpha, sha256Of('a'))),

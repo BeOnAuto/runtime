@@ -41,6 +41,14 @@ const aRowFolded = `INSERT INTO prediction_rows (playbook_key, data_sha256, seri
     target_count, target_at, events, features)
   VALUES (?, ?, 'north', 20000, '2024-10-04', 11, 1, NULL, 1, '[]')`;
 
+const ColumnRows = Schema.Array(Schema.Struct({ name: Schema.String }));
+
+function namesOfColumns(rows: readonly unknown[]): string {
+  return Schema.decodeUnknownSync(ColumnRows)(rows)
+    .map(({ name }) => name)
+    .join(', ');
+}
+
 function withTheDetailsOfAnEarlierRelease(messageData: string): string {
   const fact = Schema.decodeUnknownSync(DefinitionCreatedSchema)(messageData);
   const data = Schema.decodeUnknownSync(Schema.fromJsonString(JsonObjectSchema))(dataOfAnEarlierRelease);
@@ -53,8 +61,10 @@ export function aPredictionFunctionAtTheFloor(made: string, carried: string): vo
   const database = new DatabaseSync(carried);
   try {
     database.prepare('ATTACH DATABASE ? AS made').run(made);
+    const columnsOfTheFloor = database.prepare('SELECT name FROM main.pragma_table_info(?)');
     for (const table of tablesOfTheFacts) {
-      database.exec(`INSERT INTO ${table} SELECT * FROM made.${table}`);
+      const columns = namesOfColumns(columnsOfTheFloor.all(table));
+      database.exec(`INSERT INTO ${table} (${columns}) SELECT ${columns} FROM made.${table}`);
     }
     const [definition] = Schema.decodeUnknownSync(DefinitionFactSchema)(database.prepare(ofTheDefinition).all());
     database

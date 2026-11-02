@@ -1,3 +1,5 @@
+import { keptOutside } from '@on.auto/content';
+import { memoryContentHeads } from '@on.auto/content/testing';
 import { contentTableHead, measuredContent } from '@on.auto/ledger/content-measurement';
 
 import { objectContentOn } from '../src/content/object-content.ts';
@@ -12,6 +14,9 @@ const location = { bucket: bucket.name, prefix: `content-measure/${String(Date.n
 
 await bucketReady(bucket);
 contentTableHead();
-const held = await measuredContent('Object storage', objectContentOn(bucketOnS3(bucket), location).content);
+const held = await measuredContent(
+  'Object storage',
+  keptOutside(memoryContentHeads(), objectContentOn(bucketOnS3(bucket), location)).content,
+);
 process.stdout.write(`\n${held}\n`);
 await emptied(bucket, location.prefix);

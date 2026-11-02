@@ -36,12 +36,14 @@ export const AssetKeptSchema = factOf(
     expires_at: Schema.String,
   }),
   RunContextSchema,
+  { content: { holds: ['/sha256'] } },
 );
 
 const AssetExpiredSchema = factOf(
   'asset_expired',
   Schema.Struct({ bytes: BytesSchema, content_removed: Schema.Boolean }),
   ActedContextSchema,
+  { content: { releases: 'all' } },
 );
 
 export const AssetEventSchema = Schema.Union([AssetKeptSchema, AssetExpiredSchema]);

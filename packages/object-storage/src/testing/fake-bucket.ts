@@ -1,5 +1,6 @@
 import type { S3Client, ServiceOutputTypes } from '@aws-sdk/client-s3';
-import type { ContentStore } from '@on.auto/content';
+import { keptOutside, type ContentStore, type RecordedContent } from '@on.auto/content';
+import { memoryContentHeads } from '@on.auto/content/testing';
 import { Schema } from 'effect';
 
 import { storageClientOf, type StorageWaits } from '../client/storage-client.ts';
@@ -27,6 +28,7 @@ export interface FakeBucketOptions {
 export interface FakeContentStore extends ContentStore {
   readonly bucket: FakeBucket;
   readonly client: () => S3Client;
+  readonly content: RecordedContent;
 }
 
 const handled = Schema.decodeUnknownSync(Schema.Struct({ commandName: Schema.String }));
@@ -87,9 +89,6 @@ export function fakeContentStore(
   const bucket = fakeBucket({ name: location.bucket, ...options });
   const client = bucket.client();
   const answering = () => client;
-  return {
-    bucket,
-    client: answering,
-    ...objectContentOn(bucketOnS3({ client: answering, name: location.bucket }, waits), location),
-  };
+  const objects = objectContentOn(bucketOnS3({ client: answering, name: location.bucket }, waits), location);
+  return { bucket, client: answering, ...objects, content: keptOutside(memoryContentHeads(), objects).content };
 }

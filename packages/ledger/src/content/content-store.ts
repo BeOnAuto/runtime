@@ -5,23 +5,23 @@ import {
   takenInChunks,
   type ContentKept,
   type ContentRefused,
-  type ContentStore,
   type ContentToKeep,
-  type RecordedContent,
   type Taken,
 } from '@on.auto/content';
 import { randomUUIDv7 } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Clock, Effect } from 'effect';
 
-import { inTransactionOf, type InTransaction, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
+import type { OwnContentStore, StatementExecutor, TransactionalPool } from '../event-store.ts';
 import { sqliteContent, type ContentDialect } from './content-dialects.ts';
 import {
   playbookPlaceOf,
   columnsOf,
   commanded,
-  contentRemoved,
   headOf,
+  headTouched,
+  keptInTheLedger,
   hexOf,
+  keptRemovedWithin,
   readOn,
   uploadOf,
   uploadRemoved,
@@ -32,6 +32,7 @@ import {
 } from './content-places.ts';
 import { contentSweepOn } from './content-sweep.ts';
 import { keptShelf } from './content-tables.ts';
+import { externalHeadsOn } from './external-heads.ts';
 
 interface ChunkWriting {
   readonly take: (chunk: Readonly<Uint8Array>) => Effect.Effect<void>;
@@ -64,8 +65,26 @@ function chunkWritingOf(shelved: Shelved, upload: Key): ChunkWriting {
   };
 }
 
+const takenOverColumns = ['upload_id', 'bytes', 'chunks', 'media_type'];
+
 function readAlone(): Effect.Effect<void> {
   return Effect.void;
+}
+
+function externalTakenOver({ shelf }: Shelved): SQL {
+  const heads = SQL.identifier(shelf.heads);
+  const own = SQL`${heads}.kept_in = ${keptInTheLedger}`;
+  return SQL.merge(
+    [
+      ...takenOverColumns.map(
+        (column) =>
+          SQL`${SQL.identifier(column)} = CASE WHEN ${own} THEN ${heads}.${SQL.identifier(column)} ELSE excluded.${SQL.identifier(column)} END`,
+      ),
+      SQL`removing_since = CASE WHEN ${own} THEN ${heads}.removing_since END`,
+      SQL`kept_in = ${keptInTheLedger}`,
+    ],
+    ', ',
+  );
 }
 
 function headWritten(
@@ -74,11 +93,13 @@ function headWritten(
   uploadId: string,
   { taken, mediaType }: { readonly taken: Taken; readonly mediaType: string },
 ): Effect.Effect<void> {
-  return commanded(
-    shelved,
-    SQL`INSERT INTO ${SQL.identifier(shelved.shelf.heads)} (${columnsOf(place, 'sha256', 'upload_id', 'bytes', 'chunks', 'media_type')})
-      VALUES (${valuesOf(place)}, ${taken.sha256}, ${uploadId}, ${taken.bytes}, ${taken.chunks}, ${mediaType})
-      ON CONFLICT DO NOTHING`,
+  return Effect.flatMap(Clock.currentTimeMillis, (keptAt) =>
+    commanded(
+      shelved,
+      SQL`INSERT INTO ${SQL.identifier(shelved.shelf.heads)} (${columnsOf(place, 'sha256', 'upload_id', 'bytes', 'chunks', 'media_type', 'kept_at')})
+        VALUES (${valuesOf(place)}, ${taken.sha256}, ${uploadId}, ${taken.bytes}, ${taken.chunks}, ${mediaType}, ${keptAt})
+        ON CONFLICT (${columnsOf(place, 'sha256')}) DO UPDATE SET kept_at = excluded.kept_at, ${externalTakenOver(shelved)}`,
+    ),
   );
 }
 
@@ -89,7 +110,7 @@ function placedAfter(
   { taken, mediaType, writing }: { readonly taken: Taken; readonly mediaType: string; readonly writing: ChunkWriting },
 ): Effect.Effect<KeptHead | undefined> {
   return Effect.gen(function* () {
-    const held = writing.written() === 0 ? yield* headOf(shelved, place, taken.sha256) : undefined;
+    const held = writing.written() === 0 ? yield* headTouched(shelved, place, taken.sha256) : undefined;
     if (held !== undefined) {
       return held;
     }
@@ -116,7 +137,7 @@ function placedOn(
     const uploadId = randomUUIDv7();
     let digested: string | undefined;
     return Effect.gen(function* () {
-      const held = expected?.sha256 === undefined ? undefined : yield* headOf(shelved, place, expected.sha256);
+      const held = expected?.sha256 === undefined ? undefined : yield* headTouched(shelved, place, expected.sha256);
       const writing = chunkWritingOf(shelved, uploadOf(place, uploadId));
       const taken = yield* takenInChunks(stream, mostContentChunkBytes, held === undefined ? writing.take : readAlone);
       digested = taken.sha256;
@@ -127,26 +148,22 @@ function placedOn(
   });
 }
 
-interface ContentStatements {
-  readonly execute: StatementExecutor;
-  readonly inTransaction: InTransaction;
-}
+const removalWithin: OwnContentStore['removalWithin'] = (playbook, sha256, before) => (within) =>
+  keptRemovedWithin(keptShelf, within, { place: playbookPlaceOf(playbook), sha256, before });
 
-export function recordedContentOn(
-  { execute, inTransaction }: ContentStatements,
-  dialect: ContentDialect,
-): RecordedContent {
+export function contentStoreOn(execute: StatementExecutor, dialect: ContentDialect): OwnContentStore {
   const keeping: Shelved = { execute, dialect, shelf: keptShelf };
   return {
-    put: (playbook, content) => placedOn(keeping, playbookPlaceOf(playbook), content),
-    get: (playbook, sha256) => readOn(keeping, playbookPlaceOf(playbook), sha256),
-    remove: (playbook, sha256) => contentRemoved(keeping, inTransaction, playbookPlaceOf(playbook), sha256),
+    content: {
+      put: (playbook, content) => placedOn(keeping, playbookPlaceOf(playbook), content),
+      get: (playbook, sha256) => readOn(keeping, playbookPlaceOf(playbook), sha256),
+    },
+    removalWithin,
+    sweepContent: contentSweepOn(execute),
+    externalHeadsWith: (unlessHeld) => externalHeadsOn(execute, unlessHeld),
   };
 }
 
-export function sqliteContentOn(pool: TransactionalPool): ContentStore {
-  return {
-    content: recordedContentOn({ execute: pool.execute, inTransaction: inTransactionOf(pool) }, sqliteContent),
-    sweepContent: contentSweepOn(pool.execute),
-  };
+export function sqliteContentOn(pool: TransactionalPool): OwnContentStore {
+  return contentStoreOn(pool.execute, sqliteContent);
 }

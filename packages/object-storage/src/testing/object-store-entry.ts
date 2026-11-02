@@ -1,5 +1,6 @@
 import type { S3Client } from '@aws-sdk/client-s3';
-import type { ContentEntry } from '@on.auto/content/testing';
+import { keptOutside } from '@on.auto/content';
+import { memoryContentHeads, type ContentEntry } from '@on.auto/content/testing';
 import { onTestFinished } from 'vitest';
 
 import { objectContentOn } from '../content/object-content.ts';
@@ -47,10 +48,11 @@ export function contentEntryOf(entry: ObjectStoreEntry): ContentEntry {
       const { uploads } = objectKeysOf(store.location);
       const unnamed = async () =>
         (await keysIn(store.bucket, uploads)).length + (await openUploadsIn(store.bucket, uploads)).length;
+      const heads = memoryContentHeads();
+      const reading = objectContentOn(bucketOnS3({ client: store.reading, name: store.bucket.name }), store.location);
       return {
-        content: objectContentOn(bucketOnS3(store.bucket), store.location).content,
-        elsewhere: objectContentOn(bucketOnS3({ client: store.reading, name: store.bucket.name }), store.location)
-          .content,
+        content: keptOutside(heads, objectContentOn(bucketOnS3(store.bucket), store.location)).content,
+        elsewhere: keptOutside(heads, reading).content,
         unnamedLeft: unnamed,
       };
     },

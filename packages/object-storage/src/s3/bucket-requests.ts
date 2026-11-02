@@ -24,10 +24,13 @@ export interface OpenUpload {
   readonly uploadId: string;
 }
 
-export interface WrittenObject {
-  readonly data: Readonly<Uint8Array>;
+export interface PlacedObject {
   readonly mediaType: string;
   readonly ifAbsent?: boolean | undefined;
+}
+
+export interface WrittenObject extends PlacedObject {
+  readonly data: Readonly<Uint8Array>;
 }
 
 interface Listed {
@@ -50,6 +53,8 @@ const mostKeysInOneDelete = 1000;
 const mostConditionalWrites = 3;
 
 const octets = 'application/octet-stream';
+
+const replacingItsMetadata = 'REPLACE';
 
 const ifNoneMatch = '*';
 
@@ -191,12 +196,14 @@ export function copied(
   { client, name }: S3Bucket,
   from: string,
   to: string,
-  ifAbsent: boolean | undefined,
+  { mediaType, ifAbsent }: PlacedObject,
 ): Promise<boolean> {
   const copy = new CopyObjectCommand({
     Bucket: name,
     Key: to,
     CopySource: copySourceOf(name, from),
+    MetadataDirective: replacingItsMetadata,
+    ContentType: mediaType,
     ...(ifAbsent === true ? { IfNoneMatch: ifNoneMatch } : {}),
   });
   return writtenAsAsked(ifAbsent, () => client().send(copy));

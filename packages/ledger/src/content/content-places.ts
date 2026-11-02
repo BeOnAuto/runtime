@@ -1,9 +1,9 @@
 import { SQL } from '@event-driven-io/dumbo';
 import { verifiedStream, type ContentKept, type StreamedContent } from '@on.auto/content';
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { Clock, Effect, Schema } from 'effect';
 
-import type { InTransaction, StatementExecutor } from '../event-store.ts';
+import type { OwnRemoval, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import type { ContentDialect } from './content-dialects.ts';
 import type { Shelf } from './content-tables.ts';
@@ -68,19 +68,38 @@ export function commanded({ execute }: Shelved, sql: SQL): Effect.Effect<void> {
   return Effect.asVoid(Effect.promise(() => execute.command(sql)));
 }
 
+const headColumns = SQL.plain('upload_id, CAST(bytes AS DOUBLE PRECISION) AS bytes, chunks, media_type');
+
+export const keptInTheLedger = 'ledger';
+
+function headIn(rows: readonly unknown[], sha256: string): KeptHead | undefined {
+  const head = Schema.decodeUnknownSync(HeadRows)(rows).at(0);
+  return head === undefined
+    ? undefined
+    : { sha256, uploadId: head.upload_id, bytes: head.bytes, chunks: head.chunks, mediaType: head.media_type };
+}
+
 export function headOf(shelved: Shelved, place: Key, sha256: string): Effect.Effect<KeptHead | undefined> {
   return Effect.map(
     queried(
       shelved,
-      SQL`SELECT upload_id, CAST(bytes AS DOUBLE PRECISION) AS bytes, chunks, media_type
-        FROM ${SQL.identifier(shelved.shelf.heads)} WHERE ${matching(place)} AND sha256 = ${sha256}`,
+      SQL`SELECT ${headColumns} FROM ${SQL.identifier(shelved.shelf.heads)}
+        WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger}`,
     ),
-    (rows) => {
-      const head = Schema.decodeUnknownSync(HeadRows)(rows).at(0);
-      return head === undefined
-        ? undefined
-        : { sha256, uploadId: head.upload_id, bytes: head.bytes, chunks: head.chunks, mediaType: head.media_type };
-    },
+    (rows) => headIn(rows, sha256),
+  );
+}
+
+export function headTouched(shelved: Shelved, place: Key, sha256: string): Effect.Effect<KeptHead | undefined> {
+  return Effect.flatMap(Clock.currentTimeMillis, (keptAt) =>
+    Effect.map(
+      queried(
+        shelved,
+        SQL`UPDATE ${SQL.identifier(shelved.shelf.heads)} SET kept_at = ${keptAt}
+          WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger} RETURNING ${headColumns}`,
+      ),
+      (rows) => headIn(rows, sha256),
+    ),
   );
 }
 
@@ -113,22 +132,32 @@ export function uploadRemoved(shelved: Shelved, place: Key, { uploadId, sha256 }
   );
 }
 
-export function contentRemoved(
-  { shelf: { chunks, heads } }: Pick<Shelved, 'shelf'>,
-  inTransaction: InTransaction,
-  place: Key,
-  sha256: string,
-): Effect.Effect<void> {
-  return Effect.promise(() =>
-    inTransaction(async (execute) => {
-      const { rows } = await execute.query(
-        SQL`DELETE FROM ${SQL.identifier(heads)} WHERE ${matching(place)} AND sha256 = ${sha256} RETURNING upload_id`,
-      );
-      await inTurn(Schema.decodeUnknownSync(RemovedUploadRows)(rows), ({ upload_id }) =>
-        execute.command(SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(uploadOf(place, upload_id))}`),
-      );
-    }),
+interface StaleContent {
+  readonly place: Key;
+  readonly sha256: string;
+  readonly before: number;
+}
+
+export async function keptRemovedWithin(
+  { chunks, heads }: Shelf,
+  execute: StatementExecutor,
+  { place, sha256, before }: StaleContent,
+): Promise<OwnRemoval> {
+  const { rows } = await execute.query(
+    SQL`DELETE FROM ${SQL.identifier(heads)} WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_at < ${before}
+      RETURNING upload_id`,
   );
+  const removed = Schema.decodeUnknownSync(RemovedUploadRows)(rows);
+  await inTurn(removed, ({ upload_id }) =>
+    execute.command(SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE ${matching(uploadOf(place, upload_id))}`),
+  );
+  if (removed.length > 0) {
+    return 'removed';
+  }
+  const standing = await execute.query(
+    SQL`SELECT 1 AS standing FROM ${SQL.identifier(heads)} WHERE ${matching(place)} AND sha256 = ${sha256}`,
+  );
+  return standing.rows.length > 0 ? 'fresh' : 'removed';
 }
 
 function chunksOf(shelved: Shelved, place: Key, head: KeptHead): ReadableStream<Uint8Array> {

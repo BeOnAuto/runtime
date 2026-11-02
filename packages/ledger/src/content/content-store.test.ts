@@ -4,7 +4,7 @@ import { mostContentChunkBytes, sha256Of, textOfContent, textToKeep } from '@on.
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { StatementExecutor, TransactionalPool } from '../event-store.ts';
+import { inTransactionOf, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
 import { sqliteContentOn } from './content-store.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
@@ -57,6 +57,10 @@ function answeringTheRemovedUpload(statement: string): readonly unknown[] {
   return statement.startsWith('DELETE FROM recorded_content_heads') ? [{ upload_id: 'u1' }] : [];
 }
 
+function answeringAHeadThatStands(statement: string): readonly unknown[] {
+  return statement.startsWith('SELECT 1 AS standing') ? [{ standing: 1 }] : [];
+}
+
 function kindsOf({ statements }: Recording): readonly string[] {
   return statements.map((statement) => statement.split(' ').slice(0, 3).join(' '));
 }
@@ -97,7 +101,7 @@ describe('the writes of a recorded content', () => {
     ]);
   });
 
-  it('write nothing for a content of one chunk the playbook holds, nor for one it was told to expect, and answer the head held', async () => {
+  it('write nothing for a content of one chunk the playbook holds, nor for one it was told to expect, but the time the head held was kept, and answer that head', async () => {
     const small = recordingFinding([headOf('another')]);
     const expected = recordingFinding([headOf('another')]);
 
@@ -116,8 +120,8 @@ describe('the writes of a recorded content', () => {
       { sha256: sha256Of(largerThanTwoChunks), bytes: 4, mediaType: 'text/plain' },
     ]);
     expect([kindsOf(small), kindsOf(expected)]).toEqual([
-      ['SELECT upload_id, CAST(bytes'],
-      ['SELECT upload_id, CAST(bytes'],
+      ['UPDATE recorded_content_heads SET'],
+      ['UPDATE recorded_content_heads SET'],
     ]);
   });
 });
@@ -142,26 +146,39 @@ describe('the writes of a recorded content that another put of its digest raced'
   });
 });
 
-describe('the reads and the removals of a recorded content', () => {
-  it("remove a content in one transaction, its head first, answering its upload, and that upload's chunks after, and no chunk where no head was", async () => {
-    const [held, none] = [recordingAnswering(answeringTheRemovedUpload), recordingFinding([])];
+describe('the removals of a recorded content', () => {
+  it("remove a content kept before a time within the transaction they are given, its head first, answering its upload, and that upload's chunks after, and look for a head that stands where none was removed", async () => {
+    const [held, standing, none] = [
+      recordingAnswering(answeringTheRemovedUpload),
+      recordingAnswering(answeringAHeadThatStands),
+      recordingFinding([]),
+    ];
 
-    await Effect.runPromise(sqliteContentOn(held.pool).content.remove(alpha, 'digest'));
-    await Effect.runPromise(sqliteContentOn(none.pool).content.remove(alpha, 'digest'));
+    const removed = await Promise.all(
+      [held, standing, none].map(({ pool }) =>
+        inTransactionOf(pool)(sqliteContentOn(pool).removalWithin(alpha, 'digest', 1000)),
+      ),
+    );
 
     const headRemoved =
-      'DELETE FROM recorded_content_heads WHERE playbook_key = "playbook/acme/alpha/" AND sha256 = "digest" RETURNING upload_id';
-    expect([held.statements, none.statements]).toEqual([
+      'DELETE FROM recorded_content_heads WHERE playbook_key = "playbook/acme/alpha/" AND sha256 = "digest" AND kept_at < 1000 RETURNING upload_id';
+    const headSought =
+      'SELECT 1 AS standing FROM recorded_content_heads WHERE playbook_key = "playbook/acme/alpha/" AND sha256 = "digest"';
+    expect(removed).toEqual(['removed', 'fresh', 'removed']);
+    expect([held.statements, standing.statements, none.statements]).toEqual([
       [
         'BEGIN',
         headRemoved,
         'DELETE FROM recorded_content_chunks WHERE playbook_key = "playbook/acme/alpha/" AND upload_id = "u1"',
         'COMMIT',
       ],
-      ['BEGIN', headRemoved, 'COMMIT'],
+      ['BEGIN', headRemoved, headSought, 'COMMIT'],
+      ['BEGIN', headRemoved, headSought, 'COMMIT'],
     ]);
   });
+});
 
+describe('the reads of a recorded content', () => {
   it('read no chunk of a digest the playbook does not hold', async () => {
     const recording = recordingFinding([]);
 

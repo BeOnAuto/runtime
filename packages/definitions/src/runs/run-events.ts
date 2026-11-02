@@ -5,13 +5,21 @@ import {
   factOf,
   type Decided,
 } from '@on.auto/operations';
-import { CallAnsweredSchema, CallFailedSchema, CallStartedSchema } from '@on.auto/tool-servers';
+import {
+  argumentsHeld,
+  CallAnsweredSchema,
+  CallFailedSchema,
+  CallStartedSchema,
+  resultHeld,
+} from '@on.auto/tool-servers';
 import { Schema, SchemaTransformation } from 'effect';
 
 import {
+  messagesHeld,
   ModelCallAnsweredSchema,
   ModelCallFailedSchema,
   ModelCallStartedSchema,
+  responseHeld,
 } from '../run-work/model-call-facts.ts';
 import { OutputShapeNameSchema } from '../shapes/shape-names.ts';
 import { RunRejectionSchema } from './run.ts';
@@ -72,11 +80,31 @@ const coreFactSchemas = [
     Schema.Struct({ kind: CancelRequestKindSchema, reason: Schema.String }),
     ActedOnRunContextSchema,
   ),
-  factOf('tool_call_started', Schema.Struct({ ...numbered, ...CallStartedSchema.fields }), RunContextSchema),
-  factOf('tool_call_answered', Schema.Struct({ ...numbered, ...CallAnsweredSchema.fields }), RunContextSchema),
+  factOf(
+    'tool_call_started',
+    Schema.Struct({ ...numbered, ...CallStartedSchema.fields }),
+    RunContextSchema,
+    argumentsHeld,
+  ),
+  factOf(
+    'tool_call_answered',
+    Schema.Struct({ ...numbered, ...CallAnsweredSchema.fields }),
+    RunContextSchema,
+    resultHeld,
+  ),
   factOf('tool_call_failed', Schema.Struct({ ...numbered, ...CallFailedSchema.fields }), RunContextSchema),
-  factOf('model_call_started', Schema.Struct({ ...numbered, ...ModelCallStartedSchema.fields }), RunContextSchema),
-  factOf('model_call_answered', Schema.Struct({ ...numbered, ...ModelCallAnsweredSchema.fields }), RunContextSchema),
+  factOf(
+    'model_call_started',
+    Schema.Struct({ ...numbered, ...ModelCallStartedSchema.fields }),
+    RunContextSchema,
+    messagesHeld,
+  ),
+  factOf(
+    'model_call_answered',
+    Schema.Struct({ ...numbered, ...ModelCallAnsweredSchema.fields }),
+    RunContextSchema,
+    responseHeld,
+  ),
   factOf('model_call_failed', Schema.Struct({ ...numbered, ...ModelCallFailedSchema.fields }), RunContextSchema),
   factOf('request_answered', RequestAnsweredSchema, RunContextSchema),
 ];

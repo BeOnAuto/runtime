@@ -13,10 +13,13 @@ import {
   type ContentEntry,
 } from '@on.auto/content/testing';
 import type { Ledger } from '@on.auto/operations';
+import { unheldContentBehaviour } from '@on.auto/operations/testing';
 import { Effect, Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { referencesBehaviour } from '../references/references-behaviour.ts';
+import { aLedger, aLedgerHolding, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { headsBehaviour } from './heads-behaviour.ts';
 import { unnamedChunksSwept } from './unnamed-chunks-behaviour.ts';
 
 const ChunkRows = Schema.Array(Schema.Struct({ chunk: Schema.Number, bytes: Schema.Number }));
@@ -57,6 +60,12 @@ async function unnamedChunksIn(entry: LedgerEntry, database: string): Promise<nu
     ),
   );
   return counts.flat().reduce((total, { count }) => total + count, 0);
+}
+
+function removalOn(entry: LedgerEntry, database: string): ReturnType<LedgerEntry['storeOn']>['removalWithin'] {
+  const store = entry.storeOn(database);
+  onTestFinished(() => store.close());
+  return store.removalWithin;
 }
 
 function contentEntryOf(entry: LedgerEntry): ContentEntry {
@@ -154,14 +163,14 @@ function readFailing(entry: LedgerEntry): void {
 
 function readWhileRemoved(entry: LedgerEntry): void {
   it('fails as a defect on a read of a content removed while it is read, at a chunk it had not read yet', async () => {
-    const { ledger } = await opened(entry);
+    const { database, ledger } = await opened(entry);
     const { sha256 } = await resultOf(ledger.content.put(alpha, textToKeep(answerOfAbout(5_000_000), json)));
     const { stream } = await present(ledger.content.get(alpha, sha256));
     const reader = stream.getReader();
     const first = await reader.read();
     reader.releaseLock();
 
-    await resultOf(ledger.content.remove(alpha, sha256));
+    await entry.executedOn(database, removalOn(entry, database)(alpha, sha256, Number.MAX_SAFE_INTEGER));
     const rest = await deliveredBeforeFailing(stream);
 
     expect(first.done).toBe(false);
@@ -175,6 +184,8 @@ function readWhileRemoved(entry: LedgerEntry): void {
 
 export function contentBehaviour(entry: LedgerEntry): void {
   recordedContentBehaviour(contentEntryOf(entry));
+  unheldContentBehaviour({ aLedger: (holders) => aLedgerHolding(entry, holders) });
+  referencesBehaviour(entry);
   describe('the content a playbook recorded, in chunks', () => {
     keptInChunks(entry);
   });
@@ -183,4 +194,5 @@ export function contentBehaviour(entry: LedgerEntry): void {
     readWhileRemoved(entry);
   });
   unnamedChunksSwept(entry);
+  headsBehaviour(entry);
 }

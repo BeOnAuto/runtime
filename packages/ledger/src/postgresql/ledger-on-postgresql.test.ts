@@ -117,12 +117,15 @@ const onPostgreSQL: LedgerEntry = {
   afterClosing: 'Cannot use a pool after calling end on the pool',
   closedWhileWriting: 'Cannot use a pool after calling end on the pool',
   aDatabase,
-  ledgerOn: (database, runOutcomes, projections = []) =>
+  ledgerOn: (database, runOutcomes, projections = [], holders) =>
     postgresqlLedgerLayer({
       pools: plainPoolsOn(database),
       projections,
       ...(runOutcomes === undefined ? {} : { runOutcomes }),
+      ...(holders === undefined ? {} : { holders }),
     }),
+  ledgerOutsideOn: (database, holders, content) =>
+    postgresqlLedgerLayer({ pools: plainPoolsOn(database), holders, content }),
   ledgerRaisingOn: (database, appended) => postgresqlLedgerLayer({ pools: plainPoolsOn(database), appended }),
   storeOn: (database) => postgresqlEventStore({ pools: plainPoolsOn(database), reportLostConnection }),
   openedOn: (database) => postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection }),

@@ -65,7 +65,7 @@ async function spansOfAReadOfNothing(): Promise<readonly ExportedSpan[]> {
   const telemetry = startTelemetry(readSettingsOf(environment).telemetry);
   const { reached, store } = await composedOn(environment);
   await Effect.runPromise(reached);
-  await Effect.runPromise(store.content.get(alpha, sha256Of('{"kept":false}')));
+  await Effect.runPromise(store.read(alpha, sha256Of('{"kept":false}')));
   await telemetry.shutdown();
   return spansIn(receiver.received());
 }

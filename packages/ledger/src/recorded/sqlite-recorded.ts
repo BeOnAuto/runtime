@@ -8,7 +8,7 @@ import type {
   AppendListeners,
   AppendWaitsStore,
   DefinitionStreamsStore,
-  LedgerStore,
+  OwnContentStore,
   RecordedStore,
   StreamAgesStore,
   TransactionalPool,
@@ -163,10 +163,6 @@ export function sqliteRecordedStore(
 export function sqliteRecordedStoreOn(
   pool: TransactionalPool<SQLExecutor>,
   listeners: AppendListeners,
-): RecordedStore &
-  DefinitionStreamsStore &
-  StreamAgesStore &
-  AppendWaitsStore &
-  Pick<LedgerStore, 'content' | 'sweepContent'> {
+): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore & OwnContentStore {
   return { ...sqliteRecordedStore(pool.execute, listeners), ...sqliteContentOn(pool) };
 }

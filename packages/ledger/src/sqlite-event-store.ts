@@ -2,7 +2,7 @@ import { dumbo, type SQL } from '@event-driven-io/dumbo';
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 
 import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
-import type { AppendListeners, LedgerStore } from './event-store.ts';
+import { inTransactionOf, type AppendListeners, type LedgerStore } from './event-store.ts';
 import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts';
 import { sqliteLogOn } from './log/sqlite-log.ts';
 import { sqliteRunOutcomesOf } from './outcomes/sqlite-run-outcomes.ts';
@@ -55,9 +55,10 @@ export function sqliteEventStore<Driver extends AnyDriver>(
     ...projections.readerOn({ query, command: (sql) => pool.execute.command(sql) }),
     ...projections.scrubs.storeOver(streams, query),
     readRunOutcomes: sqliteRunOutcomesOf(kept.runOutcomes, pool.execute),
+    unlessHeld: projections.references.unlessHeldOn(inTransactionOf(pool)),
     log: sqliteLogOn(pool.execute),
     migrate: async () => {
-      await sqliteLayoutKept(pool, projections.projections, kept);
+      await sqliteLayoutKept(pool, projections.named, kept);
       await streams.migrate();
       await sqliteSchemaCreated(pool.execute);
       await preparedOn(projections.prepare, pool);

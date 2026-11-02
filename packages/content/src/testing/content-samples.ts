@@ -1,4 +1,5 @@
 import { Effect, Function } from 'effect';
+import { TestClock } from 'effect/testing';
 
 import { sha256Digest } from '../content/content-digest.ts';
 import type { ContentOwner, Digested } from '../content/recorded-content.ts';
@@ -91,6 +92,10 @@ export async function deliveredBeforeFailing(stream: ReadableStream<Uint8Array>)
 
 export function resultOf<A, E>(effect: Effect.Effect<A, E>): Promise<A> {
   return Effect.runPromise(effect);
+}
+
+export function at<A, E>(moment: number, effect: Effect.Effect<A, E>): Promise<A> {
+  return Effect.runPromise(Effect.andThen(TestClock.setTime(moment), effect).pipe(Effect.provide(TestClock.layer())));
 }
 
 export function refusalOf<A, E>(effect: Effect.Effect<A, E>): Promise<E> {

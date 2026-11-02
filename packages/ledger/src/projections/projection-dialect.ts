@@ -21,7 +21,8 @@ export interface MessageLane {
 
 export type StreamsInOrder =
   | { readonly of: 'folded'; readonly folded: FoldedStreams }
-  | { readonly of: 'lane'; readonly lane: MessageLane };
+  | { readonly of: 'lane'; readonly lane: MessageLane }
+  | { readonly of: 'every' };
 
 export interface ProjectionDialect {
   readonly tableVersions: (name: string) => SQL;
@@ -37,6 +38,7 @@ export interface ProjectionDialect {
     types: readonly string[],
   ) => SQL;
   readonly messageAt: (stream: string, position: number) => SQL;
+  readonly keyLocks: (table: string, prefix: string, key: string) => readonly SQL[];
   readonly rowLocks: (table: string, prefix: string, key: string) => readonly SQL[];
   readonly rowsInAWrite: (columns: number) => number;
   readonly filledData: (column: unknown) => unknown;

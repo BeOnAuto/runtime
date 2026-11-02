@@ -1,8 +1,7 @@
-import type { KeyedProjection } from '@on.auto/operations';
-
 import { sqliteContent } from '../content/content-dialects.ts';
 import { createdContentTables } from '../content/content-tables.ts';
 import { inTransactionOf, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
+import type { NamedProjection } from '../projections/projection-fill.ts';
 import { createSQLitePlaybookIndexes } from '../recorded/sqlite-indexes.ts';
 import { createdSecretTable } from '../secrets/kept-secrets.ts';
 import { sqliteLayout } from './layout-dialects.ts';
@@ -11,7 +10,7 @@ import { layoutCarryingBy, type CarriedTables, type LayoutCarrying } from './lay
 
 export function sqliteLayoutCarried(
   pool: TransactionalPool,
-  projected: readonly KeyedProjection[],
+  projected: readonly NamedProjection[],
   carrying: LayoutCarrying,
 ): Promise<void> {
   return requireTheLayoutKept(inTransactionOf(pool), sqliteLayout, projected, carrying);
@@ -19,7 +18,7 @@ export function sqliteLayoutCarried(
 
 export function sqliteLayoutKept(
   pool: TransactionalPool,
-  projected: readonly KeyedProjection[],
+  projected: readonly NamedProjection[],
   carried?: CarriedTables,
 ): Promise<void> {
   return sqliteLayoutCarried(pool, projected, layoutCarryingBy(carried));

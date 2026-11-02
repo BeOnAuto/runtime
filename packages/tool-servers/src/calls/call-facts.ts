@@ -1,4 +1,13 @@
+import type { FactDeclaration } from '@on.auto/operations';
 import { Schema } from 'effect';
+
+export const argumentsHeld: FactDeclaration = { content: { holds: ['/arguments_sha256'] } };
+
+export const resultHeld: FactDeclaration = { content: { holds: ['/result_sha256'] } };
+
+export const argumentsAndResultHeld: FactDeclaration = {
+  content: { holds: ['/arguments_sha256', '/result_sha256'] },
+};
 
 const JsonRpcIdSchema = Schema.NullOr(Schema.Union([Schema.String, Schema.Int])).annotate({
   description: 'The JSON-RPC id of the request to an MCP server; null for an HTTP API, whose requests have none',

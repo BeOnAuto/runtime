@@ -93,3 +93,19 @@ describe('the facts on runs of a capability an extension provides, refused', () 
     expect(providedCapabilityOf(declaringOnRuns(...onRuns))).toEqual(Result.fail(refusal));
   });
 });
+
+describe('the content a fact on runs of a capability an extension provides holds, refused', () => {
+  it('names the fact, where it declares what it holds by a pointer that does not begin at the root of the fact', () => {
+    const misdeclared = factOf('forecast_checked', Schema.Struct({ checked: Schema.Boolean }), RunContextSchema);
+
+    const provided = providedCapabilityOf(
+      declaringOnRuns({ ...forecastChecked, schema: misdeclared.annotate({ heldContent: { holds: ['sha256'] } }) }),
+    );
+
+    expect(provided).toEqual(
+      Result.fail(
+        'its capability.facts.onRuns[0] declares the fact forecast_checked with a declaration of the content it holds or releases that the runtime does not read',
+      ),
+    );
+  });
+});

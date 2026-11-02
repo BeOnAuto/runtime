@@ -60,6 +60,9 @@ function headTableOf({ heads, placeColumns }: Shelf): ContentTable {
       bytes BIGINT NOT NULL,
       chunks INTEGER NOT NULL,
       media_type TEXT NOT NULL,
+      kept_at BIGINT NOT NULL DEFAULT 0,
+      kept_in TEXT NOT NULL DEFAULT 'ledger',
+      removing_since BIGINT,
       PRIMARY KEY (${namesOf(key)})
     )`,
   };

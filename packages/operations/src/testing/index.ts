@@ -14,6 +14,12 @@ export {
   type RemarkFact,
 } from '../projections/remark-rows.ts';
 export { factScrubBehaviour } from '../scrub-testing/fact-scrub-behaviour.ts';
+export { unheldContentBehaviour } from '../content-testing/unheld-content-behaviour.ts';
+export {
+  interleavedRemovalBehaviour,
+  type InterleavedRemovalEntry,
+} from '../content-testing/interleaved-removal-behaviour.ts';
+export { heldNotes, noteHolders, type HeldNote, type UnheldContentEntry } from '../content-testing/held-notes.ts';
 export type { FactScrubEntry } from '../scrub-testing/scrub-parts.ts';
 export { appendedFactsBehaviour, type AppendedFactsEntry } from '../changes-testing/appended-facts-behaviour.ts';
 export { internalTerms, internalTermsIn } from '../plain-language/internal-terms.ts';

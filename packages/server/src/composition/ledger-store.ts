@@ -6,7 +6,7 @@ import { Effect, Layer } from 'effect';
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { contentStoreOf, type ContentStoreSettings } from './content-store.ts';
 import { keptProjections } from './kept-projections.ts';
-import { factSchemasKnownWith } from './known-facts.ts';
+import { factsKnownWith } from './known-holders.ts';
 import { layoutSteps } from './layout-steps.ts';
 
 interface LedgerOpening {
@@ -23,7 +23,7 @@ export function ledgerLayerOf(
     runOutcomes: runOutcomeMapping,
     projections: keptProjections,
     layoutSteps,
-    factSchemas: factSchemasKnownWith(declared),
+    ...factsKnownWith(declared),
     ...(appends === undefined ? {} : { appends }),
     ...(content === undefined ? {} : { content }),
   });

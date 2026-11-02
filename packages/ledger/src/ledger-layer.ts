@@ -1,12 +1,12 @@
-import type { ContentStore } from '@on.auto/content';
+import { keptOutside, type ContentStore } from '@on.auto/content';
 import { Ledger } from '@on.auto/operations';
 import { Context, Effect, Layer, Semaphore } from 'effect';
 
 import { signalledOn, type AppendSignal } from './appends/append-signal.ts';
 import { LedgerConnection, type ConnectionPorts } from './connection/ledger-connection.ts';
-import { LedgerChores, orphansSweptOf } from './content/content-sweep.ts';
-import type { AppendListeners, LedgerStore } from './event-store.ts';
-import { makeLedger } from './ledger-service.ts';
+import { LedgerChores, orphansSweptOf, type ContentSweeping } from './content/content-sweep.ts';
+import type { AppendListeners, LedgerContent, LedgerStore } from './event-store.ts';
+import { makeLedger, ownContentOf } from './ledger-service.ts';
 import { LedgerLog } from './log/ledger-log.ts';
 import type { KeptTables } from './projections/projection-parts.ts';
 
@@ -24,6 +24,21 @@ export interface OpenedLedger {
 
 export type LedgerServices = Ledger | LedgerConnection | LedgerChores | LedgerLog;
 
+function sweptWith(store: LedgerStore, content: ContentStore | undefined): ContentSweeping {
+  return content === undefined
+    ? store
+    : {
+        sweepContent: async (before) => {
+          await store.sweepContent(before);
+          await content.sweepContent(before);
+        },
+      };
+}
+
+function contentOf(store: LedgerStore, content: ContentStore | undefined): LedgerContent {
+  return content === undefined ? ownContentOf(store) : keptOutside(store.externalHeadsWith(store.unlessHeld), content);
+}
+
 export function ledgerLayerOver(
   open: () => OpenedLedger,
   { appends, content }: OpenedWith = {},
@@ -36,9 +51,8 @@ export function ledgerLayerOver(
       );
       const store = signalledOn(opened.store, appends);
       yield* Effect.promise(() => store.migrate());
-      const kept = content ?? store;
-      const orphansSwept = orphansSweptOf(kept);
-      const ledger = makeLedger({ ...store, content: kept.content, sweepContent: kept.sweepContent });
+      const orphansSwept = orphansSweptOf(sweptWith(store, content));
+      const ledger = makeLedger(store, contentOf(store, content));
       return Context.make(Ledger, ledger).pipe(
         Context.add(LedgerConnection, opened.connection),
         Context.add(LedgerLog, store.log),

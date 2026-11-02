@@ -1,4 +1,4 @@
-import type { Ledger, RunOutcomeMapping, KeyedProjection } from '@on.auto/operations';
+import type { ContentHolders, Ledger, RunOutcomeMapping, KeyedProjection } from '@on.auto/operations';
 import type { Layer } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -6,7 +6,7 @@ import type { LedgerConnection } from '../connection/ledger-connection.ts';
 import type { LedgerStore, RecordedStore, StatementExecutor } from '../event-store.ts';
 import type { LayoutDialect } from '../layout/layout-dialects.ts';
 import type { LayoutCarrying } from '../layout/layout-steps.ts';
-import type { LedgerServices, OpenedLedger } from '../ledger-layer.ts';
+import type { LedgerServices, OpenedLedger, OpenedWith } from '../ledger-layer.ts';
 import type { StreamSignal } from '../signal/append-signal.ts';
 import { openLedgerWith } from './open-ledger.ts';
 
@@ -19,6 +19,12 @@ export interface LedgerEntry {
     database: string,
     runOutcomes?: RunOutcomeMapping,
     projections?: readonly KeyedProjection[],
+    holders?: ContentHolders,
+  ) => Layer.Layer<Exclude<LedgerServices, LedgerConnection>>;
+  readonly ledgerOutsideOn: (
+    database: string,
+    holders: ContentHolders,
+    content: NonNullable<OpenedWith['content']>,
   ) => Layer.Layer<Exclude<LedgerServices, LedgerConnection>>;
   readonly ledgerRaisingOn: (database: string, appended: StreamSignal) => Layer.Layer<Ledger | LedgerConnection>;
   readonly storeOn: (database: string) => LedgerStore;
@@ -37,17 +43,36 @@ export interface LedgerEntry {
   readonly topicTables: string;
 }
 
+async function opened(layer: ReturnType<LedgerEntry['ledgerOn']>): Promise<Ledger['Service']> {
+  const { ledger, dispose } = await openLedgerWith(layer);
+  onTestFinished(dispose);
+  return ledger;
+}
+
 export async function aLedger(
   entry: LedgerEntry,
   database?: string,
   runOutcomes?: RunOutcomeMapping,
   projections?: readonly KeyedProjection[],
 ): Promise<Ledger['Service']> {
-  const { ledger, dispose } = await openLedgerWith(
-    entry.ledgerOn(database ?? (await entry.aDatabase()), runOutcomes, projections),
-  );
-  onTestFinished(dispose);
-  return ledger;
+  return opened(entry.ledgerOn(database ?? (await entry.aDatabase()), runOutcomes, projections));
+}
+
+export async function aLedgerHolding(
+  entry: LedgerEntry,
+  holders: ContentHolders,
+  database?: string,
+): Promise<Ledger['Service']> {
+  return opened(entry.ledgerOn(database ?? (await entry.aDatabase()), undefined, [], holders));
+}
+
+export async function aLedgerOutside(
+  entry: LedgerEntry,
+  holders: ContentHolders,
+  content: NonNullable<OpenedWith['content']>,
+  database?: string,
+): Promise<Ledger['Service']> {
+  return opened(entry.ledgerOutsideOn(database ?? (await entry.aDatabase()), holders, content));
 }
 
 export async function aStore(entry: LedgerEntry): Promise<LedgerStore> {

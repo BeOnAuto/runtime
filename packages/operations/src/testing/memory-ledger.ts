@@ -1,4 +1,5 @@
-import { memoryRecordedContent } from '@on.auto/content/testing';
+import { keptOutside, type ContentStore } from '@on.auto/content';
+import { memoryContentHeads, memoryContentStore } from '@on.auto/content/testing';
 import { Clock, Effect, Layer, Result, Schema } from 'effect';
 
 import {
@@ -8,6 +9,7 @@ import {
   messageIdOf,
   noLineage,
   recordingOf,
+  type ContentHolders,
   type Context,
   type Fold,
   type Lineage,
@@ -26,6 +28,7 @@ import {
 import { memoryRunOutcomes, type MemoryRunOutcomes } from '../run-outcomes/memory-run-outcomes.ts';
 import { memoryAppendedReader, type MemoryAppends } from './memory-appended.ts';
 import { memoryRecordedReader, type MemoryRecord } from './memory-recorded.ts';
+import { memoryReferences, type MemoryReferences } from './memory-references.ts';
 
 export interface MemoryLedger {
   readonly service: Ledger['Service'];
@@ -47,6 +50,7 @@ interface Kept {
   readonly rewritten: (stream: string, position: number, fact: AppendedFact) => void;
   readonly outcomes: MemoryRunOutcomes;
   readonly projected: MemoryProjections;
+  readonly references: MemoryReferences;
 }
 
 const EncodedFactSchema = Schema.Struct({ type: Schema.String, data: Schema.Unknown });
@@ -86,6 +90,7 @@ function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: numbe
   const version = storedIn(kept, stream).length;
   kept.outcomes.project(stream, stored, version + 1);
   kept.projected.project(stream, stored, version + 1);
+  kept.references.project(stream, stored);
   kept.logged(
     stored.map(({ type, data, context }, index) => ({
       position: kept.log.length + index + 1,
@@ -190,6 +195,7 @@ function scrubbedOn(kept: Kept): Ledger['Service']['scrubFact'] {
         after: messageOf(stream, position, after),
       });
       kept.outcomes.refold(stream, storedIn(kept, stream));
+      kept.references.refold(stream, storedIn(kept, stream));
       return { version: facts.length + 1 };
     });
 }
@@ -199,7 +205,13 @@ interface KeptLedger {
   readonly appends: MemoryAppends;
 }
 
-function keptLedgerOf(runOutcomes: RunOutcomeMapping | undefined, projections: readonly KeyedProjection[]): KeptLedger {
+interface MemoryTables {
+  readonly runOutcomes: RunOutcomeMapping | undefined;
+  readonly projections: readonly KeyedProjection[];
+  readonly holders: ContentHolders | undefined;
+}
+
+function keptLedgerOf({ runOutcomes, projections, holders }: MemoryTables): KeptLedger {
   const log: MemoryRecord[] = [];
   const streams = new Map<string, readonly AppendedFact[]>();
   const appends = memoryAppendedReader(log);
@@ -221,6 +233,7 @@ function keptLedgerOf(runOutcomes: RunOutcomeMapping | undefined, projections: r
     },
     outcomes: memoryRunOutcomes(runOutcomes),
     projected: memoryProjections(projections),
+    references: memoryReferences(holders),
   };
   return { kept, appends };
 }
@@ -228,9 +241,12 @@ function keptLedgerOf(runOutcomes: RunOutcomeMapping | undefined, projections: r
 export function memoryLedger(
   runOutcomes?: RunOutcomeMapping,
   projections: readonly KeyedProjection[] = [],
+  holders?: ContentHolders,
+  store: ContentStore = memoryContentStore(),
 ): MemoryLedger {
-  const { kept, appends } = keptLedgerOf(runOutcomes, projections);
-  const { projected } = kept;
+  const { kept, appends } = keptLedgerOf({ runOutcomes, projections, holders });
+  const { projected, references } = kept;
+  const outside = keptOutside(memoryContentHeads(references.heldIn), store);
   const recordedReader = memoryRecordedReader(kept.log);
   const service = Ledger.of({
     load: (stream, fold) => Effect.suspend(() => folded(fold, storedIn(kept, stream))),
@@ -247,7 +263,8 @@ export function memoryLedger(
     readDueRows: projected.readDueRows,
     nextDueOf: projected.nextDueOf,
     advanceRow: projected.advanceRow,
-    content: memoryRecordedContent(),
+    content: outside.content,
+    removeUnheld: references.removalOver(outside),
   });
   return { service, layer: Layer.succeed(Ledger, service), streamNames: () => [...kept.streams.keys()] };
 }

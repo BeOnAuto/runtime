@@ -75,13 +75,13 @@ describe('the client of an object store that stops answering', () => {
       requestMs: 100,
     });
     const location = { bucket: 'content', prefix: '' };
-    const { content } = objectContentOn(bucketOnS3({ client: () => client, name: location.bucket }), location);
+    const objects = objectContentOn(bucketOnS3({ client: () => client, name: location.bucket }), location);
     const started = performance.now();
 
     const refused = await refusalOf(objectStoreReached(() => client, location));
-    const read = Effect.runPromise(content.get(alpha, sha256Of('stalled')));
+    const read = Effect.runPromise(objects.read(alpha, sha256Of('stalled')));
     await expect(read).rejects.toThrow('requestTimeout');
-    const put = Effect.runPromise(content.put(alpha, (await generated(2_500_000)).content()));
+    const put = Effect.runPromise(objects.stage(alpha, (await generated(2_500_000)).content()));
     await expect(put).rejects.toThrow('requestTimeout');
 
     expect(refused.answer).toMatch(/^TimeoutError/u);

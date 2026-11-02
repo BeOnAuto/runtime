@@ -5,7 +5,12 @@ import { Schema } from 'effect';
 import { itemsInAStatement, mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts';
 import { inTransactionOf, type TransactionalPool } from '../event-store.ts';
 import { playbookKeyOfStream } from '../recorded/sqlite-indexes.ts';
-import { type FoldedStreams, type MessageLane, type ProjectionDialect } from './projection-dialect.ts';
+import {
+  type FoldedStreams,
+  type MessageLane,
+  type ProjectionDialect,
+  type StreamsInOrder,
+} from './projection-dialect.ts';
 import { projectionPartsOf, type KeptTables, type ProjectionParts } from './projection-parts.ts';
 
 const defaultPartition = 'emt:default';
@@ -50,15 +55,22 @@ function laneAfter({ by, key }: MessageLane, { after, count, types }: LaneRead):
     LIMIT ${count}`;
 }
 
-function inOrderAfter(after: number, count: number, folded: FoldedStreams, types: readonly string[]): SQL {
+function inOrderAfter({ after, count, types }: LaneRead, folded?: FoldedStreams): SQL {
+  const ofTheStreams = folded === undefined ? SQL.EMPTY : SQL`${foldedBy('stream_id', folded)} AND `;
   return SQL`SELECT ${columnsOfAMessage}
     FROM emt_messages
-    WHERE ${foldedBy('stream_id', folded)}
-      AND global_position > ${after}
+    WHERE ${ofTheStreams}global_position > ${after}
       AND ${typesIn(types)}
       AND partition = ${defaultPartition} AND is_archived = FALSE
     ORDER BY global_position
     LIMIT ${count}`;
+}
+
+function streamsInOrder(read: LaneRead, streams: StreamsInOrder): SQL {
+  if (streams.of === 'lane') {
+    return laneAfter(streams.lane, read);
+  }
+  return inOrderAfter(read, streams.of === 'folded' ? streams.folded : undefined);
 }
 
 const sqliteProjectionDialect: ProjectionDialect = {
@@ -86,18 +98,15 @@ const sqliteProjectionDialect: ProjectionDialect = {
         AND message_type IN (SELECT value FROM json_each(${JSON.stringify(types)}))
         AND partition = ${defaultPartition} AND is_archived = FALSE
       ORDER BY stream_id, stream_position`,
-  messagesInOrderAfter: (after, count, streams, types) => {
-    const from = Number(after ?? '0');
-    return streams.of === 'folded'
-      ? inOrderAfter(from, count, streams.folded, types)
-      : laneAfter(streams.lane, { after: from, count, types });
-  },
+  messagesInOrderAfter: (after, count, streams, types) =>
+    streamsInOrder({ after: Number(after ?? '0'), count, types }, streams),
   messageAt: (stream, position) =>
     SQL`SELECT stream_id AS stream, message_type AS type, message_data AS data, message_metadata AS metadata,
         stream_position AS position
       FROM emt_messages
       WHERE stream_id = ${stream} AND stream_position = ${position}
         AND partition = ${defaultPartition} AND is_archived = FALSE`,
+  keyLocks: () => [],
   rowLocks: () => [],
   rowsInAWrite: (columns) =>
     itemsInAStatement({ mostBoundValues: mostValuesTheLedgerBindsOnSQLite, valuesEach: columns + 2 }),

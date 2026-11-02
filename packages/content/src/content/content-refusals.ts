@@ -2,7 +2,7 @@ import { Data } from 'effect';
 
 import type { Digested } from './recorded-content.ts';
 
-export type ContentRefusedBecause = 'not_its_digest' | 'not_its_size' | 'stream_failed';
+export type ContentRefusedBecause = 'not_its_digest' | 'not_its_size' | 'stream_failed' | 'unavailable';
 
 export class ContentRefused extends Data.TaggedError('content_refused')<{
   readonly because: ContentRefusedBecause;
@@ -29,6 +29,13 @@ export function notItsSize(found: Digested, expected: number): ContentRefused {
 
 export function streamFailed(cause: unknown): ContentRefused {
   return new ContentRefused({ because: 'stream_failed', detail: "The content's stream failed before its end", cause });
+}
+
+export function beingRemoved(sha256: string): ContentRefused {
+  return new ContentRefused({
+    because: 'unavailable',
+    detail: `The content kept under ${sha256} is being removed, so it is not kept now; keeping it again in a moment keeps it whole`,
+  });
 }
 
 export function notTheBytesOfItsDigest(sha256: string): Error {

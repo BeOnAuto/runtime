@@ -49,7 +49,7 @@ function putIn(bucket: S3Bucket, key: string, body: ObjectBody): Promise<boolean
     return uploaded(bucket, key, body);
   }
   if ('copyOf' in body) {
-    return copied(bucket, body.copyOf, key, body.ifAbsent);
+    return copied(bucket, body.copyOf, key, body);
   }
   return written(bucket, key, body);
 }

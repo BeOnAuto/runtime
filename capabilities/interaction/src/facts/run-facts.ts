@@ -6,7 +6,7 @@ import {
   type Decided,
   type FactReader,
 } from '@on.auto/operations';
-import { CallAnsweredSchema, CallSentSchema } from '@on.auto/tool-servers';
+import { argumentsHeld, CallAnsweredSchema, CallSentSchema, resultHeld } from '@on.auto/tool-servers';
 import { Schema, Struct } from 'effect';
 
 import { DeliveredAsSchema, RepliesInSchema } from '../tool-blocks/tool-block-schemas.ts';
@@ -78,9 +78,9 @@ const ReplyRefusedSchema = Schema.Struct({
 });
 
 export const InteractionRunFactSchema = Schema.Union([
-  factOf('delivery_started', DeliveryStartedSchema, RunContextSchema),
-  factOf('delivery_succeeded', DeliverySucceededSchema, RunContextSchema),
-  factOf('delivery_failed', DeliveryFailedSchema, RunContextSchema),
+  factOf('delivery_started', DeliveryStartedSchema, RunContextSchema, argumentsHeld),
+  factOf('delivery_succeeded', DeliverySucceededSchema, RunContextSchema, resultHeld),
+  factOf('delivery_failed', DeliveryFailedSchema, RunContextSchema, resultHeld),
   factOf('delivery_refused', DeliveryRefusedSchema, RunContextSchema),
   factOf('reply_refused', ReplyRefusedSchema, RunContextSchema),
 ]);

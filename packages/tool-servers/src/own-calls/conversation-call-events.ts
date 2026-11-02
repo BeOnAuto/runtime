@@ -1,7 +1,14 @@
 import { ActedContextSchema, RunContextSchema, factOf, type Decided } from '@on.auto/operations';
 import { Schema, Struct } from 'effect';
 
-import { CallAnsweredSchema, CallFailedSchema, CallSentSchema } from '../calls/call-facts.ts';
+import {
+  argumentsAndResultHeld,
+  argumentsHeld,
+  CallAnsweredSchema,
+  CallFailedSchema,
+  CallSentSchema,
+  resultHeld,
+} from '../calls/call-facts.ts';
 
 export const conversationCallsKind = 'conversation-calls';
 
@@ -63,12 +70,13 @@ const readArguments = {
 };
 
 export const ConversationCallEventSchema = Schema.Union([
-  factOf('telling_started', Schema.Struct({ ...ofTheCall, ...sentFields }), RunContextSchema),
-  factOf('telling_succeeded', Schema.Struct({ ...ofTheCall, ...answeredFields }), RunContextSchema),
+  factOf('telling_started', Schema.Struct({ ...ofTheCall, ...sentFields }), RunContextSchema, argumentsHeld),
+  factOf('telling_succeeded', Schema.Struct({ ...ofTheCall, ...answeredFields }), RunContextSchema, resultHeld),
   factOf(
     'telling_failed',
     Schema.Struct({ ...ofTheCall, ...callFailure, because: TellingFailedBecauseSchema, ...answerOnAFailure }),
     RunContextSchema,
+    resultHeld,
   ),
   factOf(
     'replies_read',
@@ -82,6 +90,7 @@ export const ConversationCallEventSchema = Schema.Union([
       refused: Schema.Int,
     }),
     ActedContextSchema,
+    argumentsAndResultHeld,
   ),
   factOf(
     'reading_failed',
@@ -95,6 +104,7 @@ export const ConversationCallEventSchema = Schema.Union([
       ...answerOnAFailure,
     }),
     ActedContextSchema,
+    argumentsAndResultHeld,
   ),
 ]);
 

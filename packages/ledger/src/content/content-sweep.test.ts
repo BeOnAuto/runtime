@@ -1,5 +1,6 @@
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { textToKeep } from '@on.auto/content';
+import { memoryContentStore } from '@on.auto/content/testing';
 import { Effect, Logger } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
@@ -72,5 +73,26 @@ describe('the sweep of the chunks no head names', () => {
 
     expect(kept).toMatchObject({ bytes: 2, mediaType: 'application/json' });
     expect([before, sweeps.asked]).toEqual([[], [4 * anHour]]);
+  });
+});
+
+describe('the sweep of a ledger given a content store of its own', () => {
+  it('sweeps its own chunks and then the content store it is given, so the chunks a database kept before it was given one go too', async () => {
+    const own = sweepsFailingAt(0);
+    const given = sweepsFailingAt(0);
+    const opened = () => {
+      const { store, connection } = sqliteLedgerOpened({
+        optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName: ':memory:' }),
+        inMemory: true,
+      });
+      return { store: { ...store, sweepContent: own.sweepContent }, connection };
+    };
+    const content = { ...memoryContentStore(), sweepContent: given.sweepContent };
+    const { sweptAt, dispose } = await openChoresWith(ledgerLayerOver(opened, { content }));
+    onTestFinished(dispose);
+
+    await sweptAt(5 * anHour);
+
+    expect([own.asked, given.asked]).toEqual([[4 * anHour], [4 * anHour]]);
   });
 });

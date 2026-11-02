@@ -1,9 +1,15 @@
 import { SQL } from '@event-driven-io/dumbo';
 import type { StreamScope } from '@on.auto/operations';
 
+import { inTransactionOn, type ContentConnections } from '../content/postgresql-content.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { playbookKeyOfStream } from '../postgresql-reads/playbook-indexes.ts';
-import { type FoldedStreams, type MessageLane, type ProjectionDialect } from '../projections/projection-dialect.ts';
+import {
+  type FoldedStreams,
+  type MessageLane,
+  type ProjectionDialect,
+  type StreamsInOrder,
+} from '../projections/projection-dialect.ts';
 import { projectionPartsOf, type KeptTables } from '../projections/projection-parts.ts';
 import { dataAsJsonText, storedDataOf } from './json-text.ts';
 import { postgresqlSchemaCreated } from './postgresql-schema.ts';
@@ -66,15 +72,26 @@ function laneAfter({ by, key }: MessageLane, { after, count, types }: LaneRead):
     LIMIT ${count}`;
 }
 
-function inOrderAfter(read: LaneRead, folded: FoldedStreams): SQL {
+function inOrderAfter(read: LaneRead, folded?: FoldedStreams): SQL {
+  const ofTheStreams = folded === undefined ? SQL.EMPTY : SQL`${foldedBy('m.stream_id', folded)} AND `;
   return SQL`SELECT ${columnsOfAMessage}
     FROM emt_messages AS m
-    WHERE ${foldedBy('m.stream_id', folded)}
-      AND ${pointsAfter(read.after)}
+    WHERE ${ofTheStreams}${pointsAfter(read.after)}
       AND ${typesIn(read.types)}
       AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
     ORDER BY m.transaction_id, m.global_position
     LIMIT ${read.count}`;
+}
+
+function keyLocked(table: string, prefix: string, key: string): readonly SQL[] {
+  return [SQL`SELECT pg_advisory_xact_lock(hashtextextended(${`${table}:${prefix}${key}`}, 0))`];
+}
+
+function streamsInOrder(read: LaneRead, streams: StreamsInOrder): SQL {
+  if (streams.of === 'lane') {
+    return laneAfter(streams.lane, read);
+  }
+  return inOrderAfter(read, streams.of === 'folded' ? streams.folded : undefined);
 }
 
 export const postgresqlProjectionDialect: ProjectionDialect = {
@@ -103,18 +120,16 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
         AND message_type IN (SELECT jsonb_array_elements_text(${JSON.stringify(types)}::jsonb))
         AND partition = ${defaultPartition} AND is_archived = FALSE
       ORDER BY stream_id, stream_position`,
-  messagesInOrderAfter: (after, count, streams, types) =>
-    streams.of === 'folded'
-      ? inOrderAfter({ after, count, types }, streams.folded)
-      : laneAfter(streams.lane, { after, count, types }),
+  messagesInOrderAfter: (after, count, streams, types) => streamsInOrder({ after, count, types }, streams),
   messageAt: (stream, position) =>
     SQL`SELECT stream_id AS stream, message_type AS type, message_data AS data, message_metadata AS metadata,
         stream_position::float8 AS position
       FROM emt_messages
       WHERE stream_id = ${stream} AND stream_position = ${position}
         AND partition = ${defaultPartition} AND is_archived = FALSE`,
+  keyLocks: keyLocked,
   rowLocks: (table, prefix, key) => [
-    SQL`SELECT pg_advisory_xact_lock(hashtextextended(${`${table}:${prefix}${key}`}, 0))`,
+    ...keyLocked(table, prefix, key),
     SQL`SELECT 1 FROM ${SQL.plain(table)} WHERE playbook_key = ${prefix} AND row_key = ${key} FOR UPDATE`,
   ],
   rowsInAWrite: () => rowsInAWrite,
@@ -133,5 +148,6 @@ export function postgresqlProjectionsOf(kept: KeptTables) {
       await postgresqlSchemaCreated(execute);
       await parts.prepare(execute, (work) => work(execute));
     },
+    unlessHeldOn: (connections: ContentConnections) => parts.references.unlessHeldOn(inTransactionOn(connections)),
   };
 }

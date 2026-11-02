@@ -95,6 +95,15 @@ export {
   type StreamState,
   type TypedEvent,
 } from './ledger/decider.ts';
+export { contentHoldersOf, type ContentHolders, type FactDeclaration } from './held-content/content-declaration.ts';
+export {
+  digestsChanged,
+  digestsTouchedBy,
+  heldOver,
+  releasesEverything,
+  type HeldDigests,
+} from './held-content/held-digests.ts';
+export { keptContentGraceMs, noHoldersKnown } from './held-content/unheld-removal.ts';
 export { earlierShapeOf, readingEarlierShapes, type EarlierShape } from './fact-shapes/earlier-shapes.ts';
 export { factReaderOf, factTypesOf, type FactReader } from './fact-shapes/fact-readers.ts';
 export {

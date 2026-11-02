@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import type { Bucket } from '../bucket/bucket.ts';
 import type { ContentLocation } from '../location/content-location.ts';
 import { objectKeysOf } from '../location/object-keys.ts';
-import { placedOn, type Placing } from './object-writes.ts';
+import { stagedOn, type Placing } from './object-writes.ts';
 import { sweptUploads } from './upload-sweep.ts';
 
 async function verifiedAt(bucket: Bucket, key: string, sha256: string): Promise<StreamedContent | undefined> {
@@ -15,13 +15,12 @@ async function verifiedAt(bucket: Bucket, key: string, sha256: string): Promise<
 export function objectContentOn(bucket: Bucket, location: ContentLocation): ContentStore {
   const placing: Placing = { bucket, keys: objectKeysOf(location) };
   const { keys } = placing;
-  const readOf = (key: string, sha256: string) => Effect.promise(() => verifiedAt(bucket, key, sha256));
   return {
-    content: {
-      put: (playbook, content) => placedOn(placing, (sha256) => keys.kept(playbook, sha256), content),
-      get: (playbook, sha256) => readOf(keys.kept(playbook, sha256), sha256),
-      remove: (playbook, sha256) => Effect.promise(() => bucket.delete([keys.kept(playbook, sha256)])),
-    },
+    stage: (playbook, content) => stagedOn(placing, playbook, content),
+    holds: (playbook, sha256) =>
+      Effect.promise(async () => (await bucket.head(keys.kept(playbook, sha256))) !== undefined),
+    read: (playbook, sha256) => Effect.promise(() => verifiedAt(bucket, keys.kept(playbook, sha256), sha256)),
+    delete: (playbook, sha256) => Effect.promise(() => bucket.delete([keys.kept(playbook, sha256)])),
     sweepContent: (before) => sweptUploads(bucket, keys.uploads, before),
   };
 }

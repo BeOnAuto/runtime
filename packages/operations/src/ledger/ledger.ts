@@ -1,6 +1,7 @@
 import type { RecordedContent } from '@on.auto/content';
 import { Context } from 'effect';
 
+import type { UnheldContentRemover } from '../held-content/unheld-removal.ts';
 import type { ProjectionAdvancer, ProjectionReader } from '../projections/keyed-projection.ts';
 import type { FactScrubber } from './fact-scrub.ts';
 import type {
@@ -25,6 +26,7 @@ export type LedgerPorts = StreamReader &
   RunOutcomesReader &
   ProjectionReader &
   ProjectionAdvancer &
-  ContentKeeper;
+  ContentKeeper &
+  UnheldContentRemover;
 
 export class Ledger extends Context.Service<Ledger, LedgerPorts>()('@on.auto/operations/Ledger') {}

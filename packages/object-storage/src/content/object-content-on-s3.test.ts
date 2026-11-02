@@ -1,7 +1,9 @@
 import { recordedContentBehaviour } from '@on.auto/content/testing';
+import { interleavedRemovalBehaviour, unheldContentBehaviour } from '@on.auto/operations/testing';
 import { describe, expect, it, vi } from 'vitest';
 
 import { objectContentBehaviour } from '../testing/object-content-behaviour.ts';
+import { interleavedEntryOf, onSQLite, unheldEntryOf } from '../testing/object-ledgers.ts';
 import { contentEntryOf, objectStoreEntry } from '../testing/object-store-entry.ts';
 import { bucketReady, testObjectStoreOf } from '../testing/test-object-store.ts';
 
@@ -23,7 +25,9 @@ describe.skipIf(skipped)(`The content kept on an S3-compatible object store${not
   const warned = vi.spyOn(console, 'warn');
   recordedContentBehaviour(contentEntryOf(onTheServer));
   objectContentBehaviour(onTheServer);
-  it('writes nothing to console.warn from the SDK while it keeps, reads and sweeps', () => {
+  unheldContentBehaviour(unheldEntryOf(onTheServer, onSQLite));
+  interleavedRemovalBehaviour(interleavedEntryOf(onTheServer, onSQLite));
+  it('writes nothing to console.warn from the SDK while it keeps, reads, removes and sweeps', () => {
     expect(warned).not.toHaveBeenCalled();
   });
 });

@@ -16,7 +16,10 @@ export interface PostgreSQLStoreOptions extends PostgreSQLOptions {
 
 export type PostgreSQLPool = ReturnType<PostgreSQLPools>;
 
-export type StoreKept = Pick<PostgreSQLOptions, 'runOutcomes' | 'projections' | 'layoutSteps' | 'factSchemas'>;
+export type StoreKept = Pick<
+  PostgreSQLOptions,
+  'runOutcomes' | 'projections' | 'holders' | 'layoutSteps' | 'factSchemas'
+>;
 
 const eventsInOneBoundedAppend = 64;
 
@@ -53,8 +56,9 @@ export function postgresqlStoreOn(
     ...projections.readerOn({ query: formattedFor(query), command: formattedFor(query) }),
     ...projections.scrubs.storeOver(store, formattedFor(query)),
     ...postgresqlReadsOn(kept, query),
+    unlessHeld: projections.unlessHeldOn(pool),
     migrate: async () => {
-      await postgresqlLayoutKept(pool, projections.projections, kept);
+      await postgresqlLayoutKept(pool, projections.named, kept);
       await store.migrate();
     },
     close: async () => {

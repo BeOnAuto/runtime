@@ -10,7 +10,7 @@ export interface ObjectRead extends ObjectHead {
 export type ObjectBody =
   | { readonly data: Readonly<Uint8Array>; readonly mediaType: string; readonly ifAbsent?: boolean }
   | { readonly stream: ReadableStream<Uint8Array>; readonly mediaType: string }
-  | { readonly copyOf: string; readonly ifAbsent?: boolean };
+  | { readonly copyOf: string; readonly mediaType: string; readonly ifAbsent?: boolean };
 
 export interface UnfinishedPut {
   readonly key: string;

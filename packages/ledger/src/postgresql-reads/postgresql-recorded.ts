@@ -6,7 +6,7 @@ import type {
   AppendListeners,
   AppendWaitsStore,
   DefinitionStreamsStore,
-  LedgerStore,
+  OwnContentStore,
   RecordedStore,
   StreamAgesStore,
 } from '../event-store.ts';
@@ -219,10 +219,6 @@ export function postgresqlRecordedStoreOn(
   query: Query,
   connections: ContentConnections,
   listeners: AppendListeners,
-): RecordedStore &
-  DefinitionStreamsStore &
-  StreamAgesStore &
-  AppendWaitsStore &
-  Pick<LedgerStore, 'content' | 'sweepContent'> {
+): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore & OwnContentStore {
   return { ...postgresqlRecordedStore(query, listeners), ...postgresqlContentOn(connections) };
 }

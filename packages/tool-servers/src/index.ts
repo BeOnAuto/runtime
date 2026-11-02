@@ -5,11 +5,13 @@ export { ToolNotOffered, type NotOfferedBecause } from './access/tool-not-offere
 export type { CallerContext, ServerMessage, ToolsNotOpened } from './access/caller-context.ts';
 export type { CallReply, ReplyOutcome } from './calls/call-replies.ts';
 export {
+  argumentsHeld,
   CallAnsweredSchema,
   CallFailedBecauseSchema,
   CallFailedSchema,
   CallSentSchema,
   CallStartedSchema,
+  resultHeld,
   type CallAnswered,
   type CallEnded,
   type CallFailed,

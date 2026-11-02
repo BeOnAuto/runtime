@@ -47,7 +47,13 @@ const put = Schema.decodeUnknownSync(
 );
 
 const copy = Schema.decodeUnknownSync(
-  Schema.Struct({ Key: Schema.String, CopySource: Schema.String, IfNoneMatch: Schema.optional(Schema.String) }),
+  Schema.Struct({
+    Key: Schema.String,
+    CopySource: Schema.String,
+    MetadataDirective: Schema.Literal('REPLACE'),
+    ContentType: Schema.String,
+    IfNoneMatch: Schema.optional(Schema.String),
+  }),
 );
 
 const deleted = Schema.decodeUnknownSync(
@@ -158,12 +164,13 @@ function objectAnswers(shelves: Shelves, honoursConditionalCopy: boolean): Reado
       return { $metadata: answered };
     },
     CopyObjectCommand: (input) => {
-      const { Key, CopySource, IfNoneMatch } = copy(input);
+      const { Key, CopySource, ContentType, IfNoneMatch } = copy(input);
       const source = CopySource.split('/')
         .slice(1)
         .map((segment) => decodeURIComponent(segment))
         .join('/');
-      shelves.keptFirst(Key, shelves.objectAt(source, 'NoSuchKey'), honoursConditionalCopy, IfNoneMatch);
+      const { body } = shelves.objectAt(source, 'NoSuchKey');
+      shelves.keptFirst(Key, { body, mediaType: ContentType }, honoursConditionalCopy, IfNoneMatch);
       return { $metadata: answered };
     },
     DeleteObjectsCommand: (input) => {

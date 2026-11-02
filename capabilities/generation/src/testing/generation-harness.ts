@@ -1,3 +1,5 @@
+import type { ContentStore } from '@on.auto/content';
+import { memoryContentStore } from '@on.auto/content/testing';
 import type { Capability } from '@on.auto/definitions';
 import { memoryLedger, type MemoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
@@ -23,6 +25,7 @@ export interface HarnessOptions extends Partial<Omit<GenerationPorts, 'ledger' |
 
 export interface GenerationHarness extends HarnessCalls, HarnessReaders {
   readonly ledger: MemoryLedger;
+  readonly store: ContentStore;
   readonly gateway: FakeGateway;
   readonly capability: Capability;
   readonly due: AssetsDue;
@@ -31,7 +34,8 @@ export interface GenerationHarness extends HarnessCalls, HarnessReaders {
 }
 
 export function generationHarness({ answering, ...given }: HarnessOptions = {}): GenerationHarness {
-  const ledger = memoryLedger(undefined, [assets, assetTotals]);
+  const store = memoryContentStore();
+  const ledger = memoryLedger(undefined, [assets, assetTotals], undefined, store);
   const gateway = fakeGateway(answering);
   const time = { now: harnessStartsAt };
   const capability = makeGenerationFunctionAdapter({
@@ -46,6 +50,7 @@ export function generationHarness({ answering, ...given }: HarnessOptions = {}):
   const due = assetsDue({ ledger: ledger.service });
   return {
     ledger,
+    store,
     gateway,
     capability,
     due,

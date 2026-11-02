@@ -1,4 +1,9 @@
+import type { FactDeclaration } from '@on.auto/operations';
 import { Schema } from 'effect';
+
+export const messagesHeld: FactDeclaration = { content: { holds: ['/messages_sha256'] } };
+
+export const responseHeld: FactDeclaration = { content: { holds: ['/response_sha256'] } };
 
 const TokensSchema = Schema.NullOr(Schema.Finite);
 

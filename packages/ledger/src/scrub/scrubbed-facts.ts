@@ -6,6 +6,7 @@ import type { FactScrubStore, ScrubbedData } from '../event-store.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
 import { filledMessageOf, type ProjectionKeeping } from '../projections/projection-keeping.ts';
 import { rowsRefolded } from '../projections/projection-refold.ts';
+import type { ContentReferences } from '../references/content-references.ts';
 import type { Rider } from './append-riders.ts';
 
 const defaultPartition = 'emt:default';
@@ -60,9 +61,14 @@ export function factAtOn(dialect: ProjectionDialect, query: ReadQuery): FactScru
 interface ScrubParts {
   readonly dialect: ProjectionDialect;
   readonly keepings: readonly ProjectionKeeping[];
+  readonly references: Pick<ContentReferences, 'refolded'>;
 }
 
-export function scrubWithin({ dialect, keepings }: ScrubParts, stream: string, scrubbed: ScrubbedData): Rider {
+export function scrubWithin(
+  { dialect, keepings, references }: ScrubParts,
+  stream: string,
+  scrubbed: ScrubbedData,
+): Rider {
   const { position, data } = scrubbed;
   return async (execute) => {
     const [fact] = decodeTheFact((await execute.query(dialect.messageAt(stream, position))).rows);
@@ -73,5 +79,6 @@ export function scrubWithin({ dialect, keepings }: ScrubParts, stream: string, s
     );
     const before = filledMessageOf({ dialect }, fact);
     await rowsRefolded(keepings, execute, { stream, before, after: { ...before, data } });
+    await references.refolded(execute, stream);
   };
 }

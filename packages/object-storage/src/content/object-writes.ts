@@ -2,15 +2,15 @@ import {
   mostContentChunkBytes,
   requireExpected,
   takenInChunks,
-  type ContentKept,
+  type ContentOwner,
   type ContentRefused,
   type ContentToKeep,
-  type Taken,
+  type StagedContent,
 } from '@on.auto/content';
 import { randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { Bucket, ObjectHead } from '../bucket/bucket.ts';
+import type { Bucket } from '../bucket/bucket.ts';
 import type { ObjectKeys } from '../location/object-keys.ts';
 import { uploadWritingOf, type UploadWriting } from './upload-writing.ts';
 
@@ -19,87 +19,47 @@ export interface Placing {
   readonly keys: ObjectKeys;
 }
 
-type KeyOf = (sha256: string) => string;
-
-interface Written {
-  readonly taken: Taken;
-  readonly mediaType: string;
-  readonly writing: UploadWriting;
+interface Staged {
+  readonly bucket: Bucket;
+  readonly kept: string;
   readonly upload: string;
+  readonly writing: UploadWriting;
 }
 
-function heldOf(bucket: Bucket, key: string): Effect.Effect<ObjectHead | undefined> {
-  return Effect.promise(() => bucket.head(key));
-}
-
-function keptAt(bucket: Bucket, key: string, put: ContentKept): Effect.Effect<ContentKept> {
-  return Effect.map(heldOf(bucket, key), (held) => (held === undefined ? put : { sha256: put.sha256, ...held }));
-}
-
-function readAlone(): Effect.Effect<void> {
-  return Effect.void;
-}
-
-function placedFirst(bucket: Bucket, key: string, { mediaType, writing, upload }: Written): Effect.Effect<boolean> {
+function placedFrom({ bucket, kept, upload, writing }: Staged, mediaType: string): Effect.Effect<void> {
   return writing.uploading()
     ? Effect.promise(async () => {
-        const first = await bucket.put(key, { copyOf: upload, ifAbsent: true });
-        await bucket.delete([upload]);
-        return first;
+        try {
+          await bucket.put(kept, { copyOf: upload, mediaType, ifAbsent: true });
+        } finally {
+          await bucket.delete([upload]);
+        }
       })
-    : Effect.promise(() => bucket.put(key, { data: writing.inHand(), mediaType, ifAbsent: true }));
+    : Effect.asVoid(Effect.promise(() => bucket.put(kept, { data: writing.inHand(), mediaType, ifAbsent: true })));
 }
 
-function keptAfter(bucket: Bucket, keyOf: KeyOf, written: Written): Effect.Effect<ContentKept> {
-  const { sha256, bytes } = written.taken;
-  const key = keyOf(sha256);
-  return Effect.gen(function* () {
-    const held = yield* heldOf(bucket, key);
-    if (held !== undefined) {
-      yield* Effect.promise(() => bucket.delete(written.writing.uploading() ? [written.upload] : []));
-      return { sha256, ...held };
-    }
-    const put = { sha256, bytes, mediaType: written.mediaType };
-    return (yield* placedFirst(bucket, key, written)) ? put : yield* keptAt(bucket, key, put);
-  });
+function discardedFrom({ bucket, upload, writing }: Staged): Effect.Effect<void> {
+  return Effect.promise(() => bucket.delete(writing.uploading() ? [upload] : []));
 }
 
-function heldDigestRead(
-  { stream, expected }: ContentToKeep,
-  held: ObjectHead,
-): Effect.Effect<ContentKept, ContentRefused> {
-  return Effect.gen(function* () {
-    const taken = yield* takenInChunks(stream, mostContentChunkBytes, readAlone);
-    yield* requireExpected(expected, taken);
-    return { sha256: taken.sha256, ...held };
-  });
-}
-
-function writtenOut(
-  bucket: Bucket,
-  upload: string,
-  keyOf: KeyOf,
-  { stream, mediaType, expected }: ContentToKeep,
-): Effect.Effect<ContentKept, ContentRefused> {
-  const writing = uploadWritingOf({ bucket, key: upload, mediaType });
-  return Effect.gen(function* () {
-    const taken = yield* takenInChunks(stream, mostContentChunkBytes, writing.take);
-    yield* writing.finished();
-    yield* requireExpected(expected, taken);
-    return yield* keptAfter(bucket, keyOf, { taken, mediaType, writing, upload });
-  }).pipe(Effect.onError(() => writing.abandoned()));
-}
-
-export function placedOn(
+export function stagedOn(
   { bucket, keys }: Placing,
-  keyOf: KeyOf,
-  content: ContentToKeep,
-): Effect.Effect<ContentKept, ContentRefused> {
-  return Effect.gen(function* () {
-    const { expected } = content;
-    const held = expected?.sha256 === undefined ? undefined : yield* heldOf(bucket, keyOf(expected.sha256));
-    return yield* held === undefined
-      ? writtenOut(bucket, keys.upload(randomUUIDv7()), keyOf, content)
-      : heldDigestRead(content, held);
+  playbook: ContentOwner,
+  { stream, mediaType, expected }: ContentToKeep,
+): Effect.Effect<StagedContent, ContentRefused> {
+  return Effect.suspend(() => {
+    const upload = keys.upload(randomUUIDv7());
+    const writing = uploadWritingOf({ bucket, key: upload, mediaType });
+    return Effect.gen(function* () {
+      const taken = yield* takenInChunks(stream, mostContentChunkBytes, writing.take);
+      yield* writing.finished();
+      yield* requireExpected(expected, taken);
+      const staged: Staged = { bucket, kept: keys.kept(playbook, taken.sha256), upload, writing };
+      return {
+        taken,
+        placed: (placedAs: string) => placedFrom(staged, placedAs),
+        discarded: () => discardedFrom(staged),
+      };
+    }).pipe(Effect.onError(() => writing.abandoned()));
   });
 }

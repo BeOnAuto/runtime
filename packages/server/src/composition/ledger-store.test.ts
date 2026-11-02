@@ -28,7 +28,7 @@ describe('the steps the server gives the ledger, from every package that owns a 
 
     expect(inSequence.map(({ layout }) => layout)).toEqual(numbers);
     expect(inSequence.flatMap(({ statements }) => statements)).toEqual(
-      layoutSteps.flatMap(({ statements }) => statements),
+      layoutSteps.toSorted((one, other) => one.layout - other.layout).flatMap(({ statements }) => statements),
     );
   });
 });
