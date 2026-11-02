@@ -177,7 +177,9 @@ function readWhileRemoved(entry: LedgerEntry): void {
     expect(rest.bytes).toBeLessThanOrEqual(mostContentChunkBytes);
     expect(rest.failure).toHaveProperty(
       'message',
-      expect.stringMatching(new RegExp(`^The content kept under ${sha256} is missing its chunk [12]$`, 'u')),
+      expect.toSatisfy((message: string) =>
+        [1, 2].some((chunk) => message === `The content kept under ${sha256} is missing its chunk ${chunk}`),
+      ),
     );
   });
 }

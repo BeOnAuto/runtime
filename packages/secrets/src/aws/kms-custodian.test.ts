@@ -183,7 +183,8 @@ describe('the custodian of a key KMS will not use', () => {
         kid: idOf(key),
         detail: `The custodian of the key ${idOf(key)} refused to wrap a data key: ${words}`,
       });
-      expect(JSON.stringify(refused)).not.toMatch(new RegExp(`${account}|${credentials.secretAccessKey}`, 'u'));
+      expect(JSON.stringify(refused)).not.toContain(account);
+      expect(JSON.stringify(refused)).not.toContain(credentials.secretAccessKey);
     },
   );
 
@@ -251,12 +252,8 @@ describe('the custodian of a key in a KMS that does not answer', () => {
     const stalled = await failureOf(stalling.wrap(aDataKey()));
 
     expect(stalled).toMatchObject({ _tag: 'keeper_unavailable', kid: idOf(key) });
-    expect(stalled.detail).toMatch(
-      new RegExp(
-        `^The custodian of the key ${idOf(key)} did not answer a request to wrap a data key: TimeoutError`,
-        'u',
-      ),
-    );
+    const opening = `The custodian of the key ${idOf(key)} did not answer a request to wrap a data key: TimeoutError`;
+    expect(stalled.detail.slice(0, opening.length)).toBe(opening);
     expect(performance.now() - started).toBeLessThan(20_000);
   });
 

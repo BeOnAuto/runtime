@@ -218,9 +218,8 @@ describe('the keeper of values in a Parameter Store that does not answer', () =>
     const stalled = await failureOf(stalling.reveal(holding));
 
     expect(stalled).toMatchObject({ _tag: 'keeper_unavailable' });
-    expect(stalled.detail).toMatch(
-      new RegExp(`^AWS Parameter Store could not read the parameter ${holding.held}: TimeoutError`, 'u'),
-    );
+    const opening = `AWS Parameter Store could not read the parameter ${holding.held}: TimeoutError`;
+    expect(stalled.detail.slice(0, opening.length)).toBe(opening);
     expect(performance.now() - started).toBeLessThan(20_000);
   });
 

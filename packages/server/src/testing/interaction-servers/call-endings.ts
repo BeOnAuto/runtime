@@ -24,10 +24,10 @@ export const refusingTheArguments: unknown = expect.stringMatching(
   /^The strict tool of chat refused the arguments: .*limit must be a whole number/u,
 );
 
+const failedInChat = /^The tool server chat failed: .*, after the run called the (?<tool>\S+) tool of chat$/u;
+
 export const failedAfterCalling = (tool: string): unknown =>
-  expect.stringMatching(
-    new RegExp(`^The tool server chat failed: .*, after the run called the ${tool} tool of chat$`, 'u'),
-  );
+  expect.toSatisfy((detail: string) => failedInChat.exec(detail)?.groups?.['tool'] === tool);
 
 export const notAnsweredInTime: unknown = expect.stringMatching(
   /^The tool server chat failed: .*did not answer within 300 ms.*, after the run called the sleep tool of chat$/u,

@@ -73,8 +73,14 @@ function pdfOf(objects: readonly string[]): Uint8Array {
   return Uint8Array.from(Buffer.from(written, 'latin1'));
 }
 
+const xmlEntities: ReadonlyArray<readonly [Readonly<RegExp>, string]> = [
+  [/&/gu, '&amp;'],
+  [/</gu, '&lt;'],
+  [/>/gu, '&gt;'],
+];
+
 function xmlTextOf(text: string): string {
-  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  return xmlEntities.reduce((written, [character, entity]) => written.replaceAll(character, entity), text);
 }
 
 const contentTypes =

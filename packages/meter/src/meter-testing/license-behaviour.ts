@@ -219,10 +219,10 @@ function keyChangeBehaviour(ledgerOf: LedgerOf): void {
 function orgNameBehaviour(ledgerOf: LedgerOf): void {
   it('keeps the name of its org that Auto signed into its license, on one line, and takes it again at each report', async () => {
     const { metered } = await opened(ledgerOf);
-    metered.account.orgNamed('globex', `Globex\n\u001B[31mCorporation‮ ${'x'.repeat(100)}`);
+    metered.account.orgNamed('globex', `Globex\n\u001B[31mCorporation\u202E ${'x'.repeat(100)}`);
     await metered.activated(metered.account.keyFor(installation, 'globex'));
     const named = (await metered.state()).license?.org_name;
-    metered.account.orgNamed('globex', ' \n\t​ ');
+    metered.account.orgNamed('globex', ' \n\t\u200B ');
     await metered.reported();
 
     expect(named).toBe(`Globex [31mCorporation ${'x'.repeat(57)}`);

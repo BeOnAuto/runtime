@@ -105,12 +105,14 @@ describe('the studio the page at the root of the server opens', () => {
   });
 });
 
+const iconLinks =
+  /<link rel="icon" href="data:image\/svg\+xml;base64,([^"]+)" media="\(prefers-color-scheme: ([^)]+)\)"/gu;
+
 function iconFor(page: string, scheme: string): string {
-  const link = new RegExp(
-    `<link rel="icon" href="data:image/svg\\+xml;base64,([^"]+)" media="\\(prefers-color-scheme: ${scheme}\\)"`,
-    'u',
-  );
-  return Buffer.from(link.exec(page)?.[1] ?? '', 'base64').toString();
+  const drawing = [...page.matchAll(iconLinks)].find(
+    ([, , linkScheme]: readonly string[]) => linkScheme === scheme,
+  )?.[1];
+  return Buffer.from(drawing ?? '', 'base64').toString();
 }
 
 function tileOf(icon: string): string | undefined {

@@ -4,7 +4,7 @@ import { MOST_ORG_NAME_LENGTH, shownOrgName } from './org-name.ts';
 
 describe('the name of an org as a runtime shows it', () => {
   it('is the name on one line, its control characters made spaces and its format characters taken out', () => {
-    expect(shownOrgName('  Acme\n\tCorporation\u001B[2J ‮evil​ ')).toBe('Acme Corporation [2J evil');
+    expect(shownOrgName('  Acme\n\tCorporation\u001B[2J \u202Eevil\u200B ')).toBe('Acme Corporation [2J evil');
   });
 
   it('is at most 80 characters, never splitting one', () => {
@@ -13,7 +13,7 @@ describe('the name of an org as a runtime shows it', () => {
   });
 
   it('is no name where the name is empty, spaces alone or nothing shown', () => {
-    expect(['', '   ', '\n\t', '​‮', null, undefined].map((name) => shownOrgName(name))).toEqual([
+    expect(['', '   ', '\n\t', '\u200B\u202E', null, undefined].map((name) => shownOrgName(name))).toEqual([
       null,
       null,
       null,

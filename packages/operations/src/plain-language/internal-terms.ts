@@ -1,32 +1,33 @@
-const measures = [
-  'ms',
-  's',
-  'm',
-  'h',
-  'd',
-  '%',
-  'KiB',
-  'MiB',
-  'GiB',
-  'bytes',
-  'rows',
-  'events',
-  'series',
-  'periods',
-  'tokens',
-  'times',
-];
+const statusCodeOutsideAMeasure =
+  /(?<![\d,])(?<!\d\.)\b[1-5]\d{2}\b(?!\.\d|[\d,]|(?:\sto\s[\d.,]+)?\s?(?:ms|s|m|h|d|%|KiB|MiB|GiB|bytes|rows|events|series|periods|tokens|times)(?![\p{L}\p{N}_]))/u;
 
-function escaped(unit: string): string {
-  return unit.replaceAll(/[$()*+./?[\\\]^{|}]/gu, String.raw`\$&`);
+const statusCodesOutsideAMeasure = new RegExp(statusCodeOutsideAMeasure, 'gu');
+
+const rangeBeforeAUnit = /^\sto\s[\d.,]+\s?/u;
+
+const spaceBeforeAUnit = /^\s/u;
+
+const partOfAWord = /^[\p{L}\p{N}_]/u;
+
+function textsAfterTheNumberOf(after: string): readonly string[] {
+  return [after, after.replace(spaceBeforeAUnit, ''), after.replace(rangeBeforeAUnit, '')];
 }
 
-function statusCodeOf(units: readonly string[]): RegExp {
-  const measured = [...measures, ...units.map((unit) => escaped(unit))].join('|');
-  return new RegExp(
-    String.raw`(?<![\d,])(?<!\d\.)\b[1-5]\d{2}\b(?!\.\d|[\d,]|(?:\sto\s[\d.,]+)?\s?(?:${measured})(?![\p{L}\p{N}_]))`,
-    'u',
-  );
+function startsWithTheUnit(text: string, unit: string): boolean {
+  return text.startsWith(unit) && !partOfAWord.test(text.slice(unit.length));
+}
+
+function isMeasuredIn(units: readonly string[], after: string): boolean {
+  return textsAfterTheNumberOf(after).some((text) => units.some((unit) => startsWithTheUnit(text, unit)));
+}
+
+function statusCodesIn(text: string, units: readonly string[]): readonly string[] {
+  for (const { 0: digits, index } of text.matchAll(statusCodesOutsideAMeasure)) {
+    if (!isMeasuredIn(units, text.slice(index + digits.length))) {
+      return [digits];
+    }
+  }
+  return [];
 }
 
 const namedTerms: readonly RegExp[] = [
@@ -52,15 +53,17 @@ const shapedTerms: readonly RegExp[] = [
   /\S\/\S/u,
 ];
 
-export const internalTerms: readonly RegExp[] = [...namedTerms, statusCodeOf([]), ...shapedTerms];
+export const internalTerms: readonly RegExp[] = [...namedTerms, statusCodeOutsideAMeasure, ...shapedTerms];
+
+function firstOf(text: string, term: Readonly<RegExp>): readonly string[] {
+  const match = term.exec(text);
+  return match === null ? [] : [match[0]];
+}
 
 export function internalTermsIn(text: string, measuredIn: readonly string[] = []): readonly string[] {
-  const found: string[] = [];
-  for (const term of [...namedTerms, statusCodeOf(measuredIn), ...shapedTerms]) {
-    const match = term.exec(text);
-    if (match !== null) {
-      found.push(match[0]);
-    }
-  }
-  return found;
+  return [
+    ...namedTerms.flatMap((term: Readonly<RegExp>) => firstOf(text, term)),
+    ...statusCodesIn(text, measuredIn),
+    ...shapedTerms.flatMap((term: Readonly<RegExp>) => firstOf(text, term)),
+  ];
 }

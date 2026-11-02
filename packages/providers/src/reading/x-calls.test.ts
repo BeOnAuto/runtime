@@ -83,8 +83,13 @@ const deleting = {
   mark: 'acts',
 };
 
+const aParagraphAfterTheSummary = /^\n\n[A-Z]/u;
+
 function toolSaying(name: string, summary: string, marked: Readonly<Record<string, unknown>>): unknown {
-  const described: unknown = expect.stringMatching(new RegExp(`^${summary}\\n\\n[A-Z]`, 'u'));
+  const described: unknown = expect.toSatisfy(
+    (description: string) =>
+      description.startsWith(summary) && aParagraphAfterTheSummary.test(description.slice(summary.length)),
+  );
   return expect.objectContaining({ name, description: described, ...marked, marked_by: 'method' });
 }
 

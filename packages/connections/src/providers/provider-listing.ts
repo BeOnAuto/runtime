@@ -1,4 +1,4 @@
-import { placeholdersIn, placeholdersReplaced } from '@on.auto/config';
+import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.auto/config';
 import { reservedHostKindOf } from '@on.auto/outbound';
 import { listed } from '@on.auto/phrasing';
 import {
@@ -33,15 +33,15 @@ export interface Listing {
 
 type Offering = Pick<ListedWay, 'offered' | 'because'>;
 
-const placedHostCharacters = '[a-z0-9-]+';
+const placedHostCharacters = /^[a-z0-9-]+$/u;
 
-const between = '\n';
+function isPlacedInAHost(placed: string): boolean {
+  return placedHostCharacters.test(placed);
+}
 
-function shapeOf(template: string): RegExp {
-  const fixed = placeholdersReplaced(template, () => between)
-    .toLowerCase()
-    .split(between);
-  return new RegExp(`^${fixed.map((part) => RegExp.escape(part)).join(placedHostCharacters)}$`, 'u');
+function fitsTheShapeOf(template: string, pattern: string): boolean {
+  const around = textsAroundPlaceholders(template).map((text) => text.toLowerCase());
+  return isFilledAround(around, pattern, isPlacedInAHost);
 }
 
 function fixedTailOf(template: string): string {
@@ -50,7 +50,9 @@ function fixedTailOf(template: string): string {
 
 function couldBeAllowed(pattern: string, template: string): boolean {
   const lowered = pattern.toLowerCase();
-  return lowered.startsWith('*.') ? fixedTailOf(template).endsWith(lowered.slice(1)) : shapeOf(template).test(lowered);
+  return lowered.startsWith('*.')
+    ? fixedTailOf(template).endsWith(lowered.slice(1))
+    : fitsTheShapeOf(template, lowered);
 }
 
 function couldReach(allowedHosts: readonly string[] | null, host: string): boolean {

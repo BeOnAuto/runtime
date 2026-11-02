@@ -67,6 +67,12 @@ const commands = [
   'activate_license',
 ];
 
+const words = /\w+/gu;
+
+function wordsIn(text: string): ReadonlySet<string> {
+  return new Set(text.match(words));
+}
+
 const globexAdmin = createApiKey({ id: 'globex-admin', org: 'globex', permissions: allPermissions, playbooks: '*' });
 
 const apiKeys = JSON.stringify([
@@ -202,7 +208,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
       ...readerToolsInsideAPlaybook,
       'get_guide',
     ]);
-    expect(commands.filter((name) => new RegExp(`\\b${name}\\b`, 'u').test(outcome.instructions))).toEqual([]);
+    expect(commands.filter((name) => wordsIn(outcome.instructions).has(name))).toEqual([]);
     expect(outcome.instructions).toContain(
       "The org is the caller's own: list_playbooks shows its playbooks. get_guide explains these words",
     );

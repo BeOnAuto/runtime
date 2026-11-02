@@ -10,11 +10,12 @@ catalog:
   hono: 4.13.13
   jose: 6.2.12
 
-minimumReleaseAge: 1440
+minimumReleaseAge: 10080
 minimumReleaseAgeStrict: false
 minimumReleaseAgeExclude:
   - effect@4.0.0
 trustPolicy: no-downgrade
+blockExoticSubdeps: true
 
 allowBuilds:
   esbuild: true
