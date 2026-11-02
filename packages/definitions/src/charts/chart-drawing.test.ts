@@ -60,7 +60,7 @@ describe('a chart block of the right shape', () => {
 describe('a chart block with no data yet', () => {
   it('is the one line that says so', () => {
     expect(chartsDrawn(['Lately:', '```chart line', 'null', '```'].join('\n'))).toBe(
-      'Lately:\nThere is no data for this chart yet.',
+      'Lately:\nNo data for this chart yet.',
     );
   });
 });
@@ -69,7 +69,7 @@ describe('a chart block that cannot be drawn', () => {
   it('shows data of another shape as a table under the reason', () => {
     expect(chartsDrawn(chart('chart line', channels))).toBe(
       [
-        'This chart could not be drawn: a line chart reads a series, and this is categories.',
+        'Couldn’t display this chart: a line chart requires a series; the data is categories.',
         '',
         '| name | value | low |',
         '| --- | --- | --- |',
@@ -81,29 +81,37 @@ describe('a chart block that cannot be drawn', () => {
 
   it('shows a body that is not JSON, or matches no shape, as code under the reason', () => {
     expect([chartsDrawn('```chart line\n{"lines": \n```'), chartsDrawn(chart('chart line', { posts: 3 }))]).toEqual([
-      ['This chart could not be drawn: its data is not JSON.', '', '```', '{"lines": ', '```'].join('\n'),
-      ['This chart could not be drawn: its data matches no shape.', '', '```', '{"posts":3}', '```'].join('\n'),
+      ['Couldn’t display this chart: the data is not valid JSON.', '', '```', '{"lines": ', '```'].join('\n'),
+      [
+        'Couldn’t display this chart: the data does not match a supported format.',
+        '',
+        '```',
+        '{"posts":3}',
+        '```',
+      ].join('\n'),
     ]);
   });
 
   it('names a kind or a role the info string a template wrote cannot take', () => {
     expect([chartsDrawn(chart('chart pie', channels)), chartsDrawn(chart('chart pie', { posts: 3 }))]).toEqual([
       expect.stringMatching(
-        /^This chart could not be drawn: a chart names its kind after chart, one of line,.*\n\n\| name \| value/u,
+        /^Couldn’t display this chart: specify a chart type after chart: line,.*\n\n\| name \| value/u,
       ),
-      expect.stringMatching(/^This chart could not be drawn: a chart names its kind.*\n\n```\n\{"posts":3\}\n```$/u),
+      expect.stringMatching(
+        /^Couldn’t display this chart: specify a chart type after chart:.*\n\n```\n\{"posts":3\}\n```$/u,
+      ),
     ]);
   });
 
   it('shows a text it cannot draw as the text itself', () => {
     expect(chartsDrawn(chart('chart line', { text: 'All *quiet*.' }))).toBe(
-      'This chart could not be drawn: a line chart reads a series, and this is a text.\n\nAll *quiet*.',
+      'Couldn’t display this chart: a line chart requires a series; the data is text.\n\nAll *quiet*.',
     );
   });
 
   it('refuses roles over data that is not a table', () => {
     expect(chartsDrawn(chart('chart bars x=name', channels))).toMatch(
-      /^This chart could not be drawn: its roles name the columns of a table, and this is categories\.\n\n\| name/u,
+      /^Couldn’t display this chart: column roles require a table; the data is categories\.\n\n\| name/u,
     );
   });
 });
@@ -111,20 +119,20 @@ describe('a chart block that cannot be drawn', () => {
 describe('a chart block over a table that cannot be drawn', () => {
   it('names a role whose column the table does not have, and a needed role no column is left for', () => {
     expect(chartsDrawn(chart('chart scatter x=Budget', campaigns)).split('\n')[0]).toBe(
-      'This chart could not be drawn: the role x names Budget, which is not a column of the table.',
+      'Couldn’t display this chart: the table has no column named Budget for the role x.',
     );
     expect(
       chartsDrawn(
         chart('chart bubble x=Channel y=Spend', { columns: [{ name: 'Channel' }, { name: 'Spend' }], rows: [] }),
       ).split('\n')[0],
-    ).toBe('This chart could not be drawn: a bubble chart needs a column for size, and the table has none left.');
+    ).toBe('Couldn’t display this chart: a bubble chart needs another column for size.');
   });
 
   it('names the column and the row of a cell that does not fit its role, passing over a row it does not draw', () => {
     const textAsSize = { ...campaigns, rows: [...campaigns.rows, ['Mail', 100, 4, 7]] };
 
     expect(chartsDrawn(chart('chart scatter x=Channel y=Spend mark=Note', textAsSize)).split('\n')[0]).toBe(
-      'This chart could not be drawn: row 3 of the column Note is not text, as mark needs.',
+      'Couldn’t display this chart: Note, row 3, must contain text for mark.',
     );
   });
 
@@ -134,7 +142,7 @@ describe('a chart block over a table that cannot be drawn', () => {
 
     expect(chartsDrawn(chart('chart calendar', twoLines))).toBe(
       [
-        'This chart could not be drawn: a calendar reads a series of one line whose period is day.',
+        'Couldn’t display this chart: a calendar requires a series with one line and a daily period.',
         '',
         '| at | Posts | Replies |',
         '| --- | --- | --- |',
@@ -144,7 +152,7 @@ describe('a chart block over a table that cannot be drawn', () => {
       ].join('\n'),
     );
     expect(chartsDrawn(chart('chart share', negative)).split('\n')[0]).toBe(
-      'This chart could not be drawn: a share chart reads values of at least 0, and Refunds is -3.',
+      'Couldn’t display this chart: a share chart requires values of 0 or more; Refunds is -3.',
     );
   });
 });
@@ -162,16 +170,16 @@ describe('the roles of a chart over a table', () => {
 
     expect(chartsDrawn(chart('chart timeline color=Lead', bars))).toBe(chart('chart timeline color=Lead', bars));
     expect(chartsDrawn(chart('chart timeline', late)).split('\n')[0]).toBe(
-      'This chart could not be drawn: row 1 of the column From is not a time, as start needs.',
+      'Couldn’t display this chart: From, row 1, must contain a time for start.',
     );
     expect(chartsDrawn(chart('chart bubble x=Team y=Size size=From', bars)).split('\n')[0]).toBe(
-      'This chart could not be drawn: row 1 of the column From is not a number of at least 0, as size needs.',
+      'Couldn’t display this chart: From, row 1, must contain a number of at least 0 for size.',
     );
     expect(
       chartsDrawn(chart('chart bubble x=Team y=Size size=Size', { ...bars, rows: [['Ops', '', '', -1, true]] })).split(
         '\n',
       )[0],
-    ).toBe('This chart could not be drawn: row 1 of the column Size is not a number of at least 0, as size needs.');
+    ).toBe('Couldn’t display this chart: Size, row 1, must contain a number of at least 0 for size.');
   });
 });
 

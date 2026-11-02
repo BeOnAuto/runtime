@@ -236,37 +236,17 @@ The server reads [the text of a file](connections.md#the-text-of-a-file) a tool 
 
 ### Extensions
 
-An extension is a package installed beside the runtime that fills a point a capability declares. This release serves one point, `capability/prediction`: an extension that fills it answers every prediction function in place of the runtime's built-in forecaster, within the same [`PREDICTION_MAX_FUNCTIONS`](#prediction-functions), whatever the extension sets. Without such an extension, the forecaster answers.
+An extension is a package installed beside the runtime. This release supports one extension point, `capability/prediction`. An extension at that point answers all prediction functions in place of the built-in forecaster. The same [`PREDICTION_MAX_FUNCTIONS`](#prediction-functions) limit applies, regardless of the extension's settings. Without an extension, the built-in forecaster answers.
 
-A package's `manifest` export names the package, its version and the points it fills, each with the contract it was built against and its implementation:
+Install the package beside `@on.auto/runtime`, then list it in `extensions` in `auto-runtime.yaml`, or set the environment variable below. Only one extension can provide `capability/prediction`.
 
-```js
-export const manifest = {
-  name: '@acme/forecasts',
-  version: '1.0.0',
-  provides: [{ point: 'capability/prediction', contract: 1, implementation: makePredictionCapability }],
-};
-```
+| Variable                  | Default | Purpose                                                                                                                                                  |
+| ------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTO_RUNTIME_EXTENSIONS` | none    | A JSON list of `{ "package": ..., "integrity": ... }`, loaded in precedence order. `integrity` is optional. The equivalent file setting is `extensions`. |
 
-The contract is the one every capability of the runtime is made and served by, and its version is a whole number, `1` in this release, raised when a change to it would refuse a capability built against the version before. Contract 1 hands a capability's `check` the playbook a definition is saved in, as its `place`; a check written before it takes the place and leaves it unread, so the version stays 1. The implementation of `capability/prediction` is a function the server calls once as it starts, before it opens its database, with the ports it hands a capability:
+An extension that depends on the runtime must declare `@on.auto/runtime` and `effect` as peer dependencies. The launcher copies it into the release it runs with, where it can use that release's packages. It keeps each copy so a running server can continue using it.
 
-| Port               | What the extension is handed                                                                                                                                                                                                                          |
-| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `database`         | `read`, `write`, `transaction` and `readConsistently` of the server's database, where the tables of the extension are kept. They answer once the server has opened it, so the capability reads and writes in its work, not as it is made              |
-| `pool`             | The pool of workers that runs programs and checks the expressions of a document, which the server keeps and closes                                                                                                                                    |
-| `filters`          | The filters that judge the `data` tests of a page of events as one, `verdictsOf(filters, events)`, over the pool, the verdicts of each event in turn up to the first a test was stopped at                                                            |
-| `features`         | `includes`, whether the license of an org includes a [feature](licensing.md#features), and `refusal`, the refusal of a use it does not include, `409` with the kind `feature_unlicensed`. They answer once the server has started, as `database` does |
-| `settings`         | The extension's own settings, below                                                                                                                                                                                                                   |
-| `mostFunctions`    | `PREDICTION_MAX_FUNCTIONS`                                                                                                                                                                                                                            |
-| `triesBeforeStall` | The tries a folder of the extension makes at an event before it stalls, those of the views of recall functions                                                                                                                                        |
-
-It answers `{ capability, folders, operations, dueWork }`: the capability of the type `prediction` and, each optional, the folders that fold the events of the playbooks into the extension's tables as the server's projector runs, the operations of a playbook the extension serves beyond running its definitions, and the due work the server's wake-ups hand out. The tables of a folder are made, each where it is missing, as the server opens its database, and nothing carries them forward: a table whose shape changes takes a new name. The tables of the datasets of prediction functions are the runtime's own, carried forward with its database whichever capability answers, and folded only for the capability that provides their folder: an extension that answers over them provides `datasetsProvidedOn(ports)` of `@on.auto/prediction` among its folders. The facts its capability declares on runs, `facts.onRuns`, each made by `declaredFact` of `@on.auto/definitions` over a schema that reads facts of its type alone, are known to the check the server makes of the facts in its database as it opens it, as the runtime's own are, so a database that holds them opens while the extension is listed and is refused, naming their type, once it is not, in words that say first to list the extension again in `extensions`.
-
-An extension's own settings are the variables whose names begin with `AUTO_RUNTIME_` and the name of its package in upper case, each character other than a letter or a digit written as `_`, so `AUTO_RUNTIME_ACME_FORECASTS_REGION` is the setting `REGION` of `@acme/forecasts`. The server hands an extension its own settings alone, by the names after that prefix, never a variable the runtime reads for itself, and a connection that names one is refused, naming the extension. Two listed packages whose prefixes are the same, or one of which begins the other, as `AUTO_RUNTIME_ACME_FORECASTS_` begins `AUTO_RUNTIME_ACME_FORECASTS_EU_`, stop the start, naming both.
-
-An extension imports the packages the contract names by their names, `@on.auto/definitions`, `@on.auto/operations`, `@on.auto/phrasing`, `@on.auto/workflow-host`, `@on.auto/workflow-engine`, `@on.auto/meter` and `@on.auto/prediction`, and `effect`, and is answered by the release's own copies. It names `@on.auto/runtime` and `effect` among its `peerDependencies`, so that it runs on the runtime's own `effect` rather than a copy of its own. Installed beside the npm package, it is placed by the command in the release it runs, where its imports reach the packages of that release: copied once for what npm installed, by the integrity npm records for it or else by its files, into a folder of its own that is never removed, so a server that runs from it keeps it. A package that does not name `@on.auto/runtime` is linked, as any other package installed beside the runtime is, and cannot import them.
-
-In the container image, the release's packages are linked in `/app/packages/server/node_modules`, so an image built on the release's installs an extension there, its own dependencies bundled with it:
+In the container image, install the extension in `/app/packages/server/node_modules`, with its own dependencies bundled:
 
 ```dockerfile
 FROM docker.on.auto/onauto/runtime:0.9.1
@@ -278,13 +258,21 @@ USER node
 ENV AUTO_RUNTIME_EXTENSIONS='[{"package":"@acme/forecasts"}]'
 ```
 
-The start stops, naming the package, at a listed package that provides a point this release does not serve, naming the one it serves; that provides one point twice; that is built against another contract, naming both, such as `The extension @acme/forecasts is refused: it provides capability/prediction built against contract 2, and this runtime accepts contract 1`; whose implementation is not a function, or cannot make its capability; whose implementation answers a capability, a folder or an operation that lacks a member or holds one of another kind, naming the member, such as `The extension @acme/forecasts is refused: its capability has no facts` or `its folders[0] has no fold`, a fact on runs whose schema does not read facts of the type it declares alone, or whose type is one the runtime reads as a fact of its own, a folder that cannot be opened, an operation served over HTTP alone, or a capability that is not a plain object of its members, as `defineCapability` of `@on.auto/definitions` makes one; that makes a capability of another type, naming it; and at two extensions that both fill `capability/prediction`, naming both, since one extension at most fills a capability. A listed package that provides no point is loaded and fills nothing.
+#### Extension settings
 
-`integrity` pins the files of a package. It is `sha512-` followed by the base64 of a SHA-512 over every file in the package's folder, its `node_modules` left out but for the packages its `bundleDependencies` names, sorted by the bytes of their paths within the folder, each taken as its path in UTF-8, a NUL, its length in bytes in decimal, a NUL and its bytes. A package that holds a symbolic link stops the start, since its integrity does not cover it. When the files do not have the `integrity` given, the start stops naming the integrity they have.
+Extension settings use environment variables prefixed with `AUTO_RUNTIME_` and the package name in uppercase. Replace each character other than a letter or digit with `_`. For example, `AUTO_RUNTIME_ACME_FORECASTS_REGION` supplies `REGION` to `@acme/forecasts`.
 
-| Variable                  | Default | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| ------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTO_RUNTIME_EXTENSIONS` | none    | The packages the server loads as extensions as it starts, in order of precedence, as the JSON of a list of `{ "package": ..., "integrity": ... }`, `integrity` optional; `extensions` in the file. A package that cannot be imported, exports no manifest, provides a point this release does not serve or a contract other than the release's, or whose files do not have the `integrity` given, stops the start, naming it, as do two packages that fill `capability/prediction` |
+The extension receives only its own settings, with the prefix removed. It cannot read the runtime's settings through this mechanism, and a connection cannot use an extension's variable as a credential. Startup stops if two extensions have equal or overlapping prefixes, such as `AUTO_RUNTIME_ACME_FORECASTS_` and `AUTO_RUNTIME_ACME_FORECASTS_EU_`.
+
+#### Integrity and startup checks
+
+Use `integrity` to pin the package's files. Its value is `sha512-` followed by the base64-encoded digest described in the [extension contract](https://github.com/BeOnAuto/runtime/blob/main/docs/engineering/reference/extensions.md#package-integrity). Symbolic links are not supported. If the files do not match, startup stops and reports their actual integrity.
+
+Startup also stops if a package cannot be loaded, lacks a manifest, uses an unsupported extension point or contract, or provides an invalid implementation. The error names the package and the problem. Two extensions providing `capability/prediction` also stop startup. A package with no extension point can load, but provides no capability.
+
+Keep an extension installed while the database holds facts it recorded. If you remove it, startup can refuse those facts; restore the extension before trying again. See [Upgrades](production.md#upgrades).
+
+Extension authors can find the manifest, ports, return values and validation rules in the [extension contract](https://github.com/BeOnAuto/runtime/blob/main/docs/engineering/reference/extensions.md).
 
 ## Usage ping {#usage-ping}
 

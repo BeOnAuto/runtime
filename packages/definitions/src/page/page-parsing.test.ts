@@ -86,7 +86,7 @@ describe('the fields of a page', () => {
     expect(issuesIn('---\nof: [\n---\nWelcome\n')).toHaveLength(2);
     expect(issuesIn('---\ndescription: ""\nof: playbook\n---\nWelcome\n')).toEqual([
       'Line 2, /description: Expected a value with a length of at least 1',
-      'Line 5: Nothing but white space stands outside the blocks: a page shows {% result %} and {% lately %} and nothing else',
+      'Line 5: Put page content inside {% result %} or {% lately %} blocks. Only whitespace is allowed outside them',
     ]);
   });
 });
@@ -187,14 +187,14 @@ describe('the blocks of a page', () => {
       'Line 4: A page shows at least one block: {% result %} … {% endresult %}, {% lately %} … {% endlately %} or both',
     ]);
     expect(issuesIn(pageOf({ body: `# Posts\n${resultOfTheDate}\n{{ output.date }}` }))).toEqual([
-      'Line 4: Nothing but white space stands outside the blocks: a page shows {% result %} and {% lately %} and nothing else',
-      'Line 8: Nothing but white space stands outside the blocks: a page shows {% result %} and {% lately %} and nothing else',
+      'Line 4: Put page content inside {% result %} or {% lately %} blocks. Only whitespace is allowed outside them',
+      'Line 8: Put page content inside {% result %} or {% lately %} blocks. Only whitespace is allowed outside them',
     ]);
   });
 
   it('stand at the top level, each written once, with no arguments', () => {
     expect(issuesIn(pageOf({ body: `{% if true %}${resultOfTheDate}{% endif %}` }))).toEqual([
-      'Line 4: A block stands at the top level, outside every other block and tag',
+      'Line 4: Put each block at the top level, outside other blocks and tags',
     ]);
     expect(
       issuesIn(
@@ -202,11 +202,11 @@ describe('the blocks of a page', () => {
           body: `{% if true %}\n{% for day in days %}\n${resultOfTheDate}\n{% endfor %}{% else %}x{% endif %}`,
         }),
       ),
-    ).toEqual(['Line 6: A block stands at the top level, outside every other block and tag']);
+    ).toEqual(['Line 6: Put each block at the top level, outside other blocks and tags']);
     expect(issuesIn(pageOf({ body: `{% if true %}x{% endif %}\n${resultOfTheDate}\n{% unless true %}y` }))).toEqual(
       ['Line 4', 'Line 8'].map(
         (line) =>
-          `${line}: Nothing but white space stands outside the blocks: a page shows {% result %} and {% lately %} and nothing else`,
+          `${line}: Put page content inside {% result %} or {% lately %} blocks. Only whitespace is allowed outside them`,
       ),
     );
     expect(issuesIn(pageOf({ body: `${resultOfTheDate}\n${resultOfTheDate}` }))).toEqual([
@@ -218,7 +218,7 @@ describe('the blocks of a page', () => {
       ),
     );
     expect(issuesIn(pageOf({ body: '{% result %}\n{% lately %}{% endlately %}\n{% endresult %}' }))).toEqual([
-      'Line 5: A block stands at the top level, outside every other block and tag',
+      'Line 5: Put each block at the top level, outside other blocks and tags',
     ]);
   });
 });

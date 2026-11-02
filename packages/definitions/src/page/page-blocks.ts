@@ -51,12 +51,12 @@ const endNames: ReadonlySet<string> = new Set(pageBlockNames.map((name) => `end$
 const enclosingTags: ReadonlySet<string> = new Set(['if', 'unless', 'case', 'for', 'tablerow', 'capture', 'comment']);
 
 const outsideWords =
-  'Nothing but white space stands outside the blocks: a page shows {% result %} and {% lately %} and nothing else';
+  'Put page content inside {% result %} or {% lately %} blocks. Only whitespace is allowed outside them';
 
 const noBlockWords =
   'A page shows at least one block: {% result %} … {% endresult %}, {% lately %} … {% endlately %} or both';
 
-const nestedWords = 'A block stands at the top level, outside every other block and tag';
+const nestedWords = 'Put each block at the top level, outside other blocks and tags';
 
 function isBlockName(name: string | undefined): name is PageBlockName {
   return name !== undefined && blockNames.has(name);

@@ -68,7 +68,7 @@ function whatIsHeld({ unknown, unreadable }: Refused): string {
 function ledgerFactsRefused(refused: Refused): LedgerFactsRefused {
   return new LedgerFactsRefused({
     ...refused,
-    message: `The ledger's database holds ${whatIsHeld(refused)}, so it was made by an earlier or a later release of the server than this one reads. A database a later release made wants that release or a later one, and one an earlier release made is not carried forward, so delete the local database and start the server again`,
+    message: `The ledger's database holds ${whatIsHeld(refused)}, so this release cannot read its recorded facts. Use the release that wrote them or a compatible later release. Keep a backup before starting with an empty database`,
   });
 }
 

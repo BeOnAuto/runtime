@@ -122,9 +122,9 @@ describe.each(mcpClientKinds)('the starting prompts on /mcp, for the %s client',
 
     expect(answers).toMatchObject([
       askOf(
-        'Create a playbook in my Auto Runtime with one function and run it on a made-up example. Ask me what the playbook is for and anything else you need first, then give me a link to the run in Studio.',
+        'Create a playbook in Auto with one function and run it on a made-up example. Ask me what the playbook is for and anything else you need first, then give me a link to the run in Studio.',
       ),
-      askOf('Connect Slack to my Auto Runtime for my team, and once it is connected tell me what it can do.'),
+      askOf('Connect Slack to Auto for my team, then tell me what it can do.'),
     ]);
   });
 });

@@ -168,7 +168,7 @@ describe('the operation of cancelling a run', () => {
       registration.plainLanguage?.outcome({ ...asStarted, type: 'echo', name: 'greet' }, { run_id: relayedId }),
     ]).toEqual([
       'cancel the run',
-      'The greeting “greet” is being cancelled: it ends as cancelled within a moment, unless it finishes first, and how it ended can be looked up then.',
+      'Cancellation requested for the greeting “greet”. It may finish before cancellation takes effect. Check the run for its final status.',
     ]);
   });
 });

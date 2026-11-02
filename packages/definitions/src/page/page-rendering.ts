@@ -18,12 +18,12 @@ export type ViewsShown =
   | { readonly state: 'building' }
   | { readonly state: 'stalled' };
 
-export const viewsBeingBuilt = "The figures on this page are being worked out from the playbook's history.";
+export const viewsBeingBuilt = "Building this page's figures from the playbook's history…";
 
 export const viewsStalled =
-  'The figures on this page stopped at an event they could not take, and wait for a corrected page.';
+  'The figures stopped updating because the page could not process an event. Correct the page to continue.';
 
-export const runFailed = 'The run failed inside the runtime.';
+export const runFailed = 'The run failed.';
 
 function subjectVariables({ type, name, description, version }: SubjectShown): Schema.JsonObject {
   return { type, name, description, version };
@@ -48,7 +48,7 @@ export function resultShown(parsed: ParsedTemplate, run: RunShown, subject: Subj
     today: moment.today,
     now: moment.now,
   };
-  return shown(parsed, { variables, clock: moment.clock, stopped: 'The page could not show this run:' });
+  return shown(parsed, { variables, clock: moment.clock, stopped: 'Could not display this run:' });
 }
 
 function viewsOf(kept: Schema.Json, declared: PageViews): Schema.JsonObject {
@@ -79,5 +79,5 @@ export function latelyShown(
     today: moment.today,
     now: moment.now,
   };
-  return shown(parsed, { variables, clock: moment.clock, stopped: 'The page could not show its figures:' });
+  return shown(parsed, { variables, clock: moment.clock, stopped: 'Could not display this page’s figures:' });
 }

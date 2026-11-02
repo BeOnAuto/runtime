@@ -58,7 +58,7 @@ const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
   [
     'an account closed since its org was deleted',
     { reason: 'conflict', kind: 'account_closed', because: 'org_deleted' },
-    'Could not run the workflow “tally”: the account it runs under is closed, since its org was deleted. An owner can restore the org only for a limited time, until the date at the resolve_at link in the details below, after which it is purged and its runs never run again; once it is restored, run this again.',
+    'Could not run the workflow “tally”: the account it runs under is closed, since its org was deleted. Auto support can restore the organization until the date at the resolve_at link below. After that, it is permanently removed and its runs cannot resume. If support restores it, run this again.',
   ],
   [
     'an account closed since its org was deleted for good',
@@ -177,7 +177,7 @@ describe('the words of a closed account said of a run’s record', () => {
       explanationOf({ reason: 'conflict', kind: 'account_closed', because: 'org_deleted' }),
     ].map(({ remedyOnRecord = '' }) => remedyOnRecord);
 
-    expect(onRecord.map((remedy) => remedy.includes('the detail of the rejection below'))).toEqual([true, true]);
+    expect(onRecord.map((remedy) => remedy.toLowerCase().includes('rejection below'))).toEqual([true, true]);
     expect(onRecord.filter((remedy) => remedy.includes('resolve_at'))).toEqual([]);
     expect(onRecord.flatMap((remedy) => internalTermsIn(remedy))).toEqual([]);
   });

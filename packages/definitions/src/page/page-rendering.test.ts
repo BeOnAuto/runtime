@@ -103,7 +103,7 @@ describe('the variables of result', () => {
       shownOver('{{ output.constructor }}'),
       shownOver('{{ output.tags }}{{ output.post }}', { tags: ['a', 'b'], post: {} }),
     ]).toEqual([
-      'The page could not show this run: it reads output.constructor, which the value does not have, on line 4.',
+      'Could not display this run: the value has no field output.constructor, on line 4.',
       'ab[object Object]',
     ]);
   });
@@ -118,9 +118,9 @@ describe('the variables of result', () => {
 describe('a render that stops', () => {
   it('shows the one line that says why, with its line', () => {
     expect(shownOver('\n{{ output.date }}')).toBe(
-      'The page could not show this run: it reads output.date, which the value does not have, on line 5.',
+      'Could not display this run: the value has no field output.date, on line 5.',
     );
-    expect(shownOver('{{ "dollars" | money }}')).toMatch(/^The page could not show this run: .+, on line 4\.$/u);
+    expect(shownOver('{{ "dollars" | money }}')).toMatch(/^Could not display this run: .+, on line 4\.$/u);
   });
 
   it('names the bound a render went past', () => {
@@ -131,9 +131,9 @@ describe('a render that stops', () => {
       shownOver('{% for each in (1..6000000) %}{% endfor %}'),
       shownOver('{% for each in (1..3) %}{{ each }}{% endfor %}', {}, stepping),
     ]).toEqual([
-      'The page could not show this run: it rendered more than the 65536 bytes a block may, on line 4.',
-      'The page could not show this run: it charged more than the 5000000 characters or items a render may, on line 4.',
-      'The page could not show this run: it took more than the 200 ms a render may, on line 4.',
+      'Could not display this run: the rendered block exceeds 65536 bytes, on line 4.',
+      'Could not display this run: rendering exceeded 5000000 characters or items, on line 4.',
+      'Could not display this run: rendering exceeded 200 ms, on line 4.',
     ]);
   });
 });
@@ -147,7 +147,7 @@ describe('lately, as the documented page shows it', () => {
 
   it('reads a view the fold has not given yet as null, so its chart says it has no data', () => {
     expect(latelyShown(documentedLatelyTemplate, { state: 'live', views: {} }, { declared, subject }, moment)).toBe(
-      ['There is no data for this chart yet.', '', 'There is no data for this chart yet.'].join('\n'),
+      ['No data for this chart yet.', '', 'No data for this chart yet.'].join('\n'),
     );
   });
 
@@ -162,7 +162,7 @@ describe('lately, as the documented page shows it', () => {
     const stepping: ReadMoment = { ...moment, clock: renderClockOf(steppingClock(1000)) };
 
     expect(latelyShown(documentedLatelyTemplate, { state: 'live', views: {} }, { declared, subject }, stepping)).toBe(
-      'The page could not show its figures: it took more than the 200 ms a render may, on line 54.',
+      'Could not display this page’s figures: rendering exceeded 200 ms, on line 54.',
     );
   });
 });

@@ -19,12 +19,11 @@ function shellWord(text: string): string {
   return unquotedInAShell.test(text) ? text : `'${text.replaceAll("'", String.raw`'\''`)}'`;
 }
 
-const everythingInItGoes =
-  'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';
+const everythingInItGoes = 'Deleting the ledger removes all its playbooks, definitions, runs and connections.';
 
 function deletingTheFiles(file: string): LedgerRemedy {
   return {
-    says: `Delete the ledger and start Auto Runtime again. ${everythingInItGoes}`,
+    says: `To start over, back up the ledger, then delete it and restart Auto Runtime. ${everythingInItGoes}`,
     command: `rm -f ${[file, `${file}-wal`, `${file}-shm`].map((word) => shellWord(word)).join(' ')}`,
   };
 }
@@ -40,13 +39,13 @@ function volumeHolding(folder: string): string {
 function deletingTheFilesOnTheVolume(file: string): LedgerRemedy {
   const name = basename(file);
   return {
-    says: `Delete ${name}, ${name}-wal and ${name}-shm from ${volumeHolding(dirname(file))}, or remove the volume, and start Auto Runtime again. ${everythingInItGoes}`,
+    says: `To start over, back up the volume, then delete ${name}, ${name}-wal and ${name}-shm from ${volumeHolding(dirname(file))}, or remove the volume. Restart Auto Runtime afterward. ${everythingInItGoes}`,
     command: undefined,
   };
 }
 
 const emptyingTheDatabase: LedgerRemedy = {
-  says: 'Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs.',
+  says: 'To start over, point DATABASE_URL at a separate empty database and restart Auto Runtime. You can also back up and empty the current database. The new ledger contains no playbooks, definitions, runs or connections.',
   command: undefined,
 };
 

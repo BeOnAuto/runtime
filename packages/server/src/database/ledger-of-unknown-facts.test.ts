@@ -20,7 +20,7 @@ const eitherVersionOrAnExtension =
 const listingFirst =
   'If an extension that is no longer listed in extensions declares them, list it again and start Auto Runtime again. If a newer version of Auto Runtime made the ledger, start that version or a later one, or restore the backup taken before the upgrade. A ledger an earlier version made is not carried forward:';
 
-const goesWithIt = 'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';
+const goesWithIt = 'Deleting the ledger removes all its playbooks, definitions, runs and connections.';
 
 describe('a ledger that holds facts of types this version of Auto Runtime does not read', () => {
   it('names each type, says a newer or an earlier version or an extension no longer listed made it, and what to do for each, listing the extension again first and ending with the command that deletes a file', () => {
@@ -33,7 +33,7 @@ describe('a ledger that holds facts of types this version of Auto Runtime does n
     );
 
     expect(inTheFile.message).toBe(
-      `The ledger is kept in the file /data/ledger.db, and holds facts of the type metering_faulted, ${eitherVersionOrAnExtension} ${listingFirst} Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f /data/ledger.db /data/ledger.db-wal /data/ledger.db-shm`,
+      `The ledger is kept in the file /data/ledger.db, and holds facts of the type metering_faulted, ${eitherVersionOrAnExtension} ${listingFirst} To start over, back up the ledger, then delete it and restart Auto Runtime. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f /data/ledger.db /data/ledger.db-wal /data/ledger.db-shm`,
     );
     expect(inTheFile.unknown).toEqual(['metering_faulted']);
     expect(String(inTheFile)).toMatch(/^LedgerOfUnknownFacts: The ledger is kept in the file /u);
@@ -56,7 +56,7 @@ describe('a ledger that holds facts of types this version of Auto Runtime does n
     );
 
     expect(inTheDatabase.message).toBe(
-      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and holds facts of the types license_refreshed, metering_faulted, ${eitherVersionOrAnExtension} ${listingFirst} Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs. ${askedAt}`,
+      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and holds facts of the types license_refreshed, metering_faulted, ${eitherVersionOrAnExtension} ${listingFirst} To start over, point DATABASE_URL at a separate empty database and restart Auto Runtime. You can also back up and empty the current database. The new ledger contains no playbooks, definitions, runs or connections. ${askedAt}`,
     );
     expect(inTheDatabase.message).not.toContain('a-secret-password');
     expect(inTheImage).toMatchObject({

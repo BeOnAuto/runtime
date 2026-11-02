@@ -136,9 +136,9 @@ export const creditExplanationsByBecause: Readonly<
     org_deleted: {
       why: 'the account it runs under is closed, since its org was deleted',
       remedy:
-        'An owner can restore the org only for a limited time, until the date at the resolve_at link in the details below, after which it is purged and its runs never run again; once it is restored, run this again.',
+        'Auto support can restore the organization until the date at the resolve_at link below. After that, it is permanently removed and its runs cannot resume. If support restores it, run this again.',
       remedyOnRecord:
-        'An owner can restore the org only for a limited time, after which it is purged and its runs never run again; the detail of the rejection below gives what its account said, and once the org is restored, it can be run again.',
+        'Auto support can restore the organization for a limited time. After that, it is permanently removed and its runs cannot resume. The rejection below gives the account details. If support restores the organization, this can be run again.',
     },
     org_purged: {
       why: 'the account it runs under is closed, since its org was deleted for good',

@@ -143,7 +143,7 @@ describe('a key of an org whose account Auto says was deleted', () => {
 
     expect(overHttp).toMatchObject({ status: 409, body: problem });
     expect({ isError: overMcp?.isError, problem: problemIn(overMcp) }).toMatchObject({ isError: true, problem });
-    expect(plainTextIn(overMcp)).toContain('An owner can restore the org only for a limited time, until the date at');
+    expect(plainTextIn(overMcp)).toContain('Auto support can restore the organization until the date at');
     expect((await tallied(server)).status).toBe(200);
   });
 });

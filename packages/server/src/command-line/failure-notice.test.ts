@@ -34,8 +34,9 @@ describe('the notice that a server could not start on a ledger file of an earlie
       '  layout 1.',
       '',
       '  What you can do',
-      '    Delete the ledger and start Auto Runtime again. Everything in the ledger',
-      '    goes with it, every playbook, definition, run and connection among it.',
+      '    To start over, back up the ledger, then delete it and restart Auto',
+      '    Runtime. Deleting the ledger removes all its playbooks, definitions,',
+      '    runs and connections.',
       '',
       '      rm -f /Users/ada/.auto-runtime/ledger.db /Users/ada/.auto-runtime/ledger.db-wal /Users/ada/.auto-runtime/ledger.db-shm',
       '',
@@ -90,12 +91,13 @@ describe('the notice that a server in the image could not start on a ledger file
       distribution: 'docker',
     });
 
-    expect(startupFailureNoticeFor(notATerminal)(inTheImage)?.split('\n').slice(7, 14)).toEqual([
+    expect(startupFailureNoticeFor(notATerminal)(inTheImage)?.split('\n').slice(7, 15)).toEqual([
       '  What you can do',
-      '    Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume',
-      "    mounted at /data, the ledger's folder /app/data in the image, or remove",
-      '    the volume, and start Auto Runtime again. Everything in the ledger goes',
-      '    with it, every playbook, definition, run and connection among it.',
+      '    To start over, back up the volume, then delete ledger.db, ledger.db-wal',
+      "    and ledger.db-shm from the volume mounted at /data, the ledger's folder",
+      '    /app/data in the image, or remove the volume. Restart Auto Runtime',
+      '    afterward. Deleting the ledger removes all its playbooks, definitions,',
+      '    runs and connections.',
       '',
       '  Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8',
     ]);
@@ -123,9 +125,10 @@ describe('the notice that a server could not start on a ledger in PostgreSQL of 
       '  it cannot read a ledger in layout 1.',
       '',
       '  What you can do',
-      '    Point DATABASE_URL at an empty database, or empty this one, and start',
-      '    Auto Runtime again. The ledger then starts with no playbooks,',
-      '    definitions or runs.',
+      '    To start over, point DATABASE_URL at a separate empty database and',
+      '    restart Auto Runtime. You can also back up and empty the current',
+      '    database. The new ledger contains no playbooks, definitions, runs or',
+      '    connections.',
       '',
       '  Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8',
     ]);

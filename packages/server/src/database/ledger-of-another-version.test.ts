@@ -27,7 +27,7 @@ function refusedFileAt(file: string, distribution: 'npx' | 'docker' = 'npx') {
 const notCarried =
   'was made by an earlier version of Auto Runtime, whose ledger this version does not carry forward. This version keeps the ledger in layout 3 and carries forward a ledger in layout 2 or later, so it cannot read';
 
-const goesWithIt = 'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';
+const goesWithIt = 'Deleting the ledger removes all its playbooks, definitions, runs and connections.';
 
 const askedAt = 'Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8';
 
@@ -38,7 +38,7 @@ describe('a ledger made by an earlier version of Auto Runtime than this one carr
     const refused = refusedFileAt('/Users/ada/.auto-runtime/ledger.db');
 
     expect(refused.message).toBe(
-      `The ledger is kept in the file /Users/ada/.auto-runtime/ledger.db, and ${notCarried} a ledger in layout 1. Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f /Users/ada/.auto-runtime/ledger.db /Users/ada/.auto-runtime/ledger.db-wal /Users/ada/.auto-runtime/ledger.db-shm`,
+      `The ledger is kept in the file /Users/ada/.auto-runtime/ledger.db, and ${notCarried} a ledger in layout 1. To start over, back up the ledger, then delete it and restart Auto Runtime. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f /Users/ada/.auto-runtime/ledger.db /Users/ada/.auto-runtime/ledger.db-wal /Users/ada/.auto-runtime/ledger.db-shm`,
     );
     expect(String(refused)).toMatch(/^LedgerOfAnotherVersion: The ledger is kept in the file /u);
     expect(refused).toMatchObject(inAnEarlierLayout);
@@ -57,7 +57,7 @@ describe('a ledger made by an earlier version of Auto Runtime than this one carr
     const refused = ledgerOfAnotherVersion(inAnEarlierLayout, { ledger: inPostgreSQL, distribution: 'npx' });
 
     expect(refused.message).toBe(
-      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and ${notCarried} a ledger in layout 1. Point DATABASE_URL at an empty database, or empty this one, and start Auto Runtime again. The ledger then starts with no playbooks, definitions or runs. ${askedAt}`,
+      `The ledger is kept in PostgreSQL, in the database auto_runtime on db.example.com:5432, and ${notCarried} a ledger in layout 1. To start over, point DATABASE_URL at a separate empty database and restart Auto Runtime. You can also back up and empty the current database. The new ledger contains no playbooks, definitions, runs or connections. ${askedAt}`,
     );
     expect(refused.remedy.command).toBeUndefined();
     expect(refused.message).not.toContain('a-secret-password');
@@ -67,11 +67,11 @@ describe('a ledger made by an earlier version of Auto Runtime than this one carr
     const refused = refusedFileAt('/app/data/ledger.db', 'docker');
 
     expect(refused.remedy).toEqual({
-      says: `Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume, and start Auto Runtime again. ${goesWithIt}`,
+      says: `To start over, back up the volume, then delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume. Restart Auto Runtime afterward. ${goesWithIt}`,
       command: undefined,
     });
     expect(refused.message).toBe(
-      `The ledger is kept in the file /app/data/ledger.db, and ${notCarried} a ledger in layout 1. Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume, and start Auto Runtime again. ${goesWithIt} ${askedAt}`,
+      `The ledger is kept in the file /app/data/ledger.db, and ${notCarried} a ledger in layout 1. To start over, back up the volume, then delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume. Restart Auto Runtime afterward. ${goesWithIt} ${askedAt}`,
     );
   });
 });
@@ -113,13 +113,13 @@ describe('a ledger made by a newer version of Auto Runtime', () => {
 describe('the words for a ledger file of an earlier version in the image', () => {
   it('name the volume the image mounts at /data when the ledger is kept in its folder /app/data', () => {
     expect(refusedFileAt('/app/data/ledger.db', 'docker').remedy.says).toMatch(
-      /^Delete ledger\.db, ledger\.db-wal and ledger\.db-shm from the volume mounted at \/data, the ledger's folder \/app\/data in the image, or remove the volume, /u,
+      /^To start over, back up the volume, then delete ledger\.db, ledger\.db-wal and ledger\.db-shm from the volume mounted at \/data, the ledger's folder \/app\/data in the image, or remove the volume\. /u,
     );
   });
 
   it('name only the folder of a ledger kept anywhere else, from the volume that holds it', () => {
     expect(refusedFileAt('/mnt/ledger/runtime.db', 'docker').remedy).toEqual({
-      says: `Delete runtime.db, runtime.db-wal and runtime.db-shm from the volume that holds /mnt/ledger, or remove the volume, and start Auto Runtime again. ${goesWithIt}`,
+      says: `To start over, back up the volume, then delete runtime.db, runtime.db-wal and runtime.db-shm from the volume that holds /mnt/ledger, or remove the volume. Restart Auto Runtime afterward. ${goesWithIt}`,
       command: undefined,
     });
   });

@@ -41,7 +41,7 @@ const workflowType = 'workflow';
 
 const pageType = 'page';
 
-const whatIsAskedOfAPlaybook = 'What the person asks the playbook to do is a workflow, its functions the steps';
+const whatIsAskedOfAPlaybook = 'Put the work the person asks for into a workflow whose steps use its functions';
 
 const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
   reasoning: 'prompts a model',

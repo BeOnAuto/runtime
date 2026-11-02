@@ -116,7 +116,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 - `out_of_touch`, `This runtime hasn't reached Auto since` a date: the runtime has not reached `billing.on.auto` for 28 days since its last license. Check its egress; it goes back to its org's credits at its next report.
 - `key_rotated`, `This runtime's license key was replaced`: an owner rotated the key in Studio. Activate the new key they were shown; a key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there. If the key is lost, an owner rotates it again at `resolve_at`.
 - `key_revoked`, `This runtime was removed from its organization` or `Auto no longer accepts this runtime's license key`: an owner removed the runtime. An owner registers it again at `resolve_at`; activate the new key.
-- `org_closed`, `This runtime's organization at Auto is closed`: the org was deleted. An owner can restore it, for a limited time only, and the runtime goes back to its credits at its next report; otherwise activate a key of another org.
+- `org_closed`, `This runtime's organization at Auto is closed`: the organization was deleted. Auto support can restore it only within the restoration window. If restored, the runtime resumes using its credits at the next report. Otherwise, activate a key from another organization.
 - `not_activated`, `This runtime's license key isn't activated yet`: the runtime has not reached Auto since it was given the key. Check its egress; it activates the key at its next report, within the hour.
 
 ## Activating a key, or a run on offline credits, is refused as `license_invalid` {#license-invalid}

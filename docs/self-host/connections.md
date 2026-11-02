@@ -232,7 +232,32 @@ The kind of a break is `credential_refused` where the server answered `401` to t
 
 Auto records the break once, as the first use that meets it finds it, and that use, a search among them, already says the connection is broken. Calls later in the same run still reach the server until the run ends; the next run, and the next call outside a run, refuse the connection without a request to its server. A use that began before the person connected the connection again breaks nothing.
 
-The way back is to reconnect it. `reconnect_connection`, `POST /connections/{id}/link`, under `org:write`, gives a connection that is `broken`, `connected`, or `pending`, its link open or not, a new link to Studio's page, which lasts 24 hours and replaces the one before, and answers the connection with `connect`, as `add_connection` does; nothing else of the connection changes. A broken connection of a `reference` takes no link: Auto checks that its variable is set and connects it again at once, or refuses with `409` while it is not, so set it and start Auto again first. A pending or connected one takes a link as any other does, since only the person's approval connects a connection. Where people sign in, only the person who added the connection may reconnect it, as only they may use its link, and a key may not; in local mode the local developer reconnects any. It refuses with `409` a connection that is removed, which is added again instead. A link a reconnection replaced opens nothing: its token is answered `404`, in words that say a newer link replaced it, so the person opens the newest. Studio offers the reconnection beside the connection. On the page the person who added the connection approves it again, gives its credential again or signs in again, and the connection is `connected` again with the new credential: Auto forgets the secret it held before, and records who connected it and when. A consent reconnected with another client than before has its old tokens revoked at the provider, as removing the connection does, and one reconnected with the same client has them forgotten without a revocation, since some providers end the person's whole grant to the client on one revocation, the new tokens with it. A consent is reconnected with the sign-in setup recorded when the connection was added, so a connection of a provider whose way of consent has changed since is removed and added again; it asks the scopes its credential asks with those of the scopes the connection asked since that it was granted, a group of more among them, so the person keeps what they allowed, and the credential's alone where no client set up here covers the rest. Given `more`, `reconnect_connection` gives the link for a group of more instead, as [A consent that asks more](#a-consent-that-asks-more) sets out, and refuses with `400` a group the connection's way does not name and with `409` one it holds already or no client set up here covers. A function that names it uses the new credential from its next run.
+### Reconnect a connection
+
+Use `reconnect_connection` (`POST /connections/{id}/link`, with `org:write`) to reconnect a `broken`, `connected` or `pending` connection. Studio also offers this action beside the connection.
+
+The operation returns the connection with a new `connect` link, as `add_connection` does. The link lasts 24 hours and replaces any previous link, whether it is still open or has expired. Nothing else changes until the person completes the page. Opening an older link returns `404` and explains that a newer link replaced it.
+
+Who can reconnect depends on the runtime:
+
+- On a runtime that signs people in, only the person who added the connection can reconnect it or use its link. An API key cannot do this.
+- In local mode, the local developer can reconnect any connection.
+- A removed connection returns `409`; add it again instead.
+
+A broken connection using a `reference` credential is reconnected without a link. Auto checks its environment variable and reconnects at once if it is set; otherwise it returns `409`. Set the variable and restart Auto before retrying. A pending or connected reference connection still needs approval through the page.
+
+On the page, the person approves the connection and supplies credentials or signs in again. Auto marks it `connected`, replaces the stored credential, and records who connected it and when. Functions use the new credential from their next run.
+
+For OAuth connections, Auto handles the previous tokens according to the client:
+
+- With a different client, Auto revokes the old tokens at the provider, as it does when removing a connection.
+- With the same client, Auto forgets the old tokens without revoking them. Some providers revoke the person's entire grant to a client, which would also invalidate the new tokens.
+
+Reconnection uses the sign-in setup recorded when the connection was added. If the provider's sign-in method has changed, remove the connection and add it again.
+
+The new consent asks for the credential's scopes and any additional scopes previously requested and granted. If no configured client covers those additional scopes, it asks only for the credential's scopes.
+
+To request another scope group, pass `more` as described in [A consent that asks more](#a-consent-that-asks-more). An unknown group returns `400`. A group already granted, or not covered by a configured client, returns `409`.
 
 ## Which runtimes take connections
 

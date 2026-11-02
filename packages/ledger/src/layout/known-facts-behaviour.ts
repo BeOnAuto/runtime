@@ -23,7 +23,7 @@ const EndedInAnotherShapeSchema = factOf('run_ended', Schema.Struct({ outcome: S
 const NotedInAnotherShapeSchema = factOf('run_noted', Schema.Struct({ text: Schema.String }), ActedContextSchema);
 
 const madeByAnotherRelease =
-  'so it was made by an earlier or a later release of the server than this one reads. A database a later release made wants that release or a later one, and one an earlier release made is not carried forward, so delete the local database and start the server again';
+  'so this release cannot read its recorded facts. Use the release that wrote them or a compatible later release. Keep a backup before starting with an empty database';
 
 async function aDatabaseHoldingFacts(entry: LedgerEntry): Promise<string> {
   const database = await entry.aDatabase();

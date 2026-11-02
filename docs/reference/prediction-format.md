@@ -178,7 +178,11 @@ A data test can also run out of time or memory, and the work that judges a page'
 
 ## The forecaster
 
-The forecaster answers every question in the server's own process, within the question's call, unless an extension fills `capability/prediction`, which then answers every question in its place (see [Extensions](../self-host/configuration.md#extensions)). It reads the series' window from the dataset: each period's value as the dataset folds it, a period with no row being 0 for a `count` or a `sum` and unobserved for a `last` or a `mean`. The series' **history** runs to the origin from its first period with a row in the window, or from the window's first period for a `count` or a `sum` whose series has a row before the window; a period before that holds no history.
+The built-in forecaster answers within the request that asks the question, in the server's process. An extension at `capability/prediction` replaces it for every question; see [Extensions](../self-host/configuration.md#extensions).
+
+It reads the series' window from the dataset. A period with no row is treated as 0 for `count` or `sum`, and as unobserved for `last` or `mean`.
+
+The series' history ends at the origin. It starts at the first period with a row in the window, with one exception: for `count` or `sum`, a series with a row before the window has history from the window's first period. Earlier periods are outside its history.
 
 ### The methods
 
@@ -195,7 +199,9 @@ A total is forecast by `level-adjusted-seasonal-naive`, `seasonal-naive` or `run
 
 ### The backtest
 
-A method applies when the history lets it forecast the series' own past at enough origins: for each step ahead, at least three earlier origins whose forecast it can make and whose truth was observed, so each step has three misses, each the truth less the forecast. On a series with no period unobserved, a method that needs `N` periods for one forecast so applies `h` steps ahead once the history holds `N + h + 2` periods, so `persistence` answers one week ahead from 4 weeks of history and two days ahead from 5 days.
+A method applies when it can forecast enough earlier points in the series. For each step ahead, it needs at least three earlier origins where it can make a forecast and the actual value was observed. Each miss is the actual value minus the forecast.
+
+When every period is observed, a method needing `N` periods for one forecast can predict `h` steps ahead once it has `N + h + 2` periods of history. For example, `persistence` needs 4 weeks to predict one week ahead, or 5 days to predict two days ahead.
 
 - A question of horizons is backtested at every origin of the history from which its steps fall within the history, and for its longest horizon, so every horizon it asks is answered by the same method.
 - A total is backtested as a total: at the same point of each past enclosing period, its origin as many periods into that period as the question's is into its own, and at its last period but one where that period is shorter; its truth is the sum of the periods that remained to that period's end, and a past total counts only where every one of them was observed.

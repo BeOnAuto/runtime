@@ -28,7 +28,7 @@ describe('the info string of a chart block', () => {
   it('is refused for a kind the table of kinds does not list, or none', () => {
     const refused = {
       refused:
-        'a chart names its kind after chart, one of line, bars, stacked, share, histogram, scatter, bubble, heatmap, range, funnel, calendar, timeline, table, figure, text',
+        'specify a chart type after chart: line, bars, stacked, share, histogram, scatter, bubble, heatmap, range, funnel, calendar, timeline, table, figure, text',
     };
 
     expect([chartInfoOf('chart pie'), chartInfoOf('chart')]).toEqual([refused, refused]);
@@ -41,10 +41,10 @@ describe('the info string of a chart block', () => {
       chartInfoOf('chart bars x=Channel x=Day'),
       chartInfoOf('chart bars Channel'),
     ]).toEqual([
-      { refused: 'a line chart takes no roles; leave out the role x' },
-      { refused: 'a bar chart takes the roles x, y, and color; the role size is not one of them' },
-      { refused: 'the role x is written twice' },
-      { refused: 'a role is written role=column, such as x=Channel; Channel is not' },
+      { refused: 'a line chart supports no roles; leave out x' },
+      { refused: 'a bar chart supports x, y, and color; size is not supported' },
+      { refused: 'the role x is assigned twice' },
+      { refused: 'Channel is not a valid role assignment; use role=column, such as x=Channel' },
     ]);
   });
 });

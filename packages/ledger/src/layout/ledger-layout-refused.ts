@@ -18,8 +18,8 @@ function whatWasFound(found: number | undefined): string {
 
 function whatToDo(found: number | undefined, kept: number): string {
   return found !== undefined && found > kept
-    ? 'Upgrades go forward only, and a newer database wants a newer release of the server'
-    : 'A database older than that is not carried forward, so delete the local database and start the server again';
+    ? 'Upgrades go forward only. Open this database with the release that upgraded it, or a compatible later release'
+    : 'This release cannot migrate this older database. Keep a backup; to start fresh, use a separate empty database';
 }
 
 export function ledgerLayoutRefused({ found, kept, floor }: RefusedLayout): LedgerLayoutRefused {

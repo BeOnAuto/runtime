@@ -132,7 +132,7 @@ describe('the words of the answer after the link of a connection', () => {
     await reconnecting(h, link.id);
 
     expect(await wordsAfterTheLink(h, link)).toBe(
-      'The connection “notes” is pending, and a newer link, still open, replaced the one offered: the person who added it opens the newest, and reconnecting it would replace that one too.',
+      'The connection “notes” is pending. A newer link is available. The person who added the connection should open that link; reconnecting would replace it again.',
     );
   });
 

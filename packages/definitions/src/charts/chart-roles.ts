@@ -53,7 +53,7 @@ function placedRoles({ kind, roles }: ChartInfo, columns: readonly string[]): Pl
   for (const [role, column] of roles) {
     const index = columns.indexOf(column);
     if (index === -1) {
-      return { why: `the role ${role} names ${column}, which is not a column of the table` };
+      return { why: `the table has no column named ${column} for the role ${role}` };
     }
     placed.set(role, index);
   }
@@ -61,7 +61,7 @@ function placedRoles({ kind, roles }: ChartInfo, columns: readonly string[]): Pl
   for (const role of kind.needs.filter((needed) => !placed.has(needed))) {
     const index = free.shift();
     if (index === undefined) {
-      return { why: `${kind.noun} needs a column for ${role}, and the table has none left` };
+      return { why: `${kind.noun} needs another column for ${role}` };
     }
     placed.set(role, index);
   }
@@ -91,7 +91,7 @@ export function tableRolesWhy(info: ChartInfo, table: Json): string | undefined 
     const misfit = isDrawn(info.kind, placing.placed, row) ? cellWhy(info.kind, placing.placed, row) : undefined;
     if (misfit !== undefined) {
       const [role, index] = misfit;
-      return `row ${number_ + 1} of the column ${String(columns[index])} is not ${fitOf(info.kind, role).words}, as ${role} needs`;
+      return `${String(columns[index])}, row ${number_ + 1}, must contain ${fitOf(info.kind, role).words} for ${role}`;
     }
   }
   return undefined;

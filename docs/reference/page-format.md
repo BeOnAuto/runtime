@@ -2,7 +2,12 @@
 
 # Page format
 
-A page says how a workflow, a function or the whole playbook presents its results to a person. It holds two templates: `result`, which shows one run, and `lately`, which shows the runs so far through views that its fold keeps of the playbook's events. Both render Markdown, with charts written as fenced blocks. The API stores a page as a definition of the type `page`.
+A page presents results from a workflow, a function or the whole playbook. It has two templates:
+
+- `result` shows one run.
+- `lately` summarizes runs over time, using views derived from the playbook's events.
+
+Both render Markdown and can include charts in fenced blocks. The API stores a page as a definition with type `page`.
 
 A page is not a function, and it never runs:
 
@@ -182,7 +187,9 @@ The fold runs once for every run of the workflow that succeeds, whatever it retu
 - An event without a time adds nothing. An event dated before the last point counts for that point's day, so the points stay in time order, as a series needs.
 - The line keeps the 30 days up to the latest run. The channels keep their counts since the first run, at most 200 of them, the most a `categories` view holds.
 
-So the views take at most 85,678 bytes as JSON, about 84 KiB, under the 512 KiB they may take: 30 points of at most 44 bytes, and 200 channels of at most 420 bytes, with their field names and punctuation. A fold that raises an error, or returns a view its shape refuses, stops the page's views at that event; see [When the views stall](#when-the-views-stall).
+These views take at most 85,678 bytes of JSON, about 84 KiB, within the 512 KiB limit. That includes 30 points of up to 44 bytes, 200 channels of up to 420 bytes, and their field names and punctuation.
+
+If the fold raises an error or returns a view that does not match its shape, updates stop at that event. See [When the views stall](#when-the-views-stall).
 
 ## A minimal page
 
@@ -242,13 +249,17 @@ Each point of a series has a time, and the fold chooses where it comes from:
 - the time of the run, `event.time`, as the fold of [the page document](#a-page-document) keys the posts of each day;
 - a period the run's output carries, such as `month` here, or a `week` or a `date`.
 
-Key a view by the time of the run when each run is about the moment it runs, such as the posts drafted this morning; when a run is about a period, such as the month it closes, carry that period in its output and key the view by it, so that a backfill or a late run lands on the period it is about. Keyed by the time of the run, a year of months closed in one afternoon would all land on that afternoon's day.
+Use the run's time when the work concerns that moment, such as posts drafted this morning. When the work concerns a specific period, such as the month being closed, include that period in the output and use it to key the view.
+
+This keeps backfilled and late runs in the period they describe. Using the run's time would put a year of months closed in one afternoon under that afternoon's date.
 
 A period the fold reads must be in the form of its series' `period`, such as `YYYY-MM` for a month or `YYYY-Www` for a week; see [Output shapes](output-shapes.md#series). A value in another form would fail the view's shape and stall the views, so the fold passes it over.
 
 ### One value for each period
 
-A month has one revenue, however often it is closed, and a run may be repeated for the same period, as when a month is closed again after a correction. So the fold drops the month's point before it adds the run's, and a repeated run replaces it. A fold that added each run's revenue to its month would double the revenue of a month closed twice. Add runs together only where each run brings something new, as each morning's posts do.
+A month has one revenue figure, even if the month is closed again after a correction. This fold removes the existing point for that month before adding the new one, so a repeated run replaces the figure.
+
+Adding the figures instead would count a month twice. Add runs together only when each run contributes new data, as the morning-posts example does.
 
 ## Fields
 
@@ -325,7 +336,7 @@ The server that runs the playbook's workflows keeps the views, as it keeps a rec
 
 ### When the views stall
 
-A fold that cannot take an event stops the page's views at that event, as a recall function's view stops. The views keep what they folded before, `result` still renders, and `page.lately` is the one line that says they stopped. The standing names the kind of stall:
+If a fold cannot process an event, updates stop at that event. The views retain their earlier data, and `result` can still render. In place of `page.lately`, the runtime returns a message explaining that updates stopped. The standing identifies the cause:
 
 | Kind      | At that event                                                                                        |
 | --------- | ---------------------------------------------------------------------------------------------------- |
@@ -384,7 +395,7 @@ A run that was rejected or failed is not rendered through the template. Its `pag
 | The run  | `page.result`                                                                                                                                                      |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Rejected | `The run was rejected as <reason>, <kind>.`, written without `, <kind>` where the rejection has no kind, and followed by the rejection's `detail` where it has one |
-| Failed   | `The run failed inside the runtime.`                                                                                                                               |
+| Failed   | `The run failed.`                                                                                                                                                  |
 
 So a run whose request nobody answered in time shows `The run was rejected as unanswered, expired.` as its headline.
 
@@ -487,8 +498,8 @@ A role names the column of a table that gives one part of the chart:
 
 - A fence written out in a template is checked when the page is saved. Its kind must be one of the table's, and each role one its kind takes, written once. A fence whose info string the template writes with `{{ }}` or a tag is checked when it renders.
 - The body is checked when it renders: its JSON must match a shape the kind reads, and each role must name a column of the table, with cells that fit it.
-- A block that fails renders as its data in a table, under one line that says why, such as `This chart could not be drawn: a line chart reads a series, and this is categories.` A body that is not JSON, or that matches no shape, is shown as code under that line.
-- A block whose body is `null`, a view with no data yet, renders as the one line `There is no data for this chart yet.`
+- A block that fails renders as its data in a table, under one line that says why, such as `Couldn’t display this chart: a line chart requires a series; the data is categories.` A body that is not JSON, or that matches no shape, is shown as code under that line.
+- A block whose body is `null`, a view with no data yet, renders as the one line `No data for this chart yet.`
 
 Data becomes a table this way, for a block that fails and for a client that does not draw:
 
@@ -527,7 +538,9 @@ A row lays two to four cells side by side, so that the charts that belong togeth
 - A fenced block in a cell keeps its lines: a `---` or a `:::` inside it, such as in a chart's body, is part of the block.
 - The Markdown before, between and after the rows stands on its own, across the page. Outside a row, `---` is Markdown's own rule, a line across the page.
 
-A row that keeps these rules renders with its lines as they are written. Its cells share its width equally: a client that lays out, such as Auto Studio, draws them side by side, and stacks them one under another where the screen is narrow. A client that does not lay out, such as a chat or an agent, prints the cells one after another, with the `::: row`, `---` and `:::` lines as they are. Leave a blank line between a sentence and the `---` under it, so that such a client does not read the sentence as a heading.
+A valid row keeps its Markdown structure. In Studio, cells share the row's width equally and stack vertically on narrow screens. A client without layout support, such as a chat or agent, prints them in order with the `::: row`, `---` and `:::` lines.
+
+Leave a blank line between a sentence and a following `---`, so Markdown readers do not interpret the sentence as a heading.
 
 ### When a row is checked
 
@@ -546,7 +559,7 @@ A row that keeps these rules renders with its lines as they are written. Its cel
 
 ## Laying out a page
 
-Charts written one under another make the reader scroll for what a glance should give. A page reads best when it leads with how things stand and keeps the long parts for last:
+Lead with the result and the figures someone needs to understand it. Group related charts in rows, and put longer tables and lists below them:
 
 - Open `lately` with a `figure` block of the three to five numbers that say how it is going, such as the orders, the revenue and the average order.
 - Then rows of two or three charts that belong together, each cell a short heading and its chart.
@@ -741,13 +754,13 @@ The runtime renders a page each time it is read, with the page and the views as 
 
 Where a block cannot be rendered, the read carries one fixed line in its place, and never a render half done:
 
-| When                                                      | The line                                                                                                          |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| The views are being built, or wait to be built            | `page.lately`: `The figures on this page are being worked out from the playbook's history.`                       |
-| The views stalled                                         | `page.lately`: `The figures on this page stopped at an event they could not take, and wait for a corrected page.` |
-| `result` stopped, such as at a field the output lacks     | `page.result`: `The page could not show this run:`, then the problem and its line                                 |
-| `lately` stopped                                          | `page.lately`: `The page could not show its figures:`, then the problem and its line                              |
-| A block rendered more than 64 KiB, or past a render limit | The same line, which names the limit                                                                              |
+| When                                                      | The line                                                                                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| The views are being built, or wait to be built            | `page.lately`: `Building this page's figures from the playbook's history…`                                               |
+| The views stalled                                         | `page.lately`: `The figures stopped updating because the page could not process an event. Correct the page to continue.` |
+| `result` stopped, such as at a field the output lacks     | `page.result`: `Could not display this run:`, then the problem and its line                                              |
+| `lately` stopped                                          | `page.lately`: `Could not display this page’s figures:`, then the problem and its line                                   |
+| A block rendered more than 64 KiB, or past a render limit | The same line, which names the limit                                                                                     |
 
 ### The preview
 

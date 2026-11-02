@@ -41,15 +41,15 @@ function refusalOf(cause: unknown, line: number): Stopped | undefined {
 
 function problemOf(stopped: Stopped): string {
   if (stopped.reason === 'missing_variable') {
-    return `it reads ${stopped.variable}, which the value does not have`;
+    return `the value has no field ${stopped.variable}`;
   }
   if (stopped.reason === 'too_long') {
-    return `it rendered more than the ${mostRenderedBytes} bytes a block may`;
+    return `the rendered block exceeds ${mostRenderedBytes} bytes`;
   }
   if (stopped.reason === 'limit_exceeded') {
     return stopped.limit === 'time'
-      ? `it took more than the ${templateLimits.renderMilliseconds} ms a render may`
-      : `it charged more than the ${templateLimits.memory} characters or items a render may`;
+      ? `rendering exceeded ${templateLimits.renderMilliseconds} ms`
+      : `rendering exceeded ${templateLimits.memory} characters or items`;
   }
   return stopped.detail;
 }

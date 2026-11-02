@@ -14,10 +14,11 @@ const aNewerLayout = ledgerLayout + 1;
 
 const anOlderLayout = ledgerLayoutFloor - 1;
 
-const goingForwardOnly = 'Upgrades go forward only, and a newer database wants a newer release of the server';
+const goingForwardOnly =
+  'Upgrades go forward only. Open this database with the release that upgraded it, or a compatible later release';
 
 const notCarried =
-  'A database older than that is not carried forward, so delete the local database and start the server again';
+  'This release cannot migrate this older database. Keep a backup; to start fresh, use a separate empty database';
 
 function keeping(kept: number, floor: number): string {
   return `where this server keeps layout ${kept} and carries forward no database older than layout ${floor}`;

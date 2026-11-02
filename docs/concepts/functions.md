@@ -20,7 +20,7 @@ Real work often combines types. A budget review might recall the last decisions,
 
 ## Availability
 
-Hosted Auto runs every function type, reasoning, interaction, prediction, recall and computation functions, and workflows, and pages present the results of both. Your agent lists the definition types its connection supports.
+Hosted Auto runs reasoning, interaction, prediction, recall and computation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
 
 The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, interaction, prediction, recall and computation functions are available. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers. There is nothing to turn on.
 
@@ -56,7 +56,9 @@ Choose interaction when a person must decide or supply something, or when the pl
 
 A prediction function predicts a number over time from the playbook's own history. For example, it can forecast each region's orders next week, or their total to the end of the quarter. Each prediction is a series: the last periods observed, and each period ahead as a likely value with a low and a high.
 
-The runtime's forecaster answers it, from the moment the function is saved and the series' history is long enough. It forecasts the series' own past from earlier points to see which of its simple methods, the same periods a season earlier, at the recent level or as they were, the last value carried forward or the pace so far, the history supports, and answers with the first that does, its range set from how far that method missed. So keep apart the prediction function you define, the dataset it keeps of the playbook's history, and the prediction a run gives back.
+The built-in forecaster works as soon as the saved function has enough history. It tests simple methods against earlier periods, uses the first supported method, and estimates a range from its past errors. The [forecaster reference](../reference/prediction-format.md#the-forecaster) explains the methods and how they are tested.
+
+The prediction function is the definition you save. Its dataset holds the relevant playbook history, and each run returns a prediction from that data.
 
 Choose prediction for a numeric question that comes back again and again, such as weekly sign-ups, and that past figures can answer. A prediction function uses no language model.
 
@@ -99,7 +101,9 @@ The person who runs Auto decides which tool servers each playbook may use. A too
 
 ## Pages
 
-A page is not a function: it never runs. It says how a workflow, a function or the whole playbook presents its results to the person who runs the business, so Auto Studio, a chat and an agent show the same words. Its `result` shows one run, with a first line that serves as the run's headline, and its `lately` shows the runs so far, with charts, through views its fold keeps of the playbook's events.
+A page presents the results of a workflow, a function or the whole playbook. Studio, a chat and an agent can show the same page. A page is rendered when someone reads it; it does not run as a function.
+
+The page can show one run or summarize results over time, with charts. Its [format reference](../reference/page-format.md) explains the templates and the views that supply their data.
 
 For example, a page of the workflow that drafts the morning's social posts lists each run's posts with a link to each, and charts the posts of each day and of each channel since the workflow began.
 

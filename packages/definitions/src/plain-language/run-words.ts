@@ -74,7 +74,7 @@ export function runWordsFor(capabilities: readonly Capability[]): (run: Describe
 export function cancellingWordsFor(capabilities: readonly Capability[]): (run: DefinitionAddress) => string {
   const words = definitionWordsFor(capabilities);
   return ({ type, name }) =>
-    `${capitalized(words.named(type, name))} is being cancelled: it ends as cancelled within a moment, unless it finishes first, and how it ended can be looked up then.`;
+    `Cancellation requested for ${words.named(type, name)}. It may finish before cancellation takes effect. Check the run for its final status.`;
 }
 
 export function runPlainLanguage(

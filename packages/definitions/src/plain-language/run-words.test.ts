@@ -119,7 +119,7 @@ const rejections: ReadonlyArray<readonly [string, Readonly<Record<string, unknow
   [
     'an account closed since its org was deleted, which an owner can restore for a limited time, in what its record holds',
     { reason: 'conflict', detail: 'x', kind: 'account_closed', because: 'org_deleted' },
-    'the account it runs under is closed, since its org was deleted. An owner can restore the org only for a limited time, after which it is purged and its runs never run again; the detail of the rejection below gives what its account said, and once the org is restored, it can be run again.',
+    'the account it runs under is closed, since its org was deleted. Auto support can restore the organization for a limited time. After that, it is permanently removed and its runs cannot resume. The rejection below gives the account details. If support restores the organization, this can be run again.',
   ],
   [
     'an account closed since its org was deleted for good',

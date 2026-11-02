@@ -18,5 +18,6 @@ The public self-hosting guides cover [running the image](../self-host/docker.md)
 - [Complete reasoning function format](reference/reasoning-format.md)
 - [Model access internals](reference/models.md): the library functions, reports and catalog behind [Set up a model provider](../self-host/models.md) and the [model settings reference](../reference/model-settings.md)
 - [Workflow format and runs](reference/workflow-format.md)
+- [Extension contract](reference/extensions.md): manifests, capability ports, dependencies and startup checks
 
 Keep these notes accurate when changing the runtime. Publish the relevant user-facing behavior separately in the public guides. Package READMEs retain code entry points and test instructions.

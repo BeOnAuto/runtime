@@ -11,7 +11,7 @@ import { plainText, tableOf } from './chart-tables.ts';
 
 type Json = Schema.Json;
 
-const noDataYet = 'There is no data for this chart yet.';
+const noDataYet = 'No data for this chart yet.';
 
 const decodeJson = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Json));
 
@@ -22,7 +22,7 @@ function shapeOfData(data: Json, first: readonly OutputShapeName[]): OutputShape
 }
 
 function couldNotBeDrawn(why: string, shown: string): readonly string[] {
-  return [`This chart could not be drawn: ${why}.`, '', shown];
+  return [`Couldn’t display this chart: ${why}.`, '', shown];
 }
 
 function shownAsCode(body: string): string {
@@ -38,25 +38,23 @@ function kindWhy({ kind }: ChartInfo, data: Json): string | undefined {
     const series = recordOf(data);
     return itemsOf(series['lines']).length === 1 && series['period'] === 'day'
       ? undefined
-      : 'a calendar reads a series of one line whose period is day';
+      : 'a calendar requires a series with one line and a daily period';
   }
   const negative = itemsOf(recordOf(data)['values'])
     .map((value) => recordOf(value))
     .find((value) => Number(value['value']) < 0);
   return kind.name === 'share' && negative !== undefined
-    ? `a share chart reads values of at least 0, and ${plainText(negative['name'])} is ${plainText(negative['value'])}`
+    ? `a share chart requires values of 0 or more; ${plainText(negative['name'])} is ${plainText(negative['value'])}`
     : undefined;
 }
 
 function shapedWhy(info: ChartInfo, shape: OutputShapeName, data: Json): string | undefined {
   const { kind, roles } = info;
   if (!kind.reads.includes(shape)) {
-    return `${kind.noun} reads ${readsWords(kind.reads)}, and this is ${shapeNouns[shape]}`;
+    return `${kind.noun} requires ${readsWords(kind.reads)}; the data is ${shapeNouns[shape]}`;
   }
   if (shape !== 'table') {
-    return roles.size > 0
-      ? `its roles name the columns of a table, and this is ${shapeNouns[shape]}`
-      : kindWhy(info, data);
+    return roles.size > 0 ? `column roles require a table; the data is ${shapeNouns[shape]}` : kindWhy(info, data);
   }
   return tableRolesWhy(info, data);
 }
@@ -70,7 +68,9 @@ function drawn(fence: ChartFence, reading: ChartReading): readonly string[] {
   const shape = parsed === undefined ? undefined : shapeOfData(parsed, reads);
   if (parsed === undefined || shape === undefined) {
     const why =
-      'refused' in reading ? reading.refused : `its data ${parsed === undefined ? 'is not JSON' : 'matches no shape'}`;
+      'refused' in reading
+        ? reading.refused
+        : `the data ${parsed === undefined ? 'is not valid JSON' : 'does not match a supported format'}`;
     return couldNotBeDrawn(why, shownAsCode(fence.body));
   }
   const why = 'refused' in reading ? reading.refused : shapedWhy(reading.info, shape, parsed);

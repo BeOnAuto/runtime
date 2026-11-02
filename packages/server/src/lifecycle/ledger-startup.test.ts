@@ -80,7 +80,7 @@ function refusedFor(file: string): string {
   return `Auto Runtime could not start: The ledger is kept in the file ${file}, and was made by an earlier version of Auto Runtime, whose ledger this version does not carry forward. This version keeps the ledger in layout ${ledgerLayout} and carries forward a ledger in layout ${ledgerLayoutFloor} or later, so it cannot read a ledger in layout ${anEarlierLayout}.`;
 }
 
-const goesWithIt = 'Everything in the ledger goes with it, every playbook, definition, run and connection among it.';
+const goesWithIt = 'Deleting the ledger removes all its playbooks, definitions, runs and connections.';
 
 const askedAt = 'Need a hand? Ask us on Discord: https://discord.gg/B8BKcKMRm8';
 
@@ -113,7 +113,7 @@ describe('a ledger file made by an earlier version of Auto Runtime than this one
     expect(await child.exited).toBe(1);
     expect(child.output()).toEqual({
       stdout: '',
-      stderr: `${refusedFor(file)} Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f ${file} ${file}-wal ${file}-shm\n`,
+      stderr: `${refusedFor(file)} To start over, back up the ledger, then delete it and restart Auto Runtime. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f ${file} ${file}-wal ${file}-shm\n`,
     });
   });
 });
@@ -130,7 +130,7 @@ describe('a ledger file that holds facts this version of Auto Runtime does not r
     expect(await child.exited).toBe(1);
     expect(child.output()).toEqual({
       stdout: '',
-      stderr: `Auto Runtime could not start: The ledger is kept in the file ${file}, and holds facts of the type ${aFactOfAnEarlierVersion}, which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward, or by an extension that declares them and is no longer listed in extensions. If an extension that is no longer listed in extensions declares them, list it again and start Auto Runtime again. If a newer version of Auto Runtime made the ledger, start that version or a later one, or restore the backup taken before the upgrade. A ledger an earlier version made is not carried forward: Delete the ledger and start Auto Runtime again. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f ${file} ${file}-wal ${file}-shm\n`,
+      stderr: `Auto Runtime could not start: The ledger is kept in the file ${file}, and holds facts of the type ${aFactOfAnEarlierVersion}, which this version of Auto Runtime does not read: it was made by a newer version, or by an earlier version than this one carries forward, or by an extension that declares them and is no longer listed in extensions. If an extension that is no longer listed in extensions declares them, list it again and start Auto Runtime again. If a newer version of Auto Runtime made the ledger, start that version or a later one, or restore the backup taken before the upgrade. A ledger an earlier version made is not carried forward: To start over, back up the ledger, then delete it and restart Auto Runtime. ${goesWithIt} ${askedAt} To delete the ledger, run: rm -f ${file} ${file}-wal ${file}-shm\n`,
     });
   });
 
@@ -196,7 +196,7 @@ describe('a ledger file made by an earlier version of Auto Runtime, in the image
     expect(await child.exited).toBe(1);
     expect(child.output()).toEqual({
       stdout: '',
-      stderr: `${refusedFor(ledger.fileName)} Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume that holds ${ledger.directory}, or remove the volume, and start Auto Runtime again. ${goesWithIt} ${askedAt}\n`,
+      stderr: `${refusedFor(ledger.fileName)} To start over, back up the volume, then delete ledger.db, ledger.db-wal and ledger.db-shm from the volume that holds ${ledger.directory}, or remove the volume. Restart Auto Runtime afterward. ${goesWithIt} ${askedAt}\n`,
     });
   });
 });

@@ -27,7 +27,9 @@ Each function a step calls has a run of its own, with its own id, so you can ins
 
 ## Starting a run
 
-What you ask the playbook to do is a workflow, its functions the steps, run and shown as one result: your agent writes it, a later ask changes it, a one-step workflow is still a workflow, and a function runs on its own only to test it. Your agent starts a run and gives it the workflow's input. The run then goes on by itself, and your agent can check on it later. Every step acts for whoever started the run, with the permissions they had when it started.
+Your agent puts the work you ask for into a workflow, even if it needs only one step. Its steps use the playbook's functions. The agent runs the workflow and shows you the result; later requests can change that workflow. It runs individual functions separately to test them.
+
+The agent supplies the workflow's input when it starts a run. The run then continues on its own, and the agent can check on it later. Every step acts for whoever started the run, with the permissions they had when it started.
 
 [Starting and cancelling a run](../reference/workflow-format.md#starting-and-cancelling-a-run) gives the details, including how to repeat a start safely and how to cancel a run.
 
@@ -42,7 +44,7 @@ A run that a trigger starts acts for the playbook itself, not for a person. A tr
 
 [Run a workflow on a schedule or event](../guides/triggers.md) shows how to add a trigger, and [Triggers](../reference/workflow-format.md#triggers) in the workflow format gives the rules and limits.
 
-Every run counts toward the runtime's meter, and each function a step calls is a run of its own. A runtime you host without a license key has 100 runs, then 15 a UTC day and 75 a UTC month. Once those are spent, a run a trigger would start never starts and is not tried again. The playbook records a `reaction_refused` event instead. [Self-hosted licensing reference](../self-host/licensing.md) gives the rules.
+Each function a workflow calls has a run of its own, and every run counts toward usage. If the runtime refuses a triggered run because it has reached a usage limit, that run does not start and is not retried. The playbook records a `reaction_refused` event. The [trigger reference](../reference/workflow-format.md#triggers) explains refusals; self-hosted limits are in the [licensing reference](../self-host/licensing.md).
 
 ## How a run waits
 

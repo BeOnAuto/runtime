@@ -76,7 +76,7 @@ describe('get_definition of a subject that has a page', () => {
     await saving({ type: 'page', name: 'reviews', source: pageOf({ of: 'reasoning/review-brief' }) });
 
     expect(building).toMatchObject({
-      output: { page: { lately: "The figures on this page are being worked out from the playbook's history." } },
+      output: { page: { lately: "Building this page's figures from the playbook's history…" } },
     });
     expect(await reading({ type: 'reasoning', name: 'review-brief' })).not.toHaveProperty('output.page');
   });
@@ -91,7 +91,8 @@ describe('views that stopped', () => {
     expect(await reading({ type: 'workflow', name: 'morning-social-content' })).toMatchObject({
       output: {
         page: {
-          lately: 'The figures on this page stopped at an event they could not take, and wait for a corrected page.',
+          lately:
+            'The figures stopped updating because the page could not process an event. Correct the page to continue.',
         },
       },
     });

@@ -2,7 +2,7 @@
 
 A playbook is a system built around one business responsibility, such as reviewing campaigns or evaluating budget changes. It holds your team's methods as functions and workflows, together with the information they need and limits on what the playbook may do.
 
-A marketing specialist knows what makes a brief ready for review. Working with an agent, they capture those criteria in a function and run it against each new brief. Someone comfortable with a terminal installs and runs Auto Runtime once, and sets up the services it may reach. After that, people work through their agent.
+A marketing specialist knows what makes a brief ready for review. They [connect their agent to Auto](../get-started/cloud.md), capture those criteria in a function, and use it to review each new brief. Auto hosts the playbook, and the team can inspect its runs in Studio.
 
 ## From a method to runs
 
@@ -39,13 +39,15 @@ Auto Runtime
 └── Tool servers
 ```
 
-Tool servers are how a playbook's functions reach other services, such as a CRM or a chat tool. They are set up once, by whoever runs Auto, and can serve several playbooks. [Give a function tools](../guides/tools.md) explains how a function uses them.
+Tool servers let a playbook's functions reach other services, such as a CRM or a chat tool. Ask your agent to connect a service and approve the connection in your browser. A self-hosted runtime can also use tool servers configured by its operator. [Give a function tools](../guides/tools.md) explains how a function uses them.
 
-Auto Runtime runs playbooks, and Auto Studio inspects and manages them. Your agent is a separate client. A client learns of changes by asking what changed and waiting for the answer, rather than polling ([Changes](../reference/http.md#changes)). [Functions](functions.md) describes the five function types and when to choose each, and [Workflows and runs](workflows.md) describes how workflows coordinate them.
+Auto Runtime runs playbooks, and Auto Studio lets you inspect and manage them. Your agent is a separate client. [Functions](functions.md) describes the five function types and when to choose each. [Workflows and runs](workflows.md) explains how workflows coordinate them.
 
 ## The agent and the playbook
 
-Your agent helps you create and refine definitions, supplies inputs and calls functions. It can coordinate its own calls to Auto and to other systems. The kind of ask decides the shape: what you ask the playbook to do is a workflow, its functions the steps, run and shown as one result, and a later ask changes the workflow; what you ask it to remember is a recall function; what you ask it to connect is a connection; and a question for right now is answered now, with nothing saved.
+Your agent helps you create and refine definitions, supplies inputs and calls functions. It can coordinate its own calls to Auto and to other systems.
+
+The agent puts repeatable work into a workflow and shows you its result. Later requests can change that workflow. It uses a recall function to keep information for later, or a connection to reach another service. It can answer a one-off question without saving anything.
 
 The playbook keeps the saved definitions and the recorded runs, whatever happens to that conversation. An authorized colleague can use the same function from their own agent. Access to the playbook does not give a colleague access to the accounts anyone else's agent is connected to.
 

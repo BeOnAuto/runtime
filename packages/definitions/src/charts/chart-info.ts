@@ -18,8 +18,8 @@ const kindsInWords = chartKinds.map(({ name }) => name).join(', ');
 function roleRefused({ noun, needs, may }: ChartKind, given: string): string {
   const roles = [...needs, ...may];
   return roles.length === 0
-    ? `${noun} takes no roles; leave out the role ${given}`
-    : `${noun} takes the roles ${listed(roles)}; the role ${given} is not one of them`;
+    ? `${noun} supports no roles; leave out ${given}`
+    : `${noun} supports ${listed(roles)}; ${given} is not supported`;
 }
 
 type RolesReading = { readonly roles: ReadonlyMap<ChartRole, string> } | { readonly refused: string };
@@ -33,14 +33,14 @@ function rolesOf(kind: ChartKind, written: readonly string[]): RolesReading {
   for (const word of written) {
     const parts = roleWord.exec(word);
     if (parts === null) {
-      return { refused: `a role is written role=column, such as x=Channel; ${word} is not` };
+      return { refused: `${word} is not a valid role assignment; use role=column, such as x=Channel` };
     }
     const role = roleOf(kind, String(parts[1]));
     if (role === undefined) {
       return { refused: roleRefused(kind, String(parts[1])) };
     }
     if (roles.has(role)) {
-      return { refused: `the role ${role} is written twice` };
+      return { refused: `the role ${role} is assigned twice` };
     }
     roles.set(role, parts[2] ?? String(parts[3]));
   }
@@ -54,7 +54,7 @@ export function chartInfoOf(info: string): ChartInfoReading {
   }
   const kind = named === undefined ? undefined : chartKindNamed(named);
   if (kind === undefined) {
-    return { refused: `a chart names its kind after chart, one of ${kindsInWords}` };
+    return { refused: `specify a chart type after chart: ${kindsInWords}` };
   }
   const roles = rolesOf(kind, written);
   return 'refused' in roles ? roles : { info: { kind, roles: roles.roles } };

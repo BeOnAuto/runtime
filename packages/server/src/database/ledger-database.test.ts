@@ -73,7 +73,7 @@ describe('a ledger that refuses the layout of its database as it opens', () => {
 
     expect(refused).toMatchObject({
       remedy: {
-        says: "Delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume, and start Auto Runtime again. Everything in the ledger goes with it, every playbook, definition, run and connection among it.",
+        says: "To start over, back up the volume, then delete ledger.db, ledger.db-wal and ledger.db-shm from the volume mounted at /data, the ledger's folder /app/data in the image, or remove the volume. Restart Auto Runtime afterward. Deleting the ledger removes all its playbooks, definitions, runs and connections.",
         command: undefined,
       },
     });

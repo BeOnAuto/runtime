@@ -34,7 +34,7 @@ async function recipeCarrying(name: string, ...carried: readonly string[]): Prom
 }
 
 const modelSentence =
-  ' A reasoning function calls a model, so it runs only where the server can call one; on a server of their own, the person adds a model provider in its model settings: https://on.auto/docs/self-host/configuration#models.\n';
+  ' A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.\n';
 
 const firstPlaybookFile = readFileSync(new URL('recipes/first-playbook.md', import.meta.url), 'utf8');
 
@@ -90,7 +90,7 @@ describe('the recipes whose function calls a model', () => {
   it('say so at the top, and point to the model settings of a server of their own', async () => {
     const giveTools = await recipeCarrying('give-tools', 'reasoning-function');
 
-    expect(firstPlaybookFile).toContain(`to give the person.${modelSentence}`);
+    expect(firstPlaybookFile).toContain(`Give that link to the person.${modelSentence}`);
     expect(giveTools?.text).toContain(`before you write one.${modelSentence}`);
   });
 });

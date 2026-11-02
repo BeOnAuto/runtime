@@ -99,14 +99,14 @@ function linkWordsOf(connection: Linked, providers: ProviderList): string {
 
 function connectedWordsOf(named: string, linkRanOut: boolean): string {
   return linkRanOut
-    ? `The link of ${named} ran out unused, so the connection stands as it was, connected.`
+    ? `The link for ${named} expired unused. The connection is still connected.`
     : `Connected ${named}; nothing is left to open.`;
 }
 
 function standingWordsOf(connection: Omit<AddedConnection, 'connect'>): string {
   const named = connectionNamed(connection);
   if (connection.link_replaced === true) {
-    return `${capitalized(named)} is ${connection.status}, and a newer link, still open, replaced the one offered: the person who added it opens the newest, and reconnecting it would replace that one too.`;
+    return `${capitalized(named)} is ${connection.status}. A newer link is available. The person who added the connection should open that link; reconnecting would replace it again.`;
   }
   if (connection.status === 'connected') {
     return connectedWordsOf(named, connection.link_ran_out === true);

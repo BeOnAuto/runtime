@@ -106,8 +106,8 @@ describe('the chart fences a template writes out', () => {
     const fences = ['```chart pie', '{{ views.by_day | json }}', '```', '```chart line x=at', 'null', '```'].join('\n');
 
     expect(issuesIn(latelyOf(fences))).toEqual([
-      'Line 17: A chart names its kind after chart, one of line, bars, stacked, share, histogram, scatter, bubble, heatmap, range, funnel, calendar, timeline, table, figure, text',
-      'Line 20: A line chart takes no roles; leave out the role x',
+      'Line 17: Specify a chart type after chart: line, bars, stacked, share, histogram, scatter, bubble, heatmap, range, funnel, calendar, timeline, table, figure, text',
+      'Line 20: A line chart supports no roles; leave out x',
     ]);
   });
 

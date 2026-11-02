@@ -1,6 +1,6 @@
 # Create your first playbook
 
-A first playbook holds a first reasoning function that the person sees answer. Read the reasoning-function guide with get_guide before you write the function. What you make or run answers `studio`, a link to its page in Studio, to give the person. A reasoning function calls a model, so it runs only where the server can call one; on a server of their own, the person adds a model provider in its model settings: https://on.auto/docs/self-host/configuration#models.
+A first playbook holds a first reasoning function that the person sees answer. Read the reasoning-function guide with get_guide before you write the function. When you create or run something, the response includes `studio`, a link to its page in Studio. Give that link to the person. A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.
 
 1. Call list_playbooks, and list_models where this connection has it to see the models this server can call. When it lists none and says in `provider_setup` how the person adds a model provider, help them do that first.
 2. Ask the person what the playbook is for, in their own words, and what its first function should do, such as checking a campaign brief for an audience, a budget and a measurable goal. When more than one model is offered, ask which to use; a model whose id ends in `*` stands for many and is not a model to run.

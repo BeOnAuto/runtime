@@ -62,7 +62,7 @@ describe('the answer after the link of a reconnection', () => {
 
     expect(after).toMatchObject({ output: { id, status: 'connected', link_ran_out: true } });
     expect(wordsOf(h, outputOf(after), id)).toBe(
-      'The link of the connection “crm” ran out unused, so the connection stands as it was, connected.',
+      'The link for the connection “crm” expired unused. The connection is still connected.',
     );
   });
 });
@@ -80,7 +80,7 @@ describe('the answer after a link a later reconnection replaced', () => {
     expect(whileOpen).toMatchObject({ output: { id, status: 'broken', link_replaced: true } });
     expect(whileOpen).not.toHaveProperty('output.connect');
     expect(wordsOf(h, outputOf(whileOpen), id)).toBe(
-      'The connection “crm” is broken, and a newer link, still open, replaced the one offered: the person who added it opens the newest, and reconnecting it would replace that one too.',
+      'The connection “crm” is broken. A newer link is available. The person who added the connection should open that link; reconnecting would replace it again.',
     );
     expect(ranOut).toMatchObject({ output: { id, status: 'broken' } });
     expect(ranOut).not.toHaveProperty('output.link_replaced');
