@@ -29,6 +29,7 @@ export function postgresqlStoreOn(
 ): LedgerStore {
   const pool = pooled();
   const projections = postgresqlProjectionsOf(kept);
+  const { riders } = projections.scrubs;
   const store = emmettEventStore(
     getPostgreSQLEventStore({
       driver: pgEventStoreDriver,
@@ -38,9 +39,10 @@ export function postgresqlStoreOn(
       hooks: {
         onBeforeSchemaCreated: migrationLockTaken,
         onAfterSchemaCreated: projections.afterTheSchema,
+        onBeforeCommit: riders.beforeCommit,
       },
     }),
-    { data: dataAsJsonText, mostEventsInOneAppend: eventsInOneBoundedAppend, ...listeners },
+    { data: dataAsJsonText, mostEventsInOneAppend: eventsInOneBoundedAppend, riders, ...listeners },
   );
   const query: Query = async (text, values) =>
     (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows;
@@ -49,6 +51,7 @@ export function postgresqlStoreOn(
     ...store,
     ...recorded,
     ...projections.readerOn({ query: formattedFor(query), command: formattedFor(query) }),
+    ...projections.scrubs.storeOver(store, formattedFor(query)),
     ...postgresqlReadsOn(kept, query),
     migrate: async () => {
       await postgresqlLayoutKept(pool, projections.projections, kept);

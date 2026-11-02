@@ -109,6 +109,7 @@ export function streamPortsOf(streams: Streams): StreamReader & StreamWriter {
 export function makeLedger(store: LedgerStore): Ledger['Service'] {
   return Ledger.of({
     ...streamPortsOf(store),
+    scrubFact: store.scrubFact,
     ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     readRecorded: recordedReaderOf(store),
     readRecordedEvent: recordedEventReaderOf(store),

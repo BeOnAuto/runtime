@@ -5,25 +5,30 @@ import { OrgContext } from '../caller/org-context.ts';
 import type { Runnable } from '../definition/registration.ts';
 import {
   orgBoundAppendedFactsReader,
+  orgBoundProjectionReader,
   prefixedReader,
   prefixedWriter,
   streamPrefixOfOrg,
 } from '../ledger/bound-ports.ts';
+import type { LedgerPorts } from '../ledger/ledger.ts';
 import { OrgReader } from '../ledger/org-reader.ts';
 import { OrgWriter } from '../ledger/org-writer.ts';
-import type { AppendedFactsReader, StreamReader, StreamWriter } from '../ledger/stream-ports.ts';
 import type { Succeeded, Rejected } from '../outcome/outcome.ts';
 import type { OrgRequest } from './request.ts';
 
 export function runInOrg<A extends Succeeded>(
   registration: Runnable<'org', A>,
   { caller, org, input, encoding }: OrgRequest,
-  ledger: StreamReader & StreamWriter & AppendedFactsReader,
+  ledger: LedgerPorts,
 ): Effect.Effect<A, Rejected> {
   const prefix = streamPrefixOfOrg({ org });
   const forQueries = Context.make(Caller, caller).pipe(
     Context.add(OrgContext, { org }),
-    Context.add(OrgReader, { ...prefixedReader(ledger, prefix), ...orgBoundAppendedFactsReader(ledger, { org }) }),
+    Context.add(OrgReader, {
+      ...prefixedReader(ledger, prefix),
+      ...orgBoundAppendedFactsReader(ledger, { org }),
+      ...orgBoundProjectionReader(ledger, { org }),
+    }),
   );
   return registration.kind === 'query'
     ? registration.run(input, encoding).pipe(Effect.provideContext(forQueries))

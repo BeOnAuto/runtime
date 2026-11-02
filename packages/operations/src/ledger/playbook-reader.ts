@@ -1,7 +1,7 @@
 import type { StreamedContent } from '@on.auto/content';
 import { Context, type Effect } from 'effect';
 
-import type { PlaybookProjectionReader } from '../projections/keyed-projection.ts';
+import type { BoundProjectionReader } from '../projections/keyed-projection.ts';
 import type {
   PlaybookAppendedFactsReader,
   PlaybookRecordedReader,
@@ -21,6 +21,6 @@ export class PlaybookReader extends Context.Service<
     PlaybookRecordedReader &
     PlaybookAppendedFactsReader &
     PlaybookRunOutcomesReader &
-    PlaybookProjectionReader &
+    BoundProjectionReader &
     PlaybookContentReader
 >()('@on.auto/operations/PlaybookReader') {}

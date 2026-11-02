@@ -186,6 +186,7 @@ const keyed = postgresqlProjectionsOf({ projections: [topicRows] });
 function noted(point: number, topic: string) {
   return {
     point: `7/${point}`,
+    ordered: `${'7'.padStart(20, '0')}/${String(point).padStart(20, '0')}`,
     stream: `playbook/acme/alpha/notes/n${point}`,
     type: 'topic_opened',
     data: { json: JSON.stringify({ topic, at: point }) },
@@ -207,12 +208,6 @@ function batchAnswering(statement: string): readonly unknown[] {
   return batchesAfter.find(([after]) => statement.includes(after))?.[1] ?? [];
 }
 
-const storedTopic = { topic: 'spring', note: null, last_message: 'm1', open: false, next_at: null, due_at: null };
-
-function topicAnswering(statement: string): readonly unknown[] {
-  return statement.startsWith('SELECT topic') ? [storedTopic] : [];
-}
-
 describe('the fill of a projection keyed by its mapping on PostgreSQL', () => {
   it('reads the messages of its kinds and types in the order they were appended, a batch after another', async () => {
     const fill = recordedAnswering(batchAnswering);
@@ -226,60 +221,5 @@ describe('the fill of a projection keyed by its mapping on PostgreSQL', () => {
     expect(fill.commands.filter((command) => command.startsWith('INSERT INTO topics_2')).join(' ')).toMatch(
       /"t0".*"t1".*"t2"/u,
     );
-  });
-});
-
-function appendedNote(type: string, data: unknown) {
-  return {
-    type,
-    data: { json: JSON.stringify(data) },
-    metadata: {
-      streamName: 'playbook/acme/alpha/notes/n1',
-      messageId: 'm2',
-      streamPosition: 2n,
-      at: '2026-10-05T09:00:00.000Z',
-      by: 'topics',
-    },
-  };
-}
-
-describe('the fold of a projection keyed by its mapping on PostgreSQL', () => {
-  it('leaves the columns its reader advances as they stand unless the fact sets them', async () => {
-    const fold = recordedAnswering(topicAnswering);
-    const [registration] = keyed.registrations;
-
-    await registration?.projection.handle(
-      [
-        appendedNote('topic_noted', { topic: 'spring', note: 'later' }),
-        appendedNote('topic_opened', { topic: 'spring', at: 1000 }),
-      ],
-      { execute: fold.execute },
-    );
-
-    expect(fold.commands.map((command) => command.slice(command.indexOf('DO UPDATE SET')))).toEqual([
-      'DO UPDATE SET topic = excluded.topic, note = excluded.note, last_message = excluded.last_message',
-      'DO UPDATE SET topic = excluded.topic, note = excluded.note, last_message = excluded.last_message, open = excluded.open, next_at = excluded.next_at, due_at = excluded.due_at',
-    ]);
-  });
-
-  it('writes, of the columns its reader advances, each one the fact sets and none other', async () => {
-    const fold = recordedAnswering(topicAnswering);
-    const noteOpens = {
-      ...topicRows,
-      advanced: [
-        { column: 'open', setBy: ['topic_opened', 'topic_noted'] },
-        { column: 'next_at', setBy: ['topic_opened'] },
-        { column: 'due_at', setBy: ['topic_opened'] },
-      ],
-    };
-    const [registration] = postgresqlProjectionsOf({ projections: [noteOpens] }).registrations;
-
-    await registration?.projection.handle([appendedNote('topic_noted', { topic: 'spring', note: 'later' })], {
-      execute: fold.execute,
-    });
-
-    expect(fold.commands.map((command) => command.slice(command.indexOf('DO UPDATE SET')))).toEqual([
-      'DO UPDATE SET topic = excluded.topic, note = excluded.note, last_message = excluded.last_message, open = excluded.open',
-    ]);
   });
 });

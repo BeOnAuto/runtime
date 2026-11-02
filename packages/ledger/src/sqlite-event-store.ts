@@ -1,4 +1,4 @@
-import { dumbo } from '@event-driven-io/dumbo';
+import { dumbo, type SQL } from '@event-driven-io/dumbo';
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 
 import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
@@ -31,24 +31,29 @@ export function sqliteEventStore<Driver extends AnyDriver>(
   const options = pooledOptionsOf(optionsOf);
   const { pool } = options;
   const projections = sqliteProjectionsOf(kept);
+  const { riders } = projections.scrubs;
   const store = getSQLiteEventStore({
     ...options,
     schema: { autoMigration: 'None' },
     projections: [...(options.projections ?? []), ...projections.registrations],
+    hooks: {
+      ...options.hooks,
+      onBeforeCommit: projections.scrubs.afterTheHook(options.hooks?.onBeforeCommit, riders.beforeCommit),
+    },
   });
   const streams = emmettEventStore(store, {
     data: dataAsWritten,
     mostEventsInOneAppend: eventsWithinAHundredParameters,
+    riders,
     ...listeners,
   });
   const recorded = sqliteRecordedStoreOn(pool, listeners);
+  const query = async (sql: SQL) => (await pool.execute.query(sql)).rows;
   return {
     ...streams,
     ...recorded,
-    ...projections.readerOn({
-      query: async (sql) => (await pool.execute.query(sql)).rows,
-      command: (sql) => pool.execute.command(sql),
-    }),
+    ...projections.readerOn({ query, command: (sql) => pool.execute.command(sql) }),
+    ...projections.scrubs.storeOver(streams, query),
     readRunOutcomes: sqliteRunOutcomesOf(kept.runOutcomes, pool.execute),
     log: sqliteLogOn(pool.execute),
     migrate: async () => {

@@ -84,9 +84,9 @@ describe('a read of the rows of a projection in the in-memory ledger', () => {
     const due = (through: number, limit = 10) =>
       Effect.runPromise(ledger.service.readDueRows('run_tallies', { column: 'due_at', through, limit }));
 
-    expect((await due(nine + 3 * 60_000)).map(({ org, playbook, key }) => `${org}/${playbook}/${key}`)).toEqual([
-      'globex/gamma/r2',
-      'acme/alpha/r1',
+    expect((await due(nine + 3 * 60_000)).map(({ org, playbook, key }) => [org, playbook, key])).toEqual([
+      ['globex', 'gamma', 'r2'],
+      ['acme', 'alpha', 'r1'],
     ]);
     expect((await due(nine + tallyDueAfterMs)).map(({ key }) => key)).toEqual(['r2']);
     expect((await due(nine + 3 * 60_000, 1)).map(({ key }) => key)).toEqual(['r2']);
@@ -164,6 +164,10 @@ const malformed: readonly (readonly [string, KeyedProjection])[] = [
   [
     'The projection run_tallies has no column due',
     { ...runTallyRows, indexes: [{ name: 'due', columns: ['due_at'], whereSet: 'due' }] },
+  ],
+  [
+    "The projection run_tallies names neither a playbook's streams nor an org's to fold",
+    { ...runTallyRows, scopes: [] },
   ],
   ['The projection run_tallies names no stream kind it folds', { ...runTallyRows, kinds: [] }],
   ['The stream kind name Runs is malformed', { ...runTallyRows, kinds: ['Runs'] }],

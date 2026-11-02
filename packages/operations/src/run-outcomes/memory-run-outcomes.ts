@@ -20,6 +20,7 @@ interface KeptOutcome {
 
 export interface MemoryRunOutcomes {
   readonly project: (stream: string, facts: readonly AppendedFact[], firstPosition: number) => void;
+  readonly refold: (stream: string, facts: readonly AppendedFact[]) => void;
   readonly readRunOutcomes: RunOutcomesReader['readRunOutcomes'];
 }
 
@@ -84,20 +85,28 @@ function stagedOutcomes(
 
 export function memoryRunOutcomes(mapping: RunOutcomeMapping | undefined): MemoryRunOutcomes {
   const kept = new Map<string, KeptOutcome>();
+  const project: MemoryRunOutcomes['project'] = (stream, facts, firstPosition) => {
+    if (mapping === undefined) {
+      return;
+    }
+    const messages = projectedMessagesOf(stream, facts, firstPosition);
+    const stage = stagedOutcomes(mapping, kept, stream);
+    const staged = messages.reduce<ReadonlyMap<string, KeptOutcome>>(
+      (outcomes, message) => stage(outcomes, message),
+      new Map(),
+    );
+    for (const [key, outcome] of staged) {
+      kept.set(key, outcome);
+    }
+  };
   return {
-    project: (stream, facts, firstPosition) => {
-      if (mapping === undefined) {
-        return;
+    project,
+    refold: (stream, facts) => {
+      const run = runStreamOf(stream);
+      if (run !== undefined) {
+        kept.delete(`${run.playbookKey}${run.runId}`);
       }
-      const messages = projectedMessagesOf(stream, facts, firstPosition);
-      const stage = stagedOutcomes(mapping, kept, stream);
-      const staged = messages.reduce<ReadonlyMap<string, KeptOutcome>>(
-        (outcomes, message) => stage(outcomes, message),
-        new Map(),
-      );
-      for (const [key, outcome] of staged) {
-        kept.set(key, outcome);
-      }
+      project(stream, facts, 1);
     },
     readRunOutcomes: (playbook, window, selection) =>
       Effect.sync(() => {

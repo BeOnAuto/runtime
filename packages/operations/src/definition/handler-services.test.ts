@@ -1,9 +1,9 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
 import type {
+  BoundProjectionReader,
   PlaybookContentReader,
   PlaybookAddress,
-  PlaybookProjectionReader,
   PlaybookRecordedReader,
   PlaybookRunOutcomesReader,
   PlaybookRegistry,
@@ -57,7 +57,7 @@ describe('the services a handler may ask for', () => {
   it('bind every port a handler sees to the org or playbook of the call', () => {
     expectTypeOf<OrgContext['Service']>().toEqualTypeOf<OrgAddress>();
     expectTypeOf<PlaybookContext['Service']>().toEqualTypeOf<PlaybookAddress>();
-    expectTypeOf<OrgReader['Service']>().toEqualTypeOf<StreamReader & OrgAppendedFactsReader>();
+    expectTypeOf<OrgReader['Service']>().toEqualTypeOf<StreamReader & OrgAppendedFactsReader & BoundProjectionReader>();
     expectTypeOf<OrgWriter['Service']>().toEqualTypeOf<StreamWriter>();
     expectTypeOf<PlaybookReader['Service']>().toEqualTypeOf<
       StreamReader &
@@ -65,7 +65,7 @@ describe('the services a handler may ask for', () => {
         PlaybookRecordedReader &
         PlaybookAppendedFactsReader &
         PlaybookRunOutcomesReader &
-        PlaybookProjectionReader &
+        BoundProjectionReader &
         PlaybookContentReader
     >();
     expectTypeOf<PlaybookWriter['Service']>().toEqualTypeOf<StreamWriter>();

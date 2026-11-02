@@ -1,25 +1,53 @@
 import type { SQL } from '@event-driven-io/dumbo';
-import type { ProjectedColumn, ProjectedColumnKind, ProjectedValue } from '@on.auto/operations';
+import {
+  scopesOf,
+  type KeyedProjection,
+  type ProjectedColumn,
+  type ProjectedColumnKind,
+  type ProjectedValue,
+  type StreamScope,
+} from '@on.auto/operations';
 import { Schema } from 'effect';
+
+export interface FoldedStreams {
+  readonly scopes: readonly StreamScope[];
+  readonly kinds: readonly string[];
+}
+
+export interface MessageLane {
+  readonly by: 'stream' | 'prefix';
+  readonly key: string;
+}
+
+export type StreamsInOrder =
+  | { readonly of: 'folded'; readonly folded: FoldedStreams }
+  | { readonly of: 'lane'; readonly lane: MessageLane };
 
 export interface ProjectionDialect {
   readonly tableVersions: (name: string) => SQL;
   readonly columnTypes: Readonly<Record<ProjectedColumnKind, string>>;
   readonly playbookIndexNulls: string;
   readonly asNumber: (expression: string) => string;
-  readonly streamsAfter: (after: string, count: number, kinds: readonly string[], types: readonly string[]) => SQL;
+  readonly streamsAfter: (after: string, count: number, folded: FoldedStreams, types: readonly string[]) => SQL;
   readonly messagesOf: (streams: readonly string[], types: readonly string[]) => SQL;
   readonly messagesInOrderAfter: (
     after: string | undefined,
     count: number,
-    kinds: readonly string[],
+    streams: StreamsInOrder,
     types: readonly string[],
   ) => SQL;
+  readonly messageAt: (stream: string, position: number) => SQL;
+  readonly rowLocks: (table: string, prefix: string, key: string) => readonly SQL[];
   readonly rowsInAWrite: (columns: number) => number;
   readonly filledData: (column: unknown) => unknown;
   readonly filledMetadata: (column: unknown) => unknown;
   readonly appendedData: (stored: unknown) => unknown;
+  readonly storedData: (data: Schema.JsonObject) => Readonly<Record<string, unknown>>;
   readonly booleanOf: (value: boolean) => boolean | number;
+}
+
+export function foldedStreamsOf(projection: KeyedProjection): FoldedStreams {
+  return { scopes: scopesOf(projection), kinds: projection.kinds };
 }
 
 export function selectedColumn({ asNumber }: ProjectionDialect, { name, kind }: ProjectedColumn): string {

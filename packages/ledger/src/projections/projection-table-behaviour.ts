@@ -1,10 +1,13 @@
 import { messageIdOf, type ProjectedRowsQuery } from '@on.auto/operations';
 import {
+  remarkFacts,
+  remarkRows,
   runFacts,
   runTallyRows,
   tallyRowsOf,
   topicFacts,
   topicRows,
+  type RemarkFact,
   type RunFact,
   type TopicFact,
 } from '@on.auto/operations/testing';
@@ -79,7 +82,7 @@ function aTableNotThereYet(entry: LedgerEntry): void {
       expect(await Effect.runPromise(reopened.readProjectedRows('run_tallies', alpha, everyRow))).toEqual([]);
     });
 
-    it('reads no row it finds under a key that is no playbook’s', async () => {
+    it('reads no row it finds under a key that is neither a playbook’s nor an org’s', async () => {
       const database = await entry.aDatabase();
       const ledger = await aLedger(entry, database, undefined, [runTallyRows]);
       await noting(ledger, 'playbook/acme/alpha/runs/r1', began);
@@ -91,7 +94,7 @@ function aTableNotThereYet(entry: LedgerEntry): void {
         ledger.readDueRows('run_tallies', { column: 'due_at', through: Number.MAX_SAFE_INTEGER, limit: 10 }),
       );
 
-      expect(due.map(({ org, playbook, key }) => `${org}/${playbook}/${key}`)).toEqual(['acme/alpha/r1']);
+      expect(due.map(({ org, playbook, key }) => [org, playbook, key])).toEqual([['acme', 'alpha', 'r1']]);
     });
   });
 }
@@ -158,10 +161,48 @@ function aKeyedTableNotThereYet(entry: LedgerEntry): void {
   });
 }
 
+function remarked(ledger: Awaited<ReturnType<typeof aLedger>>, stream: string, ...facts: readonly RemarkFact[]) {
+  return Effect.runPromise(ledger.execute(stream, remarkFacts, facts));
+}
+
+function aTableOfOrgsNotThereYet(entry: LedgerEntry): void {
+  describe('the table of a projection of the streams of orgs that is not there yet', () => {
+    it('is filled from the streams of orgs as from those of playbooks, keyed by the stream and by the mapping', async () => {
+      const database = await entry.aDatabase();
+      const first = await aLedger(entry, database);
+      await remarked(first, 'org/acme/remarks/r1', { type: 'remark_made', data: { text: 'of acme' } });
+      await remarked(first, 'playbook/acme/alpha/remarks/r1', { type: 'remark_made', data: { text: 'of alpha' } });
+      await remarked(first, 'org/acme/remarks/r1/nested', { type: 'remark_made', data: { text: 'nested' } });
+      await topics(first, 'org/acme/runs/r1', { type: 'topic_opened', data: { topic: 'spring', at: 1000 } });
+      await topics(first, 'org/acme/notes/n1', { type: 'topic_noted', data: { topic: 'spring', note: 'of acme' } });
+
+      const next = await aLedger(entry, database, undefined, [remarkRows, { ...topicRows, scopes: ['org'] }]);
+      const acme = { org: 'acme' };
+
+      expect(
+        (await Effect.runPromise(next.readProjectedRows('remarks', acme, everyRow))).map(({ key, row }) => [
+          key,
+          row['text'],
+        ]),
+      ).toEqual([['r1', 'of acme']]);
+      expect(
+        (await Effect.runPromise(next.readProjectedRows('remarks', alpha, everyRow))).map(({ row }) => row['text']),
+      ).toEqual(['of alpha']);
+      expect(
+        (await Effect.runPromise(next.readProjectedRows('topics', acme, everyRow))).map(({ key, row }) => [
+          key,
+          row['note'],
+        ]),
+      ).toEqual([['spring', 'of acme']]);
+    });
+  });
+}
+
 export function projectionTableBehaviour(entry: LedgerEntry): void {
   runOutcomeTableBehaviour(entry);
   projectionsBehaviour((projections) => aLedger(entry, undefined, undefined, projections));
   anAppendThatBreaksDown(entry);
   aTableNotThereYet(entry);
   aKeyedTableNotThereYet(entry);
+  aTableOfOrgsNotThereYet(entry);
 }

@@ -1,7 +1,12 @@
 import { Option, type Effect } from 'effect';
 
-import type { PlaybookAddress } from '../caller/playbook-context.ts';
-import { playbookOfStreamPrefix } from '../ledger/bound-ports.ts';
+import type { OrgAddress } from '../caller/org-context.ts';
+import {
+  orgOfStreamPrefix,
+  playbookOfStreamPrefix,
+  streamPrefixOfOrg,
+  streamPrefixOfPlaybook,
+} from '../ledger/bound-ports.ts';
 import type { Context } from '../ledger/context.ts';
 
 export type ProjectedValue = string | number | boolean | null;
@@ -40,9 +45,12 @@ export interface AdvancedColumn {
   readonly setBy: readonly string[];
 }
 
+export type StreamScope = 'playbook' | 'org';
+
 export interface KeyedProjection {
   readonly name: string;
   readonly version: number;
+  readonly scopes?: readonly StreamScope[];
   readonly kinds: readonly string[];
   readonly types: readonly string[];
   readonly columns: readonly ProjectedColumn[];
@@ -67,9 +75,11 @@ export interface ProjectedRowsQuery {
   readonly limit: number;
 }
 
-export interface ProjectedKeyedRow {
-  readonly org: string;
-  readonly playbook: string;
+export interface ProjectedAddress extends OrgAddress {
+  readonly playbook?: string;
+}
+
+export interface ProjectedKeyedRow extends ProjectedAddress {
   readonly key: string;
   readonly row: ProjectedRow;
 }
@@ -83,12 +93,12 @@ export interface DueRowsQuery {
 export interface ProjectionReader {
   readonly readProjectedRows: (
     projection: string,
-    playbook: PlaybookAddress,
+    address: ProjectedAddress,
     query: ProjectedRowsQuery,
   ) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly countProjectedRows: (
     projection: string,
-    playbook: PlaybookAddress,
+    address: ProjectedAddress,
     where: readonly ProjectedCondition[],
   ) => Effect.Effect<number>;
   readonly readDueRows: (projection: string, query: DueRowsQuery) => Effect.Effect<readonly ProjectedKeyedRow[]>;
@@ -103,13 +113,13 @@ export interface RowAdvance {
 export interface ProjectionAdvancer {
   readonly advanceRow: (
     projection: string,
-    playbook: PlaybookAddress,
+    address: ProjectedAddress,
     key: string,
     advance: RowAdvance,
   ) => Effect.Effect<void>;
 }
 
-export interface PlaybookProjectionReader {
+export interface BoundProjectionReader {
   readonly readProjectedRows: (
     projection: string,
     query: ProjectedRowsQuery,
@@ -127,26 +137,58 @@ const streamKind = /^[a-z][a-z0-9-]{0,39}$/u;
 
 const keyColumns: ReadonlySet<string> = new Set(['playbook_key', rowKeyColumn]);
 
-const aKeyKindAndId = /^([^/]+\/[^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
-
-export interface PlaybookStream extends ProjectedStream {
-  readonly playbookKey: string;
-  readonly playbook: PlaybookAddress;
+export function streamPrefixOfAddress({ org, playbook }: ProjectedAddress): string {
+  return playbook === undefined ? streamPrefixOfOrg({ org }) : streamPrefixOfPlaybook({ org, playbook });
 }
 
-export function playbookStreamOf(stream: string): PlaybookStream | undefined {
-  const [, playbookKey = '', kind = '', id = ''] = aKeyKindAndId.exec(stream) ?? [];
+export function addressOfStreamPrefix(prefix: string): Option.Option<ProjectedAddress> {
+  return Option.orElse(playbookOfStreamPrefix(prefix), () => orgOfStreamPrefix(prefix));
+}
+
+export interface AddressedStream extends ProjectedStream {
+  readonly scope: StreamScope;
+  readonly prefix: string;
+  readonly address: ProjectedAddress;
+}
+
+const aPlaybookKindAndId = /^([^/]+\/[^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
+
+const anOrgKindAndId = /^([^/]+\/[^/]+\/)([^/]+)\/([^/]+)$/u;
+
+function streamIn(
+  scope: StreamScope,
+  pattern: Readonly<RegExp>,
+  addressOf: (prefix: string) => Option.Option<ProjectedAddress>,
+  stream: string,
+): Option.Option<AddressedStream> {
+  const [, prefix = '', kind = '', id = ''] = pattern.exec(stream) ?? [];
+  return Option.map(addressOf(prefix), (address) => ({ scope, prefix, address, kind, id }));
+}
+
+export function addressedStreamOf(stream: string): AddressedStream | undefined {
   return Option.getOrUndefined(
-    Option.map(playbookOfStreamPrefix(playbookKey), (playbook) => ({ playbookKey, playbook, kind, id })),
+    Option.orElse(streamIn('playbook', aPlaybookKindAndId, playbookOfStreamPrefix, stream), () =>
+      streamIn('org', anOrgKindAndId, orgOfStreamPrefix, stream),
+    ),
   );
+}
+
+const playbookStreamsAlone: readonly StreamScope[] = ['playbook'];
+
+export function scopesOf({ scopes = playbookStreamsAlone }: KeyedProjection): readonly StreamScope[] {
+  return scopes;
+}
+
+export function foldsStream(projection: KeyedProjection, { scope, kind }: AddressedStream): boolean {
+  return scopesOf(projection).includes(scope) && projection.kinds.includes(kind);
 }
 
 export function rowKeyOf(
   projection: KeyedProjection,
   message: ProjectedMessage,
-  stream: PlaybookStream,
+  stream: AddressedStream,
 ): string | undefined {
-  if (!projection.kinds.includes(stream.kind)) {
+  if (!foldsStream(projection, stream)) {
     return undefined;
   }
   return projection.keyOf === undefined ? stream.id : projection.keyOf(message, stream);
@@ -195,10 +237,9 @@ function requireAdvancedOnce(projection: KeyedProjection, columns: readonly stri
   }
 }
 
-export function checkedProjection(projection: KeyedProjection): KeyedProjection {
-  requireNamed('projection', projection.name, projectionName);
-  if (!Number.isSafeInteger(projection.version) || projection.version < 1) {
-    throw new Error(`The projection ${projection.name} has a version that is not a whole number from 1`);
+function requireStreamsFolded(projection: KeyedProjection): void {
+  if (scopesOf(projection).length === 0) {
+    throw new Error(`The projection ${projection.name} names neither a playbook's streams nor an org's to fold`);
   }
   if (projection.kinds.length === 0) {
     throw new Error(`The projection ${projection.name} names no stream kind it folds`);
@@ -206,6 +247,14 @@ export function checkedProjection(projection: KeyedProjection): KeyedProjection 
   for (const kind of projection.kinds) {
     requireNamed('stream kind', kind, streamKind);
   }
+}
+
+export function checkedProjection(projection: KeyedProjection): KeyedProjection {
+  requireNamed('projection', projection.name, projectionName);
+  if (!Number.isSafeInteger(projection.version) || projection.version < 1) {
+    throw new Error(`The projection ${projection.name} has a version that is not a whole number from 1`);
+  }
+  requireStreamsFolded(projection);
   for (const { name } of projection.columns) {
     requireNamed('column', name, columnName);
     if (keyColumns.has(name)) {

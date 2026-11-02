@@ -1,4 +1,9 @@
-export { playbookOfStreamPrefix, streamPrefixOfPlaybook, streamPrefixOfOrg } from './ledger/bound-ports.ts';
+export {
+  orgOfStreamPrefix,
+  playbookOfStreamPrefix,
+  streamPrefixOfPlaybook,
+  streamPrefixOfOrg,
+} from './ledger/bound-ports.ts';
 export { PlaybookAccessSchema, canAccessPlaybook, type PlaybookAccess } from './caller/playbook-access.ts';
 export { PlaybookRegistry, type LivePlaybookStatus, type PlaybookStatus } from './ledger/playbook-registry.ts';
 export {
@@ -31,19 +36,24 @@ export { Conflict, ConflictKindSchema, resolutionOf, type ConflictKind, type Res
 export { Forbidden } from './outcome/forbidden.ts';
 export { RunUnanswered, UnansweredKindSchema, type UnansweredKind } from './outcome/unanswered-run.ts';
 export {
+  addressOfStreamPrefix,
+  addressedStreamOf,
   advancedColumnsLeftBy,
   advancedColumnsOf,
-  playbookStreamOf,
   checkedProjection,
+  foldsStream,
   projectedTableOf,
   requireAdvancedColumns,
   rowKeyColumn,
   rowKeyOf,
+  scopesOf,
+  streamPrefixOfAddress,
+  type AddressedStream,
   type AdvancedColumn,
-  type PlaybookProjectionReader,
-  type PlaybookStream,
+  type BoundProjectionReader,
   type DueRowsQuery,
   type KeyedProjection,
+  type ProjectedAddress,
   type ProjectedColumn,
   type ProjectedColumnKind,
   type ProjectedCondition,
@@ -58,7 +68,9 @@ export {
   type ProjectionAdvancer,
   type RowAdvance,
   type ProjectionReader,
+  type StreamScope,
 } from './projections/keyed-projection.ts';
+export { playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
 export {
   isKindWithType,
   kindsWithTypes,
@@ -220,6 +232,16 @@ export type {
   StreamReader,
   StreamWriter,
 } from './ledger/stream-ports.ts';
+export {
+  ScrubRefused,
+  noStreamToScrub,
+  notAPositionOfTheStream,
+  notTheShapeOf,
+  type FactScrub,
+  type FactScrubber,
+  type ScrubRefusedBecause,
+  type ScrubbedStream,
+} from './ledger/fact-scrub.ts';
 export {
   RunOutcomeStatusSchema,
   runStreamOf,

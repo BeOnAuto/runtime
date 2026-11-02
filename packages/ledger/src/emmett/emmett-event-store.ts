@@ -1,3 +1,4 @@
+import { DeadlockError, DumboError } from '@event-driven-io/dumbo';
 import {
   isExpectedVersionConflictError,
   type Event,
@@ -6,7 +7,15 @@ import {
 import { contextOf, messageIdOf, noLineage, type Context, type Lineage } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
-import type { AppendListeners, MessageLineage, RecordedMessage, StreamStore } from '../event-store.ts';
+import type {
+  AppendListeners,
+  AppendPlace,
+  EncodedEvent,
+  MessageLineage,
+  RecordedMessage,
+  StreamStore,
+} from '../event-store.ts';
+import { appendRiders, type AppendRiders, type Rider } from '../scrub/append-riders.ts';
 import { signalOf } from '../signal/append-signal.ts';
 import { VersionConflict } from '../version-conflict.ts';
 
@@ -23,7 +32,14 @@ export interface StoredData<Stored extends Record<string, unknown>> {
 export interface EmmettEventStoreOptions<Stored extends Record<string, unknown>> extends AppendListeners {
   readonly data: StoredData<Stored>;
   readonly mostEventsInOneAppend: number;
+  readonly riders?: AppendRiders;
 }
+
+export interface RiddenAppends {
+  readonly appendWithin: (stream: string, event: EncodedEvent, place: AppendPlace, rider: Rider) => Promise<void>;
+}
+
+export const rodeNowhere = 'The store appended the fact without running the work that rides on it before its commit';
 
 export const dataAsWritten: StoredData<Schema.JsonObject> = {
   stored: (data) => data,
@@ -65,12 +81,83 @@ function recordedMessageOf<Stored extends Record<string, unknown>>(
   });
 }
 
+interface PlacedMessage<Stored extends Record<string, unknown>> {
+  readonly type: string;
+  readonly data: Stored;
+  readonly metadata: StoredMetadata;
+}
+
+function messagesOf<Stored extends Record<string, unknown>>(
+  data: StoredData<Stored>,
+  stream: string,
+  events: readonly EncodedEvent[],
+  { expectedVersion, context, lineage = noLineage }: AppendPlace,
+): readonly PlacedMessage<Stored>[] {
+  return events.map((event, index) => ({
+    type: event.type,
+    data: data.stored(event.data),
+    metadata: metadataOf(messageIdOf(stream, expectedVersion + index + 1), lineage, context),
+  }));
+}
+
+function isADeadlock(error: unknown): boolean {
+  return DumboError.isInstanceOf(error, { errorType: DeadlockError.ErrorType });
+}
+
+async function appendedTo<Stored extends Record<string, unknown>>(
+  store: EmmettStore,
+  stream: string,
+  messages: readonly PlacedMessage<Stored>[],
+  { expectedVersion, context, lineage = noLineage }: AppendPlace,
+): Promise<void> {
+  try {
+    await store.appendToStream(stream, [...messages], {
+      expectedStreamVersion: BigInt(expectedVersion),
+      observability: observabilityOf(lineage, context),
+    });
+  } catch (error) {
+    if (isExpectedVersionConflictError(error) || isADeadlock(error)) {
+      throw new VersionConflict();
+    }
+    throw error;
+  }
+}
+
+async function appendedCarrying<Stored extends Record<string, unknown>>(
+  appended: () => Promise<void>,
+  messages: readonly PlacedMessage<Stored>[],
+  riders: AppendRiders,
+  rider: Rider,
+): Promise<void> {
+  const unridden = riders.ridden(
+    messages.map(({ data }) => data),
+    rider,
+  );
+  try {
+    await appended();
+  } catch (error) {
+    unridden();
+    throw error;
+  }
+  if (!unridden()) {
+    throw new Error(rodeNowhere);
+  }
+}
+
 export function emmettEventStore<Stored extends Record<string, unknown>>(
   store: EmmettStore,
-  { data, mostEventsInOneAppend, observer, ...listeners }: EmmettEventStoreOptions<Stored>,
-): StreamStore {
+  { data, mostEventsInOneAppend, observer, riders = appendRiders(), ...listeners }: EmmettEventStoreOptions<Stored>,
+): StreamStore & RiddenAppends {
   const recorded = recordedMessageOf(data);
-  const appended = signalOf(listeners);
+  const signal = signalOf(listeners);
+  const announced = (
+    stream: string,
+    events: readonly EncodedEvent[],
+    { lineage = noLineage, ...place }: AppendPlace,
+  ) => {
+    signal.raise(stream);
+    observer?.appended(stream, events, { ...place, lineage });
+  };
   return {
     mostEventsInOneAppend,
     read: async (stream, after = 0) => {
@@ -85,25 +172,14 @@ export function emmettEventStore<Stored extends Record<string, unknown>>(
         ),
       };
     },
-    append: async (stream, events, { expectedVersion, context, lineage = noLineage }) => {
-      try {
-        await store.appendToStream(
-          stream,
-          events.map((event, index) => ({
-            type: event.type,
-            data: data.stored(event.data),
-            metadata: metadataOf(messageIdOf(stream, expectedVersion + index + 1), lineage, context),
-          })),
-          { expectedStreamVersion: BigInt(expectedVersion), observability: observabilityOf(lineage, context) },
-        );
-      } catch (error) {
-        if (isExpectedVersionConflictError(error)) {
-          throw new VersionConflict();
-        }
-        throw error;
-      }
-      appended.raise(stream);
-      observer?.appended(stream, events, { expectedVersion, context, lineage });
+    append: async (stream, events, place) => {
+      await appendedTo(store, stream, messagesOf(data, stream, events, place), place);
+      announced(stream, events, place);
+    },
+    appendWithin: async (stream, event, place, rider) => {
+      const messages = messagesOf(data, stream, [event], place);
+      await appendedCarrying(() => appendedTo(store, stream, messages, place), messages, riders, rider);
+      announced(stream, [event], place);
     },
     migrate: async () => {
       await store.schema.migrate();

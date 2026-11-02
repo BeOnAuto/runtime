@@ -1,5 +1,5 @@
 import {
-  playbookStreamOf,
+  addressedStreamOf,
   projectedTableOf,
   rowKeyOf,
   type KeyedProjection,
@@ -9,6 +9,7 @@ import {
 import { chunksOf } from '../connection/bound-values.ts';
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
 import { inTurn } from './inline-projection.ts';
+import { foldedStreamsOf } from './projection-dialect.ts';
 import { filledMessageOf, replayedRow, type ProjectionKeeping, type ReplayedMessage } from './projection-keeping.ts';
 import {
   createdTable,
@@ -27,7 +28,7 @@ import {
 
 const streamsInABatch = 100;
 
-const messagesInABatch = 256;
+export const messagesInABatch = 256;
 
 const mostBytesInABatch = 16 * 1024 * 1024;
 
@@ -57,9 +58,9 @@ function replayedRows(
 ): readonly KeptRow[] {
   const byStream = Map.groupBy(messages, ({ stream }) => stream);
   return streams.flatMap((stream) => {
-    const named = playbookStreamOf(stream);
+    const named = addressedStreamOf(stream);
     const row = named === undefined ? undefined : replayedRow(keeping, byStream.get(stream) ?? []);
-    return named === undefined || row === undefined ? [] : [{ playbookKey: named.playbookKey, key: named.id, row }];
+    return named === undefined || row === undefined ? [] : [{ prefix: named.prefix, key: named.id, row }];
   });
 }
 
@@ -99,7 +100,7 @@ async function batchFilled(
   const { dialect, projection } = keeping;
   const listed = await streamsIn(
     execute,
-    dialect.streamsAfter(batch.after, batch.listing, projection.kinds, projection.types),
+    dialect.streamsAfter(batch.after, batch.listing, foldedStreamsOf(projection), projection.types),
   );
   const streams = withinBytes(listed);
   const messages = streams.length === 0 ? [] : await messagesIn(execute, dialect.messagesOf(streams, projection.types));
@@ -124,12 +125,12 @@ interface PlacedMessage {
 
 function placedMessages(keeping: ProjectionKeeping, messages: readonly Ordered[]) {
   return messages.flatMap((message): readonly PlacedMessage[] => {
-    const named = playbookStreamOf(message.stream);
+    const named = addressedStreamOf(message.stream);
     const key =
       named === undefined ? undefined : rowKeyOf(keeping.projection, filledMessageOf(keeping, message), named);
     return named === undefined || key === undefined
       ? []
-      : [{ message, place: { playbookKey: named.playbookKey, key }, stored: `${named.playbookKey}${key}` }];
+      : [{ message, place: { prefix: named.prefix, key }, stored: `${named.prefix}${key}` }];
   });
 }
 
@@ -167,7 +168,12 @@ async function filledInOrder(keeping: ProjectionKeeping, execute: StatementExecu
   const { dialect, projection } = keeping;
   const messages = await orderedMessagesIn(
     execute,
-    dialect.messagesInOrderAfter(after, messagesInABatch, projection.kinds, projection.types),
+    dialect.messagesInOrderAfter(
+      after,
+      messagesInABatch,
+      { of: 'folded', folded: foldedStreamsOf(projection) },
+      projection.types,
+    ),
   );
   await writtenInChunks(keeping, execute, await keyedRowsAfter(keeping, execute, messages));
   const last = messages.at(-1);

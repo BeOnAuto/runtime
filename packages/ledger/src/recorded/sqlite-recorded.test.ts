@@ -101,6 +101,29 @@ describe('an event store on SQLite given hooks of its own', () => {
 
     expect([hooked, indexesOf(fileName)]).toEqual([['after the schema'], playbookIndexes]);
   });
+
+  it('keeps its hook that runs before each commit', async () => {
+    const hooked: string[] = [];
+    const store = sqliteEventStore(() => ({
+      driver: sqlite3EventStoreDriver,
+      fileName: aDatabaseFile(),
+      hooks: {
+        onBeforeCommit: (messages: readonly unknown[]) => {
+          hooked.push(`before a commit of ${messages.length}`);
+          return Promise.resolve();
+        },
+      },
+    }));
+    onTestFinished(() => store.close());
+    await store.migrate();
+
+    await store.append('org/acme/notes', [{ type: 'noted', data: {} }], {
+      expectedVersion: 0,
+      context: { at: '2026-10-05T09:00:00.000Z', by: 'tester' },
+    });
+
+    expect(hooked).toEqual(['before a commit of 1']);
+  });
 });
 
 describe('the read of one message by its id on SQLite', () => {

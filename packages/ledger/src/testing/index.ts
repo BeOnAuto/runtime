@@ -2,6 +2,7 @@ export { ledgerLayout, ledgerLayoutFloor } from '../layout/ledger-layout.ts';
 export { ledgerBehaviour } from './ledger-behaviour.ts';
 export { logBehaviour } from './log-behaviour.ts';
 export { appendedFactsOnStoresBehaviour } from '../appended/appended-facts-on-stores-behaviour.ts';
+export { factScrubOnStoresBehaviour } from '../scrub/fact-scrub-on-stores-behaviour.ts';
 export { keptSecretsBehaviour, type KeptSecretsEntry } from '../secrets/kept-secrets-behaviour.ts';
 export { earlierShapesBehaviour } from '../recorded-facts/earlier-shapes-behaviour.ts';
 export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';

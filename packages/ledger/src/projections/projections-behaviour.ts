@@ -12,6 +12,8 @@ import {
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { orgProjectionsBehaviour } from './org-projections-behaviour.ts';
+
 type AnyLedger = Ledger['Service'];
 
 export type ProjectingLedger = (projections: readonly KeyedProjection[]) => Promise<AnyLedger>;
@@ -141,12 +143,15 @@ function dueRows(open: ProjectingLedger): void {
       await noting(ledger, 'org/acme/alpha/runs/r4', began('triage', 0));
       const due = async (through: number, limit = 10) =>
         (await Effect.runPromise(ledger.readDueRows('run_tallies', { column: 'due_at', through, limit }))).map(
-          ({ org, playbook, key }) => `${org}/${playbook}/${key}`,
+          ({ org, playbook, key }) => [org, playbook, key],
         );
 
-      expect(await due(nine + 3 * minute)).toEqual(['globex/gamma/r2', 'acme/alpha/r1']);
-      expect(await due(nine + tallyDueAfterMs)).toEqual(['globex/gamma/r2']);
-      expect(await due(nine + 3 * minute, 1)).toEqual(['globex/gamma/r2']);
+      expect(await due(nine + 3 * minute)).toEqual([
+        ['globex', 'gamma', 'r2'],
+        ['acme', 'alpha', 'r1'],
+      ]);
+      expect(await due(nine + tallyDueAfterMs)).toEqual([['globex', 'gamma', 'r2']]);
+      expect(await due(nine + 3 * minute, 1)).toEqual([['globex', 'gamma', 'r2']]);
       expect(await due(nine)).toEqual([]);
       expect(await Effect.runPromise(ledger.nextDueOf('run_tallies', 'due_at', 0))).toBe(nine + tallyDueAfterMs);
       expect(await Effect.runPromise(ledger.nextDueOf('run_tallies', 'due_at', nine + tallyDueAfterMs))).toBe(
@@ -281,4 +286,5 @@ export function projectionsBehaviour(open: ProjectingLedger): void {
   rowsKeyedByTheirMapping(open);
   rowsAdvanced(open);
   rowsAdvancedWhileUnchanged(open);
+  orgProjectionsBehaviour(open);
 }

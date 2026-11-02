@@ -1,30 +1,71 @@
+import { Option } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
+  addressOfStreamPrefix,
+  addressedStreamOf,
   advancedColumnsLeftBy,
   advancedColumnsOf,
-  playbookStreamOf,
   requireAdvancedColumns,
   rowKeyOf,
+  streamPrefixOfAddress,
+  type AddressedStream,
 } from './keyed-projection.ts';
+import { remarkRows } from './remark-rows.ts';
 import { runTallyRows } from './tally-rows.ts';
 import { topicRows } from './topic-rows.ts';
 
-describe('the stream of a playbook a fact was appended to', () => {
-  it('is read as the playbook key, its playbook, the kind and the id, and nothing that names no kind and id', () => {
+const alphaRuns: AddressedStream = {
+  scope: 'playbook',
+  prefix: 'playbook/acme/alpha/',
+  address: { org: 'acme', playbook: 'alpha' },
+  kind: 'runs',
+  id: 'r1',
+};
+
+const acmeRemarks: AddressedStream = {
+  scope: 'org',
+  prefix: 'org/acme/',
+  address: { org: 'acme' },
+  kind: 'remarks',
+  id: 'r1',
+};
+
+describe('the stream a fact was appended to', () => {
+  it('is read as the prefix, the playbook or the org, the kind and the id, and nothing that names no kind and id', () => {
     expect([
-      playbookStreamOf('playbook/acme/alpha/runs/r1'),
-      playbookStreamOf('playbook/acme/alpha/runs'),
-      playbookStreamOf('playbook/acme/alpha/runs/r1/nested'),
-    ]).toEqual([
-      { playbookKey: 'playbook/acme/alpha/', playbook: { org: 'acme', playbook: 'alpha' }, kind: 'runs', id: 'r1' },
+      addressedStreamOf('playbook/acme/alpha/runs/r1'),
+      addressedStreamOf('org/acme/remarks/r1'),
+      addressedStreamOf('playbook/acme/alpha/runs'),
+      addressedStreamOf('playbook/acme/alpha/runs/r1/nested'),
+      addressedStreamOf('org/acme/remarks'),
+      addressedStreamOf('org/acme/alpha/runs/r1'),
+    ]).toEqual([alphaRuns, acmeRemarks, undefined, undefined, undefined, undefined]);
+  });
+
+  it('is of neither a playbook nor an org outside them, though it names a kind and an id', () => {
+    expect([addressedStreamOf('runs/acme/alpha/runs/r1'), addressedStreamOf('orgs/acme/remarks/r1')]).toEqual([
       undefined,
       undefined,
     ]);
   });
+});
 
-  it('is no stream of a playbook outside the playbooks, though it names a kind and an id', () => {
-    expect(playbookStreamOf('org/acme/alpha/runs/r1')).toBeUndefined();
+describe('the address of a projected row', () => {
+  it('is the playbook or the org its prefix names, and names that prefix again', () => {
+    const addresses = ['playbook/acme/alpha/', 'org/acme/', 'org/acme/alpha/', 'playbook/acme/'].map((prefix) =>
+      addressOfStreamPrefix(prefix),
+    );
+
+    expect(addresses).toEqual([
+      Option.some({ org: 'acme', playbook: 'alpha' }),
+      Option.some({ org: 'acme' }),
+      Option.none(),
+      Option.none(),
+    ]);
+    expect([streamPrefixOfAddress({ org: 'acme', playbook: 'alpha' }), streamPrefixOfAddress({ org: 'acme' })]).toEqual(
+      ['playbook/acme/alpha/', 'org/acme/'],
+    );
   });
 });
 
@@ -38,18 +79,19 @@ describe('the key of the row a fact changes', () => {
   };
 
   it('is the stream’s id by default, what the mapping says otherwise, and none for a kind it does not fold', () => {
-    const run = {
-      playbookKey: 'playbook/acme/alpha/',
-      playbook: { org: 'acme', playbook: 'alpha' },
-      kind: 'runs',
-      id: 'r1',
-    };
-
     expect([
-      rowKeyOf(runTallyRows, opened, run),
-      rowKeyOf(topicRows, opened, run),
-      rowKeyOf(topicRows, opened, { ...run, kind: 'others' }),
+      rowKeyOf(runTallyRows, opened, alphaRuns),
+      rowKeyOf(topicRows, opened, alphaRuns),
+      rowKeyOf(topicRows, opened, { ...alphaRuns, kind: 'others' }),
     ]).toEqual(['r1', 'spring', undefined]);
+  });
+
+  it('is none for a stream of a scope the projection does not fold, a playbook’s streams alone when it names none', () => {
+    expect([
+      rowKeyOf(runTallyRows, opened, { ...alphaRuns, scope: 'org', prefix: 'org/acme/', address: { org: 'acme' } }),
+      rowKeyOf(remarkRows, opened, acmeRemarks),
+      rowKeyOf({ ...remarkRows, scopes: ['playbook'] }, opened, acmeRemarks),
+    ]).toEqual([undefined, 'r1', undefined]);
   });
 });
 

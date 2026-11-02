@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { Ledger } from '@on.auto/operations';
 import { topicFacts, topicRows } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { Client } from 'pg';
@@ -47,14 +48,14 @@ async function aDatabase(): Promise<string> {
 const waitingOnALock =
   "SELECT count(*)::int AS waiting FROM pg_stat_activity WHERE datname = current_database() AND wait_event_type = 'Lock'";
 
-async function untilAWriteWaitsOnALock(database: string): Promise<void> {
+async function untilWritesWaitOnALock(database: string, waiting = 1): Promise<void> {
   await until(async () => {
-    expect(await queried(database, waitingOnALock)).toEqual([{ waiting: 1 }]);
+    expect(await queried(database, waitingOnALock)).toEqual([{ waiting }]);
   });
 }
 
 describe.skipIf(skipped)(`A fold beside an advance of the same row on PostgreSQL${notice}`, () => {
-  it('leaves the columns the advance wrote, though the fold read the row before the advance committed', async () => {
+  it('leaves the columns the advance wrote, the fold waiting for the advance to commit before it reads the row', async () => {
     const database = await aDatabase();
     const { ledger, dispose } = await openLedgerWith(
       postgresqlLedgerLayer({ pools: plainPoolsOn(database), projections: [topicRows] }),
@@ -74,7 +75,7 @@ describe.skipIf(skipped)(`A fold beside an advance of the same row on PostgreSQL
         { type: 'topic_noted', data: { topic: 'spring', note: 'during' } },
       ]),
     );
-    await untilAWriteWaitsOnALock(database);
+    await untilWritesWaitOnALock(database);
     await advancing.query('COMMIT');
     await folding;
 
@@ -83,3 +84,83 @@ describe.skipIf(skipped)(`A fold beside an advance of the same row on PostgreSQL
     ).toEqual([{ note: 'during', open: false, next_at: null, due_at: null }]);
   });
 });
+
+async function aLedgerOfTopics(): Promise<{ readonly database: string; readonly ledger: Ledger['Service'] }> {
+  const database = await aDatabase();
+  const { ledger, dispose } = await openLedgerWith(
+    postgresqlLedgerLayer({ pools: plainPoolsOn(database), projections: [topicRows] }),
+  );
+  onTestFinished(dispose);
+  await Effect.runPromise(
+    ledger.execute('playbook/acme/alpha/runs/r1', topicFacts, [
+      { type: 'topic_opened', data: { topic: 'spring', at: 1000 } },
+    ]),
+  );
+  return { database, ledger };
+}
+
+async function aRowHeld(database: string): Promise<Client> {
+  const holding = await connected(database);
+  await holding.query('BEGIN');
+  await holding.query("SELECT 1 FROM topics_2 WHERE row_key = 'spring' FOR UPDATE");
+  return holding;
+}
+
+const springOf = "SELECT note, next_at FROM topics_2 WHERE row_key = 'spring'";
+
+describe.skipIf(skipped)(`Two appends that fold into one row at once on PostgreSQL${notice}`, () => {
+  it('fold one after the other, each from the row the other left, so neither is lost', async () => {
+    const { database, ledger } = await aLedgerOfTopics();
+    const holding = await aRowHeld(database);
+
+    const noting = Effect.runPromise(
+      ledger.execute('playbook/acme/alpha/notes/n1', topicFacts, [
+        { type: 'topic_noted', data: { topic: 'spring', note: 'during' } },
+      ]),
+    );
+    const opening = Effect.runPromise(
+      ledger.execute('playbook/acme/alpha/runs/r2', topicFacts, [
+        { type: 'topic_opened', data: { topic: 'spring', at: 2000 } },
+      ]),
+    );
+    await untilWritesWaitOnALock(database, 2);
+    await holding.query('COMMIT');
+    await Promise.all([noting, opening]);
+
+    expect(await queried(database, springOf)).toEqual([{ note: 'during', next_at: '7000' }]);
+  });
+});
+
+describe.skipIf(skipped)(
+  `A scrub beside an append that folds into the row it folds again on PostgreSQL${notice}`,
+  () => {
+    it('leaves the row folded from the scrubbed fact and the appended one, whichever folds first', async () => {
+      const { database, ledger } = await aLedgerOfTopics();
+      await Effect.runPromise(
+        ledger.execute('playbook/acme/alpha/notes/n1', topicFacts, [
+          { type: 'topic_noted', data: { topic: 'spring', note: 'call me on 0123' } },
+        ]),
+      );
+      const holding = await aRowHeld(database);
+
+      const scrubbing = Effect.runPromise(
+        ledger.scrubFact('playbook/acme/alpha/notes/n1', 1, {
+          eventSchema: topicFacts.eventSchema,
+          data: { topic: 'spring', note: 'a note was erased' },
+          erasure: { type: 'topic_noted', data: { topic: 'erased', note: 'a note was erased' } },
+          context: { at: '2026-10-06T09:00:00.000Z', by: 'eraser' },
+        }),
+      );
+      const opening = Effect.runPromise(
+        ledger.execute('playbook/acme/alpha/runs/r2', topicFacts, [
+          { type: 'topic_opened', data: { topic: 'spring', at: 2000 } },
+        ]),
+      );
+      await untilWritesWaitOnALock(database, 2);
+      await holding.query('COMMIT');
+      await Promise.all([scrubbing, opening]);
+
+      expect(await queried(database, springOf)).toEqual([{ note: 'a note was erased', next_at: '7000' }]);
+    });
+  },
+);

@@ -2,6 +2,7 @@ import type { SQL } from '@event-driven-io/dumbo';
 import type { ContentStore } from '@on.auto/content';
 import type {
   Context,
+  FactScrubber,
   ProjectionAdvancer,
   ProjectionReader,
   Lineage,
@@ -190,7 +191,30 @@ export interface RunOutcomesStore {
   ) => Promise<readonly RunOutcomeGroup[]>;
 }
 
-export interface LedgerStore extends EventStore, RunOutcomesStore, ProjectionReader, ProjectionAdvancer, ContentStore {
+export interface ScrubbedData {
+  readonly position: number;
+  readonly data: Schema.JsonObject;
+}
+
+type FactAt =
+  | { readonly found: 'no_stream' }
+  | { readonly found: 'no_fact'; readonly version: number }
+  | { readonly found: 'fact'; readonly version: number; readonly type: string; readonly context: Context };
+
+export interface FactScrubStore {
+  readonly factAt: (stream: string, position: number) => Promise<FactAt>;
+  readonly scrub: (stream: string, scrubbed: ScrubbedData, erasure: EncodedEvent, place: AppendPlace) => Promise<void>;
+}
+
+export interface LedgerStore
+  extends
+    EventStore,
+    FactScrubStore,
+    FactScrubber,
+    RunOutcomesStore,
+    ProjectionReader,
+    ProjectionAdvancer,
+    ContentStore {
   readonly log: LogPorts;
 }
 

@@ -1,4 +1,4 @@
-import type { ProjectedKeyedRow } from '@on.auto/operations';
+import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { attemptInFlightMs } from '../requests/open-requests.ts';
@@ -14,7 +14,7 @@ function conversationRead(parts: ConversationParts, place: ConversationPlace, no
   );
 }
 
-function itemOf(parts: ConversationParts, kept: ProjectedKeyedRow): DueRequestItem {
+function itemOf(parts: ConversationParts, kept: PlaybookProjectedRow): DueRequestItem {
   const place = {
     playbook: { org: kept.org, playbook: kept.playbook },
     key: kept.key,
@@ -36,7 +36,7 @@ export function conversationsDue(parts: ConversationParts): RequestsDue {
       callsOut
         ? Effect.map(
             parts.ledger.readDueRows(conversationsName, { column: 'due_at', through: now, limit: most }),
-            (rows) => rows.map((kept) => itemOf(parts, kept)),
+            (rows) => playbookRowsOf(conversationsName, rows).map((kept) => itemOf(parts, kept)),
           )
         : Effect.succeed(callsNothing),
     nextDueAt: (after, callsOut = true) =>

@@ -1,3 +1,4 @@
+import { DeadlockError } from '@event-driven-io/dumbo';
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { Result } from 'effect';
@@ -7,7 +8,7 @@ import { eventAppenderOf, VersionConflict } from '../index.ts';
 import { stamped } from '../testing/happenings.ts';
 import { outcomeOf } from '../testing/open-ledger.ts';
 import { tally } from '../testing/tally.ts';
-import { dataAsWritten, emmettEventStore, type EmmettStore } from './emmett-event-store.ts';
+import { dataAsWritten, emmettEventStore, rodeNowhere, type EmmettStore } from './emmett-event-store.ts';
 
 function anEmmettStore(): EmmettStore {
   const store = getSQLiteEventStore({
@@ -93,5 +94,41 @@ describe('an append to an event store over an Emmett event store', () => {
     await store.close();
 
     await expect(emmett.readStream(run)).rejects.toThrow('Singleton connection pool has been closed');
+  });
+});
+
+describe('an append that carries work to do inside its transaction', () => {
+  it('fails when the Emmett store under it runs no work of the ledger before its commit', async () => {
+    const store = emmettEventStore(anEmmettStore(), { data: dataAsWritten, mostEventsInOneAppend: 8 });
+    await store.migrate();
+    const done: string[] = [];
+
+    const appended = store.appendWithin(
+      run,
+      { type: 'counted', data: { n: 1 } },
+      { expectedVersion: 0, context: stamped },
+      () => {
+        done.push('the work');
+        return Promise.resolve();
+      },
+    );
+
+    await expect(appended).rejects.toThrow(rodeNowhere);
+    expect(done).toEqual([]);
+  });
+});
+
+describe('an append whose store answers a deadlock', () => {
+  it('meets a version conflict, so the decision is made again', async () => {
+    const store = emmettEventStore(
+      { ...anEmmettStore(), appendToStream: () => Promise.reject(new DeadlockError('deadlock detected')) },
+      { data: dataAsWritten, mostEventsInOneAppend: 8 },
+    );
+
+    expect(
+      await outcomeOf(
+        eventAppenderOf(store, tally.eventSchema)(run, counted(1), { expectedVersion: 0, context: stamped }),
+      ),
+    ).toEqual(Result.fail(new VersionConflict()));
   });
 });

@@ -3,7 +3,7 @@ import { Effect, Option } from 'effect';
 import type { OrgAddress } from '../caller/org-context.ts';
 import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import { InvalidInput } from '../outcome/invalid-input.ts';
-import type { PlaybookProjectionReader, ProjectionReader } from '../projections/keyed-projection.ts';
+import type { BoundProjectionReader, ProjectedAddress, ProjectionReader } from '../projections/keyed-projection.ts';
 import { isCalendarDay } from '../reading/calendar-days.ts';
 import { mostExaminedInAPage, mostRecordsInAPage } from '../reading/page-bounds.ts';
 import type {
@@ -40,8 +40,10 @@ function wellFormed(stream: string): Effect.Effect<string> {
     : Effect.die(new Error(`The stream name ${JSON.stringify(stream)} is malformed`));
 }
 
+const orgStreams = 'org/';
+
 export function streamPrefixOfOrg({ org }: OrgAddress): string {
-  return `org/${org}/`;
+  return `${orgStreams}${org}/`;
 }
 
 const playbookStreams = 'playbook/';
@@ -55,6 +57,13 @@ const aPlaybookPrefix = new RegExp(`^${playbookStreams}([^/]+)/([^/]+)/$`, 'u');
 export function playbookOfStreamPrefix(prefix: string): Option.Option<PlaybookAddress> {
   const [, org, playbook] = aPlaybookPrefix.exec(prefix) ?? [];
   return org === undefined || playbook === undefined ? Option.none() : Option.some({ org, playbook });
+}
+
+const anOrgPrefix = new RegExp(`^${orgStreams}([^/]+)/$`, 'u');
+
+export function orgOfStreamPrefix(prefix: string): Option.Option<OrgAddress> {
+  const [, org] = anOrgPrefix.exec(prefix) ?? [];
+  return org === undefined ? Option.none() : Option.some({ org });
 }
 
 export function prefixedReader(ledger: StreamReader, prefix: string): StreamReader {
@@ -149,17 +158,25 @@ function wellFormedWindow(window: RunOutcomeWindow): Effect.Effect<RunOutcomeWin
     : Effect.die(new RangeError(`The days from ${JSON.stringify(from)} to ${JSON.stringify(to)} are not a window`));
 }
 
-export function playbookBoundProjectionReader(
-  ledger: ProjectionReader,
-  playbook: PlaybookAddress,
-): PlaybookProjectionReader {
+function boundProjectionReader(ledger: ProjectionReader, address: ProjectedAddress): BoundProjectionReader {
   return {
     readProjectedRows: (projection, query) =>
       Number.isSafeInteger(query.limit) && query.limit >= 1
-        ? ledger.readProjectedRows(projection, playbook, query)
+        ? ledger.readProjectedRows(projection, address, query)
         : Effect.die(new RangeError(`A read of projected rows takes a limit of 1 or more, not ${query.limit}`)),
-    countProjectedRows: (projection, where) => ledger.countProjectedRows(projection, playbook, where),
+    countProjectedRows: (projection, where) => ledger.countProjectedRows(projection, address, where),
   };
+}
+
+export function playbookBoundProjectionReader(
+  ledger: ProjectionReader,
+  { org, playbook }: PlaybookAddress,
+): BoundProjectionReader {
+  return boundProjectionReader(ledger, { org, playbook });
+}
+
+export function orgBoundProjectionReader(ledger: ProjectionReader, { org }: OrgAddress): BoundProjectionReader {
+  return boundProjectionReader(ledger, { org });
 }
 
 export function playbookBoundRunOutcomesReader(

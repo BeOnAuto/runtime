@@ -8,6 +8,7 @@ import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded
 import { databaseStructureBehaviour } from '../structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
   knownFactsBehaviour,
@@ -151,6 +152,7 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   ledgerBehaviour(onPostgreSQL);
   logBehaviour(onPostgreSQL);
   appendedFactsOnStoresBehaviour(onPostgreSQL);
+  factScrubOnStoresBehaviour(onPostgreSQL);
   earlierShapesBehaviour(onPostgreSQL);
   databaseStructureBehaviour(onPostgreSQL);
   knownFactsBehaviour(onPostgreSQL);

@@ -6,6 +6,15 @@ export { recordingTracer, type RecordedSpan, type RecordingTracer } from './reco
 export { runFacts, runTallies, talliedContext, type RunFact } from '../run-outcomes/run-tallies.ts';
 export { runTallyRows, tallyDueAfterMs, tallyRowsOf } from '../projections/tally-rows.ts';
 export { topicFacts, topicRows, topicWaitMs, type TopicFact } from '../projections/topic-rows.ts';
+export {
+  RemarkFactSchema,
+  remarkFacts,
+  remarkRows,
+  remarkedContext,
+  type RemarkFact,
+} from '../projections/remark-rows.ts';
+export { factScrubBehaviour } from '../scrub-testing/fact-scrub-behaviour.ts';
+export type { FactScrubEntry } from '../scrub-testing/scrub-parts.ts';
 export { appendedFactsBehaviour, type AppendedFactsEntry } from '../changes-testing/appended-facts-behaviour.ts';
 export { internalTerms, internalTermsIn } from '../plain-language/internal-terms.ts';
 export { endedWhileItRuns, stoppedWithinMs, type RunningProcess } from '../process-testing/process-endings.ts';

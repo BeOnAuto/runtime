@@ -1,6 +1,6 @@
 import {
+  addressedStreamOf,
   advancedColumnsLeftBy,
-  playbookStreamOf,
   contextOf,
   messageIdOf,
   rowKeyOf,
@@ -19,7 +19,7 @@ import {
   type StoredMessage,
 } from './inline-projection.ts';
 import type { ProjectionDialect } from './projection-dialect.ts';
-import { rowIn, rowsWrite, type RowPlace } from './projection-statements.ts';
+import { rowIn, rowsLocked, rowsWrite, type RowPlace } from './projection-statements.ts';
 
 export interface ProjectionKeeping {
   readonly dialect: ProjectionDialect;
@@ -53,22 +53,37 @@ async function keptAfter(
 }
 
 function placeOf(projection: KeyedProjection, message: StoredMessage): RowPlace | undefined {
-  const named = playbookStreamOf(message.stream);
+  const named = addressedStreamOf(message.stream);
   const key = named === undefined ? undefined : rowKeyOf(projection, projectedOf(message), named);
-  return named === undefined || key === undefined ? undefined : { playbookKey: named.playbookKey, key };
+  return named === undefined || key === undefined ? undefined : { prefix: named.prefix, key };
+}
+
+interface PlacedMessage {
+  readonly message: StoredMessage;
+  readonly place: RowPlace;
+}
+
+function placedOf({ dialect, projection }: ProjectionKeeping, messages: readonly StoredMessage[]) {
+  return messages.flatMap((message): readonly PlacedMessage[] => {
+    const decoded = { ...message, data: dialect.appendedData(message.data) };
+    const place = placeOf(projection, decoded);
+    return place === undefined ? [] : [{ message: decoded, place }];
+  });
 }
 
 function keepingProjection(keeping: ProjectionKeeping): InlineProjection {
   return {
     types: keeping.projection.types,
-    handle: (messages, execute) =>
-      inTurn(messages, async (message: StoredMessage) => {
-        const decoded = { ...message, data: keeping.dialect.appendedData(message.data) };
-        const place = placeOf(keeping.projection, decoded);
-        if (place !== undefined) {
-          await keptAfter(keeping, execute, place, decoded);
-        }
-      }),
+    handle: async (messages, execute) => {
+      const placed = placedOf(keeping, messages);
+      await rowsLocked(
+        execute,
+        keeping.dialect,
+        keeping.projection,
+        placed.map(({ place }) => place),
+      );
+      await inTurn(placed, ({ message, place }: PlacedMessage) => keptAfter(keeping, execute, place, message));
+    },
   };
 }
 
@@ -80,16 +95,28 @@ export function filledMessageOf(
   return { id: messageIdOf(stream, position), position, type, data: dialect.filledData(data), context };
 }
 
+export function rowFoldedOver(
+  { rowAfter }: KeyedProjection,
+  messages: readonly ProjectedMessage[],
+  from?: ProjectedRow,
+): ProjectedRow | undefined {
+  let row = from;
+  for (const message of messages) {
+    row = rowAfter(row, message) ?? row;
+  }
+  return row;
+}
+
 export function replayedRow(
   keeping: ProjectionKeeping,
   messages: readonly ReplayedMessage[],
   from?: ProjectedRow,
 ): ProjectedRow | undefined {
-  let row = from;
-  for (const message of messages) {
-    row = keeping.projection.rowAfter(row, filledMessageOf(keeping, message)) ?? row;
-  }
-  return row;
+  return rowFoldedOver(
+    keeping.projection,
+    messages.map((message) => filledMessageOf(keeping, message)),
+    from,
+  );
 }
 
 export function projectionRegistrations(

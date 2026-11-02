@@ -12,10 +12,11 @@ import {
 import { Schema } from 'effect';
 
 import type { StatementExecutor } from '../event-store.ts';
+import { inTurn } from './inline-projection.ts';
 import { boundOf, selectedColumn, valueOf, type ProjectionDialect } from './projection-dialect.ts';
 
 export interface RowPlace {
-  readonly playbookKey: string;
+  readonly prefix: string;
   readonly key: string;
 }
 
@@ -39,7 +40,9 @@ const MessageFields = {
 
 const MessageRows = Schema.Array(Schema.Struct(MessageFields));
 
-const OrderedMessageRows = Schema.Array(Schema.Struct({ point: Schema.String, ...MessageFields }));
+const OrderedMessageRows = Schema.Array(
+  Schema.Struct({ point: Schema.String, ordered: Schema.String, ...MessageFields }),
+);
 
 const decodeObjects = Schema.decodeUnknownSync(Schema.Array(Schema.Record(Schema.String, Schema.Unknown)));
 
@@ -90,18 +93,18 @@ export async function rowIn(
   execute: StatementExecutor,
   dialect: ProjectionDialect,
   projection: KeyedProjection,
-  { playbookKey, key }: RowPlace,
+  { prefix, key }: RowPlace,
 ): Promise<ProjectedRow | undefined> {
   const { rows } = await execute.query(
-    SQL`SELECT ${selectedColumns(dialect, projection)} FROM ${tableOf(projection)} WHERE playbook_key = ${playbookKey} AND row_key = ${key}`,
+    SQL`SELECT ${selectedColumns(dialect, projection)} FROM ${tableOf(projection)} WHERE playbook_key = ${prefix} AND row_key = ${key}`,
   );
   const [stored] = rowsFrom(rows);
   return stored === undefined ? undefined : rowFrom(projection, stored);
 }
 
-function valuesOf(dialect: ProjectionDialect, projection: KeyedProjection, { playbookKey, key, row }: KeptRow): SQL {
+function valuesOf(dialect: ProjectionDialect, projection: KeyedProjection, { prefix, key, row }: KeptRow): SQL {
   const values = projection.columns.map(({ name }) => SQL`${boundOf(dialect, row[name] ?? null)}`);
-  return SQL`(${SQL.merge([SQL`${playbookKey}`, SQL`${key}`, ...values], ', ')})`;
+  return SQL`(${SQL.merge([SQL`${prefix}`, SQL`${key}`, ...values], ', ')})`;
 }
 
 function updatedColumns(projection: KeyedProjection, standing: readonly string[]): readonly string[] {
@@ -153,7 +156,7 @@ export function conditionsOf(
 export function rowAdvance(
   dialect: ProjectionDialect,
   projection: KeyedProjection,
-  { playbookKey, key }: RowPlace,
+  { prefix, key }: RowPlace,
   { set, when }: RowAdvance,
 ): SQL {
   const assignments = SQL.merge(
@@ -162,7 +165,31 @@ export function rowAdvance(
     ),
     ', ',
   );
-  return SQL`UPDATE ${tableOf(projection)} SET ${assignments} WHERE playbook_key = ${playbookKey} AND row_key = ${key}${conditionsOf(dialect, projection, when)}`;
+  return SQL`UPDATE ${tableOf(projection)} SET ${assignments} WHERE playbook_key = ${prefix} AND row_key = ${key}${conditionsOf(dialect, projection, when)}`;
+}
+
+type NamedPlace = readonly [string, RowPlace];
+
+function inLockOrder(places: readonly RowPlace[]): readonly RowPlace[] {
+  const named = new Map(places.map((place): NamedPlace => [`${place.prefix}${place.key}`, place]));
+  return [...named]
+    .toSorted(([left]: NamedPlace, [right]: NamedPlace) => Number(left > right) - Number(left < right))
+    .map(([, place]: NamedPlace) => place);
+}
+
+export async function rowsLocked(
+  execute: StatementExecutor,
+  dialect: ProjectionDialect,
+  projection: KeyedProjection,
+  places: readonly RowPlace[],
+): Promise<void> {
+  const table = projectedTableOf(projection);
+  const locks = inLockOrder(places).flatMap(({ prefix, key }) => dialect.rowLocks(table, prefix, key));
+  await inTurn(locks, (lock) => execute.query(lock));
+}
+
+export function rowDelete(projection: KeyedProjection, { prefix, key }: RowPlace): SQL {
+  return SQL`DELETE FROM ${tableOf(projection)} WHERE playbook_key = ${prefix} AND row_key = ${key}`;
 }
 
 export function tableDrop(name: string): SQL {

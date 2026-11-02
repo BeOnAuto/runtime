@@ -6,6 +6,7 @@ import { Client } from 'pg';
 
 import type { AppendListeners, LedgerStore } from '../src/event-store.ts';
 import { plainPoolsOn, postgresqlEventStore } from '../src/postgresql/postgresql-ledger.ts';
+import type { KeptTables } from '../src/projections/projection-parts.ts';
 import { sqliteEventStore } from '../src/sqlite-event-store.ts';
 import type { modestConnections } from '../src/sqlite3.ts';
 import { temporaryDatabase } from '../src/testing/temporary-database.ts';
@@ -15,7 +16,7 @@ const postgresqlServer = process.env['LEDGER_MEASURE_POSTGRESQL_URL'] ?? '';
 export interface MeasuredStore {
   readonly name: string;
   readonly statement: (text: string) => Promise<readonly Readonly<Record<string, unknown>>[]>;
-  readonly opened: (listeners?: AppendListeners) => Promise<LedgerStore>;
+  readonly opened: (listeners?: AppendListeners, kept?: KeptTables) => Promise<LedgerStore>;
   readonly dropped: () => Promise<void>;
 }
 
@@ -52,14 +53,14 @@ export interface MeasuredOn {
 
 async function sqliteStore({ sqliteConnections }: MeasuredOn): Promise<MeasuredStore> {
   const { fileName, remove } = temporaryDatabase();
-  const open = (listeners: AppendListeners = {}): LedgerStore =>
+  const open = (listeners: AppendListeners = {}, kept: KeptTables = {}): LedgerStore =>
     sqliteEventStore(
       () => ({
         driver: sqlite3EventStoreDriver,
         fileName,
         ...(sqliteConnections === undefined ? {} : { connectionOptions: sqliteConnections }),
       }),
-      {},
+      kept,
       listeners,
     );
   await (await openedOf(open)).close();
@@ -73,7 +74,7 @@ async function sqliteStore({ sqliteConnections }: MeasuredOn): Promise<MeasuredS
         database.close();
       }
     },
-    opened: (listeners) => openedOf(() => open(listeners)),
+    opened: (listeners, kept) => openedOf(() => open(listeners, kept)),
     dropped: () => {
       remove();
       return Promise.resolve();
@@ -88,15 +89,21 @@ async function postgresqlStore(): Promise<MeasuredStore> {
   await administration.query(`CREATE DATABASE ${name}`);
   const url = new URL(postgresqlServer);
   url.pathname = `/${name}`;
-  const open = (listeners: AppendListeners = {}): LedgerStore =>
-    postgresqlEventStore({ pools: plainPoolsOn(url.href), reportLostConnection: Function.constVoid, ...listeners });
+  const open = (listeners: AppendListeners = {}, { runOutcomes, projections = [] }: KeptTables = {}): LedgerStore =>
+    postgresqlEventStore({
+      pools: plainPoolsOn(url.href),
+      reportLostConnection: Function.constVoid,
+      ...listeners,
+      projections,
+      ...(runOutcomes === undefined ? {} : { runOutcomes }),
+    });
   await (await openedOf(open)).close();
   const client = new Client({ connectionString: url.href });
   await client.connect();
   return {
     name: 'PostgreSQL',
     statement: async (text) => (await client.query<Readonly<Record<string, unknown>>>(text)).rows,
-    opened: (listeners) => openedOf(() => open(listeners)),
+    opened: (listeners, kept) => openedOf(() => open(listeners, kept)),
     dropped: async () => {
       await client.end();
       await administration.query(`DROP DATABASE ${name} WITH (FORCE)`);

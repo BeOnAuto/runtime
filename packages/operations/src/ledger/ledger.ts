@@ -2,6 +2,7 @@ import type { RecordedContent } from '@on.auto/content';
 import { Context } from 'effect';
 
 import type { ProjectionAdvancer, ProjectionReader } from '../projections/keyed-projection.ts';
+import type { FactScrubber } from './fact-scrub.ts';
 import type {
   AppendedFactsReader,
   RecordedReader,
@@ -18,6 +19,7 @@ export interface ContentKeeper {
 export type LedgerPorts = StreamReader &
   StreamAges &
   StreamWriter &
+  FactScrubber &
   RecordedReader &
   AppendedFactsReader &
   RunOutcomesReader &

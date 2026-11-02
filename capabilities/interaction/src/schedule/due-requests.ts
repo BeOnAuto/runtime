@@ -1,4 +1,4 @@
-import type { ProjectedKeyedRow } from '@on.auto/operations';
+import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { openRequestsName } from '../requests/open-requests.ts';
@@ -66,14 +66,14 @@ function performedNow(parts: DeliveryParts, request: DueRequest, now: number): E
   return performed[dueActionOf(row, now)]();
 }
 
-function performedRow(parts: DeliveryParts, kept: ProjectedKeyedRow, row: OpenRequestRow, now: number) {
+function performedRow(parts: DeliveryParts, kept: PlaybookProjectedRow, row: OpenRequestRow, now: number) {
   const address = { org: kept.org, playbook: kept.playbook, id: kept.key };
   return Effect.flatMap(correlationOf(parts.ledger, address), (correlationId) =>
     performedNow(parts, { address, row, lineage: { causationId: row.request_id, correlationId } }, now),
   );
 }
 
-function itemOf(parts: DeliveryParts, kept: ProjectedKeyedRow, dueAt: number): DueRequestItem {
+function itemOf(parts: DeliveryParts, kept: PlaybookProjectedRow, dueAt: number): DueRequestItem {
   const row = requestRowFrom(kept.row);
   return {
     key: `${kept.org}/${kept.playbook}/${kept.key}`,
@@ -105,7 +105,7 @@ export function requestsDue(parts: DeliveryParts): RequestsDue {
           through: now,
           limit: most,
         }),
-        (rows) => rows.map((kept) => itemOf(parts, kept, now)),
+        (rows) => playbookRowsOf(openRequestsName, rows).map((kept) => itemOf(parts, kept, now)),
       ),
     nextDueAt: (after, callsOut) =>
       Effect.map(
