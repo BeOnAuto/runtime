@@ -16,7 +16,7 @@ export type PageRead = Checked<Option.Option<PageDefinitionDocument | null>>;
 const PageMappingSchema = Schema.Struct({
   data: Schema.optionalKey(PageDataSchema),
   result: Schema.optionalKey(Schema.String),
-  lately: Schema.optionalKey(Schema.String),
+  runs: Schema.optionalKey(Schema.String),
 });
 
 type PageMapping = typeof PageMappingSchema.Type;
@@ -34,10 +34,10 @@ const isJsonObject = Schema.is(Schema.JsonObject);
 
 const decodeMapping = Schema.decodeUnknownResult(PageMappingSchema, { errors: 'all' });
 
-const notAMapping = 'page is a mapping of data, result and lately';
+const notAMapping = 'page is a mapping of data, result and runs';
 
-const latelyNeedsData =
-  'lately renders the views that data keeps, so a page with lately has data, and a page with data has lately';
+const runsNeedsData =
+  'runs renders the views that data keeps, so a page with runs has data, and a page with data has runs';
 
 const playbookHasNoRuns = 'The playbook has no runs of its own, so its page has no result';
 
@@ -51,18 +51,18 @@ function blockAt(text: string, pointer: string, { lines, documentLines }: Readin
   return { text, line: blockIndicator.test(String(documentLines[line - 1])) ? line + 1 : line };
 }
 
-function blocksOf({ result, lately }: PageMapping, reading: Reading): PageBlocks {
+function blocksOf({ result, runs }: PageMapping, reading: Reading): PageBlocks {
   return {
     ...(result === undefined ? {} : { result: blockAt(result, '/result', reading) }),
-    ...(lately === undefined ? {} : { lately: blockAt(lately, '/lately', reading) }),
+    ...(runs === undefined ? {} : { runs: blockAt(runs, '/runs', reading) }),
   };
 }
 
-function pairingIssues({ data, result, lately }: PageMapping, { lines, writtenIn }: Reading): readonly DocumentIssue[] {
+function pairingIssues({ data, result, runs }: PageMapping, { lines, writtenIn }: Reading): readonly DocumentIssue[] {
   const unpaired =
-    (data === undefined) === (lately === undefined)
+    (data === undefined) === (runs === undefined)
       ? []
-      : [issueAt(lines, data === undefined ? '/lately' : '/data', latelyNeedsData)];
+      : [issueAt(lines, data === undefined ? '/runs' : '/data', runsNeedsData)];
   const ofThePlaybook =
     writtenIn === 'playbook' && result !== undefined ? [issueAt(lines, '/result', playbookHasNoRuns)] : [];
   return [...unpaired, ...ofThePlaybook];
@@ -111,13 +111,40 @@ function mappingRead(reading: Reading): Checked<PageDefinitionDocument | null> {
   return documentOf(decoded.success, reading);
 }
 
-export function pageIn(source: string, writtenIn: PageReadAs): PageRead {
+function pageReadIn(source: string, writtenIn: PageReadAs, named: (read: PageMappingRead) => PageMappingRead) {
   return Result.flatMap(Result.map(pageMappingIn(source, writtenIn), Option.getOrUndefined), (read) =>
     read === undefined
       ? Result.succeedNone
-      : Result.mapBoth(mappingRead({ ...read, documentLines: source.split('\n'), writtenIn }), {
+      : Result.mapBoth(mappingRead({ ...named(read), documentLines: source.split('\n'), writtenIn }), {
           onFailure: reportedIssues,
           onSuccess: Option.some,
         }),
   );
+}
+
+export function pageIn(source: string, writtenIn: PageReadAs): PageRead {
+  return pageReadIn(source, writtenIn, (read) => read);
+}
+
+const earlierRunsPointer = /^\/lately(?=\/|$)/u;
+
+function withRunsNamed(read: PageMappingRead): PageMappingRead {
+  const { mapping, lines } = read;
+  if (!isJsonObject(mapping) || !Object.hasOwn(mapping, 'lately') || Object.hasOwn(mapping, 'runs')) {
+    return read;
+  }
+  const { lately, ...rest } = mapping;
+  return {
+    mapping: { ...rest, runs: lately },
+    lines: new Map(
+      [...lines].map(([pointer, line]: readonly [string, number]) => [
+        pointer.replace(earlierRunsPointer, '/runs'),
+        line,
+      ]),
+    ),
+  };
+}
+
+export function savedPageIn(source: string, writtenIn: PageReadAs): PageRead {
+  return pageReadIn(source, writtenIn, withRunsNamed);
 }

@@ -9,7 +9,7 @@ const PageShownSchema = Schema.Struct({
         "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview",
     }),
   ),
-  lately: Schema.optionalKey(
+  runs: Schema.optionalKey(
     Schema.String.annotate({
       description:
         "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview",

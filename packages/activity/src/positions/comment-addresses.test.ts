@@ -44,7 +44,7 @@ const forms: readonly (readonly [string, ListedTarget])[] = [
   [`finance/${run}`, { kind: 'request', playbook: 'finance', run }],
   [`playbooks/${run}`, { kind: 'request', playbook: 'playbooks', run }],
   ['playbooks/finance/parts/ledger', { kind: 'playbook', playbook: 'finance', part: 'ledger' }],
-  ['playbooks/finance/parts/lately-2', { kind: 'playbook', playbook: 'finance', part: 'lately-2' }],
+  ['playbooks/finance/parts/runs-2', { kind: 'playbook', playbook: 'finance', part: 'runs-2' }],
   [
     'finance/definitions/reasoning/categorize-invoice/7/parts/source',
     {

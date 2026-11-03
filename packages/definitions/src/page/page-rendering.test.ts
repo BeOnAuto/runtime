@@ -4,18 +4,11 @@ import { Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { renderClockOf } from '../template/render-clock.ts';
-import { documentedJson, documentedLately, documentedMarkdown, documentedPage, pageOf } from '../testing/pages.ts';
+import { documentedJson, documentedRuns, documentedMarkdown, documentedPage, pageOf } from '../testing/pages.ts';
 import { steppingClock, standingRenderClock } from '../testing/time/stepping-clock.ts';
 import { pageIn } from './page-key.ts';
 import { parsePageDocument } from './page-parsing.ts';
-import {
-  latelyShown,
-  resultShown,
-  runFailed,
-  viewsBeingBuilt,
-  viewsStalled,
-  type ReadMoment,
-} from './page-rendering.ts';
+import { runsShown, resultShown, runFailed, viewsBeingBuilt, viewsStalled, type ReadMoment } from './page-rendering.ts';
 
 const moment: ReadMoment = { today: '2026-11-01', now: '2026-11-01T09:30:00.000Z', clock: standingRenderClock };
 
@@ -39,9 +32,7 @@ const documentedResult = Result.getOrThrow(Result.fromNullishOr(documented.templ
 
 const [documentedOutput = null, documentedViews = null] = documentedJson;
 
-const documentedLatelyTemplate = Result.getOrThrow(
-  Result.fromNullishOr(documented.templates.lately, () => 'no lately'),
-);
+const documentedRunsTemplate = Result.getOrThrow(Result.fromNullishOr(documented.templates.runs, () => 'no runs'));
 
 const succeeded = {
   status: 'succeeded',
@@ -87,7 +78,7 @@ const forecastHeadline = 'About 140 orders in 2026-W42 (128 to 151).';
 const decodeAnswer = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 
 describe('the result of a question, as the page of the prediction format shows it', () => {
-  it('leads with the likely orders of the next week and draws the weeks observed and ahead under their names in words, with no lately, as the example keeps none', () => {
+  it('leads with the likely orders of the next week and draws the weeks observed and ahead under their names in words, with no runs, as the example keeps none', () => {
     const page = Result.getOrThrow(
       Result.fromNullishOr(Option.getOrUndefined(Result.getOrThrow(pageIn(weeklyOrders, 'function'))), () => 'no page'),
     );
@@ -101,7 +92,7 @@ describe('the result of a question, as the page of the prediction format shows i
       `${forecastHeadline}\n\n\`\`\`chart line\n${renamed}\n\`\`\``,
     );
     expect(linesOnAPage).toContain(`its headline is \`${forecastHeadline}\``);
-    expect(page.templates.lately).toBeUndefined();
+    expect(page.templates.runs).toBeUndefined();
   });
 });
 
@@ -184,30 +175,30 @@ describe('a render that stops', () => {
   });
 });
 
-describe('lately, as the documented page shows it', () => {
+describe('runs, as the documented page shows it', () => {
   it('renders the views with their charts', () => {
     expect(
-      latelyShown(documentedLatelyTemplate, { state: 'live', views: documentedViews }, { declared, subject }, moment),
-    ).toBe(documentedLately.trim());
+      runsShown(documentedRunsTemplate, { state: 'live', views: documentedViews }, { declared, subject }, moment),
+    ).toBe(documentedRuns.trim());
   });
 
   it('reads a view the fold has not given yet as null, so its chart says it has no data', () => {
-    expect(latelyShown(documentedLatelyTemplate, { state: 'live', views: {} }, { declared, subject }, moment)).toBe(
+    expect(runsShown(documentedRunsTemplate, { state: 'live', views: {} }, { declared, subject }, moment)).toBe(
       ['No data for this chart yet.', '', 'No data for this chart yet.'].join('\n'),
     );
   });
 
   it('is the one line that says the views are being built, or stopped', () => {
     expect([
-      latelyShown(documentedLatelyTemplate, { state: 'building' }, { declared, subject }, moment),
-      latelyShown(documentedLatelyTemplate, { state: 'stalled' }, { declared, subject }, moment),
+      runsShown(documentedRunsTemplate, { state: 'building' }, { declared, subject }, moment),
+      runsShown(documentedRunsTemplate, { state: 'stalled' }, { declared, subject }, moment),
     ]).toEqual([viewsBeingBuilt, viewsStalled]);
   });
 
   it('shows the line that says why its render stopped', () => {
     const stepping: ReadMoment = { ...moment, clock: renderClockOf(steppingClock(1000)) };
 
-    expect(latelyShown(documentedLatelyTemplate, { state: 'live', views: {} }, { declared, subject }, stepping)).toBe(
+    expect(runsShown(documentedRunsTemplate, { state: 'live', views: {} }, { declared, subject }, stepping)).toBe(
       'Could not display this page’s figures: rendering exceeded 200 ms, on line 51.',
     );
   });

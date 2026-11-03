@@ -35,7 +35,7 @@ function pageMappingOfOld(source: string, { blocks }: PageDefinitionDocument): s
   return [
     ...dataLinesOf(source),
     ...blockLinesOf('result', blocks.result),
-    ...blockLinesOf('lately', blocks.lately),
+    ...blockLinesOf('runs', blocks.runs),
     '',
   ].join('\n');
 }

@@ -2,7 +2,7 @@ import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { issueText } from '../document/document-issue.ts';
-import { latelyOfTheDays, pageData, pageOf, pageWithData, resultOfTheDate } from '../testing/pages.ts';
+import { runsOfTheDays, pageData, pageOf, pageWithData, resultOfTheDate } from '../testing/pages.ts';
 import { parsePageDocument } from './page-parsing.ts';
 
 function issuesIn(source: string): readonly string[] {
@@ -70,14 +70,12 @@ describe('the fields of a page', () => {
 
 describe('the data of a page', () => {
   it('needs its language, its events, its views and its module, and takes nothing else', () => {
-    expect(issuesIn(pageOf({ body: latelyOfTheDays, data: 'data:\n  language: typescript\n  shape: series' }))).toEqual(
-      [
-        'Line 3, /data/source: source is required',
-        'Line 3, /data/views: views is required',
-        'Line 3, /data/module: module is required',
-        'Line 4, /data/shape: shape is not a key of data; it takes language, source, views, module',
-      ],
-    );
+    expect(issuesIn(pageOf({ body: runsOfTheDays, data: 'data:\n  language: typescript\n  shape: series' }))).toEqual([
+      'Line 3, /data/source: source is required',
+      'Line 3, /data/views: views is required',
+      'Line 3, /data/module: module is required',
+      'Line 4, /data/shape: shape is not a key of data; it takes language, source, views, module',
+    ]);
   });
 
   it('is written in TypeScript, the playbook’s one language', () => {
@@ -159,7 +157,7 @@ describe('the module of a page', () => {
 });
 
 describe('the blocks of a page', () => {
-  it('are result, lately or both, and nothing but white space stands outside them', () => {
+  it('are result, runs or both, and nothing but white space stands outside them', () => {
     expect(issuesIn(pageOf({ body: '\n  \n' }))).toEqual([
       'Line 3: A page shows at least one block: {% result %} … {% endresult %}, {% lately %} … {% endlately %} or both',
     ]);
@@ -216,11 +214,11 @@ describe('the templates of a page', () => {
     ]);
   });
 
-  it('pair lately with data, since the views are kept for lately alone', () => {
+  it('pair runs with data, since the views are kept for runs alone', () => {
     const words =
-      'lately renders the views that data keeps, so a page with {% lately %} has data, and a page with data has {% lately %}';
+      '{% lately %} renders the views that data keeps, so a page with {% lately %} has data, and a page with data has {% lately %}';
 
-    expect(issuesIn(pageOf({ body: latelyOfTheDays }))).toEqual([`Line 3: ${words}`]);
+    expect(issuesIn(pageOf({ body: runsOfTheDays }))).toEqual([`Line 3: ${words}`]);
     expect(issuesIn(pageOf({ data: pageData() }))).toEqual([`Line 3, /data: ${words}`]);
   });
 

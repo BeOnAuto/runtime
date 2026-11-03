@@ -43,10 +43,10 @@ const lastMonth: KeptViewState = {
   checkpointAt: '2026-10-01T09:00:00.000Z',
 };
 
-const askingTheDay = workflowWithItsPage(`${foldingNothing}\nlately: |\n  {{ today }}`);
+const askingTheDay = workflowWithItsPage(`${foldingNothing}\nruns: |\n  {{ today }}`);
 
 describe('the preview of a page as of a run', () => {
-  it('answers the run’s result, and lately and standing over the views as they stood', async () => {
+  it('answers the run’s result, and runs and standing over the views as they stood', async () => {
     const { updating, rendering, running, ready } = playbookWithTheWorkflow(keepingTheViews(liveDays, lastMonth));
     await ready;
     await updating({ ...workflow, source: daysPage });
@@ -56,25 +56,25 @@ describe('the preview of a page as of a run', () => {
       output: {
         page: {
           result: 'Good morning',
-          lately: '0 days',
+          runs: '0 days',
           standing: { state: 'live', checkpoint_at: lastMonth.checkpointAt, folded: 1 },
         },
       },
     });
   });
 
-  it('renders lately at the moment of the run', async () => {
+  it('renders runs at the moment of the run', async () => {
     const { updating, rendering, running, ready } = playbookWithTheWorkflow(keepingTheViews(liveDays, lastMonth));
     await ready;
     await updating({ ...workflow, source: askingTheDay });
     const ran = await running({ ...workflow, input: {} });
 
     expect(await rendering({ ...workflow, run_id: runIdOf(ran) })).toMatchObject({
-      output: { page: { lately: '2026-10-01' } },
+      output: { page: { runs: '2026-10-01' } },
     });
   });
 
-  it('says so in place of lately, with the standing out of reach, past the bound of a replay', async () => {
+  it('says so in place of runs, with the standing out of reach, past the bound of a replay', async () => {
     const outOfReach = { ...lastMonth, phase: 'out_of_reach', checkpointAt: null } satisfies KeptViewState;
     const { updating, rendering, running, ready } = playbookWithTheWorkflow(keepingTheViews(liveDays, outOfReach));
     await ready;
@@ -85,7 +85,7 @@ describe('the preview of a page as of a run', () => {
       output: {
         page: {
           result: 'Good morning',
-          lately: viewsOutOfReach,
+          runs: viewsOutOfReach,
           standing: { state: 'out_of_reach', version: 2 },
         },
       },
@@ -101,7 +101,7 @@ describe('the preview of a page as of a run whose views it cannot replay', () =>
     const ran = await running({ ...workflow, input: {} });
 
     expect(await rendering({ ...workflow, run_id: runIdOf(ran) })).toMatchObject({
-      output: { page: { lately: viewsBeingBuilt, standing: { state: 'rebuilding' } } },
+      output: { page: { runs: viewsBeingBuilt, standing: { state: 'rebuilding' } } },
     });
   });
 
@@ -114,7 +114,7 @@ describe('the preview of a page as of a run whose views it cannot replay', () =>
 
     expect(answered).toMatchObject({ output: { page: { result: 'Good morning from version 2' } } });
     expect(answered).not.toHaveProperty('output.page.standing');
-    expect(answered).not.toHaveProperty('output.page.lately');
+    expect(answered).not.toHaveProperty('output.page.runs');
   });
 });
 
@@ -127,7 +127,7 @@ describe('the preview of a page as of a run that is still going, or that it refu
       ...uncheckedPages,
       pageOf: () => Effect.succeed(page),
       resultOf: () => Effect.undefined,
-      viewsOf: () => Effect.succeed({ lately: 'As the views stand' }),
+      viewsOf: () => Effect.succeed({ runs: 'As the views stand' }),
     });
 
     expect(
@@ -135,7 +135,7 @@ describe('the preview of a page as of a run that is still going, or that it refu
         renderPage,
         toPlaybook('acme', 'alpha')(acmeAdmin, { type: 'relay', name: 'hand-on', run_id: relayedId }),
       ),
-    ).toMatchObject({ output: { page: { lately: 'As the views stand' } } });
+    ).toMatchObject({ output: { page: { runs: 'As the views stand' } } });
   });
 
   it('refuses a run of another definition, one the playbook does not have, and run_id beside sample_output', async () => {

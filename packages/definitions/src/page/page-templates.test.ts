@@ -16,7 +16,7 @@ function resultOf(body: string): string {
   return pageOf({ body: `{% result %}\n${body}\n{% endresult %}` });
 }
 
-function latelyOf(body: string): string {
+function runsOf(body: string): string {
   return pageOf({ body: `{% lately %}\n${body}\n{% endlately %}`, data: pageData() });
 }
 
@@ -86,16 +86,16 @@ describe('the variables of result', () => {
   });
 });
 
-describe('the variables of lately', () => {
+describe('the variables of runs', () => {
   it('are the views data.views declares, the subject, today and now', () => {
     expect(
-      issuesIn(latelyOf('{{ views.by_day | json }} {{ views[subject.name] }} {{ views | json }} {{ now }}')),
+      issuesIn(runsOf('{{ views.by_day | json }} {{ views[subject.name] }} {{ views | json }} {{ now }}')),
     ).toEqual([]);
   });
 
   it('refuse the output, and a view data.views does not declare', () => {
-    expect(issuesIn(latelyOf('{{ output.posts }}\n{{ views.by_week }}'))).toEqual([
-      'Line 16: output is not a variable of lately, which reads views, subject, today and now; assign it first',
+    expect(issuesIn(runsOf('{{ output.posts }}\n{{ views.by_week }}'))).toEqual([
+      'Line 16: output is not a variable of runs, which reads views, subject, today and now; assign it first',
       'Line 17: views.by_week is not a view that data.views declares; it declares by_day',
     ]);
   });
@@ -105,14 +105,14 @@ describe('the chart fences a template writes out', () => {
   it('are refused for a kind or a role the table of kinds does not give, with the line of the fence', () => {
     const fences = ['```chart pie', '{{ views.by_day | json }}', '```', '```chart line x=at', 'null', '```'].join('\n');
 
-    expect(issuesIn(latelyOf(fences))).toEqual([
+    expect(issuesIn(runsOf(fences))).toEqual([
       'Line 16: Specify a chart type after chart: line, bars, stacked, share, histogram, scatter, bubble, heatmap, range, funnel, calendar, timeline, table, figure, text',
       'Line 19: A line chart supports no roles; leave out x',
     ]);
   });
 
   it('are checked when they render where the template writes their info string', () => {
-    expect(issuesIn(latelyOf('```chart {{ subject.name }}\n{{ views.by_day | json }}\n```'))).toEqual([]);
+    expect(issuesIn(runsOf('```chart {{ subject.name }}\n{{ views.by_day | json }}\n```'))).toEqual([]);
     expect(issuesIn(pageWithData())).toEqual([]);
   });
 });

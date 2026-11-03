@@ -44,7 +44,7 @@ const readsOf: Readonly<Record<PageBlockName, Readonly<Record<string, Readable>>
     today: moment('the date, as YYYY-MM-DD'),
     now: moment('the time, in ISO 8601'),
   },
-  lately: {
+  runs: {
     views: { words: 'the views' },
     subject,
     today: moment('the date, as YYYY-MM-DD'),
@@ -54,7 +54,7 @@ const readsOf: Readonly<Record<PageBlockName, Readonly<Record<string, Readable>>
 
 const namesInWords: Readonly<Record<PageBlockName, string>> = {
   result: 'output, run, subject, today and now',
-  lately: 'views, subject, today and now',
+  runs: 'views, subject, today and now',
 };
 
 const noViews: PageViews = {};

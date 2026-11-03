@@ -29,5 +29,5 @@ export const PlaybookPageField = Schema.NullOr(
     }),
   ),
 ).annotate({
-  description: 'Its page as YAML, data and lately, as the page guide says; null removes it',
+  description: 'Its page as YAML, data and runs, as the page guide says; null removes it',
 });

@@ -4,7 +4,7 @@ import {
   foldingNothing,
   functionWithItsPage,
   greeting,
-  latelyOfTheDays,
+  runsOfTheDays,
   pageOfTheDays,
   playbookWithTheWorkflow,
   resultOfTheGreeting,
@@ -36,7 +36,7 @@ describe('saving a definition with its page', () => {
     await saving({ ...review, source: functionWithItsPage(pageOfTheDays), diagram: 'none' });
 
     expect(await reading(review)).toMatchObject({
-      output: { page: { lately: "Building this page's figures from the playbook's history…" } },
+      output: { page: { runs: "Building this page's figures from the playbook's history…" } },
     });
     expect(await reading(workflow)).not.toHaveProperty('output.page');
   });
@@ -82,7 +82,7 @@ describe('retiring a definition with a page', () => {
   it('retires its page with it: the definition answers no page, and its preview is refused', async () => {
     const { saving, retiring, reading, rendering, ready } = playbookWithTheWorkflow();
     await ready;
-    await saving({ ...evening, source: workflowWithItsPage(`${foldingNothing}\n${latelyOfTheDays}`) });
+    await saving({ ...evening, source: workflowWithItsPage(`${foldingNothing}\n${runsOfTheDays}`) });
 
     const retired = await retiring(evening);
 

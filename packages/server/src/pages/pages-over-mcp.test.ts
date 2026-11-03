@@ -29,7 +29,7 @@ const playbookPage = [
   '    export function fold(view: View, event: Event): View {',
   '      return { runs: { values: [...(view.runs?.values ?? []), { name: event.type, value: 1 }] } };',
   '    }',
-  "lately: '{{ views.runs.values | size }} runs.'",
+  "runs: '{{ views.runs.values | size }} runs.'",
 ].join('\n');
 
 let server: ReasoningServer;

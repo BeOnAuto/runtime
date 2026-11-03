@@ -51,7 +51,7 @@ page:
       }
   result: |
     Kept a decision for the {{ output.scope }}{% if output.version > 1 %}, as version {{ output.version }} of it{% endif %}.
-  lately: |
+  runs: |
     ```chart line
     {{ views.kept | json }}
     ```
@@ -98,7 +98,7 @@ page:
     {% for memory in output.memories -%}
     - {{ memory.text | clip: 200 }}
     {% endfor %}
-  lately: |
+  runs: |
     ```chart line
     {{ views.recalls | json }}
     ```
@@ -305,9 +305,9 @@ A `replaces` that renders empty is no id, so the run ends `conflict` as `unworka
 A memory function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function kept or recalled:
 
 - `result`: what was remembered or recalled. A run of `recall` answers the memories, which `result` lists, a line each. A run of `remember` answers the memory's `id`, `version` and `scope`, not its text, so `result` says what was kept in the function's own words, such as `Kept a decision for the playbook.` It cannot say whom or what the memory is about, such as which café, since `result` reads no input: the page of the workflow that remembers says it, from the workflow's output.
-- `lately`: what the function's runs kept or recalled over time. A `remember` function's page counts the memories its runs kept each day; a `recall` function's page counts its recalls each day, with how many memories each found. A fold sees runs, not the memories themselves, so a page cannot show what the playbook holds now: memories your agent keeps with `remember`, and those forgotten or expired, never reach it.
+- `runs`: what the function's runs kept or recalled over time. A `remember` function's page counts the memories its runs kept each day; a `recall` function's page counts its recalls each day, with how many memories each found. A fold sees runs, not the memories themselves, so a page cannot show what the playbook holds now: memories your agent keeps with `remember`, and those forgotten or expired, never reach it.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## Availability
 

@@ -73,7 +73,7 @@ const DefinitionPageSchema = Schema.Struct({
         "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview",
     }),
   ),
-  lately: Schema.optionalKey(
+  runs: Schema.optionalKey(
     Schema.String.annotate({
       description: "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks",
     }),

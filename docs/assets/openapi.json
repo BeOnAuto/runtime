@@ -200,7 +200,7 @@
                       "properties": {
                         "source": {
                           "type": "string",
-                          "description": "The page as it was saved, YAML of its data and lately"
+                          "description": "The page as it was saved, YAML of its data and runs"
                         }
                       },
                       "required": [
@@ -381,7 +381,7 @@
                           "properties": {
                             "source": {
                               "type": "string",
-                              "description": "The page as it was saved, YAML of its data and lately"
+                              "description": "The page as it was saved, YAML of its data and runs"
                             }
                           },
                           "required": [
@@ -546,7 +546,7 @@
                       "properties": {
                         "source": {
                           "type": "string",
-                          "description": "The page as it was saved, YAML of its data and lately"
+                          "description": "The page as it was saved, YAML of its data and runs"
                         }
                       },
                       "required": [
@@ -666,7 +666,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "Its page as YAML, data and lately, as the page guide says; null removes it"
+                    "description": "Its page as YAML, data and runs, as the page guide says; null removes it"
                   }
                 }
               }
@@ -740,7 +740,7 @@
                       "properties": {
                         "source": {
                           "type": "string",
-                          "description": "The page as it was saved, YAML of its data and lately"
+                          "description": "The page as it was saved, YAML of its data and runs"
                         }
                       },
                       "required": [
@@ -915,7 +915,7 @@
                       "properties": {
                         "source": {
                           "type": "string",
-                          "description": "The page as it was saved, YAML of its data and lately"
+                          "description": "The page as it was saved, YAML of its data and runs"
                         }
                       },
                       "required": [
@@ -11782,7 +11782,7 @@
                           "type": "string",
                           "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
-                        "lately": {
+                        "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
@@ -12242,7 +12242,7 @@
       "get": {
         "operationId": "get_definition",
         "summary": "Get definition",
-        "description": "Reads one definition with its document, active or retired, with its version and the input and output its document declares. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition whose document has a page answers page.lately and how its views stand; `render: true` previews the page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
+        "description": "Reads one definition with its document, active or retired, with its version and the input and output its document declares. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition whose document has a page answers page.runs and how its views stand; `render: true` previews the page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
         "tags": [
           "definitions"
         ],
@@ -12531,7 +12531,7 @@
                           "type": "string",
                           "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
-                        "lately": {
+                        "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
@@ -12968,7 +12968,7 @@
                           "type": "string",
                           "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
-                        "lately": {
+                        "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
@@ -13105,7 +13105,7 @@
       "post": {
         "operationId": "render_page",
         "summary": "Render page",
-        "description": "Renders a definition's page and answers the definition as get_definition does, with page.result and page.lately: as it stands now, so that the page can be seen before the definition has run, or as of a run. `sample_output`, optional, is an output to render result over, as a run that succeeded gave it. Without sample_output, result renders over the definition's latest run, and is left out when it has not run. `run_id`, optional in place of sample_output, renders the page as it stood when that run ended, with lately and standing over the views folded again up to the last event of the run.",
+        "description": "Renders a definition's page and answers the definition as get_definition does, with page.result and page.runs: as it stands now, so that the page can be seen before the definition has run, or as of a run. `sample_output`, optional, is an output to render result over, as a run that succeeded gave it. Without sample_output, result renders over the definition's latest run, and is left out when it has not run. `run_id`, optional in place of sample_output, renders the page as it stood when that run ended, with runs and standing over the views folded again up to the last event of the run.",
         "tags": [
           "definitions"
         ],
@@ -13401,7 +13401,7 @@
                           "type": "string",
                           "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
-                        "lately": {
+                        "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
@@ -13534,7 +13534,7 @@
       "post": {
         "operationId": "render_playbook_page",
         "summary": "Render playbook page",
-        "description": "Renders the playbook's page now and answers it with page.lately, over its views as they stand, and page.standing, how they stand. Use it to show the playbook's dashboard; get_playbook reads the page's source. A playbook without a page is refused as not found.",
+        "description": "Renders the playbook's page now and answers it with page.runs, over its views as they stand, and page.standing, how they stand. Use it to show the playbook's dashboard; get_playbook reads the page's source. A playbook without a page is refused as not found.",
         "tags": [
           "playbooks"
         ],
@@ -13582,7 +13582,7 @@
                     "PlaybookPage": {
                       "type": "object",
                       "properties": {
-                        "lately": {
+                        "runs": {
                           "type": "string",
                           "description": "What the playbook's page shows over its views, Markdown with charts as fenced blocks"
                         },
@@ -13932,7 +13932,7 @@
                           "type": "string",
                           "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
-                        "lately": {
+                        "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
@@ -14950,7 +14950,7 @@
                           "type": "string",
                           "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
                         },
-                        "lately": {
+                        "runs": {
                           "type": "string",
                           "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
                         }

@@ -231,9 +231,9 @@ They also take a `diagram`, every time, so that whether the function is drawn is
 A generation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function made:
 
 - `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page.
-- `lately`: what was produced over time, such as the assets made each week by kind, as a count, or a table of the latest, each with its kind and size.
+- `runs`: what was produced over time, such as the assets made each week by kind, as a count, or a table of the latest, each with its kind and size.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## Availability
 

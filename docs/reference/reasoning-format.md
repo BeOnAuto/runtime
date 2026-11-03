@@ -55,7 +55,7 @@ page:
       }
   result: |
     {{ output.recommendation }}{% if output.missing.size > 0 %}: {{ output.missing | join: "; " }}{% endif %}.
-  lately: |
+  runs: |
     ```chart bars x=Day y=Reviews color=Recommendation
     {{ views.reviews | json }}
     ```
@@ -425,11 +425,11 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 A reasoning function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person the judgement the function made:
 
 - `result`: the judgement in a sentence, with the fields that decided it, such as `Revise: the audience names no job role.` for a review of a brief.
-- `lately`: the outcomes by category over time, such as the reviews of each day by their recommendation.
+- `runs`: the outcomes by category over time, such as the reviews of each day by their recommendation.
 
 Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
 
-A page counts what the answer names, so give the answer the fields that decide it: `output.format: json`, and an `output.schema` that holds them, such as the `recommendation` of `Ready` or `Revise` and the criteria it found `missing` in [the example](#a-function-document). An answer in text gives the page its words alone. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+A page counts what the answer names, so give the answer the fields that decide it: `output.format: json`, and an `output.schema` that holds them, such as the `recommendation` of `Ready` or `Revise` and the criteria it found `missing` in [the example](#a-function-document). An answer in text gives the page its words alone. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## Provider options
 

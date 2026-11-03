@@ -7,7 +7,7 @@ import { recordedAdmin } from '../testing/callers.ts';
 import { playbookAsked } from '../testing/page-asking.ts';
 import {
   functionWithPage,
-  latelyOfTheDayChart,
+  runsOfTheDayChart,
   pageData,
   pageMappingOf,
   workflowWithData,
@@ -25,7 +25,7 @@ const strippingTheModule = {
     }),
 };
 
-const playbookPage = pageMappingOf({ data: pageData(), lately: latelyOfTheDayChart });
+const playbookPage = pageMappingOf({ data: pageData(), runs: runsOfTheDayChart });
 
 function keeping(kept: Readonly<Record<string, KeptViewState>>): KeptViews {
   return {
@@ -216,25 +216,25 @@ describe('a run that did not succeed, on the page of a definition', () => {
   });
 });
 
-describe('lately on the page of a definition', () => {
-  it('renders lately over its views, kept under the type and the name of its subject, and answers their standing', async () => {
+describe('runs on the page of a definition', () => {
+  it('renders runs over its views, kept under the type and the name of its subject, and answers their standing', async () => {
     const asked = await withTheMorning();
     const building = pagesOver({ 'workflow/morning': { ...liveAt(1, days), phase: 'rebuilding' } });
 
     expect(await asked.ask(pagesOver({ 'workflow/morning': liveAt(1, days) }).viewsOf(morning))).toMatchObject({
       output: {
-        answer: { lately: containing(JSON.stringify(days.by_day)), standing: { state: 'live', version: 1, folded: 2 } },
+        answer: { runs: containing(JSON.stringify(days.by_day)), standing: { state: 'live', version: 1, folded: 2 } },
       },
     });
     expect(await asked.ask(building.viewsOf(morning))).toMatchObject({
-      output: { answer: { lately: containing('Building'), standing: { state: 'rebuilding' } } },
+      output: { answer: { runs: containing('Building'), standing: { state: 'rebuilding' } } },
     });
     expect(await asked.ask(pages.viewsOf(morning))).toMatchObject({
-      output: { answer: { lately: containing('Building'), standing: { state: 'rebuilding', version: 1 } } },
+      output: { answer: { runs: containing('Building'), standing: { state: 'rebuilding', version: 1 } } },
     });
   });
 
-  it('has no lately and no standing without data, and none where there is no page', async () => {
+  it('has no runs and no standing without data, and none where there is no page', async () => {
     const asked = await withTheMorning(workflowWithPage());
     await asked.created('workflow', 'evening', 'name: evening\ndo: []\n');
 
@@ -264,7 +264,7 @@ describe('the page of the playbook', () => {
     expect(await asked.ask(pages.savePlaybookPage(saved))).toMatchObject({ output: { answer: { version: 3 } } });
   });
 
-  it('renders lately over the views kept under the playbook’s name', async () => {
+  it('renders runs over the views kept under the playbook’s name', async () => {
     const asked = playbookAsked();
 
     expect(await asked.ask(pages.viewsOf('playbook'))).toMatchObject({ output: { answer: {} } });
@@ -273,7 +273,7 @@ describe('the page of the playbook', () => {
     );
 
     expect(await asked.ask(pagesOver({ 'playbook/alpha': liveAt(1, days) }).viewsOf('playbook'))).toMatchObject({
-      output: { answer: { lately: containing(JSON.stringify(days.by_day)), standing: { state: 'live' } } },
+      output: { answer: { runs: containing(JSON.stringify(days.by_day)), standing: { state: 'live' } } },
     });
   });
 });

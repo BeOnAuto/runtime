@@ -16,7 +16,9 @@ export const noPagesOfTheirOwn: PagesOfTheirOwn = new Map();
 
 const partsSegment = 'parts';
 
-const latelyPart = /^lately-/u;
+const runsPart = /^runs-/u;
+
+const earlierRunsPart = /\/parts\/lately-(?=[1-9])/u;
 
 export function pagesOfTheirOwnIn(carried: CarriedPages): PagesOfTheirOwn {
   return new Map([...carried].map(([subject, { name }]: readonly [string, CarriedPage]) => [name, subject]));
@@ -42,11 +44,12 @@ export function pageOfItsOwnIn(address: string): PageOfItsOwn | undefined {
 }
 
 function ofThePlaybook(playbook: string, [parts, part = '', ...beyond]: readonly string[]): string {
-  const ofItsPage = parts === partsSegment && beyond.length === 0 && latelyPart.test(part);
+  const ofItsPage = parts === partsSegment && beyond.length === 0 && runsPart.test(part);
   return ofItsPage ? `${playbooksSegment}/${playbook}/${partsSegment}/${part}` : `${playbooksSegment}/${playbook}`;
 }
 
-export function currentAddressOf(address: string, pages: PagesOfTheirOwn): string {
+export function currentAddressOf(recorded: string, pages: PagesOfTheirOwn): string {
+  const address = recorded.replace(earlierRunsPart, '/parts/runs-');
   const page = pageOfItsOwnIn(address);
   const subject = page === undefined ? undefined : pages.get(page.name);
   if (page === undefined || subject === undefined) {

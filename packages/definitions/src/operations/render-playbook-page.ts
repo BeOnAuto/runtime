@@ -5,7 +5,7 @@ import { playbookSubject } from '../page/subject-pages-port.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
 
 const PlaybookPageSchema = Schema.Struct({
-  lately: Schema.optionalKey(
+  runs: Schema.optionalKey(
     Schema.String.annotate({
       description: "What the playbook's page shows over its views, Markdown with charts as fenced blocks",
     }),
@@ -18,7 +18,7 @@ const PlaybookPageSchema = Schema.Struct({
 }).annotate({ identifier: 'PlaybookPage', description: "The playbook's page, rendered now" });
 
 const description = [
-  "Renders the playbook's page now and answers it with page.lately, over its views as they stand, and page.standing, how they stand.",
+  "Renders the playbook's page now and answers it with page.runs, over its views as they stand, and page.standing, how they stand.",
   "Use it to show the playbook's dashboard; get_playbook reads the page's source.",
   'A playbook without a page is refused as not found.',
 ].join(' ');

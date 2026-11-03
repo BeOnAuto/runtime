@@ -35,7 +35,7 @@ const pageOfWhatItSees = [
   '        return { seen: { values: [...(view.seen?.values ?? []), { name: event.type, value: 1 }] } };',
   '      }',
   '  result: Seen.',
-  "  lately: '{% for value in views.seen.values %}{{ value.name }}{% endfor %}'",
+  "  runs: '{% for value in views.seen.values %}{{ value.name }}{% endfor %}'",
   '',
 ].join('\n');
 
@@ -101,7 +101,7 @@ describe('the calls made by hand in a playbook', () => {
     expect(called).toMatchObject({ status: 200, body: { outcome: 'result' } });
     expect(triggered).toHaveLength(1);
     expect(await runsOf(server, 'on-a-call')).toEqual([]);
-    expect(presented.body).toMatchObject({ page: { lately: 'com.acme.ledger.closed' } });
+    expect(presented.body).toMatchObject({ page: { runs: 'com.acme.ledger.closed' } });
     expect(await runsOf(server, 'on-a-call')).toEqual([]);
   });
 });

@@ -33,7 +33,7 @@ export type PageCheck = (
 ) => Effect.Effect<PageContent | null | undefined, InvalidInput | Unavailable>;
 
 interface PageViewsShown {
-  readonly lately?: string;
+  readonly runs?: string;
   readonly standing?: Schema.JsonObject;
 }
 

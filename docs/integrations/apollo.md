@@ -138,7 +138,7 @@ page:
       }
   result: |
     {{ output | clip: 2000 }}
-  lately: |
+  runs: |
     ```chart table
     {{ views.reviews | json }}
     ```

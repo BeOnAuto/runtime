@@ -31,7 +31,7 @@ const recordWeek = [
   '        return { by_store: { values: [...(view.by_store?.values ?? []), { name: event.type, value: 1 }] } };',
   '      }',
   '  result: Recorded.',
-  "  lately: '{% for value in views.by_store.values %}{{ value.name }}{% endfor %}'",
+  "  runs: '{% for value in views.by_store.values %}{{ value.name }}{% endfor %}'",
   '---',
   'export default function (input: Input): Output {',
   '  return input;',

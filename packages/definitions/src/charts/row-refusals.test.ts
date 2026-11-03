@@ -20,7 +20,7 @@ const chart = ['```chart line', '{{ views.by_day | json }}', '```'];
 
 describe('the rows a template writes out, when the page is saved', () => {
   it('are taken with two to four cells, each closed by a line of :::', () => {
-    const lately = [
+    const runs = [
       '{% lately %}',
       '::: row',
       '#### Posts each day',
@@ -47,7 +47,7 @@ describe('the rows a template writes out, when the page is saved', () => {
       '{% endlately %}',
     ].join('\n');
 
-    expect(issuesIn(pageOf({ body: lately, data: pageData() }))).toEqual([]);
+    expect(issuesIn(pageOf({ body: runs, data: pageData() }))).toEqual([]);
   });
 });
 

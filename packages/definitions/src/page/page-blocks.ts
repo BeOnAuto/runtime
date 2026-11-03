@@ -44,9 +44,11 @@ interface Body {
   readonly line: number;
 }
 
-const blockNames: ReadonlySet<string> = new Set(pageBlockNames);
+const tagOf: Readonly<Record<PageBlockName, string>> = { result: 'result', runs: 'lately' };
 
-const endNames: ReadonlySet<string> = new Set(pageBlockNames.map((name) => `end${name}`));
+const blockOfTag: ReadonlyMap<string, PageBlockName> = new Map(pageBlockNames.map((name) => [tagOf[name], name]));
+
+const endNames: ReadonlySet<string> = new Set(pageBlockNames.map((name) => `end${tagOf[name]}`));
 
 const enclosingTags: ReadonlySet<string> = new Set(['if', 'unless', 'case', 'for', 'tablerow', 'capture', 'comment']);
 
@@ -58,8 +60,8 @@ const noBlockWords =
 
 const nestedWords = 'Put each block at the top level, outside other blocks and tags';
 
-function isBlockName(name: string | undefined): name is PageBlockName {
-  return name !== undefined && blockNames.has(name);
+function blockNamed(tag: string | undefined): PageBlockName | undefined {
+  return tag === undefined ? undefined : blockOfTag.get(tag);
 }
 
 function lineIn(body: Body, offset: number): number {
@@ -75,7 +77,7 @@ function argumentWords(token: BodyToken): readonly string[] {
 }
 
 function opening(scan: Scan, name: PageBlockName, token: BodyToken): Scan {
-  const twice = scan.blocks[name] === undefined ? [] : [`A page writes {% ${name} %} at most once`];
+  const twice = scan.blocks[name] === undefined ? [] : [`A page writes {% ${tagOf[name]} %} at most once`];
   return { ...withIssues(scan, token, [...argumentWords(token), ...twice]), opened: { name, token } };
 }
 
@@ -102,8 +104,9 @@ function openingWithin(scan: Scan, name: PageBlockName, token: BodyToken): Scan 
 
 function outside(scan: Scan, token: BodyToken): Scan {
   const enclosing = scan.around.at(-1);
-  if (isBlockName(token.tag)) {
-    return enclosing === undefined ? opening(scan, token.tag, token) : openingWithin(scan, token.tag, token);
+  const name = blockNamed(token.tag);
+  if (name !== undefined) {
+    return enclosing === undefined ? opening(scan, name, token) : openingWithin(scan, name, token);
   }
   if (enclosing !== undefined && token.tag === `end${String(enclosing.opener.tag)}`) {
     return closedAround(scan, enclosing, token);
@@ -123,10 +126,12 @@ function closing(scan: Scan, body: Body, opened: Opened, token: BodyToken): Scan
 }
 
 function inside(scan: Scan, body: Body, opened: Opened, token: BodyToken): Scan {
-  if (token.tag === `end${opened.name}`) {
+  if (token.tag === `end${tagOf[opened.name]}`) {
     return closing(scan, body, opened, token);
   }
-  return isBlockName(token.tag) || endNames.has(String(token.tag)) ? withIssues(scan, token, [nestedWords]) : scan;
+  return blockNamed(token.tag) !== undefined || endNames.has(String(token.tag))
+    ? withIssues(scan, token, [nestedWords])
+    : scan;
 }
 
 function tokensOf(body: Body): Checked<readonly BodyToken[]> {
@@ -180,7 +185,9 @@ function scanned(body: Body, tokens: readonly BodyToken[]): Scan {
   );
   return end.opened === undefined
     ? end
-    : withIssues(end, end.opened.token, [`{% ${end.opened.name} %} is never closed by {% end${end.opened.name} %}`]);
+    : withIssues(end, end.opened.token, [
+        `{% ${tagOf[end.opened.name]} %} is never closed by {% end${tagOf[end.opened.name]} %}`,
+      ]);
 }
 
 function blocksOf(body: Body, tokens: readonly BodyToken[]): Checked<PageBlocks> {

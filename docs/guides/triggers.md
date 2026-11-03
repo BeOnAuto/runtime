@@ -320,7 +320,7 @@ page:
     {% else %}
     {{ output | clip: 2000 }}
     {% endif %}
-  lately: |
+  runs: |
     ```chart line
     {{ views.reviewed | json }}
     ```
@@ -395,7 +395,7 @@ page:
     {% else %}
     {{ output | clip: 2000 }}
     {% endif %}
-  lately: |
+  runs: |
     ```chart table
     {{ views.weeks | json }}
     ```

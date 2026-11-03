@@ -38,7 +38,7 @@ const campaigns = {
 
 describe('a chart block of the right shape', () => {
   it('is left as it was written, among the rest of the Markdown', () => {
-    const written = ['Lately:', '', chart('chart line', days), '', chart('chart bars', channels), 'Done.'].join('\n');
+    const written = ['Runs:', '', chart('chart line', days), '', chart('chart bars', channels), 'Done.'].join('\n');
 
     expect(chartsDrawn(written)).toBe(written);
   });
@@ -59,8 +59,8 @@ describe('a chart block of the right shape', () => {
 
 describe('a chart block with no data yet', () => {
   it('is the one line that says so', () => {
-    expect(chartsDrawn(['Lately:', '```chart line', 'null', '```'].join('\n'))).toBe(
-      'Lately:\nNo data for this chart yet.',
+    expect(chartsDrawn(['Runs:', '```chart line', 'null', '```'].join('\n'))).toBe(
+      'Runs:\nNo data for this chart yet.',
     );
   });
 });

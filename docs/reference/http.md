@@ -123,7 +123,7 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 - `list_playbooks` lists the playbooks the caller may access. It leaves out retired ones unless `include_retired` asks for them. It also accepts a key with only `playbook:read`, so a key that may only read inside some playbooks can find them.
 - A key limited to a list of playbooks can create only a playbook whose id is on that list.
 - `update_playbook` changes the fields it is given and keeps the others. A `page` is checked as [Saving a page](page-format.md#saving-a-page) sets out, with its issues under `/page`, and recorded as `playbook_page_saved`. An update that changes nothing records nothing.
-- `render_playbook_page` renders the playbook's page now and answers `{ page: { lately, standing } }`, both where the page has `data` ([The preview](page-format.md#the-preview)).
+- `render_playbook_page` renders the playbook's page now and answers `{ page: { runs, standing } }`, both where the page has `data` ([The preview](page-format.md#the-preview)).
 - Retirement is permanent. A playbook id cannot be reused, and a retired playbook cannot be restored.
 - A retired playbook stays readable: `get_playbook` reads it, `include_retired` lists it, and its definitions, runs and history remain readable. Commands inside it return `conflict` with the kind `retired`. Retiring it again succeeds and changes nothing.
 
@@ -427,10 +427,10 @@ The same input gives the same `unworkable` result again, unless the program read
 
 Give every workflow and function its page, which presents its results ([Page format](page-format.md)). A save without one is accepted, and over MCP its summary says the definition has no page yet, where the summary has room for it. The page is the `page` key of the definition's document, so `create_definition` and `update_definition` save it with the rest of `source`, and a save that changes only the page is a new version like any other. The playbook's page is saved by [`update_playbook`](#playbooks).
 
-- `get_definition` adds `page`, with `lately` and `standing` where the page has them, and `get_run` of a run of the definition adds `page.result`. `list_definitions` shows nothing of a page.
-- `render_page`, `POST /definitions/{type}/{name}/render`, renders the page now, with `page.result` and `page.lately`, over the definition's latest run or over an optional JSON body `{ "sample_output": … }`. It needs `playbook:read`, and is refused with `not_found` for a definition without a page and `conflict` for a retired one.
-- Given `{ "run_id": … }` in place of `sample_output`, `render_page` answers the page as it stood when that run ended: `page.result`, and `page.lately` and `page.standing` over the views folded again up to the run's last event. A run still going renders over the views as they stand.
-- The replay reads at most 10 pages of up to 1,000 records. Past that, `page.standing.state` is `out_of_reach` and `page.lately` is a line that says so.
+- `get_definition` adds `page`, with `runs` and `standing` where the page has them, and `get_run` of a run of the definition adds `page.result`. `list_definitions` shows nothing of a page.
+- `render_page`, `POST /definitions/{type}/{name}/render`, renders the page now, with `page.result` and `page.runs`, over the definition's latest run or over an optional JSON body `{ "sample_output": … }`. It needs `playbook:read`, and is refused with `not_found` for a definition without a page and `conflict` for a retired one.
+- Given `{ "run_id": … }` in place of `sample_output`, `render_page` answers the page as it stood when that run ended: `page.result`, and `page.runs` and `page.standing` over the views folded again up to the run's last event. A run still going renders over the views as they stand.
+- The replay reads at most 10 pages of up to 1,000 records. Past that, `page.standing.state` is `out_of_reach` and `page.runs` is a line that says so.
 - A run the playbook does not have is refused with `not_found`, and a run of another definition with `invalid_input`. See [As of a run](page-format.md#as-of-a-run).
 - Retiring a definition retires its page with it.
 

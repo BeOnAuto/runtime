@@ -10,7 +10,7 @@ const pageSource = '---\nof: workflow/close-the-week\n---\n{% result %}\n{{ outp
 
 const madeBy = { id: priya.id, name: priya.name };
 
-const oldPage = 'finance/definitions/page/weekly-close/1/parts/lately-1';
+const oldPage = 'finance/definitions/page/weekly-close/1/parts/runs-1';
 
 async function withAPageOfItsOwn() {
   const scene = await commenting();
@@ -40,21 +40,21 @@ async function withAPageOfItsOwn() {
 describe('a comment made on a page saved as a definition of its own', () => {
   it('is listed at the address of its subject’s page, and under its subject with the comments made there', async () => {
     const scene = await withAPageOfItsOwn();
-    await scene.made('finance/definitions/workflow/close-the-week/4/parts/lately-2', minute(2));
+    await scene.made('finance/definitions/workflow/close-the-week/4/parts/runs-2', minute(2));
     await scene.made('finance/definitions/workflow/close-the-week/4', minute(3));
     await scene.made('finance/definitions/workflow/other/4', minute(4));
 
     expect(addressesIn(await scene.comments())).toEqual([
       'finance/definitions/workflow/other/4',
       'finance/definitions/workflow/close-the-week/4',
-      'finance/definitions/workflow/close-the-week/4/parts/lately-2',
+      'finance/definitions/workflow/close-the-week/4/parts/runs-2',
       'finance/definitions/workflow/close-the-week',
     ]);
     expect(
       addressesIn(await scene.comments({ address: 'finance/definitions/workflow/close-the-week', under: 'true' })),
     ).toEqual([
       'finance/definitions/workflow/close-the-week/4',
-      'finance/definitions/workflow/close-the-week/4/parts/lately-2',
+      'finance/definitions/workflow/close-the-week/4/parts/runs-2',
       'finance/definitions/workflow/close-the-week',
     ]);
   });
@@ -62,7 +62,7 @@ describe('a comment made on a page saved as a definition of its own', () => {
   it('is listed under its subject in the order of the comments made there at the same moment', async () => {
     const scene = await withAPageOfItsOwn();
     await scene.made('finance/definitions/workflow/close-the-week/4', minute(1));
-    await scene.made('finance/definitions/workflow/close-the-week/4/parts/lately-2', minute(1));
+    await scene.made('finance/definitions/workflow/close-the-week/4/parts/runs-2', minute(1));
 
     expect(
       addressesIn(await scene.comments({ address: 'finance/definitions/workflow/close-the-week', under: 'true' })),

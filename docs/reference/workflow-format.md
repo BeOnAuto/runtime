@@ -103,7 +103,7 @@ page:
     {% else %}
     Sent back for revision. {{ output.approval.note | default: "" }}
     {% endif %}
-  lately: |
+  runs: |
     ```chart bars x=Day y=Briefs color=Verdict
     {{ views.briefs | json }}
     ```
@@ -668,9 +668,9 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 A workflow's page is the `page` key of its document, written with the document and saved with it. It shows the person what each run achieved:
 
 - `result`: the business outcome of the run, as a headline and its key figures.
-- `lately`: the main number of each period, with its breakdowns.
+- `runs`: the main number of each period, with its breakdowns.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## How a run ends
 

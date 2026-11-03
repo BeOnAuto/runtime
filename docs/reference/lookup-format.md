@@ -69,7 +69,7 @@ page:
     {% for reply in output -%}
     | {{ reply.user }} | {{ reply.text | normalize_whitespace | replace: "|", "\\|" | clip: 120 }} |
     {% endfor %}
-  lately: |
+  runs: |
     The replies the latest run found, newest first.
 
     ```chart table
@@ -179,9 +179,9 @@ Every 503 a lookup function raises, `tool_not_read_only`, `tool_server_failed`, 
 A lookup function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the lookup found:
 
 - `result`: what was found, as a table, such as the replies of a thread, a row for each with who wrote it and what it said.
-- `lately`: the values found over time, where they are numbers, such as the stock of each item each morning. Where the answer holds no numbers, `lately` keeps a table of the latest finds.
+- `runs`: the values found over time, where they are numbers, such as the stock of each item each morning. Where the answer holds no numbers, `runs` keeps a table of the latest finds.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## Availability
 

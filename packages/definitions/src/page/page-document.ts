@@ -2,7 +2,7 @@ import type { EventFilter, FilterExpression } from '../document/event-filters.ts
 import type { OutputShapeName } from '../shapes/shape-names.ts';
 import type { ParsedTemplate } from '../template/template-parsing.ts';
 
-export const pageBlockNames = ['result', 'lately'] as const;
+export const pageBlockNames = ['result', 'runs'] as const;
 
 export type PageBlockName = (typeof pageBlockNames)[number];
 

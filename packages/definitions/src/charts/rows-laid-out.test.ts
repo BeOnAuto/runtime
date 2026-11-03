@@ -2,7 +2,7 @@ import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { parsePageDocument } from '../page/page-parsing.ts';
-import { latelyShown, type ReadMoment } from '../page/page-rendering.ts';
+import { runsShown, type ReadMoment } from '../page/page-rendering.ts';
 import { pageData, pageOf } from '../testing/pages.ts';
 import { standingRenderClock } from '../testing/time/stepping-clock.ts';
 import { chartsDrawnAndLaidOut } from './rows-laid-out.ts';
@@ -76,11 +76,11 @@ describe('the lines a row does not take', () => {
 
 describe('a row that breaks a rule', () => {
   it('is shown as its cells one after another, under the line that says it holds more than 4', () => {
-    const written = ['Lately:', ...rowOf(['One'], ['', 'Two', ''], ['Three'], ['Four'], ['Five']), 'Done.'];
+    const written = ['Runs:', ...rowOf(['One'], ['', 'Two', ''], ['Three'], ['Four'], ['Five']), 'Done.'];
 
     expect(laidOut(written)).toBe(
       [
-        'Lately:',
+        'Runs:',
         'This row could not be laid out: it holds 5 cells, and a row holds at most 4.',
         '',
         'One',
@@ -114,10 +114,8 @@ describe('a row that breaks a rule', () => {
 
 describe('a row that is never closed, or that holds another', () => {
   it('runs to the end of the block when it is never closed', () => {
-    expect(laidOut(['Lately:', '::: row', 'One', '---', '', 'Two', ''])).toBe(
-      ['Lately:', 'This row could not be laid out: it is not closed by a line of :::.', '', 'One', '', 'Two'].join(
-        '\n',
-      ),
+    expect(laidOut(['Runs:', '::: row', 'One', '---', '', 'Two', ''])).toBe(
+      ['Runs:', 'This row could not be laid out: it is not closed by a line of :::.', '', 'One', '', 'Two'].join('\n'),
     );
   });
 
@@ -152,13 +150,13 @@ describe('a row that is never closed, or that holds another', () => {
 
 const moment: ReadMoment = { today: '2026-11-01', now: '2026-11-01T09:30:00.000Z', clock: standingRenderClock };
 
-function latelyOver(body: string, views: Schema.Json): string {
+function runsOver(body: string, views: Schema.Json): string {
   const page = Result.getOrThrow(
     parsePageDocument(pageOf({ body: `{% lately %}\n${body}\n{% endlately %}`, data: pageData() })),
   );
-  const template = Result.getOrThrow(Result.fromNullishOr(page.templates.lately, () => 'no lately'));
+  const template = Result.getOrThrow(Result.fromNullishOr(page.templates.runs, () => 'no runs'));
   const subject = { type: 'workflow', name: 'morning-social-content', description: null, version: 1 };
-  return latelyShown(template, { state: 'live', views }, { declared: { by_day: 'series' }, subject }, moment);
+  return runsShown(template, { state: 'live', views }, { declared: { by_day: 'series' }, subject }, moment);
 }
 
 describe('a row a template writes', () => {
@@ -177,7 +175,7 @@ describe('a row a template writes', () => {
       ':::',
     ].join('\n');
 
-    expect(latelyOver(body, { by_day: { names: ['One', 'Two'] } })).toBe(
+    expect(runsOver(body, { by_day: { names: ['One', 'Two'] } })).toBe(
       [
         '::: row',
         '',
@@ -194,7 +192,7 @@ describe('a row a template writes', () => {
         ':::',
       ].join('\n'),
     );
-    expect(latelyOver(body, { by_day: { names: ['One', 'Two', 'Three', 'Four', 'Five'] } }).split('\n')[0]).toBe(
+    expect(runsOver(body, { by_day: { names: ['One', 'Two', 'Three', 'Four', 'Five'] } }).split('\n')[0]).toBe(
       'This row could not be laid out: it holds 5 cells, and a row holds at most 4.',
     );
   });

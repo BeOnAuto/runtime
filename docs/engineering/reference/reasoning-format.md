@@ -46,7 +46,7 @@ page:
       }
   result: |
     {{ output | clip: 1000 }}
-  lately: |
+  runs: |
     ```chart table
     {{ views.latest | json }}
     ```
@@ -72,7 +72,7 @@ Summarize the account {{ input.account }} as of {{ today }}.
 | `output.schema`            | With `json` | A JSON Schema                                         | The answer must match it; see [Answers that are JSON](../../reference/model-settings.md#answers-that-are-json). Not allowed with `text`                                                  |
 | `provider_options`         | No          | An object of objects, keyed by the provider namespace | Options for `anthropic`, `openai`, `azure`, `google`, `vertex`, `googleVertex`, `amazonBedrock`, `bedrock`, or a gateway's name: only those [Provider options](#provider-options) offers |
 | `tools`                    | No          | A list of `server/tool` or `server/*`                 | The tools of the tool servers configured for the playbook that a run may call; see [Tools](#tools)                                                                                       |
-| `page`                     | No          | A mapping of `data`, `result` and `lately`            | Its page, which shows each run and the runs so far; see [Page format](../../reference/page-format.md)                                                                                    |
+| `page`                     | No          | A mapping of `data`, `result` and `runs`              | Its page, which shows each run and the runs so far; see [Page format](../../reference/page-format.md)                                                                                    |
 
 Any other key, at any level, is rejected.
 

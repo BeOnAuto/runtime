@@ -40,7 +40,7 @@ const echoWithWhatItWasTold = echoWith([
   '        return { said: { values: [...(view.said?.values ?? []), { name, value: 1 }] } };',
   '      }',
   "  result: '{{ output.said }}'",
-  "  lately: '{% for value in views.said.values %}{{ value.name }}{% endfor %}'",
+  "  runs: '{% for value in views.said.values %}{{ value.name }}{% endfor %}'",
 ]);
 
 describe('the functions pnpm dev serves in worker threads', () => {
@@ -61,6 +61,6 @@ describe('the functions pnpm dev serves in worker threads', () => {
       return read;
     });
 
-    expect(presented.body).toMatchObject({ page: { lately: 'HELLO' } });
+    expect(presented.body).toMatchObject({ page: { runs: 'HELLO' } });
   });
 });

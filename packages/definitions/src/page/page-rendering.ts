@@ -87,7 +87,7 @@ function viewsOf(kept: Schema.Json, declared: PageViews): Schema.JsonObject {
   );
 }
 
-export function latelyShown(
+export function runsShown(
   parsed: ParsedTemplate,
   views: ViewsShown,
   { declared, subject }: { readonly declared: PageViews; readonly subject: SubjectShown },

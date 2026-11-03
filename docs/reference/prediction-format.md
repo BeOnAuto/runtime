@@ -317,7 +317,7 @@ A chart draws each line of a series under its name. A page that draws a predicti
 
 Over the answer above, its headline is `About 140 orders in 2026-W42 (128 to 151).` A template prints a number as it is. A forecast's figures are often not whole, since a range's ends are interpolated between misses, so the headline rounds each with `round`. `round: 1` keeps one decimal: `4.800000000000001` prints as `4.8`.
 
-A workflow whose output carries the prediction under a field, such as `forecast`, renames `output.forecast` the same way. A page's fold that keeps predictions in a view for `lately` names each line as it builds it; see [Its page](#its-page).
+A workflow whose output carries the prediction under a field, such as `forecast`, renames `output.forecast` the same way. A page's fold that keeps predictions in a view for `runs` names each line as it builds it; see [Its page](#its-page).
 
 ## How a run ends
 
@@ -482,9 +482,9 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 A prediction function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what is coming, and how well the forecasts held:
 
 - `result`: the forecast as a line, with its horizon: a headline with the likely value of the period ahead and its range, and a chart of the periods observed and those ahead, as [The lines on a page](#the-lines-on-a-page) shows. An answer does not name its series, and `result` reads no input. To name the series in the headline, the workflow that asks can give the series' name as the label of a mark, such as `marks: [{ label: 'North, last week', value: 136 }]`. The answer carries the mark back, so `result` reads the name as `output.marks[0].label`, and the chart draws the mark as a level. An answer to a question asked without marks has none. Read the label through `default`, as `{{ output.marks[0].label | default: "This series" }}`, since a missing field stops the render.
-- `lately`: the forecast against what happened. A fold keeps, for each period, the value forecast for it and, once the period has passed, the value a later answer observed, as two lines of one series. An answer does not name its series, so keep this view for a function asked of one series, or read the series from the output of the workflow that asks. `weekly-orders` is asked of each region, so its page has no `lately`, which would mix the regions.
+- `runs`: the forecast against what happened. A fold keeps, for each period, the value forecast for it and, once the period has passed, the value a later answer observed, as two lines of one series. An answer does not name its series, so keep this view for a function asked of one series, or read the series from the output of the workflow that asks. `weekly-orders` is asked of each region, so its page has no `runs`, which would mix the regions.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## Availability
 

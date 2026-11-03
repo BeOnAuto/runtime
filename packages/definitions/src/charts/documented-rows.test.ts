@@ -6,7 +6,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { pageCheckOn } from '../page/page-content.ts';
 import { pageIn } from '../page/page-key.ts';
-import { latelyShown, resultShown, type ReadMoment } from '../page/page-rendering.ts';
+import { runsShown, resultShown, type ReadMoment } from '../page/page-rendering.ts';
 import { measuredPoolSettings } from '../testing/read-on-disk.ts';
 import { checkingWithin } from '../testing/time/patient-checks.ts';
 
@@ -20,7 +20,7 @@ function fencedIn(language: string): string {
 
 const documentedPage = fencedIn('yaml');
 
-const documentedLately = fencedIn('markdown');
+const documentedRuns = fencedIn('markdown');
 
 const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
@@ -83,9 +83,9 @@ describe('the documented page that lays out its charts in rows', () => {
   it('is saved, and renders the views its fold keeps of three orders as the Markdown the page format shows', async () => {
     const fold = await foldOf(documentedPage);
     const views = orders.reduce((view: Schema.Json, order: Order) => fold(view, eventOf(order)), {});
-    const lately = Result.getOrThrow(Result.fromNullishOr(parsed.templates.lately, () => 'no lately'));
+    const runs = Result.getOrThrow(Result.fromNullishOr(parsed.templates.runs, () => 'no runs'));
 
-    expect(latelyShown(lately, { state: 'live', views }, { declared, subject }, moment)).toBe(documentedLately.trim());
+    expect(runsShown(runs, { state: 'live', views }, { declared, subject }, moment)).toBe(documentedRuns.trim());
     expect(fold(views, eventOf({ time: '2026-11-01T09:00:00Z', output: { order: 'A-1044' } }))).toBe(views);
   });
 

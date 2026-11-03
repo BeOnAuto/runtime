@@ -34,7 +34,7 @@ function withItsPage(subject: string): string {
     '        return { runs: { values: [...(view.runs?.values ?? []), { name: event.type, value: 1 }] } };',
     '      }',
     '  result: Ran.',
-    "  lately: '{{ views.runs.values | size }} runs.'",
+    "  runs: '{{ views.runs.values | size }} runs.'",
     '---',
     'export default function (input: Input): Output {',
     '  return input;',
@@ -114,7 +114,7 @@ describe('the views of the pages of a playbook, built at most PAGE_MAX_REBUILDS 
       { page: { standing: { state: 'live', folded: 1 } } },
     ]);
     expect(await server.call('GET', `${inPlaybook('alpha')}/definitions/computation/second`)).toMatchObject({
-      body: { page: { lately: '1 runs.' } },
+      body: { page: { runs: '1 runs.' } },
     });
   });
 });

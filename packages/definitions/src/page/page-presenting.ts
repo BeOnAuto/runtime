@@ -4,9 +4,9 @@ import { Clock, Effect, Option, Result, type Schema } from 'effect';
 import { viewStandingOf, type KeptViewState, type KeptViews } from '../capability/view-standing.ts';
 import { renderClock } from '../template/render-clock.ts';
 import type { SubjectPage } from './page-facts.ts';
-import { pageIn } from './page-key.ts';
+import { savedPageIn } from './page-key.ts';
 import {
-  latelyShown,
+  runsShown,
   resultShown,
   type ReadMoment,
   type RunShown,
@@ -36,7 +36,7 @@ const readMoment: Effect.Effect<ReadMoment> = Effect.flatMap(Clock.currentTimeMi
 
 function documentOf({ page, of, written }: Pick<PlacedPage, 'page' | 'of' | 'written'>) {
   const readAs = written === 'carried' ? (of === 'playbook' ? 'playbook' : 'mapping') : written;
-  return Option.getOrUndefined(Result.getOrElse(pageIn(page.source, readAs), Option.none));
+  return Option.getOrUndefined(Result.getOrElse(savedPageIn(page.source, readAs), Option.none));
 }
 
 export function pageResultOf(
@@ -60,7 +60,7 @@ function viewsShownOf(kept: KeptViewState | undefined): ViewsShown {
 }
 
 interface PageViewsRead {
-  readonly lately?: string;
+  readonly runs?: string;
   readonly standing?: Schema.JsonObject;
 }
 
@@ -70,14 +70,14 @@ interface ViewsAsRead {
   readonly moment: ReadMoment;
 }
 
-function latelyOver(placed: PlacedPage, { kept, moment }: ViewsAsRead): PageViewsRead {
+function runsOver(placed: PlacedPage, { kept, moment }: ViewsAsRead): PageViewsRead {
   const document = documentOf(placed);
-  const template = document?.templates.lately;
+  const template = document?.templates.runs;
   if (document?.data === undefined || template === undefined) {
     return {};
   }
   const context = { declared: document.data.views, subject: placed.subject };
-  return { lately: latelyShown(template, viewsShownOf(kept), context, moment) };
+  return { runs: runsShown(template, viewsShownOf(kept), context, moment) };
 }
 
 function standingOver(placed: PlacedPage, { kept, newestAt }: ViewsAsRead): PageViewsRead {
@@ -92,7 +92,7 @@ export const pageViewsOf = Effect.fnUntraced(function* (views: KeptViews, placed
     newestAt: yield* views.newestRecordAt(placed.place),
     moment: yield* readMoment,
   };
-  const shown: PageViewsRead = { ...latelyOver(placed, read), ...standingOver(placed, read) };
+  const shown: PageViewsRead = { ...runsOver(placed, read), ...standingOver(placed, read) };
   return shown;
 });
 
@@ -102,7 +102,7 @@ function momentOfTheRun(kept: KeptViewState | undefined): Effect.Effect<ReadMome
 
 export const pageAsOfRun = Effect.fnUntraced(function* (views: KeptViews, placed: PlacedPage, run: string) {
   const document = documentOf(placed);
-  const template = document?.templates.lately;
+  const template = document?.templates.runs;
   if (document?.data === undefined || template === undefined) {
     return {};
   }
@@ -110,7 +110,7 @@ export const pageAsOfRun = Effect.fnUntraced(function* (views: KeptViews, placed
   const moment = yield* momentOfTheRun(kept);
   const context = { declared: document.data.views, subject: placed.subject };
   return {
-    lately: latelyShown(template, viewsShownOf(kept), context, moment),
+    runs: runsShown(template, viewsShownOf(kept), context, moment),
     standing: viewStandingOf(kept?.version ?? placed.page.version, kept, yield* views.newestRecordAt(placed.place)),
   };
 });

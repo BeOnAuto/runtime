@@ -44,7 +44,7 @@ page:
       }
   result: |
     {{ output | clip: 500 }}
-  lately: |
+  runs: |
     ```chart table
     {{ views.latest | json }}
     ```
@@ -122,7 +122,7 @@ page:
 
     {{ output.greeting | clip: 500 }}
     {% endif %}
-  lately: |
+  runs: |
     ```chart line
     {{ views.replied | json }}
     ```

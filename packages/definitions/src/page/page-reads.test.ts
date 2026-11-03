@@ -10,7 +10,7 @@ import {
   foldingNothing,
   functionWithItsPage,
   greeting,
-  latelyOfTheDays,
+  runsOfTheDays,
   pageOfTheDays,
   pageOperationsOver,
   playbookWithTheWorkflow,
@@ -23,7 +23,7 @@ const greetingPage = workflowWithItsPage(resultOfTheGreeting);
 
 const daysPage = workflowWithItsPage(pageOfTheDays);
 
-const latelyOnly = workflowWithItsPage(`${foldingNothing}\n${latelyOfTheDays}`);
+const runsOnly = workflowWithItsPage(`${foldingNothing}\n${runsOfTheDays}`);
 
 const liveDays: KeptViewState = {
   version: 2,
@@ -61,7 +61,7 @@ describe('get_run of a run whose definition has a page', () => {
     await ready;
     const ran = await running({ ...workflow, input: {} });
     const without = await readingRun({ run_id: runIdOf(ran) });
-    await updating({ ...workflow, source: latelyOnly });
+    await updating({ ...workflow, source: runsOnly });
 
     expect(without).not.toHaveProperty('output.page');
     expect(await readingRun({ run_id: runIdOf(ran) })).not.toHaveProperty('output.page');
@@ -69,7 +69,7 @@ describe('get_run of a run whose definition has a page', () => {
 });
 
 describe('get_definition of a definition that has a page', () => {
-  it('carries what the page shows of its runs so far, as page.lately, and how its views stand, and no source', async () => {
+  it('carries what the page shows of its runs so far, as page.runs, and how its views stand, and no source', async () => {
     const { updating, reading, ready } = playbookWithTheWorkflow(keepingTheViews(liveDays));
     await ready;
     await updating({ ...workflow, source: daysPage });
@@ -78,7 +78,7 @@ describe('get_definition of a definition that has a page', () => {
 
     expect(read).toMatchObject({
       status: 'succeeded',
-      output: { version: 2, source: daysPage, page: { lately: '1 days', standing: { state: 'live', version: 2 } } },
+      output: { version: 2, source: daysPage, page: { runs: '1 days', standing: { state: 'live', version: 2 } } },
     });
     expect(read).not.toHaveProperty('output.page.source');
     expect(read).not.toHaveProperty('output.page.version');
@@ -94,7 +94,7 @@ describe('get_definition of a definition that has a page', () => {
     expect(building).toMatchObject({
       output: {
         page: {
-          lately: "Building this page's figures from the playbook's history…",
+          runs: "Building this page's figures from the playbook's history…",
           standing: { state: 'rebuilding', version: 2, folded: 0 },
         },
       },
@@ -115,13 +115,12 @@ describe('views that stopped', () => {
   it('show the one line that says so', async () => {
     const { updating, reading, ready } = playbookWithTheWorkflow(keepingTheViews({ ...liveDays, phase: 'stalled' }));
     await ready;
-    await updating({ ...workflow, source: latelyOnly });
+    await updating({ ...workflow, source: runsOnly });
 
     expect(await reading(workflow)).toMatchObject({
       output: {
         page: {
-          lately:
-            'The figures stopped updating because the page could not process an event. Correct the page to continue.',
+          runs: 'The figures stopped updating because the page could not process an event. Correct the page to continue.',
         },
       },
     });
@@ -129,25 +128,25 @@ describe('views that stopped', () => {
 });
 
 describe('the preview of a page', () => {
-  it('renders result over the latest run, or none before it has run, and lately', async () => {
+  it('renders result over the latest run, or none before it has run, and runs', async () => {
     const { updating, reading, rendering, running, ready } = playbookWithTheWorkflow(keepingTheViews(liveDays));
     await ready;
     await updating({ ...workflow, source: daysPage });
     const before = await reading({ ...workflow, render: true });
     await running({ ...workflow, input: {} });
 
-    expect(before).toMatchObject({ status: 'succeeded', output: { page: { lately: '1 days' } } });
+    expect(before).toMatchObject({ status: 'succeeded', output: { page: { runs: '1 days' } } });
     expect(before).not.toHaveProperty('output.page.result');
     expect(await reading({ ...workflow, render: true })).toMatchObject({
-      output: { page: { result: 'Good morning', lately: '1 days' } },
+      output: { page: { result: 'Good morning', runs: '1 days' } },
     });
     expect(await rendering(workflow)).toMatchObject({
       status: 'succeeded',
-      output: { type: 'workflow', name: 'morning-social-content', page: { result: 'Good morning', lately: '1 days' } },
+      output: { type: 'workflow', name: 'morning-social-content', page: { result: 'Good morning', runs: '1 days' } },
     });
   });
 
-  it('shows no page where the definition has not run and the page has no lately', async () => {
+  it('shows no page where the definition has not run and the page has no runs', async () => {
     const { updating, reading, ready } = playbookWithTheWorkflow();
     await ready;
     await updating({ ...workflow, source: greetingPage });
@@ -199,7 +198,7 @@ function playbookWithItsPage(views: KeptViews = keepingNoViews) {
 
 const playbookPage = [
   foldingNothing,
-  'lately: \'{{ subject.type }} {{ subject.name }} {{ subject.version | default: "unversioned" }}\'',
+  'runs: \'{{ subject.type }} {{ subject.name }} {{ subject.version | default: "unversioned" }}\'',
 ].join('\n');
 
 describe('the playbook’s page', () => {
@@ -212,7 +211,7 @@ describe('the playbook’s page', () => {
     expect(await calling(operations.renderPlaybookPage, {})).toMatchObject({
       status: 'succeeded',
       output: {
-        page: { lately: 'playbook alpha unversioned', standing: { state: 'live' } },
+        page: { runs: 'playbook alpha unversioned', standing: { state: 'live' } },
       },
     });
   });

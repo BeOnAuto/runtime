@@ -8,7 +8,7 @@ Show numbers over time as a chart keyed by [the period a run is about](#the-time
 
 What a page shows depends on its subject. The format guide of each type gives its recipe under Its page:
 
-| Subject                                                | `result`, one run                                                  | `lately`, the runs so far                                                   |
+| Subject                                                | `result`, one run                                                  | `runs`, the runs so far                                                     |
 | ------------------------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | [Workflow](workflow-format.md#its-page)                | The business outcome of the run, as a headline and its key figures | The main number of each period, with its breakdowns                         |
 | [Reasoning function](reasoning-format.md#its-page)     | The judgement in a sentence, with the fields that decided it       | The outcomes by category over time                                          |
@@ -24,19 +24,19 @@ Write the page its type's recipe gives. Where the work fits none of them, start 
 A page presents the results of a workflow, a function or the whole playbook. A definition's page is the `page` key of its own document. It is saved and versioned with the definition it presents, which is its subject. It has two templates:
 
 - `result` shows one run.
-- `lately` summarizes runs over time, using views derived from the playbook's events.
+- `runs` summarizes runs over time, using views derived from the playbook's events.
 
 Both render Markdown and can include charts in fenced blocks.
 
 A page is not a function, and it never runs:
 
 - `create_definition` and `update_definition` save the page with the rest of the document, so a save that changes only the page is a new version of the definition, as any save is. A document whose page the runtime refuses is not saved.
-- The runtime renders a page each time it is read. `get_run` of a run of the subject carries the run rendered through `result`, and `get_definition` of the subject carries `lately` rendered over the views. So Auto Studio, a chat and an agent show the same words.
-- The views are a fold of the playbook's events, so `render_page` given a `run_id` renders `lately` over them as they stood when that run ended; see [As of a run](#as-of-a-run).
+- The runtime renders a page each time it is read. `get_run` of a run of the subject carries the run rendered through `result`, and `get_definition` of the subject carries `runs` rendered over the views. So Auto Studio, a chat and an agent show the same words.
+- The views are a fold of the playbook's events, so `render_page` given a `run_id` renders `runs` over them as they stood when that run ended; see [As of a run](#as-of-a-run).
 
 ## A page
 
-A page is a YAML mapping of up to three keys: `data`, the views it keeps, and the two templates, `result` and `lately`, written as block scalars. This example is the page of the workflow `morning-social-content`. Each morning the workflow drafts the day's social posts, asks their owner to approve them, and ends with an output such as:
+A page is a YAML mapping of up to three keys: `data`, the views it keeps, and the two templates, `result` and `runs`, written as block scalars. This example is the page of the workflow `morning-social-content`. Each morning the workflow drafts the day's social posts, asks their owner to approve them, and ends with an output such as:
 
 ```json
 {
@@ -113,7 +113,7 @@ page:
     - [{{ post.channel }}: {{ post.title | clip: 80 }}]({{ post.url }})
     {% endfor %}
     {% endif %}
-  lately: |
+  runs: |
     {% if views.by_channel -%}
     Since it began, the workflow has drafted {{ views.by_channel.values | sum: "value" }} posts across {{ views.by_channel.values | size }} channels.
     {%- endif %}
@@ -172,7 +172,7 @@ After three runs of the workflow, on 30 October, 31 October and 1 November, the 
 
 While a run still waits for the owner's approval, its `page.result` is `Waiting for approval of the posts drafted this morning.`
 
-`get_definition` of the workflow carries this Markdown as `page.lately`. Auto Studio draws the two blocks as a line and as bars:
+`get_definition` of the workflow carries this Markdown as `page.runs`. Auto Studio draws the two blocks as a line and as bars:
 
 <!-- prettier-ignore -->
 ````markdown
@@ -237,13 +237,13 @@ page:
     {% else %}
     {{ output.month }} closed with {{ output.revenue | money }} of revenue.
     {% endif %}
-  lately: |
+  runs: |
     ```chart line
     {{ views.revenue | json }}
     ```
 ````
 
-`get_run` of the run that closed October carries `2026-10 closed with $182,450 of revenue.` as `page.result`, which is also its headline. `get_definition` of the workflow carries `page.lately`, a line of the revenue of the last 36 months closed. The fold guards what it reads, as [Guard the fold](#guard-the-fold) says: an output without a `month` in the form `YYYY-MM`, or without a `revenue` that is a number, adds nothing.
+`get_run` of the run that closed October carries `2026-10 closed with $182,450 of revenue.` as `page.result`, which is also its headline. `get_definition` of the workflow carries `page.runs`, a line of the revenue of the last 36 months closed. The fold guards what it reads, as [Guard the fold](#guard-the-fold) says: an output without a `month` in the form `YYYY-MM`, or without a `revenue` that is a number, adds nothing.
 
 ### The time a view is keyed by
 
@@ -275,10 +275,10 @@ Adding the figures instead would count a month twice. Add runs together only whe
 | `data.views`         | Required with `data`; 1 to 8 views, each a name and the shape it takes: `series`, `categories`, `table`, `text` or `memories`; see [The views](#the-views) |
 | `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                               |
 | `result`             | Optional; the template of one run; see [The templates](#the-templates)                                                                                     |
-| `lately`             | Optional; the template of the runs so far, over the views                                                                                                  |
+| `runs`               | Optional; the template of the runs so far, over the views                                                                                                  |
 
-- `data` is optional. A page without it has no views and no `lately`.
-- A page has `result`, `lately` or both. Write each as a YAML block scalar, `|`, so that its lines stay as written.
+- `data` is optional. A page without it has no views and no `runs`.
+- A page has `result`, `runs` or both. Write each as a YAML block scalar, `|`, so that its lines stay as written.
 - Unknown keys are refused with their line.
 - `page: {}` is no page.
 
@@ -304,7 +304,7 @@ Review this brief against the team's criteria: {{ input.brief }}
 - A definition has at most one page. A document saved without `page`, or with `page: {}`, has none, and the summary of a workflow or a function saved so ends with `It has no page yet; the page guide says how to give it one.`, where its 400 characters have room for it.
 - Retiring a definition retires its page with it: the page renders nowhere and its views are no longer kept.
 - A definition's name is its id. To rename one, create it under the new name with the same document, point every call and filter that names the old name at the new, and retire the old one at once: until then, a trigger the two share starts both. Its runs so far stay under the old name, so a page or a prediction function's data part that reads them keeps its filter on the old name, beside one on the new.
-- The playbook's page is the same mapping, with `data` and `lately`. It has no `result`, since the playbook has no runs of its own. `update_playbook` saves it as YAML text in `page`, and `page: null` removes it. Each save is recorded as `playbook_page_saved`, which no fold sees.
+- The playbook's page is the same mapping, with `data` and `runs`. It has no `result`, since the playbook has no runs of its own. `update_playbook` saves it as YAML text in `page`, and `page: null` removes it. Each save is recorded as `playbook_page_saved`, which no fold sees.
 - Give the playbook a page once it has more than one workflow, one that leads with each workflow's main number. Over MCP, `get_playbook` answers its source and renders nothing; [`render_playbook_page`](#the-preview) renders it, over HTTP alone.
 - A page saved as a definition of its own, of the type `page`, is read as its subject's page, in the form of a `page` mapping, without the `of` line that named the subject. It counts only while the subject's document has no `page` key. For the playbook, a save or removal through `update_playbook`, `null` included, replaces it.
 
@@ -382,7 +382,7 @@ Each event is a CloudEvent with its `id`, `type`, `source`, `time` and `data`. I
 | `Series`, `Categories`, `Table`, `Text`, `Memories` | The five [output shapes](output-shapes.md), `series`, `categories`, `table`, `text` and `memories`, as types |
 | `Event`, `Json`                                     | The playbook's event, described below, and any JSON value                                                    |
 
-- The fold starts from `{}`, with no views. A view the fold leaves out has no data yet, and `lately` reads it as `null`.
+- The fold starts from `{}`, with no views. A view the fold leaves out has no data yet, and `runs` reads it as `null`.
 - A module that exports `answer` is refused, since a page never runs.
 - The module's lines are counted in the definition's document, so a problem names the line where it is.
 
@@ -454,7 +454,7 @@ The server that runs the playbook's workflows keeps the views:
 - It is woken by every event the playbook records through it. The views follow the playbook by the time it takes to fold a page of events, and by up to a pass (a second) for an event another server recorded.
 - It reads the playbook's history in pages of up to 1,000 records. It folds each page in a worker apart from the server, kept ready between pages.
 - It writes the views once a page, so a restart folds at most one page again, to the same views.
-- Saving a page with `data`, or with its `data` changed, builds its views from the start of the playbook's history. A new version that leaves `data` as it was keeps the views. Until they have caught up, `page.lately` is the one line that says so; see [Lines in place of a render](#lines-in-place-of-a-render).
+- Saving a page with `data`, or with its `data` changed, builds its views from the start of the playbook's history. A new version that leaves `data` as it was keeps the views. Until they have caught up, `page.runs` is the one line that says so; see [Lines in place of a render](#lines-in-place-of-a-render).
 - A playbook builds the views of at most four pages at once, the setting `PAGE_MAX_REBUILDS`. The others wait in the order they were saved.
 - Changed `data` replaces views of the `data` before it that are being built, waiting or stalled.
 
@@ -474,7 +474,7 @@ The server that runs the playbook's workflows keeps the views:
 
 ### When the views stall
 
-If a fold cannot process an event, updates stop at that event. The views retain their earlier data, and `result` can still render. In place of `page.lately`, the runtime returns a message explaining that updates stopped. The standing identifies the cause:
+If a fold cannot process an event, updates stop at that event. The views retain their earlier data, and `result` can still render. In place of `page.runs`, the runtime returns a message explaining that updates stopped. The standing identifies the cause:
 
 | Kind      | At that event                                                                                        |
 | --------- | ---------------------------------------------------------------------------------------------------- |
@@ -494,16 +494,16 @@ The history is the source of the views, so the repair is a corrected version. Sa
 
 A page holds two templates:
 
-| Key      | Rendered over          | Carried by                                        |
-| -------- | ---------------------- | ------------------------------------------------- |
-| `result` | One run of the subject | `get_run` of that run, as `page.result`           |
-| `lately` | The views              | `get_definition` of the subject, as `page.lately` |
+| Key      | Rendered over          | Carried by                                      |
+| -------- | ---------------------- | ----------------------------------------------- |
+| `result` | One run of the subject | `get_run` of that run, as `page.result`         |
+| `runs`   | The views              | `get_definition` of the subject, as `page.runs` |
 
-The playbook's `lately` is carried by [`render_playbook_page`](#the-preview).
+The playbook's `runs` is carried by [`render_playbook_page`](#the-preview).
 
 - Each is optional, and a page has at least one.
 - The playbook's page has no `result`, since the playbook has no runs of its own.
-- `lately` needs `data`, and `data` needs `lately`, since the views are kept for `lately` alone.
+- `runs` needs `data`, and `data` needs `runs`, since the views are kept for `runs` alone.
 - The white space at each end of a rendered template is dropped.
 
 Each is a [Liquid](https://shopify.github.io/liquid/) template, as a reasoning function's prompt is, and renders Markdown; see [Markdown, not HTML](#markdown-not-html).
@@ -539,9 +539,9 @@ A run that was rejected or failed is not rendered through the template. Its `pag
 
 So a run whose request nobody answered in time shows `The run was rejected as unanswered, expired.` as its headline.
 
-### `lately`
+### `runs`
 
-`lately` reads four variables and nothing else:
+`runs` reads four variables and nothing else:
 
 | Variable       | Value                                                                                                                                              |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -715,7 +715,7 @@ Leave a blank line between a sentence and a following `---`, so Markdown readers
 
 Lead with the result and the figures someone needs to understand it. Group related charts in rows, and put longer tables and lists below them:
 
-- Open `lately` with a `figure` block of the three to five numbers that say how it is going, such as the orders, the revenue and the average order.
+- Open `runs` with a `figure` block of the three to five numbers that say how it is going, such as the orders, the revenue and the average order.
 - Then rows of two or three charts that belong together, each cell a short heading and its chart.
 - Then the long tables and lists, across the page.
 - Open `result` with its headline sentence, then the figures of the run, then at most one row of charts. The headline is the first line of `result`, so a row never opens it.
@@ -797,7 +797,7 @@ page:
     {% else %}
     Order {{ output.order }} fulfilled: {{ output.total | money }}, ordered through {{ output.channel }}.
     {% endif %}
-  lately: |
+  runs: |
     ```chart figure
     {{ views.figures | json }}
     ```
@@ -828,7 +828,7 @@ page:
 
 The fold guards what it reads, as [Guard the fold](#guard-the-fold) says: an output without a `total` that is a number of at least 0 adds nothing, and an order without a channel counts for `Other`. The line keeps the 30 days up to the latest order, and the table the latest 10 orders.
 
-`get_run` of the run for the order of 1 November carries `Order A-1043 fulfilled: $132.25, ordered through Web.` as `page.result`. After three orders, on 30 October, 31 October and 1 November, `get_definition` of the workflow carries this Markdown as `page.lately`. Auto Studio draws the figures across the top, the three charts of the row side by side, and the table of the latest orders under them:
+`get_run` of the run for the order of 1 November carries `Order A-1043 fulfilled: $132.25, ordered through Web.` as `page.result`. After three orders, on 30 October, 31 October and 1 November, `get_definition` of the workflow carries this Markdown as `page.runs`. Auto Studio draws the figures across the top, the three charts of the row side by side, and the table of the latest orders under them:
 
 <!-- prettier-ignore -->
 ````markdown
@@ -866,7 +866,7 @@ A definition's page is in its `source`, as written. `get_definition` adds `page`
 
 | Field      | What it holds                                                                                    |
 | ---------- | ------------------------------------------------------------------------------------------------ |
-| `lately`   | `lately`, rendered over the views, where the page has it                                         |
+| `runs`     | `runs`, rendered over the views, where the page has it                                           |
 | `standing` | The [standing of the views](#the-standing-of-the-views), where the page has `data`               |
 | `result`   | In a [preview](#the-preview), `result` rendered over the subject's latest run or a sample output |
 
@@ -882,7 +882,7 @@ A definition's page is in its `source`, as written. `get_definition` adds `page`
   "version": 4,
   "source": "document:\n  dsl: '1.0.3'\n…\npage:\n  data:\n…",
   "page": {
-    "lately": "Since it began, the workflow has drafted 8 posts across 3 channels.\n\n```chart line\n…",
+    "runs": "Since it began, the workflow has drafted 8 posts across 3 channels.\n\n```chart line\n…",
     "standing": { "state": "live" }
   }
 }
@@ -895,12 +895,12 @@ The runtime renders a page each time it is read, with the page as it stands then
 | Read                                       | What it carries                                   |
 | ------------------------------------------ | ------------------------------------------------- |
 | `get_run` of a run of the subject          | `page.result`: the run, rendered through `result` |
-| `get_definition` of the subject            | `page.lately`: `lately`, rendered over the views  |
-| The [preview](#the-preview) of the subject | `page.result` and `page.lately`                   |
-| The preview [as of a run](#as-of-a-run)    | The run's `page.result`, and `page.lately` then   |
-| `render_playbook_page`                     | The playbook's `page.lately`                      |
+| `get_definition` of the subject            | `page.runs`: `runs`, rendered over the views      |
+| The [preview](#the-preview) of the subject | `page.result` and `page.runs`                     |
+| The preview [as of a run](#as-of-a-run)    | The run's `page.result`, and `page.runs` then     |
+| `render_playbook_page`                     | The playbook's `page.runs`                        |
 
-- `get_run` carries no `page` where the subject has no page, or a page with no `result`. `get_definition` carries no `page.lately` where the page has no `lately`.
+- `get_run` carries no `page` where the subject has no page, or a page with no `result`. `get_definition` carries no `page.runs` where the page has no `runs`.
 - `run_definition`, `list_runs`, `list_definitions`, `get_playbook` and `list_playbooks` render nothing.
 - Each read renders the page as it stands. So an older run renders with the current page, and two reads a moment apart can differ by `now`.
 - The page of a retired definition renders nowhere, its views are no longer kept, and its preview is refused with `conflict`.
@@ -909,14 +909,14 @@ The runtime renders a page each time it is read, with the page as it stands then
 
 Where a template cannot be rendered, the read carries one fixed line in its place, and never a render half done:
 
-| When                                                        | The line                                                                                                                 |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| The views are being built, or wait to be built              | `page.lately`: `Building this page's figures from the playbook's history…`                                               |
-| The views stalled                                           | `page.lately`: `The figures stopped updating because the page could not process an event. Correct the page to continue.` |
-| The views could not be replayed [as of a run](#as-of-a-run) | `page.lately`: `Could not work out this page's figures as they stood when this run ended.`                               |
-| `result` stopped, such as at a field the output lacks       | `page.result`: `Could not display this run:`, then the problem and its line                                              |
-| `lately` stopped                                            | `page.lately`: `Could not display this page’s figures:`, then the problem and its line                                   |
-| A render over 64 KiB, or past a render limit                | The same line, which names the limit                                                                                     |
+| When                                                        | The line                                                                                                               |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| The views are being built, or wait to be built              | `page.runs`: `Building this page's figures from the playbook's history…`                                               |
+| The views stalled                                           | `page.runs`: `The figures stopped updating because the page could not process an event. Correct the page to continue.` |
+| The views could not be replayed [as of a run](#as-of-a-run) | `page.runs`: `Could not work out this page's figures as they stood when this run ended.`                               |
+| `result` stopped, such as at a field the output lacks       | `page.result`: `Could not display this run:`, then the problem and its line                                            |
+| `runs` stopped                                              | `page.runs`: `Could not display this page’s figures:`, then the problem and its line                                   |
+| A render over 64 KiB, or past a render limit                | The same line, which names the limit                                                                                   |
 
 ### The preview
 
@@ -927,27 +927,27 @@ The preview renders a page when asked, so that it can be seen before its subject
 | MCP  | `get_definition`, with the subject's `type` and `name`  | `render: true`, and optionally `sample_output`                                                               |
 | HTTP | `render_page`, `POST /definitions/{type}/{name}/render` | Optionally, a JSON body `{ "sample_output": … }`, or `{ "run_id": … }` to render [as of a run](#as-of-a-run) |
 
-Both answer the subject as `get_definition` does, with `page.result` and `page.lately`, and need `playbook:read`, as `get_definition` does.
+Both answer the subject as `get_definition` does, with `page.result` and `page.runs`, and need `playbook:read`, as `get_definition` does.
 
 - `sample_output` is an output to render `result` over, as the output of a run that succeeded. It is checked against the subject's output schema, where the subject has one.
 - Without `sample_output`, `result` renders over the subject's latest run. `page.result` is left out when the subject has not run.
 - A page with no `result` takes `sample_output` too. It is checked as above, and renders nothing.
 - Over a sample, `run.status` is `succeeded`, `run.started` and `run.ended` are the moment of the read, and `run.version` is the subject's latest version.
-- `lately` renders over the views as they stand, or as the line that says they are being built.
+- `runs` renders over the views as they stand, or as the line that says they are being built.
 - `render` on a definition without a page is refused as `invalid_input`, and so is `sample_output` without `render`. `render_page` of a definition without a page is refused as `not_found`.
 
-The playbook's page is read with `render_playbook_page`, `POST /render` relative to the playbook, which takes no body, needs `playbook:read` and answers `{ page: { lately, standing } }`, both where the page has `data`. A playbook without a page is refused as `not_found`.
+The playbook's page is read with `render_playbook_page`, `POST /render` relative to the playbook, which takes no body, needs `playbook:read` and answers `{ page: { runs, standing } }`, both where the page has `data`. A playbook without a page is refused as `not_found`.
 
 ### As of a run
 
-`render_page` given a `run_id` answers `page.result`, `page.lately` and `page.standing` as they stood when that run ended. So a client can show the page of a run from last month as it read that day. This takes HTTP: `get_definition` has no `run_id`.
+`render_page` given a `run_id` answers `page.result`, `page.runs` and `page.standing` as they stood when that run ended. So a client can show the page of a run from last month as it read that day. This takes HTTP: `get_definition` has no `run_id`.
 
 - The views are not stored for each moment. The runtime folds again from the start of the playbook's history up to the run's last event. It uses the same fold and the same limits that keep the views, and writes nothing.
-- `page.result` is what `get_run` of the run answers. `lately` renders with the page of the subject's latest version, like every read. It renders over the views of that run's moment, and its `now` and `today` are that moment.
+- `page.result` is what `get_run` of the run answers. `runs` renders with the page of the subject's latest version, like every read. It renders over the views of that run's moment, and its `now` and `today` are that moment.
 - `page.standing` says how the replay ended. `checkpoint` and `checkpoint_at` are the run's last event, `folded` and `last_event` count up to there, and `lag_ms` is how far that is behind the playbook's newest record.
 - A run still going has no end yet, so it renders over the views as they stand, as the preview does.
 - A fold that stalls before the run's last event gives the line for stalled views, as it does for the views themselves. A run that ended before a stall replays as usual.
-- Where the replay reaches [its limit](#limits), or no worker can fold it, `page.lately` is the line that says so and `page.standing.state` is `out_of_reach`, with the version alone. `page.result` is still answered.
+- Where the replay reaches [its limit](#limits), or no worker can fold it, `page.runs` is the line that says so and `page.standing.state` is `out_of_reach`, with the version alone. `page.result` is still answered.
 - A run the playbook does not have is refused as `not_found`. A run of another definition is refused as `invalid_input` at `/run_id`, and so is `run_id` given with `sample_output`.
 - The refusals of the preview hold: `not_found` for a definition without a page, and `conflict` for a retired one.
 
@@ -959,8 +959,8 @@ The playbook's page is read with `render_playbook_page`, `POST /render` relative
 - `data` without `language`, `source.events`, `views` or `module`; more than 8 views; a view's name not of the form above; or a shape that is not `series`, `categories`, `table`, `text` or `memories`.
 - A filter that [The filters of the events](#the-filters-of-the-events) refuse, or a module that [The module](#the-module) refuses, with its line and the compiler's words.
 - A module that exports `answer`: a page never runs.
-- `data` without `lately`, or `lately` without `data`: the views are kept for `lately` alone.
-- A `result` or a `lately` that is not text.
+- `data` without `runs`, or `runs` without `data`: the views are kept for `runs` alone.
+- A `result` or a `runs` that is not text.
 - `result` in the playbook's page: the playbook has no runs of its own.
 - A template that does not compile, or names a tag, a filter or a variable it does not have, or a view that `data.views` does not declare, with its line.
 - A chart fence written out with a kind that the table of kinds does not list, a role its kind does not take, or a role written twice, with its line.
@@ -980,10 +980,10 @@ The playbook's page is read with `render_playbook_page`, `POST /render` relative
 | The views together                    | 512 KiB as JSON, checked after every fold                       | The views stall at that event, `size`                |
 | Work, memory and duration of one fold | 500 checkpoints, 64 MiB and 10 seconds                          | The views stall at that event                        |
 | Views built at once                   | 4 pages a playbook, the setting `PAGE_MAX_REBUILDS`             | The save succeeds; the standing says `waiting`       |
-| A replay [as of a run](#as-of-a-run)  | 10 pages of up to 1,000 records, with one page folded at a time | `out_of_reach`, and the line in place of `lately`    |
+| A replay [as of a run](#as-of-a-run)  | 10 pages of up to 1,000 records, with one page folded at a time | `out_of_reach`, and the line in place of `runs`      |
 | Time to render                        | 200 ms for each template                                        | The line in place of the template                    |
 | Memory a render may charge            | 5,000,000 characters or items                                   | The line in place of the template                    |
-| A rendered template                   | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `lately`   | The line in place of the template                    |
+| A rendered template                   | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `runs`     | The line in place of the template                    |
 | The headline                          | 200 characters                                                  | A client cuts it there, with an ellipsis             |
 | `sample_output`                       | 256 KiB as JSON, nesting at most 512 levels, as a run's input   | `invalid_input` at `/sample_output`                  |
 | Cells of a row                        | 2 to 4                                                          | Refused when saved; a line says why when it renders  |

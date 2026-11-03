@@ -14,7 +14,7 @@ export const PlaybookSchema = Schema.Struct({
   ),
   page: Schema.optionalKey(
     Schema.Struct({
-      source: Schema.String.annotate({ description: 'The page as it was saved, YAML of its data and lately' }),
+      source: Schema.String.annotate({ description: 'The page as it was saved, YAML of its data and runs' }),
     }).annotate({
       description: "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook",
     }),

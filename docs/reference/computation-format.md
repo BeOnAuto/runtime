@@ -67,7 +67,7 @@ page:
     {% for each in output.campaigns -%}
     | {{ each.campaign }} | {{ each.spend_cents | divided_by: 100 | money }} | {{ each.projected_cents | divided_by: 100 | money }} | {% if each.pace_permille == nil %}no budget{% else %}{{ each.pace_permille | divided_by: 10 }}% of budget{% endif %} |
     {% endfor %}
-  lately: |
+  runs: |
     ```chart line
     {{ views.spend | json }}
     ```
@@ -442,11 +442,11 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 A computation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person the figures the program worked out:
 
 - `result`: the numbers, as figures or a table, such as the total spend in a `figure` chart and a row for each campaign in a table.
-- `lately`: their series over time, such as the total spend of each period, keyed by the period the output names.
+- `runs`: their series over time, such as the total spend of each period, keyed by the period the output names.
 
 Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
 
-The fold sees the output alone, so give the output the period it is about, such as the month a run totals. The example's output names none, so its page keys each total by the day it was worked out: the spend so far, as of that day. Write amounts kept in cents as dollars, with `divided_by: 100` and `money`. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+The fold sees the output alone, so give the output the period it is about, such as the month a run totals. The example's output names none, so its page keys each total by the day it was worked out: the spend so far, as of that day. Write amounts kept in cents as dollars, with `divided_by: 100` and `money`. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## Availability
 

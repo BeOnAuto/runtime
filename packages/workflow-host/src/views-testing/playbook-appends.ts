@@ -153,7 +153,7 @@ function pageAppendsOf(append: Append) {
     subjectSaved: (subject: string, version: number) => saving(subject, version),
     subjectRetired: (subject: string) =>
       onTheSubject(append, next(), subject)([{ type: 'definition_retired', data: {} }]),
-    playbookPageSaved: (details: Schema.JsonObject) => onThePlaybook({ source: 'lately: |\n  Posts', details }),
+    playbookPageSaved: (details: Schema.JsonObject) => onThePlaybook({ source: 'runs: |\n  Posts', details }),
     playbookPageRemoved: () => onThePlaybook(null),
   };
 }

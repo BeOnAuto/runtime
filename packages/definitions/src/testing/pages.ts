@@ -17,7 +17,7 @@ function fencedIn(text: string, fence: string, language: string): readonly strin
 
 export const documentedPage = String(fencedIn(pageFormat, '````', 'yaml')[0]);
 
-export const documentedLately = String(fencedIn(pageFormat, '````', 'markdown')[0]);
+export const documentedRuns = String(fencedIn(pageFormat, '````', 'markdown')[0]);
 
 const decodeJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 
@@ -42,7 +42,7 @@ interface PageParts {
 
 export const resultOfTheDate = '{% result %}\n{{ output.date }}\n{% endresult %}';
 
-export const latelyOfTheDays = '{% lately %}\n```chart line\n{{ views.by_day | json }}\n```\n{% endlately %}';
+export const runsOfTheDays = '{% lately %}\n```chart line\n{{ views.by_day | json }}\n```\n{% endlately %}';
 
 export function pageData(module = foldingNothing, views = 'by_day: series'): string {
   return [
@@ -70,17 +70,17 @@ interface LegacyDataParts extends PageParts {
 }
 
 export function pageWithData({ module, views, ...parts }: LegacyDataParts = {}): string {
-  return pageOf({ body: `${resultOfTheDate}\n\n${latelyOfTheDays}`, ...parts, data: pageData(module, views) });
+  return pageOf({ body: `${resultOfTheDate}\n\n${runsOfTheDays}`, ...parts, data: pageData(module, views) });
 }
 
 export const resultOfTheDay = '{{ output.date }}';
 
-export const latelyOfTheDayChart = '```chart line\n{{ views.by_day | json }}\n```';
+export const runsOfTheDayChart = '```chart line\n{{ views.by_day | json }}\n```';
 
 interface PageKeyParts {
   readonly data?: string;
   readonly result?: string;
-  readonly lately?: string;
+  readonly runs?: string;
   readonly more?: string;
 }
 
@@ -88,12 +88,12 @@ function blockOf(key: string, text: string | undefined): readonly string[] {
   return text === undefined ? [] : [`${key}: |`, indented(text, 2)];
 }
 
-export function pageMappingOf({ data, result, lately, more }: PageKeyParts): string {
+export function pageMappingOf({ data, result, runs, more }: PageKeyParts): string {
   return [
     ...(more === undefined ? [] : [more]),
     ...(data === undefined ? [] : [data]),
     ...blockOf('result', result),
-    ...blockOf('lately', lately),
+    ...blockOf('runs', runs),
   ].join('\n');
 }
 
@@ -113,5 +113,5 @@ interface DataParts {
 }
 
 export function workflowWithData({ module, views }: DataParts = {}): string {
-  return workflowWithPage({ data: pageData(module, views), result: resultOfTheDay, lately: latelyOfTheDayChart });
+  return workflowWithPage({ data: pageData(module, views), result: resultOfTheDay, runs: runsOfTheDayChart });
 }

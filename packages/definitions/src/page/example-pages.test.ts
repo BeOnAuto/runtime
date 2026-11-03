@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { standingRenderClock } from '../testing/time/stepping-clock.ts';
 import { pageIn } from './page-key.ts';
-import { latelyShown, resultShown, type ReadMoment } from './page-rendering.ts';
+import { runsShown, resultShown, type ReadMoment } from './page-rendering.ts';
 
 const moment: ReadMoment = { today: '2026-11-01', now: '2026-11-01T09:30:00.000Z', clock: standingRenderClock };
 
@@ -39,8 +39,8 @@ function resultOf(page: ExamplePage) {
   return Result.getOrThrow(Result.fromNullishOr(page.templates.result, () => 'no result'));
 }
 
-function latelyOf(page: ExamplePage) {
-  return Result.getOrThrow(Result.fromNullishOr(page.templates.lately, () => 'no lately'));
+function runsOf(page: ExamplePage) {
+  return Result.getOrThrow(Result.fromNullishOr(page.templates.runs, () => 'no runs'));
 }
 
 function viewsOf(page: ExamplePage) {
@@ -94,7 +94,7 @@ describe('the page of the example of the workflow format', () => {
     };
     const shown = { declared: viewsOf(pageOfTheReview), subject: theReview };
 
-    expect(latelyShown(latelyOf(pageOfTheReview), { state: 'live', views: { briefs } }, shown, moment)).toBe(
+    expect(runsShown(runsOf(pageOfTheReview), { state: 'live', views: { briefs } }, shown, moment)).toBe(
       chartOf('bars x=Day y=Briefs color=Verdict', briefs),
     );
   });
@@ -144,7 +144,7 @@ describe('the page of the example of the interaction format', () => {
     const shown = { declared: viewsOf(pageOfTheApproval), subject: theApproval };
 
     expect(
-      latelyShown(latelyOf(pageOfTheApproval), { state: 'live', views: { waiting: open, decisions } }, shown, moment),
+      runsShown(runsOf(pageOfTheApproval), { state: 'live', views: { waiting: open, decisions } }, shown, moment),
     ).toBe([chartOf('figure', open), '', chartOf('bars x=Day y=Briefs color=Answer', decisions)].join('\n'));
   });
 });
@@ -187,7 +187,7 @@ describe('the page of the example of the computation format', () => {
     };
     const shown = { declared: viewsOf(pageOfThePace), subject: thePace };
 
-    expect(latelyShown(latelyOf(pageOfThePace), { state: 'live', views: { spend } }, shown, moment)).toBe(
+    expect(runsShown(runsOf(pageOfThePace), { state: 'live', views: { spend } }, shown, moment)).toBe(
       chartOf('line', spend),
     );
   });

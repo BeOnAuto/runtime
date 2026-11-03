@@ -12,8 +12,8 @@ import type { PageOf } from './subject-pages-port.ts';
 
 type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;
 
-const latelyNeedsData =
-  'lately renders the views that data keeps, so a page with {% lately %} has data, and a page with data has {% lately %}';
+const runsNeedsData =
+  '{% lately %} renders the views that data keeps, so a page with {% lately %} has data, and a page with data has {% lately %}';
 
 const playbookHasNoRuns = 'The playbook has no runs of its own, so its page has no {% result %}';
 
@@ -23,11 +23,11 @@ function issuesOf(check: () => Checked<unknown>): readonly DocumentIssue[] {
 }
 
 function unpairedIssues(front: PageFrontMatter, blocks: PageBlocks, lines: SourceLines): readonly DocumentIssue[] {
-  if (front.data !== undefined && blocks.lately === undefined) {
-    return [issueAt(lines, '/data', latelyNeedsData)];
+  if (front.data !== undefined && blocks.runs === undefined) {
+    return [issueAt(lines, '/data', runsNeedsData)];
   }
-  return front.data === undefined && blocks.lately !== undefined
-    ? [{ line: blocks.lately.line, pointer: '', detail: latelyNeedsData }]
+  return front.data === undefined && blocks.runs !== undefined
+    ? [{ line: blocks.runs.line, pointer: '', detail: runsNeedsData }]
     : [];
 }
 

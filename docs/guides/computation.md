@@ -256,7 +256,7 @@ page:
       }
   result: |
     {{ output | clip: 1000 }}
-  lately: |
+  runs: |
     ```chart table
     {{ views.notes | json }}
     ```
@@ -353,7 +353,7 @@ page:
 
     {{ output.note | clip: 1000 }}
     {% endif %}
-  lately: |
+  runs: |
     ```chart bars x=Day y=Spent color=Campaign
     {{ views.spend | json }}
     ```

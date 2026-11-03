@@ -23,7 +23,7 @@ const pageData = [
   '    }',
 ];
 
-const lately = 'lately: \'Since it began, {{ views.by_channel.values | sum: "value" }} posts were drafted.\'';
+const runs = 'runs: \'Since it began, {{ views.by_channel.values | sum: "value" }} posts were drafted.\'';
 
 const result = [
   'result: |',
@@ -52,9 +52,9 @@ function draftPostsWith(page: readonly string[]): string {
   ].join('\n');
 }
 
-const draftPosts = draftPostsWith([...pageData, ...result, lately]);
+const draftPosts = draftPostsWith([...pageData, ...result, runs]);
 
-const playbookPage = [...pageData, lately].join('\n');
+const playbookPage = [...pageData, runs].join('\n');
 
 const morning = {
   date: '2026-11-01',
@@ -100,7 +100,7 @@ const drafted = [
 ].join('\n');
 
 describe('the page of a definition over HTTP', () => {
-  it('shows a run as page.result on the run, and its views as page.lately on the definition', async () => {
+  it('shows a run as page.result on the run, and its views as page.runs on the definition', async () => {
     const run = await playbookWithThePage();
 
     const read = await server.call('GET', `${alpha}/runs/${run}`);
@@ -112,7 +112,7 @@ describe('the page of a definition over HTTP', () => {
     expect(definition.body).toMatchObject({
       version: 1,
       source: draftPosts,
-      page: { lately: 'Since it began, 2 posts were drafted.' },
+      page: { runs: 'Since it began, 2 posts were drafted.' },
     });
     expect(definition.body).not.toHaveProperty('page.source');
   });
@@ -141,7 +141,7 @@ describe('the preview of the page of a definition over HTTP', () => {
     await playbookWithThePage();
 
     const changed = await server.call('PUT', draftPostsAt, {
-      body: { source: draftPostsWith([...pageData, 'result: Drafted.', lately]), diagram: 'none' },
+      body: { source: draftPostsWith([...pageData, 'result: Drafted.', runs]), diagram: 'none' },
     });
     const removed = await server.call('PUT', draftPostsAt, { body: { source: draftPostsWith([]), diagram: 'none' } });
 
@@ -172,7 +172,7 @@ describe('the page of the playbook over HTTP', () => {
         status: 200,
         body: {
           page: {
-            lately: 'Since it began, 2 posts were drafted.',
+            runs: 'Since it began, 2 posts were drafted.',
             standing: { state: 'live', folded: 1 },
           },
         },
@@ -215,7 +215,7 @@ describe('the page of the playbook over HTTP, removed', () => {
     });
     expect(
       await server.call('PUT', '/v1/orgs/acme/playbooks/alpha', {
-        body: { page: [...pageData, 'result: Ran.', lately].join('\n') },
+        body: { page: [...pageData, 'result: Ran.', runs].join('\n') },
       }),
     ).toMatchObject({ status: 422, body: { errors: [{ pointer: '/page' }] } });
   });

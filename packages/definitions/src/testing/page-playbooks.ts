@@ -77,6 +77,6 @@ export const foldingNothing = [
 
 export const resultOfTheGreeting = "result: '{{ output.greeting }} from version {{ run.version }}'";
 
-export const latelyOfTheDays = "lately: '{{ views.by_day.lines[0].points | size }} days'";
+export const runsOfTheDays = "runs: '{{ views.by_day.lines[0].points | size }} days'";
 
-export const pageOfTheDays = [foldingNothing, "result: '{{ output.greeting }}'", latelyOfTheDays].join('\n');
+export const pageOfTheDays = [foldingNothing, "result: '{{ output.greeting }}'", runsOfTheDays].join('\n');

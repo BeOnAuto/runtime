@@ -18,9 +18,9 @@ const pages = subjectPagesOf({
   },
 });
 
-const latelyOfTheDays = '{% lately %}\n{{ views.by_day | json }}\n{% endlately %}';
+const runsOfTheDays = '{% lately %}\n{{ views.by_day | json }}\n{% endlately %}';
 
-function savedAsADefinition(of: string, body = `${resultOfTheDate}\n\n${latelyOfTheDays}`): string {
+function savedAsADefinition(of: string, body = `${resultOfTheDate}\n\n${runsOfTheDays}`): string {
   return pageOf({ front: `of: ${of}`, data: pageData(), body });
 }
 
@@ -64,7 +64,7 @@ describe('a page saved as a definition of its own', () => {
       output: {
         answer: {
           version: 2,
-          source: `${pageData()}\nresult: |2\n  {{ output.date }}\nlately: |2\n  {{ views.by_day | json }}\n`,
+          source: `${pageData()}\nresult: |2\n  {{ output.date }}\nruns: |2\n  {{ views.by_day | json }}\n`,
           details: { data: { foldLine: 10, views: { by_day: 'series' } } },
         },
       },
@@ -74,7 +74,7 @@ describe('a page saved as a definition of its own', () => {
 
   it('of the playbook reads back as a page the playbook saves, and saves back unchanged', async () => {
     const asked = await withPagesOfTheirOwn();
-    const mapping = `${pageData()}\nlately: |2\n  {{ views.by_day | json }}\n\n  Posts so far.\n`;
+    const mapping = `${pageData()}\nruns: |2\n  {{ views.by_day | json }}\n\n  Posts so far.\n`;
 
     expect(await asked.ask(savedBack)).toMatchObject({
       output: {
@@ -88,7 +88,7 @@ describe('a page saved as a definition of its own', () => {
     expect(await asked.ask(pages.playbookPageOf())).toMatchObject({
       output: { answer: { version: 1, source: mapping } },
     });
-    expect(await asked.ask(pages.viewsOf('playbook'))).toMatchObject({ output: { answer: { lately: building } } });
+    expect(await asked.ask(pages.viewsOf('playbook'))).toMatchObject({ output: { answer: { runs: building } } });
   });
 
   it('keeps the forms its save stripped, for the views', async () => {

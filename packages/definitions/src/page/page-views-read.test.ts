@@ -45,7 +45,7 @@ describe('the views of a page as a read shows them', () => {
     await asked.created('workflow', 'morning', workflowWithData(), { page: await contentOf(workflowWithData()) });
 
     expect(await asked.ask(pages.viewsOf({ type: 'workflow', name: 'morning' }))).toMatchObject({
-      output: { answer: { lately: building, standing: { state: 'rebuilding' } } },
+      output: { answer: { runs: building, standing: { state: 'rebuilding' } } },
     });
   });
 });

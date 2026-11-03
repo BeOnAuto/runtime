@@ -88,9 +88,9 @@ describe('the presenter of the changes to a definition', () => {
     const shown = (page: object | null) =>
       present(recordOf('definitions/playbook', 'playbook_page_saved', { page }, ofThePlaybook), showing).at(0);
 
-    expect(shown({ source: 'lately: Hé', details: {} })).toMatchObject({
+    expect(shown({ source: 'runs: Hé', details: {} })).toMatchObject({
       summary: "The playbook's page was saved.",
-      data: { source_bytes: 11 },
+      data: { source_bytes: 9 },
     });
     expect(shown(null)).toMatchObject({ summary: "The playbook's page was removed.", data: {} });
   });

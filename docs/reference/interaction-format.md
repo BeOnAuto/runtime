@@ -122,7 +122,7 @@ page:
     {% else %}
     {% if output.verdict == "approve" %}Approved{% else %}Sent back{% endif %} by the campaign owner on {{ run.ended | slice: 0, 10 }}{% if output.note %}: {{ output.note | clip: 160 }}{% else %}.{% endif %}
     {% endif %}
-  lately: |
+  runs: |
     ```chart figure
     {{ views.waiting | json }}
     ```
@@ -604,9 +604,9 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 An interaction function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what was decided:
 
 - `result`: the decision, who made it and when, such as `Approved by the campaign owner on 2026-11-01: Ready to launch.` The answer is `output`, and the moment it came `run.ended`. `result` reads neither the input nor `to`, so name who answers in words. Nor can it say what was decided on, such as which brief was approved: the answer holds only what the person answered, so the page of the workflow that asks says it, from the workflow's output. While the request waits, `result` says whom it waits for.
-- `lately`: the decisions over time, what waits now, and how long people took to answer. A request's run starts with `run_started` and ends with `run_succeeded`, the answer, `run_rejected` when it ends without one, as when nobody answered, or `run_failed`, each naming the run in `source`. So a fold counts each day's answers by their verdict, the requests still open, and the hours between asking and answering.
+- `runs`: the decisions over time, what waits now, and how long people took to answer. A request's run starts with `run_started` and ends with `run_succeeded`, the answer, `run_rejected` when it ends without one, as when nobody answered, or `run_failed`, each naming the run in `source`. So a fold counts each day's answers by their verdict, the requests still open, and the hours between asking and answering.
 
-A fold pairs a request's start with its end by `source`. Another page for `approve-campaign-brief`, in place of the one in [its document](#a-function-document), keeps the requests still open in a view of its own, `open`, which holds each run's `source` and when it asked. `lately` never draws that view, so the run ids in it never reach the page; it draws the hours each answer took:
+A fold pairs a request's start with its end by `source`. Another page for `approve-campaign-brief`, in place of the one in [its document](#a-function-document), keeps the requests still open in a view of its own, `open`, which holds each run's `source` and when it asked. `runs` never draws that view, so the run ids in it never reach the page; it draws the hours each answer took:
 
 <!-- prettier-ignore -->
 ````yaml
@@ -644,7 +644,7 @@ page:
         const line = { name: 'Hours to answer', points: [...points, { at: time, value: hours }].slice(-200) };
         return { ...view, open, hours: { unit: 'hours', lines: [line] } };
       }
-  lately: |
+  runs: |
     {% if views.open %}Briefs waiting for their owner's answer: {{ views.open.rows | size }}.{% endif %}
 
     ```chart line
@@ -654,7 +654,7 @@ page:
 
 Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
 
-A notification takes no answer, so its page counts what was sent. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
+A notification takes no answer, so its page counts what was sent. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
 ## Availability
 
