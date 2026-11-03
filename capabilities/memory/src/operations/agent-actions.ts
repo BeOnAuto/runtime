@@ -4,7 +4,7 @@ import { Clock, Effect } from 'effect';
 
 import { memoryDefinitionType } from '../capability/memory-run.ts';
 import type { MemoryPlace } from '../facts/memory-streams.ts';
-import type { Acting } from '../remember/remembering.ts';
+import type { Acting } from '../keeper/memory-keeper.ts';
 
 export interface AgentAction {
   readonly place: MemoryPlace;

@@ -1,47 +1,65 @@
-import { InvalidInput, randomUUIDv7, type Ledger } from '@on.auto/operations';
+import { InvalidInput, randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { memoryBounds } from '../document/memory-bounds.ts';
 import { organizationNotKept } from '../document/memory-scopes.ts';
 import type { MemoryScope } from '../facts/memory-facts.ts';
-
-export type MemoryLedger = Pick<
-  Ledger['Service'],
-  'load' | 'execute' | 'scrubFact' | 'readProjectedRows' | 'countProjectedRows'
->;
+import type { MemoryAt, MemoryPlace } from '../facts/memory-streams.ts';
+import { memoryKeeperOn } from '../keeper/kept-in-a-ledger.ts';
+import type { MemoryKeeper, MemoryLedger } from '../keeper/memory-keeper.ts';
 
 export interface MemoryFunctionAdapterOptions {
   readonly ledger: MemoryLedger;
+  readonly organization?: MemoryKeeper;
   readonly mostKept?: number;
   readonly mostExamined?: number;
   readonly newId?: () => string;
-  readonly organizationKept?: boolean;
 }
 
 export interface MemoryPorts {
-  readonly ledger: MemoryLedger;
-  readonly mostKept: number;
+  readonly kept: MemoryKeeper;
+  readonly organization: MemoryKeeper | undefined;
   readonly mostExamined: number;
   readonly newId: () => string;
-  readonly organizationKept: boolean;
 }
 
 export function memoryPortsOf({
   ledger,
-  mostKept = memoryBounds.mostKept,
+  organization,
+  mostKept,
   mostExamined = memoryBounds.mostExamined,
   newId = randomUUIDv7,
-  organizationKept = true,
 }: MemoryFunctionAdapterOptions): MemoryPorts {
-  return { ledger, mostKept, mostExamined, newId, organizationKept };
+  return {
+    kept: memoryKeeperOn({ ledger, ...(mostKept === undefined ? {} : { mostKept }) }),
+    organization,
+    mostExamined,
+    newId,
+  };
+}
+
+export function organizationKeeperOf({ kept, organization }: MemoryPorts): MemoryKeeper {
+  return organization ?? kept;
+}
+
+export function keeperOf(
+  ports: MemoryPorts,
+  { playbook }: MemoryPlace,
+  { place, scope }: Pick<MemoryAt, 'place' | 'scope'>,
+): MemoryKeeper {
+  return scope === 'playbook' && place.playbook === playbook ? ports.kept : organizationKeeperOf(ports);
+}
+
+export function organizationKept({ organization }: Pick<MemoryPorts, 'organization'>): boolean {
+  return organization !== undefined;
 }
 
 export function keptHere(
-  { organizationKept }: Pick<MemoryPorts, 'organizationKept'>,
+  ports: Pick<MemoryPorts, 'organization'>,
   scope: MemoryScope,
   pointer: string,
 ): Effect.Effect<void, InvalidInput> {
-  return organizationKept || scope === 'playbook'
+  return organizationKept(ports) || scope === 'playbook'
     ? Effect.void
     : Effect.fail(
         new InvalidInput({ detail: organizationNotKept, issues: [{ pointer, detail: organizationNotKept }] }),

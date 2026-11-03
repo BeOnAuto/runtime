@@ -1,11 +1,10 @@
 import { Effect } from 'effect';
 
-import type { MemoryPorts } from '../capability/memory-ports.ts';
+import { keeperOf, organizationKept, type MemoryPorts } from '../capability/memory-ports.ts';
 import type { RecallScope } from '../document/memory-scopes.ts';
 import type { MemoryScope } from '../facts/memory-facts.ts';
 import { addressOfScope, type MemoryPlace } from '../facts/memory-streams.ts';
 import { keptMemoryOf, type KeptMemory } from '../projection/memory-row-reading.ts';
-import { memoriesName } from '../projection/memory-rows.ts';
 import { rankedMemories, wordsIn } from './memory-matching.ts';
 
 export interface RecallAsked {
@@ -51,7 +50,7 @@ function rowsExaminedIn(
     order: 'desc',
     limit: ports.mostExamined,
   } as const;
-  return Effect.map(ports.ledger.readProjectedRows(memoriesName, addressOfScope(place, scope), query), (rows) =>
+  return Effect.map(keeperOf(ports, place, { place, scope }).rowsRead(addressOfScope(place, scope), query), (rows) =>
     rows.map((row) => keptMemoryOf(row)),
   );
 }
@@ -76,7 +75,7 @@ export function recalled(
 ): Effect.Effect<RecallMade> {
   return Effect.map(
     Effect.forEach(
-      scopesRecalled[scope].filter((each) => ports.organizationKept || each === 'playbook'),
+      scopesRecalled[scope].filter((each) => organizationKept(ports) || each === 'playbook'),
       (each) => rowsExaminedIn(ports, place, each),
     ),
     (examinedByScope: readonly (readonly KeptMemory[])[]) => {

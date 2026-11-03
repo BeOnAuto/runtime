@@ -5,7 +5,7 @@ import { idOf, memoryHarness, recallDocument, rememberDocument } from '../testin
 const notKept = 'Organization-wide memories are not available here yet: keep it for the playbook, with scope playbook';
 
 function keepingNoOrganization() {
-  return memoryHarness({ organizationKept: false });
+  return memoryHarness({ organization: 'none' });
 }
 
 describe('a server that keeps no memories of the organization', () => {
@@ -44,6 +44,21 @@ describe('a server that keeps no memories of the organization', () => {
       { status: 'succeeded', output: { memories: [] } },
       { status: 'succeeded', output: { memories: [{ scope: 'playbook' }] } },
     ]);
+  });
+});
+
+describe('the memories a server that keeps none of the organization lists and forgets', () => {
+  it("are the playbook's own, and an id it does not keep is found in neither scope", async () => {
+    const harness = keepingNoOrganization();
+    const id = await harness.rememberedId({ text: 'Drafts go out on Mondays' });
+
+    const listed = await harness.call(harness.operations.listMemories, {});
+    const forgotten = await harness.call(harness.operations.forget, { id });
+    const unknown = await harness.call(harness.operations.forget, { id: '019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a' });
+
+    expect(listed).toMatchObject({ status: 'succeeded', output: { memories: [{ id, scope: 'playbook' }] } });
+    expect(forgotten).toMatchObject({ status: 'succeeded', output: { id, scope: 'playbook', status: 'forgotten' } });
+    expect(unknown).toMatchObject({ status: 'rejected', reason: 'not_found' });
   });
 });
 

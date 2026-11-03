@@ -4,7 +4,6 @@ import {
   allPermissions,
   makeDispatcher,
   type CallerIdentity,
-  type Ledger,
   type Outcome,
   type ProjectedAddress,
   type ProjectedKeyedRow,
@@ -14,9 +13,9 @@ import { createPlaybook } from '@on.auto/playbooks';
 import { Schema, type Layer } from 'effect';
 
 import { makeMemoryFunctionAdapter } from '../capability/memory-function.ts';
-import type { MemoryLedger } from '../capability/memory-ports.ts';
 import type { RecordedMemoryFact } from '../facts/memory-fact-schema.ts';
 import { memoryOperationsOf, type MemoryOperations } from '../operations/memory-operations.ts';
+import { organizationKeeperIn, type LedgerOver, type OrganizationKeeping } from './harness-keeping.ts';
 import { aLedgerOfMemories, factsIn, ranWith, rowsIn, type HarnessLedger } from './harness-services.ts';
 
 export const acmeAdmin: CallerIdentity = {
@@ -29,11 +28,11 @@ export const acmeAdmin: CallerIdentity = {
 
 export interface MemoryHarnessOptions {
   readonly ledger?: HarnessLedger;
-  readonly over?: (ledger: Ledger['Service']) => MemoryLedger;
+  readonly over?: LedgerOver;
+  readonly organization?: OrganizationKeeping;
   readonly mostKept?: number;
   readonly mostExamined?: number;
   readonly newId?: () => string;
-  readonly organizationKept?: boolean;
   readonly meter?: Layer.Layer<RunMeter>;
 }
 
@@ -69,16 +68,16 @@ export function idOf(outcome: Outcome): string {
   return idIn(outcome).output.id;
 }
 
-function adaptedOver(
-  ledger: HarnessLedger,
-  { over, mostKept, mostExamined, newId, organizationKept }: MemoryHarnessOptions,
-) {
+function adaptedOver(ledger: HarnessLedger, options: MemoryHarnessOptions) {
+  const { over, mostKept, mostExamined, newId } = options;
+  const adapted = over === undefined ? ledger.service : over(ledger.service);
+  const organization = organizationKeeperIn(adapted, options);
   return {
-    ledger: over === undefined ? ledger.service : over(ledger.service),
+    ledger: adapted,
+    ...(organization === undefined ? {} : { organization }),
     ...(mostKept === undefined ? {} : { mostKept }),
     ...(mostExamined === undefined ? {} : { mostExamined }),
     ...(newId === undefined ? {} : { newId }),
-    ...(organizationKept === undefined ? {} : { organizationKept }),
   };
 }
 

@@ -36,7 +36,7 @@ export function defineForget(ports: MemoryPorts) {
       const action = yield* actingNow;
       const found = yield* foundIn(ports, action.place, id);
       yield* admitted(action, 'forget', id);
-      return yield* forgotten(ports, found, erase, action.acting);
+      return yield* forgotten(ports, found, erase, action);
     }),
     plainLanguage: {
       task: 'forget a memory',

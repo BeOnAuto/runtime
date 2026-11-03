@@ -15,9 +15,9 @@ import {
 import { loadRegistry } from '@on.auto/playbooks';
 import { Effect, Option, Schema } from 'effect';
 
-import type { MemoryPorts } from '../capability/memory-ports.ts';
+import { organizationKeeperOf, type MemoryPorts } from '../capability/memory-ports.ts';
+import type { MemoryKeeper } from '../keeper/memory-keeper.ts';
 import { memoryRowOf, type MemoryRow } from '../projection/memory-row-reading.ts';
-import { memoriesName } from '../projection/memory-rows.ts';
 import { newestFirst } from '../recall/memory-matching.ts';
 import { MemoryListingSchema } from './memory-outputs.ts';
 
@@ -57,17 +57,19 @@ function listedOf(row: MemoryRow) {
   };
 }
 
+interface KeptAt {
+  readonly keeper: MemoryKeeper;
+  readonly address: ProjectedAddress;
+}
+
 const pageAcross = Effect.fnUntraced(function* (
-  ports: MemoryPorts,
-  addresses: readonly ProjectedAddress[],
+  places: readonly KeptAt[],
   { limit = defaultPageLimit, cursor }: Listing,
 ) {
   const after = yield* afterOf(cursor);
   const query = { where: [], orderBy: ['written_at'], order: 'desc', limit: limit + 1 } as const;
   const asked = after === undefined ? query : { ...query, after };
-  const read = yield* Effect.forEach(addresses, (address) =>
-    ports.ledger.readProjectedRows(memoriesName, address, asked),
-  );
+  const read = yield* Effect.forEach(places, ({ keeper, address }) => keeper.rowsRead(address, asked));
   const rows = read
     .flat()
     .map((row) => memoryRowOf(row))
@@ -95,7 +97,8 @@ export function defineListMemories(ports: MemoryPorts) {
     reasons: ['invalid_input'],
     handle: Effect.fnUntraced(function* (listing: Listing) {
       const { org, playbook } = yield* PlaybookContext;
-      return yield* pageAcross(ports, [{ org, playbook }, { org }], listing);
+      const ofThePlaybook = { keeper: ports.kept, address: { org, playbook } };
+      return yield* pageAcross([ofThePlaybook, { keeper: organizationKeeperOf(ports), address: { org } }], listing);
     }),
   });
 }
@@ -117,7 +120,8 @@ export function defineListOrgMemories(ports: MemoryPorts) {
       const playbooks = [...(yield* loadRegistry).keys()].filter((playbook) =>
         canAccessPlaybook(caller.playbooks, playbook),
       );
-      return yield* pageAcross(ports, [{ org }, ...playbooks.map((playbook) => ({ org, playbook }))], listing);
+      const ofThePlaybooks = playbooks.map((playbook) => ({ keeper: ports.kept, address: { org, playbook } }));
+      return yield* pageAcross([{ keeper: organizationKeeperOf(ports), address: { org } }, ...ofThePlaybooks], listing);
     }),
   });
 }

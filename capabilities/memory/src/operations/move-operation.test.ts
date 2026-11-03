@@ -2,7 +2,7 @@ import { Conflict, type Ledger } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import type { MemoryLedger } from '../capability/memory-ports.ts';
+import type { MemoryLedger } from '../keeper/memory-keeper.ts';
 import { idOf, memoryHarness } from '../testing/index.ts';
 
 function refusingTheFirstAppendTo(prefix: string): (ledger: Ledger['Service']) => MemoryLedger {

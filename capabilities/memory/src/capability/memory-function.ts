@@ -7,14 +7,14 @@ import {
 
 import { memoryFacts } from '../facts/memory-presenter.ts';
 import { parse, summarize } from './memory-definitions.ts';
-import { memoryPortsOf, type MemoryFunctionAdapterOptions } from './memory-ports.ts';
+import { memoryPortsOf, organizationKept, type MemoryFunctionAdapterOptions } from './memory-ports.ts';
 import { memoryDefinitionType, memoryRun } from './memory-run.ts';
 import { describeMemoryOutput } from './memory-words.ts';
 
 export function makeMemoryFunctionAdapter(options: MemoryFunctionAdapterOptions): Capability {
   const ports = memoryPortsOf(options);
   const run = memoryRun(ports);
-  const parseHere = (source: string) => parse(source, ports.organizationKept);
+  const parseHere = (source: string) => parse(source, organizationKept(ports));
   return defineCapability({
     type: memoryDefinitionType,
     title: functionCategoryLabels.memory,

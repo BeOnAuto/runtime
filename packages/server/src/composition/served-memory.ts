@@ -1,6 +1,6 @@
 import type { AppRuntime } from '@on.auto/api';
 import type { Capability } from '@on.auto/definitions';
-import { makeMemoryFunctionAdapter, memoryOperationsOf, type MemoryOperations } from '@on.auto/memory';
+import { makeMemoryFunctionAdapter, memoryKeeperOn, memoryOperationsOf, type MemoryOperations } from '@on.auto/memory';
 import type { DispatcherServices } from '@on.auto/operations';
 
 import { runtimeLedger } from './runtime-ledger.ts';
@@ -11,6 +11,7 @@ export interface ServedMemory {
 }
 
 export function memoryServedBy(runtime: AppRuntime<DispatcherServices>): ServedMemory {
-  const memories = { ledger: runtimeLedger(runtime) };
+  const ledger = runtimeLedger(runtime);
+  const memories = { ledger, organization: memoryKeeperOn({ ledger }) };
   return { capability: makeMemoryFunctionAdapter(memories), operations: memoryOperationsOf(memories) };
 }
