@@ -20,7 +20,6 @@ import { commandMetadata } from './command-metadata.ts';
 interface RegistryKind {
   readonly type: string;
   readonly mostActive: number;
-  readonly presents?: { readonly subjectOf: (details: StoredDefinition['details']) => string | undefined };
 }
 
 export interface DefinitionInRegistry {
@@ -69,13 +68,13 @@ export function versionOf(type: string, name: string, version: number) {
 }
 
 export const recordInRegistry = Effect.fnUntraced(function* (
-  { type, mostActive, presents }: RegistryKind,
+  { type, mostActive }: RegistryKind,
   data: DefinitionCommandData,
 ) {
   const metadata = yield* commandMetadata;
   const { state, decidedOn } = yield* (yield* PlaybookWriter).execute(
     definitionTypeStreamOf(type),
-    definitionsDecider(type, mostActive, presents?.subjectOf),
+    definitionsDecider(type, mostActive),
     {
       ...data,
       ...metadata,

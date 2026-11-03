@@ -75,6 +75,7 @@ A template may use the filters listed in [Templates](template.md#filters), the `
 | `call`          | Required. The tool the function reads through: `server`, `tool`, `with` and `read`, the same keys an interaction function's [`call`](interaction-format.md#call) takes |
 | `input.schema`  | Optional JSON Schema of the input                                                                                                                                      |
 | `output.schema` | Required. The JSON Schema of the part of the answer the run returns, which it must match                                                                               |
+| `page`          | Optional [page](page-format.md) that presents its runs                                                                                                                 |
 
 `to`, `expires`, `deliver`, `replies`, `model`, `tools`, `language` and every other field are rejected with their line, and so is a body after the front matter. The saved function has the `media_type` `text/markdown`.
 

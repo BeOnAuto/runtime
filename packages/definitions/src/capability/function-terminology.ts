@@ -50,7 +50,6 @@ export const functionTypeOrder: readonly FunctionType[] = [
 const resourceLabels: ReadonlyMap<string, string> = new Map([
   ...functionTypeOrder.map((type): [string, string] => [type, functionResourceLabels[type].singular]),
   ['workflow', 'workflow'],
-  ['page', 'page'],
 ]);
 
 export function definitionResourceLabel(type: string): string {

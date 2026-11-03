@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { createPlaybook, getPlaybook, listPlaybooks, retirePlaybook, updatePlaybook } from '../index.ts';
+import { createPlaybook, listPlaybooks, retirePlaybook } from '../index.ts';
 import { acmeAdmin, acmeAlphaKeeper, acmeReader, globexAdmin } from '../testing/callers.ts';
 import { harness, toOrg } from '../testing/harness.ts';
+import { getPlaybook, updatePlaybook } from '../testing/playbook-pages.ts';
 
 const toAcme = toOrg('acme');
 

@@ -71,6 +71,14 @@ export function definitionRetired(words: DefinitionWords, type: string, name: st
   return `${capitalized(words.named(type, name))} was retired.`;
 }
 
+export function playbookPageSaved(): string {
+  return "The playbook's page was saved.";
+}
+
+export function playbookPageRemoved(): string {
+  return "The playbook's page was removed.";
+}
+
 export function toolCalled(number: number, server: string, tool: string): string {
   return `A run made tool call ${plainNumber(number)}, to ${toolInWords({ server, tool })}.`;
 }

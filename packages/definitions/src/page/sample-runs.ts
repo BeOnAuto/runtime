@@ -3,9 +3,9 @@ import { InvalidInput } from '@on.auto/operations';
 import { mostValueDepth } from '@on.auto/workflow-engine/worker';
 import { Clock, Effect, type Schema } from 'effect';
 
-import type { RunShown } from '../capability/definition-kinds.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import { outputShapeOfSchema } from '../shapes/output-shapes.ts';
+import type { RunShown } from './page-rendering.ts';
 
 function outputIssues(schema: Schema.JsonObject, output: Schema.Json): readonly SchemaIssue[] {
   const shape = outputShapeOfSchema(schema);

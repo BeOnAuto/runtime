@@ -66,7 +66,7 @@ describe('the prediction capability made from the ports the runtime hands a capa
     const { folders = [] } = makePredictionFunctionAdapter(portsReading().ports);
     const tables = folders.flatMap((some) => some((folder) => folder.tables.map(({ strings }) => strings.join('?'))));
 
-    expect(folders.map((some) => some((folder) => folder.definitionType))).toEqual(['prediction']);
+    expect(folders.map((some) => some((folder) => folder.definitionTypes))).toEqual([['prediction']]);
     expect(
       tables.map((created) => /^CREATE TABLE IF NOT EXISTS (?<name>\w+) /u.exec(created)?.groups?.['name']),
     ).toEqual([datasetTables.datasets, datasetTables.rows]);

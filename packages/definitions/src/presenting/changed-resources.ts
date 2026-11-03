@@ -23,6 +23,8 @@ const interactionChanged = changeKindOf('interaction', 'The request of a run, op
   run_id: 'The id of the run that asks',
 });
 
+export const playbookChanged = changeKindOf('playbook', 'The playbook itself, whose own page was saved or removed', {});
+
 const decodeDefinitionContext = Schema.decodeUnknownSync(DefinitionContextSchema);
 
 function idInItsKind(stream: string): string {
@@ -32,6 +34,10 @@ function idInItsKind(stream: string): string {
 export function definitionChangedBy({ context }: PlacedFact): readonly ResourceChange[] {
   const { definitionType, definitionName } = decodeDefinitionContext(context);
   return [definitionChanged.of({ type: definitionType, name: definitionName })];
+}
+
+export function playbookChangedBy(): readonly ResourceChange[] {
+  return [playbookChanged.of({})];
 }
 
 export function runChangedBy({ stream }: PlacedFact): readonly ResourceChange[] {

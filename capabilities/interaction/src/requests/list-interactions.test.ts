@@ -1,4 +1,5 @@
 import { defineUpdateDefinition } from '@on.auto/definitions';
+import { uncheckedPages } from '@on.auto/definitions/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -146,7 +147,7 @@ describe('the answer shape of an open request', () => {
     const playbook = interactionHarness();
     await playbook.define('approve-brief', approvalDocument());
     await playbook.ask('approve-brief', { campaign: 'Spring', owner: 'ada' }, String(runIds[0]));
-    const changed = await playbook.call(defineUpdateDefinition([playbook.capability]), {
+    const changed = await playbook.call(defineUpdateDefinition([playbook.capability], uncheckedPages), {
       type: 'interaction',
       name: 'approve-brief',
       source: decisionDocument,

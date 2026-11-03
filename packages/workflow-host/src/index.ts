@@ -44,7 +44,15 @@ export {
 } from '@on.auto/ledger';
 export { hostLayoutSteps } from './database/host-tables.ts';
 export type { PageEvent, ReadPage } from './pages/page-events.ts';
-export type { PlaybookDefinitions, KeptFunction, KeptOf } from './projector/playbook-definitions.ts';
+export { keptDefinitionsOf } from './projector/playbook-definitions.ts';
+export type {
+  DefinitionsKeeping,
+  KeptAfter,
+  KeptFunction,
+  KeptOf,
+  KeptTogether,
+  PlaybookDefinitions,
+} from './projector/playbook-definitions.ts';
 export {
   someFolder,
   type FoldedChanges,
@@ -54,6 +62,7 @@ export {
   type PassedRow,
   type Reconciled,
   type Reconciling,
+  type RenamedRow,
   type RowPhase,
   type RowStanding,
   type SomeFolder,

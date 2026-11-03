@@ -9,6 +9,7 @@ import {
   type RecordedCommentEvent,
 } from '../facts/comment-facts.ts';
 import { commentTargetOf, thingAddressOf, type CommentTarget } from '../positions/comment-addresses.ts';
+import { pageOfItsOwnIn } from '../positions/current-addresses.ts';
 import { millisecondsOf } from './activity-facts.ts';
 
 export const commentsName = 'comments';
@@ -33,10 +34,24 @@ function aboutOf(target: CommentTarget): About {
     : aboutNothing;
 }
 
+function aboutAPageOfItsOwn(address: string) {
+  const page = pageOfItsOwnIn(address);
+  if (page === undefined) {
+    return { ...aboutNothing, about_thing: address };
+  }
+  const definition = `page/${page.name}`;
+  return {
+    ...aboutNothing,
+    about_version: `${definition}/${page.version}`,
+    about_definition: definition,
+    about_thing: `${page.playbook}/definitions/${definition}/${page.version}`,
+  };
+}
+
 function aboutAddress(address: string) {
   const target = commentTargetOf(address);
   return target === undefined
-    ? { ...aboutNothing, about_thing: address }
+    ? aboutAPageOfItsOwn(address)
     : { ...aboutOf(target), about_thing: thingAddressOf(target) };
 }
 

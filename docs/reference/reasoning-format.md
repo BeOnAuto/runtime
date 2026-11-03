@@ -51,6 +51,7 @@ A function document contains instructions, never model credentials. Each change 
 | `output.shape`             | No          | The name of an [output shape](output-shapes.md), `series`, `categories`, `table`, `text` or `memories`: the answer is JSON of that shape. Not allowed beside `output.schema` or with `text` |
 | `provider_options`         | No          | Options for one provider, under its namespace; see [Provider options](#provider-options)                                                                                                    |
 | `tools`                    | No          | The tools a run may call, each `server/tool` or `server/*`; see [Tools](#tools)                                                                                                             |
+| `page`                     | No          | The [page](page-format.md) that presents its runs                                                                                                                                           |
 
 Any other key, at any level, is rejected.
 

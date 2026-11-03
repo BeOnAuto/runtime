@@ -1,0 +1,59 @@
+import type { PlaybookReader } from '@on.auto/operations';
+import { Effect } from 'effect';
+
+import { loadRegistry } from '../operations/registry-access.ts';
+import type { RegisteredDefinition } from '../registry/definition-registry.ts';
+import type { SubjectPage } from './page-facts.ts';
+import type { PageWritten } from './page-presenting.ts';
+import { pageViewNameOf } from './page-view-names.ts';
+import { carriedPageOf, type CarriedPage } from './pages-saved-as-definitions.ts';
+import { playbookPageIn } from './playbook-pages.ts';
+import { playbookSubject } from './subject-pages-port.ts';
+
+type Read<A, E = never> = Effect.Effect<A, E, PlaybookReader>;
+
+export interface WrittenPage {
+  readonly page: SubjectPage;
+  readonly written: PageWritten;
+}
+
+function carriedOrNot(carried: CarriedPage | undefined): WrittenPage | undefined {
+  if (carried === undefined) {
+    return undefined;
+  }
+  const { version, source, details } = carried;
+  return { page: { version, source, details }, written: 'carried' };
+}
+
+function ownPageOf(type: string, stored: RegisteredDefinition, page: NonNullable<RegisteredDefinition['page']>) {
+  const { version, source } = stored;
+  const written: PageWritten = type === 'workflow' ? 'workflow' : 'function';
+  return { page: { version, source, details: page.details }, written };
+}
+
+function writtenPageOf(type: string, stored: RegisteredDefinition | undefined): Read<WrittenPage | undefined> {
+  if (stored === undefined || stored.status === 'retired' || stored.page === null) {
+    return Effect.undefined;
+  }
+  return stored.page === undefined
+    ? Effect.map(carriedPageOf(pageViewNameOf({ type, name: stored.name })), carriedOrNot)
+    : Effect.succeed(ownPageOf(type, stored, stored.page));
+}
+
+export interface Presented extends WrittenPage {
+  readonly stored: RegisteredDefinition;
+}
+
+export const presentedOf = Effect.fnUntraced(function* (type: string, name: string) {
+  const stored = (yield* loadRegistry(type)).get(name);
+  const written = yield* writtenPageOf(type, stored);
+  return stored === undefined || written === undefined ? undefined : ({ ...written, stored } satisfies Presented);
+});
+
+export const writtenPlaybookPageOf: () => Read<WrittenPage | undefined> = () =>
+  Effect.flatMap(playbookPageIn, ({ saves, page }) => {
+    if (saves === 0) {
+      return Effect.map(carriedPageOf(playbookSubject), carriedOrNot);
+    }
+    return Effect.succeed(page === undefined ? undefined : { page, written: 'playbook' as const });
+  });

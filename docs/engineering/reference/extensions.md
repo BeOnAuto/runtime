@@ -10,13 +10,13 @@ A package exports `manifest` with its name, version and extension points. Each p
 export const manifest = {
   name: '@acme/forecasts',
   version: '1.0.0',
-  provides: [{ point: 'capability/prediction', contract: 1, implementation: makePredictionCapability }],
+  provides: [{ point: 'capability/prediction', contract: 2, implementation: makePredictionCapability }],
 };
 ```
 
-This release supports `capability/prediction` with contract version `1`. The contract is the runtime's capability contract. Its version increases when a change would reject an implementation built against the previous version.
+This release supports `capability/prediction` with contract version `2`. The contract is the runtime's capability contract. Its version increases when a change would reject an implementation built against the previous version.
 
-Contract 1 passes the playbook where a definition is saved to the capability's `check` as `place`. Earlier checks can ignore that argument, so the contract version remains 1.
+The contract passes the playbook where a definition is saved to the capability's `check` as `place`. Contract 2 changed the members of a folder a capability returns: its `name`, the `definitionTypes` it reads, `keptAfter` and `together`.
 
 ## Initialization and ports
 
@@ -85,7 +85,7 @@ A package that does not declare `@on.auto/runtime` is linked like any other adja
 Startup stops and names the package if any of these conditions holds:
 
 - The package provides a point this release does not support, or provides one point twice.
-- Its contract version differs from the runtime's. The error names both versions, for example: `The extension @acme/forecasts is refused: it provides capability/prediction built against contract 2, and this runtime accepts contract 1`.
+- Its contract version differs from the runtime's. The error names both versions, for example: `The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contract 2`.
 - Its implementation is not a function, or fails while constructing the capability.
 - A returned capability, folder or operation is missing a member or has a member of the wrong kind. The error names the member, for example `The extension @acme/forecasts is refused: its capability has no facts` or `its folders[0] has no fold`.
 - A run-fact schema accepts types other than its declared type, or declares a fact type owned by the runtime.

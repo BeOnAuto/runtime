@@ -34,7 +34,6 @@ afterAll(async () => {
 const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'get_voice',
   'transcribe',
-  'get_playbook',
   'get_connection',
   'read_link',
   'approve',
@@ -54,6 +53,7 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'mark_activity_seen',
   'list_playbook_changes',
   'render_page',
+  'render_playbook_page',
   'make_comment',
   'make_comment_in_org',
   'reopen_comment',
@@ -93,7 +93,7 @@ describe('the operations of the document and the tools of the endpoints', () => 
     expect(servedAsTools().map((described) => toolsOf(described).map(({ description }) => description))).toEqual(
       servedAsTools().map(({ operation }) => [operation.description]),
     );
-    expect(servedAsTools()).toHaveLength(38);
+    expect(servedAsTools()).toHaveLength(39);
   });
 
   it('leave no tool of an endpoint without its operation, and give none to an operation served over HTTP alone', () => {

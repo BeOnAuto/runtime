@@ -27,8 +27,6 @@ export type PageTemplates = Readonly<Partial<Record<PageBlockName, ParsedTemplat
 
 export interface PageDefinitionDocument {
   readonly description?: string;
-  readonly of: string;
-  readonly ofLine: number;
   readonly data?: PageData;
   readonly blocks: PageBlocks;
   readonly templates: PageTemplates;

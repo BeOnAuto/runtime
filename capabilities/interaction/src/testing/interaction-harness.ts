@@ -10,7 +10,7 @@ import {
   type Capability,
   type RecordWork,
 } from '@on.auto/definitions';
-import { standingClock, admittingMeter } from '@on.auto/definitions/testing';
+import { admittingMeter, standingClock, uncheckedPages } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   makeDispatcher,
@@ -112,7 +112,7 @@ function servicesOf(ledger: HarnessLedger): Layer.Layer<DispatcherServices> {
 
 function savingAnInteraction(call: Calling, capabilities: readonly Capability[]): InteractionHarness['define'] {
   return (name, source) =>
-    call(defineCreateDefinition(capabilities), { type: 'interaction', name, source, diagram: 'none' });
+    call(defineCreateDefinition(capabilities, uncheckedPages), { type: 'interaction', name, source, diagram: 'none' });
 }
 
 export function interactionHarness(options: HarnessOptions = {}): InteractionHarness {
@@ -131,7 +131,7 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     requestsDue({ ledger: over, tools, record: workRecorder(over, facts) });
   const due = dueOver(ledger.service);
   const defineAs: InteractionHarness['defineAs'] = (type, name, source) =>
-    call(defineCreateDefinition(capabilities), { type, name, source });
+    call(defineCreateDefinition(capabilities, uncheckedPages), { type, name, source });
   const askAs: InteractionHarness['askAs'] = (type, name, input, runId) =>
     call(defineRunDefinition(capabilities), { type, name, input, run_id: runId });
   const performDue = async (now: number): Promise<number> => {
@@ -152,7 +152,7 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     defineAs,
     askAs,
     cancel: (runId) => call(defineCancelRun(capabilities), { run_id: runId }),
-    runOf: (runId) => call(defineGetRun(capabilities), { run_id: runId }),
+    runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages), { run_id: runId }),
     performDue,
     dueOver,
     dueItems: (now, from = due) => dueInBothLanes(from, now),

@@ -20,15 +20,16 @@ deepStrictEqual(
 );
 
 const workflows = { type: 'workflow', noun: { one: 'workflow', other: 'workflows' }, guide: { name: 'workflow' } };
-const shelf = await guideShelfFrom(shippedFilesOnDisk(apiShippedRoots()), [workflows]);
+const shelf = await guideShelfFrom(shippedFilesOnDisk(apiShippedRoots()), [workflows], { pages: true });
 const pages = [...shelf.guides, ...shelf.recipes].map(({ name, text }) => [name, text.length > 0]);
 deepStrictEqual(pages, [
   ['terminology', true],
   ['workflow', true],
   ['templates', true],
+  ['page', true],
   ['schedule', true],
 ]);
 
 process.stdout.write(
-  `Read, in a release of the package, the module of the sandbox, which answered 1 + 2 with 3, the kept lib of the check, ${keptLib.join(' and ')} bytes, and the guide shelf of a server of workflows, ${shelf.everyGuide.map(({ name }) => name).join(', ')}\n`,
+  `Read, in a release of the package, the module of the sandbox, which answered 1 + 2 with 3, the kept lib of the check, ${keptLib.join(' and ')} bytes, and the guide shelf of a server of workflows and pages, ${shelf.everyGuide.map(({ name }) => name).join(', ')}\n`,
 );

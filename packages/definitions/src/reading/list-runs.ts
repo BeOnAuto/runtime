@@ -10,7 +10,7 @@ import {
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { knownRunningCapabilities, runningOf, type KnownCapabilities } from '../capability/known-capabilities.ts';
+import { knownRunningCapabilities, type KnownCapabilities } from '../capability/known-capabilities.ts';
 import { RunsOfNameField } from '../operations/definition-fields.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { runsListed, runsToList } from '../plain-language/reading-words.ts';
@@ -74,7 +74,7 @@ function runsListedBy(byStatus: StoredTypesByStatus) {
 
 export function defineListRuns(capabilities: readonly Capability[], byStatus: StoredTypesByStatus) {
   const known = knownRunningCapabilities(capabilities);
-  const words = definitionWordsFor(runningOf(capabilities));
+  const words = definitionWordsFor(capabilities);
   const listRuns = runsListedBy(byStatus);
   const operation = defineQuery('playbook', {
     name: 'list_runs',

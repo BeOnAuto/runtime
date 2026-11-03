@@ -1,9 +1,10 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { createPlaybook, retirePlaybook, updatePlaybook } from '../index.ts';
+import { createPlaybook, defineUpdatePlaybook, retirePlaybook } from '../index.ts';
 import { acmeAdmin, acmeAlphaKeeper } from '../testing/callers.ts';
 import { firstMoment, harness, toOrg } from '../testing/harness.ts';
+import { getPlaybook, pagesInMemory, refusedPage, updatePlaybook } from '../testing/playbook-pages.ts';
 
 const toAcme = toOrg('acme');
 
@@ -27,7 +28,7 @@ describe('update_playbook', () => {
       route: { method: 'PUT', path: '/playbooks/{playbook}' },
       pathParameters: ['playbook'],
       successStatus: 200,
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
     });
   });
 
@@ -61,13 +62,19 @@ describe('update_playbook', () => {
 });
 
 describe('the input of update_playbook', () => {
-  it('needs both the name and the description, held to their limits', async () => {
+  it('needs a name, a description or a page, each held to its limits', async () => {
     const { call } = await withAlpha();
     const updating = (input: object) => call(updatePlaybook, toAcme(acmeAdmin, { playbook: 'alpha', ...input }));
 
-    expect(await updating({ name: 'Alpha Sales' })).toMatchObject({
+    expect(await updating({})).toEqual({
+      status: 'rejected',
       reason: 'invalid_input',
-      issues: [{ pointer: '/description', detail: 'Missing key' }],
+      detail: 'Give name, description or page, at least one, to update the playbook',
+      issues: [{ pointer: '', detail: 'Give name, description or page, at least one, to update the playbook' }],
+    });
+    expect(await updating({ page: 'p'.repeat(65_537) })).toMatchObject({
+      reason: 'invalid_input',
+      issues: [{ pointer: '/page' }],
     });
     expect(await updating({ name: '', description: 'd'.repeat(2001) })).toMatchObject({
       reason: 'invalid_input',
@@ -87,6 +94,80 @@ describe('the input of update_playbook', () => {
       reason: 'invalid_input',
       issues: [{ pointer: '/status', detail: 'Expected no excess property' }],
     });
+  });
+});
+
+async function withAlphaAndItsPages() {
+  const pages = pagesInMemory();
+  const playbooks = await withAlpha();
+  const updating = (input: object, at?: string) =>
+    playbooks.call(defineUpdatePlaybook(pages), toAcme(acmeAdmin, { playbook: 'alpha', ...input }), at);
+  return { ...playbooks, pages, updating };
+}
+
+describe('update_playbook with a page', () => {
+  it('saves the page alone, keeping the name and the description, and answers it', async () => {
+    const { updating } = await withAlphaAndItsPages();
+
+    expect(await updating({ page: '---\n---\n' }, later)).toStrictEqual({
+      status: 'succeeded',
+      output: {
+        id: 'alpha',
+        name: 'Alpha',
+        description: 'Answers sales',
+        status: 'active',
+        created_at: firstMoment,
+        created_by: { id: 'acme-admin', name: 'acme-admin' },
+        updated_at: firstMoment,
+        page: { source: '---\n---\n' },
+      },
+    });
+    expect(await updating({ name: 'Alpha Sales', page: '---\n---\n' }, later)).toMatchObject({
+      status: 'succeeded',
+      output: { name: 'Alpha Sales', updated_at: later, page: { source: '---\n---\n' } },
+    });
+    expect(await updating({ description: 'Sells' }, later)).toMatchObject({
+      output: { name: 'Alpha Sales', description: 'Sells', page: { source: '---\n---\n' } },
+    });
+  });
+});
+
+describe('update_playbook with a page, removed or refused', () => {
+  it('removes the page with null', async () => {
+    const { updating } = await withAlphaAndItsPages();
+    await updating({ page: '---\n---\n' });
+
+    expect(await updating({ page: null })).toMatchObject({ status: 'succeeded' });
+    expect(await updating({ page: null })).not.toHaveProperty('output.page');
+  });
+
+  it('refuses a page that does not fit its format, and changes nothing else', async () => {
+    const { updating, call } = await withAlphaAndItsPages();
+
+    expect(await updating({ name: 'Renamed', page: refusedPage })).toEqual({
+      status: 'rejected',
+      reason: 'invalid_input',
+      detail: 'The page has a problem',
+      issues: [{ pointer: '/page', detail: 'Line 1: a page starts with its front matter' }],
+    });
+    expect(await call(getPlaybook, toAcme(acmeAdmin, { playbook: 'alpha' }))).toMatchObject({
+      output: { name: 'Alpha' },
+    });
+  });
+
+  it('refuses the page of a retired playbook, and of one the org does not have', async () => {
+    const { updating, call, pages } = await withAlphaAndItsPages();
+    await call(retirePlaybook, toAcme(acmeAdmin, { playbook: 'alpha' }));
+
+    expect(await updating({ page: '---\n---\n' })).toEqual({
+      status: 'rejected',
+      reason: 'conflict',
+      detail: 'The playbook alpha is retired and can no longer change',
+      kind: 'retired',
+    });
+    expect(
+      await call(defineUpdatePlaybook(pages), toAcme(acmeAdmin, { playbook: 'nowhere', page: '---\n---\n' })),
+    ).toMatchObject({ status: 'rejected', reason: 'not_found' });
   });
 });
 

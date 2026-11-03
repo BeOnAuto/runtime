@@ -1,0 +1,16 @@
+{
+  "type": "definition_updated",
+  "data": {
+    "content": {
+      "source": "document:\n  dsl: 1.0.3\ndo: []\npage: {}\n",
+      "page": null
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 2
+  }
+}

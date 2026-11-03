@@ -25,7 +25,7 @@ const checkingForecasts: ScratchPackage = {
     "import { Effect } from 'effect';",
     `import { forecastChecked } from '${declaredFacts}';`,
     manifestSource(name, [
-      `{ point: 'capability/prediction', contract: 1, implementation: () => ({
+      `{ point: 'capability/prediction', contract: 2, implementation: () => ({
         capability: defineCapability({
           type: 'prediction',
           title: 'Prediction',

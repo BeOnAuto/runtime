@@ -1,9 +1,9 @@
-import { defineQuery } from '@on.auto/operations';
+import { defineQuery, InvalidInput } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import type { DefinitionKind } from '../capability/definition-kinds.ts';
+import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
-import { pageOperationsOf } from '../page/render-page.ts';
+import type { SubjectPages } from '../page/subject-pages-port.ts';
 import {
   definitionStanding,
   definitionWordsFor,
@@ -13,13 +13,12 @@ import {
 } from '../plain-language/definition-words.ts';
 import { DefinitionSchema } from '../registry/definition.ts';
 import { DefinitionNameField, RenderField, SampleOutputField } from './definition-fields.ts';
-import { definitionRead } from './definition-read.ts';
+import { definitionRead, type PageMissing } from './definition-read.ts';
 
 const description = [
   'Reads one definition with its document, active or retired, with its version and the input and output its document declares.',
-  'For a page it also returns how its views stand: live, rebuilding, waiting or stalled.',
   'For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own.',
-  'A definition with a page answers page.lately; `render: true` previews a page.',
+  'A definition whose document has a page answers page.lately and how its views stand; `render: true` previews the page.',
   'Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type.',
   "`type` is the definition's type and `name` its name.",
 ].join(' ');
@@ -28,7 +27,12 @@ function readingVerbOf({ render }: Pick<OfferedDefinition, 'render'>): string {
   return render === true ? 'render' : 'look up';
 }
 
-export function defineGetDefinition(capabilities: readonly DefinitionKind[]) {
+function noPageToRender({ label, name }: PageMissing): InvalidInput {
+  const detail = `The ${label} ${name} has no page to render; save one with update_definition, or leave render out`;
+  return new InvalidInput({ detail, issues: [{ pointer: '/render', detail }] });
+}
+
+export function defineGetDefinition(capabilities: readonly Capability[], pages: SubjectPages) {
   const known = knownCapabilities(capabilities);
   const words = definitionWordsFor(capabilities);
   return known.publish(
@@ -45,7 +49,7 @@ export function defineGetDefinition(capabilities: readonly DefinitionKind[]) {
       }),
       outputSchema: DefinitionSchema,
       reasons: ['not_found', 'invalid_input', 'conflict'],
-      handle: definitionRead(capabilities),
+      handle: definitionRead(capabilities, pages, noPageToRender),
       plainLanguage: {
         task: `look up a ${words.kinds}`,
         attempt: (asked) => `${readingVerbOf(asked)} ${words.named(asked.type, asked.name)}`,
@@ -54,8 +58,4 @@ export function defineGetDefinition(capabilities: readonly DefinitionKind[]) {
       },
     }),
   );
-}
-
-export function definitionReadings(capabilities: readonly DefinitionKind[]) {
-  return [defineGetDefinition(capabilities), ...pageOperationsOf(capabilities)];
 }

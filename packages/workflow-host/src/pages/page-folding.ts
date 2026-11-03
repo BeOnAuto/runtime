@@ -12,7 +12,7 @@ import { FoldedViewSchema, type StallCause, type ViewRow } from '../views/view-r
 import { viewToFold } from '../views/view-statements.ts';
 import { pageDeadlineMs, waitForAWorkerMs, type ViewsFolding } from '../views/views-folding.ts';
 import { isAfter } from './history-points.ts';
-import type { PageEvent, ReadPage } from './page-events.ts';
+import type { ReadPage } from './page-events.ts';
 import {
   hasChanged,
   lostTryOf,
@@ -46,21 +46,12 @@ type Lost = Extract<FoldOutcome, { readonly ran: 'stopped' | 'crashed' }>;
 
 type Folded = Extract<FoldOutcome, { readonly ran: 'folded' }>;
 
-const runSourcePrefix = '/runs/';
-
 const stoppedBy = { deadline: 'time', memory: 'memory' } as const satisfies Readonly<Record<string, StallCause>>;
 
-function isOwnRun({ event }: PageEvent, ownSubject: string): boolean {
-  return event.source.startsWith(runSourcePrefix) && event.subject === ownSubject;
-}
-
-function consideredBy(row: ViewRow, page: ReadPage, definitionType: string): readonly number[] {
+function consideredBy(row: ViewRow, page: ReadPage): readonly number[] {
   const types = new Set(row.details.filters.map(({ type }) => type));
-  const ownSubject = `${definitionType}/${row.name}`;
   return page.events.flatMap((placed, index) =>
-    isAfter(placed.point, row.checkpoint) && types.has(placed.event.type) && !isOwnRun(placed, ownSubject)
-      ? [index]
-      : [],
+    isAfter(placed.point, row.checkpoint) && types.has(placed.event.type) ? [index] : [],
   );
 }
 
@@ -194,9 +185,9 @@ function loaded(row: ViewRow, events: readonly number[], database: HostDatabase)
 }
 
 function foldingsOf(rows: readonly ViewRow[], page: ReadPage, parts: PageFolding) {
-  return Effect.forEach(rows, (row) =>
-    loaded(row, consideredBy(row, page, parts.settings.definitionType), parts.database),
-  ).pipe(Effect.map((each: readonly (readonly Folding[])[]) => each.flat()));
+  return Effect.forEach(rows, (row) => loaded(row, consideredBy(row, page), parts.database)).pipe(
+    Effect.map((each: readonly (readonly Folding[])[]) => each.flat()),
+  );
 }
 
 export function foldedPage(

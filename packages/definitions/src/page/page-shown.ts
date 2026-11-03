@@ -1,6 +1,8 @@
 import { Schema } from 'effect';
 
-export const PageShownSchema = Schema.Struct({
+import { RunDetailSchema } from '../runs/run.ts';
+
+const PageShownSchema = Schema.Struct({
   result: Schema.optionalKey(
     Schema.String.annotate({
       description:
@@ -15,4 +17,11 @@ export const PageShownSchema = Schema.Struct({
   ),
 }).annotate({ description: 'What the page of the subject renders when it is read, each block it has' });
 
-export type PageShown = typeof PageShownSchema.Type;
+export const RunReadSchema = Schema.Struct({
+  ...RunDetailSchema.fields,
+  page: Schema.optionalKey(PageShownSchema),
+}).annotate({
+  identifier: 'RunRead',
+  description:
+    'One run as get_run reads it: how it ended, what its runtime adapter recorded, and its page where its definition has one',
+});

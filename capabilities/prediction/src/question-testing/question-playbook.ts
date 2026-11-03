@@ -5,6 +5,7 @@ import {
   runOutcomeMapping,
   type PlaybookOperation,
 } from '@on.auto/definitions';
+import { uncheckedPages } from '@on.auto/definitions/testing';
 import { memoryLedger } from '@on.auto/operations/testing';
 import type { HostDatabase } from '@on.auto/workflow-host';
 import type { Clock } from 'effect';
@@ -37,9 +38,9 @@ export function questionPlaybook({ clock, database, datasets }: QuestionPlaybook
   return {
     call: playbookCalls(memoryLedger(runOutcomeMapping), clock),
     operations: {
-      create: defineCreateDefinition(capabilities),
+      create: defineCreateDefinition(capabilities, uncheckedPages),
       run: defineRunDefinition(capabilities),
-      get: defineGetDefinition(capabilities),
+      get: defineGetDefinition(capabilities, uncheckedPages),
     },
   };
 }

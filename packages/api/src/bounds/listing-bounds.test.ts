@@ -102,7 +102,7 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'own org',
     path: '/mcp',
-    most: 58_000,
+    most: 58_800,
     servingWith: (extra) => ({
       operations: [
         ...orgToolsFilled(8, descriptionRoom * 8, longestArgument),
@@ -113,7 +113,7 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'org',
     path: '/orgs/acme/mcp',
-    most: 20_100,
+    most: 21_000,
     servingWith: (extra) => ({ operations: orgToolsFilled(12, extra, longestArgument) }),
   },
   {

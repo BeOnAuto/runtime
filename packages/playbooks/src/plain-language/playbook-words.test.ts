@@ -1,7 +1,8 @@
 import type { Registration } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { createPlaybook, listPlaybooks, retirePlaybook, updatePlaybook } from '../index.ts';
+import { createPlaybook, listPlaybooks, retirePlaybook } from '../index.ts';
+import { updatePlaybook } from '../testing/playbook-pages.ts';
 
 const sales = {
   id: 'sales',

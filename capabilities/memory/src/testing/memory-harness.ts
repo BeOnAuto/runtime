@@ -1,4 +1,5 @@
 import { defineCreateDefinition, defineRunDefinition, type Capability, type RunMeter } from '@on.auto/definitions';
+import { uncheckedPages } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   makeDispatcher,
@@ -102,7 +103,11 @@ export function memoryHarness(options: MemoryHarnessOptions = {}): MemoryHarness
     call,
     callInOrg,
     define: (name, source, asking) =>
-      call(defineCreateDefinition([capability]), { type: 'memory', name, source, diagram: 'none' }, asking),
+      call(
+        defineCreateDefinition([capability], uncheckedPages),
+        { type: 'memory', name, source, diagram: 'none' },
+        asking,
+      ),
     run: (name, input, asking) => call(defineRunDefinition([capability]), { type: 'memory', name, input }, asking),
     playbookCreated: (playbook) => callInOrg(createPlaybook, { playbook, name: playbook }),
     rememberedId: async (input, asking) => idOf(await call(operations.remember, input, asking)),

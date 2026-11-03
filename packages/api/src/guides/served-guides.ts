@@ -3,7 +3,7 @@ import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
 import type { DefinitionType } from '../mcp/instructions.ts';
 import { documentation } from './guide-files.ts';
-import { guideShelfOf, type Guide, type GuideShelf } from './guide-shelf.ts';
+import { guideShelfOf, pageGuideName, type Guide, type GuideShelf } from './guide-shelf.ts';
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
@@ -24,6 +24,19 @@ const templatesAbout: Omit<Guide, 'text'> = {
   title: 'Templates',
   description: 'The filters a template may use, the same in every template of every definition.',
 };
+
+const pagePage = 'reference/page-format.md';
+
+const pageAbout: Omit<Guide, 'text'> = {
+  name: pageGuideName,
+  title: 'Page format',
+  description:
+    'How a workflow, a function or the playbook shows its results, run by run and over time: the page document, its views, templates and bounds.',
+};
+
+interface ServedPages {
+  readonly pages: boolean;
+}
 
 function pageOfGuide(guide: string): string {
   return `reference/${guide.replace(/-function$/u, '')}-format.md`;
@@ -49,7 +62,11 @@ async function typeGuideOf(
   return { ...about, text: guide.onThisServer === undefined ? text : `${text.trimEnd()}\n\n${guide.onThisServer}\n` };
 }
 
-export async function guideShelfFrom(shippedFiles: ShippedFiles, types: readonly ServedType[]): Promise<GuideShelf> {
+export async function guideShelfFrom(
+  shippedFiles: ShippedFiles,
+  types: readonly ServedType[],
+  { pages }: ServedPages,
+): Promise<GuideShelf> {
   const definitionTypes: readonly DefinitionType[] = types.map(({ type, noun, guide }) => ({
     type,
     noun: noun.one,
@@ -62,6 +79,7 @@ export async function guideShelfFrom(shippedFiles: ShippedFiles, types: readonly
     ),
     ...(await Promise.all(types.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
     await pageGuideOf(shippedFiles, templatesPage, templatesAbout),
+    ...(pages ? [await pageGuideOf(shippedFiles, pagePage, pageAbout)] : []),
   ];
   return guideShelfOf(guides, await recipesFor(shippedFiles, guides), definitionTypes);
 }

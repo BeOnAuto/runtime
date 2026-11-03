@@ -24,7 +24,7 @@ const viewNameWords =
 
 const oneLanguage = "The playbook's one language is TypeScript; write the module in TypeScript";
 
-const blockIndicator = /[|>][1-9+-]{0,2}\s*(?:#.*)?$/u;
+export const blockIndicator = /[|>][1-9+-]{0,2}\s*(?:#.*)?$/u;
 
 const exportedAnswer = /^export function answer\b/mu;
 

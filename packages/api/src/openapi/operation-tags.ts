@@ -32,6 +32,7 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
 
 const resourcesOfOperations: Readonly<Record<string, string>> = {
   answer_interaction: 'interactions',
+  render_playbook_page: 'playbooks',
 };
 
 export const guidesTag = 'guides';

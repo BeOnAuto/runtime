@@ -75,7 +75,7 @@ function folderPartsOf({ database, settings, definitions, note, resting, firstSe
     resting,
     firstSeen,
     trouble,
-    definitionTypes: settings.folders.map((some) => some((folder) => folder.definitionType)),
+    definitionTypes: [...new Set(settings.folders.flatMap((some) => some((folder) => folder.definitionTypes)))],
   };
 }
 

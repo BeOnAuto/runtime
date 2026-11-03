@@ -1,5 +1,5 @@
 import { defineCancelRun, defineCreateDefinition, defineRunDefinition, type Capability } from '@on.auto/definitions';
-import { admittingMeter } from '@on.auto/definitions/testing';
+import { admittingMeter, uncheckedPages } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   Ledger,
@@ -65,7 +65,7 @@ export function cancelsInACall(capability: Capability): CancelsInACall {
       .dispatchToPlaybook(operation.registration, { caller, org: 'acme', playbook: 'alpha', input, encoding: 'json' })
       .pipe(Effect.provide(services));
   }
-  const createDefinition = defineCreateDefinition([capability]);
+  const createDefinition = defineCreateDefinition([capability], uncheckedPages);
   const runDefinition = defineRunDefinition([capability]);
   return {
     create: (name, source) =>

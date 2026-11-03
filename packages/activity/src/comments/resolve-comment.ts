@@ -10,6 +10,7 @@ import {
 import { DateTime, Effect, Schema } from 'effect';
 
 import { commentDecider, commentStreamOf, type ResolvedHow } from '../facts/comment-facts.ts';
+import { noPagesOfTheirOwn, pagesOfTheirOwn, type PagesOfTheirOwn } from '../positions/current-addresses.ts';
 import { CommentIdField, HowInputField } from './comment-fields.ts';
 import { CommentSchema, keptOfState, shownComment } from './comment-shown.ts';
 
@@ -22,9 +23,16 @@ type CommentAct = { readonly kind: 'resolve'; readonly how: ResolvedHow } | { re
 
 export const notFoundInPlaybook = 'There is no such comment in this playbook';
 
-export const notFoundInOrg = 'There is no such comment of the organization';
+const notFoundInOrg = 'There is no such comment of the organization';
 
-export function actedOnComment(writer: StreamWriter, id: string, act: CommentAct, notFound: string) {
+export const ofTheOrg = { notFound: notFoundInOrg, pages: noPagesOfTheirOwn };
+
+interface ActedOn {
+  readonly notFound: string;
+  readonly pages: PagesOfTheirOwn;
+}
+
+export function actedOnComment(writer: StreamWriter, id: string, act: CommentAct, { notFound, pages }: ActedOn) {
   return Effect.gen(function* () {
     const caller = yield* Caller;
     const { state } = yield* writer.execute(commentStreamOf(id), commentDecider, {
@@ -32,16 +40,17 @@ export function actedOnComment(writer: StreamWriter, id: string, act: CommentAct
       at: DateTime.formatIso(yield* DateTime.now),
       by: caller.id,
     });
-    return yield* state === null ? new NotFound({ detail: notFound }) : shownComment(keptOfState(id, state));
+    return yield* state === null ? new NotFound({ detail: notFound }) : shownComment(keptOfState(id, state), pages);
   });
 }
 
 const resolved = Effect.fnUntraced(function* ({ id, how }: Resolving) {
-  return yield* actedOnComment(yield* PlaybookWriter, id, { kind: 'resolve', how }, notFoundInPlaybook);
+  const inThePlaybook = { notFound: notFoundInPlaybook, pages: yield* pagesOfTheirOwn };
+  return yield* actedOnComment(yield* PlaybookWriter, id, { kind: 'resolve', how }, inThePlaybook);
 });
 
 const resolvedInOrg = Effect.fnUntraced(function* ({ id, how }: Resolving) {
-  return yield* actedOnComment(yield* OrgWriter, id, { kind: 'resolve', how }, notFoundInOrg);
+  return yield* actedOnComment(yield* OrgWriter, id, { kind: 'resolve', how }, ofTheOrg);
 });
 
 const ResolveCommentInputSchema = Schema.Struct({ id: CommentIdField, how: HowInputField });

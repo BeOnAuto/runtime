@@ -46,7 +46,6 @@ export async function functionsServedBy(
     computation.capability,
     forecaster,
     generation.capability,
-    projections.page,
   ];
   const { facts, names, record } = factsComposedOf(runtime, capabilities);
   return {
@@ -54,8 +53,9 @@ export async function functionsServedBy(
       capabilities,
       facts,
       names,
+      pages: projections.pages,
       orgOperations: [
-        ...orgOperationsOfPlaybooks,
+        ...orgOperationsOfPlaybooks(runtime, projections.pages),
         ...reasoningOperationsOf(reasoning),
         ...toolOperations.inOrg,
         ...memory.operations.inOrg,

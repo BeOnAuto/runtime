@@ -1,5 +1,5 @@
 import { defineCreateDefinition, defineGetRun, defineRunDefinition, type Capability } from '@on.auto/definitions';
-import { admittingMeter } from '@on.auto/definitions/testing';
+import { admittingMeter, uncheckedPages } from '@on.auto/definitions/testing';
 import { allPermissions, makeDispatcher, type CallerIdentity, type Outcome } from '@on.auto/operations';
 import { memoryPlaybookRegistry, recordingReporter, type MemoryLedger } from '@on.auto/operations/testing';
 import { Clock, Effect, Layer } from 'effect';
@@ -51,9 +51,14 @@ export function callsOn(ledger: MemoryLedger, capability: Capability, now: () =>
   const capabilities = [capability];
   return {
     define: (name, source) =>
-      call(defineCreateDefinition(capabilities).registration, { type: 'generation', name, source, diagram: 'none' }),
+      call(defineCreateDefinition(capabilities, uncheckedPages).registration, {
+        type: 'generation',
+        name,
+        source,
+        diagram: 'none',
+      }),
     run: (name, input, runId) =>
       call(defineRunDefinition(capabilities).registration, { type: 'generation', name, input, run_id: runId }),
-    runOf: (runId) => call(defineGetRun(capabilities).registration, { run_id: runId }),
+    runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages).registration, { run_id: runId }),
   };
 }

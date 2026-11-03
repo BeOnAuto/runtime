@@ -54,10 +54,12 @@ const CapabilitySchema = anObject({
 const StatementSchema = anObject({ strings: aList(Schema.String), values: aList(Schema.Unknown) });
 
 const FolderSchema = anObject({
-  definitionType: text,
+  name: text,
+  definitionTypes: aList(Schema.String),
+  keptAfter: aFunction,
+  together: aFunction,
   tables: aList(StatementSchema),
   rebuildsAtOnce: aNumber,
-  keptOf: aFunction,
   keyOf: aFunction,
   typesOf: aFunction,
   playbooksWithRows: aFunction,

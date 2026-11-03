@@ -18,7 +18,7 @@ const acmeAlpha = createApiKey({ id: 'acme-alpha', org: 'acme', permissions: all
 
 const apiKeys = JSON.stringify([acmeAdmin.entry, acmeReader.entry, acmeAlpha.entry]);
 
-const playbookTools = ['create_playbook', 'list_playbooks', 'update_playbook', 'retire_playbook'];
+const playbookTools = ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook'];
 
 const definitionTools = [
   'create_definition',
@@ -86,7 +86,7 @@ function postInitialize(path: string, headers: Readonly<Record<string, string>>)
 }
 
 describe('the org endpoint of the server', () => {
-  it('names the release under the title Auto Runtime and lists the four playbook tools, the two of comments, list_models, search and the five of connections', async () => {
+  it('names the release under the title Auto Runtime and lists the five playbook tools, the two of comments, list_models, search and the five of connections', async () => {
     const connected = await withMcpSession(
       'current revision',
       endpoint('/orgs/acme/mcp', acmeAdmin.key),
@@ -174,6 +174,7 @@ describe('the callers the MCP endpoints of the server reject before MCP', () => 
 
 const readerToolsOfTheOrg = [
   'list_playbooks',
+  'get_playbook',
   'list_comments',
   'resolve_comment',
   'list_models',

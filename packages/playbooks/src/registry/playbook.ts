@@ -12,6 +12,13 @@ export const PlaybookSchema = Schema.Struct({
   retired_at: Schema.optionalKey(
     Schema.String.annotate({ description: 'When the playbook was retired, in ISO 8601 UTC' }),
   ),
+  page: Schema.optionalKey(
+    Schema.Struct({
+      source: Schema.String.annotate({ description: 'The page as it was saved, YAML of its data and lately' }),
+    }).annotate({
+      description: "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook",
+    }),
+  ),
 }).annotate({ identifier: 'Playbook', description: 'A playbook of the org' });
 
 export type Playbook = typeof PlaybookSchema.Type;

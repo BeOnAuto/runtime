@@ -23,10 +23,6 @@ const forms: readonly (readonly [string, ListedTarget])[] = [
     { kind: 'definition', playbook: 'finance', type: 'reasoning', name: 'categorize-invoice', version: 7 },
   ],
   [
-    'finance/definitions/page/weekly-close/1',
-    { kind: 'definition', playbook: 'finance', type: 'page', name: 'weekly-close', version: 1 },
-  ],
-  [
     'finance/definitions/memory/vendor-terms/2147483646',
     { kind: 'definition', playbook: 'finance', type: 'memory', name: 'vendor-terms', version: 2_147_483_646 },
   ],
@@ -75,6 +71,7 @@ const ofTheOrg: readonly (readonly [string, ListedTarget])[] = [
 ];
 
 const notOfItsRule = [
+  'finance/definitions/page/weekly-close/1',
   'playbooks/Finance',
   'playbooks/finance/extra',
   'Finance/definitions/reasoning/categorize-invoice/7',

@@ -77,9 +77,9 @@ describe('the instructions a connection is served', () => {
   it.each(openings)(
     'open, for %s, with whom it acts as, by name and id, and in which org',
     (_case, caller, org, opening) => {
-      expect(instructionsActingAs({ caller, org }, 'own org', withConnections(ownOrg), definitionTypes)).toBe(
-        `${opening} ${servedOnMcp}`,
-      );
+      expect(
+        instructionsActingAs({ caller, org }, 'own org', withConnections(ownOrg), { definitionTypes, pages: false }),
+      ).toBe(`${opening} ${servedOnMcp}`);
     },
   );
 });
@@ -114,7 +114,10 @@ describe('the instructions of each endpoint, for a key that may call every tool'
   it.each(everyEndpoint)(
     'stay within 2,000 characters on the %s endpoint, opening line included, for a person named in 20 characters, of a user id of 32 and an org id of 30',
     (endpoint, served) => {
-      const opened = instructionsActingAs(callerTheInstructionsHold, endpoint, served, definitionTypes);
+      const opened = instructionsActingAs(callerTheInstructionsHold, endpoint, served, {
+        definitionTypes,
+        pages: false,
+      });
 
       expect(opened.length).toBeLessThanOrEqual(2000);
       expect(opened).toMatch(/^This connection acts as n{20} \(person:u{32}\) in the org o{30}\. /u);
@@ -193,8 +196,7 @@ describe('what the instructions say of the definition types', () => {
   });
 
   it('say what a page is where the server keeps pages, and ask an overview of the functions and workflows alone', () => {
-    const withPages = [...definitionTypes, { type: 'page', noun: 'page', guide: 'page' }];
-    const instructions = instructionsFor('playbook', playbookEndpoint, withPages);
+    const instructions = instructionsFor('playbook', playbookEndpoint, definitionTypes, true);
 
     expect(instructions).toContain(
       'run the workflow and show its result. A page shows the person the results of a workflow or function, run by run and over time. This connection acts inside one playbook.',

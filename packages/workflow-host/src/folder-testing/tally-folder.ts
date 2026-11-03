@@ -5,7 +5,7 @@ import { rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../
 import { comparePoints, isAfter, pointIn, pointText, type Point } from '../pages/history-points.ts';
 import type { PageEvent, ReadPage } from '../pages/page-events.ts';
 import type { FoldedChanges, Folder, Reconciled, Reconciling, RowPhase, Writing } from '../projector/folder.ts';
-import type { PlaybookDefinitions } from '../projector/playbook-definitions.ts';
+import { keptDefinitionsOf, type PlaybookDefinitions } from '../projector/playbook-definitions.ts';
 
 export const tallyType = 'tally';
 
@@ -236,10 +236,10 @@ function writtenTally(
 
 export function tallyFolderOf(rebuildsAtOnce: number): Folder<TallyRow, TallyChange> {
   return {
-    definitionType: tallyType,
+    name: 'tallies',
+    ...keptDefinitionsOf(tallyType, (details) => details),
     tables: [talliesTable, outputsTable],
     rebuildsAtOnce,
-    keptOf: (details) => details,
     keyOf: ({ tally }) => tally,
     typesOf: ({ counts }) => [counts],
     playbooksWithRows: (database) =>

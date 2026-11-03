@@ -1,11 +1,34 @@
 import type { Schema } from 'effect';
 
-import type { RunRejectionShown, RunShown, SubjectShown } from '../capability/definition-kinds.ts';
 import { recordOf } from '../shapes/shape-values.ts';
 import type { RenderClock } from '../template/render-clock.ts';
 import type { ParsedTemplate } from '../template/template-parsing.ts';
 import type { PageViews } from './page-document.ts';
 import { shown } from './rendered-blocks.ts';
+
+interface RunRejectionShown {
+  readonly reason: string;
+  readonly kind?: string;
+  readonly detail?: string;
+}
+
+export type RunShown =
+  | {
+      readonly status: 'started' | 'succeeded';
+      readonly output: Schema.Json;
+      readonly started: string;
+      readonly ended: string | null;
+      readonly version: number;
+    }
+  | { readonly status: 'rejected'; readonly rejection: RunRejectionShown }
+  | { readonly status: 'failed' };
+
+export interface SubjectShown {
+  readonly type: string;
+  readonly name: string;
+  readonly description: string | null;
+  readonly version: number | null;
+}
 
 export interface ReadMoment {
   readonly today: string;

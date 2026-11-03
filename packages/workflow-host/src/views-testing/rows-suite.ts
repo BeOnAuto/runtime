@@ -6,7 +6,16 @@ import type { SettingsOf } from '../testing/host-files.ts';
 import { viewRowOf, ViewRowSchema, type ViewRow } from '../views/view-rows.ts';
 import { foldedWritten, viewDropped, viewNamed, type FoldedRow } from '../views/view-statements.ts';
 import { racingOnce } from './pool-faults.ts';
-import { alphaKey, counting, detailsOf, foldOf, liveAt, succeeded, viewsFolderOver } from './view-documents.ts';
+import {
+  alphaKey,
+  counting,
+  countingAnew,
+  detailsOf,
+  foldOf,
+  liveAt,
+  succeeded,
+  viewsFolderOver,
+} from './view-documents.ts';
 import { viewHarness, type ViewHarness } from './view-harness.ts';
 import { viewsReconciled } from './view-reading.ts';
 
@@ -76,7 +85,7 @@ function slotTests(settingsOf: SettingsOf): void {
     await views.saved('third', counting);
 
     const slotted = phasesOf(await reconcile());
-    await views.saved('first', counting);
+    await views.saved('first', countingAnew);
     const replaced = await reconcile();
 
     expect(stalled).toBe(1);
@@ -109,7 +118,7 @@ function loneViewTests(settingsOf: SettingsOf): void {
 
     await views.saved('runs', counting);
     await reconcile();
-    await views.saved('runs', counting);
+    await views.saved('runs', countingAnew);
     const [renewed] = await reconcile();
 
     expect([watched.seen().map((rows) => phasesOf(rows)), renewed?.version]).toEqual([
@@ -150,7 +159,7 @@ function handOverTests(settingsOf: SettingsOf): void {
     await views.saved('second', counting);
     await reconcile();
 
-    await views.saved('first', counting);
+    await views.saved('first', countingAnew);
     const rows = await reconcile();
 
     expect(watched.seen().map((seen) => phasesOf(seen))).toEqual([
@@ -190,7 +199,7 @@ function conditionalWriteTests(settingsOf: SettingsOf): void {
 
     const first = await written(views, row, {});
     const stale = await written(views, row, { view: 99 });
-    await views.saved('runs', counting);
+    await views.saved('runs', countingAnew);
     const [renewed] = await reconcile();
     const afterReset = await written(views, { ...row, checkpointText: '' }, { view: 99 });
     const kept = await views.viewOf('runs');

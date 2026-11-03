@@ -195,6 +195,20 @@
                       "type": "string",
                       "description": "When the playbook was retired, in ISO 8601 UTC"
                     },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The page as it was saved, YAML of its data and lately"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+                    },
                     "studio": {
                       "type": "string",
                       "description": "The page in Studio of what was made"
@@ -361,6 +375,20 @@
                         "retired_at": {
                           "type": "string",
                           "description": "When the playbook was retired, in ISO 8601 UTC"
+                        },
+                        "page": {
+                          "type": "object",
+                          "properties": {
+                            "source": {
+                              "type": "string",
+                              "description": "The page as it was saved, YAML of its data and lately"
+                            }
+                          },
+                          "required": [
+                            "source"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
                         }
                       },
                       "required": [
@@ -432,7 +460,7 @@
       "get": {
         "operationId": "get_playbook",
         "summary": "Get playbook",
-        "description": "Reads one playbook of the org by its id and returns it, active or retired, with its name, what it is for and when it was made and changed. Use it when the person names a playbook whose id is known; list_playbooks finds the playbooks when it is not. `playbook` is the id of the playbook.",
+        "description": "Reads one playbook by its id, active or retired, with the source of its page. Use it to read the playbook's page, or a playbook whose id is known; list_playbooks finds the others. `playbook` is its id.",
         "tags": [
           "playbooks"
         ],
@@ -512,6 +540,20 @@
                     "retired_at": {
                       "type": "string",
                       "description": "When the playbook was retired, in ISO 8601 UTC"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The page as it was saved, YAML of its data and lately"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
                     }
                   },
                   "required": [
@@ -574,7 +616,7 @@
       "put": {
         "operationId": "update_playbook",
         "summary": "Update playbook",
-        "description": "Replaces the name and the description of an active playbook and returns it. Use it when the person renames a playbook or changes what it is for. Both are given in full, even when one stays the same.",
+        "description": "Changes the name, the description or the page of an active playbook and returns it. Use it when the person renames a playbook, changes what it is for or gives it a dashboard. What is left out stays as saved.",
         "tags": [
           "playbooks"
         ],
@@ -594,7 +636,7 @@
           }
         ],
         "requestBody": {
-          "required": true,
+          "required": false,
           "content": {
             "application/json": {
               "schema": {
@@ -613,12 +655,20 @@
                     "type": "string",
                     "maxLength": 2000,
                     "description": "What the playbook is for: up to 2000 characters, or empty"
+                  },
+                  "page": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Its page as YAML, data and lately, as the page guide says; null removes it"
                   }
-                },
-                "required": [
-                  "name",
-                  "description"
-                ]
+                }
               }
             }
           }
@@ -684,6 +734,20 @@
                     "retired_at": {
                       "type": "string",
                       "description": "When the playbook was retired, in ISO 8601 UTC"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The page as it was saved, YAML of its data and lately"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
                     }
                   },
                   "required": [
@@ -845,6 +909,20 @@
                     "retired_at": {
                       "type": "string",
                       "description": "When the playbook was retired, in ISO 8601 UTC"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The page as it was saved, YAML of its data and lately"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
                     }
                   },
                   "required": [
@@ -11402,7 +11480,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function, workflow or page from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, memory, interaction, computation, prediction, generation, page, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too; a workflow and a page take none. A document that does not fit its format is refused with the line and what is wrong.",
+        "description": "Saves a new function or workflow from its document, without running it. Use it once the person agrees; update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, memory, interaction, computation, prediction, generation, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too; a workflow takes none. The document's `page` key, optional, shows the person its runs, as the page guide says. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -11427,7 +11505,6 @@
                 "computation",
                 "prediction",
                 "generation",
-                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -11486,7 +11563,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -11534,17 +11611,6 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
-                        },
-                        "of": {
-                          "type": "string",
-                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
-                        },
-                        "views": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
                       "additionalProperties": false,
@@ -11707,22 +11773,26 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
                       "type": "object",
                       "properties": {
                         "result": {
                           "type": "string",
-                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                          "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
                         "lately": {
                           "type": "string",
-                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                          "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "standing": {
+                          "type": "object",
+                          "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
                         }
                       },
                       "additionalProperties": false,
-                      "description": "What the page of the subject renders when it is read, each block it has"
+                      "description": "What the page of the definition, the page key of its document, shows when it is read"
                     },
                     "used_by": {
                       "type": "array",
@@ -11872,7 +11942,6 @@
                 "computation",
                 "prediction",
                 "generation",
-                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -11915,7 +11984,7 @@
                       "properties": {
                         "type": {
                           "type": "string",
-                          "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
+                          "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow"
                         },
                         "name": {
                           "type": "string",
@@ -11963,17 +12032,6 @@
                             "shape": {
                               "type": "string",
                               "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
-                            },
-                            "of": {
-                              "type": "string",
-                              "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
-                            },
-                            "views": {
-                              "type": "object",
-                              "additionalProperties": {
-                                "type": "string"
-                              },
-                              "description": "For a page with data, each view's name and the shape it takes"
                             }
                           },
                           "additionalProperties": false,
@@ -12184,7 +12242,7 @@
       "get": {
         "operationId": "get_definition",
         "summary": "Get definition",
-        "description": "Reads one definition with its document, active or retired, with its version and the input and output its document declares. For a page it also returns how its views stand: live, rebuilding, waiting or stalled. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition with a page answers page.lately; `render: true` previews a page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
+        "description": "Reads one definition with its document, active or retired, with its version and the input and output its document declares. For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own. A definition whose document has a page answers page.lately and how its views stand; `render: true` previews the page. Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type. `type` is the definition's type and `name` its name.",
         "tags": [
           "definitions"
         ],
@@ -12209,7 +12267,6 @@
                 "computation",
                 "prediction",
                 "generation",
-                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -12231,7 +12288,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "description": "For a page, true to render it now"
+              "description": "True to render its page now"
             }
           },
           {
@@ -12255,7 +12312,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -12303,17 +12360,6 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
-                        },
-                        "of": {
-                          "type": "string",
-                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
-                        },
-                        "views": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
                       "additionalProperties": false,
@@ -12476,22 +12522,26 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
                       "type": "object",
                       "properties": {
                         "result": {
                           "type": "string",
-                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                          "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
                         "lately": {
                           "type": "string",
-                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                          "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "standing": {
+                          "type": "object",
+                          "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
                         }
                       },
                       "additionalProperties": false,
-                      "description": "What the page of the subject renders when it is read, each block it has"
+                      "description": "What the page of the definition, the page key of its document, shows when it is read"
                     },
                     "used_by": {
                       "type": "array",
@@ -12612,7 +12662,7 @@
       "put": {
         "operationId": "update_definition",
         "summary": "Update definition",
-        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time; a workflow and a page take none. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing. A new version of a page builds its views again from the playbook's history.",
+        "description": "Replaces the document of an active definition and returns its new version, used from then on. Use it when the person changes a saved definition; a retired one cannot change. `type` and `name` say which, `source` is the whole new document, and `overview` Markdown for the person who runs the business, written again each time; left out, the saved one stays. A function needs `diagram` each time; a workflow takes none. A document that does not fit its format is refused with the line and what is wrong; one the same as saved, with the same diagram and its overview the same or left out, records nothing.",
         "tags": [
           "definitions"
         ],
@@ -12637,7 +12687,6 @@
                 "computation",
                 "prediction",
                 "generation",
-                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -12700,7 +12749,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -12748,17 +12797,6 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
-                        },
-                        "of": {
-                          "type": "string",
-                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
-                        },
-                        "views": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
                       "additionalProperties": false,
@@ -12921,22 +12959,26 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
                       "type": "object",
                       "properties": {
                         "result": {
                           "type": "string",
-                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                          "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
                         "lately": {
                           "type": "string",
-                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                          "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "standing": {
+                          "type": "object",
+                          "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
                         }
                       },
                       "additionalProperties": false,
-                      "description": "What the page of the subject renders when it is read, each block it has"
+                      "description": "What the page of the definition, the page key of its document, shows when it is read"
                     },
                     "used_by": {
                       "type": "array",
@@ -13059,11 +13101,11 @@
         ]
       }
     },
-    "/orgs/{org}/playbooks/{playbook}/definitions/page/{name}/render": {
+    "/orgs/{org}/playbooks/{playbook}/definitions/{type}/{name}/render": {
       "post": {
         "operationId": "render_page",
         "summary": "Render page",
-        "description": "Renders a page now and answers it as get_definition does, with page.result and page.lately, so that it can be seen before its subject has run. `name` is the page's name, and `sample_output`, optional, an output of its subject to render result over, as a run that succeeded gave it. Without sample_output, result renders over the subject's latest run, and is left out when the subject has not run.",
+        "description": "Renders a definition's page now and answers the definition as get_definition does, with page.result and page.lately, so that the page can be seen before the definition has run. `sample_output`, optional, is an output to render result over, as a run that succeeded gave it. Without sample_output, result renders over the definition's latest run, and is left out when it has not run.",
         "tags": [
           "definitions"
         ],
@@ -13073,6 +13115,25 @@
           },
           {
             "$ref": "#/components/parameters/playbook"
+          },
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "reasoning",
+                "lookup",
+                "memory",
+                "interaction",
+                "computation",
+                "prediction",
+                "generation",
+                "workflow"
+              ],
+              "description": "The definition's type"
+            }
           },
           {
             "name": "name",
@@ -13115,7 +13176,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -13163,17 +13224,6 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
-                        },
-                        "of": {
-                          "type": "string",
-                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
-                        },
-                        "views": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
                       "additionalProperties": false,
@@ -13336,22 +13386,26 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
                       "type": "object",
                       "properties": {
                         "result": {
                           "type": "string",
-                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                          "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
                         "lately": {
                           "type": "string",
-                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                          "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "standing": {
+                          "type": "object",
+                          "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
                         }
                       },
                       "additionalProperties": false,
-                      "description": "What the page of the subject renders when it is read, each block it has"
+                      "description": "What the page of the definition, the page key of its document, shows when it is read"
                     },
                     "used_by": {
                       "type": "array",
@@ -13470,11 +13524,123 @@
         ]
       }
     },
+    "/orgs/{org}/playbooks/{playbook}/render": {
+      "post": {
+        "operationId": "render_playbook_page",
+        "summary": "Render playbook page",
+        "description": "Renders the playbook's page now and answers it with page.lately, over its views as they stand, and page.standing, how they stand. Use it to show the playbook's dashboard; get_playbook reads the page's source. A playbook without a page is refused as not found.",
+        "tags": [
+          "playbooks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "$ref": "#/components/parameters/playbook"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/render_playbook_page/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/render_playbook_page/output",
+                  "type": "object",
+                  "properties": {
+                    "page": {
+                      "$ref": "#/$defs/PlaybookPage"
+                    }
+                  },
+                  "required": [
+                    "page"
+                  ],
+                  "additionalProperties": false,
+                  "$defs": {
+                    "PlaybookPage": {
+                      "type": "object",
+                      "properties": {
+                        "lately": {
+                          "type": "string",
+                          "description": "What the playbook's page shows over its views, Markdown with charts as fenced blocks"
+                        },
+                        "standing": {
+                          "type": "object",
+                          "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The playbook's page, rendered now"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "playbook:read"
+            ]
+          }
+        ]
+      }
+    },
     "/orgs/{org}/playbooks/{playbook}/definitions/{type}/{name}/retire": {
       "post": {
         "operationId": "retire_definition",
         "summary": "Retire definition",
-        "description": "Retires a function, workflow or page for good and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it. Use it only when the person asks to retire that definition; update_definition changes it instead. `type` and `name` say which definition, and retiring one already retired changes nothing.",
+        "description": "Retires a function or workflow for good, with its page, and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it. Use it only when the person asks to retire that definition; update_definition changes it instead. `type` and `name` say which definition, and retiring one already retired changes nothing.",
         "tags": [
           "definitions"
         ],
@@ -13499,7 +13665,6 @@
                 "computation",
                 "prediction",
                 "generation",
-                "page",
                 "workflow"
               ],
               "description": "The definition's type"
@@ -13542,7 +13707,7 @@
                   "properties": {
                     "type": {
                       "type": "string",
-                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one"
+                      "description": "The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow"
                     },
                     "name": {
                       "type": "string",
@@ -13590,17 +13755,6 @@
                         "shape": {
                           "type": "string",
                           "description": "The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws"
-                        },
-                        "of": {
-                          "type": "string",
-                          "description": "For a page, the subject whose results it presents: <type>/<name>, or playbook"
-                        },
-                        "views": {
-                          "type": "object",
-                          "additionalProperties": {
-                            "type": "string"
-                          },
-                          "description": "For a page with data, each view's name and the shape it takes"
                         }
                       },
                       "additionalProperties": false,
@@ -13763,22 +13917,26 @@
                     },
                     "standing": {
                       "type": "object",
-                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)"
+                      "description": "How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function"
                     },
                     "page": {
                       "type": "object",
                       "properties": {
                         "result": {
                           "type": "string",
-                          "description": "The run as its subject's page shows it, Markdown whose first line is the run's headline; on get_run of a run of a subject that has a page, and in a page's preview"
+                          "description": "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview"
                         },
                         "lately": {
                           "type": "string",
-                          "description": "The subject's runs so far as its page shows them, Markdown with charts as fenced blocks; on get_definition of a subject that has a page, and in a page's preview"
+                          "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "standing": {
+                          "type": "object",
+                          "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
                         }
                       },
                       "additionalProperties": false,
-                      "description": "What the page of the subject renders when it is read, each block it has"
+                      "description": "What the page of the definition, the page key of its document, shows when it is read"
                     },
                     "used_by": {
                       "type": "array",
@@ -16450,6 +16608,7 @@
                 "definition_created",
                 "definition_updated",
                 "definition_retired",
+                "playbook_page_saved",
                 "event_published",
                 "reaction_refused",
                 "memory_remembered",
@@ -16950,7 +17109,7 @@
       "get": {
         "operationId": "list_playbook_changes",
         "summary": "List playbook changes",
-        "description": "Answers which runs, interactions, definitions, events, and comments of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
+        "description": "Answers which runs, interactions, definitions, playbooks, events, and comments of the playbook changed after a cursor. Without since it answers at once with the cursor of now and no changes, so a client starts from now. With since it answers at once when something changed after it, and otherwise holds the request until the next change or until wait seconds pass. Each change names a resource and its identity alone; the client reads what it needs of it. more says more changed already, so the client asks again at once with the new cursor.",
         "tags": [
           "changes"
         ],
@@ -17072,6 +17231,23 @@
                             ],
                             "additionalProperties": false,
                             "description": "A function or workflow saved or retired"
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "playbook"
+                                ],
+                                "description": "The kind of the resource that changed"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The playbook itself, whose own page was saved or removed"
                           },
                           {
                             "type": "object",
@@ -21189,7 +21365,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), memory-function (Memory function format), interaction-function (Interaction function format), computation-function (Computation function format), prediction-function (Prediction function format), generation-function (Generation function format), page (Page format), workflow (Workflow format), templates (Templates), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
+            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), memory-function (Memory function format), interaction-function (Interaction function format), computation-function (Computation function format), prediction-function (Prediction function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), page (Page format), first-playbook (Create your first playbook), remember (Make the playbook remember something), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule)",
             "schema": {
               "type": "string",
               "enum": [
@@ -21201,9 +21377,9 @@
                 "computation-function",
                 "prediction-function",
                 "generation-function",
-                "page",
                 "workflow",
                 "templates",
+                "page",
                 "first-playbook",
                 "remember",
                 "give-tools",

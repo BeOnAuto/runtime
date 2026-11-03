@@ -1,8 +1,6 @@
 import { makeCatalog } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { playbookOperations } from '../index.ts';
-
 describe('the playbook operations', () => {
   const catalog = makeCatalog(playbookOperations);
 
@@ -30,3 +28,4 @@ describe('the playbook operations', () => {
     expect(new Set(routes).size).toBe(routes.length);
   });
 });
+import { playbookOperations } from '../testing/playbook-pages.ts';

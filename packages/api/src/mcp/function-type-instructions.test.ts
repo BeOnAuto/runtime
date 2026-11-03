@@ -30,7 +30,10 @@ describe('the instructions of a server that runs seven function types', () => {
     'stay within 2,000 characters on the %s endpoint, opening line included, for a server that runs seven function types, lookup, memory and generation functions among them',
     (endpoint, served) => {
       expect(
-        instructionsActingAs(callerTheInstructionsHold, endpoint, served, sevenServedTypes).length,
+        instructionsActingAs(callerTheInstructionsHold, endpoint, served, {
+          definitionTypes: sevenServedTypes,
+          pages: false,
+        }).length,
       ).toBeLessThanOrEqual(2000);
     },
   );

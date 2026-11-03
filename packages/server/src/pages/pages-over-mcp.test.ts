@@ -11,18 +11,25 @@ const greeter = [
   'output:',
   '  format: json',
   '  schema: {type: object, properties: {greeting: {type: string}}, required: [greeting]}',
+  'page:',
+  "  result: '{{ output.greeting }}!'",
   '---',
   'Greet the person.',
 ].join('\n');
 
-const greetingPage = [
-  '---',
-  'of: reasoning/greeter',
-  '---',
-  '{% result %}',
-  '{{ output.greeting }}!',
-  '{% endresult %}',
-  '',
+const playbookPage = [
+  'data:',
+  '  language: typescript',
+  '  source:',
+  '    events:',
+  '      - type: run_succeeded',
+  '  views:',
+  '    runs: categories',
+  '  module: |',
+  '    export function fold(view: View, event: Event): View {',
+  '      return { runs: { values: [...(view.runs?.values ?? []), { name: event.type, value: 1 }] } };',
+  '    }',
+  "lately: '{{ views.runs.values | size }} runs.'",
 ].join('\n');
 
 let server: ReasoningServer;
@@ -44,7 +51,7 @@ async function onAlpha<T>(use: (session: McpSession) => Promise<T>): Promise<T> 
 }
 
 describe('a page over MCP', () => {
-  it('is saved with create_definition and previewed with get_definition, its render over a sample output', async () => {
+  it('is saved in the document of its definition, and previewed with get_definition over a sample output', async () => {
     const preview = await onAlpha(async (session) => {
       await session.callTool('create_definition', {
         type: 'reasoning',
@@ -52,29 +59,45 @@ describe('a page over MCP', () => {
         source: greeter,
         diagram: 'none',
       });
-      await session.callTool('create_definition', { type: 'page', name: 'greetings', source: greetingPage });
       return session.callTool('get_definition', {
-        type: 'page',
-        name: 'greetings',
+        type: 'reasoning',
+        name: 'greeter',
         render: true,
         sample_output: { greeting: 'Good morning' },
       });
     });
 
     expect(preview.structuredContent).toMatchObject({
-      type: 'page',
-      details: { of: 'reasoning/greeter' },
+      type: 'reasoning',
+      name: 'greeter',
+      source: greeter,
       page: { result: 'Good morning!' },
     });
   });
 
-  it('is a type the definition tools take and the run tools do not', async () => {
+  it('is no type of definition', async () => {
     const tools = await onAlpha(async (session) => listedTools(await session.listTools()));
     const typesOf = (name: string): string =>
       JSON.stringify(tools.find((tool) => tool.name === name)?.inputSchema['properties']);
 
-    expect(typesOf('create_definition')).toContain('"page"');
-    expect(typesOf('run_definition')).not.toContain('"page"');
+    expect(typesOf('create_definition')).not.toContain('"page"');
     expect(typesOf('list_runs')).not.toContain('"page"');
+  });
+});
+
+describe("the playbook's page over MCP", () => {
+  it('is saved with update_playbook and read with get_playbook, on the endpoint of the org', async () => {
+    server = await servingPages([]);
+    const read = await withMcpSession(
+      'current revision',
+      { url: `${server.origin}/orgs/acme/mcp`, headers: {} },
+      async (session) => {
+        await session.callTool('create_playbook', { playbook: 'alpha', name: 'Alpha' });
+        await session.callTool('update_playbook', { playbook: 'alpha', page: playbookPage });
+        return session.callTool('get_playbook', { playbook: 'alpha' });
+      },
+    );
+
+    expect(read.structuredContent).toMatchObject({ id: 'alpha', page: { source: playbookPage } });
   });
 });

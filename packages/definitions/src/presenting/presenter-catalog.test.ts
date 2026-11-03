@@ -45,7 +45,10 @@ function storedTypesOf(ast: SchemaAST.AST): readonly string[] {
 
 const catalog = [
   { stream: runStream, storedTypes: [...coreRunFactTypes, 'nudge_sent'] },
-  { stream: definitionStream, storedTypes: storedTypesOf(definitionsOfTheLongestType.eventSchema.ast) },
+  {
+    stream: definitionStream,
+    storedTypes: [...storedTypesOf(definitionsOfTheLongestType.eventSchema.ast), 'playbook_page_saved'],
+  },
   { stream: eventStream, storedTypes: storedTypesOf(publishedEventDecider.eventSchema.ast) },
   { stream: 'nudges/1', storedTypes: ['nudge_read'] },
 ] as const;

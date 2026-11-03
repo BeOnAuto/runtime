@@ -6,8 +6,10 @@ import { guideShelfFrom } from './served-guides.ts';
 
 it('refuses to start without the format page of a type the server runs', async () => {
   await expect(
-    guideShelfFrom(shippedFilesOnDisk(apiShippedRoots()), [
-      { type: 'drafting', noun: { one: 'draft', other: 'drafts' }, guide: { name: 'drafting-function' } },
-    ]),
+    guideShelfFrom(
+      shippedFilesOnDisk(apiShippedRoots()),
+      [{ type: 'drafting', noun: { one: 'draft', other: 'drafts' }, guide: { name: 'drafting-function' } }],
+      { pages: false },
+    ),
   ).rejects.toThrow(/no such file or directory.*drafting-format\.md/u);
 });

@@ -42,17 +42,15 @@ const everyType = [reasoning, memory, computation, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
-const served = await guideShelfFrom(guideFiles, everyType);
+const served = await guideShelfFrom(guideFiles, everyType, { pages: false });
 
-const servedWithInteraction = await guideShelfFrom(guideFiles, [...everyType, interaction]);
+const servedWithInteraction = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: false });
 
-const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoning, workflow]);
+const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoning, workflow], { pages: false });
 
-const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning]);
+const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning], { pages: false });
 
-const pageKind = capabilityOf('page', 'page', { name: 'page' });
-
-const servedWithEverything = await guideShelfFrom(guideFiles, [...everyType, interaction, pageKind]);
+const servedWithEverything = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: true });
 
 function recipeTextsOf({ recipes }: GuideShelf): Readonly<Record<string, string>> {
   return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
@@ -161,6 +159,14 @@ describe('the size and the words of the guides of a server', () => {
     expect(servedWithEverything.recipes.filter(({ text }) => byteLengthOf(text) > mostRecipeBytes)).toEqual([]);
   });
 
+  it('carry the page guide beside the templates where the server keeps pages, and say so', () => {
+    expect([served.pages, servedWithEverything.pages, servedWithEverything.named('page')?.title]).toEqual([
+      false,
+      true,
+      'Page format',
+    ]);
+  });
+
   it('describe each guide in a sentence for a person or a client that lists them', () => {
     expect(guides.slice(1).map(({ description }) => description)).toEqual([
       'How reasoning functions are written: their document, fields, examples and bounds.',
@@ -183,7 +189,7 @@ describe('the recipes of a server', () => {
   });
 
   it('are none for a server that runs no type of definition', async () => {
-    expect((await guideShelfFrom(guideFiles, [])).recipes).toEqual([]);
+    expect((await guideShelfFrom(guideFiles, [], { pages: false })).recipes).toEqual([]);
   });
 
   it('ask the person in their own words, filled into what the prompt asks for', () => {

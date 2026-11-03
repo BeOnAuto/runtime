@@ -19,11 +19,11 @@ const mostDescriptionSentences = 8;
 
 export const mostArgumentDescriptionCharacters = 300;
 
-export const mostToolsOnAConnection = 37;
+export const mostToolsOnAConnection = 38;
 
 export const mostListingBytes: Readonly<Record<McpEndpoint, number>> = {
-  'own org': 58_000,
-  org: 20_100,
+  'own org': 58_800,
+  org: 21_000,
   playbook: 40_800,
 };
 
@@ -32,7 +32,7 @@ export const mostGuideBytes = 65_536;
 export const mostRecipeBytes = 5120;
 
 export function mostGuidesBeyondTheRecipes(definitionTypes: number): number {
-  return definitionTypes + 2;
+  return definitionTypes + 3;
 }
 
 export const mostRecipes = 4;

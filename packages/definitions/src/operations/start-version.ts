@@ -2,7 +2,7 @@ import { defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { knownRunningCapabilities, runningOf } from '../capability/known-capabilities.ts';
+import { knownRunningCapabilities } from '../capability/known-capabilities.ts';
 import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { runPlainLanguage } from '../plain-language/run-words.ts';
 import { RunDetailSchema } from '../runs/run.ts';
@@ -17,8 +17,8 @@ const description = [
 
 export function defineStartVersion(capabilities: readonly Capability[]) {
   const known = knownRunningCapabilities(capabilities);
-  const words = runPlainLanguage(runningOf(capabilities), capabilities);
-  const definitionWords = definitionWordsFor(runningOf(capabilities));
+  const words = runPlainLanguage(capabilities);
+  const definitionWords = definitionWordsFor(capabilities);
   return known.publish(
     defineCommand('playbook', {
       name: 'start_definition_version',

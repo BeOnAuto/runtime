@@ -83,6 +83,18 @@ describe('the presenter of the changes to a definition', () => {
     });
   });
 
+  it('presents a save and a removal of the playbook’s own page, which no definition holds', () => {
+    const ofThePlaybook = { at: '2026-10-01T09:00:00.000Z', by: 'acme-admin' };
+    const shown = (page: object | null) =>
+      present(recordOf('definitions/playbook', 'playbook_page_saved', { page }, ofThePlaybook), showing).at(0);
+
+    expect(shown({ source: 'lately: Hé', details: {} })).toMatchObject({
+      summary: "The playbook's page was saved.",
+      data: { source_bytes: 11 },
+    });
+    expect(shown(null)).toMatchObject({ summary: "The playbook's page was removed.", data: {} });
+  });
+
   it('shows the first three hundred characters of a description', () => {
     const description = `${'😀'.repeat(299)}ab`;
 

@@ -1,13 +1,14 @@
 export { ledgerPlaybookRegistry } from './registry/ledger-playbook-registry.ts';
-export { playbookOperations } from './operations/playbook-operations.ts';
+export { playbookOperationsOf } from './operations/playbook-operations.ts';
+export { type PlaybookPage, type PlaybookPages } from './operations/playbook-pages.ts';
 export { createPlaybook } from './operations/create-playbook.ts';
 export { defineGetEvent } from './feed/get-event.ts';
 export { defineListPlaybookEvents } from './feed/list-playbook-events.ts';
-export { getPlaybook } from './operations/get-playbook.ts';
+export { defineGetPlaybook } from './operations/get-playbook.ts';
 export { foundPlaybook, loadRegistry } from './operations/registry-loading.ts';
 export { listPlaybooks } from './operations/list-playbooks.ts';
 export { retirePlaybook } from './operations/retire-playbook.ts';
-export { updatePlaybook } from './operations/update-playbook.ts';
+export { defineUpdatePlaybook } from './operations/update-playbook.ts';
 export { PlaybookSchema, type Playbook } from './registry/playbook.ts';
 export { playbookCreatedOf } from './registry/created-playbooks.ts';
 export { PlaybookEventSchema } from './registry/playbook-events.ts';

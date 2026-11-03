@@ -1,6 +1,5 @@
 import { waitForeverAnnouncing } from '@on.auto/api/testing';
 import type { DispatcherServices } from '@on.auto/operations';
-import { playbookOperations } from '@on.auto/playbooks';
 
 import { compositionRoot } from '../../composition/composition-root.ts';
 import { routesServing } from '../../composition/served-routes.ts';
@@ -8,6 +7,7 @@ import { startServer } from '../../lifecycle/lifecycle.ts';
 import { keyInHandOf } from '../../secrets/secrets-keys.ts';
 import { servedBy } from '../../server-options/server-options.ts';
 import { temporaryLedger } from '../records/temporary-ledger.ts';
+import { playbookOperations } from './pageless-playbooks.ts';
 import { loopbackSettingsOver } from './reasoning-server.ts';
 
 export interface WaitingServer {

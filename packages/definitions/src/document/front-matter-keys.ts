@@ -7,12 +7,13 @@ import { readFrontMatter } from './front-matter-reading.ts';
 export interface FrontMatterSection {
   readonly name: string | undefined;
   readonly keys: readonly string[];
+  readonly said?: string;
 }
 
 export interface FrontMatterShape {
   readonly sections: readonly FrontMatterSection[];
   readonly decode: (root: unknown) => Result.Result<unknown, Schema.SchemaError>;
-  readonly required: string;
+  readonly required?: string;
 }
 
 export interface ReadFrontMatter {
@@ -38,7 +39,7 @@ function unknownKeyIssues(
   lines: SourceLines,
   sections: readonly FrontMatterSection[],
 ): readonly DocumentIssue[] {
-  return sections.flatMap(({ name, keys }) => {
+  return sections.flatMap(({ name, keys, said }) => {
     const path = name === undefined ? [] : name.split('.');
     const section = sectionAt(root, path);
     const unknown = Predicate.isObject(section) && !Array.isArray(section) ? Object.keys(section) : [];
@@ -48,7 +49,7 @@ function unknownKeyIssues(
         issueAt(
           lines,
           pointerOf([...path, key]),
-          `${key} is not a key of ${name ?? 'the front matter'}; it takes ${keys.join(', ')}`,
+          `${key} is not a key of ${said ?? name ?? 'the front matter'}; it takes ${keys.join(', ')}`,
         ),
       );
   });
@@ -69,14 +70,20 @@ function typeIssues(root: Schema.JsonObject, lines: SourceLines, shape: FrontMat
   });
 }
 
+export function keysChecked(value: Schema.JsonObject, lines: SourceLines, shape: FrontMatterShape): ReadFrontMatter {
+  return {
+    root: value,
+    lines,
+    issues: [...unknownKeyIssues(value, lines, shape.sections), ...typeIssues(value, lines, shape)],
+  };
+}
+
 export function frontMatterIn(
   text: string,
   firstLine: number,
   shape: FrontMatterShape,
 ): Result.Result<ReadFrontMatter, readonly DocumentIssue[]> {
-  return Result.map(readFrontMatter(text, firstLine, shape.required), ({ value, lines }) => ({
-    root: value,
-    lines,
-    issues: [...unknownKeyIssues(value, lines, shape.sections), ...typeIssues(value, lines, shape)],
-  }));
+  return Result.map(readFrontMatter(text, firstLine, shape.required), ({ value, lines }) =>
+    keysChecked(value, lines, shape),
+  );
 }

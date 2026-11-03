@@ -98,9 +98,10 @@ describe('the recipes whose function calls a model', () => {
 describe('the first-playbook recipe where the page guide is carried with the workflow guide', () => {
   it('gives the workflow its page after its run, from the minimal page of the page guide, and shows the person its headline', () => {
     expect(withWorkflowsAndPages?.text).toContain(
-      "and get_run.\n10. Read the page guide with get_guide and give the workflow its page, which shows the person what each run did and the runs so far: start from the guide's minimal page, a headline for each run and one chart, keyed by the period a run is about where its output carries one. Show the person the page, save it with create_definition, `type` page, once they agree, and show them the run's headline with get_run.\n\nThen tell the person",
+      "and get_run.\n10. Read the page guide with get_guide and give the workflow its page, which shows the person what each run did and the runs so far: start from the guide's minimal page, a headline for each run and one chart, keyed by the period a run is about where its output carries one. Show the person the page, add it to the workflow's document as its `page` and save that with update_definition once they agree, and show them the run's headline with get_run.\n\nThen tell the person",
     );
-    expect(withWorkflowsAndPages?.calls).toEqual(withWorkflows?.calls);
+    expect(withWorkflowsAndPages?.calls.filter((name) => name !== 'update_definition')).toEqual(withWorkflows?.calls);
+    expect(withWorkflowsAndPages?.calls).toContain('update_definition');
   });
 
   it('gives no page where the workflow guide is not carried, since there is then no workflow to present', () => {
@@ -115,7 +116,7 @@ describe('the schedule recipe', () => {
     const withoutPages = await recipeCarrying('schedule', 'workflow');
 
     expect(withPages?.text).toMatch(
-      /and get_run for one run\.\n7\. Where the workflow has no page yet, give it one with the page guide, so the person sees what each run did while they were away: a headline for each run and one chart of the runs so far, from the guide's minimal page, keyed by the period a run is about where its output carries one\. Save it with create_definition, `type` page, once they agree\.\n$/u,
+      /and get_run for one run\.\n7\. Where the workflow has no page yet, give it one with the page guide, so the person sees what each run did while they were away: a headline for each run and one chart of the runs so far, from the guide's minimal page, keyed by the period a run is about where its output carries one\. Add it to the workflow's document as its `page` and save that with update_definition once they agree\.\n$/u,
     );
     expect(withoutPages?.text).toMatch(/and get_run for one run\.\n$/u);
   });

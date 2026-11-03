@@ -19,7 +19,9 @@ describe('what the instructions say of what the person wants kept, where the ser
 describe('the length of the instructions of a server that runs memory functions beside the others', () => {
   it('take 1,717 characters on /mcp, 1,682 on the org endpoint and 1,350 on the playbook endpoint, and 1,847, 1,812 and 1,480 with the opening line of the person the bound holds', () => {
     const opened = everyEndpoint.map(
-      ([endpoint, served]) => instructionsActingAs(callerTheInstructionsHold, endpoint, served, withMemory).length,
+      ([endpoint, served]) =>
+        instructionsActingAs(callerTheInstructionsHold, endpoint, served, { definitionTypes: withMemory, pages: false })
+          .length,
     );
 
     expect(everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, withMemory).length)).toEqual([

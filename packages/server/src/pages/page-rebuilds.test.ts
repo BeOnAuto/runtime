@@ -14,27 +14,31 @@ const echo = [
   '}',
 ].join('\n');
 
-function pageOf(subject: string): string {
+function withItsPage(subject: string): string {
   return [
     '---',
-    `description: How many times ${subject} ran`,
-    `of: computation/${subject}`,
-    'data:',
-    '  language: typescript',
-    '  source:',
-    '    events:',
-    '      - type: run_succeeded',
-    `        subject: computation/${subject}`,
-    '  views:',
-    '    runs: categories',
-    '  module: |',
-    '    export function fold(view: View, event: Event): View {',
-    '      return { runs: { values: [...(view.runs?.values ?? []), { name: event.type, value: 1 }] } };',
-    '    }',
+    'language: typescript',
+    'input:',
+    '  schema: {type: object}',
+    'page:',
+    '  data:',
+    '    language: typescript',
+    '    source:',
+    '      events:',
+    '        - type: run_succeeded',
+    `          subject: computation/${subject}`,
+    '    views:',
+    '      runs: categories',
+    '    module: |',
+    '      export function fold(view: View, event: Event): View {',
+    '        return { runs: { values: [...(view.runs?.values ?? []), { name: event.type, value: 1 }] } };',
+    '      }',
+    '  result: Ran.',
+    "  lately: '{{ views.runs.values | size }} runs.'",
     '---',
-    '{% result %}Ran.{% endresult %}',
-    '',
-    '{% lately %}{{ views.runs.values | size }} runs.{% endlately %}',
+    'export default function (input: Input): Output {',
+    '  return input;',
+    '}',
   ].join('\n');
 }
 
@@ -59,8 +63,8 @@ async function ranOnce(playbook: string, subject: string): Promise<readonly numb
 }
 
 async function pageSaved(playbook: string, subject: string): Promise<number> {
-  const saved = await server.call('POST', `${inPlaybook(playbook)}/definitions/page`, {
-    body: { name: `${subject}-runs`, source: pageOf(subject) },
+  const saved = await server.call('PUT', `${inPlaybook(playbook)}/definitions/computation/${subject}`, {
+    body: { source: withItsPage(subject), diagram: 'none' },
   });
   return saved.status;
 }
@@ -82,13 +86,13 @@ describe('the views of the pages of a playbook, built at most PAGE_MAX_REBUILDS 
     gate.letThrough(1);
 
     const building = await Promise.all([
-      pageInState(server, 'first-runs', 'rebuilding'),
-      pageInState(server, 'second-runs', 'waiting'),
+      pageInState(server, 'computation/first', 'rebuilding'),
+      pageInState(server, 'computation/second', 'waiting'),
     ]);
     gate.open();
     const built = await Promise.all([
-      pageInState(server, 'first-runs', 'live'),
-      pageInState(server, 'second-runs', 'live'),
+      pageInState(server, 'computation/first', 'live'),
+      pageInState(server, 'computation/second', 'live'),
     ]);
 
     expect([made, ran, elsewhere, saved]).toEqual([
@@ -98,13 +102,19 @@ describe('the views of the pages of a playbook, built at most PAGE_MAX_REBUILDS 
         [201, 200],
         [201, 200],
       ],
-      201,
-      [201, 201],
+      200,
+      [200, 200],
     ]);
-    expect(building).toMatchObject([{ standing: { state: 'rebuilding' } }, { standing: { state: 'waiting' } }]);
+    expect(building).toMatchObject([
+      { page: { standing: { state: 'rebuilding' } } },
+      { page: { standing: { state: 'waiting' } } },
+    ]);
     expect(built).toMatchObject([
-      { standing: { state: 'live', folded: 1 } },
-      { standing: { state: 'live', folded: 1 } },
+      { page: { standing: { state: 'live', folded: 1 } } },
+      { page: { standing: { state: 'live', folded: 1 } } },
     ]);
+    expect(await server.call('GET', `${inPlaybook('alpha')}/definitions/computation/second`)).toMatchObject({
+      body: { page: { lately: '1 runs.' } },
+    });
   });
 });

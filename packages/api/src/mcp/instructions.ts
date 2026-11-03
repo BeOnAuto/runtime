@@ -30,6 +30,7 @@ interface Serving {
   readonly endpoint: McpEndpoint;
   readonly listed: (name: string) => boolean;
   readonly definitionTypes: readonly DefinitionType[];
+  readonly pages: boolean;
   readonly reasoning: DefinitionType | undefined;
 }
 
@@ -38,8 +39,6 @@ type Sentences = (serving: Serving) => readonly string[];
 const reasoningFunctionType = 'reasoning';
 
 const workflowType = 'workflow';
-
-const pageType = 'page';
 
 const whatIsAskedOfAPlaybook = 'Put the work the person asks for into a workflow whose steps use its functions';
 
@@ -94,14 +93,8 @@ const workflows: Sentences = ({ definitionTypes, listed }) =>
       ]
     : [];
 
-function servesPages({ definitionTypes }: Serving): boolean {
-  return definitionTypes.some(({ type }) => type === pageType);
-}
-
-const pages: Sentences = (serving) =>
-  servesPages(serving)
-    ? ['A page shows the person the results of a workflow or function, run by run and over time.']
-    : [];
+const whatAPageIs: Sentences = (serving) =>
+  serving.pages ? ['A page shows the person the results of a workflow or function, run by run and over time.'] : [];
 
 export const whatThisServerIsFor = [
   'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer.',
@@ -143,7 +136,7 @@ const modelsBeforeWriting: Sentences = ({ reasoning, listed }) =>
     : [];
 
 function overviewWords(serving: Serving): string {
-  return servesPages(serving) ? 'give a function or workflow an overview' : 'give it an overview';
+  return serving.pages ? 'give a function or workflow an overview' : 'give it an overview';
 }
 
 const guides: Sentences = (serving) => [
@@ -170,7 +163,7 @@ const orientation: readonly Sentences[] = [
   functionTypes,
   whatTheFunctionTypesAlsoNeedSaid,
   workflows,
-  pages,
+  whatAPageIs,
   connection,
   modelsBeforeWriting,
   guides,
@@ -203,22 +196,29 @@ export function instructionsFor(
   endpoint: McpEndpoint,
   tools: ServedTools,
   definitionTypes: readonly DefinitionType[],
+  pages = false,
 ): string {
   const names = namesOf(tools);
   const serving: Serving = {
     endpoint,
     listed: (name) => names.includes(name),
     definitionTypes,
+    pages,
     reasoning: definitionTypes.find(({ type }) => type === reasoningFunctionType),
   };
   return [...whatThisServerIsFor, ...orientation.flatMap((sentences) => sentences(serving))].join(' ');
+}
+
+interface ServedDefinitions {
+  readonly definitionTypes: readonly DefinitionType[];
+  readonly pages: boolean;
 }
 
 export function instructionsActingAs(
   actingAs: ActingAs,
   endpoint: McpEndpoint,
   tools: ServedTools,
-  definitionTypes: readonly DefinitionType[],
+  { definitionTypes, pages }: ServedDefinitions,
 ): string {
-  return `${whomTheConnectionActsAs(actingAs)} ${instructionsFor(endpoint, tools, definitionTypes)}`;
+  return `${whomTheConnectionActsAs(actingAs)} ${instructionsFor(endpoint, tools, definitionTypes, pages)}`;
 }

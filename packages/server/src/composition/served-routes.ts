@@ -31,6 +31,7 @@ export interface ServedCatalog {
   readonly catalog: Catalog;
   readonly dispatcher: Dispatcher;
   readonly capabilities: readonly Capability[];
+  readonly pages: boolean;
   readonly identityIssuer: string;
   readonly retryStateKeys: RetryStateKeys;
   readonly contentAddressKey: ContentAddressKey;
@@ -39,9 +40,18 @@ export interface ServedCatalog {
 
 export async function routesFor(
   runtime: AppRuntime<DispatcherServices>,
-  { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys, contentAddressKey, shippedFiles }: ServedCatalog,
+  {
+    catalog,
+    dispatcher,
+    capabilities,
+    pages,
+    identityIssuer,
+    retryStateKeys,
+    contentAddressKey,
+    shippedFiles,
+  }: ServedCatalog,
 ): Promise<readonly RegisterRoutes[]> {
-  const shelf = await guideShelfFrom(shippedFiles, capabilities);
+  const shelf = await guideShelfFrom(shippedFiles, capabilities, { pages });
   return [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
     openApiDocumentRoutes({ catalog, serverInfo: release, shelf, identityIssuer }),
@@ -76,6 +86,7 @@ export function routesServing(
     catalog,
     dispatcher: makeDispatcher([]),
     capabilities: [],
+    pages: false,
     identityIssuer,
     retryStateKeys,
     contentAddressKey,

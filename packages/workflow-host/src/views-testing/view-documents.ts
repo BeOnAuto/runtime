@@ -35,6 +35,8 @@ export function foldOf(body: string): string {
 
 export const counting = detailsOf(foldOf('return view + 1;'), succeeded, { initial: 0 });
 
+export const countingAnew = detailsOf(foldOf('return view + 1;'), succeeded, { initial: 0, foldLine: 31 });
+
 export const collecting = detailsOf(foldOf('return [...view, event.data.output];'), succeeded, {
   initial: [],
 });

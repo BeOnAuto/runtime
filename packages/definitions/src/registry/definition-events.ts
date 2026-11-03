@@ -2,6 +2,7 @@ import { DefinitionContextSchema, RecordedCallerSchema, factOf, type Decided } f
 import { Schema } from 'effect';
 
 import { StrippedFormsSchema } from '../capability/stripped-forms.ts';
+import { PageContentSchema } from '../page/page-facts.ts';
 import { TriggerSchema } from './definition-triggers.ts';
 
 const DefinitionContentSchema = Schema.Struct({
@@ -15,6 +16,7 @@ const DefinitionContentSchema = Schema.Struct({
   triggers: Schema.optionalKey(Schema.Array(TriggerSchema)),
   details: Schema.optionalKey(Schema.JsonObject),
   stripped: Schema.optionalKey(StrippedFormsSchema),
+  page: Schema.optionalKey(Schema.NullOr(PageContentSchema)),
 });
 
 export type DefinitionContent = typeof DefinitionContentSchema.Type;

@@ -12,7 +12,7 @@ const ofRuns = refusalNaming(
 );
 
 const ofDefinitions = refusalNaming(
-  'Expected a type of definition this server keeps: reasoning, lookup, memory, interaction, computation, prediction, generation, page, or workflow',
+  'Expected a type of definition this server keeps: reasoning, lookup, memory, interaction, computation, prediction, generation, or workflow',
 );
 
 let server: ReasoningServer;

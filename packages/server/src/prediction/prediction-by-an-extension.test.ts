@@ -18,7 +18,7 @@ afterEach(async () => {
   await Promise.all(closing.splice(0).map((close) => close()));
 });
 
-function forecastsFilling(name: string, contract = 1): ScratchPackage {
+function forecastsFilling(name: string, contract = 2): ScratchPackage {
   const capability = `(ports) => ({
     ...datasetsProvidedOn(ports),
     capability: defineCapability({
@@ -67,7 +67,7 @@ function lackingTitle(name: string): ScratchPackage {
   return {
     name,
     module: manifestSource(name, [
-      "{ point: 'capability/prediction', contract: 1, implementation: () => ({ capability: { type: 'prediction' } }) }",
+      "{ point: 'capability/prediction', contract: 2, implementation: () => ({ capability: { type: 'prediction' } }) }",
     ]),
   };
 }
@@ -113,8 +113,8 @@ describe('a question to a prediction function of a runtime an extension fills ca
 
 describe('a runtime an extension fills capability/prediction of', () => {
   it('does not start for an extension built against another contract, naming it, the point and both contracts', async () => {
-    await expect(servingWith([forecastsFilling('@acme/forecasts', 2)])).rejects.toThrow(
-      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 2, and this runtime accepts contract 1',
+    await expect(servingWith([forecastsFilling('@acme/forecasts', 1)])).rejects.toThrow(
+      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contract 2',
     );
   });
 

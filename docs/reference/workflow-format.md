@@ -177,6 +177,7 @@ An approval, or any other question for a person or a system, is an interaction f
 | `output.shape`                              | Optional [output shape](output-shapes.md), checked when the run ends; see below |
 | `timeout`                                   | Optional limit for the run: `after` and a duration, or a name in `use.timeouts` |
 | `use.errors`, `use.retries`, `use.timeouts` | Optional named errors, retry policies and timeouts that tasks name              |
+| `page`                                      | Optional [page](page-format.md) of its runs                                     |
 
 - A run a caller starts is checked against `input.schema` before it starts, with its input as given, before `input.from` shapes it: an input it refuses is `invalid_input` of the kind `input_schema`, with a pointer under `/input` and a sentence for each issue. A triggered run is not, as it gets its trigger's input.
 - The input schema holds the rules of the fields the steps need; a field's `description` and `examples` are what a person is shown when it is refused. Output is not checked against `output.schema`.
@@ -680,7 +681,7 @@ These are refused when a document is saved, each for the reason given:
 
 `create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the workflow exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update. Unlike a function, a workflow takes no `diagram`, and a save that gives one is refused: Auto Studio draws a workflow from its steps, with the words in [Describing steps](#describing-steps).
 
-A person sees what the runs did through the workflow's page, a definition of the type `page` whose `of` names the workflow. Save one beside it, starting from [a minimal page](page-format.md#a-minimal-page): a headline for each run, and one chart of the runs so far.
+The workflow's `page` shows a person what its runs did. Start from [a minimal page](page-format.md#a-minimal-page): a headline for each run, and one chart of the runs so far.
 
 An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one. A definition the workflow calls names the workflow's steps there by the names of their tasks, so name each task for what it does.
 

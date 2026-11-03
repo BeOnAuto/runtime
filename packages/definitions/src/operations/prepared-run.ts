@@ -7,13 +7,14 @@ import {
   type GivenLineage,
   type RecordedCaller,
 } from '@on.auto/operations';
-import { Effect } from 'effect';
+import { Effect, type Schema } from 'effect';
 
-import type { Capability } from '../capability/capability.ts';
+import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { admittedByTheMeter, type MeteredRun } from '../metering/run-meter.ts';
 import { firstAttempt, type RunRequest } from '../runs/run-commands.ts';
+import { shapeNameIn } from '../shapes/published-output.ts';
+import type { OutputShapeName } from '../shapes/shape-names.ts';
 import { answeredAttempt } from './attempt-endings.ts';
-import { outputShapeOf } from './definition-preparation.ts';
 import { recordRun } from './run-access.ts';
 import { contextOf, type Called, type Prepared } from './run-contexts.ts';
 
@@ -23,6 +24,10 @@ function tooDeep(callDepth: number): Conflict {
   return new Conflict({
     detail: `This run would sit ${callDepth} calls below the run at the top of its tree, more than the ${mostCallDepth} a run may: workflows that call workflows reach at most ${mostCallDepth} calls deep`,
   });
+}
+
+function outputShapeOf(prepared: PreparedDefinition, input: Schema.Json): OutputShapeName | undefined {
+  return prepared.answersItsShapeFor(input) ? shapeNameIn(prepared.summary.details) : undefined;
 }
 
 function startOf(

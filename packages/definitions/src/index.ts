@@ -152,7 +152,7 @@ export {
   type Settlement,
 } from './runs/run-settler.ts';
 export { answeredFirst, attemptIsLive } from './runs/run-decisions.ts';
-export { defineGetRun, getRun } from './operations/get-run.ts';
+export { defineGetRun, foundRun } from './operations/get-run.ts';
 export { defineGetRunHistory } from './reading/get-run-history.ts';
 export { defineListRuns } from './reading/list-runs.ts';
 export { ListedRunSchema, type ListedRun } from './reading/listed-run.ts';
@@ -274,14 +274,8 @@ export {
   type KeptViewStall,
   type KeptViews,
 } from './capability/view-standing.ts';
-export { pageDefinitionType } from './page/page-subjects.ts';
 export { PageDetailsSchema, pageDetailsIn, type PageDetails } from './page/page-details.ts';
+export { PageEventSchema, type PageContent, type RecordedPageEvent } from './page/page-facts.ts';
+export { withoutThePage, type DocumentWrittenIn } from './page/page-lines.ts';
+export { pageViewNameOf, playbookPageViewNameOf } from './page/page-view-names.ts';
 export { shapedViewsSchemaOf } from './shapes/shaped-views.ts';
-export type {
-  DefinitionKind,
-  PresentedDefinition,
-  PresentedPage,
-  Presenting,
-  RunShown,
-  SubjectShown,
-} from './capability/definition-kinds.ts';

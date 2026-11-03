@@ -2,7 +2,7 @@
 
 The HTTP API serves every operation of Auto Runtime. It covers playbooks, function and workflow definitions, runs and their history, and requests. It also covers events, analytics and the tool servers a playbook's functions may use. This page lists every route with its fields, limits and errors.
 
-The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `lookup`, `memory`, `interaction`, `prediction`, `computation`, `workflow` or `page`.
+The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `lookup`, `memory`, `interaction`, `prediction`, `computation`, `generation` or `workflow`.
 
 ## Requests and access
 
@@ -43,7 +43,7 @@ These four need no key, and neither does [content at a signed address](#content-
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, and `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five routes of Studio's connection page, `get_playbook`, `get_connection`, `get_run_history`, `get_playbook_analytics`, `validate`, `make_comment` and `make_comment_in_org`, `reopen_comment` and `reopen_comment_in_org`, `list_org_changes`, `list_playbook_changes`, `list_activity`, `mark_activity_seen`, `transcribe`, `get_voice`, `activate_allocation` and `report_allocation`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the five routes of Studio's connection page, `get_connection`, `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page`, `validate`, `make_comment` and `make_comment_in_org`, `reopen_comment` and `reopen_comment_in_org`, `list_org_changes`, `list_playbook_changes`, `list_activity`, `mark_activity_seen`, `transcribe`, `get_voice`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -100,27 +100,30 @@ This route serves the bytes a playbook keeps by their digest at an address the r
 
 These routes are relative to `/v1/orgs/{org}`:
 
-| Operation         | Method and route                    | Permission                    | Input                                      |
-| ----------------- | ----------------------------------- | ----------------------------- | ------------------------------------------ |
-| `create_playbook` | `POST /playbooks`                   | `org:write`                   | `playbook`, `name`, optional `description` |
-| `list_playbooks`  | `GET /playbooks`                    | `org:read` or `playbook:read` | Optional `include_retired`                 |
-| `get_playbook`    | `GET /playbooks/{playbook}`         | `org:read`                    | Playbook id in path                        |
-| `update_playbook` | `PUT /playbooks/{playbook}`         | `org:write`                   | `name` and `description`                   |
-| `retire_playbook` | `POST /playbooks/{playbook}/retire` | `org:write`                   | Playbook id in path                        |
+| Operation              | Method and route                    | Permission                    | Input                                            |
+| ---------------------- | ----------------------------------- | ----------------------------- | ------------------------------------------------ |
+| `create_playbook`      | `POST /playbooks`                   | `org:write`                   | `playbook`, `name`, optional `description`       |
+| `list_playbooks`       | `GET /playbooks`                    | `org:read` or `playbook:read` | Optional `include_retired`                       |
+| `get_playbook`         | `GET /playbooks/{playbook}`         | `org:read`                    | Playbook id in path                              |
+| `update_playbook`      | `PUT /playbooks/{playbook}`         | `org:write`                   | At least one of `name`, `description` and `page` |
+| `retire_playbook`      | `POST /playbooks/{playbook}/retire` | `org:write`                   | Playbook id in path                              |
+| `render_playbook_page` | `POST /playbooks/{playbook}/render` | `playbook:read`               | Playbook id in path                              |
 
-| Field         | Rule                                                                                      |
-| ------------- | ----------------------------------------------------------------------------------------- |
-| `playbook`    | The id: 3 to 48 lowercase letters, digits and hyphens, beginning with a letter            |
-| `name`        | 1 to 100 characters, stored without the whitespace around it; it cannot be all whitespace |
-| `description` | At most 2,000 characters, stored without the whitespace around it                         |
+| Field         | Rule                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| `playbook`    | The id: 3 to 48 lowercase letters, digits and hyphens, beginning with a letter                   |
+| `name`        | 1 to 100 characters, stored without the whitespace around it; it cannot be all whitespace        |
+| `description` | At most 2,000 characters, stored without the whitespace around it                                |
+| `page`        | The playbook's [page](page-format.md) as YAML text, at most 65,536 bytes, or `null` to remove it |
 
-Each operation returns the playbook, with its `id`, `name`, `description`, `status` (`active` or `retired`), `created_at`, `created_by`, the caller who created it, by `id` and `name`, `updated_at` and, once retired, `retired_at`. `list_playbooks` returns them in `playbooks`, and `create_playbook` returns the playbook's page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
+Each operation returns the playbook, with its `id`, `name`, `description`, `status` (`active` or `retired`), `created_at`, `created_by`, the caller who created it, by `id` and `name`, `updated_at` and, once retired, `retired_at`. `get_playbook` and `update_playbook` add `page: { source }` for a playbook with a page. `list_playbooks` returns them in `playbooks`, and `create_playbook` returns the playbook's page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
 
 `list_playbooks` of an org with no playbook yet, active or retired, to a caller who may act on every playbook of the org and holds `org:write`, also returns `welcome`: words the agent relays to the person, on what a playbook is, three ways to start and what Studio shows, ending with the link to Studio's home. [The welcome of a new organization](mcp.md#the-welcome-of-a-new-organization) quotes them. A caller who may only read, or who acts on some playbooks alone, gets the empty list and no `welcome`, and an org with a playbook returns none to anyone.
 
 - `list_playbooks` lists the playbooks the caller may access. It leaves out retired ones unless `include_retired` asks for them. It also accepts a key with only `playbook:read`, so a key that may only read inside some playbooks can find them.
 - A key limited to a list of playbooks can create only a playbook whose id is on that list.
-- `update_playbook` requires both `name` and `description`, even when only one of them changes. An update that changes nothing records nothing.
+- `update_playbook` changes the fields it is given and keeps the others. A `page` is checked as [Saving a page](page-format.md#saving-a-page) sets out, with its issues under `/page`, and recorded as `playbook_page_saved`. An update that changes nothing records nothing.
+- `render_playbook_page` renders the playbook's page now and answers `{ page: { lately, standing } }`, both where the page has `data` ([The preview](page-format.md#the-preview)).
 - Retirement is permanent. A playbook id cannot be reused, and a retired playbook cannot be restored.
 - A retired playbook stays readable: `get_playbook` reads it, `include_retired` lists it, and its definitions, runs and history remain readable. Commands inside it return `conflict` with the kind `retired`. Retiring it again succeeds and changes nothing.
 
@@ -129,11 +132,12 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 | `create_playbook` with an id the org has or had                                       | `conflict`                |
 | `update_playbook` of a retired playbook                                               | `conflict`                |
 | `get_playbook`, `update_playbook` or `retire_playbook` of an id the org does not have | `not_found`               |
+| `render_playbook_page` of a playbook without a page                                   | `not_found`               |
 | A change that meets another change to the org's playbooks at the same moment          | `conflict`; send it again |
 
 ### Links to Studio
 
-`create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the run's. A comment carries one too, to the place it is about. The link opens the Studio the runtime names, `/studio/` on its own origin where it serves Studio and the Studio host, `STUDIO_ORIGIN`, otherwise, on the runtime the request reached, its `PUBLIC_URL` where it signs people in, as `server`, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`. A definition's page is named by its type and its name, as `reasoning=summarize-brief`, then by `because`, `created` from `create_definition` and `updated` from `update_definition`, and by `version`, the version the call answers: `reasoning=summarize-brief&because=updated&version=3`. An `update_definition` that changes nothing records no version, so its link has no `because` and names the version that stands. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
+`create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the run's. A comment carries one too, to the place it is about. The link opens the Studio the runtime names, `/studio/` on its own origin where it serves Studio and the Studio host, `STUDIO_ORIGIN`, otherwise, on the runtime the request reached, its `PUBLIC_URL` where it signs people in, as `server`, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`. A definition's place in Studio is named by its type and its name, as `reasoning=summarize-brief`, then by `because`, `created` from `create_definition` and `updated` from `update_definition`, and by `version`, the version the call answers: `reasoning=summarize-brief&because=updated&version=3`. An `update_definition` that changes nothing records no version, so its link has no `because` and names the version that stands. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
 
 A comment's `studio`, which each [comment](#comments) carries, opens its [address](addresses.md) and shows the comment beside it. It opens a place rather than announcing what an agent made, so it carries `server` where the other links do, then the parameters Studio's own address takes, in this order, one for each segment of the address, each URL-encoded, and only those the address has, with no `src` and no `because`:
 
@@ -141,7 +145,7 @@ A comment's `studio`, which each [comment](#comments) carries, opens its [addres
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `playbook`      | The playbook, for a thing of a playbook                                                                                                                                          |
 | `settings`      | The page of Settings, for a thing of the organization's other than `org` itself: the page `org/settings/<page>` names, `connections` for a connection and `members` for a member |
-| `<type>=<name>` | The definition, by its type and its name, as the other links name it: `workflow=close-the-week`, `computation=total-spend` or `page=weekly-close`                                |
+| `<type>=<name>` | The definition, by its type and its name, as the other links name it: `workflow=close-the-week` or `computation=total-spend`                                                     |
 | `version`       | The definition's version                                                                                                                                                         |
 | `step`          | The step of a workflow, its reference without its leading `/`: `step=do%2F1%2Freview`                                                                                            |
 | `run`           | The run, for a run, an event of a run, a block of its result and a request                                                                                                       |
@@ -227,6 +231,7 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 | `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`, `diagram`, optional `overview`         |
 | `retire_definition` | `POST /definitions/reasoning/{name}/retire` | `playbook:write` | Name in path                                     |
 | `run_definition`    | `POST /definitions/reasoning/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id`         |
+| `render_page`       | `POST /definitions/reasoning/{name}/render` | `playbook:read`  | Optional `sample_output`                         |
 | `get_run`           | `GET /runs/{run_id}`                        | `playbook:read`  | Run id in path                                   |
 
 The `source` is a [reasoning function document](reasoning-format.md). These rules apply to the definitions of every type:
@@ -241,7 +246,7 @@ The `source` is a [reasoning function document](reasoning-format.md). These rule
 
 A definition names the caller who created it as `created_by`, by `id` and `name`, and keeps it across its versions.
 
-`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out. `create_definition` and `update_definition` return its page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
+`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out. `get_definition` of a definition with a page also has `page` ([Pages](#pages)). `create_definition` and `update_definition` return its page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
 
 - `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
 - `diagram` is how a function works as a picture, which Auto Studio draws under the overview. Every `create_definition` and `update_definition` of a function gives it, as one of two choices: Mermaid source of a flowchart or a state diagram, whose first line is `flowchart`, `graph` or `stateDiagram`, optionally with a direction such as `TD`, in at most 8,192 UTF-8 bytes; or the word `none`, when a picture would add nothing. Since Auto Studio draws it at full size in a column, a diagram reads best top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. The version keeps it as given. A version saved before functions took one has none.
@@ -415,14 +420,11 @@ The same input gives the same `unworkable` result again, unless the program read
 
 ## Pages
 
-Pages use the operations of reasoning functions that save and read definitions, with `page` in place of `reasoning` in each route, such as `POST /definitions/page` and `GET /definitions/page/{name}`. The `source` is a [page document](page-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions), except that a page takes no `overview` and no `diagram`.
+A workflow or a function can have a page, which presents its results ([Page format](page-format.md)). The page is the `page` key of the definition's document, so `create_definition` and `update_definition` save it with the rest of `source`, and a save that changes only the page is a new version like any other. The playbook's page is saved by [`update_playbook`](#playbooks).
 
-A page presents the results of its subject, a workflow, a function or the playbook, and never runs:
-
-- `POST /definitions/page/{name}/run`, `list_runs` and `get_playbook_analytics` refuse the type `page` as `invalid_input` at `/type`.
-- A subject has at most one active page. Saving another returns `conflict`. An update that names another subject returns `invalid_input` at `/of`, since a page keeps its subject.
-- `get_run` of a run of the subject adds `page.result`, and `get_definition` of the subject adds `page.lately`. `get_definition` of a page with views adds their `standing`.
-- `POST /definitions/page/{name}/render` renders the page now, with `page.result` and `page.lately`, over the subject's latest run or over an optional JSON body `{ "sample_output": … }`. It needs `playbook:read`, and is refused with `conflict` for a retired page.
+- `get_definition` adds `page`, with `lately` and `standing` where the page has them, and `get_run` of a run of the definition adds `page.result`. `list_definitions` shows nothing of a page.
+- `render_page`, `POST /definitions/{type}/{name}/render`, renders the page now, with `page.result` and `page.lately`, over the definition's latest run or over an optional JSON body `{ "sample_output": … }`. It needs `playbook:read`, and is refused with `not_found` for a definition without a page and `conflict` for a retired one.
+- Retiring a definition retires its page with it.
 
 See [What reads render](page-format.md#what-reads-render).
 
@@ -1177,16 +1179,17 @@ Each returns `cursor`, `changes` and `more`:
 - `changes` lists at most 200 resources, in the order the ledger recorded what changed them, each once; one record may name several. When `more` is `true`, more changed already: ask again at once with the new `cursor`.
 - Each change names a resource and its identity, nothing else. Read the resource through its own route.
 
-| Route                   | `kind`        | Identity       | What names it                                                                                                                                                                      |
-| ----------------------- | ------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_org_changes`      | `playbook`    | `playbook`     | A playbook created, updated or retired                                                                                                                                             |
-| `list_org_changes`      | `connection`  | `connection`   | A connection added, connected, broken or removed, or asked for more                                                                                                                |
-| `list_org_changes`      | `comment`     | `comment_id`   | A [comment of the organization's own](#the-organization-s-comments) made, resolved or reopened                                                                                     |
-| `list_playbook_changes` | `definition`  | `type`, `name` | A function or workflow saved or retired                                                                                                                                            |
-| `list_playbook_changes` | `run`         | `run_id`       | A run started, given an input or an event, or ended                                                                                                                                |
-| `list_playbook_changes` | `interaction` | `run_id`       | Everything the run of an interaction function records: its request opened, answered, expired, undelivered or cancelled, beside the run                                             |
-| `list_playbook_changes` | `event`       | `event_id`     | An event published to the playbook, a refusal of its reactions, a call of a tool by hand and a telling or a read of a conversation, by the `id` `list_playbook_events` lists it by |
-| `list_playbook_changes` | `comment`     | `comment_id`   | A [comment](#comments) made, resolved or reopened, so a client that shows it learns when someone resolves or reopens it                                                            |
+| Route                   | `kind`        | Identity                                                              | What names it                                                                                                                                                                      |
+| ----------------------- | ------------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_org_changes`      | `playbook`    | `playbook`                                                            | A playbook created, updated or retired                                                                                                                                             |
+| `list_org_changes`      | `connection`  | `connection`                                                          | A connection added, connected, broken or removed, or asked for more                                                                                                                |
+| `list_org_changes`      | `comment`     | `comment_id`                                                          | A [comment of the organization's own](#the-organization-s-comments) made, resolved or reopened                                                                                     |
+| `list_playbook_changes` | `playbook`    | None, since the playbook is the route's own: `{ "kind": "playbook" }` | The playbook's page saved or removed; `list_org_changes` names the `playbook` of its own change                                                                                    |
+| `list_playbook_changes` | `definition`  | `type`, `name`                                                        | A function or workflow saved or retired                                                                                                                                            |
+| `list_playbook_changes` | `run`         | `run_id`                                                              | A run started, given an input or an event, or ended                                                                                                                                |
+| `list_playbook_changes` | `interaction` | `run_id`                                                              | Everything the run of an interaction function records: its request opened, answered, expired, undelivered or cancelled, beside the run                                             |
+| `list_playbook_changes` | `event`       | `event_id`                                                            | An event published to the playbook, a refusal of its reactions, a call of a tool by hand and a telling or a read of a conversation, by the `id` `list_playbook_events` lists it by |
+| `list_playbook_changes` | `comment`     | `comment_id`                                                          | A [comment](#comments) made, resolved or reopened, so a client that shows it learns when someone resolves or reopens it                                                            |
 
 A run's own records, its steps and its tool calls name the run; read them with `list_playbook_events` given its `run_id`. A new link or consent of a connection names nothing until the connection is connected.
 
@@ -1209,7 +1212,7 @@ Each reads and marks only the activity of the playbooks the caller may access, a
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `needs_you` | A request of an interaction function that takes an answer, a request a workflow's call made included                                                                                                                                                                               | When the request was made                                      | Until it is answered, expires or ends with its run                                                                          |
 | `broken`    | A definition whose latest run at its current version failed or was rejected. One row per definition, naming the version it broke on and its latest failing run. A cancelled run is neither a failure nor a success, and a request that expires unanswered closes its request alone | When its latest failing run ended                              | Until a run at that version or a later one succeeds, a new version of the definition is saved, or the definition is retired |
-| `new`       | A run no other run started that succeeded; a function, workflow or page saved, each version its own item; or a playbook created or updated, each change its own item                                                                                                               | When the run ended, or the version or the change was saved     | Always                                                                                                                      |
+| `new`       | A run no other run started that succeeded; a function or workflow saved, each version its own item; or a playbook created or updated, each change its own item                                                                                                                     | When the run ended, or the version or the change was saved     | Always                                                                                                                      |
 | `comment`   | A [comment](#comments) on something of a playbook, or of the organization's own                                                                                                                                                                                                    | When it was made, or, once reopened, when it was last reopened | Until it is resolved, and again from when it is reopened                                                                    |
 
 A run that a workflow's call started has no `new` or `broken` row of its own: the row of the workflow's run stands for what it did. A request, a broken definition or a comment is listed only while open, and nothing is served about it once it is resolved: the run's page says what became of a request, and `list_comments` reads a resolved comment. A definition that breaks again opens its row again, at the time of the new break, and a comment that is reopened opens its row again, at the time it was reopened.

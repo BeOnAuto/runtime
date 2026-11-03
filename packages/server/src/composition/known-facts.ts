@@ -2,6 +2,7 @@ import { ConnectionEventSchema, RegistrationEventSchema } from '@on.auto/connect
 import {
   DefinitionEventSchema,
   EventPublishedSchema,
+  PageEventSchema,
   ReactionRefusedSchema,
   RunEventSchema,
   type DeclaredFact,
@@ -18,6 +19,7 @@ import { serverFactSchemas } from './server-facts.ts';
 export const knownFactSchemas = [
   ...orgFactSchemas,
   DefinitionEventSchema,
+  PageEventSchema,
   RunEventSchema,
   InteractionRunFactSchema,
   MemoryFactSchema,

@@ -68,7 +68,7 @@ export function connectionOf(endpoint: McpEndpoint, serving: McpServing, { serve
   );
   requireTextWithin(
     `The instructions of the ${endpoint} endpoint`,
-    instructionsActingAs(callerTheInstructionsHold, endpoint, served, connection.shelf.definitionTypes),
+    instructionsActingAs(callerTheInstructionsHold, endpoint, served, connection.shelf),
     mostInstructionCharacters,
   );
   return connection;
@@ -90,7 +90,7 @@ export function serverOf(
     { ...connection.serving.serverInfo, title: serverTitle },
     {
       capabilities: { tools: noChangesAnnounced, resources: noChangesAnnounced, prompts: noChangesAnnounced },
-      instructions: instructionsActingAs(actingAs, endpoint, served, shelf.definitionTypes),
+      instructions: instructionsActingAs(actingAs, endpoint, served, shelf),
       requestState: states,
     },
   );

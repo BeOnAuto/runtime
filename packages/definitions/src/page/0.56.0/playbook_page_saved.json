@@ -1,0 +1,31 @@
+{
+  "type": "playbook_page_saved",
+  "data": {
+    "page": {
+      "source": "data:\n  language: typescript\n  source:\n    events:\n      - type: run_succeeded\n        subject: workflow/close-the-month\n  views:\n    revenue: series\n  module: |\n    export function fold(view: View, event: Event): View {\n      return view;\n    }\nlately: |\n  ```chart line\n  {{ views.revenue | json }}\n  ```\n",
+      "details": {
+        "data": {
+          "views": {
+            "revenue": "series"
+          },
+          "language": "typescript",
+          "fold": "export function fold(view: View, event: Event): View {\n  return view;\n}\n",
+          "foldLine": 10,
+          "filters": [
+            {
+              "type": "run_succeeded",
+              "subject": "workflow/close-the-month"
+            }
+          ]
+        }
+      },
+      "stripped": {
+        "module": "export function fold(view      , event       )       {\n  return view;\n}\n"
+      }
+    }
+  },
+  "context": {
+    "at": "2026-11-02T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

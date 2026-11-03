@@ -1,5 +1,4 @@
 import type { DispatcherServices } from '@on.auto/operations';
-import { playbookOperations } from '@on.auto/playbooks';
 
 import { compositionRoot } from '../../composition/composition-root.ts';
 import { routesServing } from '../../composition/served-routes.ts';
@@ -8,6 +7,7 @@ import { stopInsistedBy, stopRequestedBy } from '../../lifecycle/stop-request.ts
 import { keyInHandOf } from '../../secrets/secrets-keys.ts';
 import { servedBy } from '../../server-options/server-options.ts';
 import { shortShutdownTimeoutMs } from '../processes/shutdown-timeouts.ts';
+import { playbookOperations } from '../servers/pageless-playbooks.ts';
 import { waitForeverAnnouncedIn } from './calls-in-flight.ts';
 
 await runServer<DispatcherServices>(

@@ -1,0 +1,40 @@
+{
+  "type": "definition_created",
+  "data": {
+    "content": {
+      "source": "document:\n  dsl: 1.0.3\ndo: []\npage:\n  result: |\n    {{ output.month }} closed.\n",
+      "page": {
+        "details": {
+          "data": {
+            "views": {
+              "revenue": "series"
+            },
+            "language": "typescript",
+            "fold": "export function fold(view: View, event: Event): View {\n  return view;\n}\n",
+            "foldLine": 12,
+            "filters": [
+              {
+                "type": "run_succeeded",
+                "subject": "workflow/close-the-month"
+              }
+            ]
+          }
+        },
+        "stripped": {
+          "module": "export function fold(view      , event       )       {\n  return view;\n}\n"
+        }
+      }
+    },
+    "created_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 1
+  }
+}

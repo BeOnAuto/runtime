@@ -66,7 +66,7 @@ const forecasts: InstalledPackage = {
       'export const manifest = {',
       "  name: '@acme/forecasts',",
       "  version: '1.0.0',",
-      "  provides: [{ point: 'capability/prediction', contract: 1, implementation: forecasts }],",
+      "  provides: [{ point: 'capability/prediction', contract: 2, implementation: forecasts }],",
       '};',
       '',
     ].join('\n'),

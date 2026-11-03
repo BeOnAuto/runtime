@@ -19,33 +19,30 @@ const onACall = workflowSource(
   'schedule:\n  on: { one: { with: { type: tool_call_started } } }\ndo:\n  - seen: { set: { seen: true } }\n',
 );
 
+const pageOfWhatItSees = [
+  'page:',
+  '  data:',
+  '    language: typescript',
+  '    source:',
+  '      events:',
+  '        - type: tool_call_started',
+  '        - type: tool_call_answered',
+  '        - type: com.acme.ledger.closed',
+  '    views:',
+  '      seen: categories',
+  '    module: |',
+  '      export function fold(view: View, event: Event): View {',
+  '        return { seen: { values: [...(view.seen?.values ?? []), { name: event.type, value: 1 }] } };',
+  '      }',
+  '  result: Seen.',
+  "  lately: '{% for value in views.seen.values %}{{ value.name }}{% endfor %}'",
+  '',
+].join('\n');
+
 const onAClosing = workflowSource(
   'on-a-closing',
-  'schedule:\n  on: { one: { with: { type: com.acme.ledger.closed } } }\ndo:\n  - seen: { set: { seen: true } }\n',
+  `schedule:\n  on: { one: { with: { type: com.acme.ledger.closed } } }\ndo:\n  - seen: { set: { seen: true } }\n${pageOfWhatItSees}`,
 );
-
-const pageOfWhatItSees = [
-  '---',
-  'description: The types of the events the page folds',
-  'of: workflow/on-a-closing',
-  'data:',
-  '  language: typescript',
-  '  source:',
-  '    events:',
-  '      - type: tool_call_started',
-  '      - type: tool_call_answered',
-  '      - type: com.acme.ledger.closed',
-  '  views:',
-  '    seen: categories',
-  '  module: |',
-  '    export function fold(view: View, event: Event): View {',
-  '      return { seen: { values: [...(view.seen?.values ?? []), { name: event.type, value: 1 }] } };',
-  '    }',
-  '---',
-  '{% result %}Seen.{% endresult %}',
-  '',
-  '{% lately %}{% for value in views.seen.values %}{{ value.name }}{% endfor %}{% endlately %}',
-].join('\n');
 
 const RunsSchema = Schema.Struct({ runs: Schema.Array(Schema.Struct({ status: Schema.String })) });
 
@@ -70,7 +67,6 @@ async function servingACalledPlaybook(): Promise<CalledPlaybook> {
   const saving = [
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-a-call', source: onACall } }),
     await server.call('POST', `${alpha}/definitions/workflow`, { body: { name: 'on-a-closing', source: onAClosing } }),
-    await server.call('POST', `${alpha}/definitions/page`, { body: { name: 'seen', source: pageOfWhatItSees } }),
   ];
   return { server, saved: saving.map(({ status }) => status) };
 }
@@ -96,12 +92,12 @@ describe('the calls made by hand in a playbook', () => {
       return runs;
     });
     const presented = await until(async () => {
-      const read = await server.call('GET', `${alpha}/definitions/page/seen`);
-      expect(read.body).toMatchObject({ standing: { state: 'live', folded: 1 } });
-      return server.call('GET', `${alpha}/definitions/workflow/on-a-closing`);
+      const read = await server.call('GET', `${alpha}/definitions/workflow/on-a-closing`);
+      expect(read.body).toMatchObject({ page: { standing: { state: 'live', folded: 1 } } });
+      return read;
     });
 
-    expect(saved).toEqual([201, 201, 201]);
+    expect(saved).toEqual([201, 201]);
     expect(called).toMatchObject({ status: 200, body: { outcome: 'result' } });
     expect(triggered).toHaveLength(1);
     expect(await runsOf(server, 'on-a-call')).toEqual([]);

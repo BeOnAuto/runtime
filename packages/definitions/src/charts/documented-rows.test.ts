@@ -1,13 +1,12 @@
 import { readFileSync } from 'node:fs';
 
 import { programPool } from '@on.auto/workflow-engine/dsl';
-import { Effect, Predicate, Result, type Schema } from 'effect';
+import { Effect, Option, Predicate, Result, type Schema } from 'effect';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { makePageAdapter } from '../page/page-adapter.ts';
-import { parsePageDocument } from '../page/page-parsing.ts';
+import { pageCheckOn } from '../page/page-content.ts';
+import { pageIn } from '../page/page-key.ts';
 import { latelyShown, resultShown, type ReadMoment } from '../page/page-rendering.ts';
-import { keepingNoViews } from '../testing/page-ports.ts';
 import { measuredPoolSettings } from '../testing/read-on-disk.ts';
 import { checkingWithin } from '../testing/time/patient-checks.ts';
 
@@ -15,15 +14,19 @@ const pageFormat = readFileSync(new URL('../../../../docs/reference/page-format.
 
 const layingOut = String(pageFormat.split('\n## Laying out a page\n')[1]?.split('\n## ')[0]);
 
-const [, documentedPage = '', documentedLately = ''] = layingOut
-  .split('\n````markdown\n')
-  .map((part) => String(part.split('\n````\n')[0]));
+function fencedIn(language: string): string {
+  return String(layingOut.split(`\n\`\`\`\`${language}\n`)[1]?.split('\n````\n')[0]);
+}
+
+const documentedPage = fencedIn('yaml');
+
+const documentedLately = fencedIn('markdown');
 
 const pool = programPool({ workers: 1, heapMegabytes: 256, ...measuredPoolSettings });
 
 afterAll(() => pool.close());
 
-const pages = makePageAdapter({ pool: checkingWithin(pool), views: keepingNoViews });
+const checkPage = pageCheckOn(checkingWithin(pool));
 
 type Fold = (view: Schema.Json, event: Schema.Json) => Schema.Json;
 
@@ -32,9 +35,8 @@ function isFold(value: unknown): value is Fold {
 }
 
 async function foldOf(source: string): Promise<Fold> {
-  const { module = '' } = await Effect.runPromise(
-    Effect.flatMap(pages.prepare(source), ({ check }) => check({ org: 'acme', playbook: 'alpha' })),
-  );
+  const content = await Effect.runPromise(checkPage(source, 'workflow'));
+  const module = content?.stripped?.module ?? '';
   const loaded: unknown = await import(`data:text/javascript,${encodeURIComponent(module)}`);
   const fold: unknown = Predicate.isObject(loaded) ? Reflect.get(loaded, 'fold') : undefined;
   if (!isFold(fold)) {
@@ -71,7 +73,9 @@ const moment: ReadMoment = { today: '2026-11-01', now: '2026-11-01T09:30:00.000Z
 
 const subject = { type: 'workflow', name: 'fulfill-order', description: null, version: 1 };
 
-const parsed = Result.getOrThrow(parsePageDocument(documentedPage));
+const parsed = Result.getOrThrow(
+  Result.fromNullishOr(Option.getOrUndefined(Result.getOrThrow(pageIn(documentedPage, 'workflow'))), () => 'no page'),
+);
 
 const declared = parsed.data?.views ?? {};
 

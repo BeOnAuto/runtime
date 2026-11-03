@@ -68,10 +68,42 @@ const drawn: readonly (typeof DefinitionEventSchema.Type)[] = [
   },
 ];
 
+const ofTheWorkflow = { ...ofTheDefinition, definitionName: 'close-the-month' };
+
+const paged: readonly (typeof DefinitionEventSchema.Type)[] = [
+  {
+    type: 'definition_created',
+    data: {
+      content: {
+        source: 'document:\n  dsl: 1.0.3\ndo: []\npage:\n  result: |\n    {{ output.month }} closed.\n',
+        page: {
+          details: {
+            data: {
+              views: { revenue: 'series' },
+              language: 'typescript',
+              fold: 'export function fold(view: View, event: Event): View {\n  return view;\n}\n',
+              foldLine: 12,
+              filters: [{ type: 'run_succeeded', subject: 'workflow/close-the-month' }],
+            },
+          },
+          stripped: { module: 'export function fold(view      , event       )       {\n  return view;\n}\n' },
+        },
+      },
+      created_by: { id: 'key_7f3a', name: 'key_7f3a' },
+    },
+    context: ofTheWorkflow,
+  },
+  {
+    type: 'definition_updated',
+    data: { content: { source: 'document:\n  dsl: 1.0.3\ndo: []\npage: {}\n', page: null } },
+    context: { ...ofTheWorkflow, definitionVersion: 2 },
+  },
+];
+
 describe('the facts of the definitions of a playbook', () => {
   recordedFactsBehaviour({
     schema: DefinitionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.54.0': drawn },
+    releases: { '0.46.0': baseline, '0.54.0': drawn, '0.56.0': paged },
   });
 });

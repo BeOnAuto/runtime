@@ -3,7 +3,7 @@ import { Effect, Semaphore } from 'effect';
 import { foldedPage } from '../pages/page-folding.ts';
 import { hasChanged, hasTriedAgain, liveFrom, unchangedOf, type ViewChange } from '../pages/view-changes.ts';
 import type { Folder } from '../projector/folder.ts';
-import { runnableDetailsOf } from './view-details.ts';
+import { viewDefinitionsOf } from './view-details.ts';
 import { playbooksWithViewsIn, plannedViews, rowsOfPlaybook } from './view-reconciling.ts';
 import type { ViewRow } from './view-rows.ts';
 import { phaseSet, viewDropped, viewsTable } from './view-statements.ts';
@@ -13,10 +13,10 @@ import { shareOfThePool, type ViewsFolding } from './views-folding.ts';
 export function viewsFolder(folding: ViewsFolding): Folder<ViewRow, ViewChange> {
   const share = Semaphore.makeUnsafe(shareOfThePool(folding.pool));
   return {
-    definitionType: folding.definitionType,
+    name: 'views',
+    ...viewDefinitionsOf(folding.definitionType),
     tables: [viewsTable],
     rebuildsAtOnce: folding.rebuildsAtOnce,
-    keptOf: runnableDetailsOf,
     keyOf: ({ name }) => name,
     typesOf: ({ details }) => details.filters.map(({ type }) => type),
     playbooksWithRows: playbooksWithViewsIn,

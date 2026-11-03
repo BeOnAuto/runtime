@@ -78,7 +78,20 @@ export function viewRenewed({ playbookKey, name, version, saved, details, phase,
       phase = ${phase}, view = ${view}, checkpoint = '', checkpoint_at = NULL, last_event_id = NULL,
       last_event_at = NULL, folded = 0, overtimes = 0, stalled_event_id = NULL, stalled_event_type = NULL,
       stalled_event_at = NULL, stalled_kind = NULL, stalled_message = NULL, stalled_line = NULL
-    WHERE playbook_key = ${playbookKey} AND name = ${name} AND version < ${version}`;
+    WHERE playbook_key = ${playbookKey} AND name = ${name} AND details <> ${details}`;
+}
+
+export interface RenamedView {
+  readonly playbookKey: string;
+  readonly from: string;
+  readonly name: string;
+  readonly version: number;
+  readonly details: string;
+}
+
+export function viewRenamed({ playbookKey, from, name, version, details }: RenamedView): Statement {
+  return statement`UPDATE page_views SET name = ${name}, details = ${details}
+    WHERE playbook_key = ${playbookKey} AND name = ${from} AND version = ${version}`;
 }
 
 export function viewDropped(playbookKey: string, name: string): Statement {

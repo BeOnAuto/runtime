@@ -5,7 +5,7 @@ import type { HostReports } from '../host/host-reports.ts';
 import { startListeningLoop, type LoopParts } from '../loop/host-loop.ts';
 import { oneWakeAtATime, type HostWakeUp, type WakeSignal } from '../loop/host-wake-up.ts';
 import type { SomeFolder } from './folder.ts';
-import { playbookKeyOfDefinitions } from './playbook-definitions.ts';
+import { keptKeyOf, playbookKeyOfDefinitions } from './playbook-definitions.ts';
 import { playbookPass, type PassParts } from './playbook-pass.ts';
 import { scheduleOf, type Schedule } from './projector-schedule.ts';
 import type { ProjectorSettings } from './projector-settings.ts';
@@ -36,10 +36,19 @@ export function firstSeenOf(most: number): (record: string) => boolean {
   };
 }
 
-function discoveredFor(database: HostDatabase, schedule: Schedule, definitionType: string): Effect.Effect<void> {
+interface Discovering {
+  readonly name: string;
+  readonly definitionType: string;
+}
+
+function discoveredFor(
+  database: HostDatabase,
+  schedule: Schedule,
+  { name, definitionType }: Discovering,
+): Effect.Effect<void> {
   return Effect.gen(function* () {
     const streams = yield* Effect.promise(() => database.store.definitionStreams(definitionType));
-    const known = schedule.definitions.of(definitionType);
+    const known = schedule.definitions.of(keptKeyOf({ name }, definitionType));
     for (const { stream, version } of streams) {
       const playbook = playbookKeyOfDefinitions(stream, definitionType);
       if (known.get(playbook)?.version !== version) {
@@ -50,16 +59,14 @@ function discoveredFor(database: HostDatabase, schedule: Schedule, definitionTyp
 }
 
 function discovered({ database, settings }: ProjectorParts, schedule: Schedule): Effect.Effect<void> {
-  return Effect.forEach(
-    settings.folders,
-    (some) =>
-      discoveredFor(
-        database,
-        schedule,
-        some((folder) => folder.definitionType),
-      ),
-    { discard: true },
+  const discovering = settings.folders.flatMap((some) =>
+    some((folder) =>
+      folder.definitionTypes.map((definitionType): Discovering => ({ name: folder.name, definitionType })),
+    ),
   );
+  return Effect.forEach(discovering, (each: Discovering) => discoveredFor(database, schedule, each), {
+    discard: true,
+  });
 }
 
 function playbooksWithRows(database: HostDatabase, folders: readonly SomeFolder[]) {

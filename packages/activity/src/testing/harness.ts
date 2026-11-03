@@ -10,7 +10,13 @@ import {
   type StudioPage,
 } from '@on.auto/operations';
 import { memoryLedger, recordingReporter } from '@on.auto/operations/testing';
-import { createPlaybook, ledgerPlaybookRegistry, retirePlaybook, updatePlaybook } from '@on.auto/playbooks';
+import {
+  createPlaybook,
+  defineUpdatePlaybook,
+  ledgerPlaybookRegistry,
+  retirePlaybook,
+  type PlaybookPages,
+} from '@on.auto/playbooks';
 import { DateTime, Effect, Layer, Schema } from 'effect';
 import { TestClock } from 'effect/testing';
 
@@ -98,6 +104,12 @@ export function studioPageOf(page?: StudioPage): string {
 function playbookRequestOf({ caller, playbook, input, encoding = 'json' }: PlaybookCall): PlaybookRequest {
   return { caller, org: 'acme', playbook, input, encoding };
 }
+
+const noPage = () => Effect.undefined;
+
+const noPages: PlaybookPages = { pageOf: noPage, save: noPage };
+
+const updatePlaybook = defineUpdatePlaybook(noPages);
 
 export function activityHarness() {
   const ledger = memoryLedger(undefined, activityProjections);

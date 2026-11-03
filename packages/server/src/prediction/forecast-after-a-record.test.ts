@@ -10,28 +10,6 @@ const week = 7 * day;
 
 const weeksBefore = 10;
 
-const weeksRecorded = [
-  '---',
-  'description: How many weeks were recorded, store by store',
-  'of: computation/record-week',
-  'data:',
-  '  language: typescript',
-  '  source:',
-  '    events:',
-  '      - type: run_succeeded',
-  '        subject: computation/record-week',
-  '  views:',
-  '    by_store: categories',
-  '  module: |',
-  '    export function fold(view: View, event: Event): View {',
-  '      return { by_store: { values: [...(view.by_store?.values ?? []), { name: event.type, value: 1 }] } };',
-  '    }',
-  '---',
-  '{% result %}Recorded.{% endresult %}',
-  '',
-  '{% lately %}{% for value in views.by_store.values %}{{ value.name }}{% endfor %}{% endlately %}',
-].join('\n');
-
 const forecasts = 20;
 
 const recordWeek = [
@@ -39,6 +17,21 @@ const recordWeek = [
   'language: typescript',
   'input:',
   '  schema: {type: object, properties: {store: {type: string}, week_start: {type: string}, revenue: {type: number}}, required: [store, week_start, revenue]}',
+  'page:',
+  '  data:',
+  '    language: typescript',
+  '    source:',
+  '      events:',
+  '        - type: run_succeeded',
+  '          subject: computation/record-week',
+  '    views:',
+  '      by_store: categories',
+  '    module: |',
+  '      export function fold(view: View, event: Event): View {',
+  '        return { by_store: { values: [...(view.by_store?.values ?? []), { name: event.type, value: 1 }] } };',
+  '      }',
+  '  result: Recorded.',
+  "  lately: '{% for value in views.by_store.values %}{{ value.name }}{% endfor %}'",
   '---',
   'export default function (input: Input): Output {',
   '  return input;',
@@ -97,7 +90,7 @@ function revenueOf(ago: number): number {
 
 async function created(server: ReasoningServer, type: string, name: string, source: string): Promise<void> {
   const answer = await server.call('POST', `${alpha}/definitions/${type}`, {
-    body: { name, source, ...(type === 'workflow' || type === 'page' ? {} : { diagram: 'none' }) },
+    body: { name, source, ...(type === 'workflow' ? {} : { diagram: 'none' }) },
   });
   expect(answer.status).toBe(201);
 }
@@ -114,7 +107,6 @@ async function servingWeeks(): Promise<ReasoningServer> {
   closing.push(server.stop);
   await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await created(server, 'computation', 'record-week', recordWeek);
-  await created(server, 'page', 'weeks-recorded', weeksRecorded);
   await created(server, 'prediction', 'weekly-revenue', weeklyRevenue);
   await created(server, 'workflow', 'close-and-forecast', closeAndForecast);
   await Array.from({ length: weeksBefore }, (_, at) => weeksBefore + 1 - at).reduce(

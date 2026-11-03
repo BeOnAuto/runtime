@@ -77,16 +77,13 @@ export function cancellingWordsFor(capabilities: readonly Capability[]): (run: D
     `Cancellation requested for ${words.named(type, name)}. It may finish before cancellation takes effect. Check the run for its final status.`;
 }
 
-export function runPlainLanguage(
-  capabilities: readonly Capability[],
-  kept: readonly Capability[] = capabilities,
-): PlainLanguage<DefinitionAddress, DescribedRun> {
+export function runPlainLanguage(capabilities: readonly Capability[]): PlainLanguage<DefinitionAddress, DescribedRun> {
   const words = definitionWordsFor(capabilities);
   const runWords = runWordsFor(capabilities);
   return {
     task: `run a ${words.kinds}`,
     attempt: ({ type, name }) => `run ${words.named(type, name)}`,
-    attemptAsOffered: offeredAttemptFor(kept, () => 'run'),
+    attemptAsOffered: offeredAttemptFor(capabilities, () => 'run'),
     outcome: (run) => runWords(run, 'just started'),
   };
 }

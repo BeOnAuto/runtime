@@ -67,14 +67,14 @@ export function foldsHeld(gate: Gate, folds: number): Promise<void> {
   });
 }
 
-const StandingSchema = Schema.Struct({ standing: Schema.Struct({ state: Schema.String }) });
+const StandingSchema = Schema.Struct({ page: Schema.Struct({ standing: Schema.Struct({ state: Schema.String }) }) });
 
 const decodeStanding = Schema.decodeUnknownOption(StandingSchema);
 
-export function pageInState(server: ReasoningServer, name: string, state: string): Promise<unknown> {
+export function pageInState(server: ReasoningServer, definition: string, state: string): Promise<unknown> {
   return until(async () => {
-    const { body } = await server.call('GET', `${alpha}/definitions/page/${name}`);
-    expect(Option.getOrUndefined(decodeStanding(body))?.standing.state).toBe(state);
+    const { body } = await server.call('GET', `${alpha}/definitions/${definition}`);
+    expect(Option.getOrUndefined(decodeStanding(body))?.page.standing.state).toBe(state);
     return body;
   });
 }

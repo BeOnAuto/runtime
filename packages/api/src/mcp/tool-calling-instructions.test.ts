@@ -23,7 +23,7 @@ describe('the length of the instructions with every tool', () => {
     expect(
       everyEndpoint.map(
         ([endpoint, served]) =>
-          instructionsActingAs(callerTheInstructionsHold, endpoint, served, definitionTypes).length,
+          instructionsActingAs(callerTheInstructionsHold, endpoint, served, { definitionTypes, pages: false }).length,
       ),
     ).toEqual([1708, 1376, 1743]);
   });

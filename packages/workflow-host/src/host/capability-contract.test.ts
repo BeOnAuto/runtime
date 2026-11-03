@@ -42,7 +42,9 @@ import type {
   FoldedChanges,
   Folder,
   HostDatabase,
+  KeptAfter,
   KeptOf,
+  KeptTogether,
   PassedChange,
   PassedRow,
   ProvidedCapability,
@@ -174,8 +176,36 @@ interface ContractOne {
   readonly playbookOperation: { readonly registration: Registration<'playbook'> };
 }
 
+interface ContractTwo extends Omit<ContractOne, 'folder'> {
+  readonly folder: {
+    readonly name: string;
+    readonly definitionTypes: readonly string[];
+    readonly keptAfter: KeptAfter;
+    readonly together: KeptTogether;
+    readonly tables: readonly Statement[];
+    readonly rebuildsAtOnce: number;
+    readonly keyOf: (row: Row) => string;
+    readonly typesOf: (row: Row) => readonly string[];
+    readonly playbooksWithRows: (database: HostDatabase) => Effect.Effect<readonly string[], DatabaseFailed>;
+    readonly rowsOf: (database: HostDatabase, playbook: string) => Effect.Effect<readonly Row[], DatabaseFailed>;
+    readonly reconcile: (reconciling: Reconciling, rows: readonly Row[]) => Reconciled<Row>;
+    readonly dropped: (row: Row) => readonly Statement[];
+    readonly phased: (row: Row, phase: RowPhase) => Statement;
+    readonly fold: (
+      rows: readonly Row[],
+      page: ReadPage,
+      database: HostDatabase,
+    ) => Effect.Effect<FoldedChanges<Change>, DatabaseFailed>;
+    readonly write: (writing: Writing, change: Change) => Effect.Effect<Row | undefined, DatabaseFailed>;
+    readonly unchanged: (row: Row) => Change;
+    readonly joinedLive: (change: Change) => Change;
+    readonly hasChanged: (change: Change) => boolean;
+  };
+}
+
 interface TypesOfEachContract {
   readonly 1: ContractOne;
+  readonly 2: ContractTwo;
 }
 
 type ThisContract = TypesOfEachContract[typeof capabilityContract];
@@ -192,6 +222,6 @@ describe('the contract by which a capability is made and served', () => {
     expectTypeOf<DueWork>().toEqualTypeOf<ThisContract['dueWork']>();
     expectTypeOf<DueItem>().toEqualTypeOf<ThisContract['dueItem']>();
     expectTypeOf<PlaybookOperation>().toEqualTypeOf<ThisContract['playbookOperation']>();
-    expect(capabilityContract).toBe(1);
+    expect(capabilityContract).toBe(2);
   });
 });

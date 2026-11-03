@@ -50,7 +50,7 @@ type Filling = readonly [name: string, implementation: unknown, contract?: numbe
 
 function packagesHolding(fillings: readonly Filling[]): InstalledPackages {
   const modules = new Map(
-    fillings.map(([name, implementation, contract = 1]) => [
+    fillings.map(([name, implementation, contract = 2]) => [
       name,
       {
         manifest: {
@@ -248,7 +248,7 @@ describe('the prediction capability of a runtime', () => {
     expect([folders.length, operations]).toEqual([1, [answerInteraction]]);
   });
 
-  it('is the capability an extension filling it at contract 1 makes from the ports and its own settings, kept to the functions the runtime allows', async () => {
+  it('is the capability an extension filling it at contract 2 makes from the ports and its own settings, kept to the functions the runtime allows', async () => {
     const makePrediction = await predictionFilledBy([
       '@acme/forecasts',
       (given: CapabilityPorts) => ({ capability: forecastsOf(given) }),
@@ -264,8 +264,8 @@ describe('an extension filling capability/prediction that a runtime refuses, so 
   it.each<readonly [string, Filling, string]>([
     [
       'built against a contract other than the release’s',
-      ['@acme/forecasts', makingOnly(wholeCapability()), 2],
-      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 2, and this runtime accepts contract 1',
+      ['@acme/forecasts', makingOnly(wholeCapability()), 1],
+      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contract 2',
     ],
     [
       'whose implementation makes nothing',

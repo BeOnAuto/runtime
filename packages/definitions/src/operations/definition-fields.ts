@@ -91,5 +91,5 @@ export const SampleOutputField = Schema.Json.annotate({
 );
 
 export const RenderField = Schema.Boolean.annotate({
-  description: 'For a page, true to render it now',
+  description: 'True to render its page now',
 });

@@ -126,6 +126,6 @@ The page can show one run or summarize results over time, with charts. Its [form
 
 For example, a page of the workflow that drafts the morning's social posts lists each run's posts with a link to each, and charts the posts of each day and of each channel since the workflow began.
 
-Save a page for any workflow or function whose results the person will look at again and again. A subject has one page at a time.
+Give a page to any workflow or function whose results the person will look at again and again.
 
 - [Page format](../reference/page-format.md) describes the document, its templates and its charts.

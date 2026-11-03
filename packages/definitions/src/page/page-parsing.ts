@@ -7,8 +7,8 @@ import { pageBlocksIn } from './page-blocks.ts';
 import { pageDataOf } from './page-data.ts';
 import type { PageBlocks, PageData, PageDefinitionDocument, PageTemplates } from './page-document.ts';
 import { decodePageFrontMatter, pageFrontMatter, type PageFrontMatter } from './page-front-matter.ts';
-import { playbookSubject, subjectIn } from './page-subjects.ts';
 import { pageTemplatesOf } from './page-templates.ts';
+import type { PageOf } from './subject-pages-port.ts';
 
 type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;
 
@@ -22,11 +22,6 @@ function issuesOf(check: () => Checked<unknown>): readonly DocumentIssue[] {
   return Result.isFailure(checked) ? checked.failure : [];
 }
 
-function subjectIssues(of: string, lines: SourceLines): readonly DocumentIssue[] {
-  const reading = subjectIn(of);
-  return 'refused' in reading ? [issueAt(lines, '/of', reading.refused)] : [];
-}
-
 function unpairedIssues(front: PageFrontMatter, blocks: PageBlocks, lines: SourceLines): readonly DocumentIssue[] {
   if (front.data !== undefined && blocks.lately === undefined) {
     return [issueAt(lines, '/data', latelyNeedsData)];
@@ -36,9 +31,14 @@ function unpairedIssues(front: PageFrontMatter, blocks: PageBlocks, lines: Sourc
     : [];
 }
 
-function pairingIssues(front: PageFrontMatter, blocks: PageBlocks, lines: SourceLines): readonly DocumentIssue[] {
+interface Reading {
+  readonly lines: SourceLines;
+  readonly of: PageOf;
+}
+
+function pairingIssues(front: PageFrontMatter, blocks: PageBlocks, { lines, of }: Reading): readonly DocumentIssue[] {
   const playbookResult =
-    front.of === playbookSubject && blocks.result !== undefined
+    of === 'playbook' && blocks.result !== undefined
       ? [{ line: blocks.result.line, pointer: '', detail: playbookHasNoRuns }]
       : [];
   return [...unpairedIssues(front, blocks, lines), ...playbookResult];
@@ -68,11 +68,9 @@ interface Written {
   readonly templates: PageTemplates;
 }
 
-function assembled(front: PageFrontMatter, lines: SourceLines, { data: { data }, blocks, templates }: Written) {
+function assembled(front: PageFrontMatter, { data: { data }, blocks, templates }: Written) {
   const document: PageDefinitionDocument = {
     ...(front.description === undefined ? {} : { description: front.description }),
-    of: front.of,
-    ofLine: issueAt(lines, '/of', '').line,
     ...(data === undefined ? {} : { data }),
     blocks,
     templates,
@@ -80,7 +78,7 @@ function assembled(front: PageFrontMatter, lines: SourceLines, { data: { data },
   return document;
 }
 
-function documentFrom(read: ReadFrontMatter, parts: DocumentParts): Checked<PageDefinitionDocument> {
+function documentFrom(read: ReadFrontMatter, parts: DocumentParts, of: PageOf): Checked<PageDefinitionDocument> {
   const blocks = pageBlocksIn(parts.body, parts.bodyLine);
   const decoded = decodePageFrontMatter(read.root);
   if (read.issues.length > 0 || Result.isFailure(decoded)) {
@@ -89,26 +87,28 @@ function documentFrom(read: ReadFrontMatter, parts: DocumentParts): Checked<Page
   const front = decoded.success;
   const data = dataOf(front, read, parts);
   const issues = [
-    ...subjectIssues(front.of, read.lines),
     ...issuesOf(() => data),
     ...issuesOf(() => blocks),
-    ...(Result.isSuccess(blocks) ? pairingIssues(front, blocks.success, read.lines) : []),
+    ...(Result.isSuccess(blocks) ? pairingIssues(front, blocks.success, { lines: read.lines, of }) : []),
   ];
   if (issues.length > 0 || Result.isFailure(data) || Result.isFailure(blocks)) {
     return Result.fail(issues);
   }
   return Result.map(pageTemplatesOf(blocks.success, data.success.data?.views), (templates) =>
-    assembled(front, read.lines, { data: data.success, blocks: blocks.success, templates }),
+    assembled(front, { data: data.success, blocks: blocks.success, templates }),
   );
 }
 
-function documentOf(parts: DocumentParts): Checked<PageDefinitionDocument> {
+function documentOf(parts: DocumentParts, of: PageOf): Checked<PageDefinitionDocument> {
   const reading = frontMatterIn(parts.frontMatter, parts.frontMatterLine, pageFrontMatter);
   return Result.isFailure(reading)
     ? Result.fail([...reading.failure, ...issuesOf(() => pageBlocksIn(parts.body, parts.bodyLine))])
-    : documentFrom(reading.success, parts);
+    : documentFrom(reading.success, parts, of);
 }
 
-export function parsePageDocument(source: string): Checked<PageDefinitionDocument> {
-  return Result.mapError(Result.flatMap(splitDocument(source, 'A page'), documentOf), reportedIssues);
+export function parsePageDocument(source: string, of: PageOf = 'definition'): Checked<PageDefinitionDocument> {
+  return Result.mapError(
+    Result.flatMap(splitDocument(source, 'A page'), (parts) => documentOf(parts, of)),
+    reportedIssues,
+  );
 }

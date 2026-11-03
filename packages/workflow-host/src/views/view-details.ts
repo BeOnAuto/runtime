@@ -1,6 +1,8 @@
 import { noStrippedForms, runnableAttributes, type StrippedForms } from '@on.auto/definitions';
 import { Option, Schema } from 'effect';
 
+import { keptDefinitionsOf, type DefinitionsKeeping } from '../projector/playbook-definitions.ts';
+
 const ViewFilterSchema = Schema.StructWithRest(Schema.Struct({ type: Schema.String }), [
   Schema.Record(Schema.String, Schema.Json),
 ]);
@@ -35,4 +37,8 @@ export function runnableDetailsOf(details: unknown, stripped: StrippedForms = no
 
 export function lineInDocument({ foldLine }: ViewDetails, line: number): number {
   return foldLine + line - 1;
+}
+
+export function viewDefinitionsOf(definitionType: string): DefinitionsKeeping {
+  return keptDefinitionsOf(definitionType, runnableDetailsOf);
 }

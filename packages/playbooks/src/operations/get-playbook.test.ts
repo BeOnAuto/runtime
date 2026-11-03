@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { createPlaybook, getPlaybook, retirePlaybook } from '../index.ts';
+import { createPlaybook, defineGetPlaybook, defineUpdatePlaybook, retirePlaybook } from '../index.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { firstMoment, harness, toOrg } from '../testing/harness.ts';
+import { getPlaybook, pagesInMemory } from '../testing/playbook-pages.ts';
 
 const toAcme = toOrg('acme');
 
 const later = '2026-10-02T14:15:00.000Z';
 
 describe('get_playbook', () => {
-  it('is an org query at GET /playbooks/{playbook}, served over HTTP alone, that may meet not_found', () => {
+  it('is an org query at GET /playbooks/{playbook}, served as a tool too, that may meet not_found', () => {
     expect(getPlaybook.registration).toMatchObject({
       scope: 'org',
       kind: 'query',
@@ -18,8 +19,8 @@ describe('get_playbook', () => {
       pathParameters: ['playbook'],
       successStatus: 200,
       reasons: ['not_found'],
-      servedOverHttpAlone: { kind: 'none' },
     });
+    expect(getPlaybook.registration).not.toHaveProperty('servedOverHttpAlone');
   });
 
   it('reads a playbook, active or retired', async () => {
@@ -45,6 +46,40 @@ describe('get_playbook', () => {
       status: 'succeeded',
       output: { status: 'retired', retired_at: later },
     });
+  });
+});
+
+describe('get_playbook of a playbook with a page', () => {
+  it("answers the page's source", async () => {
+    const pages = pagesInMemory();
+    const { call } = harness();
+    await call(createPlaybook, toAcme(acmeAdmin, { playbook: 'alpha', name: 'Alpha' }));
+    await call(defineUpdatePlaybook(pages), toAcme(acmeAdmin, { playbook: 'alpha', page: '---\n---\n' }));
+
+    expect(await call(defineGetPlaybook(pages), toAcme(acmeAdmin, { playbook: 'alpha' }))).toMatchObject({
+      status: 'succeeded',
+      output: { id: 'alpha', page: { source: '---\n---\n' } },
+    });
+  });
+
+  it('says what it looked up and found', () => {
+    const { plainLanguage } = getPlaybook.registration;
+
+    expect([
+      plainLanguage?.attempt({ playbook: 'alpha' }),
+      plainLanguage?.outcome(
+        {
+          id: 'alpha',
+          name: 'Alpha',
+          description: 'Answers sales',
+          status: 'active',
+          created_at: firstMoment,
+          created_by: { id: 'acme-admin', name: 'acme-admin' },
+          updated_at: firstMoment,
+        },
+        { playbook: 'alpha' },
+      ),
+    ]).toEqual(['look up the playbook “alpha”', 'Found the playbook “Alpha”. What it is for: Answers sales.']);
   });
 });
 

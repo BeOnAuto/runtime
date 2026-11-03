@@ -3,6 +3,7 @@ import { Effect, Option, Schema } from 'effect';
 
 import { ResolvedHowSchema, fractionOf, type CommentState } from '../facts/comment-facts.ts';
 import { commentTargetOf, type CommentTarget, type OfTheOrg } from '../positions/comment-addresses.ts';
+import { currentAddressOf, noPagesOfTheirOwn, type PagesOfTheirOwn } from '../positions/current-addresses.ts';
 
 const NullableText = (description: string) => Schema.NullOr(Schema.String).annotate({ description });
 
@@ -166,7 +167,11 @@ function pageOf(id: string, target: CommentTarget): StudioPage {
   return settings === undefined ? { kind: 'org_comment', comment: id } : { kind: 'org_comment', comment: id, settings };
 }
 
-export function shownComment(comment: KeptComment): Effect.Effect<ShownComment> {
+export function shownComment(
+  kept: KeptComment,
+  pages: PagesOfTheirOwn = noPagesOfTheirOwn,
+): Effect.Effect<ShownComment> {
+  const comment = { ...kept, address: currentAddressOf(kept.address, pages) };
   const target = commentTargetOf(comment.address);
   return target === undefined ? Effect.succeed(comment) : withStudioLink(comment, pageOf(comment.id, target));
 }

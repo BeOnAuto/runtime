@@ -69,7 +69,7 @@ function restingKeyOf<Row extends PassedRow, Change extends PassedChange<Row>>(
   { folder }: Passing<Row, Change>,
   key: string,
 ): string {
-  return JSON.stringify([folder.definitionType, key]);
+  return JSON.stringify([folder.name, key]);
 }
 
 function isAwake<Row extends PassedRow, Change extends PassedChange<Row>>(
@@ -231,7 +231,7 @@ export function folderPassOf<Row extends PassedRow, Change extends PassedChange<
           );
           yield* troubled(passing, result);
           const after = yield* applied(passing, { rows: state.rows, pages: 0 }, result.changes);
-          state.rows = page.definitionsSeen.has(folder.definitionType)
+          state.rows = folder.definitionTypes.some((type) => page.definitionsSeen.has(type))
             ? yield* reconciledRows(folder, parts, playbook)
             : after.rows;
           state.sharing = !(result.again || (result.complete && page.atTheEnd));

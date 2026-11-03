@@ -4,9 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionOperations } from '../operations/definition-operations.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import { echo } from '../testing/capabilities/echo.ts';
-import { checkingNothing, keepingNoViews } from '../testing/page-ports.ts';
+import { uncheckedPages } from '../testing/page-ports.ts';
 import { shapeNamed } from '../testing/shapes.ts';
-import { makePageAdapter } from './page-adapter.ts';
 import { runShownOf } from './page-reads.ts';
 import { sampleRunOf } from './sample-runs.ts';
 
@@ -94,13 +93,19 @@ describe('a sample output', () => {
   });
 });
 
-function namesOf(capabilities: Parameters<typeof makeDefinitionOperations>[0]): readonly string[] {
-  return makeDefinitionOperations(capabilities).map(({ registration }) => registration.name);
-}
+const rendering: ReadonlySet<string> = new Set(['render_page', 'render_playbook_page']);
 
-describe('the route that renders a page', () => {
-  it('is served beside the definitions where pages are, and not where they are not', () => {
-    expect(namesOf([echo, makePageAdapter({ pool: checkingNothing, views: keepingNoViews })])).toContain('render_page');
-    expect(namesOf([echo])).not.toContain('render_page');
+describe('the routes that render a page', () => {
+  it('are served beside the definitions, over HTTP alone', () => {
+    const served = makeDefinitionOperations([echo], uncheckedPages).map(({ registration }) => registration);
+
+    expect(
+      served
+        .filter(({ name }) => rendering.has(name))
+        .map(({ route, servedOverHttpAlone }) => [`${route.method} ${route.path}`, servedOverHttpAlone]),
+    ).toEqual([
+      ['POST /definitions/{type}/{name}/render', { kind: 'json' }],
+      ['POST /render', { kind: 'json' }],
+    ]);
   });
 });

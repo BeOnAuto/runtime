@@ -1,7 +1,7 @@
 import { Conflict, Unavailable } from '@on.auto/operations';
 import { Effect, Layer } from 'effect';
 
-import { RunMeter, type MeteredAction } from '../index.ts';
+import { RunMeter, type MeteredAction } from '../metering/run-meter.ts';
 
 export type MeterRefusal = 'credits_exhausted' | 'license_required' | 'license_invalid' | 'meter_unavailable';
 

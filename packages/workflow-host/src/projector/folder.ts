@@ -5,7 +5,7 @@ import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts'
 import type { HostNote } from '../host/host-reports.ts';
 import type { Point } from '../pages/history-points.ts';
 import type { ReadPage } from '../pages/page-events.ts';
-import type { PlaybookDefinitions, KeptOf } from './playbook-definitions.ts';
+import type { DefinitionsKeeping, PlaybookDefinitions } from './playbook-definitions.ts';
 
 export type RowPhase = 'waiting' | 'rebuilding' | 'live' | 'stalled';
 
@@ -42,9 +42,15 @@ export interface FreshRow {
   readonly added: (phase: RowPhase) => Statement;
 }
 
+export interface RenamedRow<Row> {
+  readonly row: Row;
+  readonly renamed: Statement;
+}
+
 export interface Reconciled<Row> {
   readonly fresh: readonly FreshRow[];
   readonly dropped: readonly Row[];
+  readonly renamed?: readonly RenamedRow<Row>[];
 }
 
 export interface Writing {
@@ -53,11 +59,10 @@ export interface Writing {
   readonly note: (note: HostNote) => Effect.Effect<void>;
 }
 
-export interface Folder<Row extends PassedRow, Change extends PassedChange<Row>> {
-  readonly definitionType: string;
+export interface Folder<Row extends PassedRow, Change extends PassedChange<Row>> extends DefinitionsKeeping {
+  readonly name: string;
   readonly tables: readonly Statement[];
   readonly rebuildsAtOnce: number;
-  readonly keptOf: KeptOf;
   readonly keyOf: (row: Row) => string;
   readonly typesOf: (row: Row) => readonly string[];
   readonly playbooksWithRows: (database: HostDatabase) => Effect.Effect<readonly string[], DatabaseFailed>;

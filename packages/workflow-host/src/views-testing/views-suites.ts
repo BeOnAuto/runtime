@@ -1,4 +1,5 @@
 import type { SettingsOf } from '../testing/host-files.ts';
+import { carriedPagesSuite } from './carried-pages-suite.ts';
 import { foldingSuite } from './folding-suite.ts';
 import { pageViewsSuite } from './page-views-suite.ts';
 import { rowsSuite } from './rows-suite.ts';
@@ -13,4 +14,5 @@ export function viewsSuites(settingsOf: SettingsOf): void {
   sharingSuite(settingsOf);
   rowsSuite(settingsOf);
   pageViewsSuite(settingsOf);
+  carriedPagesSuite(settingsOf);
 }

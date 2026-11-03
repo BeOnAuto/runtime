@@ -1,19 +1,20 @@
 import { Buffer } from 'node:buffer';
 
-import { changingOne, type Presenter } from '@on.auto/operations';
+import type { Presenter } from '@on.auto/operations';
 
 import { firstCharacters } from '../plain-language/characters.ts';
 import type { DefinitionWords } from '../plain-language/definition-words.ts';
 import { definitionCreated, definitionRetired, definitionUpdated } from '../plain-language/event-words.ts';
-import {
-  DefinitionEventSchema,
-  type DefinitionContent,
-  type RecordedDefinitionEvent,
-} from '../registry/definition-events.ts';
+import type { DefinitionContent, RecordedDefinitionEvent } from '../registry/definition-events.ts';
 import { jsonBytesOf } from '../runs/recorded-size.ts';
-import { definitionChanged, definitionChangedBy } from './changed-resources.ts';
 import { mostDescriptionCharacters } from './event-data.ts';
 import { eventPresenter, type Account } from './event-presenter.ts';
+import {
+  DefinitionsStreamEventSchema,
+  definitionsStreamChangesOf,
+  playbookPageAccountOf,
+  type DefinitionsStreamEvent,
+} from './playbook-page-presenting.ts';
 
 const definitionEventTypes: readonly RecordedDefinitionEvent['type'][] = [
   'definition_created',
@@ -54,11 +55,12 @@ function accountOf(words: DefinitionWords, event: RecordedDefinitionEvent, defin
 }
 
 export function definitionPresenter(words: DefinitionWords): Presenter {
-  return eventPresenter<RecordedDefinitionEvent>({
+  return eventPresenter<DefinitionsStreamEvent>({
     streamKind: 'definitions',
-    eventSchema: DefinitionEventSchema,
-    types: definitionEventTypes,
-    account: (event, definitionType) => accountOf(words, event, definitionType),
-    changes: changingOne(definitionChanged, definitionEventTypes, definitionChangedBy),
+    eventSchema: DefinitionsStreamEventSchema,
+    types: [...definitionEventTypes, 'playbook_page_saved'],
+    account: (event, definitionType) =>
+      event.type === 'playbook_page_saved' ? playbookPageAccountOf(event) : accountOf(words, event, definitionType),
+    changes: definitionsStreamChangesOf(definitionEventTypes),
   });
 }

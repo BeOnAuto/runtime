@@ -30,9 +30,9 @@ const interaction = capabilityOf('interaction', 'interaction function', { name: 
 
 const workflow = capabilityOf('workflow', 'workflow', { name: 'workflow' });
 
-const servedWithLookup = await guideShelfFrom(guideFiles, [reasoning, lookup, interaction, workflow]);
+const servedWithLookup = await guideShelfFrom(guideFiles, [reasoning, lookup, interaction, workflow], { pages: false });
 
-const servedWithoutLookup = await guideShelfFrom(guideFiles, [reasoning, interaction, workflow]);
+const servedWithoutLookup = await guideShelfFrom(guideFiles, [reasoning, interaction, workflow], { pages: false });
 
 function giveToolsOf({ recipes }: GuideShelf): string {
   return recipes.find(({ name }) => name === 'give-tools')?.text ?? '';

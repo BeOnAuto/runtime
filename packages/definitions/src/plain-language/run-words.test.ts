@@ -5,10 +5,11 @@ import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { relay } from '../testing/capabilities/relay.ts';
+import { uncheckedPages } from '../testing/page-ports.ts';
 
 const relaying = relay().capability;
 
-const operations = makeDefinitionOperations([echo, probe().capability, relaying]);
+const operations = makeDefinitionOperations([echo, probe().capability, relaying], uncheckedPages);
 
 function registrationOf(name: string): RouteRegistration {
   const found = operations.find(({ registration }) => registration.name === name);

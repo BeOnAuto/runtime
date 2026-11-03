@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import {
   callerSourcePrefix,
   EventSourceSchema,
-  getRun,
+  foundRun,
   isWorkflowRun,
   refusingBlankText,
   refusingForbiddenCharacters,
@@ -119,7 +119,7 @@ export function defineSendRunEvent(runs: Pick<WorkflowHost, 'deliver'>, names: P
     }),
     reasons: ['not_found', 'unavailable'],
     handle: Effect.fnUntraced(function* ({ run_id: runId, event }) {
-      const run = yield* getRun.call({ run_id: runId });
+      const run = yield* foundRun(runId);
       if (!isWorkflowRun(run) || run.status !== 'started') {
         return yield* new NotFound({ detail: noRunningWorkflow });
       }

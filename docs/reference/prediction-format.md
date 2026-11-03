@@ -69,6 +69,7 @@ Before you write one, settle these with the person:
 | `predicts.coverage`    | Optional; 0.5 to 0.95, 0.8 by default: the share of truths each range is meant to hold                                                                        |
 | `data`                 | Required; a projection of the playbook's history, with its `window`; see [The dataset](#the-dataset)                                                          |
 | `data.window`          | Required; the periods of history a question reads, at least what the forecaster needs at the longest horizon and at most 1,000, as [Bounds](#bounds) sets out |
+| `page`                 | Optional [page](page-format.md) that presents its runs                                                                                                        |
 
 - The target's name is 1 to 64 lowercase letters, digits and underscores, starting with a letter, and neither `series` nor `period`, which every row has.
 - Every problem a save finds is refused with its line, and nothing is saved.

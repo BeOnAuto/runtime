@@ -3,14 +3,13 @@ import { Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
 import type { StrippedForms } from '../capability/stripped-forms.ts';
-import { PageShownSchema } from '../page/page-shown.ts';
 import { DefinitionUserSchema } from '../used-by/user-relations.ts';
 import { TriggerSchema } from './definition-triggers.ts';
 
 const listedDefinitionFields = {
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow, or page for a page that presents the results of one',
+      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow',
   }),
   name: Schema.String.annotate({
     description: 'The definition name, unique among definitions of its type in the playbook and never reused',
@@ -46,16 +45,6 @@ const listedDefinitionFields = {
             'The output shape its output_schema is: series, categories, table, text, memories or asset, each a JSON Schema the runtime owns, which Auto Studio draws',
         }),
       ),
-      of: Schema.optionalKey(
-        Schema.String.annotate({
-          description: 'For a page, the subject whose results it presents: <type>/<name>, or playbook',
-        }),
-      ),
-      views: Schema.optionalKey(
-        Schema.Record(Schema.String, Schema.String).annotate({
-          description: "For a page with data, each view's name and the shape it takes",
-        }),
-      ),
     }).annotate({ description: 'What the runtime declares of the definition beside its schemas' }),
   ),
   triggers: Schema.optionalKey(
@@ -74,8 +63,27 @@ const listedDefinitionFields = {
 
 const StandingField = Schema.JsonObject.annotate({
   description:
-    'How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function, or the views of a page with their state (live, rebuilding, waiting or stalled)',
+    'How the definition stands where its runtime adapter keeps something for it, read when the definition is: the dataset of a prediction function',
 });
+
+const DefinitionPageSchema = Schema.Struct({
+  result: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "The latest run, or the sample output, rendered through the page's result: Markdown whose first line is the run's headline; in a preview",
+    }),
+  ),
+  lately: Schema.optionalKey(
+    Schema.String.annotate({
+      description: "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks",
+    }),
+  ),
+  standing: Schema.optionalKey(
+    Schema.JsonObject.annotate({
+      description: "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read",
+    }),
+  ),
+}).annotate({ description: 'What the page of the definition, the page key of its document, shows when it is read' });
 
 export const ListedDefinitionSchema = Schema.Struct(listedDefinitionFields).annotate({
   identifier: 'ListedDefinition',
@@ -104,7 +112,7 @@ export const DefinitionSchema = Schema.Struct({
     }),
   ),
   standing: Schema.optionalKey(StandingField),
-  page: Schema.optionalKey(PageShownSchema),
+  page: Schema.optionalKey(DefinitionPageSchema),
   used_by: Schema.optionalKey(
     Schema.Array(DefinitionUserSchema).annotate({
       description:

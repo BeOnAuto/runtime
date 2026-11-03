@@ -229,10 +229,10 @@ In my "<playbook name>" playbook, give the "<workflow name>" workflow a page:
 one plain sentence for each run that says what it did, and one chart of
 <the figure, such as the revenue of each month> over time. If a run is about
 a period, such as the month it closes, take the period from its output rather
-than from when it ran. Show me the page before saving it.
+than from when it ran. Show me the page once it is saved.
 ```
 
-The agent saves a definition of the type `page` that names the workflow. [A minimal page](../reference/page-format.md#a-minimal-page) shows one, and explains why a run that is about a period takes its period from its output: runs made in one sitting, or late, still land on the periods they are about. Check that:
+The agent adds the page to the workflow's document, as its `page` key, and saves the workflow. [A minimal page](../reference/page-format.md#a-minimal-page) shows one, and explains why a run that is about a period takes its period from its output: runs made in one sitting, or late, still land on the periods they are about. Check that:
 
 - the newest run of the workflow shows the headline you asked for, in Auto Studio or when your agent reads the run;
 - the workflow shows the chart, with a point for each period its runs covered, in Auto Studio or when your agent reads the workflow.

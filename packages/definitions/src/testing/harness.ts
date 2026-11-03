@@ -21,7 +21,9 @@ import {
 import { DateTime, Effect, Layer } from 'effect';
 import { TestClock } from 'effect/testing';
 
-import { runOutcomeMapping, type PlaybookOperation, type RunMeter } from '../index.ts';
+import { runOutcomeMapping } from '../analytics/run-outcome-mapping.ts';
+import type { RunMeter } from '../metering/run-meter.ts';
+import type { PlaybookOperation } from '../operations/definition-operations.ts';
 import { admittingMeter } from './recording-meter.ts';
 
 export const firstMoment = '2026-10-01T09:00:00.000Z';

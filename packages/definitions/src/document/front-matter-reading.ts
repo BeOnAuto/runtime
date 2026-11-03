@@ -139,7 +139,7 @@ function offsetOf(node: unknown): number | undefined {
 export function readFrontMatter(
   text: string,
   firstLine: number,
-  required: string,
+  required?: string,
 ): Result.Result<FrontMatterReading, readonly DocumentIssue[]> {
   const lineCounter = new LineCounter();
   const document = parseDocument(text, { ...parseOptions, lineCounter });
@@ -148,7 +148,9 @@ export function readFrontMatter(
     return Result.fail(yamlIssues(document.errors, lineAt));
   }
   if (document.contents === null) {
-    return Result.fail(rootIssue(firstLine, `The front matter is empty; it names at least ${required}`));
+    return required === undefined
+      ? Result.succeed({ value: {}, lines: new Map([['', firstLine - 1]]) })
+      : Result.fail(rootIssue(firstLine, `The front matter is empty; it names at least ${required}`));
   }
   const { contents } = document;
   if (!isMap(contents)) {

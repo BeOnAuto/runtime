@@ -8,6 +8,7 @@ import {
 import { Effect, Option } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
+import { sourceToPrepare } from '../operations/definition-views.ts';
 import { definitionVersionIn } from '../registry/definition-versions.ts';
 import type { RunCancel } from '../runs/run-commands.ts';
 import { isChangedSinceRead, runDecider, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
@@ -46,7 +47,10 @@ function longestRunOf(
     found === undefined
       ? Effect.succeedNone
       : Effect.option(
-          Effect.map(capability.prepare(found.source, found.stripped), ({ longestRunMsFor }) => longestRunMsFor(input)),
+          Effect.map(
+            capability.prepare(sourceToPrepare(capability.type, found.source), found.stripped),
+            ({ longestRunMsFor }) => longestRunMsFor(input),
+          ),
         ),
   );
 }

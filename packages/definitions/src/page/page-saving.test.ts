@@ -1,164 +1,94 @@
 import { describe, expect, it } from 'vitest';
 
-import { greeting, playbookWithTheWorkflow, refusedAtTheSource } from '../testing/page-playbooks.ts';
-import { latelyOfTheDays, pageData, pageOf, pageWithData } from '../testing/pages.ts';
+import {
+  foldingNothing,
+  functionWithItsPage,
+  greeting,
+  latelyOfTheDays,
+  pageOfTheDays,
+  playbookWithTheWorkflow,
+  resultOfTheGreeting,
+  workflowWithItsPage,
+} from '../testing/page-playbooks.ts';
 
-describe('saving a page', () => {
-  it('keeps it as a definition of the type page, showing its subject and its views and nothing that runs', async () => {
-    const { saving, ready } = playbookWithTheWorkflow();
+const workflow = { type: 'workflow', name: 'morning-social-content' };
+
+const evening = { type: 'workflow', name: 'evening-posts' };
+
+const review = { type: 'reasoning', name: 'review-brief' };
+
+describe('saving a definition with its page', () => {
+  it('keeps the page in its document, one version of the definition, and answers nothing of the page', async () => {
+    const { saving, reading, ready } = playbookWithTheWorkflow();
     await ready;
+    const source = workflowWithItsPage(pageOfTheDays);
 
-    const saved = await saving({
-      type: 'page',
-      name: 'morning-posts',
-      source: pageWithData({ front: 'description: The posts of each morning' }),
-    });
+    const saved = await saving({ ...evening, source });
 
-    expect(saved).toMatchObject({
-      status: 'succeeded',
-      output: {
-        type: 'page',
-        name: 'morning-posts',
-        version: 1,
-        status: 'active',
-        media_type: 'text/markdown',
-        description: 'The posts of each morning',
-        details: { of: 'workflow/morning-social-content', views: { by_day: 'series' } },
-      },
-    });
-    for (const field of ['used_by', 'input_schema', 'output_schema', 'overview', 'diagram']) {
-      expect(saved).not.toHaveProperty(`output.${field}`);
-    }
+    expect(saved).toMatchObject({ status: 'succeeded', output: { name: 'evening-posts', version: 1, source } });
+    expect(saved).not.toHaveProperty('output.page');
+    expect(await reading(evening)).toMatchObject({ output: { version: 1, source } });
   });
 
-  it('shows no views for a page without data, and takes the playbook as its subject', async () => {
-    const { saving, ready } = playbookWithTheWorkflow();
+  it("reads a function's page from its front matter, and no page from a document without the key", async () => {
+    const { saving, reading, ready } = playbookWithTheWorkflow();
+    await ready;
+    await saving({ ...review, source: functionWithItsPage(pageOfTheDays), diagram: 'none' });
+
+    expect(await reading(review)).toMatchObject({
+      output: { page: { lately: "Building this page's figures from the playbook's history…" } },
+    });
+    expect(await reading(workflow)).not.toHaveProperty('output.page');
+  });
+
+  it('saves neither where the page does not fit its format, whose problems are under /source with their lines', async () => {
+    const { saving, reading, ready } = playbookWithTheWorkflow();
     await ready;
 
-    expect(await saving({ type: 'page', name: 'morning-posts', source: pageOf() })).toMatchObject({
-      status: 'succeeded',
-      output: { details: { of: 'workflow/morning-social-content' } },
-    });
-    expect(
-      await saving({
-        type: 'page',
-        name: 'playbook-page',
-        source: pageOf({ of: 'playbook', body: latelyOfTheDays, data: pageData() }),
-      }),
-    ).toMatchObject({ status: 'succeeded', output: { details: { of: 'playbook', views: { by_day: 'series' } } } });
+    const refused = await saving({ ...evening, source: workflowWithItsPage(`${foldingNothing}\nmodel: fast`) });
+
+    expect(refused).toMatchObject({ status: 'rejected', reason: 'invalid_input', issues: [{ pointer: '/source' }] });
+    expect(await reading(evening)).toMatchObject({ status: 'rejected', reason: 'not_found' });
   });
 });
 
-describe('the document of a page', () => {
-  it('is refused with each of its problems', async () => {
-    const { saving } = playbookWithTheWorkflow();
+describe('changing the page of a definition', () => {
+  it('saves a new version of the definition, and the same document records nothing', async () => {
+    const { updating, ready } = playbookWithTheWorkflow();
+    await ready;
+    const source = workflowWithItsPage(resultOfTheGreeting);
 
-    expect(
-      await saving({ type: 'page', name: 'morning-posts', source: pageOf({ of: 'page/other', body: '' }) }),
-    ).toMatchObject({
-      status: 'rejected',
-      reason: 'invalid_input',
-      detail: 'The page has 2 problems',
-    });
+    expect(await updating({ ...workflow, source })).toMatchObject({ status: 'succeeded', output: { version: 2 } });
+    expect(await updating({ ...workflow, source })).toMatchObject({ status: 'succeeded', output: { version: 2 } });
   });
 
-  it('is refused when it does not fit the format, under its source', async () => {
-    const { saving } = playbookWithTheWorkflow();
+  it('removes the page with a document without it, or with an empty page', async () => {
+    const { updating, reading, rendering, ready } = playbookWithTheWorkflow();
+    await ready;
+    await updating({ ...workflow, source: workflowWithItsPage(pageOfTheDays) });
 
-    expect(await saving({ type: 'page', name: 'morning-posts', source: pageOf({ of: 'page/other' }) })).toEqual({
-      status: 'rejected',
-      reason: 'invalid_input',
-      detail: 'The page has a problem',
-      issues: [
-        {
-          pointer: '/source',
-          detail:
-            'Line 2, /of: A page presents no page, since a page has no results to present; of names a workflow, a function or playbook',
-        },
-      ],
-    });
+    await updating({ ...workflow, source: workflowWithItsPage('{}') });
+    const emptied = await reading(workflow);
+    await updating({ ...workflow, source: workflowWithItsPage(pageOfTheDays) });
+    await updating({ ...workflow, source: greeting });
+
+    expect(emptied).not.toHaveProperty('output.page');
+    expect(await reading(workflow)).not.toHaveProperty('output.page');
+    expect(await rendering(workflow)).toMatchObject({ status: 'rejected', reason: 'not_found' });
   });
 });
 
-describe('the subject of a page', () => {
-  it('refuses a subject the playbook does not have, has retired, or cannot have on this server', async () => {
-    const { saving, retiring, ready } = playbookWithTheWorkflow();
+describe('retiring a definition with a page', () => {
+  it('retires its page with it: the definition answers no page, and its preview is refused', async () => {
+    const { saving, retiring, reading, rendering, ready } = playbookWithTheWorkflow();
     await ready;
-    await saving({ type: 'reasoning', name: 'review-brief', source: greeting, diagram: 'none' });
-    await retiring({ type: 'reasoning', name: 'review-brief' });
+    await saving({ ...evening, source: workflowWithItsPage(`${foldingNothing}\n${latelyOfTheDays}`) });
 
-    expect(
-      await saving({ type: 'page', name: 'evening-posts', source: pageOf({ of: 'workflow/evening-posts' }) }),
-    ).toEqual(
-      refusedAtTheSource(
-        'Line 2, /of: of names the workflow evening-posts, which the playbook does not have; a page presents what the playbook has',
-      ),
-    );
-    expect(await saving({ type: 'page', name: 'reviews', source: pageOf({ of: 'reasoning/review-brief' }) })).toEqual(
-      refusedAtTheSource(
-        'Line 2, /of: of names the reasoning function review-brief, which the playbook retired; a page presents what the playbook has',
-      ),
-    );
-    expect(
-      await saving({ type: 'page', name: 'forecasts', source: pageOf({ of: 'prediction/weekly-orders' }) }),
-    ).toEqual(
-      refusedAtTheSource(
-        'Line 2, /of: of names the prediction function weekly-orders, which the playbook does not have; a page presents what the playbook has',
-      ),
-    );
-  });
-});
+    const retired = await retiring(evening);
 
-describe('the one page of a subject', () => {
-  it('refuses a second active page of one subject as a conflict', async () => {
-    const { saving, ready } = playbookWithTheWorkflow();
-    await ready;
-    await saving({ type: 'page', name: 'morning-posts', source: pageOf() });
-    await saving({
-      type: 'page',
-      name: 'playbook-page',
-      source: pageOf({ of: 'playbook', body: latelyOfTheDays, data: pageData() }),
-    });
-
-    expect(await saving({ type: 'page', name: 'posts-again', source: pageOf() })).toEqual({
-      status: 'rejected',
-      reason: 'conflict',
-      detail:
-        'The workflow morning-social-content already has the page morning-posts, and a subject has one page at a time; update that page, or retire it before saving another',
-    });
-    expect(
-      await saving({
-        type: 'page',
-        name: 'playbook-again',
-        source: pageOf({ of: 'playbook', body: latelyOfTheDays, data: pageData() }),
-      }),
-    ).toEqual({
-      status: 'rejected',
-      reason: 'conflict',
-      detail:
-        'The playbook already has the page playbook-page, and a subject has one page at a time; update that page, or retire it before saving another',
-    });
-  });
-});
-
-describe('the overview and the diagram of a page', () => {
-  it('are refused, since Auto Studio shows the page itself', async () => {
-    const { saving, ready } = playbookWithTheWorkflow();
-    await ready;
-    const overview = 'A page takes no overview, since Auto Studio shows the page itself; leave overview out';
-    const diagram = 'A page takes no diagram, since Auto Studio shows the page itself; leave diagram out';
-
-    expect(await saving({ type: 'page', name: 'morning-posts', source: pageOf(), overview: 'The posts' })).toEqual({
-      status: 'rejected',
-      reason: 'invalid_input',
-      detail: overview,
-      issues: [{ detail: overview, pointer: '/overview' }],
-    });
-    expect(await saving({ type: 'page', name: 'morning-posts', source: pageOf(), diagram: 'none' })).toEqual({
-      status: 'rejected',
-      reason: 'invalid_input',
-      detail: diagram,
-      issues: [{ detail: diagram, pointer: '/diagram' }],
-    });
+    expect(retired).toMatchObject({ status: 'succeeded', output: { status: 'retired' } });
+    expect(retired).not.toHaveProperty('output.page');
+    expect(await reading(evening)).not.toHaveProperty('output.page');
+    expect(await rendering(evening)).toMatchObject({ status: 'rejected', reason: 'conflict', kind: 'retired' });
   });
 });

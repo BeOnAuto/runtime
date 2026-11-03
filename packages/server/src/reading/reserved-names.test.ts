@@ -44,6 +44,7 @@ const reserved = [
   'definition_created',
   'definition_updated',
   'definition_retired',
+  'playbook_page_saved',
   'event_published',
   'reaction_refused',
 ];

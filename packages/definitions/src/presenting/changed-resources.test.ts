@@ -39,6 +39,10 @@ describe('the changes the facts of a playbook make', () => {
     ]);
   });
 
+  it('name the playbook for a save of its own page', () => {
+    expect(catalog.changesOf(factOf('definitions/playbook', 'playbook_page_saved'))).toEqual([{ kind: 'playbook' }]);
+  });
+
   it('name the run and its request for every fact of a run whose function asks, its expiry and its cancel among them', () => {
     expect([
       catalog.changesOf(factOf('runs/r1', 'run_deferred', ofTheDefinition('asking'))),
@@ -61,7 +65,7 @@ describe('the changes the facts of a playbook make', () => {
     ]).toEqual([
       [{ kind: 'event', event_id: 'message-of-event_published' }],
       [{ kind: 'event', event_id: 'message-of-reaction_refused' }],
-      ['run', 'interaction', 'definition', 'event'],
+      ['run', 'interaction', 'definition', 'playbook', 'event'],
     ]);
   });
 });

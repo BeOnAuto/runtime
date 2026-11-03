@@ -121,7 +121,6 @@ describe('workflows over MCP', () => {
       'computation',
       'prediction',
       'generation',
-      'page',
       'workflow',
     ]);
   });

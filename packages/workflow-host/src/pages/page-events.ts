@@ -1,4 +1,4 @@
-import { playbookEventOf, definitionTypeStreamOf, type CloudEvent } from '@on.auto/definitions';
+import { definitionTypeStreamOf, playbookEventOf, type CloudEvent } from '@on.auto/definitions';
 import type { LedgerStreams, StoredPage, StoredPlace } from '@on.auto/ledger';
 
 import type { Point } from './history-points.ts';
@@ -36,6 +36,8 @@ type StoredRecord = StoredPage['records'][number];
 
 const definitionEvents = ['definition_created', 'definition_updated', 'definition_retired'];
 
+const savesOfPages: ReadonlySet<string> = new Set(['playbook_page_saved']);
+
 const factTypes: ReadonlySet<string> = new Set([
   'run_started',
   'run_succeeded',
@@ -46,7 +48,12 @@ const factTypes: ReadonlySet<string> = new Set([
 
 export function typesToRead(named: readonly string[]): readonly string[] {
   const published = named.some((type) => !factTypes.has(type)) ? ['event_published'] : [];
-  const read = new Set([...named.filter((type) => factTypes.has(type)), ...published, ...definitionEvents]);
+  const read = new Set([
+    ...named.filter((type) => factTypes.has(type)),
+    ...published,
+    ...definitionEvents,
+    ...savesOfPages,
+  ]);
   return [...read].toSorted();
 }
 
@@ -95,7 +102,9 @@ export async function readPage(
     { kind: 'everything' },
     { order: 'asc', limit: recordsInAPage, types, ...(after === undefined ? {} : { after }) },
   );
-  const placed = page.records.map((record) => placedOf(playbookKey, record));
+  const placed = page.records
+    .filter(({ type }) => !savesOfPages.has(type))
+    .map((record) => placedOf(playbookKey, record));
   const streams = new Set(page.records.map(({ stream }) => stream));
   return {
     events: placed.filter((each) => isPageEvent(each)),

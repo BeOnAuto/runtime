@@ -123,10 +123,10 @@ describe('the description of an argument of one shape of a union input', () => {
 });
 
 describe('the tools on a connection', () => {
-  it('start the server at 37 with the guide tool, and refuse to start it at 38', () => {
-    expect(starting({ operations: askingTools(36) })).not.toThrow();
-    expect(starting({ operations: askingTools(37) })).toThrow(
-      'The own org endpoint: 38 tools, more than the 37 allowed',
+  it('start the server at 38 with the guide tool, and refuse to start it at 39', () => {
+    expect(starting({ operations: askingTools(37) })).not.toThrow();
+    expect(starting({ operations: askingTools(38) })).toThrow(
+      'The own org endpoint: 39 tools, more than the 38 allowed',
     );
   });
 });
@@ -163,10 +163,10 @@ function noteRecipeSaying(text: string): Recipe {
 }
 
 describe('the guides a server carries', () => {
-  it('start the server with one guide per type, terminology and templates, and refuse to start it with one more', () => {
-    expect(starting({ guides: guidesNumbering(6), definitionTypes: typesNumbering(4) })).not.toThrow();
-    expect(starting({ guides: guidesNumbering(7), definitionTypes: typesNumbering(4) })).toThrow(
-      'The guides of the server: 7 guides, more than the 6 allowed',
+  it('start the server with one guide per type, terminology, templates and pages, and refuse to start it with one more', () => {
+    expect(starting({ guides: guidesNumbering(7), definitionTypes: typesNumbering(4) })).not.toThrow();
+    expect(starting({ guides: guidesNumbering(8), definitionTypes: typesNumbering(4) })).toThrow(
+      'The guides of the server: 8 guides, more than the 7 allowed',
     );
   });
 

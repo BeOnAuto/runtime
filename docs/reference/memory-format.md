@@ -66,6 +66,7 @@ A document takes `remember` or `recall`, never both and never neither. Every oth
 | `recall.tags`            | No               | At most 8 templates of tags every memory recalled has                                                                               |
 | `recall.scope`           | No               | `playbook`, `organization`, or `both`, the default                                                                                  |
 | `recall.most_characters` | No               | The most characters of text recalled across the memories, from 1 to 16,000; 4,000 when left out                                     |
+| `page`                   | No               | The [page](page-format.md) that presents its runs                                                                                   |
 
 The templates are [Liquid](template.md) and read `input`, `today` and `now`, as a reasoning function's prompt does. A field written without a template is checked when the function is saved: a text past 2,000 characters, a tag that is not one, a day that is not one, a span that ends before it begins, a duration out of bounds, an id that is not one and a `most_characters` out of bounds are refused at the field, `invalid_input`, in words that name the bound. A template is checked once it is rendered, by the run.
 

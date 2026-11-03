@@ -3,12 +3,22 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
+import { uncheckedPages } from '../testing/page-ports.ts';
 
-const operations = makeDefinitionOperations([echo, probe().capability]).map(({ registration }) => registration);
+const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages).map(
+  ({ registration }) => registration,
+);
 
-const onRuns = new Set(['get_run', 'cancel_run', 'list_runs', 'get_run_history', 'get_playbook_analytics']);
+const takingNoType = new Set([
+  'render_playbook_page',
+  'get_run',
+  'cancel_run',
+  'list_runs',
+  'get_run_history',
+  'get_playbook_analytics',
+]);
 
-const takingAType = operations.filter(({ name }) => !onRuns.has(name));
+const takingAType = operations.filter(({ name }) => !takingNoType.has(name));
 
 function described(name: string): string {
   return String(operations.find((operation) => operation.name === name)?.description);
@@ -63,7 +73,7 @@ describe('the JSON Schema of the input of the operations', () => {
   });
 
   it('takes any JSON value as the input of a run, and a UUID as its id', () => {
-    expect(operations[5]?.input.schema).toMatchObject({
+    expect(operations[7]?.input.schema).toMatchObject({
       properties: {
         input: {
           description:
@@ -73,7 +83,7 @@ describe('the JSON Schema of the input of the operations', () => {
       },
       required: ['type', 'name'],
     });
-    expect(operations[6]?.input.schema).toMatchObject({
+    expect(operations[8]?.input.schema).toMatchObject({
       properties: { run_id: { type: 'string', format: 'uuid' } },
       required: ['run_id'],
     });

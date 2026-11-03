@@ -4,6 +4,7 @@ import {
   type RecordedDefinitionEvent,
   type StrippedForms,
 } from '@on.auto/definitions';
+import type { PagesSavedAsDefinitions } from '@on.auto/definitions/page';
 import { recordedDecoder } from '@on.auto/operations';
 import { Option } from 'effect';
 
@@ -11,14 +12,30 @@ export interface KeptFunction {
   readonly version: number;
   readonly saved: number;
   readonly details: unknown;
+  readonly formerly?: string;
 }
 
 export interface PlaybookDefinitions {
   readonly version: number;
   readonly functions: ReadonlyMap<string, KeptFunction>;
+  readonly savedAsDefinitions?: PagesSavedAsDefinitions;
 }
 
 export type KeptOf = (details: unknown, stripped?: StrippedForms) => unknown;
+
+export type KeptAfter = (
+  previous: PlaybookDefinitions,
+  type: string,
+  messages: readonly unknown[],
+) => PlaybookDefinitions;
+
+export type KeptTogether = (playbook: string, byType: ReadonlyMap<string, PlaybookDefinitions>) => PlaybookDefinitions;
+
+export interface DefinitionsKeeping {
+  readonly definitionTypes: readonly string[];
+  readonly keptAfter: KeptAfter;
+  readonly together: KeptTogether;
+}
 
 export const noDefinitions: PlaybookDefinitions = { version: 0, functions: new Map() };
 
@@ -26,6 +43,10 @@ const decodeDefinitionEvent = recordedDecoder(DefinitionEventSchema);
 
 export function definitionStreamOf(playbookKey: string, definitionType: string): string {
   return `${playbookKey}${definitionTypeStreamOf(definitionType)}`;
+}
+
+export function keptKeyOf(folder: { readonly name: string }, definitionType: string): string {
+  return JSON.stringify([folder.name, definitionType]);
 }
 
 export function playbookKeyOfDefinitions(stream: string, definitionType: string): string {
@@ -63,4 +84,12 @@ export function definitionsAfter(
     previous.functions,
   );
   return { version: previous.version + events.length, functions };
+}
+
+export function keptDefinitionsOf(definitionType: string, keptOf: KeptOf): DefinitionsKeeping {
+  return {
+    definitionTypes: [definitionType],
+    keptAfter: (previous, _, messages) => definitionsAfter(previous, messages, keptOf),
+    together: (_, byType) => byType.get(definitionType) ?? noDefinitions,
+  };
 }

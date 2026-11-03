@@ -10,10 +10,17 @@ import {
   type InvalidInput,
   type PlainLanguage,
   type ProjectedCondition,
+  type ProjectedKeyedRow,
 } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
 import { isPart, listedTargetOf, playbookOfTarget, type ListedTarget } from '../positions/comment-addresses.ts';
+import {
+  noPagesOfTheirOwn,
+  pagesOfTheirOwn,
+  pagesOfTheirOwnOf,
+  type PagesOfTheirOwn,
+} from '../positions/current-addresses.ts';
 import { commentsName } from '../projections/comment-rows.ts';
 import { AddressInputField, CursorField, LimitField, commentsInAPage, refusedAt } from './comment-fields.ts';
 import { CommentSchema, keptOfRow, shownComment } from './comment-shown.ts';
@@ -44,6 +51,11 @@ type ListCommentsInput = typeof ListCommentsInputSchema.Type;
 
 const CursorSchema = Schema.Tuple([Schema.String, Schema.Int, Schema.String]);
 
+function newestFirst(one: ProjectedKeyedRow, other: ProjectedKeyedRow): number {
+  const byTime = Number(other.row['at']) - Number(one.row['at']);
+  return byTime === 0 ? other.key.localeCompare(one.key) : byTime;
+}
+
 const isCursor = Schema.is(CursorSchema);
 
 const ofTheOrg = '';
@@ -51,6 +63,7 @@ const ofTheOrg = '';
 interface Owner {
   readonly playbook: string | undefined;
   readonly named: string;
+  readonly pages: PagesOfTheirOwn;
 }
 
 function ownedBy(owner: Owner): string {
@@ -67,29 +80,32 @@ function afterOf(owner: Owner, cursor: string | undefined) {
     : Effect.fail(refusedAt('/cursor', `Expected the next_cursor of a page of list_comments of ${owner.named}`));
 }
 
-function underOf(target: ListedTarget, address: string): ProjectedCondition {
+function underOf(target: ListedTarget, address: string, pages: PagesOfTheirOwn): readonly ProjectedCondition[] {
   if (isPart(target)) {
-    return { column: 'address', equals: address };
+    return [{ column: 'address', equals: address }];
   }
   if (target.kind === 'run') {
-    return { column: 'about_run', equals: target.run };
+    return [{ column: 'about_run', equals: target.run }];
   }
   if (target.kind === 'definition') {
-    return { column: 'about_version', equals: `${target.type}/${target.name}/${target.version}` };
+    return [{ column: 'about_version', equals: `${target.type}/${target.name}/${target.version}` }];
   }
   return target.kind === 'every_version'
-    ? { column: 'about_definition', equals: `${target.type}/${target.name}` }
-    : { column: 'about_thing', equals: address };
+    ? [`${target.type}/${target.name}`, ...pagesOfTheirOwnOf(pages, target.type, target.name)].map((definition) => ({
+        column: 'about_definition',
+        equals: definition,
+      }))
+    : [{ column: 'about_thing', equals: address }];
 }
 
 function addressedIn(
   owner: Owner,
   { address, under = false }: ListCommentsInput,
-): Effect.Effect<readonly ProjectedCondition[], InvalidInput> {
+): Effect.Effect<readonly (readonly ProjectedCondition[])[], InvalidInput> {
   if (address === undefined) {
     return under
       ? Effect.fail(refusedAt('/under', 'Expected an address to list the comments under'))
-      : Effect.succeed([]);
+      : Effect.succeed([[]]);
   }
   const target = listedTargetOf(address);
   if (
@@ -99,28 +115,35 @@ function addressedIn(
   ) {
     return Effect.fail(refusedAt('/address', `Expected the address of something of ${owner.named}`));
   }
-  return Effect.succeed([under ? underOf(target, address) : { column: 'address', equals: address }]);
+  return Effect.succeed(
+    under
+      ? underOf(target, address, owner.pages).map((condition) => [condition])
+      : [[{ column: 'address', equals: address }]],
+  );
 }
 
 function listedWith(reader: BoundProjectionReader, owner: Owner, input: ListCommentsInput) {
   return Effect.gen(function* () {
-    const where = yield* addressedIn(owner, input);
+    const wheres = yield* addressedIn(owner, input);
     const after = yield* afterOf(owner, input.cursor);
     const limit = input.limit ?? commentsInAPage;
-    const rows = yield* reader.readProjectedRows(commentsName, {
-      where: [{ column: 'open', equals: input.open ?? true }, ...where],
-      orderBy: ['at'],
-      order: 'desc',
-      ...(after === undefined ? {} : { after }),
-      limit: limit + 1,
-    });
+    const read = yield* Effect.forEach(wheres, (where) =>
+      reader.readProjectedRows(commentsName, {
+        where: [{ column: 'open', equals: input.open ?? true }, ...where],
+        orderBy: ['at'],
+        order: 'desc',
+        ...(after === undefined ? {} : { after }),
+        limit: limit + 1,
+      }),
+    );
+    const rows = read.flat().toSorted(newestFirst);
     const page = rows.slice(0, limit);
     const last = page.at(-1);
     const hasMore = rows.length > limit && last !== undefined;
     return {
       comments: yield* Effect.forEach(
         page.flatMap((row) => keptOfRow(row)),
-        (comment) => shownComment(comment),
+        (comment) => shownComment(comment, owner.pages),
       ),
       has_more: hasMore,
       next_cursor: hasMore ? cursorOfParts([ownedBy(owner), Number(last.row['at']), last.key]) : null,
@@ -130,11 +153,13 @@ function listedWith(reader: BoundProjectionReader, owner: Owner, input: ListComm
 
 const listed = Effect.fnUntraced(function* (input: ListCommentsInput) {
   const { playbook } = yield* PlaybookContext;
-  return yield* listedWith(yield* PlaybookReader, { playbook, named: `the playbook ${playbook}` }, input);
+  const owner = { playbook, named: `the playbook ${playbook}`, pages: yield* pagesOfTheirOwn };
+  return yield* listedWith(yield* PlaybookReader, owner, input);
 });
 
 const listedInOrg = Effect.fnUntraced(function* (input: ListCommentsInput) {
-  return yield* listedWith(yield* OrgReader, { playbook: undefined, named: "the organization's own" }, input);
+  const owner = { playbook: undefined, named: "the organization's own", pages: noPagesOfTheirOwn };
+  return yield* listedWith(yield* OrgReader, owner, input);
 });
 
 function commentsInWords(count: number, open: boolean | undefined): string {

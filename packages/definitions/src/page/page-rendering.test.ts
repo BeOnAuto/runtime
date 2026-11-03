@@ -1,9 +1,10 @@
-import { Result, type Schema } from 'effect';
+import { Option, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { renderClockOf } from '../template/render-clock.ts';
 import { documentedJson, documentedLately, documentedMarkdown, documentedPage, pageOf } from '../testing/pages.ts';
 import { steppingClock, standingRenderClock } from '../testing/time/stepping-clock.ts';
+import { pageIn } from './page-key.ts';
 import { parsePageDocument } from './page-parsing.ts';
 import {
   latelyShown,
@@ -18,7 +19,12 @@ const moment: ReadMoment = { today: '2026-11-01', now: '2026-11-01T09:30:00.000Z
 
 const subject = { type: 'workflow', name: 'morning-social-content', description: 'Drafts the posts', version: 2 };
 
-const documented = Result.getOrThrow(parsePageDocument(documentedPage));
+const documented = Result.getOrThrow(
+  Result.fromNullishOr(
+    Option.getOrUndefined(Result.getOrThrow(pageIn(`do: []\n${documentedPage}`, 'workflow'))),
+    () => 'no page',
+  ),
+);
 
 const declared = documented.data?.views ?? {};
 
@@ -73,7 +79,7 @@ describe('a run that was rejected or failed', () => {
         documentedResult,
         {
           status: 'rejected',
-          rejection: { reason: 'conflict', kind: 'unworkable', detail: 'The program raised an error on line 3.' },
+          rejection: { reason: 'conflict', kind: 'unworkable', detail: 'The program raised an error on line 2.' },
         },
         subject,
         moment,
@@ -82,7 +88,7 @@ describe('a run that was rejected or failed', () => {
     ]).toEqual([
       'The run was rejected as unanswered, expired.',
       'The run was rejected as cancelled.',
-      'The run was rejected as conflict, unworkable. The program raised an error on line 3.',
+      'The run was rejected as conflict, unworkable. The program raised an error on line 2.',
       runFailed,
     ]);
   });
@@ -103,7 +109,7 @@ describe('the variables of result', () => {
       shownOver('{{ output.constructor }}'),
       shownOver('{{ output.tags }}{{ output.post }}', { tags: ['a', 'b'], post: {} }),
     ]).toEqual([
-      'Could not display this run: the value has no field output.constructor, on line 4.',
+      'Could not display this run: the value has no field output.constructor, on line 3.',
       'ab[object Object]',
     ]);
   });
@@ -118,9 +124,9 @@ describe('the variables of result', () => {
 describe('a render that stops', () => {
   it('shows the one line that says why, with its line', () => {
     expect(shownOver('\n{{ output.date }}')).toBe(
-      'Could not display this run: the value has no field output.date, on line 5.',
+      'Could not display this run: the value has no field output.date, on line 4.',
     );
-    expect(shownOver('{{ "dollars" | money }}')).toMatch(/^Could not display this run: .+, on line 4\.$/u);
+    expect(shownOver('{{ "dollars" | money }}')).toMatch(/^Could not display this run: .+, on line 3\.$/u);
   });
 
   it('names the bound a render went past', () => {
@@ -131,9 +137,9 @@ describe('a render that stops', () => {
       shownOver('{% for each in (1..6000000) %}{% endfor %}'),
       shownOver('{% for each in (1..3) %}{{ each }}{% endfor %}', {}, stepping),
     ]).toEqual([
-      'Could not display this run: the rendered block exceeds 65536 bytes, on line 4.',
-      'Could not display this run: rendering exceeded 5000000 characters or items, on line 4.',
-      'Could not display this run: rendering exceeded 200 ms, on line 4.',
+      'Could not display this run: the rendered block exceeds 65536 bytes, on line 3.',
+      'Could not display this run: rendering exceeded 5000000 characters or items, on line 3.',
+      'Could not display this run: rendering exceeded 200 ms, on line 3.',
     ]);
   });
 });
@@ -162,7 +168,7 @@ describe('lately, as the documented page shows it', () => {
     const stepping: ReadMoment = { ...moment, clock: renderClockOf(steppingClock(1000)) };
 
     expect(latelyShown(documentedLatelyTemplate, { state: 'live', views: {} }, { declared, subject }, stepping)).toBe(
-      'Could not display this page’s figures: rendering exceeded 200 ms, on line 54.',
+      'Could not display this page’s figures: rendering exceeded 200 ms, on line 51.',
     );
   });
 });

@@ -4,17 +4,8 @@ import { CallLineage } from '../caller/call-lineage.ts';
 import { Caller } from '../caller/caller.ts';
 import { PlaybookContext } from '../caller/playbook-context.ts';
 import { PlaybookLifecycle } from '../caller/playbook-lifecycle.ts';
-import {
-  playbookBoundAppendedFactsReader,
-  playbookBoundProjectionReader,
-  playbookBoundRecordedReader,
-  playbookBoundRunOutcomesReader,
-  prefixedAges,
-  prefixedReader,
-  prefixedWriter,
-  streamPrefixOfPlaybook,
-} from '../ledger/bound-ports.ts';
 import type { LedgerPorts } from '../ledger/ledger.ts';
+import { playbookReaderOf, playbookWriterOf } from '../ledger/playbook-ledger.ts';
 import { PlaybookReader } from '../ledger/playbook-reader.ts';
 import { PlaybookWriter } from '../ledger/playbook-writer.ts';
 import type { PlaybookRequest } from './request.ts';
@@ -28,22 +19,13 @@ export function playbookServicesOf(
   { caller, org, playbook, lineage, depth, callDepth, calledBy, trigger, attemptDied }: PlaybookRequest,
   { ledger, lifecycle }: PlaybookBinding,
 ) {
-  const prefix = streamPrefixOfPlaybook({ org, playbook });
   const forQueries = Context.make(Caller, caller).pipe(
     Context.add(PlaybookContext, { org, playbook }),
     Context.add(PlaybookLifecycle, lifecycle),
-    Context.add(PlaybookReader, {
-      ...prefixedReader(ledger, prefix),
-      ...prefixedAges(ledger, prefix),
-      ...playbookBoundRecordedReader(ledger, { org, playbook }),
-      ...playbookBoundAppendedFactsReader(ledger, { org, playbook }),
-      ...playbookBoundRunOutcomesReader(ledger, { org, playbook }),
-      ...playbookBoundProjectionReader(ledger, { org, playbook }),
-      readContent: (sha256) => ledger.content.get({ org, playbook }, sha256),
-    }),
+    Context.add(PlaybookReader, playbookReaderOf(ledger, { org, playbook })),
   );
   const forCommands = forQueries.pipe(
-    Context.add(PlaybookWriter, prefixedWriter(ledger, prefix)),
+    Context.add(PlaybookWriter, playbookWriterOf(ledger, { org, playbook })),
     Context.add(CallLineage, {
       lineage: lineage ?? null,
       depth: depth ?? 0,

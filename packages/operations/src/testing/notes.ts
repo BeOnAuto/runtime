@@ -27,7 +27,7 @@ const NoteAddedSchema = factOf('note_added', NoteSchema, ActedContextSchema);
 
 type NoteAdded = typeof NoteAddedSchema.Type;
 
-const notebook: Decider<readonly Note[], Note, NoteAdded, 'conflict'> = {
+export const notebook: Decider<readonly Note[], Note, NoteAdded, 'conflict'> = {
   initialState: [],
   evolve: (notes, { data }) => [...notes, data],
   decide: (note, notes) =>

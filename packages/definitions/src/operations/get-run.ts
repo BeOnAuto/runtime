@@ -1,14 +1,26 @@
 import { defineQuery } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import type { DefinitionKind } from '../capability/definition-kinds.ts';
-import { pageResultWith, RunReadSchema } from '../page/run-pages.ts';
+import type { Capability } from '../capability/capability.ts';
+import { RunReadSchema } from '../page/page-shown.ts';
+import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { runWordsFor } from '../plain-language/run-words.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
+import type { RunDetail } from '../runs/run.ts';
 import { RunIdInputField } from './definition-fields.ts';
 import { loadRun } from './run-access.ts';
 
-export function defineGetRun(capabilities: readonly DefinitionKind[]) {
+export function foundRun(id: string) {
+  return loadRun(id).pipe(Effect.flatMap((state) => runDetailOf(id, state)));
+}
+
+function withItsResult(pages: SubjectPages, detail: RunDetail) {
+  return Effect.orDie(pages.resultOf(detail.type, detail.name, { run: detail })).pipe(
+    Effect.map((result) => (result === undefined ? detail : { ...detail, page: { result } })),
+  );
+}
+
+export function defineGetRun(capabilities: readonly Capability[], pages: SubjectPages) {
   const runWords = runWordsFor(capabilities);
   return defineQuery('playbook', {
     name: 'get_run',
@@ -25,11 +37,7 @@ export function defineGetRun(capabilities: readonly DefinitionKind[]) {
     inputSchema: Schema.Struct({ run_id: RunIdInputField }),
     outputSchema: RunReadSchema,
     reasons: ['not_found'],
-    handle: ({ run_id: id }) =>
-      loadRun(id).pipe(
-        Effect.flatMap((state) => runDetailOf(id, state)),
-        Effect.flatMap((detail) => pageResultWith(capabilities, detail)),
-      ),
+    handle: ({ run_id: id }) => Effect.flatMap(foundRun(id), (detail) => withItsResult(pages, detail)),
     plainLanguage: {
       task: 'look up a run',
       attempt: () => 'look up the run',
@@ -37,5 +45,3 @@ export function defineGetRun(capabilities: readonly DefinitionKind[]) {
     },
   });
 }
-
-export const getRun = defineGetRun([]);

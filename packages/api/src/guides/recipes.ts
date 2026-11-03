@@ -160,10 +160,10 @@ const wherePagesAreServed: AdditionsByRecipe = {
       {
         after: 'with list_runs, `type` workflow, and get_run.',
         words:
-          "\n10. Read the page guide with get_guide and give the workflow its page, which shows the person what each run did and the runs so far: start from the guide's minimal page, a headline for each run and one chart, keyed by the period a run is about where its output carries one. Show the person the page, save it with create_definition, `type` page, once they agree, and show them the run's headline with get_run.",
+          "\n10. Read the page guide with get_guide and give the workflow its page, which shows the person what each run did and the runs so far: start from the guide's minimal page, a headline for each run and one chart, keyed by the period a run is about where its output carries one. Show the person the page, add it to the workflow's document as its `page` and save that with update_definition once they agree, and show them the run's headline with get_run.",
       },
     ],
-    calls: [],
+    calls: ['update_definition'],
   },
   'give-tools': {
     insertions: [
@@ -180,7 +180,7 @@ const wherePagesAreServed: AdditionsByRecipe = {
       {
         after: 'and get_run for one run.',
         words:
-          "\n7. Where the workflow has no page yet, give it one with the page guide, so the person sees what each run did while they were away: a headline for each run and one chart of the runs so far, from the guide's minimal page, keyed by the period a run is about where its output carries one. Save it with create_definition, `type` page, once they agree.",
+          "\n7. Where the workflow has no page yet, give it one with the page guide, so the person sees what each run did while they were away: a headline for each run and one chart of the runs so far, from the guide's minimal page, keyed by the period a run is about where its output carries one. Add it to the workflow's document as its `page` and save that with update_definition once they agree.",
       },
     ],
     calls: [],

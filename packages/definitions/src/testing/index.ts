@@ -14,3 +14,4 @@ export { checkingWithin, checksAwaitedAtMostMs } from './time/patient-checks.ts'
 export { measuredPoolSettings } from './read-on-disk.ts';
 export { onTheStandingClock, standingClock, standingRenderClock, steppingClock } from './time/stepping-clock.ts';
 export { shapeNamed } from './shapes.ts';
+export { uncheckedPages } from './page-ports.ts';

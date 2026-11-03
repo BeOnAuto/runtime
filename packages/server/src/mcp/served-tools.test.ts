@@ -90,8 +90,8 @@ function hasNoConstraint({ keywords }: Argument): boolean {
 }
 
 describe('the descriptions of the tools of /mcp', () => {
-  it('are thirty-six, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(36);
+  it('are thirty-seven, each under 800 characters, in three to eight sentences', () => {
+    expect(tools).toHaveLength(37);
     expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
     expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
   });
@@ -103,17 +103,20 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow and a page take none, at 614 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow takes none and that its page is a key of its document, at 680 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
-      '`type` is reasoning, lookup, memory, interaction, computation, prediction, generation, page, or workflow, and `name` how workflows and tools refer to it.',
+      '`type` is reasoning, lookup, memory, interaction, computation, prediction, generation, or workflow, and `name` how workflows and tools refer to it.',
     );
     expect(description).toContain(
       "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
     );
-    expect(description).toContain('A function needs `diagram` too; a workflow and a page take none.');
-    expect([description.length, sentencesOf(description)]).toEqual([614, 6]);
+    expect(description).toContain('A function needs `diagram` too; a workflow takes none.');
+    expect(description).toContain(
+      "The document's `page` key, optional, shows the person its runs, as the page guide says.",
+    );
+    expect([description.length, sentencesOf(description)]).toEqual([680, 7]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });
@@ -202,6 +205,7 @@ type Hints = readonly [boolean, boolean, boolean, boolean];
 const served: Readonly<Record<string, Hints>> = {
   create_playbook: [false, false, false, false],
   list_playbooks: [true, false, true, false],
+  get_playbook: [true, false, true, false],
   update_playbook: [false, false, true, false],
   retire_playbook: [false, true, true, false],
   list_models: [true, false, true, true],

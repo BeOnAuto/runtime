@@ -34,8 +34,11 @@ export interface ShelvedRecipe extends Recipe {
   readonly format: Guide;
 }
 
+export const pageGuideName = 'page';
+
 export interface GuideShelf {
   readonly definitionTypes: readonly DefinitionType[];
+  readonly pages: boolean;
   readonly guides: readonly Guide[];
   readonly recipes: readonly ShelvedRecipe[];
   readonly everyGuide: readonly Guide[];
@@ -87,6 +90,7 @@ export function guideShelfOf(
   }
   return {
     definitionTypes,
+    pages: guides.some(({ name }) => name === pageGuideName),
     guides,
     recipes: shelved,
     everyGuide,

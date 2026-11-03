@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
-import { pageOperations } from '../testing/page-ports.ts';
+import { uncheckedPages } from '../testing/page-ports.ts';
 
-const operations = makeDefinitionOperations([echo, probe().capability]);
+const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages);
 
 function registrationOf(name: string): RouteRegistration {
   const found = operations.find(({ registration }) => registration.name === name);
@@ -158,28 +158,27 @@ describe('the plain language of retire_definition', () => {
   });
 });
 
-describe('the attempt of an operation asked of a page', () => {
-  const runOfAPage = pageOperations.runDefinition.registration.plainLanguage;
-  const readOfAPage = pageOperations.getDefinition.registration.plainLanguage;
+describe('the attempt of a read that renders a page', () => {
+  const read = registrationOf('get_definition').plainLanguage;
 
-  it('names the one page asked, even where its input is refused', () => {
+  it('names the definition whose page it renders, even where its input is refused', () => {
     expect([
-      runOfAPage?.attempt({ type: 'page', name: 'morning-posts', input: {} }),
-      readOfAPage?.attempt({ type: 'page', name: 'morning-posts', render: true, sample_output: 'x'.repeat(262_145) }),
-      readOfAPage?.attempt({ type: 'page', name: 'morning-posts', render: true }),
-      readOfAPage?.attempt({ type: 'page', name: 'morning-posts' }),
-    ]).toEqual([
-      'run the page “morning-posts”',
-      'render the page “morning-posts”',
-      'render the page “morning-posts”',
-      'look up the page “morning-posts”',
-    ]);
+      read?.attempt({ type: 'echo', name: 'greet', render: true, sample_output: 'x'.repeat(262_145) }),
+      read?.attempt({ type: 'echo', name: 'greet', render: true }),
+      read?.attempt({ type: 'echo', name: 'greet' }),
+    ]).toEqual(['render the greeting “greet”', 'render the greeting “greet”', 'look up the greeting “greet”']);
+  });
+
+  it('names the definition a run is asked of, even where its input is refused', () => {
+    expect(registrationOf('run_definition').plainLanguage?.attempt({ type: 'echo', name: 'greet', run_id: 'no' })).toBe(
+      'run the greeting “greet”',
+    );
   });
 
   it('falls back to the task where the input names no type the server keeps', () => {
-    expect([runOfAPage?.attempt({ type: 'forecast', name: 'morning-posts' }), readOfAPage?.attempt({})]).toEqual([
-      runOfAPage?.attempt(null),
-      readOfAPage?.attempt(null),
+    expect([read?.attempt({ type: 'forecast', name: 'greet' }), read?.attempt({})]).toEqual([
+      read?.attempt(null),
+      read?.attempt(null),
     ]);
   });
 });

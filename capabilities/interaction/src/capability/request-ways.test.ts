@@ -1,5 +1,5 @@
 import { defineUpdateDefinition } from '@on.auto/definitions';
-import { savedIn } from '@on.auto/definitions/testing';
+import { savedIn, uncheckedPages } from '@on.auto/definitions/testing';
 import { OperationsServed } from '@on.auto/operations';
 import type { ToolServer } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
@@ -59,7 +59,7 @@ describe('a request saved without saying how its party is reached', () => {
   it('is refused on an update as on a create, once its version that names deliver: agent is saved', async () => {
     const playbook = interactionHarness({ tools: fakeTools() });
     const updating = (source: string) =>
-      playbook.call(defineUpdateDefinition(playbook.capabilities), {
+      playbook.call(defineUpdateDefinition(playbook.capabilities, uncheckedPages), {
         type: 'interaction',
         name: 'approve-brief',
         source,

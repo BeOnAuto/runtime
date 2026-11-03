@@ -23,7 +23,7 @@ The limits of `name` and `description` hold for the text as sent, so the JSON Sc
 
 ## The operations
 
-All five are org operations, so their routes are relative to the org. `playbookOperations` lists them for a catalog. `get_playbook` is defined with `defineHttpOperation` and so served over HTTP alone, since a playbook `list_playbooks` lists holds the same fields; the other four are also MCP tools.
+All five are org operations, so their routes are relative to the org, and all five are also MCP tools. `playbookOperationsOf(pages)` lists them for a catalog, over `pages`, a `PlaybookPages` the composition supplies: `pageOf` reads a playbook's page, by its org and id, and `save` checks and saves one, or removes it with `null`, so this package depends on nothing that keeps pages. `update_playbook` saves the page it is given first, after it finds the playbook active, then the name and the description, and `get_playbook` and `update_playbook` answer the page as `page.source`; `list_playbooks` answers no page.
 
 | Operation         | Kind    | Route                               | Input                                                      | Answer                                 | Rejections of the handler |
 | ----------------- | ------- | ----------------------------------- | ---------------------------------------------------------- | -------------------------------------- | ------------------------- |

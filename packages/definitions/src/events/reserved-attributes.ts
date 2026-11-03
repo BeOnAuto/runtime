@@ -2,6 +2,7 @@ import { lineageAttributeNames } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
+import type { RecordedPageEvent } from '../page/page-facts.ts';
 import type { DefinitionEvent } from '../registry/definition-events.ts';
 import { composedFactsOf, type CapabilityFacts } from '../run-work/declared-facts.ts';
 import { coreRunFactTypes } from '../runs/run-events.ts';
@@ -14,12 +15,17 @@ export const definitionSourcePrefix = '/definitions/';
 
 export const callerSourcePrefix = '/callers/';
 
-type PlaybookFeedType = DefinitionEvent['type'] | EventPublished['type'] | ReactionRefused['type'];
+type PlaybookFeedType =
+  | DefinitionEvent['type']
+  | RecordedPageEvent['type']
+  | EventPublished['type']
+  | ReactionRefused['type'];
 
 const playbookFeedTypes: Readonly<Record<PlaybookFeedType, true>> = {
   definition_created: true,
   definition_updated: true,
   definition_retired: true,
+  playbook_page_saved: true,
   event_published: true,
   reaction_refused: true,
 };

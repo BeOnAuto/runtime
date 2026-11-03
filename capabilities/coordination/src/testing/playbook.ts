@@ -2,11 +2,11 @@ import {
   defineCreateDefinition,
   defineRunDefinition,
   runSettler,
-  getRun,
+  defineGetRun,
   type Capability,
   type SettleRun,
 } from '@on.auto/definitions';
-import { admittingMeter } from '@on.auto/definitions/testing';
+import { admittingMeter, uncheckedPages } from '@on.auto/definitions/testing';
 import {
   makeDispatcher,
   settle as settleCall,
@@ -48,7 +48,7 @@ export function playbookOn(ledger: MemoryLedger, capabilities: readonly Capabili
     admittingMeter,
   );
   const dispatcher = makeDispatcher([]);
-  const createDefinition = defineCreateDefinition(capabilities);
+  const createDefinition = defineCreateDefinition(capabilities, uncheckedPages);
   const runDefinition = defineRunDefinition(capabilities);
   const dispatch = (operation: PlaybookOperation, input: object, caller: CallerIdentity): Effect.Effect<Outcome> =>
     dispatcher
@@ -59,7 +59,7 @@ export function playbookOn(ledger: MemoryLedger, capabilities: readonly Capabili
   return {
     createDefinition,
     runDefinition,
-    getRun,
+    getRun: defineGetRun(capabilities, uncheckedPages),
     call,
     callCancelledWhen: (cancelled, operation, input) => {
       const cancelling = new AbortController();

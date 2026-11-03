@@ -18,7 +18,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
-const playbookTools = ['create_playbook', 'list_playbooks', 'update_playbook', 'retire_playbook'];
+const playbookTools = ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook'];
 
 const definitionTools = [
   'create_definition',
@@ -140,17 +140,15 @@ const definitionTypes = [
   { type: 'computation', noun: 'computation function', guide: 'computation-function' },
   { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
   { type: 'generation', noun: 'generation function', guide: 'generation-function' },
-  { type: 'page', noun: 'page', guide: 'page' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];
 
 const terminology = readFileSync(new URL('../../../../docs/concepts/terminology.md', import.meta.url), 'utf8');
 
 const resourcesOnTheTerminologyPage: ReadonlySet<string> = new Set(
-  [
-    ...terminology.matchAll(/^\| \w+ +\| ([A-Z][a-z]+(?: function)?) +\| /gmu),
-    ...terminology.matchAll(/^\| (Page) +\| /gmu),
-  ].map(([, resource = '']: readonly string[]) => resource.toLowerCase()),
+  [...terminology.matchAll(/^\| \w+ +\| ([A-Z][a-z]+(?: function)?) +\| /gmu)].map(
+    ([, resource = '']: readonly string[]) => resource.toLowerCase(),
+  ),
 );
 
 interface Connection {
@@ -199,7 +197,7 @@ describe('the instructions an agent receives when it connects', () => {
       const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
 
       expect(instructions).toBe(
-        instructionsActingAs({ caller: localDeveloper, org }, endpoint, served, definitionTypes),
+        instructionsActingAs({ caller: localDeveloper, org }, endpoint, served, { definitionTypes, pages: true }),
       );
       expect(instructions).toContain(sentence);
       expect(unnamed.filter((name) => instructions?.includes(name) === true)).toEqual([]);

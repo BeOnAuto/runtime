@@ -70,6 +70,7 @@ A run answers the [asset](output-shapes.md#asset) it made:
 | `parameters`   | No       | The [parameters](#parameters) of the kind, each within the limits of the model                                                                                                                     |
 | `references`   | No       | JSON Pointers into the input, such as `/photo`, each at the `id` of an asset of the playbook the model takes as a reference; see [References](#references)                                         |
 | `expires`      | No       | How long the asset is kept, an ISO 8601 duration from one hour to 3,650 days, such as `P30D`. Without it, an asset is kept for the days the runtime keeps one, 90 unless its operator sets another |
+| `page`         | No       | The [page](page-format.md) that presents its runs                                                                                                                                                  |
 
 The prompt is everything after the front matter. It is a [template](template.md) that reads `input`, `today`, the date as `YYYY-MM-DD`, and `now`, the time in ISO 8601, and it must render text: a list or an object written whole is refused. For audio, the prompt is the text the model speaks.
 

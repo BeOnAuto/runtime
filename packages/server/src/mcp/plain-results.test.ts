@@ -118,6 +118,7 @@ async function playbooksCalled(session: McpSession): Promise<Called> {
     ['retire_playbook', await session.callTool('retire_playbook', { playbook: 'old-sales' })],
     ['list_playbooks', await session.callTool('list_playbooks', { include_retired: true })],
     ['update_playbook', await session.callTool('update_playbook', { ...describing, description: 'Answers questions' })],
+    ['get_playbook', await session.callTool('get_playbook', { playbook: 'sales' })],
     ['list_models', await session.callTool('list_models', {})],
   ];
 }

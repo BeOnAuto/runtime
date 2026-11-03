@@ -1,5 +1,4 @@
-import type { DefinitionKind } from '@on.auto/definitions';
-import { makePageAdapter } from '@on.auto/definitions/page';
+import { subjectPagesOf, type SubjectPages } from '@on.auto/definitions/page';
 import { appendSignal, type AppendSignal, type ConnectionPorts } from '@on.auto/ledger';
 import type { ProgramPool } from '@on.auto/workflow-engine/dsl';
 import {
@@ -16,7 +15,7 @@ import {
 import type { Settings } from '../settings/settings.ts';
 
 interface ServedProjections {
-  readonly page: DefinitionKind;
+  readonly pages: SubjectPages;
   readonly store: WorkflowStore;
   readonly projector: ProjectorSettings;
 }
@@ -39,7 +38,7 @@ export function projectionWiring(): ProjectionWiring {
       const folders = [someFolder(pages), ...besides];
       const store = await openWorkflowStore(database, folders);
       return {
-        page: makePageAdapter({ pool, views: viewsPortOn(store.database) }),
+        pages: subjectPagesOf({ pool, views: viewsPortOn(store.database) }),
         store,
         projector: {
           folders,

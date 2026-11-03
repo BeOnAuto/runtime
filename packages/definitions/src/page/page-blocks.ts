@@ -150,7 +150,7 @@ function tokensOf(body: Body): Checked<readonly BodyToken[]> {
   }
 }
 
-function sizeIssues(blocks: PageBlocks, line: number): readonly DocumentIssue[] {
+export function sizeIssues(blocks: PageBlocks, line: number): readonly DocumentIssue[] {
   const bytes = Object.values(blocks).reduce((sum, { text }) => sum + Buffer.byteLength(text, 'utf8'), 0);
   return bytes > mostTemplateBytes
     ? [

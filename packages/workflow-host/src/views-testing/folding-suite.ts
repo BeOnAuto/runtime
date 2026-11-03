@@ -97,7 +97,7 @@ function checkpointTests(settingsOf: SettingsOf): void {
 }
 
 function sourceTests(settingsOf: SettingsOf): void {
-  it('never folds the runs of its own definition, and folds those of another', async () => {
+  it('folds every run its filters name, those of its own definition among them', async () => {
     const views = await viewHarness(await settingsOf());
     const runs = [
       { type: 'run_succeeded', subject: 'view/self' },
@@ -109,9 +109,9 @@ function sourceTests(settingsOf: SettingsOf): void {
     await views.ran('view/self', 'its own answer again');
     views.start();
 
-    const kept = await views.until('self', liveFromSomewhere);
+    const kept = await views.until('self', foldedAll(3));
 
-    expect([kept.view, kept.folded]).toEqual([1, 1]);
+    expect([kept.view, kept.folded]).toEqual([3, 3]);
   });
 
   it('folds the events published to the playbook as their publishers gave them, matched by type, source and data', async () => {

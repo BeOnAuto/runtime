@@ -1,4 +1,4 @@
-import { definitionNamePattern, functionTypeOrder, pageDefinitionType } from '@on.auto/definitions';
+import { definitionNamePattern, functionTypeOrder } from '@on.auto/definitions';
 import { PlaybookIdSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
@@ -26,7 +26,7 @@ const commentsSegment = 'comments';
 
 export const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 
-const definitionTypes: ReadonlySet<string> = new Set(['workflow', ...functionTypeOrder, pageDefinitionType]);
+const definitionTypes: ReadonlySet<string> = new Set(['workflow', ...functionTypeOrder]);
 
 export const countPattern = /^[1-9][0-9]{0,8}$/u;
 

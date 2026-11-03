@@ -175,6 +175,7 @@ describe('a read-only key on /mcp', () => {
 
     expect(outcome.tools).toEqual([
       'list_playbooks',
+      'get_playbook',
       ...commentTools,
       'list_models',
       'search',
@@ -217,7 +218,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
 });
 
 describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
-  it('lists the thirty-six tools and the playbooks of its org', async () => {
+  it('lists the thirty-seven tools and the playbooks of its org', async () => {
     const outcome = await asKey(
       acmeAdmin.key,
       async (session) => ({
@@ -228,7 +229,7 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
       kind,
     );
 
-    expect(outcome.tools).toBe(36);
+    expect(outcome.tools).toBe(37);
     expect(outcome.playbooks.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });
 });

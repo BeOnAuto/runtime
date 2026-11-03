@@ -7,12 +7,14 @@ import {
   defineRunDefinition,
   defineUpdateDefinition,
   defineCapability,
+  type Capability,
   type RunContext,
   type CapabilityDeclaration,
 } from '../index.ts';
 import { recordingJournal } from '../journal-testing/recording-journal.ts';
 import { answeringLaterMs, answeringNowMs, asking, nudgesPresenter } from '../testing/asking.ts';
 import { noCalledDefinitions } from '../testing/called-definitions.ts';
+import { uncheckedPages } from '../testing/page-ports.ts';
 
 const parseWords = (source: string) =>
   source.trim() === ''
@@ -92,7 +94,11 @@ describe('the reach of a capability', () => {
   it('reaches systems outside the server only when it says so, and so do run_definition and the saves, whose check may ask them, when one of its capabilities does', () => {
     const local = defineCapability(words);
     const outside = defineCapability({ ...words, type: 'lookup', reachesOutside: true });
-    const operations = [defineRunDefinition, defineCreateDefinition, defineUpdateDefinition];
+    const operations = [
+      (capabilities: readonly Capability[]) => defineRunDefinition(capabilities),
+      (capabilities: readonly Capability[]) => defineCreateDefinition(capabilities, uncheckedPages),
+      (capabilities: readonly Capability[]) => defineUpdateDefinition(capabilities, uncheckedPages),
+    ];
 
     expect([local.reachesOutside, outside.reachesOutside]).toEqual([false, true]);
     expect(

@@ -3,10 +3,11 @@ import { Effect, Fiber } from 'effect';
 import { TestClock } from 'effect/testing';
 import { describe, expect, it } from 'vitest';
 
-import { createPlaybook, defineListOrgChanges, playbookChanges, retirePlaybook, updatePlaybook } from '../index.ts';
+import { createPlaybook, defineListOrgChanges, playbookChanges, retirePlaybook } from '../index.ts';
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
 import { changesOf } from '../testing/followed-changes.ts';
 import { asQueryString, harness, toOrg } from '../testing/harness.ts';
+import { updatePlaybook } from '../testing/playbook-pages.ts';
 
 const listOrgChanges = defineListOrgChanges([playbookChanges]);
 

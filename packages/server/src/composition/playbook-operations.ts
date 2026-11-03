@@ -5,10 +5,15 @@ import {
   makeDefinitionPresenters,
   type Capability,
 } from '@on.auto/definitions';
+import type { SubjectPages } from '@on.auto/definitions/page';
 import type { RouteRegistration } from '@on.auto/operations';
 import { defineGetEvent, defineListPlaybookChanges, defineListPlaybookEvents } from '@on.auto/playbooks';
 
 import type { ComposedFacts } from './composed-facts.ts';
+
+export interface ServedPages {
+  readonly pages: SubjectPages;
+}
 
 interface PlaybookOperation {
   readonly registration: RouteRegistration<'playbook'>;
@@ -16,11 +21,11 @@ interface PlaybookOperation {
 
 export function playbookOperationsServing(
   capabilities: readonly Capability[],
-  { facts, names }: Pick<ComposedFacts, 'facts' | 'names'>,
+  { facts, names, pages }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages,
 ): readonly PlaybookOperation[] {
   const presenters = makeDefinitionPresenters(capabilities, facts);
   return [
-    ...makeDefinitionOperations(capabilities, facts, presenters),
+    ...makeDefinitionOperations(capabilities, pages, facts, presenters),
     defineListPlaybookEvents(presenters),
     defineListPlaybookChanges(presenters, [commentChanges]),
     defineGetEvent(presenters),

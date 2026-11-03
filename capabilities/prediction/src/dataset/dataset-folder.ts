@@ -1,5 +1,6 @@
 import type { PageFilters } from '@on.auto/workflow-engine';
 import {
+  keptDefinitionsOf,
   rowsOf,
   someFolder,
   type CapabilityPorts,
@@ -86,10 +87,10 @@ export function datasetFolder({
   rebuildsAtOnce = predictionBounds.datasetRebuildsAtOnce,
 }: DatasetFolding): Folder<DatasetRow, DatasetChange> {
   return {
-    definitionType: predictionDefinitionType,
+    name: 'datasets',
+    ...keptDefinitionsOf(predictionDefinitionType, keptDatasetOf),
     tables: [datasetsTable, rowsTable],
     rebuildsAtOnce,
-    keptOf: keptDatasetOf,
     keyOf: ({ dataSha256 }) => dataSha256,
     typesOf: ({ data }) => data.events.map(({ type }) => type),
     playbooksWithRows: (database) =>

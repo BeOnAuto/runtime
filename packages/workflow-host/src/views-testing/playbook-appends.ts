@@ -5,7 +5,7 @@ import { streamPrefixOfPlaybook, type Context } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
 import type { ViewDetails } from '../views/view-details.ts';
-import { alpha, viewedType, type Playbook } from './view-documents.ts';
+import { alpha, alphaKey, viewedType, type Playbook } from './view-documents.ts';
 
 interface RunOf {
   readonly at?: string;
@@ -20,8 +20,14 @@ export interface PlaybookAppends {
   readonly append: Append;
   readonly saved: (name: string, details?: ViewDetails, playbook?: Playbook) => Promise<void>;
   readonly retired: (name: string) => Promise<void>;
-  readonly savedPage: (name: string, details: Schema.JsonObject) => Promise<void>;
+  readonly savedPage: (name: string, details: Schema.JsonObject, source?: string) => Promise<void>;
   readonly retiredPage: (name: string) => Promise<void>;
+  readonly pageSaved: (subject: string, version: number, details: Schema.JsonObject) => Promise<void>;
+  readonly pageRemoved: (subject: string, version: number) => Promise<void>;
+  readonly subjectSaved: (subject: string, version: number) => Promise<void>;
+  readonly subjectRetired: (subject: string) => Promise<void>;
+  readonly playbookPageSaved: (details: Schema.JsonObject) => Promise<void>;
+  readonly playbookPageRemoved: () => Promise<void>;
   readonly ran: Ran;
   readonly ranEach: (subject: string, outputs: readonly Schema.Json[]) => Promise<unknown>;
   readonly ranInOneStream: (subject: string, outputs: readonly Schema.Json[]) => Promise<void>;
@@ -64,15 +70,15 @@ function ranBy(append: Append): Ran {
   };
 }
 
-type Saved = (name: string, details?: Schema.JsonObject, playbook?: Playbook) => Promise<void>;
+type Saved = (name: string, details?: Schema.JsonObject, playbook?: Playbook, source?: string) => Promise<void>;
 
 function savedBy(append: Append, definitions: Map<string, number>, definitionType: string): Saved {
-  return async (name, details, playbook = alpha) => {
+  return async (name, details, playbook = alpha, source?: string) => {
     const key = `${streamPrefixOfPlaybook(playbook)}${definitionType}/${name}`;
     const version = (definitions.get(key) ?? 0) + 1;
     definitions.set(key, version);
     const content = {
-      source: `the ${name} document, version ${version}`,
+      source: source ?? `the ${name} document, version ${version}`,
       ...(details === undefined ? {} : { details }),
     };
     const saving =
@@ -105,6 +111,53 @@ function retiredBy(append: Append, definitions: Map<string, number>, definitionT
   };
 }
 
+function inTurn(): () => string {
+  let saves = 0;
+  return () => {
+    saves += 1;
+    return new Date(Date.parse(savedAt) + saves * 1000).toISOString();
+  };
+}
+
+function onTheSubject(append: Append, at: string, subject: string, version = 1) {
+  const [type = '', name = ''] = subject.split('/');
+  return (events: readonly EncodedEvent[]) =>
+    append(`${alphaKey}definitions/${type}`, events, {
+      by: 'acme-admin',
+      at,
+      definitionType: type,
+      definitionName: name,
+      definitionVersion: version,
+    });
+}
+
+function savedWith(version: number, page: Schema.Json | undefined): EncodedEvent {
+  const content = { source: `version ${version}`, ...(page === undefined ? {} : { page }) };
+  return version === 1
+    ? { type: 'definition_created', data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } } }
+    : { type: 'definition_updated', data: { content } };
+}
+
+function pageAppendsOf(append: Append) {
+  const next = inTurn();
+  const onThePlaybook = (page: Schema.Json) =>
+    append(`${alphaKey}definitions/playbook`, [{ type: 'playbook_page_saved', data: { page } }], {
+      by: 'acme-admin',
+      at: next(),
+    });
+  const saving = (subject: string, version: number, page?: Schema.Json) =>
+    onTheSubject(append, next(), subject, version)([savedWith(version, page)]);
+  return {
+    pageSaved: (subject: string, version: number, details: Schema.JsonObject) => saving(subject, version, { details }),
+    pageRemoved: (subject: string, version: number) => saving(subject, version, null),
+    subjectSaved: (subject: string, version: number) => saving(subject, version),
+    subjectRetired: (subject: string) =>
+      onTheSubject(append, next(), subject)([{ type: 'definition_retired', data: {} }]),
+    playbookPageSaved: (details: Schema.JsonObject) => onThePlaybook({ source: 'lately: |\n  Posts', details }),
+    playbookPageRemoved: () => onThePlaybook(null),
+  };
+}
+
 export function playbookAppends(store: LedgerStreams, appends: AppendSignal): PlaybookAppends {
   const append = appendOn(store, appends);
   const ran = ranBy(append);
@@ -113,7 +166,8 @@ export function playbookAppends(store: LedgerStreams, appends: AppendSignal): Pl
     append,
     saved: savedBy(append, definitions, viewedType),
     retired: retiredBy(append, definitions, viewedType),
-    savedPage: savedBy(append, definitions, 'page'),
+    savedPage: (name, details, source) => savedBy(append, definitions, 'page')(name, details, alpha, source),
+    ...pageAppendsOf(append),
     retiredPage: retiredBy(append, definitions, 'page'),
     ran,
     ranInOneStream: async (subject, outputs) => {

@@ -5,7 +5,7 @@ import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
-import { playbookOperationsServing } from '../composition/playbook-operations.ts';
+import { playbookOperationsServing, type ServedPages } from '../composition/playbook-operations.ts';
 import { routesFor, type ServedCatalog } from '../composition/served-routes.ts';
 import type { Served } from '../server-options/server-options.ts';
 import { openedHost, type HostParts, type HostRuntime } from './host-dependencies.ts';
@@ -18,7 +18,7 @@ interface PlaybookOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
-export interface WorkflowParts extends HostParts {
+export interface WorkflowParts extends HostParts, ServedPages {
   readonly orgOperations: readonly OrgOperation[];
   readonly playbookOperations: readonly PlaybookOperation[];
   readonly check: ExpressionCheck;
@@ -70,6 +70,15 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     defineSendRunEvent(host, names),
   ]);
   const { identityIssuer, retryStateKeys, contentAddressKey, shippedFiles } = parts;
-  const served = { catalog, dispatcher, capabilities, identityIssuer, retryStateKeys, contentAddressKey, shippedFiles };
+  const served = {
+    catalog,
+    dispatcher,
+    capabilities,
+    pages: true,
+    identityIssuer,
+    retryStateKeys,
+    contentAddressKey,
+    shippedFiles,
+  };
   return { routes: await routesFor(runtime, served), stopWork: host.stop };
 }

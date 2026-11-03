@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { detailsOf } from '../views-testing/view-documents.ts';
+import { alphaKey } from '../views-testing/view-documents.ts';
 import { runnableDetailsOf } from '../views/view-details.ts';
-import { definitionsAfter, noDefinitions } from './playbook-definitions.ts';
+import { definitionsAfter, keptDefinitionsOf, noDefinitions } from './playbook-definitions.ts';
 
 const fold = 'export function fold(view: number): number { return view + 1; }';
 
@@ -79,5 +80,15 @@ describe('the fold a playbook keeps for a definition', () => {
       filters: [{ type: 'noted', data: '${ $data.n           > 1 }' }],
     });
     expect(kept.functions.get('plain')?.details).toEqual(typed);
+  });
+});
+
+describe('the definitions of one type a folder keeps', () => {
+  it('are those of its stream, and none before the stream is read', () => {
+    const keeping = keptDefinitionsOf('view', runnableDetailsOf);
+    const kept = keeping.keptAfter(noDefinitions, 'view', [savedAs('runs', { source: 'a', details: { fold } })]);
+
+    expect(keeping.together(alphaKey, new Map([['view', kept]]))).toBe(kept);
+    expect(keeping.together(alphaKey, new Map())).toBe(noDefinitions);
   });
 });
