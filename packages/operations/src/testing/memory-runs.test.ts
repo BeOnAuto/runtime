@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   ContextSchema,
+  type Context,
   type Decided,
   type Decider,
   type InvalidCursor,
@@ -189,5 +190,41 @@ describe('the in-memory read of the runs of one definition, over a first record 
     );
 
     expect(pages).toEqual([['workflow'], [], []]);
+  });
+});
+
+describe('the in-memory read of the runs no step started', () => {
+  it('leaves out a run whose first record names the call that started it, and lists it when that is not asked', async () => {
+    const at = '2026-11-02T09:00:00.000Z';
+    const firstRecordOf = (run: string, position: number, context: Context) => ({
+      position,
+      id: `message-${position}`,
+      causationId: null,
+      correlationId: null,
+      stream: `playbook/acme/alpha/runs/${run}`,
+      streamPosition: 1,
+      type: 'run_started',
+      data: run,
+      context,
+      recordedAt: at,
+    });
+    const readTwoRuns = memoryRecordedReader([
+      firstRecordOf('close-the-week', 1, { at, by: 'tester' }),
+      firstRecordOf('total-the-week', 2, {
+        at,
+        by: 'playbook:alpha',
+        calledBy: { runId: 'close-the-week', reference: '/do/0/total', run: 1 },
+      }),
+    ]);
+    const reading = (selection: RecordedSelection) =>
+      readTwoRuns
+        .readRecorded({ org: 'acme', playbook: 'alpha' }, selection, newestHundred)
+        .pipe(Effect.map(({ records }) => records.map(({ data }) => data)));
+
+    const pages = await Effect.runPromise(
+      Effect.all([reading({ kind: 'runs' }), reading({ kind: 'runs', called: false })]),
+    );
+
+    expect(pages).toEqual([['total-the-week', 'close-the-week'], ['close-the-week']]);
   });
 });

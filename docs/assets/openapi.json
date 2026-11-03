@@ -13105,7 +13105,7 @@
       "post": {
         "operationId": "render_page",
         "summary": "Render page",
-        "description": "Renders a definition's page now and answers the definition as get_definition does, with page.result and page.lately, so that the page can be seen before the definition has run. `sample_output`, optional, is an output to render result over, as a run that succeeded gave it. Without sample_output, result renders over the definition's latest run, and is left out when it has not run.",
+        "description": "Renders a definition's page and answers the definition as get_definition does, with page.result and page.lately: as it stands now, so that the page can be seen before the definition has run, or as of a run. `sample_output`, optional, is an output to render result over, as a run that succeeded gave it. Without sample_output, result renders over the definition's latest run, and is left out when it has not run. `run_id`, optional in place of sample_output, renders the page as it stood when that run ended, with lately and standing over the views folded again up to the last event of the run.",
         "tags": [
           "definitions"
         ],
@@ -13158,6 +13158,12 @@
                 "properties": {
                   "sample_output": {
                     "description": "With render, an output to render result over, as of a run that succeeded"
+                  },
+                  "run_id": {
+                    "type": "string",
+                    "description": "The run's id, a UUID in any case, kept in lowercase",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|[fF]{8}-[fF]{4}-[fF]{4}-[fF]{4}-[fF]{12})$",
+                    "format": "uuid"
                   }
                 }
               }
@@ -14464,6 +14470,9 @@
                       "type": "string",
                       "description": "When the run finished, in ISO 8601 UTC"
                     },
+                    "within": {
+                      "$ref": "#/$defs/RunWithin"
+                    },
                     "record": {
                       "type": "object",
                       "description": "What the runtime adapter recorded: of the run that succeeded, of what a rejected run did before it was rejected, such as the tokens a model call used, or of the work it started that finishes later"
@@ -14483,7 +14492,28 @@
                     "started_by"
                   ],
                   "additionalProperties": false,
-                  "description": "A run run_definition answers: how it stands or ended, what its runtime adapter recorded and its page in Studio"
+                  "description": "A run run_definition answers: how it stands or ended, what its runtime adapter recorded and its page in Studio",
+                  "$defs": {
+                    "RunWithin": {
+                      "type": "object",
+                      "properties": {
+                        "run_id": {
+                          "type": "string",
+                          "description": "The workflow's run whose step started this run"
+                        },
+                        "step": {
+                          "type": "string",
+                          "description": "The step, its reference in the workflow without its leading /, such as do/1/review"
+                        }
+                      },
+                      "required": [
+                        "run_id",
+                        "step"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The workflow run and the step that started this run; left out for a run no workflow's step started"
+                    }
+                  }
                 }
               }
             }
@@ -14904,6 +14934,9 @@
                       "type": "string",
                       "description": "When the run finished, in ISO 8601 UTC"
                     },
+                    "within": {
+                      "$ref": "#/$defs/RunWithin"
+                    },
                     "record": {
                       "type": "object",
                       "description": "What the runtime adapter recorded: of the run that succeeded, of what a rejected run did before it was rejected, such as the tokens a model call used, or of the work it started that finishes later"
@@ -14934,7 +14967,28 @@
                     "started_by"
                   ],
                   "additionalProperties": false,
-                  "description": "One run as get_run reads it: how it ended, what its runtime adapter recorded, and its page where its definition has one"
+                  "description": "One run as get_run reads it: how it ended, what its runtime adapter recorded, and its page where its definition has one",
+                  "$defs": {
+                    "RunWithin": {
+                      "type": "object",
+                      "properties": {
+                        "run_id": {
+                          "type": "string",
+                          "description": "The workflow's run whose step started this run"
+                        },
+                        "step": {
+                          "type": "string",
+                          "description": "The step, its reference in the workflow without its leading /, such as do/1/review"
+                        }
+                      },
+                      "required": [
+                        "run_id",
+                        "step"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The workflow run and the step that started this run; left out for a run no workflow's step started"
+                    }
+                  }
                 }
               }
             }
@@ -15369,6 +15423,9 @@
                     "finished_at": {
                       "type": "string",
                       "description": "When the run finished, in ISO 8601 UTC"
+                    },
+                    "within": {
+                      "$ref": "#/$defs/RunWithin"
                     }
                   },
                   "required": [
@@ -15381,7 +15438,28 @@
                     "started_by"
                   ],
                   "additionalProperties": false,
-                  "description": "One run of a definition with an input, and how it ended"
+                  "description": "One run of a definition with an input, and how it ended",
+                  "$defs": {
+                    "RunWithin": {
+                      "type": "object",
+                      "properties": {
+                        "run_id": {
+                          "type": "string",
+                          "description": "The workflow's run whose step started this run"
+                        },
+                        "step": {
+                          "type": "string",
+                          "description": "The step, its reference in the workflow without its leading /, such as do/1/review"
+                        }
+                      },
+                      "required": [
+                        "run_id",
+                        "step"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The workflow run and the step that started this run; left out for a run no workflow's step started"
+                    }
+                  }
                 }
               }
             }
@@ -15492,6 +15570,15 @@
             }
           },
           {
+            "name": "steps",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "false leaves out the runs a workflow's step started; true when left out"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -15553,6 +15640,25 @@
                   ],
                   "additionalProperties": false,
                   "$defs": {
+                    "RunWithin": {
+                      "type": "object",
+                      "properties": {
+                        "run_id": {
+                          "type": "string",
+                          "description": "The workflow's run whose step started this run"
+                        },
+                        "step": {
+                          "type": "string",
+                          "description": "The step, its reference in the workflow without its leading /, such as do/1/review"
+                        }
+                      },
+                      "required": [
+                        "run_id",
+                        "step"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The workflow run and the step that started this run; left out for a run no workflow's step started"
+                    },
                     "ListedRun": {
                       "type": "object",
                       "properties": {
@@ -15620,6 +15726,9 @@
                         "finished_at": {
                           "type": "string",
                           "description": "When the run finished, in ISO 8601 UTC"
+                        },
+                        "within": {
+                          "$ref": "#/$defs/RunWithin"
                         },
                         "rejection": {
                           "type": "object",

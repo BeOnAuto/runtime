@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
+import { replayBounds } from '../pages/view-replay.ts';
 import { projectorBounds } from '../projector/projector-settings.ts';
 import { pageFolding, pageViewsBounds } from './page-views.ts';
 
@@ -33,6 +34,12 @@ describe('the bounds on the public reference page of pages', () => {
       ),
       expect.stringContaining(`${pageViewsBounds.rebuildsAtOnce} pages a playbook`),
     ]);
+  });
+
+  it('say how far a replay as of a run reads', () => {
+    expect(valueOf('A replay [as of a run](#as-of-a-run)')).toContain(
+      `${replayBounds.pages} pages of up to 1,000 records`,
+    );
   });
 
   it('say a fold that runs out of time or crashes stalls the views after as many tries as the code allows', () => {

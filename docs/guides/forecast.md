@@ -64,7 +64,7 @@ Ask the "<function name>" function in my "<playbook name>" playbook for
 <series>'s <number> <how many> <periods> ahead.
 ```
 
-The agent runs the function with a question, such as `{ "series": "north", "horizon": 1 }`, and the run returns the forecast at once. Without `horizon`, it forecasts every horizon the function names. The forecast is a series, which Auto Studio draws on the run's page. A page can name its lines in your words; [The lines on a page](../reference/prediction-format.md#the-lines-on-a-page) shows how. Read it like this:
+The agent runs the function with a question, such as `{ "series": "north", "horizon": 1 }`, and the run returns the forecast at once. Without `horizon`, it forecasts every horizon the function names. The forecast is a series, which Auto Studio draws where it shows the run, in the playbook's Ledger. A page can name its lines in your words; [The lines on a page](../reference/prediction-format.md#the-lines-on-a-page) shows how. Read it like this:
 
 - `origin` is the last observed period, the one before the period you asked in.
 - The `observed` line holds the last periods of the data up to the origin, twice the longest horizon unless the document's `predicts.history` says how many.

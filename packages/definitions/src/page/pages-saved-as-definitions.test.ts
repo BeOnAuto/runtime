@@ -11,7 +11,11 @@ const pages = subjectPagesOf({
     check: () =>
       Promise.resolve({ ran: 'checked' as const, issues: [], stripped: { expressions: [] }, milliseconds: 0 }),
   },
-  views: { viewOf: () => Effect.undefined, newestRecordAt: () => Effect.undefined },
+  views: {
+    viewOf: () => Effect.undefined,
+    newestRecordAt: () => Effect.undefined,
+    viewAsOfRun: () => Effect.undefined,
+  },
 });
 
 const latelyOfTheDays = '{% lately %}\n{{ views.by_day | json }}\n{% endlately %}';

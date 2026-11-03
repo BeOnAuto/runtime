@@ -5,14 +5,15 @@ import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { DefinitionSchema } from '../registry/definition.ts';
-import { DefinitionNameField, SampleOutputField } from './definition-fields.ts';
+import { DefinitionNameField, RunIdInputField, SampleOutputField } from './definition-fields.ts';
 import { definitionRead, type PageMissing } from './definition-read.ts';
 import { defineRenderPlaybookPage } from './render-playbook-page.ts';
 
 const description = [
-  "Renders a definition's page now and answers the definition as get_definition does, with page.result and page.lately, so that the page can be seen before the definition has run.",
+  "Renders a definition's page and answers the definition as get_definition does, with page.result and page.lately: as it stands now, so that the page can be seen before the definition has run, or as of a run.",
   '`sample_output`, optional, is an output to render result over, as a run that succeeded gave it.',
   "Without sample_output, result renders over the definition's latest run, and is left out when it has not run.",
+  '`run_id`, optional in place of sample_output, renders the page as it stood when that run ended, with lately and standing over the views folded again up to the last event of the run.',
 ].join(' ');
 
 function noPage({ label, name }: PageMissing): NotFound {
@@ -33,6 +34,7 @@ export function defineRenderPage(capabilities: readonly Capability[], pages: Sub
         type: known.field,
         name: DefinitionNameField,
         sample_output: Schema.optionalKey(SampleOutputField),
+        run_id: Schema.optionalKey(RunIdInputField),
       }),
       outputSchema: DefinitionSchema,
       reasons: ['not_found', 'invalid_input', 'conflict'],

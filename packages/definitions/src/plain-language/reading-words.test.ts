@@ -67,3 +67,19 @@ describe('the plain language of list_runs', () => {
     ]).toEqual(['list the runs', 'list the runs of greetings that are still running', 'list the runs']);
   });
 });
+
+describe('the plain language of list_runs that leaves out the runs a step started', () => {
+  it('says so after the other filters, when it lists runs, finds none and tries', () => {
+    expect([
+      listed([run('succeeded')], { steps: false }),
+      listed([], { status: 'failed', steps: false }),
+      listRuns.registration.plainLanguage?.attempt({ type: 'echo', steps: false }),
+      listRuns.registration.plainLanguage?.attempt({ steps: true }),
+    ]).toEqual([
+      'Listed 1 run other than those a step started, newest first: 1 finished.',
+      'This playbook has no runs that broke down other than those a step started.',
+      'list the runs of greetings other than those a step started',
+      'list the runs',
+    ]);
+  });
+});

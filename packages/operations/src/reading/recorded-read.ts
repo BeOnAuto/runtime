@@ -12,6 +12,7 @@ export type RecordedSelection =
       readonly notBeginningWith?: readonly string[];
       readonly definitionType?: string;
       readonly name?: string;
+      readonly called?: false;
     }
   | { readonly kind: 'run'; readonly run: string }
   | { readonly kind: 'correlated'; readonly correlation: string };

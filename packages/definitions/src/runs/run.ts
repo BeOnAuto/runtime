@@ -82,6 +82,18 @@ export const RunRejectionSchema = Schema.Union([
 
 export type RunRejection = typeof RunRejectionSchema.Type;
 
+const RunWithinSchema = Schema.Struct({
+  run_id: Schema.String.annotate({ description: "The workflow's run whose step started this run" }),
+  step: Schema.String.annotate({
+    description: 'The step, its reference in the workflow without its leading /, such as do/1/review',
+  }),
+}).annotate({
+  identifier: 'RunWithin',
+  description: "The workflow run and the step that started this run; left out for a run no workflow's step started",
+});
+
+export type RunWithin = typeof RunWithinSchema.Type;
+
 export const RunSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run id, a UUID' }),
   type: Schema.String.annotate({
@@ -109,6 +121,7 @@ export const RunSchema = Schema.Struct({
   started_at: Schema.String.annotate({ description: 'When the run started, in ISO 8601 UTC' }),
   started_by: RecordedCallerSchema.annotate({ description: 'The caller who started the run, by id and name' }),
   finished_at: Schema.optionalKey(Schema.String.annotate({ description: 'When the run finished, in ISO 8601 UTC' })),
+  within: Schema.optionalKey(RunWithinSchema),
 }).annotate({ identifier: 'Run', description: 'One run of a definition with an input, and how it ended' });
 
 export type Run = typeof RunSchema.Type;
@@ -125,7 +138,7 @@ export function isWorkflowRun(run: Run): run is WorkflowRun {
   return run.type === 'workflow';
 }
 
-export type RunRecord = Omit<Run, 'run_id'>;
+export type RunRecord = Omit<Run, 'run_id' | 'within'>;
 
 export const RunDetailSchema = Schema.Struct({
   ...RunSchema.fields,

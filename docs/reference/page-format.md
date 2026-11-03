@@ -15,6 +15,7 @@ A page is not a function, and it never runs:
 - `create_definition` and `update_definition` save the page with the rest of the document, so a save that changes only the page is a new version of the definition, as any save is. A document whose page the runtime refuses is not saved.
 - The runtime renders a page each time it is read. `get_run` of a run of the subject carries the run rendered through `result`, and `get_definition` of the subject carries `lately` rendered over the views. So Auto Studio, a chat and an agent show the same words.
 - A run renders with the page of its subject's latest version, so a run of an older version shows the page as it stands.
+- The views are projections of the playbook's events, so a past view is the same fold over those events up to a point. `render_page` given a `run_id` renders `lately` over the views as they stood when that run ended; see [As of a run](#as-of-a-run).
 
 To start, give a workflow [a minimal page](#a-minimal-page): a headline for each run, and one chart of the runs so far.
 
@@ -419,15 +420,15 @@ The server that runs the playbook's workflows keeps the views:
 
 `get_definition` of a subject whose page has `data` carries its views' standing as `page.standing`, and so does [`render_playbook_page`](#the-preview) for the playbook's page:
 
-| Field                         | What it says                                                                                                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `state`                       | `live` once caught up, `rebuilding` while they are built, `waiting` for their turn to be built, or `stalled`                                                  |
-| `version`                     | The version of the subject whose `data` the views are built from                                                                                              |
-| `checkpoint`, `checkpoint_at` | Where in the playbook's history the views have read to, an opaque cursor, and when the playbook recorded the last record they read                            |
-| `last_event`, `folded`        | The `id` and `time` of the last event the views folded, `null` before the first, and how many events they have folded                                         |
-| `lag_ms`                      | How far the views are behind: the time of the playbook's newest record less `checkpoint_at`, to the second on SQLite                                          |
-| `newest_record_at`            | When the playbook last recorded anything                                                                                                                      |
-| `stalled`                     | For stalled views: the `event` they stopped at, with its `id`, `type` and `time`; the `kind` of stall; the fold's own `error`; and its `line` in the document |
+| Field                         | What it says                                                                                                                                                   |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `state`                       | `live` once caught up, `rebuilding` while they are built, `waiting` for their turn to be built, or `stalled`; [as of a run](#as-of-a-run), also `out_of_reach` |
+| `version`                     | The version of the subject whose `data` the views are built from                                                                                               |
+| `checkpoint`, `checkpoint_at` | Where in the playbook's history the views have read to, an opaque cursor, and when the playbook recorded the last record they read                             |
+| `last_event`, `folded`        | The `id` and `time` of the last event the views folded, `null` before the first, and how many events they have folded                                          |
+| `lag_ms`                      | How far the views are behind: the time of the playbook's newest record less `checkpoint_at`, to the second on SQLite                                           |
+| `newest_record_at`            | When the playbook last recorded anything                                                                                                                       |
+| `stalled`                     | For stalled views: the `event` they stopped at, with its `id`, `type` and `time`; the `kind` of stall; the fold's own `error`; and its `line` in the document  |
 
 ### When the views stall
 
@@ -831,13 +832,14 @@ A definition's page is in its `source`, as written. `get_definition` adds `page`
 
 ## What reads render
 
-The runtime renders a page each time it is read, with the page and the views as they stand then:
+The runtime renders a page each time it is read, with the page as it stands then. The views are as they stand then too, apart from a render [as of a run](#as-of-a-run):
 
 | Read                                       | What it carries                                   |
 | ------------------------------------------ | ------------------------------------------------- |
 | `get_run` of a run of the subject          | `page.result`: the run, rendered through `result` |
 | `get_definition` of the subject            | `page.lately`: `lately`, rendered over the views  |
 | The [preview](#the-preview) of the subject | `page.result` and `page.lately`                   |
+| The preview [as of a run](#as-of-a-run)    | The run's `page.result`, and `page.lately` then   |
 | `render_playbook_page`                     | The playbook's `page.lately`                      |
 
 - `get_run` carries no `page` where the subject has no page, or a page with no `result`. `get_definition` carries no `page.lately` where the page has no `lately`.
@@ -849,22 +851,23 @@ The runtime renders a page each time it is read, with the page and the views as 
 
 Where a template cannot be rendered, the read carries one fixed line in its place, and never a render half done:
 
-| When                                                  | The line                                                                                                                 |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| The views are being built, or wait to be built        | `page.lately`: `Building this page's figures from the playbook's history…`                                               |
-| The views stalled                                     | `page.lately`: `The figures stopped updating because the page could not process an event. Correct the page to continue.` |
-| `result` stopped, such as at a field the output lacks | `page.result`: `Could not display this run:`, then the problem and its line                                              |
-| `lately` stopped                                      | `page.lately`: `Could not display this page’s figures:`, then the problem and its line                                   |
-| A render over 64 KiB, or past a render limit          | The same line, which names the limit                                                                                     |
+| When                                                        | The line                                                                                                                 |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| The views are being built, or wait to be built              | `page.lately`: `Building this page's figures from the playbook's history…`                                               |
+| The views stalled                                           | `page.lately`: `The figures stopped updating because the page could not process an event. Correct the page to continue.` |
+| The views could not be replayed [as of a run](#as-of-a-run) | `page.lately`: `Could not work out this page's figures as they stood when this run ended.`                               |
+| `result` stopped, such as at a field the output lacks       | `page.result`: `Could not display this run:`, then the problem and its line                                              |
+| `lately` stopped                                            | `page.lately`: `Could not display this page’s figures:`, then the problem and its line                                   |
+| A render over 64 KiB, or past a render limit                | The same line, which names the limit                                                                                     |
 
 ### The preview
 
 The preview renders a page when asked, so that it can be seen before its subject has run. Over MCP it is `get_definition` of the subject with two more inputs. Over HTTP it is a route of its own, `render_page`, relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Over | Operation                                               | Input                                            |
-| ---- | ------------------------------------------------------- | ------------------------------------------------ |
-| MCP  | `get_definition`, with the subject's `type` and `name`  | `render: true`, and optionally `sample_output`   |
-| HTTP | `render_page`, `POST /definitions/{type}/{name}/render` | Optionally, a JSON body `{ "sample_output": … }` |
+| Over | Operation                                               | Input                                                                                                        |
+| ---- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| MCP  | `get_definition`, with the subject's `type` and `name`  | `render: true`, and optionally `sample_output`                                                               |
+| HTTP | `render_page`, `POST /definitions/{type}/{name}/render` | Optionally, a JSON body `{ "sample_output": … }`, or `{ "run_id": … }` to render [as of a run](#as-of-a-run) |
 
 Both answer the subject as `get_definition` does, with `page.result` and `page.lately`, and need `playbook:read`, as `get_definition` does.
 
@@ -874,6 +877,19 @@ Both answer the subject as `get_definition` does, with `page.result` and `page.l
 - Over a sample, `run.status` is `succeeded`, `run.started` and `run.ended` are the moment of the read, and `run.version` is the subject's latest version.
 - `lately` renders over the views as they stand, or as the line that says they are being built.
 - `render` on a definition without a page is refused as `invalid_input`, and so is `sample_output` without `render`. `render_page` of a definition without a page is refused as `not_found`.
+
+### As of a run
+
+`render_page` given a `run_id` answers `page.result`, `page.lately` and `page.standing` as they stood when that run ended. So a client can show the page of a run from last month as it read that day. This takes HTTP: `get_definition` has no `run_id`.
+
+- The views are not stored for each moment. The runtime folds again from the start of the playbook's history up to the run's last event. It uses the same fold and the same limits that keep the views, and writes nothing.
+- `page.result` is what `get_run` of the run answers. `lately` renders with the page of the subject's latest version, like every read. It renders over the views of that run's moment, and its `now` and `today` are that moment.
+- `page.standing` says how the replay ended. `checkpoint` and `checkpoint_at` are the run's last event, `folded` and `last_event` count up to there, and `lag_ms` is how far that is behind the playbook's newest record.
+- A run still going has no end yet, so it renders over the views as they stand, as the preview does.
+- A fold that stalls before the run's last event gives the line for stalled views, as it does for the views themselves. A run that ended before a stall replays as usual.
+- Where the replay reaches [its limit](#limits), or no worker can fold it, `page.lately` is the line that says so and `page.standing.state` is `out_of_reach`, with the version alone. `page.result` is still answered.
+- A run the playbook does not have is refused as `not_found`. A run of another definition is refused as `invalid_input` at `/run_id`, and so is `run_id` given with `sample_output`.
+- The refusals of the preview hold: `not_found` for a definition without a page, and `conflict` for a retired one.
 
 The playbook's page is read with `render_playbook_page`, `POST /render` relative to the playbook, which takes no body, needs `playbook:read` and answers `{ page: { lately, standing } }`, both where the page has `data`. A playbook without a page is refused as `not_found`. Over MCP, `get_playbook` answers the playbook's page as its `source`, and renders nothing.
 
@@ -895,23 +911,24 @@ The playbook's page is read with `render_playbook_page`, `POST /render` relative
 
 ## Limits
 
-| Bound                                 | Value                                                         | When it is reached                                   |
-| ------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------- |
-| Document                              | 65,536 bytes in UTF-8, the page included                      | Refused when saved                                   |
-| Templates                             | 32 KiB (32,768 bytes) in UTF-8, the two together              | Refused when saved                                   |
-| Names in tags and outputs             | 1,000 in each template, as in a reasoning function's          | Refused when saved                                   |
-| Views                                 | 8                                                             | Refused when saved                                   |
-| Filters                               | 8                                                             | Refused when saved                                   |
-| The check at save                     | 2 seconds of the server's time on the check's own worker      | `invalid_input`; `unavailable` with no checker ready |
-| The views together                    | 512 KiB as JSON, checked after every fold                     | The views stall at that event, `size`                |
-| Work, memory and duration of one fold | 500 checkpoints, 64 MiB and 10 seconds                        | The views stall at that event                        |
-| Views built at once                   | 4 pages a playbook, the setting `PAGE_MAX_REBUILDS`           | The save succeeds; the standing says `waiting`       |
-| Time to render                        | 200 ms for each template                                      | The line in place of the template                    |
-| Memory a render may charge            | 5,000,000 characters or items                                 | The line in place of the template                    |
-| A rendered template                   | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `lately` | The line in place of the template                    |
-| The headline                          | 200 characters                                                | A client cuts it there, with an ellipsis             |
-| `sample_output`                       | 256 KiB as JSON, nesting at most 512 levels, as a run's input | `invalid_input` at `/sample_output`                  |
-| Cells of a row                        | 2 to 4                                                        | Refused when saved; a line says why when it renders  |
+| Bound                                 | Value                                                           | When it is reached                                   |
+| ------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------- |
+| Document                              | 65,536 bytes in UTF-8, the page included                        | Refused when saved                                   |
+| Templates                             | 32 KiB (32,768 bytes) in UTF-8, the two together                | Refused when saved                                   |
+| Names in tags and outputs             | 1,000 in each template, as in a reasoning function's            | Refused when saved                                   |
+| Views                                 | 8                                                               | Refused when saved                                   |
+| Filters                               | 8                                                               | Refused when saved                                   |
+| The check at save                     | 2 seconds of the server's time on the check's own worker        | `invalid_input`; `unavailable` with no checker ready |
+| The views together                    | 512 KiB as JSON, checked after every fold                       | The views stall at that event, `size`                |
+| Work, memory and duration of one fold | 500 checkpoints, 64 MiB and 10 seconds                          | The views stall at that event                        |
+| Views built at once                   | 4 pages a playbook, the setting `PAGE_MAX_REBUILDS`             | The save succeeds; the standing says `waiting`       |
+| A replay [as of a run](#as-of-a-run)  | 10 pages of up to 1,000 records, with one page folded at a time | `out_of_reach`, and the line in place of `lately`    |
+| Time to render                        | 200 ms for each template                                        | The line in place of the template                    |
+| Memory a render may charge            | 5,000,000 characters or items                                   | The line in place of the template                    |
+| A rendered template                   | 64 KiB (65,536 bytes) in UTF-8, for `result` and for `lately`   | The line in place of the template                    |
+| The headline                          | 200 characters                                                  | A client cuts it there, with an ellipsis             |
+| `sample_output`                       | 256 KiB as JSON, nesting at most 512 levels, as a run's input   | `invalid_input` at `/sample_output`                  |
+| Cells of a row                        | 2 to 4                                                          | Refused when saved; a line says why when it renders  |
 
 ## Availability
 

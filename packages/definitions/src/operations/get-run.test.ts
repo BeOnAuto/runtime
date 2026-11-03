@@ -62,3 +62,26 @@ describe('get_run rejecting', () => {
     });
   });
 });
+
+describe('a run a step of a workflow started', () => {
+  it('names the workflow run and the step it is within, as run_definition answered it, and a run no step started does not', async () => {
+    const definitions = await withRun();
+    const workflowRun = '0199a3c4-7d2e-7c1a-9b3f-000000000001';
+    const stepRun = '0199a3c4-7d2e-7c1a-9b3f-000000000002';
+    const within = { run_id: workflowRun, step: 'do/0/fork/branches/1/greet' };
+
+    const answered = await definitions.call(runDefinition, {
+      ...toAlpha(acmeAdmin, { type: 'echo', name: 'greet', run_id: stepRun }),
+      calledBy: { run_id: workflowRun, reference: '/do/0/fork/branches/1/greet', run: 1 },
+    });
+    const read = await definitions.call(getRun, toAlpha(acmeAdmin, { run_id: stepRun }));
+    const notWithin = await definitions.call(getRun, toAlpha(acmeAdmin, { run_id: runId }));
+
+    expect([answered, read]).toMatchObject([
+      { status: 'succeeded', output: { run_id: stepRun, within } },
+      { status: 'succeeded', output: { run_id: stepRun, within } },
+    ]);
+    expect(notWithin).toMatchObject({ status: 'succeeded', output: { run_id: runId } });
+    expect(notWithin).not.toHaveProperty('output.within');
+  });
+});

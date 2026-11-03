@@ -39,12 +39,15 @@ export interface ReadMoment {
 export type ViewsShown =
   | { readonly state: 'live'; readonly views: Schema.Json }
   | { readonly state: 'building' }
-  | { readonly state: 'stalled' };
+  | { readonly state: 'stalled' }
+  | { readonly state: 'out_of_reach' };
 
 export const viewsBeingBuilt = "Building this page's figures from the playbook's history…";
 
 export const viewsStalled =
   'The figures stopped updating because the page could not process an event. Correct the page to continue.';
+
+export const viewsOutOfReach = "Could not work out this page's figures as they stood when this run ended.";
 
 export const runFailed = 'The run failed.';
 
@@ -95,6 +98,9 @@ export function latelyShown(
   }
   if (views.state === 'stalled') {
     return viewsStalled;
+  }
+  if (views.state === 'out_of_reach') {
+    return viewsOutOfReach;
   }
   const variables = {
     views: viewsOf(views.views, declared),

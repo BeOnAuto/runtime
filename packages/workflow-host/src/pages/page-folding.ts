@@ -30,13 +30,17 @@ export interface FoldedPageResult {
   readonly trouble?: string;
 }
 
-export interface PageFolding {
-  readonly settings: ViewsFolding;
+export interface FoldingTurn {
+  readonly settings: Pick<ViewsFolding, 'pool' | 'folding' | 'overtimesBeforeStall'>;
   readonly share: Semaphore.Semaphore;
+}
+
+export interface PageFolding extends FoldingTurn {
+  readonly settings: ViewsFolding;
   readonly database: HostDatabase;
 }
 
-interface Folding {
+export interface Folding {
   readonly row: ViewRow;
   readonly view: Schema.Json;
   readonly events: readonly number[];
@@ -48,7 +52,7 @@ type Folded = Extract<FoldOutcome, { readonly ran: 'folded' }>;
 
 const stoppedBy = { deadline: 'time', memory: 'memory' } as const satisfies Readonly<Record<string, StallCause>>;
 
-function consideredBy(row: ViewRow, page: ReadPage): readonly number[] {
+export function consideredBy(row: ViewRow, page: ReadPage): readonly number[] {
   const types = new Set(row.details.filters.map(({ type }) => type));
   return page.events.flatMap((placed, index) =>
     isAfter(placed.point, row.checkpoint) && types.has(placed.event.type) ? [index] : [],
@@ -66,7 +70,7 @@ function foldingViewOf({ row, view, events }: Folding): FoldingView {
   };
 }
 
-function requestOf(foldings: readonly Folding[], page: ReadPage, { folding }: ViewsFolding): FoldRequest {
+function requestOf(foldings: readonly Folding[], page: ReadPage, { folding }: FoldingTurn['settings']): FoldRequest {
   return {
     ...folding,
     events: page.events.map(({ event }) => event),
@@ -76,7 +80,7 @@ function requestOf(foldings: readonly Folding[], page: ReadPage, { folding }: Vi
   };
 }
 
-function retriesOf({ overtimesBeforeStall, folding }: ViewsFolding): Retries {
+function retriesOf({ overtimesBeforeStall, folding }: FoldingTurn['settings']): Retries {
   return { overtimesBeforeStall, foldDeadlineMs: folding.foldDeadlineMs };
 }
 
@@ -109,7 +113,7 @@ function foldedChanges(foldings: readonly Folding[], page: ReadPage, outcome: Fo
   );
 }
 
-function foldedBy(request: FoldRequest, { settings, share }: PageFolding): Effect.Effect<FoldOutcome> {
+function foldedBy(request: FoldRequest, { settings, share }: FoldingTurn): Effect.Effect<FoldOutcome> {
   return share.withPermits(1)(pooledJob('fold', (signal) => settings.pool.fold(request, signal)));
 }
 
@@ -124,7 +128,7 @@ function salvageOf(page: ReadPage, at: number): ReadPage {
   };
 }
 
-function salvagedTry(going: Folding, lost: Try, parts: PageFolding): Effect.Effect<ViewChange> {
+function salvagedTry(going: Folding, lost: Try, parts: FoldingTurn): Effect.Effect<ViewChange> {
   const page = salvageOf(lost.page, lost.at);
   const salvaging = { ...going, events: going.events.filter((index) => index < lost.at) };
   if (salvaging.events.length === 0) {
@@ -145,7 +149,7 @@ function salvagedTry(going: Folding, lost: Try, parts: PageFolding): Effect.Effe
   );
 }
 
-function lostChanges(foldings: readonly Folding[], page: ReadPage, outcome: Lost, parts: PageFolding) {
+function lostChanges(foldings: readonly Folding[], page: ReadPage, outcome: Lost, parts: FoldingTurn) {
   const kind = causeOf(outcome);
   const progress = 'progress' in outcome ? outcome.progress : undefined;
   const going = progress === undefined ? undefined : foldings[progress.view];
@@ -162,7 +166,7 @@ function settledBy(
   foldings: readonly Folding[],
   page: ReadPage,
   outcome: FoldOutcome,
-  parts: PageFolding,
+  parts: FoldingTurn,
 ): Effect.Effect<FoldedPageResult> {
   if (outcome.ran === 'folded') {
     const changes = foldedChanges(foldings, page, outcome, retriesOf(parts.settings));
@@ -190,18 +194,26 @@ function foldingsOf(rows: readonly ViewRow[], page: ReadPage, parts: PageFolding
   );
 }
 
+export function foldedOver(
+  foldings: readonly Folding[],
+  page: ReadPage,
+  parts: FoldingTurn,
+): Effect.Effect<FoldedPageResult> {
+  if (foldings.every(({ events }) => events.length === 0)) {
+    const views = foldings.map(() => ({ view: null, folded: 0, lastFolded: -1, through: -1, work: 0 }));
+    return settledBy(foldings, page, { ran: 'folded', early: false, views, milliseconds: 0 }, parts);
+  }
+  return Effect.flatMap(foldedBy(requestOf(foldings, page, parts.settings), parts), (outcome) =>
+    settledBy(foldings, page, outcome, parts),
+  );
+}
+
 export function foldedPage(
   rows: readonly ViewRow[],
   page: ReadPage,
   parts: PageFolding,
 ): Effect.Effect<FoldedPageResult, DatabaseFailed> {
-  return Effect.gen(function* () {
-    const foldings = yield* foldingsOf(rows, page, parts);
-    if (foldings.every(({ events }) => events.length === 0)) {
-      const views = foldings.map(() => ({ view: null, folded: 0, lastFolded: -1, through: -1, work: 0 }));
-      return yield* settledBy(foldings, page, { ran: 'folded', early: false, views, milliseconds: 0 }, parts);
-    }
-    const outcome = yield* foldedBy(requestOf(foldings, page, parts.settings), parts);
-    return yield* settledBy(foldings, page, outcome, parts);
-  });
+  return Effect.flatMap(foldingsOf(rows, page, parts), (foldings: readonly Folding[]) =>
+    foldedOver(foldings, page, parts),
+  );
 }

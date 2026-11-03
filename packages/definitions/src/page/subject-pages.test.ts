@@ -31,6 +31,7 @@ function keeping(kept: Readonly<Record<string, KeptViewState>>): KeptViews {
   return {
     viewOf: (_, name) => Effect.succeed(kept[name]),
     newestRecordAt: () => Effect.succeed('2026-11-01T09:00:00.000Z'),
+    viewAsOfRun: (_, name) => Effect.succeed(kept[name]),
   };
 }
 
@@ -147,6 +148,7 @@ describe('the page of a definition', () => {
 
     expect(await asked.ask(pages.pageOf('workflow', 'morning'))).toMatchObject({ output: { answer: null } });
     expect(await asked.ask(pages.latelyOf(morning))).toMatchObject({ output: { answer: null } });
+    expect(await asked.ask(pages.asOfRun(morning, 'a-run'))).toMatchObject({ output: { answer: {} } });
   });
 });
 
@@ -238,6 +240,7 @@ describe('lately on the page of a definition', () => {
     await asked.created('workflow', 'evening', 'name: evening\ndo: []\n');
 
     expect(await asked.ask(pages.latelyOf(morning))).toMatchObject({ output: { answer: null } });
+    expect(await asked.ask(pages.asOfRun(morning, 'a-run'))).toMatchObject({ output: { answer: {} } });
     expect(await asked.ask(pages.standingOf(morning))).toMatchObject({ output: { answer: null } });
     expect(await asked.ask(pages.standingOf({ type: 'workflow', name: 'evening' }))).toMatchObject({
       output: { answer: null },

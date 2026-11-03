@@ -47,7 +47,7 @@ function pagesOf(studioWithServer: string): readonly string[] {
     playbook,
     `${playbook}&reasoning=summary&because=created&version=1`,
     `${playbook}&reasoning=summary&because=updated&version=2`,
-    `${playbook}&run=${runId}`,
+    `${playbook}&ledger=&run=${runId}`,
   ];
 }
 

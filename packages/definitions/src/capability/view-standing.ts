@@ -16,7 +16,7 @@ export interface KeptViewStall {
 
 export interface KeptViewState {
   readonly version: number;
-  readonly phase: 'waiting' | 'rebuilding' | 'live' | 'stalled';
+  readonly phase: 'waiting' | 'rebuilding' | 'live' | 'stalled' | 'out_of_reach';
   readonly view: Schema.Json;
   readonly checkpoint: string | null;
   readonly checkpointAt: string | null;
@@ -28,6 +28,11 @@ export interface KeptViewState {
 export interface KeptViews {
   readonly viewOf: (playbook: PlaybookAddress, name: string) => Effect.Effect<KeptViewState | undefined>;
   readonly newestRecordAt: (playbook: PlaybookAddress) => Effect.Effect<string | undefined>;
+  readonly viewAsOfRun: (
+    playbook: PlaybookAddress,
+    name: string,
+    run: string,
+  ) => Effect.Effect<KeptViewState | undefined>;
 }
 
 export function lagOf(newestAt: string | undefined, checkpointAt: string | null): number | undefined {
@@ -45,6 +50,9 @@ export function viewStandingOf(version: number, kept?: KeptViewState, newestAt?:
   const newest = { newest_record_at: newestAt ?? null };
   if (kept?.version !== version) {
     return { state: 'rebuilding', version, checkpoint: null, checkpoint_at: null, folded: 0, lag_ms: null, ...newest };
+  }
+  if (kept.phase === 'out_of_reach') {
+    return { state: kept.phase, version };
   }
   return {
     state: kept.phase,

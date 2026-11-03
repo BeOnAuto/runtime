@@ -73,7 +73,7 @@ describe('the links of a call over HTTP to pages in Studio', () => {
     expect(await answeredOverHttp()).toEqual({
       invocation: 'none',
       home: 'https://studio.on.auto/?server=http%3A%2F%2Flocalhost&src=agent',
-      studio: 'https://studio.on.auto/?server=http%3A%2F%2Flocalhost&src=agent&playbook=alpha&run=r-1',
+      studio: 'https://studio.on.auto/?server=http%3A%2F%2Flocalhost&src=agent&playbook=alpha&ledger=&run=r-1',
     });
   });
 
@@ -92,7 +92,7 @@ describe('the links of a call over HTTP to pages in Studio', () => {
   it('join the context the shell makes of the request, which still reaches the call', async () => {
     expect(await answeredOverHttp({ callContext: () => Context.make(Invocation, 'invocation-7') })).toMatchObject({
       invocation: 'invocation-7',
-      studio: 'https://studio.on.auto/?server=http%3A%2F%2Flocalhost&src=agent&playbook=alpha&run=r-1',
+      studio: 'https://studio.on.auto/?server=http%3A%2F%2Flocalhost&src=agent&playbook=alpha&ledger=&run=r-1',
     });
   });
 });
@@ -111,7 +111,7 @@ describe('the links of a tool of an MCP endpoint to pages in Studio', () => {
     expect(result.structuredContent).toEqual({
       invocation: 'none',
       home: `${server.origin}/studio/?${named}`,
-      studio: `${server.origin}/studio/?${named}&playbook=alpha&run=r-2`,
+      studio: `${server.origin}/studio/?${named}&playbook=alpha&ledger=&run=r-2`,
     });
   });
 });

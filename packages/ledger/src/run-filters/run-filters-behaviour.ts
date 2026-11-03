@@ -1,5 +1,6 @@
 import {
   ContextSchema,
+  type CalledBy,
   type Decided,
   type Decider,
   type RecordedPage,
@@ -23,16 +24,18 @@ interface RunFacts {
   readonly facts: readonly RunFact[];
   readonly definitionType?: string;
   readonly definitionName?: string;
+  readonly calledBy?: CalledBy;
 }
 
 const runFacts: Decider<null, RunFacts, typeof RunFactSchema.Type> = {
   initialState: null,
   evolve: () => null,
   decide: ({ facts }) => Result.succeed(facts),
-  context: ({ definitionType, definitionName }) => ({
+  context: ({ definitionType, definitionName, calledBy }) => ({
     ...stamped,
     ...(definitionType === undefined ? {} : { definitionType }),
     ...(definitionName === undefined ? {} : { definitionName }),
+    ...(calledBy === undefined ? {} : { calledBy }),
   }),
   eventSchema: RunFactSchema,
 };
@@ -137,6 +140,50 @@ function theRejectedRuns(aLedger: LedgerMaker): void {
   });
 }
 
+function runOfAWeek(index: number): RunFacts {
+  const facts = [factOfType('run_started'), factOfType('run_succeeded')];
+  return index % 3 === 0
+    ? { facts, definitionType: 'workflow', definitionName: 'close-the-week' }
+    : {
+        facts,
+        definitionType: 'reasoning',
+        definitionName: 'total-the-week',
+        calledBy: { runId: `run-${index - (index % 3)}`, reference: `/do/${index % 3}/total`, run: 1 },
+      };
+}
+
+function theRunsNoStepStarted(aLedger: LedgerMaker): void {
+  it('leave out the runs whose start names the step that started them, alone or with the type asked for', async () => {
+    const ledger = await aLedger();
+    await Effect.runPromise(
+      Effect.forEach(
+        Array.from({ length: 9 }, (_, index) => index),
+        (index) => recordedRun(ledger, `run-${index}`, runOfAWeek(index)),
+        { discard: true },
+      ),
+    );
+    const noStepStarted: RecordedSelection = { kind: 'runs', called: false };
+
+    const pages = await Promise.all([
+      everyPageOfRuns(ledger, noStepStarted, { order: 'desc', limit: 2 }),
+      everyPageOfRuns(ledger, { ...noStepStarted, definitionType: 'reasoning' }, { order: 'desc', limit: 2 }),
+      everyPageOfRuns(ledger, { kind: 'runs', definitionType: 'reasoning' }, { order: 'desc', limit: 4 }),
+    ]);
+
+    expect(pages).toEqual([
+      [
+        [['run-6', 'run-3'], true],
+        [['run-0'], false],
+      ],
+      [[[], false]],
+      [
+        [['run-8', 'run-7', 'run-5', 'run-4'], true],
+        [['run-2', 'run-1'], false],
+      ],
+    ]);
+  });
+}
+
 const awkwardText = {
   nul: 'a NUL \u0000 inside',
   unpaired: 'half a pair \uD800 alone',
@@ -180,6 +227,7 @@ export function runFiltersBehaviour(aLedger: LedgerMaker): void {
     theRunsOfOneType(aLedger);
     theRunsOfOneName(aLedger);
     theRejectedRuns(aLedger);
+    theRunsNoStepStarted(aLedger);
     theDefinitionOfAnAwkwardRun(aLedger);
   });
 }

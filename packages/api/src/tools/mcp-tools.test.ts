@@ -108,7 +108,7 @@ describe('the definition tools on a playbook endpoint', () => {
     expect(ran.structuredContent).toMatchObject({
       status: 'succeeded',
       output: { greeting: 'Hello', input: { who: 'Ada' } },
-      studio: inStudio(`run=${runId}`),
+      studio: inStudio(`ledger=&run=${runId}`),
     });
     expect(run.structuredContent).toEqual({ ...ran.structuredContent, studio: undefined, ...echoRecord });
   });

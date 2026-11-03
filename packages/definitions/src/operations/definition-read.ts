@@ -4,17 +4,18 @@ import { Effect, type Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
-import type { SubjectPages } from '../page/subject-pages-port.ts';
+import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import { readDefinition } from './definition-reading.ts';
+import { overOf, runOfThePage, runWithSample, viewsRead } from './page-runs.ts';
 import { triggersSince } from './registry-access.ts';
-import { viewsShownOf } from './saved-pages.ts';
 
 interface DefinitionAsked {
   readonly type: string;
   readonly name: string;
   readonly render?: boolean;
   readonly sample_output?: Schema.Json;
+  readonly run_id?: string;
 }
 
 export interface PageMissing {
@@ -48,7 +49,7 @@ function retiredPage(label: string, name: string): Conflict {
 
 const resultOfAPreview = Effect.fnUntraced(function* (
   { pages, type, stored }: Reading,
-  sample: Schema.Json | undefined,
+  over: ResultOver,
   refusedWithoutAPage: MissingPageRefusal,
 ) {
   const label = definitionResourceLabel(type);
@@ -58,22 +59,32 @@ const resultOfAPreview = Effect.fnUntraced(function* (
   if ((yield* pages.pageOf(type, stored.name)) === undefined) {
     return yield* refusedWithoutAPage({ label, name: stored.name });
   }
-  return yield* pages.resultOf(type, stored.name, sample === undefined ? { latest: true } : { sample });
+  return yield* pages.resultOf(type, stored.name, over);
 });
 
-const pageRead = Effect.fnUntraced(function* (reading: Reading, result: string | undefined) {
+const pageRead = Effect.fnUntraced(function* (
+  reading: Reading,
+  result: string | undefined,
+  run?: Parameters<typeof viewsRead>[1],
+) {
   const { pages, type, stored } = reading;
   const page = yield* pages.pageOf(type, stored.name);
   if (page === undefined) {
     return {};
   }
-  const subject = { type, name: stored.name };
-  const shown = {
-    ...(result === undefined ? {} : { result }),
-    ...viewsShownOf(yield* pages.latelyOf(subject), yield* pages.standingOf(subject)),
-  };
+  const shown = { ...(result === undefined ? {} : { result }), ...(yield* viewsRead(reading, run)) };
   return Object.keys(shown).length === 0 ? {} : { page: shown };
 });
+
+function askedRightly({ render = false, sample_output: sample, run_id: runId }: DefinitionAsked) {
+  if (sample === undefined) {
+    return Effect.void;
+  }
+  if (!render) {
+    return Effect.fail(sampleWithoutRender);
+  }
+  return runId === undefined ? Effect.void : Effect.fail(runWithSample);
+}
 
 export function definitionRead(
   capabilities: readonly Capability[],
@@ -81,14 +92,14 @@ export function definitionRead(
   refusedWithoutAPage: MissingPageRefusal,
 ) {
   const known = knownCapabilities(capabilities);
-  return Effect.fnUntraced(function* ({ type, name, render = false, sample_output: sample }: DefinitionAsked) {
-    if (sample !== undefined && !render) {
-      return yield* sampleWithoutRender;
-    }
+  return Effect.fnUntraced(function* (asked: DefinitionAsked) {
+    yield* askedRightly(asked);
+    const { type, name, render = false, sample_output: sample, run_id: runId } = asked;
     const capability = yield* known.capabilityOfType(type);
     const { stored, definition: read } = yield* readDefinition(capability, known.types, name);
     const reading = { pages, type: capability.type, stored };
-    const result = render ? yield* resultOfAPreview(reading, sample, refusedWithoutAPage) : undefined;
+    const run = runId === undefined ? undefined : yield* runOfThePage(reading, runId);
+    const result = render ? yield* resultOfAPreview(reading, overOf(sample, run), refusedWithoutAPage) : undefined;
     const definition =
       (stored.triggers ?? []).length > 0 && stored.status === 'active'
         ? { ...read, triggers_since: yield* triggersSince(capability.type, stored) }
@@ -102,7 +113,7 @@ export function definitionRead(
       status: definition.status,
       ...(stored.details === undefined ? {} : { details: stored.details }),
     });
-    const page = yield* pageRead(reading, result);
+    const page = yield* pageRead(reading, result, run);
     return { ...definition, ...(standing === undefined ? {} : { standing }), ...page };
   });
 }

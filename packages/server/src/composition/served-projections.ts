@@ -6,6 +6,8 @@ import {
   pageViewsFolder,
   projectorBounds,
   someFolder,
+  pageFolding,
+  viewsAsOfOn,
   viewsPortOn,
   type ProjectorSettings,
   type SomeFolder,
@@ -38,7 +40,13 @@ export function projectionWiring(): ProjectionWiring {
       const folders = [someFolder(pages), ...besides];
       const store = await openWorkflowStore(database, folders);
       return {
-        pages: subjectPagesOf({ pool, views: viewsPortOn(store.database) }),
+        pages: subjectPagesOf({
+          pool,
+          views: {
+            ...viewsPortOn(store.database),
+            ...viewsAsOfOn(store.database, { pool, folding: pageFolding }),
+          },
+        }),
         store,
         projector: {
           folders,

@@ -137,9 +137,13 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 
 ### Links to Studio
 
-`create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the run's. A comment carries one too, to the place it is about. The link opens the Studio the runtime names, `/studio/` on its own origin where it serves Studio and the Studio host, `STUDIO_ORIGIN`, otherwise, on the runtime the request reached, its `PUBLIC_URL` where it signs people in, as `server`, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`. A definition's place in Studio is named by its type and its name, as `reasoning=summarize-brief`, then by `because`, `created` from `create_definition` and `updated` from `update_definition`, and by `version`, the version the call answers: `reasoning=summarize-brief&because=updated&version=3`. An `update_definition` that changes nothing records no version, so its link has no `because` and names the version that stands. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
+`create_playbook`, `create_definition`, `update_definition` and `run_definition` return `studio`, the page in Studio of what they made or ran: the playbook's, the definition's in its playbook, and the playbook's Ledger with the run chosen. A comment carries one too, to the place it is about. The link opens the Studio the runtime names: `/studio/` on its own origin where it serves Studio, and the Studio host, `STUDIO_ORIGIN`, otherwise. It names the runtime the request reached as `server`, its `PUBLIC_URL` where it signs people in, such as `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&src=agent&playbook=briefs&ledger=&run=0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a`.
 
-A comment's `studio`, which each [comment](#comments) carries, opens its [address](addresses.md) and shows the comment beside it. It opens a place rather than announcing what an agent made, so it carries `server` where the other links do, then the parameters Studio's own address takes, in this order, one for each segment of the address, each URL-encoded, and only those the address has, with no `src` and no `because`:
+A run's place is `ledger`, which is empty, then `run`, its id.
+
+A definition's place is its type and its name, as `reasoning=summarize-brief`, then `because`, `created` from `create_definition` and `updated` from `update_definition`, and `version`, the version the call answers: `reasoning=summarize-brief&because=updated&version=3`. An `update_definition` that changes nothing records no version, so its link has no `because` and names the version that stands. The link names no install. Where the runtime's own address is neither `https` nor on this computer, Studio would not open it, so `studio` is left out, and the welcome ends without a link.
+
+A comment's `studio`, which each [comment](#comments) carries, opens its [address](addresses.md) and shows the comment beside it. It opens a place rather than announcing what an agent made, so it has no `src` and no `because`. It carries `server` where the other links do, then the parameters Studio's own address takes, each URL-encoded: one for each segment of the address, and `ledger` before a run's. They come in this order, and only those the address has:
 
 | Parameter       | What it names                                                                                                                                                                    |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -148,12 +152,13 @@ A comment's `studio`, which each [comment](#comments) carries, opens its [addres
 | `<type>=<name>` | The definition, by its type and its name, as the other links name it: `workflow=close-the-week` or `computation=total-spend`                                                     |
 | `version`       | The definition's version                                                                                                                                                         |
 | `step`          | The step of a workflow, its reference without its leading `/`: `step=do%2F1%2Freview`                                                                                            |
-| `run`           | The run, for a run, an event of a run, a block of its result and a request                                                                                                       |
+| `ledger`        | The playbook's Ledger, empty, where Studio shows a run, its events and its request                                                                                               |
+| `run`           | The run chosen in the Ledger, for a run, an event of a run, a block of its result and a request                                                                                  |
 | `event`         | The event of the run                                                                                                                                                             |
 | `block`         | The place of a block of the run's result, from 1                                                                                                                                 |
 | `comment`       | The comment's id, always                                                                                                                                                         |
 
-So a comment on a step opens `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f`, and one on the playbook `…&playbook=finance&comment=<id>`. Studio reads a resolved comment with `open=false`, so its link opens it too.
+So a comment on a step opens `https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=019a4120-5b6c-7d8e-9f01-2a3b4c5d6e7f`, one on an event of a run `…&playbook=finance&ledger=&run=<run id>&event=<event id>&comment=<id>`, and one on the playbook `…&playbook=finance&comment=<id>`. Studio reads a resolved comment with `open=false`, so its link opens it too.
 
 A part adds no parameter: a comment on a part opens the page of its thing, and Studio finds the part there by the comment's address and shows it with the comment. A comment of the organization's own opens:
 
@@ -231,7 +236,7 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 | `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`, `diagram`, optional `overview`         |
 | `retire_definition` | `POST /definitions/reasoning/{name}/retire` | `playbook:write` | Name in path                                     |
 | `run_definition`    | `POST /definitions/reasoning/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id`         |
-| `render_page`       | `POST /definitions/reasoning/{name}/render` | `playbook:read`  | Optional `sample_output`                         |
+| `render_page`       | `POST /definitions/reasoning/{name}/render` | `playbook:read`  | Optional `sample_output` or `run_id`             |
 | `get_run`           | `GET /runs/{run_id}`                        | `playbook:read`  | Run id in path                                   |
 
 The `source` is a [reasoning function document](reasoning-format.md). These rules apply to the definitions of every type:
@@ -424,6 +429,9 @@ A workflow or a function can have a page, which presents its results ([Page form
 
 - `get_definition` adds `page`, with `lately` and `standing` where the page has them, and `get_run` of a run of the definition adds `page.result`. `list_definitions` shows nothing of a page.
 - `render_page`, `POST /definitions/{type}/{name}/render`, renders the page now, with `page.result` and `page.lately`, over the definition's latest run or over an optional JSON body `{ "sample_output": … }`. It needs `playbook:read`, and is refused with `not_found` for a definition without a page and `conflict` for a retired one.
+- Given `{ "run_id": … }` in place of `sample_output`, `render_page` answers the page as it stood when that run ended: `page.result`, and `page.lately` and `page.standing` over the views folded again up to the run's last event. A run still going renders over the views as they stand.
+- The replay reads at most 10 pages of up to 1,000 records. Past that, `page.standing.state` is `out_of_reach` and `page.lately` is a line that says so.
+- A run the playbook does not have is refused with `not_found`, and a run of another definition with `invalid_input`. See [As of a run](page-format.md#as-of-a-run).
 - Retiring a definition retires its page with it.
 
 See [What reads render](page-format.md#what-reads-render).
@@ -550,7 +558,7 @@ A cancelled run's rejection names the kind of its cancellation:
 
 ## Runs and results
 
-A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record`, and `run_definition` the run's page in Studio as `studio` ([Links to Studio](#links-to-studio)). A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
+A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record`, and `run_definition` the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
 Most runs finish within the request that starts them. These runs finish later, so `run_definition` returns them `started`, unless one ended before its first wait:
 
@@ -699,7 +707,7 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
 | Operation              | Method and route             | Permission      | Input                                                             |
 | ---------------------- | ---------------------------- | --------------- | ----------------------------------------------------------------- |
-| `list_runs`            | `GET /runs`                  | `playbook:read` | Optional `type`, `name`, `status`, `limit` and `cursor`           |
+| `list_runs`            | `GET /runs`                  | `playbook:read` | Optional `type`, `name`, `status`, `steps`, `limit` and `cursor`  |
 | `get_run_history`      | `GET /runs/{run_id}/history` | `playbook:read` | Run id in path; optional `order`, `limit` and `cursor`            |
 | `list_playbook_events` | `GET /events`                | `playbook:read` | Optional `type`, `since`, `run_id`, `order`, `limit` and `cursor` |
 | `get_event`            | `GET /events/{event_id}`     | `playbook:read` | Event id in path                                                  |
@@ -714,6 +722,7 @@ A retired playbook stays readable: these reads work on it, while every change to
 - A rejection shows its `reason`, with `kind` and `because` when the function gave them.
 - `status` keeps only the runs whose status is `started`, `succeeded`, `rejected` or `failed`.
 - `type` and `name` keep only the runs of one definition.
+- `steps: false` leaves out the runs that a workflow's step started. Left out, `steps` is `true`, and those runs are listed among the others, each with its `within`.
 
 ### A run's history
 
@@ -877,7 +886,7 @@ A page can contain fewer items than `limit`, or none, while `has_more` is `true`
 
 - records with no event type are left out;
 - a page stops after loading 4 MiB of stored data;
-- with `status`, `type` or `name`, a page stops after looking at 1,000 runs or records.
+- with `status`, `type`, `name` or `steps: false`, a page stops after looking at 1,000 runs or records.
 
 ## Comments
 
@@ -1004,7 +1013,7 @@ Authorization: Bearer <key>
       "resolved_how": null,
       "reopened_at": null,
       "reopened_by": null,
-      "studio": "https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&run=019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e&block=2&comment=019a4122-0c1d-7e2f-8a3b-4c5d6e7f8091"
+      "studio": "https://studio.on.auto/?server=https%3A%2F%2Fruntime.example.com&playbook=finance&ledger=&run=019a4012-7c3e-7d10-9b2a-4e6f8a1c2d3e&block=2&comment=019a4122-0c1d-7e2f-8a3b-4c5d6e7f8091"
     }
   ],
   "has_more": false,
@@ -1215,7 +1224,7 @@ Each reads and marks only the activity of the playbooks the caller may access, a
 | `new`       | A run no other run started that succeeded; a function or workflow saved, each version its own item; or a playbook created or updated, each change its own item                                                                                                                     | When the run ended, or the version or the change was saved     | Always                                                                                                                      |
 | `comment`   | A [comment](#comments) on something of a playbook, or of the organization's own                                                                                                                                                                                                    | When it was made, or, once reopened, when it was last reopened | Until it is resolved, and again from when it is reopened                                                                    |
 
-A run that a workflow's call started has no `new` or `broken` row of its own: the row of the workflow's run stands for what it did. A request, a broken definition or a comment is listed only while open, and nothing is served about it once it is resolved: the run's page says what became of a request, and `list_comments` reads a resolved comment. A definition that breaks again opens its row again, at the time of the new break, and a comment that is reopened opens its row again, at the time it was reopened.
+A run that a workflow's call started has no `new` or `broken` row of its own: the row of the workflow's run stands for what it did. A request, a broken definition or a comment is listed only while open, and nothing is served about it once it is resolved: `get_run` says what became of a request, and `list_comments` reads a resolved comment. A definition that breaks again opens its row again, at the time of the new break, and a comment that is reopened opens its row again, at the time it was reopened.
 
 The rows of playbooks come from the org's register of playbooks, which `list_activity` reads beside the other rows and merges with them by `at`: the newest 100 changes of the register, so an older change has no row.
 

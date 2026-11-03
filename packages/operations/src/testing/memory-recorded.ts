@@ -141,8 +141,12 @@ function holdsWhatWasAsked(asked: string | undefined, held: string | undefined):
   return asked === undefined || held === asked;
 }
 
-function isOfTheDefinitionAsked({ definitionType, name }: RunsSelection, { context }: MemoryRecord): boolean {
-  return holdsWhatWasAsked(definitionType, context.definitionType) && holdsWhatWasAsked(name, context.definitionName);
+function isOfTheDefinitionAsked({ definitionType, name, called }: RunsSelection, { context }: MemoryRecord): boolean {
+  return (
+    holdsWhatWasAsked(definitionType, context.definitionType) &&
+    holdsWhatWasAsked(name, context.definitionName) &&
+    (called === undefined || context.calledBy === undefined)
+  );
 }
 
 function examinedRuns(

@@ -35,6 +35,11 @@ function listRunsInputOf(typeField: KnownCapabilities['field']) {
         description: 'Only runs in this status: started, succeeded, rejected or failed',
       }),
     ),
+    steps: Schema.optionalKey(
+      Schema.Boolean.annotate({
+        description: "false leaves out the runs a workflow's step started; true when left out",
+      }),
+    ),
     limit: PagingInputFields.limit,
     cursor: PagingInputFields.cursor,
   });
@@ -56,9 +61,12 @@ export function streamsOfRuns(type: string | undefined, name: string | undefined
   };
 }
 
+const noStepStarted: { readonly called: false } = { called: false };
+
 function runsListedBy(byStatus: StoredTypesByStatus) {
-  return Effect.fnUntraced(function* ({ type, name, status, limit = defaultPageLimit, cursor }: ListRunsInput) {
-    const page = yield* (yield* PlaybookReader).readRecorded(streamsOfRuns(type, name), {
+  return Effect.fnUntraced(function* ({ type, name, status, steps, limit = defaultPageLimit, cursor }: ListRunsInput) {
+    const selection = { ...streamsOfRuns(type, name), ...(steps === false ? noStepStarted : {}) };
+    const page = yield* (yield* PlaybookReader).readRecorded(selection, {
       order: 'desc',
       limit,
       ...(cursor === undefined ? {} : { cursor }),

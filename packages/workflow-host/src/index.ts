@@ -79,6 +79,7 @@ export {
 export { followerWakeUp, type FollowedParts, type FollowingParts } from './reactions/host-reactions.ts';
 export { comparePoints, isAfter, pointIn, pointText, type Point } from './pages/history-points.ts';
 export { pageFolding, pageViewsBounds, pageViewsFolder } from './views/page-views.ts';
+export { replayBounds, viewsAsOfOn, type ViewAsOf, type ViewsAsOf } from './pages/view-replay.ts';
 export { viewsPortOn, type ViewsPort } from './views/views-port.ts';
 export type { HostClock } from './loop/host-clock.ts';
 export {

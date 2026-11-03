@@ -53,7 +53,7 @@ function atPage(studio: StudioSettings, page: StudioPage): string {
 const atAlpha = 'https://studio.example.com/?server=http%3A%2F%2F127.0.0.1%3A5555&src=agent&playbook=alpha';
 
 describe('the link that opens Studio on the runtime at a page', () => {
-  it("names the playbook of the page, and a definition's type and name, why the link is given and the version, or a run's id", () => {
+  it("names the playbook of the page, and a definition's type and name, why the link is given and the version, or its Ledger and a run's id", () => {
     expect([
       atPage(elsewhere, { kind: 'playbook', playbook: 'alpha' }),
       atPage(elsewhere, {
@@ -65,7 +65,11 @@ describe('the link that opens Studio on the runtime at a page', () => {
         saved: 'created',
       }),
       atPage(elsewhere, { kind: 'run', playbook: 'alpha', run: '0190f5c2-run' }),
-    ]).toEqual([atAlpha, `${atAlpha}&workflow=weekly-build&because=created&version=1`, `${atAlpha}&run=0190f5c2-run`]);
+    ]).toEqual([
+      atAlpha,
+      `${atAlpha}&workflow=weekly-build&because=created&version=1`,
+      `${atAlpha}&ledger=&run=0190f5c2-run`,
+    ]);
   });
 
   it('names a reasoning function by its type, as every definition is named', () => {
@@ -104,11 +108,11 @@ describe('the link that opens Studio on the runtime at a comment', () => {
     ]).toEqual([
       `${atAlphaOfAComment}&comment=${comment}`,
       `${atAlphaOfAComment}&workflow=close-the-week&version=4&comment=${comment}`,
-      `${atAlphaOfAComment}&run=${run}&comment=${comment}`,
+      `${atAlphaOfAComment}&ledger=&run=${run}&comment=${comment}`,
     ]);
   });
 
-  it('names a step without its leading slash, URL-encoded, and the event or the block of a run', () => {
+  it('names a step without its leading slash, URL-encoded, and the Ledger with the event or the block of a run', () => {
     expect([
       atPage(elsewhere, {
         kind: 'comment',
@@ -120,8 +124,8 @@ describe('the link that opens Studio on the runtime at a comment', () => {
       atPage(elsewhere, { kind: 'comment', playbook: 'alpha', comment, on: { kind: 'run', run, block: 2 } }),
     ]).toEqual([
       `${atAlphaOfAComment}&workflow=close-the-week&version=4&step=do%2F1%2Freview&comment=${comment}`,
-      `${atAlphaOfAComment}&run=${run}&event=${run}_2&comment=${comment}`,
-      `${atAlphaOfAComment}&run=${run}&block=2&comment=${comment}`,
+      `${atAlphaOfAComment}&ledger=&run=${run}&event=${run}_2&comment=${comment}`,
+      `${atAlphaOfAComment}&ledger=&run=${run}&block=2&comment=${comment}`,
     ]);
     expect(
       studioLinkOf(elsewhere, {

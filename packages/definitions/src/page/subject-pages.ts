@@ -4,11 +4,11 @@ import { Effect } from 'effect';
 import type { KeptViews } from '../capability/view-standing.ts';
 import { pageCheckOn } from './page-content.ts';
 import { withoutThePage } from './page-lines.ts';
-import { pageLatelyOf, pageStandingOf } from './page-presenting.ts';
+import { pageAsOfRun, pageLatelyOf, pageStandingOf } from './page-presenting.ts';
 import { placedOf, resultOf } from './placed-pages.ts';
 import { playbookPageSaved } from './playbook-pages.ts';
 import { presentedOf, writtenPlaybookPageOf } from './presented-pages.ts';
-import type { PageSubject, SubjectPages } from './subject-pages-port.ts';
+import type { DefinitionSubject, PageSubject, SubjectPages } from './subject-pages-port.ts';
 
 export type { PageContent, SubjectPage } from './page-facts.ts';
 
@@ -50,6 +50,13 @@ function standingOn(views: KeptViews) {
   });
 }
 
+function asOfRunOn(views: KeptViews) {
+  return Effect.fnUntraced(function* (subject: DefinitionSubject, run: string) {
+    const placed = yield* placedOf(subject);
+    return placed === undefined ? {} : yield* pageAsOfRun(views, placed, run);
+  });
+}
+
 export function subjectPagesOf({ pool, views }: SubjectPagesOptions): SubjectPages {
   return {
     check: pageCheckOn(pool),
@@ -59,6 +66,7 @@ export function subjectPagesOf({ pool, views }: SubjectPagesOptions): SubjectPag
     resultOf,
     latelyOf: latelyOn(views),
     standingOf: standingOn(views),
+    asOfRun: asOfRunOn(views),
     savePlaybookPage: playbookPageSaved,
   };
 }

@@ -24,12 +24,13 @@ function notOfTypes(column: string, types: readonly string[]): SQL {
   return types.length === 0 ? SQL`` : SQL` AND NOT ${ofTypes(column, types)}`;
 }
 
-function ofTheDefinitionAsked({ definitionType, name }: RunsSelected): SQL {
+function ofTheDefinitionAsked({ definitionType, name, called }: RunsSelected): SQL {
   const asked: SQL[] = [
     ...(definitionType === undefined
       ? []
       : [SQL`json_extract(message_metadata, '$.definitionType') IS ${definitionType}`]),
     ...(name === undefined ? [] : [SQL`json_extract(message_metadata, '$.definitionName') IS ${name}`]),
+    ...(called === undefined ? [] : [SQL`json_extract(message_metadata, '$.calledBy') IS NULL`]),
   ];
   return asked.length === 0 ? SQL`1` : SQL.merge(asked, ' AND ');
 }

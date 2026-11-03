@@ -81,6 +81,7 @@ function rowsOfRun(playbook: string, run: number, inputCharacters: number): read
     definitionType: run % 10 === 0 ? 'workflow' : 'reasoning',
     definitionName: `definition-${run % 10}`,
     definitionVersion: 1,
+    ...(run % 10 === 5 ? { calledBy: { runId: String(run - 5), reference: '/do/0/total', run: 1 } } : {}),
   });
   const start = { input: { text: text(inputCharacters) } };
   const ending = endingOf(run);
@@ -146,6 +147,13 @@ function cases(deepCursor: string): readonly Case[] {
       'big',
       runsOf({ definitionType: 'workflow' }),
       aPage('desc', 20, { types: ['run_rejected'] }),
+    ],
+    ['Runs no step started, newest first', 'big', runsOf({ called: false }), aPage('desc', 20)],
+    [
+      'Runs of one name, all started by a step, 1,000 examined',
+      'big',
+      runsOf({ name: 'definition-5', called: false }),
+      aPage('desc', 20),
     ],
     ['Runs of a name none has, 1,000 examined', 'big', runsOf({ name: 'definition-none' }), aPage('desc', 20)],
     [

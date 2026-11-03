@@ -45,10 +45,11 @@ function notOfTypes(bind: Bind, types: readonly string[]): string {
   return types.length === 0 ? '' : ` AND NOT ${ofTypes(bind, 'message_type', types)}`;
 }
 
-function ofTheDefinitionAsked(bind: Bind, { definitionType, name }: RunsSelected): string {
+function ofTheDefinitionAsked(bind: Bind, { definitionType, name, called }: RunsSelected): string {
   const asked = [
     ...(definitionType === undefined ? [] : [`message_metadata ->> 'definitionType' = ${bind(definitionType)}`]),
     ...(name === undefined ? [] : [`message_metadata ->> 'definitionName' = ${bind(name)}`]),
+    ...(called === undefined ? [] : [`message_metadata -> 'calledBy' IS NULL`]),
   ];
   return asked.length === 0 ? 'TRUE' : asked.join(' AND ');
 }

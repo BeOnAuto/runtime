@@ -145,15 +145,15 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 
 These tools are listed on `/mcp` and a playbook endpoint. Their routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`.
 
-| Tool             | HTTP operation                        | What it is for                                                             |
-| ---------------- | ------------------------------------- | -------------------------------------------------------------------------- |
-| `run_definition` | `POST /definitions/{type}/{name}/run` | Run a function or workflow once, with its `input` and an optional `run_id` |
-| `get_run`        | `GET /runs/{run_id}`                  | Read a run, with its detailed `record` and its page's `result`             |
-| `list_runs`      | `GET /runs`                           | List the playbook's runs, newest first                                     |
-| `cancel_run`     | `POST /runs/{run_id}/cancel`          | Cancel a run that is still going                                           |
-| `send_run_event` | `POST /runs/{run_id}/events`          | Deliver an event to a workflow run that is still `started`                 |
+| Tool             | HTTP operation                        | What it is for                                                                         |
+| ---------------- | ------------------------------------- | -------------------------------------------------------------------------------------- |
+| `run_definition` | `POST /definitions/{type}/{name}/run` | Run a function or workflow once, with its `input` and an optional `run_id`             |
+| `get_run`        | `GET /runs/{run_id}`                  | Read a run, with its detailed `record` and its page's `result`                         |
+| `list_runs`      | `GET /runs`                           | List the playbook's runs, newest first; `steps: false` leaves out those a step started |
+| `cancel_run`     | `POST /runs/{run_id}/cancel`          | Cancel a run that is still going                                                       |
+| `send_run_event` | `POST /runs/{run_id}/events`          | Deliver an event to a workflow run that is still `started`                             |
 
-`create_playbook` answers the playbook's page in Studio as `studio`, `create_definition` and `update_definition` the definition's, and `run_definition` the run's, so the agent gives the person the link without being asked; [Links to Studio](http.md#links-to-studio) says what each link opens.
+`create_playbook` answers the playbook's page in Studio as `studio`, `create_definition` and `update_definition` the definition's, and `run_definition` its playbook's Ledger with the run chosen, so the agent gives the person the link without being asked; [Links to Studio](http.md#links-to-studio) says what each link opens.
 
 [Runs and results](http.md#runs-and-results) covers input limits and which runs finish later, and [Retrying under a run id](http.md#retrying-under-a-run-id) what a request under an earlier run's id returns. [Cancelling a run](http.md#cancelling-a-run), [Sending an event to a run](http.md#sending-an-event-to-a-run) and [Run history and playbook events](http.md#run-history-and-playbook-events) give the rest.
 

@@ -9,10 +9,18 @@ const checkingNothing: Pick<ProgramPool, 'check'> = {
   check: () => Promise.resolve({ ran: 'checked', issues: [], stripped: { expressions: [] }, milliseconds: 0 }),
 };
 
-export const keepingNoViews: KeptViews = { viewOf: () => Effect.undefined, newestRecordAt: () => Effect.undefined };
+export const keepingNoViews: KeptViews = {
+  viewOf: () => Effect.undefined,
+  newestRecordAt: () => Effect.undefined,
+  viewAsOfRun: () => Effect.undefined,
+};
 
-export function keepingTheViews(kept: KeptViewState): KeptViews {
-  return { viewOf: () => Effect.succeed(kept), newestRecordAt: () => Effect.succeed('2026-11-01T09:00:00.000Z') };
+export function keepingTheViews(kept: KeptViewState, asOfRun: KeptViewState = kept): KeptViews {
+  return {
+    viewOf: () => Effect.succeed(kept),
+    newestRecordAt: () => Effect.succeed('2026-11-01T09:00:00.000Z'),
+    viewAsOfRun: () => Effect.succeed(asOfRun),
+  };
 }
 
 export function pagesOver(views: KeptViews): SubjectPages {

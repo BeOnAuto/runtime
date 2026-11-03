@@ -2,7 +2,7 @@ import { Conflict, InvalidInput, NotFound, RunCancelled, RunUnanswered, Unavaila
 import { Effect } from 'effect';
 
 import { startedRunOf, type RunStreamState, type RecordedRunState } from './run-state.ts';
-import type { Run, RunDetail, RunRejection } from './run.ts';
+import type { Run, RunDetail, RunRejection, RunWithin } from './run.ts';
 
 export function noRunCalled(id: string): NotFound {
   return new NotFound({ detail: `There is no run ${id} in this playbook` });
@@ -13,12 +13,26 @@ function recorded(id: string, stream: RunStreamState): Effect.Effect<RecordedRun
   return state === undefined ? Effect.fail(noRunCalled(id)) : Effect.succeed(state);
 }
 
-export function runOf(id: string, state: RunStreamState): Effect.Effect<Run, NotFound> {
-  return recorded(id, state).pipe(Effect.map(({ run }) => ({ run_id: id, ...run })));
+const leadingSlash = /^\//u;
+
+function withinOf({ calledBy }: RecordedRunState): { readonly within?: RunWithin } {
+  return calledBy === undefined
+    ? {}
+    : { within: { run_id: calledBy.runId, step: calledBy.reference.replace(leadingSlash, '') } };
 }
 
-function detailOf(id: string, { run, record }: RecordedRunState): RunDetail {
-  return record === undefined ? { run_id: id, ...run } : { run_id: id, ...run, record };
+function shownRunOf(id: string, recordedRun: RecordedRunState): Run {
+  return { run_id: id, ...recordedRun.run, ...withinOf(recordedRun) };
+}
+
+export function runOf(id: string, state: RunStreamState): Effect.Effect<Run, NotFound> {
+  return recorded(id, state).pipe(Effect.map((recordedRun) => shownRunOf(id, recordedRun)));
+}
+
+function detailOf(id: string, recordedRun: RecordedRunState): RunDetail {
+  const { record } = recordedRun;
+  const run = shownRunOf(id, recordedRun);
+  return record === undefined ? run : { ...run, record };
 }
 
 export function runDetailOf(id: string, state: RunStreamState): Effect.Effect<RunDetail, NotFound> {

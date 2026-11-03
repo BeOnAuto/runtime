@@ -28,12 +28,19 @@ function namedIf(name: string, value: string | number | undefined): Parameter[] 
   return value === undefined ? [] : [[name, String(value)]];
 }
 
+function chosenInTheLedger(run: string): Parameter[] {
+  return [
+    ['ledger', ''],
+    ['run', run],
+  ];
+}
+
 function placeParametersOf(place: CommentedPlace): Parameter[] {
   if (place.kind === 'definition') {
     return [[place.type, place.name], ['version', String(place.version)], ...namedIf('step', place.step)];
   }
   return place.kind === 'run'
-    ? [['run', place.run], ...namedIf('event', place.event), ...namedIf('block', place.block)]
+    ? [...chosenInTheLedger(place.run), ...namedIf('event', place.event), ...namedIf('block', place.block)]
     : [];
 }
 
@@ -51,7 +58,7 @@ function pageParametersOf(page: StudioPage | undefined): Parameter[] {
   if (page.kind === 'comment') {
     return [playbook, ...placeParametersOf(page.on), ['comment', page.comment]];
   }
-  return page.kind === 'run' ? [playbook, ['run', page.run]] : [playbook];
+  return page.kind === 'run' ? [playbook, ...chosenInTheLedger(page.run)] : [playbook];
 }
 
 function arrivalOf(

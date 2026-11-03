@@ -7,6 +7,7 @@ export interface RunFilters {
   readonly type?: string;
   readonly name?: string;
   readonly status?: RunStatus;
+  readonly steps?: boolean;
   readonly cursor?: string;
 }
 
@@ -37,9 +38,10 @@ function runsOfWhat(words: DefinitionWords, { type, name }: RunFilters): string 
 }
 
 function filtersInWords(words: DefinitionWords, filters: RunFilters): string {
-  const { status } = filters;
+  const { status, steps } = filters;
   const endedSo = status === undefined ? '' : ` that ${status === 'started' ? 'are ' : ''}${endingsInWords[status]}`;
-  return `${runsOfWhat(words, filters)}${endedSo}`;
+  const startedSo = steps === false ? ' other than those a step started' : '';
+  return `${runsOfWhat(words, filters)}${endedSo}${startedSo}`;
 }
 
 export function runsToList(words: DefinitionWords, filters: RunFilters): string {

@@ -92,15 +92,18 @@ export function pointKey(point: RecordedPoint): string {
   return point.join(':');
 }
 
-function asksForOneDefinition(selection: RecordedSelection): boolean {
-  return selection.kind === 'runs' && (selection.definitionType !== undefined || selection.name !== undefined);
+function filtersTheRuns(selection: RecordedSelection): boolean {
+  return (
+    selection.kind === 'runs' &&
+    (selection.definitionType !== undefined || selection.name !== undefined || selection.called !== undefined)
+  );
 }
 
 function scopeOf(
   selection: RecordedSelection,
   { order, limit, types, dataOf, after, at }: StoredPageRequest,
 ): ExaminationScope {
-  const filtering = types !== undefined || asksForOneDefinition(selection);
+  const filtering = types !== undefined || filtersTheRuns(selection);
   return {
     order,
     examineAtMost: filtering ? mostExaminedInAPage : limit,
