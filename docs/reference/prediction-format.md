@@ -21,10 +21,10 @@ The forecaster keeps nothing between questions, so a question always answers fro
 
 ## A function document
 
-The source is YAML front matter between two lines of three dashes, with nothing after it. This example predicts the orders of each region one and four weeks ahead, from the events `order.placed` the playbook records:
+The source is YAML front matter between two lines of three dashes, with nothing after it. This example predicts the orders of each region one and four weeks ahead, from the events `order.placed` the playbook records. Its page leads each answer with the likely orders of the next week:
 
 <!-- prettier-ignore -->
-```markdown
+````markdown
 ---
 description: Predicts the orders of each region one and four weeks ahead
 predicts:
@@ -40,8 +40,16 @@ data:
   series: /region
   target: { as: count }
   window: 156
+page:
+  result: |
+    {% assign next = output.lines[1].points[0] %}
+    About {{ next.value | round }} orders in {{ next.at }} ({{ next.low | round }} to {{ next.high | round }}).
+
+    ```chart line
+    {{ output | json | replace: '"name":"observed"', '"name":"Orders"' | replace: '"name":"predicted"', '"name":"Forecast"' }}
+    ```
 ---
-```
+````
 
 `create_definition` takes `type: "prediction"`, a function `name` such as `weekly-orders` and the document as `source`. The saved function has the `media_type` `text/markdown`. The playbook writes its `input_schema` itself, from the document: the question of [The input and the output](#the-input-and-the-output). Its `output_schema` is the [series shape](output-shapes.md#series), what a question answers, and its `details.shape` is `series`. So a document that names `input` or `output` is refused, as is one with any text after its front matter.
 
@@ -73,6 +81,7 @@ Before you write one, settle these with the person:
 
 - The target's name is 1 to 64 lowercase letters, digits and underscores, starting with a letter, and neither `series` nor `period`, which every row has.
 - Every problem a save finds is refused with its line, and nothing is saved.
+- Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
 
 ### The input and the output
 
@@ -149,6 +158,8 @@ For each event a filter takes, in the order the playbook recorded them, the data
 
 When each period has one value, such as the revenue of a week that a workflow records once a week, aggregate it as `last`, with `time` reading the period's own date from the run's output, such as `/output/week_start`. A run repeated for the same week, as when the week is recorded again after a correction, then replaces its value. `sum` adds every run's value, so a week recorded twice would count twice. Keep `sum` and `count` for events that each add something new, such as each order placed.
 
+An event adds to one row: one series, one period. So a run whose output tallies several series at once, such as the week's sales of seven coffees, feeds one of them alone. Record each series with a run of its own: in a workflow, a `for` task calls a computation function once for each series, and the data part reads that function's runs. The function returns what it is given, as `record-week` of [this example](#forecast-from-a-run-the-workflow-just-recorded) does. Each of those runs counts on the runtime's meter. To fill the dataset with the periods before the playbook began, run that recording function by hand, once for each series and period, with the period's own date in its input. Its runs are folded as the workflow's are, and none of the workflow's other steps runs. A data part whose filter names `calldepth` leaves out such runs, since a run by hand carries none.
+
 The dataset passes over an event, counts it and notes it in the server's log, when:
 
 - its time is not on a day of the calendar, names a leap second, or is neither an ISO 8601 date nor a date and time with its offset, as `2026-10-25T09:00:00` is not;
@@ -198,6 +209,8 @@ The forecaster tries its methods in this order and answers with the first that t
 
 A total is forecast by `level-adjusted-seasonal-naive`, `seasonal-naive` or `run-rate`, the seasonal methods summing each step's own value a season earlier; a question of horizons by the first three.
 
+Without `predicts.season`, no seasonal method applies. With it, a seasonal method needs a season of history and a few periods more, as [The backtest](#the-backtest) counts: 55 weeks for `season: 52` and `horizons: [1]`. Until one applies, `persistence` answers a question of horizons. The likely value of every period ahead is then the last one observed, such as last week's, and what the forecast adds is its range. Tell the person so. Where they have older periods, record them, as [The dataset](#the-dataset) says, so that a seasonal method applies sooner.
+
 ### The backtest
 
 A method applies when it can forecast enough earlier points in the series. For each step ahead, it needs at least three earlier origins where it can make a forecast and the actual value was observed. Each miss is the actual value minus the forecast.
@@ -221,6 +234,8 @@ A history too short for even `persistence`, or the `run-rate` for a total, is re
 ## A question
 
 A question is `{ series, horizon?, marks? }`, or `{ series, marks? }` with `accumulates`. The forecaster answers it from the series' last window: the dataset's rows from the period `data.window` periods before the period the question is asked in to the one before it, at the dataset's checkpoint. It answers within the question's call, in the server's own process.
+
+The period a question is asked in is reckoned in UTC, as the dataset's periods are. At 23:00 on a Sunday in Portland it is already Monday in UTC: a weekly question asked then has the week just ended as its origin, and horizon 1 is the coming week. Asked at 15:00 that Sunday, still Sunday in UTC, it asks in the week that ends that day, so horizon 1 is that week.
 
 The output is the prediction of [The input and the output](#the-input-and-the-output). The run's record holds:
 
@@ -298,25 +313,11 @@ A run that has not ended when the question starts, such as one another workflow 
 
 ### The lines on a page
 
-A chart draws each line of a series under its name. A page that draws a prediction as it is shows `observed` and `predicted`, or `observed` and `total`, in the chart's legend. To show them in the person's words, rename them where the page reads the prediction. In a page's `result`, the `replace` filter renames them in the JSON the chart reads. This page of `weekly-orders` leads with the likely orders of the next week, and draws the weeks observed as `Orders` and the weeks ahead as `Forecast`:
+A chart draws each line of a series under its name. A page that draws a prediction as it is shows `observed` and `predicted`, or `observed` and `total`, in the chart's legend. To show them in the person's words, rename them where the page reads the prediction. In a page's `result`, the `replace` filter renames them in the JSON the chart reads, as the page of [the example](#a-function-document) does: it leads with the likely orders of the next week, and draws the weeks observed as `Orders` and the weeks ahead as `Forecast`.
 
-<!-- prettier-ignore -->
-````markdown
----
-description: A region's orders, the weeks observed and the weeks ahead
-of: prediction/weekly-orders
----
-{% result %}
-{% assign next = output.lines[1].points[0] %}
-About {{ next.value }} orders in {{ next.at }} ({{ next.low }} to {{ next.high }}).
+Over the answer above, its headline is `About 140 orders in 2026-W42 (128 to 151).` A template prints a number as it is. A forecast's figures are often not whole, since a range's ends are interpolated between misses, so the headline rounds each with `round`. `round: 1` keeps one decimal: `4.800000000000001` prints as `4.8`.
 
-```chart line
-{{ output | json | replace: '"name":"observed"', '"name":"Orders"' | replace: '"name":"predicted"', '"name":"Forecast"' }}
-```
-{% endresult %}
-````
-
-Over the answer above, its headline is `About 140 orders in 2026-W42 (128 to 151).` A workflow whose output carries the prediction under a field, such as `forecast`, renames `output.forecast` the same way. A page's fold that keeps predictions in a view for `lately` names each line as it builds it; see [Page format](page-format.md).
+A workflow whose output carries the prediction under a field, such as `forecast`, renames `output.forecast` the same way. A page's fold that keeps predictions in a view for `lately` names each line as it builds it; see [Its page](#its-page).
 
 ## How a run ends
 
@@ -475,6 +476,15 @@ Run on Monday 2 November 2026 with `{"store": "north", "week_start": "2026-10-26
 They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
 
 An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
+
+## Its page
+
+A prediction function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what is coming, and how well the forecasts held:
+
+- `result`: the forecast as a line, with its horizon: a headline with the likely value of the period ahead and its range, and a chart of the periods observed and those ahead, as [The lines on a page](#the-lines-on-a-page) shows. An answer does not name its series, and `result` reads no input. To name the series in the headline, the workflow that asks can give the series' name as the label of a mark, such as `marks: [{ label: 'North, last week', value: 136 }]`. The answer carries the mark back, so `result` reads the name as `output.marks[0].label`, and the chart draws the mark as a level. An answer to a question asked without marks has none. Read the label through `default`, as `{{ output.marks[0].label | default: "This series" }}`, since a missing field stops the render.
+- `lately`: the forecast against what happened. A fold keeps, for each period, the value forecast for it and, once the period has passed, the value a later answer observed, as two lines of one series. An answer does not name its series, so keep this view for a function asked of one series, or read the series from the output of the workflow that asks. `weekly-orders` is asked of each region, so its page has no `lately`, which would mix the regions.
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
 
 ## Availability
 

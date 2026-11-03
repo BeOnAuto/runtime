@@ -11,7 +11,7 @@ import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
 import { fakeChat, type FakeChat } from './fake-chat.ts';
 import { fakeSessions, type FakeSessions } from './fake-sessions.ts';
 import { fakeToolChanges } from './fake-tool-changes.ts';
-import type { FakeHints, ReceivedCall } from './fake-tools.ts';
+import type { FakeHints, FakeTool, ReceivedCall } from './fake-tools.ts';
 
 export interface FakeMcpOptions {
   readonly bearer?: string;
@@ -23,6 +23,7 @@ export interface FakeMcpOptions {
   readonly chat?: boolean;
   readonly data?: boolean;
   readonly echoes?: string;
+  readonly tools?: readonly FakeTool[];
 }
 
 const SeenClientInfoSchema = Schema.Struct({ name: Schema.String, version: Schema.String });
@@ -244,6 +245,7 @@ function recordsOf(options: FakeMcpOptions, removed: ReadonlySet<string>, chat: 
     hints,
     chat: options.chat === true ? chat : undefined,
     data: options.data === true,
+    tools: options.tools ?? [],
   };
 }
 

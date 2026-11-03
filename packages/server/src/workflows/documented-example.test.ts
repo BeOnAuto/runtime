@@ -4,13 +4,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { chatEnvironment, chatServer } from '../testing/interaction-servers/chat-deliveries.ts';
 import { alpha, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
-import { blocksInOrderOf, fencedBlocksOf } from '../testing/servers/tutorial-calls.ts';
+import { blocksInOrderOf, fencedBlocksOf, pageOf } from '../testing/servers/tutorial-calls.ts';
 import { runIdIn, servingWorkflows, settledRun } from '../testing/servers/workflow-server.ts';
 import { until } from '../testing/waiting/until.ts';
 
-const [reviewAndApprove, reviewCampaignBrief, approveCampaignBrief] = blocksInOrderOf(
-  'reference/workflow-format.md',
-).map(({ body }) => body);
+const [reviewAndApprove, reviewCampaignBrief] = blocksInOrderOf('reference/workflow-format.md').map(({ body }) => body);
+
+const approveCampaignBrief = fencedBlocksOf('reference/interaction-format.md').get('markdown');
 
 const decodeListed = Schema.decodeUnknownSync(
   Schema.Struct({ interactions: Schema.Array(Schema.Struct({ run_id: Schema.String })) }),
@@ -23,7 +23,7 @@ afterEach(async () => {
 });
 
 describe('the example of the workflow format, through the server', () => {
-  it('saves the functions the page shows, reviews the brief, asks its owner in the chat, and ends with the review and the approval', async () => {
+  it('saves the functions the page shows and names, reviews the brief, asks its owner in the chat, and ends with the review and the approval its page heads the run with', async () => {
     const chat = await chatServer();
     server = await servingWorkflows(
       [answers(textResult('Revise: the audience lacks a job role.'))],
@@ -50,10 +50,16 @@ describe('the example of the workflow format, through the server', () => {
     const approval = { verdict: 'approve', note: 'Approved for the spring sale.' };
     await server.call('POST', `${alpha}/runs/${String(request?.run_id)}/answer`, { body: { answer: approval } });
 
-    expect(approveCampaignBrief).toBe(fencedBlocksOf('reference/interaction-format.md').get('markdown'));
+    expect(pageOf('reference/workflow-format.md')).toContain(
+      '`approve-campaign-brief` is the example of the [interaction function format](interaction-format.md#a-function-document)',
+    );
     expect(created.status).toBe(201);
     expect(await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`)).toMatchObject({
-      body: { status: 'succeeded', output: { review: 'Revise: the audience lacks a job role.', approval } },
+      body: {
+        status: 'succeeded',
+        output: { review: 'Revise: the audience lacks a job role.', approval },
+        page: { result: 'Approved by the owner. Approved for the spring sale.' },
+      },
     });
   });
 });

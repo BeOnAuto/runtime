@@ -1,5 +1,9 @@
 export type DocumentWrittenIn = 'workflow' | 'function';
 
+export function writtenInOf(type: string): DocumentWrittenIn {
+  return type === 'workflow' ? 'workflow' : 'function';
+}
+
 const frontMatterDelimiter = /^---[ \t]*\r?$/u;
 
 const pageKey = /^page[ \t]*:/u;

@@ -98,7 +98,7 @@ export const RunSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run id, a UUID' }),
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow',
+      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation, generation or workflow',
   }),
   name: Schema.String.annotate({ description: 'The definition name' }),
   definition_version: Schema.Int.annotate({ description: 'The definition version that ran' }),

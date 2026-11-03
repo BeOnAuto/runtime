@@ -2,7 +2,9 @@ import { alternatives, asSentence, capitalized, counted, listed, quoted, type No
 import { Option, Schema } from 'effect';
 
 import { defaultRunWords, type Capability, type RunWords } from '../capability/capability.ts';
-import type { ListedDefinition } from '../registry/definition.ts';
+import { writtenInOf } from '../page/page-lines.ts';
+import { carriesAPage } from '../page/page-yaml.ts';
+import { isPlaybookFunctionType, type Definition, type ListedDefinition } from '../registry/definition.ts';
 import { nameInWords } from './in-words.ts';
 
 const mostNamed = 20;
@@ -67,6 +69,16 @@ export function whatItDoes(
   return definition.description === undefined
     ? takesAndGives(propertyWordsOf(definition.input_schema), propertyWordsOf(definition.output_schema))
     : ` What it does: ${asSentence(definition.description)}`;
+}
+
+const noPageYet = ' It has no page yet; the page guide says how to give it one.';
+
+function presentsItsRuns(type: string): boolean {
+  return type === 'workflow' || isPlaybookFunctionType(type);
+}
+
+export function pageWords({ type, source }: Pick<Definition, 'type' | 'source'>): string {
+  return presentsItsRuns(type) && !carriesAPage(source, writtenInOf(type)) ? noPageYet : '';
 }
 
 export function definitionStanding(

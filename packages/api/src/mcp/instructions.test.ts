@@ -196,11 +196,11 @@ describe('what the instructions say of the definition types', () => {
     );
   });
 
-  it('say what a page is where the server keeps pages, and that a function or workflow alone takes an overview', () => {
-    const instructions = instructionsFor('playbook', playbookEndpoint, definitionTypes, true);
+  it('say, where the server keeps pages, that every workflow and function takes one, and ask an overview of the functions and workflows alone', () => {
+    const instructions = instructionsFor('playbook', playbookEndpoint, definitionTypes, { pages: true });
 
     expect(instructions).toContain(
-      'and run_definition runs it. A page shows the person the results of a workflow or function, run by run and over time. This connection acts inside one playbook.',
+      'and run_definition runs it. Every workflow and function takes a page that shows the person its results, run by run and over time. This connection acts inside one playbook.',
     );
     expect(instructions).toContain(
       "get_guide holds each definition's format; a function or workflow takes an overview.",

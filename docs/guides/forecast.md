@@ -36,16 +36,17 @@ Ask:
 ```text
 Draft a prediction function named "<function name>" in my "<playbook name>"
 playbook. It forecasts <the number> per <period> for each <series>, <how many>
-periods ahead, from <the events>. Show me the document and explain each setting
-before saving it.
+periods ahead, from <the events>. Give it a page that shows each forecast. Show
+me the document and explain each setting before saving it.
 ```
 
-You should see a document of YAML front matter between `---` lines and nothing after it. Check that the target, the period and the horizons are the ones you meant.
+You should see a document of YAML front matter between `---` lines and nothing after it. Check that the target, the period and the horizons are the ones you meant, and that its page shows what you asked for.
 
 ::: details What the document settles
 
 - `predicts`: the `target`, its `period`, its `horizons` (how many periods ahead a question may ask) and its `unit`. Name a `season` when the numbers repeat, such as 52 for weeks over a year or 7 for days over a week. For a total to the end of a period, name `accumulates` in place of `horizons`. `coverage` is how often each range is meant to hold the truth, 0.8 unless you name another.
 - `data`: the events, where each holds its time and its series, how the target is read and aggregated over a period, and the `window` of periods a question reads. A number that each period has once, such as a week's revenue, is aggregated as `last`, so that a week recorded again replaces its value rather than adding to it.
+- `page`: what you see of each forecast, the likely value ahead with its range. A function asked of several series, such as one for each region, has no `lately` of the forecasts against what happened, since an answer does not name its series; [Its page](../reference/prediction-format.md#its-page) says when a page can have one.
 
 [A function document](../reference/prediction-format.md#a-function-document) shows a full example, and [Fields](../reference/prediction-format.md#fields) lists every field.
 
@@ -64,7 +65,7 @@ Ask the "<function name>" function in my "<playbook name>" playbook for
 <series>'s <number> <how many> <periods> ahead.
 ```
 
-The agent runs the function with a question, such as `{ "series": "north", "horizon": 1 }`, and the run returns the forecast at once. Without `horizon`, it forecasts every horizon the function names. The forecast is a series, which Auto Studio draws where it shows the run, in the playbook's Ledger. A page can name its lines in your words; [The lines on a page](../reference/prediction-format.md#the-lines-on-a-page) shows how. Read it like this:
+The agent runs the function with a question, such as `{ "series": "north", "horizon": 1 }`, and the run returns the forecast at once. Without `horizon`, it forecasts every horizon the function names. The forecast is a series, which the function's page draws where Auto Studio shows the run, with its lines named in your words, as [The lines on a page](../reference/prediction-format.md#the-lines-on-a-page) shows. Read it like this:
 
 - `origin` is the last observed period, the one before the period you asked in.
 - The `observed` line holds the last periods of the data up to the origin, twice the longest horizon unless the document's `predicts.history` says how many.

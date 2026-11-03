@@ -1,5 +1,6 @@
+import { serveFakeMcp, type FakeTool } from '@on.auto/tool-servers/served-fakes';
 import { Schema } from 'effect';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { blocksInOrderOf } from '../testing/servers/tutorial-calls.ts';
@@ -22,6 +23,20 @@ function saved(type: string, name: string, source: string | undefined) {
   });
 }
 
+const campaignCosts: FakeTool = {
+  name: 'campaign-costs',
+  description: 'Reads the cost rows of every campaign for a month.',
+  inputSchema: { type: 'object', properties: { month: { type: 'string' } }, required: ['month'] },
+  annotations: { readOnlyHint: true },
+  answer: () => ({ content: [], structuredContent: { rows: [] } }),
+};
+
+async function servingTheAdsServer(): Promise<ReasoningServer> {
+  const ads = await serveFakeMcp({ tools: [campaignCosts] });
+  onTestFinished(ads.close);
+  return servingReasoning([], { TOOL_SERVERS: JSON.stringify({ ads: { url: ads.url, org: 'acme' } }) });
+}
+
 describe('the example of the computation function format, through the server', () => {
   it('saves the function and answers the output the page shows for its input, after the work it says', async () => {
     server = await servingReasoning([]);
@@ -38,13 +53,13 @@ describe('the example of the computation function format, through the server', (
     expect(read.body).toMatchObject({ record: { language: 'typescript', work: 0 } });
   });
 
-  it('saves the workflow of the page and the functions it calls, every expression checked', async () => {
-    server = await servingReasoning([]);
+  it('saves the workflow of the page and the functions it calls, the reading one a lookup function of a tool marked reads, every expression checked', async () => {
+    server = await servingTheAdsServer();
     await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
 
     const created = [
       await saved('computation', 'campaign-pace', pace),
-      await saved('interaction', 'read-campaign-costs', readCosts),
+      await saved('lookup', 'read-campaign-costs', readCosts),
       await saved('reasoning', 'write-pace-summary', writeSummary),
       await saved('workflow', 'campaign-pace-report', report),
     ];

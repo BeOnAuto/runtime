@@ -425,7 +425,7 @@ The same input gives the same `unworkable` result again, unless the program read
 
 ## Pages
 
-A workflow or a function can have a page, which presents its results ([Page format](page-format.md)). The page is the `page` key of the definition's document, so `create_definition` and `update_definition` save it with the rest of `source`, and a save that changes only the page is a new version like any other. The playbook's page is saved by [`update_playbook`](#playbooks).
+Give every workflow and function its page, which presents its results ([Page format](page-format.md)). A save without one is accepted, and over MCP its summary says the definition has no page yet, where the summary has room for it. The page is the `page` key of the definition's document, so `create_definition` and `update_definition` save it with the rest of `source`, and a save that changes only the page is a new version like any other. The playbook's page is saved by [`update_playbook`](#playbooks).
 
 - `get_definition` adds `page`, with `lately` and `standing` where the page has them, and `get_run` of a run of the definition adds `page.result`. `list_definitions` shows nothing of a page.
 - `render_page`, `POST /definitions/{type}/{name}/render`, renders the page now, with `page.result` and `page.lately`, over the definition's latest run or over an optional JSON body `{ "sample_output": … }`. It needs `playbook:read`, and is refused with `not_found` for a definition without a page and `conflict` for a retired one.
@@ -457,6 +457,7 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 | `update_definition` | `PUT /definitions/workflow/{name}`         | `playbook:write` | `source`                                                               |
 | `retire_definition` | `POST /definitions/workflow/{name}/retire` | `playbook:write` | Name in path                                                           |
 | `run_definition`    | `POST /definitions/workflow/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id`                               |
+| `render_page`       | `POST /definitions/workflow/{name}/render` | `playbook:read`  | Optional `sample_output` or `run_id`                                   |
 | `get_run`           | `GET /runs/{run_id}`                       | `playbook:read`  | Run id in path                                                         |
 | `cancel_run`        | `POST /runs/{run_id}/cancel`               | `playbook:write` | Optional `reason`                                                      |
 | `send_run_event`    | `POST /runs/{run_id}/events`               | `playbook:write` | `event` with `type`, and optional `id`, `source`, `subject` and `data` |
@@ -558,7 +559,7 @@ A cancelled run's rejection names the kind of its cancellation:
 
 ## Runs and results
 
-A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record`, and `run_definition` the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
+A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
 Most runs finish within the request that starts them. These runs finish later, so `run_definition` returns them `started`, unless one ended before its first wait:
 

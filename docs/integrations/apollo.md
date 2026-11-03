@@ -100,11 +100,12 @@ Check that `search` lists the server `graph` with the tools Agent Services offer
 
 ### 3. Name the graph in a function
 
-A reasoning function that lists `graph/*` in its `tools` may call every tool of that server that the entry allows; the `*` stands for all of them. During a run it can search for operations and run those the application's policies allow. Ask your agent to add `graph/*` to your function's `tools`, or to save a function such as this one. If your model provider is not Anthropic, ask your agent to use one of your provider's models.
+A reasoning function that lists `graph/*` in its `tools` may call every tool of that server that the entry allows; the `*` stands for all of them. During a run it can search for operations and run those the application's policies allow. Ask your agent to add `graph/*` to your function's `tools`, or to save a function such as this one, `review-campaign-spend`. Its page shows each review, and lists the latest ones. If your model provider is not Anthropic, ask your agent to use one of your provider's models.
 
 ::: details The function's document
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: Reviews a campaign's spend against its agreed budget, reading both from the graph
 model: anthropic/claude-sonnet-4-5
@@ -116,12 +117,37 @@ input:
       period: { type: string }
     required: [campaign, period]
 tools: [graph/*]
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: reasoning/review-campaign-spend
+    views:
+      reviews: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const review = fieldOf(event.data, 'output');
+        const day = event.time?.slice(0, 10);
+        if (typeof review !== 'string' || day === undefined) return view;
+        const rows = [[day, review.slice(0, 500)], ...(view.reviews?.rows ?? [])].slice(0, 10);
+        return { reviews: { columns: [{ name: 'Day' }, { name: 'Review' }], rows } };
+      }
+  result: |
+    {{ output | clip: 2000 }}
+  lately: |
+    ```chart table
+    {{ views.reviews | json }}
+    ```
 ---
 
 {% system %}Use the graph tools to read the campaign's spend for the period and its agreed budget. Search for the operations you need before you call one. Report the figures with their units, say which figures you could not read and why, and recommend whether the spend is within budget. Do not invent figures.{% endsystem %}
 Campaign: {{ input.campaign }}
 Period: {{ input.period }}
-```
+````
 
 :::
 

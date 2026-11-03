@@ -9,7 +9,7 @@ import { TriggerSchema } from './definition-triggers.ts';
 const listedDefinitionFields = {
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow',
+      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation, generation or workflow',
   }),
   name: Schema.String.annotate({
     description: 'The definition name, unique among definitions of its type in the playbook and never reused',

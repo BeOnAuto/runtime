@@ -2,6 +2,25 @@
 
 # Page format
 
+Give every workflow and function a page. It shows the person the value of the work: what each run achieved, and what the runs add up to over time. A definition saved without one has none; see [Where the page goes](#where-the-page-goes).
+
+Show numbers over time as a chart keyed by [the period a run is about](#the-time-a-view-is-keyed-by), and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
+
+What a page shows depends on its subject. The format guide of each type gives its recipe under Its page:
+
+| Subject                                                | `result`, one run                                                  | `lately`, the runs so far                                                   |
+| ------------------------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| [Workflow](workflow-format.md#its-page)                | The business outcome of the run, as a headline and its key figures | The main number of each period, with its breakdowns                         |
+| [Reasoning function](reasoning-format.md#its-page)     | The judgement in a sentence, with the fields that decided it       | The outcomes by category over time                                          |
+| [Interaction function](interaction-format.md#its-page) | The decision, who made it and when                                 | The decisions over time, what waits now, and how long people took to answer |
+| [Prediction function](prediction-format.md#its-page)   | The forecast as a line, with its horizon                           | The forecast against what happened                                          |
+| [Memory function](memory-format.md#its-page)           | What was remembered or recalled                                    | What its runs kept or recalled over time                                    |
+| [Computation function](computation-format.md#its-page) | The numbers, as figures or a table                                 | Their series over time                                                      |
+| [Lookup function](lookup-format.md#its-page)           | What was found, as a table                                         | The values found over time, where they are numbers                          |
+| [Generation function](generation-format.md#its-page)   | The asset the run produced, linked, in the function's own words    | What was produced over time, as a count or a table of the latest            |
+
+Write the page its type's recipe gives. Where the work fits none of them, start with [a minimal page](#a-minimal-page): a headline for each run, and one chart of the runs so far.
+
 A page presents the results of a workflow, a function or the whole playbook. A definition's page is the `page` key of its own document. It is saved and versioned with the definition it presents, which is its subject. It has two templates:
 
 - `result` shows one run.
@@ -11,13 +30,9 @@ Both render Markdown and can include charts in fenced blocks.
 
 A page is not a function, and it never runs:
 
-- A workflow's page is the top-level `page` key of its document, and a function's the `page` key of its front matter. The playbook's page is saved by `update_playbook`. See [Where the page goes](#where-the-page-goes).
 - `create_definition` and `update_definition` save the page with the rest of the document, so a save that changes only the page is a new version of the definition, as any save is. A document whose page the runtime refuses is not saved.
 - The runtime renders a page each time it is read. `get_run` of a run of the subject carries the run rendered through `result`, and `get_definition` of the subject carries `lately` rendered over the views. So Auto Studio, a chat and an agent show the same words.
-- A run renders with the page of its subject's latest version, so a run of an older version shows the page as it stands.
-- The views are projections of the playbook's events, so a past view is the same fold over those events up to a point. `render_page` given a `run_id` renders `lately` over the views as they stood when that run ended; see [As of a run](#as-of-a-run).
-
-To start, give a workflow [a minimal page](#a-minimal-page): a headline for each run, and one chart of the runs so far.
+- The views are a fold of the playbook's events, so `render_page` given a `run_id` renders `lately` over them as they stood when that run ended; see [As of a run](#as-of-a-run).
 
 ## A page
 
@@ -112,7 +127,7 @@ page:
     ```
 ````
 
-`View` is the two views as TypeScript types, each optional: `{ posts_per_day?: Series; by_channel?: Categories }`. `Series` and `Categories` are the [output shapes](output-shapes.md) of those names, and `Event` and `Json` are the playbook's event and any JSON value. The runtime declares all of them for the module; see [The module](#the-module).
+`View` is the two views as TypeScript types, each optional: `{ posts_per_day?: Series; by_channel?: Categories }`. `Series` and `Categories` are the [output shapes](output-shapes.md) of those names, and `Event` and `Json` are the playbook's event and any JSON value. The runtime declares all of them for the module; see [The module](#the-module), and [The views' rules](#the-views-rules) for the fields and bounds of each shape.
 
 The page is saved with the workflow, by `create_definition` or `update_definition` of the document that holds it. It has no name, version or `overview` of its own: those are the workflow's.
 
@@ -243,6 +258,8 @@ This keeps backfilled and late runs in the period they describe. Using the run's
 
 A period the fold reads must be in the form of its series' `period`, such as `YYYY-MM` for a month or `YYYY-Www` for a week; see [Output shapes](output-shapes.md#series). A value in another form would fail the view's shape and stall the views, so the fold passes it over.
 
+A line joins only points in consecutive periods, so the points of weekly runs keyed by their day draw as separate dots a week apart. Key a weekly run's view by its week, `YYYY-Www`, even when the run is about one day.
+
 ### One value for each period
 
 A month has one revenue figure, even if the month is closed again after a correction. This fold removes the existing point for that month before adding the new one, so a repeated run replaces the figure.
@@ -284,9 +301,11 @@ page:
 Review this brief against the team's criteria: {{ input.brief }}
 ```
 
-- A definition has at most one page. A document saved without `page`, or with `page: {}`, has none.
+- A definition has at most one page. A document saved without `page`, or with `page: {}`, has none, and the summary of a workflow or a function saved so ends with `It has no page yet; the page guide says how to give it one.`, where its 400 characters have room for it.
 - Retiring a definition retires its page with it: the page renders nowhere and its views are no longer kept.
+- A definition's name is its id. To rename one, create it under the new name with the same document, point every call and filter that names the old name at the new, and retire the old one at once: until then, a trigger the two share starts both. Its runs so far stay under the old name, so a page or a prediction function's data part that reads them keeps its filter on the old name, beside one on the new.
 - The playbook's page is the same mapping, with `data` and `lately`. It has no `result`, since the playbook has no runs of its own. `update_playbook` saves it as YAML text in `page`, and `page: null` removes it. Each save is recorded as `playbook_page_saved`, which no fold sees.
+- Give the playbook a page once it has more than one workflow, one that leads with each workflow's main number. Over MCP, `get_playbook` answers its source and renders nothing; [`render_playbook_page`](#the-preview) renders it, over HTTP alone.
 - A page saved as a definition of its own, of the type `page`, is read as its subject's page, in the form of a `page` mapping, without the `of` line that named the subject. It counts only while the subject's document has no `page` key. For the playbook, a save or removal through `update_playbook`, `null` included, replaces it.
 
 ## The views
@@ -355,7 +374,7 @@ Each event is a CloudEvent with its `id`, `type`, `source`, `time` and `data`. I
 
 ### The module
 
-`data.module` is one TypeScript module that exports `fold(view: View, event: Event): View`, and nothing else. The runtime declares these types for it:
+`data.module` is one TypeScript module that exports `fold(view: View, event: Event): View`. The runtime declares these types for it:
 
 | Type                                                | What it is                                                                                                   |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
@@ -391,6 +410,19 @@ The module runs in the QuickJS sandbox that [computation functions](computation-
 - Numbers are IEEE 754 doubles. Integers are exact up to 2^53, and `0.1 + 0.2` is not `0.3`. There is no decimal type, so keep amounts in whole minor units, such as cents. End a division with `Math.floor`, `Math.ceil` or `Math.round`.
 - The views are JSON. A `Date`, a `Map`, a `Set`, a class instance, a function, a `BigInt`, a symbol, `NaN`, `Infinity`, `undefined` and a cycle are not. A fold that returns one stalls the views.
 
+The sandbox has no time zone. So a fold that keys by the person's own day works the day out itself, with the rule of their zone written once, in the fold or in a function the module exports. This one gives the day in US Pacific time, whose clocks go forward on the second Sunday of March and back on the first Sunday of November, each at 02:00, and a fold keys by `pacificDay(event.time)` once it has checked that `event.time` is there:
+
+```typescript
+export function pacificDay(time: string): string {
+  const at = Date.parse(time);
+  const year = new Date(at).getUTCFullYear();
+  const sunday = (month: number, nth: number): number =>
+    Date.UTC(year, month, 1 + ((7 - new Date(Date.UTC(year, month, 1)).getUTCDay()) % 7) + 7 * (nth - 1));
+  const summer = at >= sunday(2, 2) + 10 * 3_600_000 && at < sunday(10, 1) + 9 * 3_600_000;
+  return new Date(at - (summer ? 7 : 8) * 3_600_000).toISOString().slice(0, 10);
+}
+```
+
 The views do not depend on where a page of events begins or ends:
 
 - In a fold, `Date.now()` and `new Date()` return the time of the event being folded, so a fold gives the same views on every server.
@@ -400,10 +432,20 @@ The views do not depend on where a page of events begins or ends:
 ### The views' rules
 
 - `data.views` names 1 to 8 views. A name is 1 to 32 lowercase letters, digits and underscores, beginning with a letter, so that a template reads it as `views.<name>`.
-- Each name takes the name of a shape: `series`, `categories`, `table`, `text` or `memories`. [Output shapes](output-shapes.md) gives each shape's fields and rules.
+- Each name takes the name of a shape: `series`, `categories`, `table`, `text` or `memories`, whose fields and bounds the table below gives.
 - After every fold, each view the fold returned must match its shape, with the rules the shape adds, such as the order of a series' points.
 - After every fold, the fold returns no name that `data.views` does not declare.
 - The views together take at most 512 KiB as JSON: 524,288 bytes in UTF-8, checked after every fold.
+
+| Shape        | Fields                                                                                                                                                                         | Bounds                                                                                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `series`     | `lines`, each a `name` and `points`, each an `at` and a `value`, with optional `low` and `high`; optional `unit`, `period`, `origin` and `marks`, each a `label` and a `value` | 1 to 20 lines, each name once, and 2,000 points across them, each later than the one before; 8 marks. `at` takes the form of `period`: `YYYY-MM-DD`, `YYYY-Www`, `YYYY-MM`, `YYYY-Qn` or `YYYY`, or, without one, an RFC 3339 time |
+| `categories` | `values`, each a `name` and a `value`, with optional `low` and `high`; optional `unit`                                                                                         | 1 to 200 values, each name once                                                                                                                                                                                                    |
+| `table`      | `columns`, each a `name` and an optional `unit`; `rows`, each a list of one cell for each column, in their order                                                               | 1 to 50 columns, each name once; 500 rows. A cell is text, a number, `true`, `false` or `null`                                                                                                                                     |
+| `text`       | `text`, Markdown                                                                                                                                                               | 65,536 bytes in UTF-8                                                                                                                                                                                                              |
+| `memories`   | `memories`, each with its `id`, `scope`, `text`, `tags`, `written_at` and `written_by`, and an optional `about`, as a recall answers them                                      | 16,000 characters of text across them                                                                                                                                                                                              |
+
+A `name`, a `label` and a `unit` are text of 1 to 64 characters. A `value`, a `low` and a `high` are numbers, a `low` at most its `value` and a `high` at least it. [Output shapes](output-shapes.md) gives every rule of each shape.
 
 ### How the views are kept
 
@@ -484,6 +526,8 @@ Each is a [Liquid](https://shopify.github.io/liquid/) template, as a reasoning f
 | `today`               | The date of the read, `YYYY-MM-DD`, in UTC                              |
 | `now`                 | The time of the read, in ISO 8601, in UTC                               |
 
+`result` reads no input, so a headline names what a run was about only where its output carries it. Have a function return what it was asked about beside its answer, such as the campaign whose brief it reviewed. Where the output cannot carry it, as an interaction function's answer or a memory kept cannot, the page of the workflow that calls the function says it, from the workflow's output.
+
 The first line of the rendered result is the run's headline, which cards and lists show alone. Write it as one plain sentence of at most 200 characters. A client cuts a longer one at 200 characters, with an ellipsis (`…`).
 
 A run that was rejected or failed is not rendered through the template. Its `page.result` is a fixed sentence with its reason:
@@ -515,6 +559,7 @@ So a run whose request nobody answered in time shows `The run was rejected as un
 - A field a value does not have stops the render. Two places may read a missing field without stopping it: a condition of `if`, `elsif` or `unless`, and the `default` filter. So `{% if output.posts %}…{% endif %}` and `{{ post.title | default: "Untitled" }}` read a field that may be absent.
 - Only a value's own fields can be read: `output.constructor` is a missing field.
 - A list renders as its items with no separators, and an object as `[object Object]`. Use `{{ views.by_channel | json }}` to render JSON.
+- A number renders as it is, such as `4.800000000000001`. Round it with `round`, or `round: 1` for one decimal.
 
 ### Tags
 
@@ -566,8 +611,21 @@ A chart is a fenced code block whose info string is the word `chart`, a kind and
 | `calendar`  | series              | A cell for each day, shaded by its value; the series has one line, whose `period` is `day`  | None                                          |
 | `timeline`  | table               | A bar for each row, from its `start` to its `end`, on the line its `y` names                | `y`, `start`, `end`; optional `color`, `mark` |
 | `table`     | table               | The table                                                                                   | None                                          |
-| `figure`    | categories          | Each value as a figure, with its name, its unit and its range                               | None                                          |
+| `figure`    | categories          | Each value as a figure, with its name, the view's unit and its range                        | None                                          |
 | `text`      | text                | The text, as Markdown                                                                       | None                                          |
+
+- A kind draws only the shapes it reads. To draw a value for each period as bars, keep the view as `categories` named by period, or as a `table`; a series is drawn by `line`, `stacked` or `calendar`. A `bars` fence over a series is saved, and fails when it renders.
+- A line's scale spans all it draws, so one value far above the rest flattens all the others. Cap such values in the fold, and say so in the chart's heading, as `Days of cover, capped at 60`.
+- A `figure` block shows each value's name and the view's one `unit`, so put a value's own unit in its name, as `Revenue (USD)`.
+- `text` reads a view of the shape text, `{"text": "…"}`, and shows it as Markdown.
+- No kind reads `memories`. Write a memories view as a Markdown list instead:
+
+<!-- prettier-ignore -->
+```markdown
+{% if views.kept %}{% for memory in views.kept.memories -%}
+- {{ memory.text | clip: 200 }}
+{% endfor %}{% endif %}
+```
 
 ### Roles
 
@@ -634,7 +692,7 @@ A row lays two to four cells side by side, so that the charts that belong togeth
 - A fenced block in a cell keeps its lines: a `---` or a `:::` inside it, such as in a chart's body, is part of the block.
 - The Markdown before, between and after the rows stands on its own, across the page. Outside a row, `---` is Markdown's own rule, a line across the page.
 
-A valid row keeps its Markdown structure. In Studio, cells share the row's width equally and stack vertically on narrow screens. A client without layout support, such as a chat or agent, prints them in order with the `::: row`, `---` and `:::` lines.
+In Studio, cells share the row's width equally and stack vertically on narrow screens. A client without layout support, such as a chat or agent, prints them in order with the `::: row`, `---` and `:::` lines.
 
 Leave a blank line between a sentence and a following `---`, so Markdown readers do not interpret the sentence as a heading.
 
@@ -878,6 +936,8 @@ Both answer the subject as `get_definition` does, with `page.result` and `page.l
 - `lately` renders over the views as they stand, or as the line that says they are being built.
 - `render` on a definition without a page is refused as `invalid_input`, and so is `sample_output` without `render`. `render_page` of a definition without a page is refused as `not_found`.
 
+The playbook's page is read with `render_playbook_page`, `POST /render` relative to the playbook, which takes no body, needs `playbook:read` and answers `{ page: { lately, standing } }`, both where the page has `data`. A playbook without a page is refused as `not_found`.
+
 ### As of a run
 
 `render_page` given a `run_id` answers `page.result`, `page.lately` and `page.standing` as they stood when that run ended. So a client can show the page of a run from last month as it read that day. This takes HTTP: `get_definition` has no `run_id`.
@@ -890,8 +950,6 @@ Both answer the subject as `get_definition` does, with `page.result` and `page.l
 - Where the replay reaches [its limit](#limits), or no worker can fold it, `page.lately` is the line that says so and `page.standing.state` is `out_of_reach`, with the version alone. `page.result` is still answered.
 - A run the playbook does not have is refused as `not_found`. A run of another definition is refused as `invalid_input` at `/run_id`, and so is `run_id` given with `sample_output`.
 - The refusals of the preview hold: `not_found` for a definition without a page, and `conflict` for a retired one.
-
-The playbook's page is read with `render_playbook_page`, `POST /render` relative to the playbook, which takes no body, needs `playbook:read` and answers `{ page: { lately, standing } }`, both where the page has `data`. A playbook without a page is refused as `not_found`. Over MCP, `get_playbook` answers the playbook's page as its `source`, and renders nothing.
 
 ## Saving a page
 

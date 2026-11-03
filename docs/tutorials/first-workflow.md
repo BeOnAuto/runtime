@@ -20,13 +20,13 @@ Your agent should show the four review criteria and say that the function takes 
 
 Send this message:
 
-> In that playbook, create a reasoning function called "Draft brief feedback". It takes the review as text and writes a short message to the brief's author. It lists the changes the review asks for, without adding facts or requirements. If the review recommends Ready, it says the brief meets the review criteria. It only drafts the message; it sends nothing. Use one of the models Auto offers. Show me the function before saving it.
+> In that playbook, create a reasoning function called "Draft brief feedback". It takes the review as text and writes a short message to the brief's author. It lists the changes the review asks for, without adding facts or requirements. If the review recommends Ready, it says the brief meets the review criteria. It only drafts the message; it sends nothing. Use one of the models Auto offers. Give it a page that shows each draft and the latest ones. Show me the function before saving it.
 
 Your agent should show a function that takes a review and returns a draft message. Check that it uses the review as its source and has no tool for sending messages. Then ask the agent to save it.
 
 ## 3. Save the workflow
 
-> Create a workflow called "Review and draft feedback" in the same playbook. It takes a campaign brief, runs "Review campaign brief", then passes that function's answer to "Draft brief feedback". Return both the review and the draft, under the names review and feedback. Show me the steps before saving it. Run it only when I ask; do not add a schedule.
+> Create a workflow called "Review and draft feedback" in the same playbook. It takes a campaign brief, runs "Review campaign brief", then passes that function's answer to "Draft brief feedback". Return both the review and the draft, under the names review and feedback. Give it a page that shows each run's recommendation with its feedback, and the briefs reviewed each day. Show me the steps before saving it. Run it only when I ask; do not add a schedule.
 
 Check the order before you approve it:
 
@@ -34,7 +34,7 @@ Check the order before you approve it:
 2. The second function receives the first function's answer.
 3. The workflow returns both answers.
 
-The agent saves the workflow at version 1. If Auto rejects the definition, the agent gets the validation error and can correct it.
+The agent saves the workflow at version 1, with its page. If Auto rejects the definition, the agent gets the validation error and can correct it. A workflow saved without a page is still saved, and Auto's answer ends with "It has no page yet"; ask the agent to give it one.
 
 ## 4. Run it on an incomplete brief
 
@@ -68,7 +68,7 @@ Both answers come from models, so their wording varies. The workflow's success m
 
 Your agent should find two function runs under the workflow run. The second function's input should contain the review, and the workflow should keep the review and feedback together.
 
-Open [Auto Studio](https://studio.on.auto) in the same organization. Select the workflow in "Campaign review tutorial" and open its run to follow the recorded steps.
+Open [Auto Studio](https://studio.on.auto) in the same organization. Select the workflow in "Campaign review tutorial": its Result shows the run as its page presents it. Open the run to see it in the Ledger, with its events beneath it, each step holding the run of the function it called.
 
 ## 6. Run it with a complete brief
 
@@ -93,4 +93,4 @@ The two workflow runs have different run ids and use the same saved definitions.
 - If a step fails, inspect its error and input before starting a new run. Check that each function works on its own.
 - If the agent cannot find the workflow, check the organization and playbook it is using.
 
-[Run a workflow on a schedule or event](../guides/triggers.md) shows how to start work automatically, and how to give the workflow a page that shows each run's result and the runs so far. [Workflows and runs](../concepts/workflows.md) explains how Auto records its progress.
+[Run a workflow on a schedule or event](../guides/triggers.md) shows how to start work automatically, and how to check that the workflow's page shows what each run did while you were away. [Workflows and runs](../concepts/workflows.md) explains how Auto records its progress.

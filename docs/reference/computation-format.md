@@ -20,7 +20,7 @@ Numbers are double-precision floating point. Integers are exact only up to 2^53.
 The source is Markdown with YAML front matter followed by the program. This example turns rows of campaign costs into spend, projection and pace per campaign, in cents:
 
 <!-- prettier-ignore -->
-```markdown
+````markdown
 ---
 description: Spend, pace and projection per campaign, in cents, for a reporting period
 language: typescript
@@ -38,6 +38,39 @@ output:
     properties:
       campaigns: { type: array, items: { type: object } }
       total_spend_cents: { type: integer }
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: computation/campaign-pace
+    views:
+      spend: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const total = fieldOf(fieldOf(event.data, 'output'), 'total_spend_cents');
+        const day = event.time?.slice(0, 10);
+        if (typeof total !== 'number' || day === undefined) return view;
+        const others = (view.spend?.lines[0]?.points ?? []).filter(({ at }) => at !== day);
+        const points = [...others, { at: day, value: total / 100 }].toSorted((one, other) => (one.at < other.at ? -1 : 1));
+        return { spend: { unit: 'USD', period: 'day', lines: [{ name: 'Spend so far', points: points.slice(-90) }] } };
+      }
+  result: |
+    {% assign campaigns = output.campaigns | size %}
+    {{ output.total_spend_cents | divided_by: 100 | money }} spent across {{ campaigns }} {% if campaigns == 1 %}campaign{% else %}campaigns{% endif %}.
+
+    | Campaign | Spent | Projected | Pace |
+    | --- | --- | --- | --- |
+    {% for each in output.campaigns -%}
+    | {{ each.campaign }} | {{ each.spend_cents | divided_by: 100 | money }} | {{ each.projected_cents | divided_by: 100 | money }} | {% if each.pace_permille == nil %}no budget{% else %}{{ each.pace_permille | divided_by: 10 }}% of budget{% endif %} |
+    {% endfor %}
+  lately: |
+    ```chart line
+    {{ views.spend | json }}
+    ```
 ---
 export default function (input: Input): Output {
   const { days_elapsed, days_total } = input.period;
@@ -60,7 +93,7 @@ export default function (input: Input): Output {
     });
   return { campaigns, total_spend_cents: campaigns.reduce((sum, each) => sum + each.spend_cents, 0) };
 }
-```
+````
 
 `Input` and `Output` are the input and output schemas as TypeScript types, which the runtime declares for the program; see [Types](#types).
 
@@ -68,10 +101,10 @@ The schema and the program keep the arithmetic exact and the rows consistent:
 
 - The schema bounds the input: at most 4,000 rows, each cost from 0 to 5,000,000 cents, each budget from 0 to 1,000,000,000 cents, and periods of 1 to 366 days. An input outside those bounds is `invalid_input`, with a pointer to each value.
 - With those bounds, the largest intermediate value, `projected_cents * 1000`, is at most 4,000 × 5,000,000 × 366 × 1,000 = 7.32 × 10^15. That is below 2^53, so every value stays an exact integer; see [Numbers](#numbers).
-- The program checks what a schema cannot say. Rows of one campaign must carry the same budget, and `days_elapsed` may not pass `days_total`. Otherwise it raises an error, and the run ends as a `conflict` of the kind `unworkable`, such as `The program raised an error on line 30: Error: The rows of spring-sale disagree on its budget: 800000 and 750000`.
+- The program checks what a schema cannot say. Rows of one campaign must carry the same budget, and `days_elapsed` may not pass `days_total`. Otherwise it raises an error, and the run ends as a `conflict` of the kind `unworkable`, such as `The program raised an error on line 63: Error: The rows of spring-sale disagree on its budget: 800000 and 750000`.
 - A budget of 0 gives a `pace_permille` of `null`.
 
-To save it, call `create_definition` with `type: "computation"`, a function `name` such as `campaign-pace`, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `rows` and `period` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook.
+To save it, call `create_definition` with `type: "computation"`, the `name` `campaign-pace`, which its page's filter names, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `rows` and `period` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook.
 
 Given this input:
 
@@ -86,7 +119,7 @@ Given this input:
 }
 ```
 
-the run succeeds with this output, and its record shows that it spent 0 checkpoints of work:
+the run succeeds with this output, and its record shows that it spent 0 checkpoints of work. Its page heads the run with `$2,630.50 spent across 2 campaigns.`, above a row for each campaign:
 
 ```json
 {
@@ -124,6 +157,7 @@ the run succeeds with this output, and its record shows that it spent 0 checkpoi
 - Unknown fields are rejected. Among them are the fields of a reasoning function that do not apply here: `model`, `config`, `tools`, `output.format` and `input.default`.
 - The body after the front matter is the program. A document without one is rejected.
 - The saved function has the `media_type` `text/markdown`. Its `description`, `input_schema` and `output_schema` come from the document.
+- Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
 
 ## The program
 
@@ -278,11 +312,11 @@ A workflow calls a computation function as it calls a reasoning function, with `
 
 This workflow reads a month's campaign costs through a tool server, computes the pace of each campaign and has a reasoning function write a summary:
 
-- The first function is an [interaction function that asks a system](interaction-format.md#asking-a-system). It calls the tool and returns the rows it gives, checked against its output schema, with no model to read them.
-- A run of it that called the tool and did not succeed is never run again under its run id. A retry starts a new run, which calls the tool again; see [Retrying under a run id](http.md#retrying-under-a-run-id). A retry on status 503 is safe: such a run raises 503 only before its call, or after a call of a tool marked `reads`.
+- The first function is a [lookup function](lookup-format.md), since its tool is marked `reads`. It returns the rows the tool gives, checked against its output schema, with no model to read them.
+- A run of it that called the tool and did not succeed is never run again under its run id. A retry starts a new run, which reads again; see [Retrying under a run id](http.md#retrying-under-a-run-id). A lookup changes nothing, so a retry on status 503 is safe.
 - The arithmetic happens in the computation function, and the words in the reasoning function.
 
-The interaction function `read-campaign-costs`:
+The lookup function `read-campaign-costs`:
 
 ```markdown
 ---
@@ -353,7 +387,7 @@ do:
   - read:
       call: run_definition
       with:
-        type: interaction
+        type: lookup
         name: read-campaign-costs
         input: { month: '${ $data.month }' }
       output:
@@ -402,6 +436,17 @@ When the computation function's run is `unavailable`, the `compute` task retries
 They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
 
 An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
+
+## Its page
+
+A computation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person the figures the program worked out:
+
+- `result`: the numbers, as figures or a table, such as the total spend in a `figure` chart and a row for each campaign in a table.
+- `lately`: their series over time, such as the total spend of each period, keyed by the period the output names.
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
+
+The fold sees the output alone, so give the output the period it is about, such as the month a run totals. The example's output names none, so its page keys each total by the day it was worked out: the spend so far, as of that day. Write amounts kept in cents as dollars, with `divided_by: 100` and `money`. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
 
 ## Availability
 

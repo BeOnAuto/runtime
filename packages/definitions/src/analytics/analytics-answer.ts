@@ -47,7 +47,7 @@ const DaySchema = Schema.Struct({
 const FunctionSchema = Schema.Struct({
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation or workflow',
+      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation, generation or workflow',
   }),
   name: Schema.String.annotate({ description: 'The definition name' }),
   runs: Count.annotate({ description: 'How many of its runs ended' }),

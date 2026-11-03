@@ -21,7 +21,7 @@ For example, [Build your first workflow](../tutorials/first-workflow.md) builds 
 
 Saving a workflow creates version 1, and each change saves a new version. A run uses the version that was the latest when it started, and keeps it to the end. So changing a workflow never changes a run that is already under way, and no one can start a run on an older version. A step that calls a function uses that function's latest version at the moment of the call.
 
-Each function a step calls has a run of its own, with its own id, so you can inspect it separately. A step that is tried again starts a fresh run of the function. A restart of Auto does not repeat a function run that already finished.
+Each function a step calls has a run of its own, with its own id, so you can inspect it separately. That run names the workflow run and the step that started it. A step that is tried again starts a fresh run of the function. A restart of Auto does not repeat a function run that already finished.
 
 [Terminology](terminology.md#definitions-and-runs) defines definition, version, run, step run and attempt.
 
@@ -63,7 +63,7 @@ An approval is an interaction function. The workflow calls it as it calls any fu
 
 A run ends when its last step completes, or earlier if an error stops it, someone cancels it or it runs too long. [How a run ends](../reference/workflow-format.md#how-a-run-ends) gives each status and its reasons.
 
-Each run has a record of where it stands. It shows the workflow version, who started the run and, once it ends, its result or why it did not succeed. Its history shows what happened, oldest first: each input the run took and the steps that input moved. Each event names the one that led to it, so the history shows the run's branches, retries and waits. The latest event shows what the run is waiting for. The history shows how the run moved, not the data it holds.
+Each run has a record of where it stands. It shows the workflow version, who started the run and, once it ends, its result or why it did not succeed. Where the workflow has a page, the run also shows the headline that page gives it. Its history shows what happened, oldest first: each input the run took and the steps that input moved. Each event names the one that led to it, so the history shows the run's branches, retries and waits. The latest event shows what the run is waiting for. The history shows how the run moved, not the data it holds.
 
 Each function a step called has its own run and history. The playbook's events show the workflow run together with every run it started. [History and events](history-and-dream.md) explains what a playbook records, and [Run history and playbook events](../reference/http.md#run-history-and-playbook-events) lists the reads and their fields.
 

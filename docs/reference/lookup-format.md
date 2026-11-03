@@ -8,10 +8,10 @@ A lookup function never acts: it calls only a tool marked `reads`, and asks no m
 
 ## A function document
 
-The source is Markdown with YAML front matter and no body. This example, `thread-replies`, reads the replies of a thread in the team chat, oldest first:
+The source is Markdown with YAML front matter and no body. This example, `thread-replies`, reads the replies of a thread in the team chat, oldest first. Its page shows the replies of each run as a table:
 
 <!-- prettier-ignore -->
-```markdown
+````markdown
 ---
 description: Reads the replies of a thread in the team chat, oldest first
 call:
@@ -39,8 +39,44 @@ output:
         user: { type: string }
         text: { type: string }
         ts: { type: string }
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: lookup/thread-replies
+    views:
+      latest: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const replies = fieldOf(event.data, 'output');
+        if (!Array.isArray(replies)) return view;
+        const rows = replies
+          .slice(-20)
+          .toReversed()
+          .map((reply) => [String(fieldOf(reply, 'user') ?? ''), String(fieldOf(reply, 'text') ?? '').slice(0, 500)]);
+        return { latest: { columns: [{ name: 'Who' }, { name: 'Reply' }], rows } };
+      }
+  result: |
+    {% assign found = output | size %}
+    {{ found }} {% if found == 1 %}reply{% else %}replies{% endif %} in the thread.
+
+    | Who | Reply |
+    | --- | --- |
+    {% for reply in output -%}
+    | {{ reply.user }} | {{ reply.text | normalize_whitespace | replace: "|", "\\|" | clip: 120 }} |
+    {% endfor %}
+  lately: |
+    The replies the latest run found, newest first.
+
+    ```chart table
+    {{ views.latest | json }}
+    ```
 ---
-```
+````
 
 To save it, call `create_definition` with `type: "lookup"`, the `name` `thread-replies`, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `channel` and `thread` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook. The run returns `status: succeeded` with the replies as its `output`.
 
@@ -55,7 +91,7 @@ Write the call from what the tool returns, not from memory:
    - `with`, the arguments;
    - `read`, a JSON Pointer to the part of the answer the function returns, such as `/messages`. Leave `read` out to return the whole answer.
 
-   Then write `output.schema`: the shape that part has in the answer `query_connection` gave.
+   Then write `output.schema`: the shape that part has in the answer `query_connection` gave. Name only the fields the function's readers need, list in `required` only the fields every answer holds, and allow `null` wherever the tool may answer `null`, as `{ type: [string, "null"] }`: one answer does not show every case. `query_connection` cuts a long answer's `text` at 64 KiB and leaves out an `answer` larger than that, so ask for fewer rows to see one whole.
 
 4. Show the person the whole document. Once they agree, save it with `create_definition`, `type` lookup. `run_definition` runs it and returns its output at once.
 
@@ -78,6 +114,8 @@ A template may use the filters listed in [Templates](template.md#filters), the `
 | `page`          | Optional [page](page-format.md) that presents its runs                                                                                                                 |
 
 `to`, `expires`, `deliver`, `replies`, `model`, `tools`, `language` and every other field are rejected with their line, and so is a body after the front matter. The saved function has the `media_type` `text/markdown`.
+
+Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
 
 Every template of `call.with` is checked when the document is saved, as an interaction function's call is: it is rejected with its line when it does not compile, names another value than `input`, `today` and `now`, names a property the input schema does not allow, or renders a structure inside a longer text. `call.read` is a JSON Pointer such as `/messages`: it starts with a slash, writes `~` as `~0`, and writes a slash within a name as `~1`.
 
@@ -135,6 +173,15 @@ A tool that pages returns one page for each run. Point `read` at the part that h
 A workflow calls a lookup function as it calls any function, with `call: run_definition` and `type: lookup`. The step's output is what the tool returned at `read`. The function's own maximum is 70 seconds, so the step waits at most 70 seconds plus one minute.
 
 Every 503 a lookup function raises, `tool_not_read_only`, `tool_server_failed`, `tool_not_offered` or `tools_unfinished`, changed nothing, so a retry on that status may try it again.
+
+## Its page
+
+A lookup function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the lookup found:
+
+- `result`: what was found, as a table, such as the replies of a thread, a row for each with who wrote it and what it said.
+- `lately`: the values found over time, where they are numbers, such as the stock of each item each morning. Where the answer holds no numbers, `lately` keeps a table of the latest finds.
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
 
 ## Availability
 

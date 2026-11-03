@@ -59,7 +59,7 @@ A run that a schedule starts gets only the time it was due. A workflow that need
 | Way                            | How it works                                                                                                                                             | Good when                                       |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Fill in the input              | The workflow's `input.from` puts fixed values in place of the schedule's input. Any other input passes through, so your agent can still run it as before | The workflow runs with the same input each time |
-| Add a small scheduled workflow | A new workflow holds the input and runs yours with it. The schedule goes on the new workflow, and yours stays as it is                                   | You want to leave the workflow unchanged        |
+| Add a small scheduled workflow | A new workflow holds the input and runs yours with it. The schedule goes on the new workflow, with its own page, and yours stays as it is                | You want to leave the workflow unchanged        |
 | Read the data when it runs     | A step recalls it from the playbook's [memories](remember.md), or reads it through a function's [tools](tools.md)                                        | The data changes between runs                   |
 
 Ask your agent:
@@ -70,8 +70,8 @@ on a schedule with this input: <the input it needs>. A scheduled run gets only
 the time it was due. Either have the workflow fill in that input when a
 schedule starts it, or prepare a small workflow that runs it with that input;
 if its input schema requires a field the schedule's input lacks, prepare the
-small workflow. Tell me which you chose, and show me the document before
-saving it.
+small workflow, with a page that shows what each of its runs did. Tell me which
+you chose, and show me the document before saving it.
 ```
 
 For example, a workflow that takes a campaign can fill in a fixed one when a schedule starts it. If the workflow already has an input schema, one that requires no field the schedule's input lacks, `from` goes beside its `schema`:
@@ -220,19 +220,19 @@ Other systems publish events over HTTP with `POST /v1/orgs/{org}/playbooks/{play
 
 ## Show the runs on a page
 
-### 8. Give the workflow its page
+### 8. Check the workflow's page
 
-A run that a trigger starts does its work while you are away, so give the workflow a page: a headline for each run, and a chart of the runs so far. Auto Studio, a chat and your agent all show the same page. Ask:
+A run that a trigger starts does its work while you are away, so the workflow's page is how you see what it did: the outcome of each run as a headline with its key figures, and the main number of each period. Auto Studio, a chat and your agent all show the same page. A workflow's page is written with its document; if yours has none yet, this step gives it one. Ask:
 
 ```text
-In my "<playbook name>" playbook, give the "<workflow name>" workflow a page:
-one plain sentence for each run that says what it did, and one chart of
-<the figure, such as the revenue of each month> over time. If a run is about
-a period, such as the month it closes, take the period from its output rather
-than from when it ran. Show me the page once it is saved.
+In my "<playbook name>" playbook, show me the page of the "<workflow name>"
+workflow. If it has none, give it one: a headline for each run that says what
+it achieved, with its key figures, and a chart of <the main figure, such as
+the revenue of each month> over time. If a run is about a period, such as the
+month it closes, take the period from its output rather than from when it ran.
 ```
 
-The agent adds the page to the workflow's document, as its `page` key, and saves the workflow. [A minimal page](../reference/page-format.md#a-minimal-page) shows one, and explains why a run that is about a period takes its period from its output: runs made in one sitting, or late, still land on the periods they are about. Check that:
+The page is the `page` key of the workflow's document, saved with the rest of it. [Its page](../reference/workflow-format.md#its-page) in the workflow format says what a workflow's page shows, and [A minimal page](../reference/page-format.md#a-minimal-page) explains why a run that is about a period takes its period from its output: runs made in one sitting, or late, still land on the periods they are about. Check that:
 
 - the newest run of the workflow shows the headline you asked for, in Auto Studio or when your agent reads the run;
 - the workflow shows the chart, with a point for each period its runs covered, in Auto Studio or when your agent reads the workflow.
@@ -261,13 +261,14 @@ A trigger you change or add applies from the version that saves it, never to any
 
 ## Example: review each submitted brief
 
-This workflow starts each time the campaign tool publishes a `com.acme.campaigns.brief-submitted` event with the brief in its data. Your agent can also run it with the input `{"brief": "..."}`. It passes the brief to `review-campaign-brief`, a reasoning function in the same playbook that takes a `brief`. A workflow names a function by the name it is saved under.
+This workflow starts each time the campaign tool publishes a `com.acme.campaigns.brief-submitted` event with the brief in its data. Your agent can also run it with the input `{"brief": "..."}`. It passes the brief to `review-campaign-brief`, a reasoning function in the same playbook that takes a `brief`. A workflow names a function by the name it is saved under. Its page heads each run with the review, and charts the briefs reviewed each day.
 
 The workflow's `namespace` is the id of the "Marketing" playbook it is saved in, `marketing`; your agent fills in your own.
 
 ::: details The "Review submitted brief" workflow
 
-```yaml
+<!-- prettier-ignore -->
+````yaml
 document:
   dsl: '1.0.3'
   namespace: marketing
@@ -294,7 +295,36 @@ do:
         name: review-campaign-brief
         input:
           brief: ${ $data.brief }
-```
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: workflow/review-submitted-brief
+    views:
+      reviewed: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const day = event.time?.slice(0, 10);
+        if (day === undefined) return view;
+        const points = view.reviewed?.lines[0]?.points ?? [];
+        const last = points.at(-1);
+        const at = last !== undefined && last.at > day ? last.at : day;
+        const counted = last?.at === at ? [...points.slice(0, -1), { at, value: last.value + 1 }] : [...points, { at, value: 1 }];
+        return { reviewed: { unit: 'briefs', period: 'day', lines: [{ name: 'Briefs reviewed', points: counted.slice(-90) }] } };
+      }
+  result: |
+    {% if run.status == "started" %}
+    Reviewing the brief…
+    {% else %}
+    {{ output | clip: 2000 }}
+    {% endif %}
+  lately: |
+    ```chart line
+    {{ views.reviewed | json }}
+    ```
+````
 
 :::
 
@@ -311,11 +341,12 @@ A run of the workflow starts within a few seconds, and its output is the review.
 
 ## Example: review a standing brief every Monday
 
-An always-on campaign runs from one brief, and its owner wants it reviewed every Monday. The "Review submitted brief" workflow above reviews the brief it is given, but a scheduled run would give it none. So this small workflow, saved as `weekly-brief-check` in the same playbook, holds the brief and runs "Review submitted brief" with it.
+An always-on campaign runs from one brief, and its owner wants it reviewed every Monday. The "Review submitted brief" workflow above reviews the brief it is given, but a scheduled run would give it none. So this small workflow, saved as `weekly-brief-check` in the same playbook, holds the brief and runs "Review submitted brief" with it. Its page heads each run with that week's review, and lists the reviews of the last twelve Mondays.
 
 ::: details The "Weekly brief check" workflow
 
-```yaml
+<!-- prettier-ignore -->
+````yaml
 document:
   dsl: '1.0.3'
   namespace: marketing
@@ -339,7 +370,36 @@ do:
             Channel: Paid LinkedIn ads
             Total budget: USD 8,000
             Success measure: 100 trial registrations
-```
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: workflow/weekly-brief-check
+    views:
+      weeks: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const review = fieldOf(event.data, 'output');
+        const day = event.time?.slice(0, 10);
+        if (typeof review !== 'string' || day === undefined) return view;
+        const rows = [[day, review.slice(0, 500)], ...(view.weeks?.rows ?? [])].slice(0, 12);
+        return { weeks: { columns: [{ name: 'Monday' }, { name: 'Review' }], rows } };
+      }
+  result: |
+    {% if run.status == "started" %}
+    Reviewing this week's brief…
+    {% else %}
+    {{ output | clip: 2000 }}
+    {% endif %}
+  lately: |
+    ```chart table
+    {{ views.weeks | json }}
+    ```
+````
 
 - `cron: '0 9 * * 1'` with `time_zone: Europe/London` starts a run at 09:00 London time every Monday, in summer and in winter. To test it, save it first without `schedule` and run it with a schedule's input, as in step 2. Then put `every: PT1M` in place of the `cron` and `time_zone` lines, as in step 3.
 - The run's input is the due time, which the step does not read. `type: workflow` runs the other workflow, and the `|` keeps the brief's lines as written.

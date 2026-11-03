@@ -1,8 +1,9 @@
-import { Option, Result, type Schema } from 'effect';
+import { Option, Result, Schema } from 'effect';
 
 import type { DocumentIssue, SourceLines } from '../document/document-issue.ts';
 import { splitDocument } from '../document/document-split.ts';
 import { readFrontMatter } from '../document/front-matter-reading.ts';
+import type { DocumentWrittenIn } from './page-lines.ts';
 import type { PageWrittenIn } from './subject-pages-port.ts';
 
 export type PageReadAs = PageWrittenIn | 'mapping';
@@ -65,4 +66,11 @@ export function pageMappingIn(
         onSuccess: ({ value, lines }) => Result.succeed(mappingOf(value, lines, writtenIn)),
       }),
   });
+}
+
+const isJsonObject = Schema.is(Schema.JsonObject);
+
+export function carriesAPage(source: string, writtenIn: DocumentWrittenIn): boolean {
+  const page = Option.getOrUndefined(Option.flatten(Result.getSuccess(pageMappingIn(source, writtenIn))))?.mapping;
+  return isJsonObject(page) && Object.keys(page).length > 0;
 }

@@ -18,6 +18,7 @@ export const byAdmin: Context = { by: 'acme-admin', at };
 export interface PublishedEvent {
   readonly id: string;
   readonly type: string;
+  readonly time?: string;
   readonly data?: Json;
 }
 

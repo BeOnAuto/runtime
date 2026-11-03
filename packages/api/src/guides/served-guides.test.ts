@@ -225,7 +225,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with query_connection, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3701, 3903,
+      3701, 4011,
     ]);
   });
 });
@@ -244,8 +244,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4290, 1640, 4301, 1741],
-      [3903, 1640, 3701, 1741],
+      [4470, 1640, 4301, 3541],
+      [4011, 1640, 3701, 3541],
     ]);
   });
 });

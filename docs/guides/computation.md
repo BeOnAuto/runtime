@@ -40,7 +40,8 @@ Ask your agent:
 In my "<playbook name>" playbook, prepare a computation function named
 "<function name>". It takes <inputs> and returns <outputs>. Keep money in whole
 cents, round each division down, and give each amount and count a maximum so
-every figure stays exact. Show me the document before saving it.
+every figure stays exact. Give it a page that shows the figures of each run.
+Show me the document before saving it.
 ```
 
 Check the document before you approve it:
@@ -48,12 +49,13 @@ Check the document before you approve it:
 - `language: typescript`, and `input.schema` and `output.schema` with a type for each field. These JSON Schemas are the function's contract. Each run's input is checked against `input.schema` before the program runs, and its result against `output.schema`. They also give the program its types, `Input` and `Output`, so a misspelt field is refused when you save.
 - The rules of [Keep every figure exact](#keep-every-figure-exact): a `maximum` on each amount and count, a `minimum` on each value the program divides by, and a whole number at the end of each division. Ask the agent to name the largest number the program forms and show the arithmetic.
 - The program is a function from `Input` to `Output`, exported as the default (`export default function`).
+- A `page` in the front matter that shows each run's headline and its figures, and their series over time if you asked for one, as [Its page](../reference/computation-format.md#its-page) says.
 
 ## 2. Save it with its overview
 
 The agent saves it with `create_definition` and the type `computation`. Saving checks the program with the TypeScript compiler. A problem is refused with its line, counted from the top of the document, and the compiler's words.
 
-Check that the agent confirms the function at version 1, and that it saved its `overview`: Markdown for the person who runs the business, on why the function exists, what it does and how it fits, for a reader who does not read TypeScript. It also saved a `diagram`, a flowchart of the calculation that Auto Studio draws under the overview, or the word `none` where a picture would add nothing.
+Check that the agent confirms the function at version 1, and that it saved its `overview`: Markdown for the person who runs the business, on why the function exists, what it does and how it fits, for a reader who does not read TypeScript. It also saved a `diagram`, a flowchart of the calculation that Auto Studio draws under the overview, or the word `none` where a picture would add nothing. The page was saved with the document, so each run shows its figures in Auto Studio, in a chat and to your agent alike.
 
 ## 3. Run it with an input you can check by hand
 
@@ -79,7 +81,8 @@ In my "<playbook name>" playbook, prepare a workflow that runs the "<function
 name>" function with the workflow's input, tries again if it finds no turn to
 run (status 503), and passes its output to the "<reasoning function name>"
 function. If it still cannot run after the last try, the workflow should stop
-with a clear error. Show me the document before saving it.
+with a clear error. Give it a page that shows the figures and the words of each
+run, and the main figure over time. Show me the document before saving it.
 ```
 
 You do not need to read the workflow's YAML yourself. The agent has the computation step retry on status 503 and then stop the run with a clear error, as [Errors, retries and timeouts](../reference/workflow-format.md#errors-retries-and-timeouts) explains.
@@ -99,7 +102,7 @@ The "Campaign spend" function, saved as `campaign-spend`, takes a campaign's bud
 ::: details The "Campaign spend" document
 
 <!-- prettier-ignore -->
-```markdown
+````markdown
 ---
 description: Totals a campaign's spend and its pace against budget, in cents
 language: typescript
@@ -132,6 +135,13 @@ output:
       projected_cents: { type: integer }
       pace_permille: { type: integer }
       within_budget: { type: boolean }
+page:
+  result: |
+    {{ output.campaign }} has spent {{ output.spend_cents | divided_by: 100 | money }} and is on course for {{ output.projected_cents | divided_by: 100 | money }}{% if output.within_budget %}, within its budget{% else %}, over its budget{% endif %}.
+
+    ```chart figure
+    {"values":[{"name":"Spent (USD)","value":{{ output.spend_cents | divided_by: 100 }}},{"name":"Left (USD)","value":{{ output.remaining_cents | divided_by: 100 }}},{"name":"Projected (USD)","value":{{ output.projected_cents | divided_by: 100 }}}]}
+    ```
 ---
 export default function (input: Input): Output {
   const spend_cents = input.costs.reduce((sum, row) => sum + row.cost_cents, 0);
@@ -145,7 +155,7 @@ export default function (input: Input): Output {
     within_budget: projected_cents <= input.budget_cents,
   };
 }
-```
+````
 
 :::
 
@@ -154,7 +164,8 @@ export default function (input: Input): Output {
 - The largest number the program forms is `projected_cents * 1000`. With `days_total` at most 366 and `days_elapsed` at least 1, it is at most 3,660,000,000 × 366 × 1,000, which is 1,339,560,000,000,000. That is well under 2^53.
 - The budget is at most 100,000,000,000 cents (USD 1 billion), so `remaining_cents` stays exact too. An input past any bound is refused with `invalid_input` before the program runs.
 - `Math.floor` ends each division in a whole number, rounding down.
-- Writing `row.cost` for `row.cost_cents` is refused when you save, with `Line 35: Property 'cost' does not exist on type '{ day: string; cost_cents: number; }'.`
+- The page's `result` says the spend and where it is heading in its first line, the run's headline, and shows the three amounts as figures, in dollars.
+- Writing `row.cost` for `row.cost_cents` is refused when you save, with `Line 42: Property 'cost' does not exist on type '{ day: string; cost_cents: number; }'.`
 
 Run it with ten days of costs out of 31, against a budget of USD 8,000:
 
@@ -202,13 +213,14 @@ With the first cost written in dollars, as `"cost_cents": 243.5`, the run is ref
 
 ## Example: write a note about the figures
 
-The "Write spend note" reasoning function, saved as `write-spend-note`, puts the figures into words for the campaign's owner. The "Spend report" workflow, saved as `spend-report`, runs "Campaign spend", then "Write spend note", naming each by the name it is saved under.
+The "Write spend note" reasoning function, saved as `write-spend-note`, puts the figures into words for the campaign's owner. Its page shows each note, and lists the latest ones. The "Spend report" workflow, saved as `spend-report`, runs "Campaign spend", then "Write spend note", naming each by the name it is saved under. Its page heads each run with the spend and where it is heading, above the note, and charts the spend each report gave, by campaign.
 
 If your model provider is not Anthropic, ask your agent to use one of your provider's models.
 
 ::: details The "Write spend note" document
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: Writes a short note to a campaign's owner about its spend and pace
 model: anthropic/claude-sonnet-4-5
@@ -223,11 +235,36 @@ input:
       pace_permille: { type: integer }
       within_budget: { type: boolean }
     required: [campaign, spend_cents, remaining_cents, projected_cents, pace_permille, within_budget]
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: reasoning/write-spend-note
+    views:
+      notes: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const note = fieldOf(event.data, 'output');
+        const day = event.time?.slice(0, 10);
+        if (typeof note !== 'string' || day === undefined) return view;
+        const rows = [[day, note.slice(0, 500)], ...(view.notes?.rows ?? [])].slice(0, 10);
+        return { notes: { columns: [{ name: 'Day' }, { name: 'Note' }], rows } };
+      }
+  result: |
+    {{ output | clip: 1000 }}
+  lately: |
+    ```chart table
+    {{ views.notes | json }}
+    ```
 ---
 
 {% system %}Write two or three sentences for the campaign's owner about its spend so far. Use the figures exactly as given and do not compute new ones. Amounts are in cents: write them as US dollars with two decimals. A pace of 1000 per mille means the campaign is on course to spend exactly its budget. Say plainly whether it is on course to stay within budget.{% endsystem %}
 Figures: {{ input | json }}
-```
+````
 
 :::
 
@@ -235,7 +272,8 @@ The "Spend report" workflow's `namespace` is the id of the "Marketing" playbook 
 
 ::: details The "Spend report" workflow
 
-```yaml
+<!-- prettier-ignore -->
+````yaml
 document:
   dsl: '1.0.3'
   namespace: marketing
@@ -285,7 +323,41 @@ do:
         input: '${ $data }'
       output:
         as: '${ ({ figures: $input, note: $data }) }'
-```
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: workflow/spend-report
+    views:
+      spend: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const figures = fieldOf(fieldOf(event.data, 'output'), 'figures');
+        const campaign = fieldOf(figures, 'campaign');
+        const spent = fieldOf(figures, 'spend_cents');
+        const day = event.time?.slice(0, 10);
+        if (typeof campaign !== 'string' || typeof spent !== 'number' || day === undefined) return view;
+        const others = (view.spend?.rows ?? []).filter(([at, name]) => at !== day || name !== campaign);
+        const rows = [...others, [day, campaign.slice(0, 64), spent / 100]].slice(-200);
+        return { spend: { columns: [{ name: 'Day' }, { name: 'Campaign' }, { name: 'Spent', unit: 'USD' }], rows } };
+      }
+  result: |
+    {% if run.status == "started" %}
+    Working out the campaign's spend…
+    {% else %}
+    {{ output.figures.campaign }} has spent {{ output.figures.spend_cents | divided_by: 100 | money }} and is on course for {{ output.figures.projected_cents | divided_by: 100 | money }}{% if output.figures.within_budget %}, within its budget{% else %}, over its budget{% endif %}.
+
+    {{ output.note | clip: 1000 }}
+    {% endif %}
+  lately: |
+    ```chart bars x=Day y=Spent color=Campaign
+    {{ views.spend | json }}
+    ```
+````
 
 - `compute` runs "Campaign spend" with the run's input. It tries again up to twice on status 503, then `give-up` stops the run with an error that names what failed.
 - `write` passes the figures to "Write spend note". Its `output.as` keeps the figures beside the note, so the run's output holds both.

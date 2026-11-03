@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { calledOnce, closedAfter, oneCallAccess, oneCallKey } from '../testing/one-calls.ts';
 import { serveFakeMcp } from './fake-mcp-server.ts';
+import type { FakeTool } from './fake-tools.ts';
 
 async function chatServer() {
   const fake = await serveFakeMcp({ bearer: oneCallKey, chat: true });
@@ -85,5 +86,36 @@ describe('the chat tools of the fake MCP server', () => {
         input: { channel: '#approvals', text: 7 },
       }),
     ).toMatchObject({ kind: 'unopened', because: 'tool_not_listed' });
+  });
+});
+
+const campaignCosts: FakeTool = {
+  name: 'campaign-costs',
+  description: 'Reads the cost rows of every campaign for a month.',
+  inputSchema: { type: 'object', properties: { month: { type: 'string' } }, required: ['month'] },
+  annotations: { readOnlyHint: true },
+  answer: () => ({
+    content: [],
+    structuredContent: { rows: [{ campaign: 'spring-sale', cost_cents: 125000, budget_cents: 800000 }] },
+  }),
+};
+
+describe('a tool a test gives the fake MCP server', () => {
+  it('is listed, marked reads by its hint, and answers as it is given', async () => {
+    const fake = await serveFakeMcp({ bearer: oneCallKey, tools: [campaignCosts] });
+    closedAfter(fake.close);
+    const access = oneCallAccess(fake.url, { allowed: ['campaign-costs'] });
+
+    const called = await calledOnce(access, {
+      reference: { server: 'graph', tool: 'campaign-costs' },
+      input: { month: '2026-09' },
+    });
+
+    expect(called).toMatchObject({
+      outcome: 'result',
+      mark: 'reads',
+      answer: { structuredContent: { rows: [{ campaign: 'spring-sale', cost_cents: 125000, budget_cents: 800000 }] } },
+    });
+    expect(fake.received()).toMatchObject([{ tool: 'campaign-costs', arguments: { month: '2026-09' } }]);
   });
 });

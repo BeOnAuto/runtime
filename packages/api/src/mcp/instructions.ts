@@ -32,6 +32,7 @@ interface Serving {
   readonly definitionTypes: readonly DefinitionType[];
   readonly pages: boolean;
   readonly reasoning: DefinitionType | undefined;
+  readonly followed: (recipe: string) => boolean;
 }
 
 type Sentences = (serving: Serving) => readonly string[];
@@ -92,7 +93,9 @@ const workflows: Sentences = ({ definitionTypes, listed }) =>
     : [];
 
 const whatAPageIs: Sentences = (serving) =>
-  serving.pages ? ['A page shows the person the results of a workflow or function, run by run and over time.'] : [];
+  serving.pages
+    ? ['Every workflow and function takes a page that shows the person its results, run by run and over time.']
+    : [];
 
 export const whatThisServerIsFor = [
   'A playbook holds work that keeps running after a conversation, in any line of business.',
@@ -144,6 +147,13 @@ const guides: Sentences = (serving) => [
     : 'get_guide explains these words and the format of each definition.',
 ];
 
+const firstPlaybookRecipe = 'first-playbook';
+
+const whereToStart: Sentences = ({ followed }) =>
+  followed(firstPlaybookRecipe)
+    ? [`The guide ${firstPlaybookRecipe} sets out how a playbook is built, and names the guides its steps need.`]
+    : [];
+
 const connectingAService = [
   "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links.",
   'A service cannot be connected when no provider or server matches.',
@@ -164,6 +174,7 @@ const orientation: readonly Sentences[] = [
   connection,
   modelsBeforeWriting,
   guides,
+  whereToStart,
   connections,
   answeringWhatRunsWaitOn,
   closing,
@@ -189,24 +200,31 @@ function whomTheConnectionActsAs({ caller, org }: ActingAs): string {
   return `This connection acts as ${callerInWords(caller)} in the org ${org}.`;
 }
 
+interface ServedBeside {
+  readonly pages?: boolean;
+  readonly recipes?: readonly RecipeCalls[];
+}
+
 export function instructionsFor(
   endpoint: McpEndpoint,
   tools: ServedTools,
   definitionTypes: readonly DefinitionType[],
-  pages = false,
+  { pages = false, recipes = [] }: ServedBeside = {},
 ): string {
   const names = namesOf(tools);
+  const followable = new Set(recipesFollowedWith(tools, recipes).map(({ name }) => name));
   const serving: Serving = {
     endpoint,
     listed: (name) => names.includes(name),
     definitionTypes,
     pages,
     reasoning: definitionTypes.find(({ type }) => type === reasoningFunctionType),
+    followed: (recipe) => followable.has(recipe),
   };
   return [...whatThisServerIsFor, ...orientation.flatMap((sentences) => sentences(serving))].join(' ');
 }
 
-interface ServedDefinitions {
+interface ServedDefinitions extends ServedBeside {
   readonly definitionTypes: readonly DefinitionType[];
   readonly pages: boolean;
 }
@@ -215,7 +233,7 @@ export function instructionsActingAs(
   actingAs: ActingAs,
   endpoint: McpEndpoint,
   tools: ServedTools,
-  { definitionTypes, pages }: ServedDefinitions,
+  { definitionTypes, pages, recipes = [] }: ServedDefinitions,
 ): string {
-  return `${whomTheConnectionActsAs(actingAs)} ${instructionsFor(endpoint, tools, definitionTypes, pages)}`;
+  return `${whomTheConnectionActsAs(actingAs)} ${instructionsFor(endpoint, tools, definitionTypes, { pages, recipes })}`;
 }

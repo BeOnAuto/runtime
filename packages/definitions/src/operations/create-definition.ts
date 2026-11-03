@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
-import { definitionWordsFor, whatItDoes } from '../plain-language/definition-words.ts';
+import { definitionWordsFor, pageWords, whatItDoes } from '../plain-language/definition-words.ts';
 import { DefinitionNameField, DiagramField, OverviewField, SourceField } from './definition-fields.ts';
 import { answeredDefinition } from './definition-reading.ts';
 import { savedFrom } from './saved-content.ts';
@@ -17,7 +17,7 @@ function descriptionOf(typesInWords: string): string {
     `\`type\` is ${typesInWords}, and \`name\` how workflows and tools refer to it.`,
     "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
     'A function needs `diagram` too; a workflow takes none.',
-    "The document's `page` key, optional, shows the person its runs, as the page guide says.",
+    "The document's `page` key shows the person its runs; write it as the page guide says.",
     'A document that does not fit its format is refused with the line and what is wrong.',
   ].join(' ');
 }
@@ -60,7 +60,7 @@ export function defineCreateDefinition(capabilities: readonly Capability[], page
         task: `create a new ${words.kinds}`,
         attempt: ({ type, name }) => `create ${words.named(type, name)}`,
         outcome: (definition) =>
-          `Created ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} It has been saved but has not been run yet.`,
+          `Created ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} It has been saved but has not been run yet.${pageWords(definition)}`,
       },
     }),
   );

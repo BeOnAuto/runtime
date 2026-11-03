@@ -1,15 +1,35 @@
 import type { RouteRegistration } from '@on.auto/operations';
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { makeDefinitionOperations } from '../index.ts';
+import { defineCapability, makeDefinitionOperations, type Capability } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
 
 const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages);
 
-function registrationOf(name: string): RouteRegistration {
-  const found = operations.find(({ registration }) => registration.name === name);
+function presenting(type: string, noun: string): Capability {
+  return defineCapability({
+    type,
+    title: noun,
+    guide: { name: type },
+    noun: { one: noun, other: `${noun}s` },
+    describeOutput: () => 'It ran.',
+    mediaType: 'text/markdown',
+    parse: () => Effect.succeed({}),
+    summarize: () => ({}),
+    run: () => Effect.succeed({ output: null, record: {} }),
+  });
+}
+
+const presentingOperations = makeDefinitionOperations(
+  [presenting('reasoning', 'reasoning function'), presenting('workflow', 'workflow')],
+  uncheckedPages,
+);
+
+function registrationOf(name: string, served = operations): RouteRegistration {
+  const found = served.find(({ registration }) => registration.name === name);
   if (found === undefined) {
     throw new Error(`There is no operation ${name}`);
   }
@@ -18,6 +38,13 @@ function registrationOf(name: string): RouteRegistration {
 
 function outcomeOf(name: string, output: unknown, input: unknown): string | undefined {
   return registrationOf(name).plainLanguage?.outcome(output, input);
+}
+
+function savedOutcomeOf(name: string, type: string, source: string): string | undefined {
+  return registrationOf(name, presentingOperations).plainLanguage?.outcome(
+    { ...greet, type, name: 'review', media_type: 'text/markdown', source },
+    { type, name: 'review', source },
+  );
 }
 
 function attemptOf(name: string, input: unknown): string | undefined {
@@ -87,6 +114,59 @@ describe('the plain language of update_definition', () => {
     expect([attemptOf('update_definition', greetInput), attemptOf('update_definition', {})]).toEqual([
       'update the greeting “greet”',
       'update a greeting or probe',
+    ]);
+  });
+});
+
+const noPageYet = 'It has no page yet; the page guide says how to give it one.';
+
+const functionWithoutAPage = '---\nmodel: anthropic/claude-sonnet-4-5\n---\nReview this brief.\n';
+
+const functionWithAPage =
+  '---\nmodel: anthropic/claude-sonnet-4-5\npage:\n  result: |\n    {{ output }}\n---\nReview this brief.\n';
+
+const functionWithAnEmptyPage = '---\nmodel: anthropic/claude-sonnet-4-5\npage: {}\n---\nReview this brief.\n';
+
+const workflowWithoutAPage = "document:\n  dsl: '1.0.3'\ndo: []\n";
+
+const workflowWithAPage = "document:\n  dsl: '1.0.3'\ndo: []\npage:\n  result: |\n    Reviewed.\n";
+
+describe('the plain language of saving a workflow or a function without a page', () => {
+  it('ends, for a function saved without one or with an empty one, by saying it has no page yet and where to learn how to give it one', () => {
+    expect([
+      savedOutcomeOf('create_definition', 'reasoning', functionWithoutAPage),
+      savedOutcomeOf('create_definition', 'reasoning', functionWithAnEmptyPage),
+      savedOutcomeOf('update_definition', 'reasoning', functionWithoutAPage),
+    ]).toEqual([
+      `Created the reasoning function “review”. It has been saved but has not been run yet. ${noPageYet}`,
+      `Created the reasoning function “review”. It has been saved but has not been run yet. ${noPageYet}`,
+      `Updated the reasoning function “review”. The change applies from its next run. ${noPageYet}`,
+    ]);
+  });
+
+  it('ends so for a workflow saved without one', () => {
+    expect([
+      savedOutcomeOf('create_definition', 'workflow', workflowWithoutAPage),
+      savedOutcomeOf('update_definition', 'workflow', workflowWithoutAPage),
+    ]).toEqual([
+      `Created the workflow “review”. It has been saved but has not been run yet. ${noPageYet}`,
+      `Updated the workflow “review”. The change applies from its next run. ${noPageYet}`,
+    ]);
+  });
+
+  it('says nothing of a page where the workflow or the function has one, nor for a type that is neither', () => {
+    expect([
+      savedOutcomeOf('create_definition', 'reasoning', functionWithAPage),
+      savedOutcomeOf('update_definition', 'reasoning', functionWithAPage),
+      savedOutcomeOf('create_definition', 'workflow', workflowWithAPage),
+      savedOutcomeOf('update_definition', 'workflow', workflowWithAPage),
+      outcomeOf('create_definition', greet, greetInput),
+    ]).toEqual([
+      'Created the reasoning function “review”. It has been saved but has not been run yet.',
+      'Updated the reasoning function “review”. The change applies from its next run.',
+      'Created the workflow “review”. It has been saved but has not been run yet.',
+      'Updated the workflow “review”. The change applies from its next run.',
+      'Created the greeting “greet”. It has been saved but has not been run yet.',
     ]);
   });
 });

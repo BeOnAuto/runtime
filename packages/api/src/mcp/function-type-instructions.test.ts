@@ -7,6 +7,7 @@ import {
   functionTypesSentence,
   ownOrg,
   playbookEndpoint,
+  recipes,
   withConnections,
 } from '../testing/served-instructions.ts';
 import { instructionsActingAs, instructionsFor, type DefinitionType } from './instructions.ts';
@@ -37,6 +38,22 @@ describe('the instructions of a server that runs seven function types', () => {
       ).toBeLessThanOrEqual(2000);
     },
   );
+});
+
+describe('the instructions of a server that runs seven function types, keeps pages and carries the recipes', () => {
+  it('take 1,509 characters on the org endpoint, 1,249 on the playbook endpoint and 1,614 on /mcp, where the connection can follow first-playbook, with the opening line of the person the bound holds, within 2,000', () => {
+    const opened = everyEndpoint.map(
+      ([endpoint, served]) =>
+        instructionsActingAs(callerTheInstructionsHold, endpoint, served, {
+          definitionTypes: sevenServedTypes,
+          pages: true,
+          recipes,
+        }).length,
+    );
+
+    expect(opened).toEqual([1509, 1249, 1614]);
+    expect(opened.filter((length) => length > 2000)).toEqual([]);
+  });
 });
 
 describe('what the instructions say of the function types', () => {

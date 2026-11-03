@@ -68,7 +68,14 @@ const outlines: readonly RecipeOutline[] = [
       },
     ],
     formatGuide: 'workflow',
-    calls: ['list_definitions', 'create_definition', 'update_definition', 'list_runs', 'get_run'],
+    calls: [
+      'list_definitions',
+      'create_definition',
+      'update_definition',
+      'list_runs',
+      'get_run',
+      'list_playbook_events',
+    ],
     request: ({ workflow, when }) => `Run the workflow ${String(workflow)} ${String(when)}.`,
   },
 ];
@@ -85,8 +92,8 @@ interface Additions {
 
 type AdditionsByRecipe = Readonly<Record<string, Additions>>;
 
-interface AdditionsOfAGuide {
-  readonly guide: string;
+interface AdditionsOfGuides {
+  readonly guides: readonly string[];
   readonly byRecipe: AdditionsByRecipe;
 }
 
@@ -108,7 +115,7 @@ const whereInteractionIsServed: AdditionsByRecipe = {
       {
         after: 'is not a model to run.',
         words:
-          ' Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither lists those that can.',
+          ' Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither lists those that can. Ask once, too, where a notice goes: a channel or their direct messages.',
       },
       {
         after: 'give it tools with the give-tools recipe.',
@@ -143,14 +150,14 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
       {
         after: 'a budget and a measurable goal.',
         words:
-          ' Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as "every morning", "continuously", "keep reviewing" or "whenever a lead comes in", take that as the answer and say so rather than asking again.',
+          ' Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as "every morning", "continuously" or "whenever a lead comes in", take that as the answer and say so rather than asking again.',
       },
       {
         after: 'tell the person what it answered, in their words.',
         words: [
           "\n7. Read the workflow guide with get_guide and write the workflow whose step is the function, which does what the person asked: a one-step workflow is still a workflow, and a later ask changes it. Where the work starts on its own, give it a `schedule` as the guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.",
           "\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
-          '\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from, and a moment later show what its run answered with list_runs, `type` workflow, and get_run.',
+          "\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`: a real event's `source` and `id` would make that event a repeat, ignored when it comes. A moment later, show what its run answered with list_runs, `type` workflow, and get_run.",
         ].join(''),
       },
       {
@@ -162,23 +169,40 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
   },
 };
 
+const everyDocumentCarriesItsPage =
+  ' Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.';
+
 const wherePagesAreServed: AdditionsByRecipe = {
   'first-playbook': {
     insertions: [
+      { after: 'before you write the function.', words: everyDocumentCarriesItsPage },
       {
-        after: 'with list_runs, `type` workflow, and get_run.',
+        after: 'and a prompt.',
         words:
-          "\n10. Read the page guide with get_guide and give the workflow its page, which shows the person what each run did and the runs so far: start from the guide's minimal page, a headline for each run and one chart, keyed by the period a run is about where its output carries one. Show the person the page, add it to the workflow's document as its `page` and save that with update_definition once they agree, and show them the run's headline with get_run.",
+          ' Write its `page` in the same front matter: the judgement of each run in a sentence, and the outcomes over time.',
+      },
+      {
+        after: 'and a later ask changes it.',
+        words:
+          ' Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period.',
       },
     ],
-    calls: ['update_definition'],
+    calls: [],
   },
   'give-tools': {
     insertions: [
+      { after: 'before you write one.', words: everyDocumentCarriesItsPage },
+      { after: 'in the format of the reasoning-function guide', words: ', with its `page` in the same document' },
+      { after: 'which does what the person asked', words: ', with its `page` in the same document' },
+    ],
+    calls: [],
+  },
+  remember: {
+    insertions: [
       {
-        after: 'and tell the person what it answered and what they can do next.',
+        after: 'as the memory-function guide says.',
         words:
-          ' Where the workflow has no page yet, give it one with the page guide, from its minimal page: a headline for each run and one chart of the runs so far.',
+          ' Write its `page` in the same document, as that guide says under Its page: what each run kept or recalled, and what the runs kept or recalled over time.',
       },
     ],
     calls: [],
@@ -186,12 +210,26 @@ const wherePagesAreServed: AdditionsByRecipe = {
   schedule: {
     insertions: [
       {
-        after: 'and get_run for one run.',
+        after: 'or write one in the format of the workflow guide.',
         words:
-          "\n7. Where the workflow has no page yet, give it one with the page guide, so the person sees what each run did while they were away: a headline for each run and one chart of the runs so far, from the guide's minimal page, keyed by the period a run is about where its output carries one. Add it to the workflow's document as its `page` and save that with update_definition once they agree.",
+          ' Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the workflow guide says under Its page.',
       },
+      { after: 'and get_run for one run', words: ', whose headline says what it did' },
     ],
     calls: [],
+  },
+};
+
+const whereWorkflowsHavePages: AdditionsByRecipe = {
+  'first-playbook': {
+    insertions: [
+      {
+        after: 'give it tools with the give-tools recipe.',
+        words:
+          " Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
+      },
+    ],
+    calls: ['update_playbook'],
   },
 };
 
@@ -207,15 +245,18 @@ const whereLookupIsServed: AdditionsByRecipe = {
   },
 };
 
-const additionsWhereServed: readonly AdditionsOfAGuide[] = [
-  { guide: 'interaction-function', byRecipe: whereInteractionIsServed },
-  { guide: 'lookup-function', byRecipe: whereLookupIsServed },
-  { guide: 'workflow', byRecipe: whereWorkflowsAreServed },
-  { guide: 'page', byRecipe: wherePagesAreServed },
+const additionsWhereServed: readonly AdditionsOfGuides[] = [
+  { guides: ['interaction-function'], byRecipe: whereInteractionIsServed },
+  { guides: ['lookup-function'], byRecipe: whereLookupIsServed },
+  { guides: ['workflow'], byRecipe: whereWorkflowsAreServed },
+  { guides: ['page'], byRecipe: wherePagesAreServed },
+  { guides: ['workflow', 'page'], byRecipe: whereWorkflowsHavePages },
 ];
 
 function additionsTo(name: string, carried: ReadonlySet<string>): readonly Additions[] {
-  return additionsWhereServed.filter(({ guide }) => carried.has(guide)).flatMap(({ byRecipe }) => byRecipe[name] ?? []);
+  return additionsWhereServed
+    .filter(({ guides }) => guides.every((guide) => carried.has(guide)))
+    .flatMap(({ byRecipe }) => byRecipe[name] ?? []);
 }
 
 function withInserted(text: string, insertions: readonly Insertion[]): string {

@@ -15,9 +15,10 @@ Your agent reaches the same memory with the tools `remember`, `recall` and `forg
 
 ## A function document
 
-The source is Markdown with YAML front matter and no body. This function, `keep-decision`, keeps a decision a review reached, tagged with its campaign:
+The source is Markdown with YAML front matter and no body. This function, `keep-decision`, keeps a decision a review reached, tagged with its campaign. Its page says what each run kept, and charts the decisions kept each day:
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: Keeps a decision the campaign review reached
 input:
@@ -29,12 +30,38 @@ remember:
   text: '{{ input.decision }}'
   tags: [decisions, '{{ input.campaign }}']
   expires: P180D
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: memory/keep-decision
+    views:
+      kept: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const day = event.time?.slice(0, 10);
+        if (day === undefined) return view;
+        const points = view.kept?.lines[0]?.points ?? [];
+        const last = points.at(-1);
+        const at = last !== undefined && last.at > day ? last.at : day;
+        const counted = last?.at === at ? [...points.slice(0, -1), { at, value: last.value + 1 }] : [...points, { at, value: 1 }];
+        return { kept: { unit: 'decisions', period: 'day', lines: [{ name: 'Decisions kept', points: counted.slice(-90) }] } };
+      }
+  result: |
+    Kept a decision for the {{ output.scope }}{% if output.version > 1 %}, as version {{ output.version }} of it{% endif %}.
+  lately: |
+    ```chart line
+    {{ views.kept | json }}
+    ```
 ---
-```
+````
 
-This one, `recall-decisions`, recalls the decisions kept for a campaign, at most 2,000 characters of them:
+This one, `recall-decisions`, recalls the decisions kept for a campaign, at most 2,000 characters of them. Its page lists what each run recalled, and charts the recalls of each day:
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: Recalls the decisions kept for a campaign, newest first
 input:
@@ -45,10 +72,42 @@ input:
 recall:
   tags: [decisions, '{{ input.campaign }}']
   most_characters: 2000
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: memory/recall-decisions
+    views:
+      recalls: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const day = event.time?.slice(0, 10);
+        if (day === undefined) return view;
+        const points = view.recalls?.lines[0]?.points ?? [];
+        const last = points.at(-1);
+        const at = last !== undefined && last.at > day ? last.at : day;
+        const counted = last?.at === at ? [...points.slice(0, -1), { at, value: last.value + 1 }] : [...points, { at, value: 1 }];
+        return { recalls: { unit: 'recalls', period: 'day', lines: [{ name: 'Recalls', points: counted.slice(-90) }] } };
+      }
+  result: |
+    {% assign recalled = output.memories | size %}
+    Recalled {{ recalled }} {% if recalled == 1 %}decision{% else %}decisions{% endif %}.
+
+    {% for memory in output.memories -%}
+    - {{ memory.text | clip: 200 }}
+    {% endfor %}
+  lately: |
+    ```chart line
+    {{ views.recalls | json }}
+    ```
 ---
-```
+````
 
 A document takes `remember` or `recall`, never both and never neither. Every other key is refused with its line, as is a body.
+
+Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
 
 ## Fields
 
@@ -212,9 +271,43 @@ A fact a memory function's run records names the run and the function; a fact an
 
 A workflow calls a memory function as it calls any function, with `call: run_definition` and `type: memory`; see [Calling a function](workflow-format.md#calling-a-function). A step that remembers gives the next step the memory's id; a step that recalls gives it the memories, which a reasoning function reads with the `memories` filter. A memory function reaches nothing outside the playbook. A run that remembers keeps a new memory each time it runs, so a retry policy that runs it again keeps it again: write `replaces` where the memory should be kept once.
 
+A `replaces` that renders empty is no id, so the run ends `conflict` as `unworkable`; it never keeps a new memory instead. To keep one memory of a thing, whether or not it was kept before, recall it first, then call one of two memory functions with `if`: one that remembers it anew, and one whose `replaces` is `'{{ input.kept }}'`. These steps keep a café's delivery details, tagged with the café, through `recall-cafe`, `remember-cafe` and `refresh-cafe`:
+
+```yaml
+- recall:
+    call: run_definition
+    with:
+      type: memory
+      name: recall-cafe
+      input: { cafe: '${ $data.cafe }' }
+    output:
+      as: '${ ({ ...$input, kept: $data.memories[0]?.id ?? null }) }'
+- first-time:
+    if: '${ $data.kept === null }'
+    call: run_definition
+    with: { type: memory, name: remember-cafe, input: '${ $data }' }
+    output:
+      as: '${ $input }'
+- again:
+    if: '${ $data.kept !== null }'
+    call: run_definition
+    with: { type: memory, name: refresh-cafe, input: '${ $data }' }
+```
+
+`first-time` hands its own input on, so `again` reads the same `kept` and is passed over after it.
+
 ## The overview
 
 `create_definition` and `update_definition` take an `overview` and a `diagram` beside the document, as for every function: see [the overview of a computation function](computation-format.md#the-overview), whose rules a memory function follows.
+
+## Its page
+
+A memory function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function kept or recalled:
+
+- `result`: what was remembered or recalled. A run of `recall` answers the memories, which `result` lists, a line each. A run of `remember` answers the memory's `id`, `version` and `scope`, not its text, so `result` says what was kept in the function's own words, such as `Kept a decision for the playbook.` It cannot say whom or what the memory is about, such as which café, since `result` reads no input: the page of the workflow that remembers says it, from the workflow's output.
+- `lately`: what the function's runs kept or recalled over time. A `remember` function's page counts the memories its runs kept each day; a `recall` function's page counts its recalls each day, with how many memories each found. A fold sees runs, not the memories themselves, so a page cannot show what the playbook holds now: memories your agent keeps with `remember`, and those forgotten or expired, never reach it.
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
 
 ## Availability
 

@@ -8,7 +8,8 @@ A reasoning function is a definition whose `type` field is `reasoning`, in API c
 
 A reasoning function definition is one Markdown document (`text/markdown`): YAML front matter between two lines of three dashes, then a Liquid template. The front matter uses Dotprompt's key names; the format is this package's own, and this package parses it.
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: Summarizes an account for the sales team
 model: anthropic/claude-sonnet-4-5
@@ -24,11 +25,36 @@ input:
     required: [account]
   default:
     tone: plain
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: reasoning/account-summary
+    views:
+      latest: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const summary = fieldOf(event.data, 'output');
+        const day = event.time?.slice(0, 10);
+        if (typeof summary !== 'string' || day === undefined) return view;
+        const rows = [[day, summary.slice(0, 500)], ...(view.latest?.rows ?? [])].slice(0, 10);
+        return { latest: { columns: [{ name: 'Day' }, { name: 'Summary' }], rows } };
+      }
+  result: |
+    {{ output | clip: 1000 }}
+  lately: |
+    ```chart table
+    {{ views.latest | json }}
+    ```
 ---
 
 {% system %}You write for a sales team, in a {{ input.tone }} tone.{% endsystem %}
 Summarize the account {{ input.account }} as of {{ today }}.
-```
+````
 
 | Key                        | Required    | Value                                                 | Meaning                                                                                                                                                                                  |
 | -------------------------- | ----------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -46,6 +72,7 @@ Summarize the account {{ input.account }} as of {{ today }}.
 | `output.schema`            | With `json` | A JSON Schema                                         | The answer must match it; see [Answers that are JSON](../../reference/model-settings.md#answers-that-are-json). Not allowed with `text`                                                  |
 | `provider_options`         | No          | An object of objects, keyed by the provider namespace | Options for `anthropic`, `openai`, `azure`, `google`, `vertex`, `googleVertex`, `amazonBedrock`, `bedrock`, or a gateway's name: only those [Provider options](#provider-options) offers |
 | `tools`                    | No          | A list of `server/tool` or `server/*`                 | The tools of the tool servers configured for the playbook that a run may call; see [Tools](#tools)                                                                                       |
+| `page`                     | No          | A mapping of `data`, `result` and `lately`            | Its page, which shows each run and the runs so far; see [Page format](../../reference/page-format.md)                                                                                    |
 
 Any other key, at any level, is rejected.
 
@@ -191,13 +218,13 @@ export ANTHROPIC_API_KEY=sk-ant-...
 pnpm dev
 ```
 
-With the [reasoning function document](#reasoning-function-document-format) saved as `account-summary.md`, create a playbook and the function. `jq` turns the document into a JSON string:
+With the [reasoning function document](#reasoning-function-document-format) saved as `account-summary.md`, create a playbook and the function, with a `diagram` of `none`, since a summary needs no picture. `jq` turns the document into a JSON string:
 
 ```bash
 curl --request POST http://localhost:5555/v1/orgs/acme/playbooks \
   --header 'content-type: application/json' \
   --data '{"playbook":"sales","name":"Sales"}'
-jq --null-input --rawfile source account-summary.md '{name: "account-summary", source: $source}' |
+jq --null-input --rawfile source account-summary.md '{name: "account-summary", source: $source, diagram: "none"}' |
   curl --request POST http://localhost:5555/v1/orgs/acme/playbooks/sales/definitions/reasoning \
     --header 'content-type: application/json' --data @-
 ```

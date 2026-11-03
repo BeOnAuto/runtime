@@ -103,7 +103,7 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow takes none and that its page is a key of its document, at 649 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the page guide says, at 647 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
@@ -114,9 +114,9 @@ describe('the descriptions of the tools of /mcp', () => {
     );
     expect(description).toContain('A function needs `diagram` too; a workflow takes none.');
     expect(description).toContain(
-      "The document's `page` key, optional, shows the person its runs, as the page guide says.",
+      "The document's `page` key shows the person its runs; write it as the page guide says.",
     );
-    expect([description.length, sentencesOf(description)]).toEqual([649, 6]);
+    expect([description.length, sentencesOf(description)]).toEqual([647, 6]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });

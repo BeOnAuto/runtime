@@ -1,4 +1,6 @@
-import { Option, Result, type Schema } from 'effect';
+import { readFileSync } from 'node:fs';
+
+import { Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { renderClockOf } from '../template/render-clock.ts';
@@ -62,6 +64,44 @@ describe('the result of a run, as the documented page shows it', () => {
     expect(
       resultShown(documentedResult, { ...succeeded, status: 'started', output: null, ended: null }, subject, moment),
     ).toBe('Waiting for approval of the posts drafted this morning.');
+  });
+});
+
+const predictionFormat = readFileSync(
+  new URL('../../../../docs/reference/prediction-format.md', import.meta.url),
+  'utf8',
+);
+
+const [documentedAnswer = ''] = [...predictionFormat.matchAll(/```json\n([\s\S]*?)```/gu)].map(
+  ([, body = '']: readonly string[]) => body,
+);
+
+const linesOnAPage = String(predictionFormat.split('\n### The lines on a page\n')[1]?.split('\n## ')[0]);
+
+const [weeklyOrders = ''] = [...predictionFormat.matchAll(/^(`{3,4})markdown\n([\s\S]*?)^\1$/gmu)].map(
+  ([, , body = '']: readonly string[]) => body,
+);
+
+const forecastHeadline = 'About 140 orders in 2026-W42 (128 to 151).';
+
+const decodeAnswer = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
+
+describe('the result of a question, as the page of the prediction format shows it', () => {
+  it('leads with the likely orders of the next week and draws the weeks observed and ahead under their names in words, with no lately, as the example keeps none', () => {
+    const page = Result.getOrThrow(
+      Result.fromNullishOr(Option.getOrUndefined(Result.getOrThrow(pageIn(weeklyOrders, 'function'))), () => 'no page'),
+    );
+    const result = Result.getOrThrow(Result.fromNullishOr(page.templates.result, () => 'no result'));
+    const answer = decodeAnswer(documentedAnswer);
+    const renamed = JSON.stringify(answer)
+      .replace('"name":"observed"', '"name":"Orders"')
+      .replace('"name":"predicted"', '"name":"Forecast"');
+
+    expect(resultShown(result, { ...succeeded, output: answer }, { ...subject, type: 'prediction' }, moment)).toBe(
+      `${forecastHeadline}\n\n\`\`\`chart line\n${renamed}\n\`\`\``,
+    );
+    expect(linesOnAPage).toContain(`its headline is \`${forecastHeadline}\``);
+    expect(page.templates.lately).toBeUndefined();
   });
 });
 

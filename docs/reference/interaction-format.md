@@ -22,9 +22,9 @@ Write in `deliver` how the request reaches its party: the tool of a connection t
 
 `deliver: agent` holds the request for an agent: an agent the person talks to reads it with `list_interactions`, and answers it with `answer_interaction` once the person says what to answer.
 
-A notification takes no answer, so no agent holds it: it goes through a connection, `deliver` naming the tool that sends it, and any connection with a tool that sends can carry it.
+A notification takes no answer, so no agent holds it: it goes through a connection, `deliver` naming the tool that sends it, and any connection with a tool that sends can carry it. Its run succeeds with the output `{}`, so nothing after it learns where the message landed. To post something whose replies a later step reads, write a function that [asks a system](#asking-a-system) instead: its `call` posts the message, and its output keeps the tool's answer, such as the message's `ts`, for a lookup function to read the replies by.
 
-Ask the person once where they want to be asked. `create_definition` and `update_definition` refuse a request that names no way with words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way, and refuse a notification that names no tool, or `agent`, with words that name each connection whose tools can send it. A tool server of the server's own settings is named a tool server. A playbook with none is told so, and why for each connection that cannot be used just now. Wherever no connection can carry it, it is told that one can be connected with `search` and `add_connection`, where the agent's tools include both. When the agent's MCP client answers forms, the server asks the person itself before it refuses, "Where should the owner be asked?", or "told?" for a notification, with each such connection, and for a request the agent way, to choose from. Once they choose, the refusal names the connection's sending tool and its reading tool, or says to write `deliver: agent`; the agent learns what each tool takes with `introspect`, calls the sending tool with `execute_connection` once the person agrees, to see what it answers for `sent`, and writes `deliver` and `replies` from it.
+Ask the person once where they want to be asked. `create_definition` and `update_definition` refuse a request that names no way with words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way, and refuse a notification that names no tool, or `agent`, with words that name each connection whose tools can send it. A tool server of the server's own settings is named a tool server. A playbook with none is told so, and why for each connection that cannot be used just now. Wherever no connection can carry it, it is told that one can be connected with `search` and `add_connection`, where the agent's tools include both. When the agent's MCP client answers forms, the server asks the person itself before it refuses, "Where should the owner be asked?", or "told?" for a notification, with each such connection, and for a request the agent way, to choose from. Once they choose, the refusal names the connection's sending tool and its reading tool, or says to write `deliver: agent`. The agent then learns what each tool takes with `introspect`. Once the person agrees, it calls the sending tool with `execute_connection` and a message the party would want anyway, to see what the tool answers for `sent`. Then it writes `deliver` from that answer. For a request, it also calls the reading tool on a thread that already has replies, and writes `replies` from what it lists, as [Sending through a tool](#sending-through-a-tool) sets out.
 
 ### Whom a request waits on
 
@@ -37,7 +37,7 @@ So write `to: "{{ input.reviewer }}"`, given the reviewer's address such as `pri
 The source is Markdown with YAML front matter followed by the message. This example, `approve-campaign-brief`, asks a campaign's owner, in the team chat, to approve the review of their brief, and takes their answer from their reply in the thread of the message. Its answer is `{ verdict: approve | revise, note? }`:
 
 <!-- prettier-ignore -->
-```markdown
+````markdown
 ---
 description: Asks the campaign owner, in the team chat, to approve a reviewed brief
 to: '{{ input.owner }}'
@@ -84,17 +84,63 @@ output:
     properties:
       verdict: { type: string, enum: [approve, revise] }
       note: { type: string, maxLength: 2000 }
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_started
+          subject: interaction/approve-campaign-brief
+        - type: run_succeeded
+          subject: interaction/approve-campaign-brief
+        - type: run_rejected
+          subject: interaction/approve-campaign-brief
+        - type: run_failed
+          subject: interaction/approve-campaign-brief
+    views:
+      waiting: categories
+      decisions: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const open = (view.waiting?.values[0]?.value ?? 0) + (event.type === 'run_started' ? 1 : -1);
+        const waiting = { values: [{ name: 'Waiting for an answer', value: Math.max(open, 0) }] };
+        const verdict = fieldOf(fieldOf(event.data, 'output'), 'verdict');
+        const answer = verdict === 'approve' ? 'Approved' : verdict === 'revise' ? 'Sent back' : undefined;
+        const day = event.time?.slice(0, 10);
+        if (answer === undefined || day === undefined) return { ...view, waiting };
+        const rows = view.decisions?.rows ?? [];
+        const counted = rows.some(([at, kind]) => at === day && kind === answer)
+          ? rows.map((row) => (row[0] === day && row[1] === answer ? [day, answer, Number(row[2]) + 1] : row))
+          : [...rows, [day, answer, 1]];
+        return { waiting, decisions: { columns: [{ name: 'Day' }, { name: 'Answer' }, { name: 'Briefs' }], rows: counted.slice(-60) } };
+      }
+  result: |
+    {% if run.status == "started" %}
+    Waiting for the campaign owner to answer in the team chat.
+    {% else %}
+    {% if output.verdict == "approve" %}Approved{% else %}Sent back{% endif %} by the campaign owner on {{ run.ended | slice: 0, 10 }}{% if output.note %}: {{ output.note | clip: 160 }}{% else %}.{% endif %}
+    {% endif %}
+  lately: |
+    ```chart figure
+    {{ views.waiting | json }}
+    ```
+
+    ```chart bars x=Day y=Briefs color=Answer
+    {{ views.decisions | json }}
+    ```
 ---
 The review of your campaign brief is ready:
 
 {{ input.review }}
 
 Reply **approve**, or **revise** with a note of what to change.
-```
+````
 
 To save it, call `create_definition` with `type: "interaction"`, the `name` `approve-campaign-brief`, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `owner` and `review` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook.
 
-The run returns `status: started` with its `run_id`, and sends the review to the owner through the chat's `post_message`. The owner answers by replying in the thread of the message, or tells their agent, which answers with `answer_interaction`. The same request held for an agent writes `deliver: agent` in place of `deliver`, `replies` and `reply`.
+The run returns `status: started` with its `run_id`, and sends the review to the owner through the chat's `post_message`. The owner answers by replying in the thread of the message, or tells their agent, which answers with `answer_interaction`. The same request held for an agent writes `deliver: agent` in place of `deliver`, `replies` and `reply`. The function's page heads each run with the owner's answer and the day it came, and counts the requests still waiting and the answers of each day; see [Its page](#its-page).
 
 ## Asking a system
 
@@ -107,13 +153,13 @@ Such a function makes no request, sends no message and asks no model. So it has 
 Write a call from what the tool returns, not from memory:
 
 1. Call `search` to see the tool servers this playbook may use, the tools each offers and the mark of each. Call `introspect` for the `input_schema` a tool takes.
-2. Once the person agrees, since the tool may change something, call it with `execute_connection`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
+2. `introspect` gives what a tool takes, not what it answers, and a call may change something. So look for a call that changes nothing: a tool that takes each id once changes nothing when it is called again with an id it has already taken. Once the person agrees, call it with `execute_connection`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
 3. Write `call`:
    - `server` and `tool`, as `search` names them;
    - `with`, the arguments;
    - `read`, a JSON Pointer to the part of the answer the function returns, such as `/messages`. Leave `read` out to return the whole answer.
 
-   Then write `output.schema`: the shape that part has in the answer `execute_connection` gave.
+   Then write `output.schema`: the shape that part has in the answer `execute_connection` gave. Name only the fields the function's readers need, list in `required` only the fields every answer holds, and allow `null` wherever the tool may answer `null`: one answer does not show every case.
 
 4. Show the person the whole document. Once they agree, save it with `create_definition`, `type` interaction. `run_definition` runs it and returns its output at once.
 
@@ -144,8 +190,8 @@ A function sends its request through a tool by naming the tool in `deliver`, wit
 Write a delivery from what the tool returns, not from memory:
 
 1. Call `search` to see the servers this playbook may use and the tools each offers, and `introspect` for the `input_schema` a tool takes.
-2. The sending tool sends a message, so wait until the person agrees. Then call it with `execute_connection`, with the arguments its `input_schema` takes, and read its answer. That is the document `deliver.sent` points into. `sent` holds two JSON Pointers: to the conversation the message landed in, and to the message's identity. A chat's tool that posts a message returns the conversation it posted in and the message's timestamp or id.
-3. If the person will answer where the message reached them, call the tool that reads what came since a point, with `query_connection` where it is marked `reads` and `execute_connection` where it is not. Then write `replies`:
+2. The sending tool sends a real message, so wait until the person agrees, and make it one the party would want anyway, such as one that tells them the playbook will ask them here. Then call it with `execute_connection`, with the arguments its `input_schema` takes, and read its answer. That is the document `deliver.sent` points into. `sent` holds two JSON Pointers: to the conversation the message landed in, and to the message's identity. A chat's tool that posts a message returns the conversation it posted in and the message's timestamp or id.
+3. If the person will answer where the message reached them, call the tool that reads what came since a point, with `query_connection` where it is marked `reads` and `execute_connection` where it is not. Read a thread that already has replies, to see their fields without asking the party to reply. Then write `replies`:
    - `conversation`, the key the playbook reads the conversation by;
    - `tool` and `with`, the reading tool and its arguments, over `sent` and the cursor `since`;
    - `read`, the pointers to the list of replies and, within each, to its id, its sender, its words and the message it answers;
@@ -205,6 +251,8 @@ A request sent through a tool is attempted at once. After a failed attempt it is
 | `page`          | Optional [page](page-format.md) that presents its runs                                                                                                                                                                                                                                                                        |
 
 `model`, `config`, `tools`, `language` and every other field are rejected with their line. The body after the front matter is the message. The saved function has the `media_type` `text/markdown`.
+
+Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
 
 ### Fields by shape
 
@@ -550,6 +598,63 @@ The run ends `succeeded` with the answer, such as `{"verdict": "approve"}`, as i
 They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
 
 An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
+
+## Its page
+
+An interaction function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what was decided:
+
+- `result`: the decision, who made it and when, such as `Approved by the campaign owner on 2026-11-01: Ready to launch.` The answer is `output`, and the moment it came `run.ended`. `result` reads neither the input nor `to`, so name who answers in words. Nor can it say what was decided on, such as which brief was approved: the answer holds only what the person answered, so the page of the workflow that asks says it, from the workflow's output. While the request waits, `result` says whom it waits for.
+- `lately`: the decisions over time, what waits now, and how long people took to answer. A request's run starts with `run_started` and ends with `run_succeeded`, the answer, `run_rejected` when it ends without one, as when nobody answered, or `run_failed`, each naming the run in `source`. So a fold counts each day's answers by their verdict, the requests still open, and the hours between asking and answering.
+
+A fold pairs a request's start with its end by `source`. Another page for `approve-campaign-brief`, in place of the one in [its document](#a-function-document), keeps the requests still open in a view of its own, `open`, which holds each run's `source` and when it asked. `lately` never draws that view, so the run ids in it never reach the page; it draws the hours each answer took:
+
+<!-- prettier-ignore -->
+````yaml
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_started
+          subject: interaction/approve-campaign-brief
+        - type: run_succeeded
+          subject: interaction/approve-campaign-brief
+        - type: run_rejected
+          subject: interaction/approve-campaign-brief
+        - type: run_failed
+          subject: interaction/approve-campaign-brief
+    views:
+      open: table
+      hours: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const columns = [{ name: 'Request' }, { name: 'Asked' }];
+        const asked = view.open?.rows ?? [];
+        if (event.type === 'run_started') {
+          return { ...view, open: { columns, rows: [...asked, [event.source, event.time ?? null]].slice(-500) } };
+        }
+        const start = asked.find(([source]) => source === event.source)?.[1];
+        const open = { columns, rows: asked.filter(([source]) => source !== event.source) };
+        const points = view.hours?.lines[0]?.points ?? [];
+        const last = points.at(-1)?.at;
+        const time = event.time;
+        if (event.type !== 'run_succeeded' || typeof start !== 'string' || time === undefined) return { ...view, open };
+        if (last !== undefined && last >= time) return { ...view, open };
+        const hours = Math.round((Date.parse(time) - Date.parse(start)) / 360_000) / 10;
+        const line = { name: 'Hours to answer', points: [...points, { at: time, value: hours }].slice(-200) };
+        return { ...view, open, hours: { unit: 'hours', lines: [line] } };
+      }
+  lately: |
+    {% if views.open %}Briefs waiting for their owner's answer: {{ views.open.rows | size }}.{% endif %}
+
+    ```chart line
+    {{ views.hours | json }}
+    ```
+````
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
+
+A notification takes no answer, so its page counts what was sent. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
 
 ## Availability
 

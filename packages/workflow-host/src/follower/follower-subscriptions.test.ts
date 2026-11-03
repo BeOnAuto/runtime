@@ -90,6 +90,33 @@ describe('the records a workflow whose trigger is an event reacts to', () => {
 
     expect(reacting.reactions.starts().filter(({ workflow }) => workflow === 'close')).toHaveLength(1);
   });
+
+  it('are those recorded after the record that activated it, whatever time the event says it happened', async () => {
+    const reacting = await reactingHost();
+    const { store } = reacting.database;
+    const daysBefore = '2026-09-28T09:00:00.000Z';
+    const daysAfter = '2026-10-04T09:00:00.000Z';
+    await definitionRecorded(store, { name: 'watch', version: 1, triggers: [sentinel] });
+    await published(store, { id: 'recorded-before', type: 'com.acme.closed', time: daysAfter });
+    await definitionRecorded(store, { name: 'close', version: 1, triggers: [closed] });
+    await published(store, { id: 'recorded-after', type: 'com.acme.closed', time: daysBefore });
+
+    await sentinelPassed(reacting, 's1');
+
+    expect(
+      reacting.reactions
+        .starts()
+        .filter(({ workflow }) => workflow === 'close')
+        .map(({ cause, input }) => ({ cause, input })),
+    ).toEqual([
+      {
+        cause: messageIdOf(`${alpha}events/recorded-after`, 1),
+        input: [
+          { specversion: '1.0', source: '/acme', time: daysBefore, id: 'recorded-after', type: 'com.acme.closed' },
+        ],
+      },
+    ]);
+  });
 });
 
 describe('a new version of a workflow whose trigger is an event', () => {

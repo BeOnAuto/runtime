@@ -6,9 +6,10 @@ A reasoning function is a definition of the type `reasoning`. Its document names
 
 ## A function document
 
-The source is Markdown: YAML front matter, then a Liquid prompt template. This example reviews a campaign brief. Replace the model reference with a concrete id from [`list_models`](mcp.md#model-information), or with one your workspace administrator confirms.
+The source is Markdown: YAML front matter, then a Liquid prompt template. This example reviews a campaign brief and answers JSON: its recommendation and what the brief misses. Its page heads each run with both, and counts the recommendations of each day. Replace the model reference with a concrete id from [`list_models`](mcp.md#model-information), or with one your workspace administrator confirms.
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: Reviews a campaign brief against the team's criteria
 model: anthropic/claude-sonnet-4-5
@@ -21,14 +22,51 @@ input:
       brief: { type: string }
       criteria: { type: string }
     required: [brief, criteria]
+output:
+  format: json
+  schema:
+    type: object
+    properties:
+      recommendation: { type: string, enum: [Ready, Revise] }
+      missing: { type: array, items: { type: string } }
+    required: [recommendation, missing]
+    additionalProperties: false
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: reasoning/review-brief
+    views:
+      reviews: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const recommendation = fieldOf(fieldOf(event.data, 'output'), 'recommendation');
+        const day = event.time?.slice(0, 10);
+        if (typeof recommendation !== 'string' || day === undefined) return view;
+        const rows = view.reviews?.rows ?? [];
+        const counted = rows.some(([at, kind]) => at === day && kind === recommendation)
+          ? rows.map((row) => (row[0] === day && row[1] === recommendation ? [day, recommendation, Number(row[2]) + 1] : row))
+          : [...rows, [day, recommendation, 1]];
+        return { reviews: { columns: [{ name: 'Day' }, { name: 'Recommendation' }, { name: 'Reviews' }], rows: counted.slice(-60) } };
+      }
+  result: |
+    {{ output.recommendation }}{% if output.missing.size > 0 %}: {{ output.missing | join: "; " }}{% endif %}.
+  lately: |
+    ```chart bars x=Day y=Reviews color=Recommendation
+    {{ views.reviews | json }}
+    ```
 ---
 
-{% system %}Review the brief using the supplied criteria. Identify missing evidence. Do not invent facts.{% endsystem %}
+{% system %}Review the brief using the supplied criteria. Recommend Ready only when it meets every criterion, and list what it misses, each in a short clause. Do not invent facts.{% endsystem %}
 Brief: {{ input.brief }}
 Criteria: {{ input.criteria }}
-```
+````
 
-To save it, call `create_definition` with `type: "reasoning"`, a function `name` and the document as `source`. To run it, call `run_definition` with the same type and name, and with `brief` and `criteria` in the `input` object. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.
+To save it, call `create_definition` with `type: "reasoning"`, the `name` `review-brief`, which its page's filter names, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `brief` and `criteria` in the `input` object. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.
 
 A function document contains instructions, never model credentials. Each change to the document creates a version. A run uses the latest active version and records it as `definition_version`; a run cannot select an older version.
 
@@ -62,6 +100,7 @@ Any other key, at any level, is rejected.
 - Each problem names its line and, where there is one, a JSON pointer into the front matter, such as `Line 4, /config/temperature: Expected number`.
 - A problem found twice is reported once. A rejection lists at most 20 problems in line order, then one line that counts the rest, such as `Line 23: 5881 more issues are not shown`.
 - The front matter is YAML 1.2 with the core schema, so `yes` and `2026-10-01` stay strings. Anchors, aliases and tags are rejected. A key may appear only once in a mapping, and numbers must be finite. Nesting is limited to 72 levels.
+- Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
 - `input.default` must match the input schema for the fields it names. Required fields may be left for the input to supply.
 - A setting in `config` is checked only against the type and range in the table above. Whether the provider accepts the value becomes clear when a run calls it.
 - Saving calls no model. Whether the provider is configured, and whether it offers the model, becomes clear only when the function runs; see [How a run ends](#how-a-run-ends).
@@ -380,6 +419,17 @@ A run that has ended is never performed again in this way; [Retrying under a run
 They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
 
 An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as written, and `get_definition` returns it so until an update gives another; an update that leaves it out keeps the overview saved. `list_definitions` leaves it out. [Reasoning functions](http.md#reasoning-functions) gives the rules every definition follows, with `used_by`, the definitions of the playbook that use this one.
+
+## Its page
+
+A reasoning function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person the judgement the function made:
+
+- `result`: the judgement in a sentence, with the fields that decided it, such as `Revise: the audience names no job role.` for a review of a brief.
+- `lately`: the outcomes by category over time, such as the reviews of each day by their recommendation.
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
+
+A page counts what the answer names, so give the answer the fields that decide it: `output.format: json`, and an `output.schema` that holds them, such as the `recommendation` of `Ready` or `Revise` and the criteria it found `missing` in [the example](#a-function-document). An answer in text gives the page its words alone. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
 
 ## Provider options
 

@@ -20,6 +20,7 @@ export interface FakeToolState {
   readonly hints: FakeHints;
   readonly chat?: FakeChat | undefined;
   readonly data: boolean;
+  readonly tools?: readonly FakeTool[];
   readonly exit: () => void;
 }
 
@@ -254,8 +255,8 @@ function chatTools(chat: FakeChat): readonly FakeTool[] {
   ];
 }
 
-function toolsOf({ chat, data }: FakeToolState): readonly FakeTool[] {
-  return [...fakeTools, ...(chat === undefined ? [] : chatTools(chat)), ...(data ? dataTools : [])];
+function toolsOf({ chat, data, tools = [] }: FakeToolState): readonly FakeTool[] {
+  return [...fakeTools, ...(chat === undefined ? [] : chatTools(chat)), ...(data ? dataTools : []), ...tools];
 }
 
 function hintsOf({ hints }: FakeToolState, tool: FakeTool) {

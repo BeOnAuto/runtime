@@ -95,6 +95,7 @@ export const recipes: readonly RecipeCalls[] = [
       'publish_event',
       'list_runs',
       'get_run',
+      'update_playbook',
     ],
   },
   { name: 'remember', calls: ['remember', 'recall', 'forget', 'create_definition'] },
@@ -110,7 +111,17 @@ export const recipes: readonly RecipeCalls[] = [
       'list_playbook_events',
     ],
   },
-  { name: 'schedule', calls: ['list_definitions', 'create_definition', 'update_definition', 'list_runs', 'get_run'] },
+  {
+    name: 'schedule',
+    calls: [
+      'list_definitions',
+      'create_definition',
+      'update_definition',
+      'list_runs',
+      'get_run',
+      'list_playbook_events',
+    ],
+  },
 ];
 
 export function withConnections({ orgTools, playbookTools }: ServedTools): ServedTools {

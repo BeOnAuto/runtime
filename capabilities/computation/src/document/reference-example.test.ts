@@ -11,9 +11,13 @@ const referencePage = readFileSync(
   'utf8',
 );
 
-const fencedBlocks = [...referencePage.matchAll(/```(\w+)\n([\s\S]*?)```/gu)].map(
-  ([, language = '', body = '']: readonly string[]) => ({ language, body }),
+const fencedBlocks = [...referencePage.matchAll(/^(`{3,4})(\w+)\n([\s\S]*?)^\1$/gmu)].map(
+  ([, , language = '', body = '']: readonly string[]) => ({ language, body }),
 );
+
+function withoutItsPage(document: string): string {
+  return document.replace(/^page:\n(?:(?: .*)?\n)*/mu, '');
+}
 
 const shapesPage = readFileSync(new URL('../../../../docs/reference/output-shapes.md', import.meta.url), 'utf8');
 
@@ -26,11 +30,12 @@ const [, shapedExample = { language: '', body: '' }] = shapedBlocks;
 const decodeJson = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Json));
 
 describe('the example on the reference page of computation functions', () => {
-  it('is, byte for byte, the document the tests run', () => {
+  it('is, byte for byte, the document the tests run, with its page', () => {
     const [example] = fencedBlocks;
 
     expect(example?.language).toBe('markdown');
-    expect(example?.body).toBe(`${campaignPace}\n`);
+    expect(example?.body).toContain('\npage:\n');
+    expect(withoutItsPage(String(example?.body))).toBe(`${campaignPace}\n`);
   });
 
   it('answers the input the page gives with the output the page shows, spending the work it says', async () => {

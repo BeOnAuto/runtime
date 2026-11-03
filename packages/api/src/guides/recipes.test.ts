@@ -55,7 +55,7 @@ describe('the first-playbook recipe where the workflow guide is carried', () => 
 
   it('learns how the work starts after what the playbook is for, and takes words that already say so as the answer', () => {
     expect(withWorkflows?.text).toContain(
-      'a budget and a measurable goal. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as "every morning", "continuously", "keep reviewing" or "whenever a lead comes in", take that as the answer and say so rather than asking again. When more than one model is offered',
+      'a budget and a measurable goal. Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as "every morning", "continuously" or "whenever a lead comes in", take that as the answer and say so rather than asking again. When more than one model is offered',
     );
   });
 
@@ -65,9 +65,9 @@ describe('the first-playbook recipe where the workflow guide is carried', () => 
     );
   });
 
-  it('runs the workflow and tells the person what it answered and when it next runs or what starts it, publishes what they paste for an event, and names the schedule recipe and the workflow guide first of what comes next', () => {
+  it('runs the workflow and tells the person what it answered and when it next runs or what starts it, publishes what they paste for an event under an id of its own, and names the schedule recipe and the workflow guide first of what comes next', () => {
     expect(withWorkflows?.text).toContain(
-      '\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from, and a moment later show what its run answered with list_runs, `type` workflow, and get_run.\n\nThen tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, or give it tools with the give-tools recipe.\n',
+      "\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`: a real event's `source` and `id` would make that event a repeat, ignored when it comes. A moment later, show what its run answered with list_runs, `type` workflow, and get_run.\n\nThen tell the person what they can do next: change when it runs with the schedule recipe and the workflow guide, or give it tools with the give-tools recipe.\n",
     );
   });
 
@@ -84,9 +84,9 @@ describe('the first-playbook recipe where the interaction-function guide is carr
     expect(withWorkflowsAndInteraction?.calls).toEqual(withWorkflows?.calls);
   });
 
-  it('asks once, after what the playbook is for and its model, where the person wants to be asked', () => {
+  it('asks once, after what the playbook is for and its model, where the person wants to be asked, and where a notice goes', () => {
     expect(withWorkflowsAndInteraction?.text).toContain(
-      'is not a model to run. Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither lists those that can.\n',
+      'is not a model to run. Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither lists those that can. Ask once, too, where a notice goes: a channel or their direct messages.\n',
     );
     expect(withWorkflows?.text).not.toContain('ask once where they want to be asked');
   });
@@ -101,30 +101,98 @@ describe('the recipes whose function calls a model', () => {
   });
 });
 
+const everyDocumentCarriesItsPage =
+  'Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.';
+
+const theFunctionsPage =
+  'and a prompt. Write its `page` in the same front matter: the judgement of each run in a sentence, and the outcomes over time. When it should use';
+
 describe('the first-playbook recipe where the page guide is carried with the workflow guide', () => {
-  it('gives the workflow its page after its run, from the minimal page of the page guide, and shows the person its headline', () => {
+  it('says first that every function and workflow carries its page, read in the page guide and written in its document', () => {
     expect(withWorkflowsAndPages?.text).toContain(
-      "and get_run.\n10. Read the page guide with get_guide and give the workflow its page, which shows the person what each run did and the runs so far: start from the guide's minimal page, a headline for each run and one chart, keyed by the period a run is about where its output carries one. Show the person the page, add it to the workflow's document as its `page` and save that with update_definition once they agree, and show them the run's headline with get_run.\n\nThen tell the person",
+      `before you write the function. ${everyDocumentCarriesItsPage} When you create or run something`,
     );
-    expect(withWorkflowsAndPages?.calls.filter((name) => name !== 'update_definition')).toEqual(withWorkflows?.calls);
-    expect(withWorkflowsAndPages?.calls).toContain('update_definition');
   });
 
-  it('gives no page where the workflow guide is not carried, since there is then no workflow to present', () => {
-    expect(withPagesAlone?.text).toBe(firstPlaybookFile);
+  it("writes the page of the function and of the workflow with each document, saved in the same create_definition, and calls update_playbook for the playbook's own page alone", () => {
+    expect(withWorkflowsAndPages?.text).toContain(theFunctionsPage);
+    expect(withWorkflowsAndPages?.text).toContain(
+      'and a later ask changes it. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own',
+    );
+    expect(withWorkflowsAndPages?.calls).toEqual([
+      ...callsOfTheFunction,
+      'publish_event',
+      'list_runs',
+      'get_run',
+      'update_playbook',
+    ]);
+    expect(withWorkflowsAndPages?.text).not.toMatch(/update_definition|minimal page|\n10\. /u);
+  });
+
+  it('gives the playbook a page of its own once it has more than one workflow, among what comes next, where pages and workflows are both served', () => {
+    const playbooksPage =
+      "give it tools with the give-tools recipe. Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.\n";
+
+    expect(withWorkflowsAndPages?.text).toContain(playbooksPage);
+    expect(
+      [withWorkflows?.text, withPagesAlone?.text].filter((text) => String(text).includes('update_playbook')),
+    ).toEqual([]);
+    expect(withPagesAlone?.calls).toEqual(callsOfTheFunction);
+  });
+
+  it("writes the function's page where the workflow guide is not carried, and no workflow's, as there is then no workflow", () => {
+    expect(withPagesAlone?.text).toContain(theFunctionsPage);
+    expect(withPagesAlone?.text).not.toContain('the main number of each period');
     expect(withWorkflows?.text).not.toContain('page guide');
   });
 });
 
 describe('the schedule recipe', () => {
-  it('ends, where the page guide is carried, with a page for a workflow that has none, so the person sees its runs', async () => {
+  it("keeps the workflow's page, or writes one in the document it saves, where the page guide is carried, and reads a run's headline", async () => {
     const withPages = await recipeCarrying('schedule', 'workflow', 'page');
     const withoutPages = await recipeCarrying('schedule', 'workflow');
 
-    expect(withPages?.text).toMatch(
-      /and get_run for one run\.\n7\. Where the workflow has no page yet, give it one with the page guide, so the person sees what each run did while they were away: a headline for each run and one chart of the runs so far, from the guide's minimal page, keyed by the period a run is about where its output carries one\. Add it to the workflow's document as its `page` and save that with update_definition once they agree\.\n$/u,
+    expect(withPages?.text).toContain(
+      'or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the workflow guide says under Its page.\n2. ',
     );
-    expect(withoutPages?.text).toMatch(/and get_run for one run\.\n$/u);
+    expect(withPages?.text).toContain('and get_run for one run, whose headline says what it did.\n9. ');
+    expect(withoutPages?.text).toContain('and get_run for one run.\n9. ');
+    expect(withoutPages?.text).not.toContain('page');
+  });
+});
+
+const scheduleFile = readFileSync(new URL('recipes/schedule.md', import.meta.url), 'utf8');
+
+describe('the schedule recipe, on what a run on a clock is given', () => {
+  it('finds what is new from its due time, and takes a stretch of its own by hand for a time it missed', () => {
+    expect(scheduleFile).toContain(
+      "4. A run on a clock is given its due time alone, so it finds what is new from that: what came since the time before, such as in the 30 minutes before `schedule.due` for `every: PT30M`. A time skipped while the run before still ran, or one whose run failed, is not run again, so give the workflow an input of its own too, such as `since` and `until`, with which the person runs it by hand for a stretch it missed, and let `input.from` take either: `'${ $data.schedule === undefined ? $data : ({ since: new Date(Date.parse($data.schedule.due) - 1800000).toISOString(), until: $data.schedule.due }) }'`. In a time zone, the stretch between two daily times is 23 or 25 hours on the nights the clocks change.\n",
+    );
+  });
+
+  it('works out when it runs next from the trigger, every counting from the save that gave the trigger its present form', () => {
+    expect(scheduleFile).toContain(
+      "Auto does not list the times ahead, so work the next one out from the trigger. `every` counts from the save that gave the trigger its present form, the workflow's `created_at` where it has not changed since; a later save that leaves it as it is keeps its times.\n",
+    );
+  });
+});
+
+describe('the schedule recipe, on a workflow another one starts', () => {
+  it('starts it from the end of a step by its run_succeeded and calldepth, or from what the other emits, once for each item of a loop', () => {
+    expect(scheduleFile).toContain(
+      "5. To start a workflow when a step of another one ends, give it `on` with a filter on that step's run: `type: run_succeeded`, a `subject` naming the function, such as `computation/work-out-order`, and `calldepth: 1`, which a run by hand does not carry. Or have the other workflow `emit` an event of a type of your own; in a `for`, it emits one for each item.\n",
+    );
+  });
+});
+
+describe('the schedule recipe, on a run an event started that did not succeed', () => {
+  it("says the event is not tried again nor taken twice, finds such runs and their input, and finishes the work by hand with the event's data", async () => {
+    const schedule = await recipeCarrying('schedule', 'workflow');
+
+    expect(schedule?.text).toMatch(
+      /\n9\. A run an event started that was rejected or failed is not started again, and the same event published again is a repeat, which records nothing\. list_runs with `status` rejected, or failed, finds such runs, and list_playbook_events given a run's `run_id` shows its input, the list holding the event\. To finish its work, run the workflow by hand with the event's `data`, which `input\.from` takes as it takes the event: `'\$\{ Array\.isArray\(\$data\) \? \$data\[0\]\.data : \$data \}'`\.\n$/u,
+    );
+    expect(schedule?.calls).toContain('list_playbook_events');
   });
 });
 
@@ -145,11 +213,17 @@ describe('the give-tools recipe', () => {
     );
   });
 
-  it('gives the workflow a page where it has none, where the page guide is carried too', async () => {
+  it('writes each function and the workflow with its page in the same document, where the page guide is carried too', async () => {
     const giveTools = await recipeCarrying('give-tools', 'reasoning-function', 'workflow', 'page');
 
+    expect(giveTools?.text).toContain(
+      `before you write one. ${everyDocumentCarriesItsPage} A reasoning function needs`,
+    );
+    expect(giveTools?.text).toContain(
+      'in the format of the reasoning-function guide, with its `page` in the same document, show it to the person, and save it',
+    );
     expect(giveTools?.text).toMatch(
-      /and tell the person what it answered and what they can do next\. Where the workflow has no page yet, give it one with the page guide, from its minimal page: a headline for each run and one chart of the runs so far\.\n$/u,
+      /which does what the person asked, with its `page` in the same document; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
     );
   });
 });
@@ -164,6 +238,16 @@ describe('the first-playbook recipe where the workflow guide is not carried', ()
 });
 
 describe('the remember recipe', () => {
+  it('writes a memory function with its page in the same document, where the page guide is carried', async () => {
+    const withPages = await recipeCarrying('remember', 'memory-function', 'page');
+    const withoutPages = await recipeCarrying('remember', 'memory-function');
+
+    expect(withPages?.text).toContain(
+      'as the memory-function guide says. Write its `page` in the same document, as that guide says under Its page: what each run kept or recalled, and what the runs kept or recalled over time. Show the person the document',
+    );
+    expect(withoutPages?.text).not.toContain('page');
+  });
+
   it('asks the person in their own words where the format guide it names is carried', async () => {
     const recipes = await recipesFor(recipeFiles, guidesNamed(['memory-function']));
     const remember = recipes.find(({ name }) => name === 'remember');

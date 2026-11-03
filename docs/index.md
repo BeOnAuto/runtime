@@ -14,7 +14,7 @@ Follow the [quick start](get-started/cloud.md) to connect your agent to `https:/
 
 ## Understand the model
 
-[Playbooks and methods](concepts/playbooks.md) shows how a business method becomes a playbook. [Functions](concepts/functions.md) explains the five function types and when to use each. [Workflows and runs](concepts/workflows.md) covers how work is coordinated, and [History and events](concepts/history-and-dream.md) covers what a playbook records.
+[Playbooks and methods](concepts/playbooks.md) shows how a business method becomes a playbook. [Functions](concepts/functions.md) explains the seven function types and when to use each. [Workflows and runs](concepts/workflows.md) covers how work is coordinated, and [History and events](concepts/history-and-dream.md) covers what a playbook records.
 
 ## Do a task
 

@@ -89,6 +89,8 @@ These are refused when the definition is saved, each with its line and its point
 
 A gateway the runtime is not given is not refused when the function is saved; its runs are.
 
+Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
+
 ## The models
 
 The runtime keeps a catalogue of the models a generation function may name, each with the kind it produces and the limits of what it takes. A model is named as the gateway names it, after the gateway's own name: a gateway named `gateway` that serves `openai/gpt-image-1` is named `gateway/openai/gpt-image-1`.
@@ -212,6 +214,15 @@ The [configuration reference](../self-host/configuration.md#generation-functions
 `create_definition` and `update_definition` take an `overview` beside the document: Markdown for the person who runs the business, written from everything known of them and of the playbook. It says why the function exists, what it does and how it fits, in one to three short paragraphs; less technical, more value. Write it after the document, and write it again with every update.
 
 They also take a `diagram`, every time, so that whether the function is drawn is a choice its author makes: Mermaid source of a flowchart or a state diagram of how the function works, whose first line is `flowchart`, `graph` or `stateDiagram`, or the word `none` when a picture would add nothing. A save without it is refused. A diagram holds at most 8,192 bytes in UTF-8, and Auto Studio draws it under the overview. It is read there at full size in a column, so draw it top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code.
+
+## Its page
+
+A generation function's page is the `page` key of its front matter, written with the document and saved with it. It shows the person what the function made:
+
+- `result`: the asset the run produced, said in the function's own words with its kind and size, such as `A picture of the product for its listing, 1.8 MB.`, and linked at its `address`. The run's output is the asset's reference, not the prompt it rendered, so `result` names what the function makes as its description does. The address lasts 15 minutes after the run, so the link opens the asset only until `address_until`, and a client shows an image as a link, never in the page.
+- `lately`: what was produced over time, such as the assets made each week by kind, as a count, or a table of the latest, each with its kind and size.
+
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `lately`.
 
 ## Availability
 

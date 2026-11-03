@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
-import { definitionWordsFor, whatItDoes } from '../plain-language/definition-words.ts';
+import { definitionWordsFor, pageWords, whatItDoes } from '../plain-language/definition-words.ts';
 import { DefinitionNameField, DiagramField, OverviewField, SourceField } from './definition-fields.ts';
 import { answeredDefinition } from './definition-reading.ts';
 import { savedFrom } from './saved-content.ts';
@@ -52,7 +52,7 @@ export function defineUpdateDefinition(capabilities: readonly Capability[], page
         task: `update a ${words.kinds}`,
         attempt: ({ type, name }) => `update ${words.named(type, name)}`,
         outcome: (definition) =>
-          `Updated ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} The change applies from its next run.`,
+          `Updated ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} The change applies from its next run.${pageWords(definition)}`,
       },
     }),
   );

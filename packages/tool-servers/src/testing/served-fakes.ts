@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 
 export { serveFakeMcp } from '../mcp-testing/fake-mcp-server.ts';
 export type { FakeMcpOptions, FakeMcpServer } from '../mcp-testing/fake-mcp-answers.ts';
+export type { FakeTool } from '../mcp-testing/fake-tools.ts';
 export { serveFakeApi } from '../api-testing/fake-api-server.ts';
 export type { FakeApiOptions, FakeApiServer } from '../api-testing/fake-api-answers.ts';
 export { serveFakeConsentService } from '../consent-testing/fake-consent-service.ts';

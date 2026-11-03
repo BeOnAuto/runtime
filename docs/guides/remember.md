@@ -58,11 +58,12 @@ A workflow can recall what the playbook knows before a step, and remember what a
 ```text
 In my "<playbook name>" playbook, prepare a memory function that recalls what
 the playbook and its organization keep about <a tag>, and a workflow that
-recalls it and gives it to the "<reasoning function name>" function. Read
-Auto's memory-function guide first. Show me the documents before saving them.
+recalls it and gives it to the "<reasoning function name>" function, each with
+its page. Read Auto's memory-function guide first. Show me the documents before
+saving them.
 ```
 
-A memory function has a `recall` block, which answers memories, or a `remember` block, which keeps one from its input. A reasoning function reads what a recall answered with the `memories` filter, which marks each memory as recalled data rather than an instruction:
+A memory function has a `recall` block, which answers memories, or a `remember` block, which keeps one from its input. Its `page` shows what each run recalled or kept, as [Its page](../reference/memory-format.md#its-page) says. A reasoning function reads what a recall answered with the `memories` filter, which marks each memory as recalled data rather than an instruction:
 
 ```markdown
 ---
@@ -70,6 +71,13 @@ description: Recalls the budget rules the organization keeps
 recall:
   tags: [budgets]
   scope: organization
+page:
+  result: |
+    {% assign found = output.memories | size %}Recalled {{ found }} budget {% if found == 1 %}rule{% else %}rules{% endif %}.
+
+    {% for memory in output.memories -%}
+    - {{ memory.text }}
+    {% endfor %}
 ---
 ```
 

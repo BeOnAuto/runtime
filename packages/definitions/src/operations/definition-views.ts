@@ -4,7 +4,7 @@ import { Effect, Order, Struct } from 'effect';
 
 import type { Capability, DefinitionSummary } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
-import { withoutThePage, type DocumentWrittenIn } from '../page/page-lines.ts';
+import { withoutThePage, writtenInOf, type DocumentWrittenIn } from '../page/page-lines.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import {
   isPlaybookFunctionType,
@@ -123,10 +123,6 @@ function preparedContentOf(
     const stripped = yield* check(yield* PlaybookContext);
     return contentFrom(written, summary, stripped);
   }).pipe(Effect.catchTag('invalid_input', refusedSource));
-}
-
-function writtenInOf(type: string): DocumentWrittenIn {
-  return type === 'workflow' ? 'workflow' : 'function';
 }
 
 export function sourceToPrepare(type: string, source: string): string {

@@ -12,9 +12,13 @@ import { parsePredictionDocument } from './document-parsing.ts';
 
 const page = readFileSync(new URL('../../../../docs/reference/prediction-format.md', import.meta.url), 'utf8');
 
-const fencedBlocks = [...page.matchAll(/```(\w+)\n([\s\S]*?)```/gu)].map(
-  ([, language = '', body = '']: readonly string[]) => ({ language, body }),
+const fencedBlocks = [...page.matchAll(/^(`{3,4})(\w+)\n([\s\S]*?)^\1$/gmu)].map(
+  ([, , language = '', body = '']: readonly string[]) => ({ language, body }),
 );
+
+function withoutItsPage(document: string): string {
+  return document.replace(/^page:\n(?:(?: .*)?\n)*/mu, '');
+}
 
 const counted = new Intl.NumberFormat('en');
 
@@ -28,11 +32,12 @@ function valueOf(bound: string): string {
 }
 
 describe('the example on the reference page of prediction functions', () => {
-  it('is, byte for byte, the document the tests run', () => {
+  it('is, byte for byte, the document the tests run, with its page', () => {
     const [example] = fencedBlocks;
 
     expect(example?.language).toBe('markdown');
-    expect(example?.body).toBe(`${weeklyOrders}\n`);
+    expect(example?.body).toContain('\npage:\n');
+    expect(withoutItsPage(String(example?.body))).toBe(`${weeklyOrders}\n`);
   });
 });
 

@@ -152,6 +152,10 @@ const resourcesOnTheTerminologyPage: ReadonlySet<string> = new Set(
   ),
 );
 
+const firstPlaybookRecipe = { name: 'first-playbook', calls: [...playbookTools, ...definitionTools] };
+
+const servedBeside = { definitionTypes, pages: true, recipes: [firstPlaybookRecipe] };
+
 interface Connection {
   readonly path: string;
   readonly org: string;
@@ -167,7 +171,7 @@ const connections: readonly Connection[] = [
     org: 'local',
     endpoint: 'own org',
     served: { orgTools, playbookTools: insideAPlaybookAlone },
-    sentence: "The org is the caller's own: list_playbooks shows its playbooks",
+    sentence: 'The guide first-playbook sets out how a playbook is built, and names the guides its steps need.',
     unnamed: [],
   },
   {
@@ -197,9 +201,7 @@ describe('the instructions an agent receives when it connects', () => {
 
       const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
 
-      expect(instructions).toBe(
-        instructionsActingAs({ caller: localDeveloper, org }, endpoint, served, { definitionTypes, pages: true }),
-      );
+      expect(instructions).toBe(instructionsActingAs({ caller: localDeveloper, org }, endpoint, served, servedBeside));
       expect(instructions).toContain(sentence);
       expect(unnamed.filter((name) => instructions?.includes(name) === true)).toEqual([]);
     },

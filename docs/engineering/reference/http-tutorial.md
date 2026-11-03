@@ -14,24 +14,50 @@ curl http://localhost:5555/v1/orgs/local/playbooks/sales
 
 `PUT /v1/orgs/local/playbooks/sales` replaces the name and the description, and `POST /v1/orgs/local/playbooks/sales/retire` retires the playbook for good.
 
-A playbook has reusable function and workflow definitions, stored as named, versioned definitions. A reasoning function calls a language model, with the key from your `.env`. Write its definition in `greeting.md`: YAML front matter that names the model, then a Liquid template that renders the prompt from the input.
+A playbook has reusable function and workflow definitions, stored as named, versioned definitions. A reasoning function calls a language model, with the key from your `.env`. Write its definition in `greeting.md`: YAML front matter that names the model, then a Liquid template that renders the prompt from the input. The front matter also holds its page, which shows each greeting and lists the latest ones.
 
-```markdown
+<!-- prettier-ignore -->
+````markdown
 ---
 description: Greets a customer
 model: anthropic/claude-sonnet-4-5
 input:
   schema: { type: object, properties: { name: { type: string } }, required: [name] }
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: reasoning/greeting
+    views:
+      latest: table
+    module: |
+      export function fold(view: View, event: Event): View {
+        const fieldOf = (value: Json | undefined, name: string): Json | undefined =>
+          typeof value === 'object' && value !== null && !Array.isArray(value) ? value[name] : undefined;
+        const greeting = fieldOf(event.data, 'output');
+        const day = event.time?.slice(0, 10);
+        if (typeof greeting !== 'string' || day === undefined) return view;
+        const rows = [[day, greeting.slice(0, 500)], ...(view.latest?.rows ?? [])].slice(0, 10);
+        return { latest: { columns: [{ name: 'Day' }, { name: 'Greeting' }], rows } };
+      }
+  result: |
+    {{ output | clip: 500 }}
+  lately: |
+    ```chart table
+    {{ views.latest | json }}
+    ```
 ---
 
 {% system %}You write one warm sentence.{% endsystem %}
 Greet {{ input.name }}, whose order shipped today, {{ today }}.
-```
+````
 
-Create the reasoning function in the playbook, run it, and read the run back with the record of the call: the rendered prompt, the model, the tokens it used and how long it took.
+Create the reasoning function in the playbook, with a `diagram` of `none`, since a greeting needs no picture. Run it, and read the run back with the record of the call: the rendered prompt, the model, the tokens it used and how long it took. The run also carries the greeting as its page shows it, `page.result`.
 
 ```bash
-jq --null-input --rawfile source greeting.md '{name: "greeting", source: $source}' |
+jq --null-input --rawfile source greeting.md '{name: "greeting", source: $source, diagram: "none"}' |
   curl --request POST http://localhost:5555/v1/orgs/local/playbooks/sales/definitions/reasoning \
     --header 'content-type: application/json' --data @-
 curl --request POST http://localhost:5555/v1/orgs/local/playbooks/sales/definitions/reasoning/greeting/run \
@@ -42,9 +68,10 @@ curl http://localhost:5555/v1/orgs/local/playbooks/sales/runs/0199a3c4-7d2e-7c1a
 
 A document with a problem is rejected with every problem and its line. An input that does not match the schema is rejected before any model is called. A provider that is not configured answers `503`; its missing settings are reported to the operator, not exposed to the caller. [Reasoning function format](reasoning-format.md) describes the document and recorded result. [HTTP API](../../reference/http.md) describes the operations. An assistant does the same over [MCP](mcp.md), where tool descriptions explain the supported definition formats.
 
-A workflow coordinates function calls and control steps, including branches, waits and event listeners. The server runs it durably and keeps its history in the ledger. Write `welcome.yaml`, a workflow that runs the greeting above, then waits for the customer's reply:
+A workflow coordinates function calls and control steps, including branches, waits and event listeners. The server runs it durably and keeps its history in the ledger. Write `welcome.yaml`, a workflow that runs the greeting above, then waits for the customer's reply. Its page heads each run with the reply, and charts the customers who replied each day:
 
-```yaml
+<!-- prettier-ignore -->
+````yaml
 document:
   dsl: '1.0.3'
   namespace: acme
@@ -68,7 +95,38 @@ do:
             with: { type: com.acme.customer.replied }
       output:
         as: '${ ({ ...$input, reply: $data[0] }) }'
-```
+page:
+  data:
+    language: typescript
+    source:
+      events:
+        - type: run_succeeded
+          subject: workflow/welcome
+    views:
+      replied: series
+    module: |
+      export function fold(view: View, event: Event): View {
+        const day = event.time?.slice(0, 10);
+        if (day === undefined) return view;
+        const points = view.replied?.lines[0]?.points ?? [];
+        const last = points.at(-1);
+        const at = last !== undefined && last.at > day ? last.at : day;
+        const counted = last?.at === at ? [...points.slice(0, -1), { at, value: last.value + 1 }] : [...points, { at, value: 1 }];
+        return { replied: { unit: 'customers', period: 'day', lines: [{ name: 'Customers who replied', points: counted.slice(-90) }] } };
+      }
+  result: |
+    {% if run.status == "started" %}
+    Greeted the customer, and waiting for their reply.
+    {% else %}
+    The customer replied: {{ output.reply | json | clip: 200 }}
+
+    {{ output.greeting | clip: 500 }}
+    {% endif %}
+  lately: |
+    ```chart line
+    {{ views.replied | json }}
+    ```
+````
 
 Create it, execute it, and send it the event it waits for:
 
@@ -85,4 +143,4 @@ curl --request POST http://localhost:5555/v1/orgs/local/playbooks/sales/runs/019
 curl http://localhost:5555/v1/orgs/local/playbooks/sales/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b
 ```
 
-Starting the workflow answers `started` at once; the run reads `started` until the workflow ends, and then `succeeded` with `{"greeting": ..., "reply": "Thank you!"}`. The greeting has its own recorded run under an id derived from the workflow's run, made by the caller who started the workflow. The public [workflow format](../../reference/workflow-format.md) describes the supported steps, and the repository-only [workflow run notes](workflow-format.md) how they run.
+Starting the workflow answers `started` at once; the run reads `started` until the workflow ends, and then `succeeded` with `{"greeting": ..., "reply": "Thank you!"}`. The greeting has its own recorded run under an id derived from the workflow's run, made by the caller who started the workflow. Its `within` names the workflow's run and the step, `do/0/greet`. The public [workflow format](../../reference/workflow-format.md) describes the supported steps, and the repository-only [workflow run notes](workflow-format.md) how they run.

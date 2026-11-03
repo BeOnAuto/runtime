@@ -36,7 +36,7 @@ const review = [
   'Review this brief against the four criteria: {{ input.brief }}',
 ].join('\n');
 
-const fencedBlock = /```(\w+)\n([\s\S]*?)```/gu;
+const fencedBlock = /^(`{3,4})(\w+)\n([\s\S]*?)^\1$/gmu;
 
 export function pageOf(page: string): string {
   return readFileSync(new URL(`../../../../../docs/${page}`, import.meta.url), 'utf8');
@@ -49,7 +49,7 @@ export interface FencedBlock {
 
 export function blocksInOrderOf(page: string): readonly FencedBlock[] {
   const blocks: FencedBlock[] = [];
-  for (const [, language = '', body = ''] of pageOf(page).matchAll(fencedBlock)) {
+  for (const [, , language = '', body = ''] of pageOf(page).matchAll(fencedBlock)) {
     blocks.push({ language, body });
   }
   return blocks;
@@ -57,7 +57,7 @@ export function blocksInOrderOf(page: string): readonly FencedBlock[] {
 
 export function fencedBlocksOf(page: string): ReadonlyMap<string, string> {
   const blocks = new Map<string, string>();
-  for (const [, language = '', body = ''] of pageOf(page).matchAll(fencedBlock)) {
+  for (const [, , language = '', body = ''] of pageOf(page).matchAll(fencedBlock)) {
     blocks.set(language, blocks.get(language) ?? body);
   }
   return blocks;

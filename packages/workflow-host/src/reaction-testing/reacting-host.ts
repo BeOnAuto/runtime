@@ -26,6 +26,7 @@ export interface ReactingOptions {
   readonly sweepEveryMs?: number;
   readonly failure?: FailingStart;
   readonly start?: RecordedReactions['options']['start'];
+  readonly emit?: RecordedReactions['options']['emit'];
   readonly appended?: RecordedReactions['options']['appended'];
   readonly consumers?: HostOptions['consumers'];
 }
@@ -45,6 +46,7 @@ export async function reactingHost(options: ReactingOptions = {}): Promise<React
     reactions: {
       ...reactions.options,
       start: options.start ?? reactions.options.start,
+      emit: options.emit ?? reactions.options.emit,
       ...(options.appended === undefined ? {} : { appended: options.appended }),
     },
     waiting: recordedWaiting().options,

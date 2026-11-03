@@ -2,7 +2,7 @@
 
 A function is one reusable piece of your team's method, saved in a playbook. It defines what goes in, what comes out and what happens in between. A run carries it out once with particular inputs. Your agent can call a function directly, and the same function can be a step in several workflows.
 
-Each function has one of six types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not a seventh function type. [Terminology](terminology.md) defines these words.
+Each function has one of seven types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not an eighth function type. [Terminology](terminology.md) defines these words.
 
 ## Choose a function type
 
@@ -122,10 +122,10 @@ The person who runs Auto decides which tool servers each playbook may use. A too
 
 A page presents the results of a workflow, a function or the whole playbook. Studio, a chat and an agent can show the same page. A page is rendered when someone reads it; it does not run as a function.
 
-The page can show one run or summarize results over time, with charts. Its [format reference](../reference/page-format.md) explains the templates and the views that supply their data.
+The page can show one run or summarize results over time, with charts.
 
 For example, a page of the workflow that drafts the morning's social posts lists each run's posts with a link to each, and charts the posts of each day and of each channel since the workflow began.
 
-Give a page to any workflow or function whose results the person will look at again and again.
+Give every workflow and function a page, written in its document and saved with it, so the person sees the value of its work: what each run achieved, and what the runs add up to. A definition can be saved without one, and you can add it later.
 
-- [Page format](../reference/page-format.md) describes the document, its templates and its charts.
+- [Page format](../reference/page-format.md) describes the document, its templates, its views and its charts, and what the page of each type shows.
