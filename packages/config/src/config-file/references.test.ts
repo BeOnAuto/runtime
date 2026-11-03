@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   placeholderNamePattern,
+  isFilledAround,
   placeholdersIn,
   placeholdersReplaced,
   referencedVariablesOf,
   substituted,
+  textsAroundPlaceholders,
 } from '../index.ts';
 
 describe('the references a substitution finds', () => {
@@ -80,5 +82,41 @@ describe('the placeholders a text holds', () => {
     expect(
       ['client_id', 'site', 'Site', '2site', 'site-name'].map((name) => placeholderNamePattern.test(name)),
     ).toEqual([true, true, false, false, false]);
+  });
+});
+
+const aLabel = (placed: string): boolean => /^[a-z]+$/u.test(placed);
+
+describe('a text that fills the places of a template', () => {
+  it('is the texts around the placeholders, in turn, with an empty text where two placeholders meet or one ends the template', () => {
+    expect([
+      textsAroundPlaceholders('https://{site}.example.com/{region}{zone}'),
+      textsAroundPlaceholders('https://${site}.example.com/{Site}'),
+    ]).toEqual([['https://', '.example.com/', '', ''], ['https://${site}.example.com/{Site}']]);
+  });
+
+  it('holds each text around in turn, and a text each place takes between them, from the start to the end', () => {
+    const around = textsAroundPlaceholders('https://{site}.example.com/{region}');
+
+    expect(
+      [
+        'https://acme.example.com/eu',
+        'https://acme.example.com/',
+        'https://.example.com/eu',
+        'https://acme.example.com/eu/v1',
+        'http://acme.example.com/eu',
+        'https://ac.me.example.com/eu',
+        'https://a.example.com.example.com/eu',
+      ].map((text) => isFilledAround(around, text, aLabel)),
+    ).toEqual([true, false, false, false, false, false, false]);
+  });
+
+  it('tries every place a text around could start, so a place may hold what the text after it begins with', () => {
+    const around = textsAroundPlaceholders('{first}a{second}');
+
+    expect(
+      ['bab', 'aab', 'aaa', 'ba', 'ab'].map((text) => isFilledAround(around, text, (placed) => placed !== '')),
+    ).toEqual([true, true, true, false, false]);
+    expect([isFilledAround(['plain'], 'plain', aLabel), isFilledAround([], '', aLabel)]).toEqual([true, false]);
   });
 });

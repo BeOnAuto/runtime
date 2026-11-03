@@ -70,12 +70,22 @@ const recalledOf = Schema.decodeUnknownOption(RecalledSchema);
 
 export const memoriesRecalled = 'memories_recalled';
 
-function escaped(text: string): string {
-  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+type Entities = ReadonlyArray<readonly [Readonly<RegExp>, string]>;
+
+const textEntities: Entities = [
+  [/&/gu, '&amp;'],
+  [/</gu, '&lt;'],
+  [/>/gu, '&gt;'],
+];
+
+const attributeEntities: Entities = [...textEntities, [/"/gu, '&quot;']];
+
+function escapedWith(entities: Entities, text: string): string {
+  return entities.reduce((escaping, [character, entity]) => escaping.replaceAll(character, entity), text);
 }
 
 function attribute(name: string, value: string): string {
-  return `${name}="${escaped(value).replaceAll('"', '&quot;')}"`;
+  return `${name}="${escapedWith(attributeEntities, value)}"`;
 }
 
 function memoryLine({ id, scope, text, written_at: writtenAt, written_by: writtenBy }: RecalledMemory): string {
@@ -85,7 +95,7 @@ function memoryLine({ id, scope, text, written_at: writtenAt, written_by: writte
     attribute('written_at', writtenAt),
     attribute('written_by', writtenBy),
   ];
-  return `<memory ${attributes.join(' ')}>${escaped(text)}</memory>`;
+  return `<memory ${attributes.join(' ')}>${escapedWith(textEntities, text)}</memory>`;
 }
 
 function listOf(recalled: typeof RecalledSchema.Type): readonly RecalledMemory[] {

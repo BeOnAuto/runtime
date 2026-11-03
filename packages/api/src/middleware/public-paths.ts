@@ -14,10 +14,16 @@ export interface PublicPaths {
 
 const parameter = /^:\w+$/u;
 
+function segmentMatches(listed: string, asked: string | undefined): boolean {
+  return parameter.test(listed) ? asked !== '' : asked === listed;
+}
+
 export function pathMatcherOf(path: string): IsPublic {
-  const segments = path.split('/').map((segment) => (parameter.test(segment) ? '[^/]+' : RegExp.escape(segment)));
-  const pattern = new RegExp(`^${segments.join('/')}$`, 'u');
-  return (candidate) => pattern.test(candidate);
+  const listed = path.split('/');
+  return (candidate) => {
+    const asked = candidate.split('/');
+    return asked.length === listed.length && listed.every((segment, index) => segmentMatches(segment, asked[index]));
+  };
 }
 
 export function publicPathsKept(): PublicPaths {

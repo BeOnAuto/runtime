@@ -1,4 +1,4 @@
-import { placeholdersIn, placeholdersReplaced } from '@on.auto/config';
+import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.auto/config';
 import { Schema, type Redacted } from 'effect';
 
 const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic', 'own'] as const;
@@ -99,9 +99,7 @@ const clientName = 'Auto Runtime';
 
 const publicClient: PublicClient = { token_endpoint_auth_method: 'none' };
 
-const between = '\n';
-
-const placedValue = '[^/?#]+';
+const placedValue = /^[^/?#]+$/u;
 
 function withoutTrailingSlash(issuer: string): string {
   return issuer.endsWith('/') ? issuer.slice(0, -1) : issuer;
@@ -111,15 +109,18 @@ export function isSameIssuer(one: string, other: string): boolean {
   return withoutTrailingSlash(one) === withoutTrailingSlash(other);
 }
 
-function shapeOf(template: string): RegExp {
-  const fixed = placeholdersReplaced(withoutTrailingSlash(template), () => between).split(between);
-  return new RegExp(`^${fixed.map((part) => RegExp.escape(part)).join(placedValue)}$`, 'u');
+function isPlacedInAnIssuer(placed: string): boolean {
+  return placedValue.test(placed);
+}
+
+function fitsTheShapeOf(template: string, issuer: string): boolean {
+  return isFilledAround(textsAroundPlaceholders(withoutTrailingSlash(template)), issuer, isPlacedInAnIssuer);
 }
 
 function isRegisteredAt(registered: string, issuer: string): boolean {
   return (
     isSameIssuer(registered, issuer) ||
-    (placeholdersIn(registered).length > 0 && shapeOf(registered).test(withoutTrailingSlash(issuer)))
+    (placeholdersIn(registered).length > 0 && fitsTheShapeOf(registered, withoutTrailingSlash(issuer)))
   );
 }
 

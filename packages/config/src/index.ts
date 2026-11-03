@@ -15,12 +15,15 @@ export { clientIdWrittenOut, credentialAsDefault, credentialProblems } from './c
 export { placeIn } from './config-file/places.ts';
 export type { FileProblem } from './config-file/file-problem.ts';
 export {
+  isFilledAround,
   placeholderNamePattern,
   placeholdersIn,
   placeholdersReplaced,
   referencedVariablesOf,
   substituted,
+  textsAroundPlaceholders,
   variableNamePattern,
+  type IsPlaced,
   type Reference,
   type Substituted,
 } from './config-file/references.ts';

@@ -18,7 +18,8 @@
     {
       "description": "Dependencies are updated in the private monorepo this repository is mirrored from, so here Renovate only refreshes the lockfile and answers vulnerability alerts",
       "matchPackageNames": ["*"],
-      "enabled": false
+      "enabled": false,
+      "minimumReleaseAge": "7 days"
     }
   ]
 }

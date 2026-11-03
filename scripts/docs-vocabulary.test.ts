@@ -217,7 +217,7 @@ function lineAt(text: string, index: number): number {
 function oldWordsIn(path: string, text: string): readonly string[] {
   const masked = maskedAllowances(path, text);
   const found = oldWords
-    .flatMap((word) => foundIn(masked, word))
+    .flatMap((word: Readonly<RegExp>) => foundIn(masked, word))
     .toSorted((one, other) => one.index - other.index)
     .map(({ index, word }) => `${path}:${lineAt(masked, index)}: ${word}`);
   return [...new Set(found)];
@@ -239,7 +239,7 @@ const pagesOfTheGuides = /^docs\/(?:reference|concepts|tutorials)\/.*\.md$/u;
 const oldLanguageOnPages = listed
   .filter((path) => pagesOfTheGuides.test(path))
   .flatMap((path) =>
-    foundIn(textOf(path) ?? '', String.raw`\bjq\b`).map(({ index }) => `${path}:${lineAt(textOf(path) ?? '', index)}`),
+    foundIn(textOf(path) ?? '', /\bjq\b/gu).map(({ index }) => `${path}:${lineAt(textOf(path) ?? '', index)}`),
   );
 
 await test('no file git tracks or would add says an old word, outside the records, the changelog, the lockfile, the frozen formats, the old words themselves and the published schema of OpenAPI documents, but the texts it allows', () => {

@@ -155,6 +155,32 @@ export function placeholdersReplaced(text: string, replacement: (name: string) =
   return text.replaceAll(placeholder, (_written, name: string) => replacement(name));
 }
 
+export type IsPlaced = (placed: string) => boolean;
+
+export function textsAroundPlaceholders(template: string): readonly string[] {
+  return template.split(placeholder).filter((_part, index) => index % 2 === 0);
+}
+
+function startsOf(part: string, text: string, from: number): readonly number[] {
+  const candidates = Math.max(text.length - part.length - from + 1, 0);
+  return Array.from({ length: candidates }, (_, offset) => from + offset).filter((at) => text.startsWith(part, at));
+}
+
+function isFilledFrom(text: string, from: number, around: readonly string[], isPlaced: IsPlaced): boolean {
+  const [next, ...after] = around;
+  if (next === undefined) {
+    return from === text.length;
+  }
+  return startsOf(next, text, from + 1).some(
+    (at) => isPlaced(text.slice(from, at)) && isFilledFrom(text, at + next.length, after, isPlaced),
+  );
+}
+
+export function isFilledAround(around: readonly string[], text: string, isPlaced: IsPlaced): boolean {
+  const [opening, ...after] = around;
+  return opening !== undefined && text.startsWith(opening) && isFilledFrom(text, opening.length, after, isPlaced);
+}
+
 export function holdsReference(textWithReferences: string): boolean {
   return piecesOf(textWithReferences).some((piece) => environmentReference.test(piece.text));
 }

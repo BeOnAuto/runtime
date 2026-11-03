@@ -1,43 +1,43 @@
-export const oldWords: readonly string[] = [
-  '[pP]rimitive|PRIMITIVE',
-  '(?<![A-Za-z])[sS]pecs?(?![a-z])|(?<=[a-z])Specs?(?![a-z])|(?<![A-Za-z])SPECS?(?![A-Z])',
-  '[eE]xecution|EXECUTION',
-  '[iI]nference|INFERENCE',
-  '[oO]rchestrat|ORCHESTRAT',
-  '[rR]ecollection|RECOLLECTION',
-  'execute_spec',
-  String.raw`/execute(?![\w./-])(?<!/tools/[^/\s]+/execute)`,
-  '[eE]xecuteSpec',
-  'language: jq',
-  String.raw`evaluate\.language: jq`,
-  'jq-ts',
-  'delivery_ended',
-  'telling_ended',
-  'arguments_json',
-  'result_json',
-  String.raw`(?<![\w-])brain\\?/`,
-  'brain_key',
-  'brain:read|brain:write',
-  String.raw`(?<![\w-])brain:(?=\S)`,
-  'brain_(?:created|updated|retired)',
-  String.raw`/brains(?![\w-])`,
-  '(?i:@beonauto)',
-  'workflow_followed_brains',
-  '_by_brain',
-  'RECALL_BRAINS_AT_ONCE',
-  String.raw`(?:[{,]\s*|\n\s*|["'])brains?["']?\s*:`,
-  '(?i:auto[-_ ]?brain)',
-  '(?i:beonauto/auto-runtime)',
-  String.raw`(?i:com\.beonauto/)`,
-  'mcp_server_failed',
-  'mcp_server_not_configured',
-  'mcp__',
-  'RecallFunction',
-  'recall-format',
-  'recall_views',
-  'RECALL_MAX_FUNCTIONS',
-  'RECALL_MAX_REBUILDS',
-  'RECALL_PLAYBOOKS_AT_ONCE',
+export const oldWords: readonly RegExp[] = [
+  /[pP]rimitive|PRIMITIVE/gu,
+  /(?<![A-Za-z])[sS]pecs?(?![a-z])|(?<=[a-z])Specs?(?![a-z])|(?<![A-Za-z])SPECS?(?![A-Z])/gu,
+  /[eE]xecution|EXECUTION/gu,
+  /[iI]nference|INFERENCE/gu,
+  /[oO]rchestrat|ORCHESTRAT/gu,
+  /[rR]ecollection|RECOLLECTION/gu,
+  /execute_spec/gu,
+  /\/execute(?![\w./-])(?<!\/tools\/[^/\s]+\/execute)/gu,
+  /[eE]xecuteSpec/gu,
+  /language: jq/gu,
+  /evaluate\.language: jq/gu,
+  /jq-ts/gu,
+  /delivery_ended/gu,
+  /telling_ended/gu,
+  /arguments_json/gu,
+  /result_json/gu,
+  /(?<![\w-])brain\\?\//gu,
+  /brain_key/gu,
+  /brain:read|brain:write/gu,
+  /(?<![\w-])brain:(?=\S)/gu,
+  /brain_(?:created|updated|retired)/gu,
+  /\/brains(?![\w-])/gu,
+  /(?i:@beonauto)/gu,
+  /workflow_followed_brains/gu,
+  /_by_brain/gu,
+  /RECALL_BRAINS_AT_ONCE/gu,
+  /(?:[{,]\s*|\n\s*|["'])brains?["']?\s*:/gu,
+  /(?i:auto[-_ ]?brain)/gu,
+  /(?i:beonauto\/auto-runtime)/gu,
+  /(?i:com\.beonauto\/)/gu,
+  /mcp_server_failed/gu,
+  /mcp_server_not_configured/gu,
+  /mcp__/gu,
+  /RecallFunction/gu,
+  /recall-format/gu,
+  /recall_views/gu,
+  /RECALL_MAX_FUNCTIONS/gu,
+  /RECALL_MAX_REBUILDS/gu,
+  /RECALL_PLAYBOOKS_AT_ONCE/gu,
 ];
 
 interface Found {
@@ -45,14 +45,14 @@ interface Found {
   readonly word: string;
 }
 
-export function foundIn(text: string, word: string): readonly Found[] {
+export function foundIn(text: string, word: Readonly<RegExp>): readonly Found[] {
   const found: Found[] = [];
-  for (const match of text.matchAll(new RegExp(word, 'gu'))) {
+  for (const match of text.matchAll(word)) {
     found.push({ index: match.index, word: match[0] });
   }
   return found;
 }
 
 export function oldWordsIn(text: string): readonly string[] {
-  return oldWords.flatMap((word) => foundIn(text, word)).map(({ word }) => word);
+  return oldWords.flatMap((word: Readonly<RegExp>) => foundIn(text, word)).map(({ word }) => word);
 }

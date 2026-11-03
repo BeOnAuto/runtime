@@ -34,9 +34,12 @@ const mostBytesInABatch = 16 * 1024 * 1024;
 
 export type NamedProjection = Pick<KeyedProjection, 'name'>;
 
+const versionDigits = /^\d+$/u;
+
 export function versionOfTable({ name }: NamedProjection, table: string): number | undefined {
-  const version = new RegExp(`^${name}_(?<version>\\d+)$`, 'u').exec(table)?.groups?.['version'];
-  return version === undefined ? undefined : Number(version);
+  const versioned = `${name}_`;
+  const version = table.startsWith(versioned) ? table.slice(versioned.length) : '';
+  return versionDigits.test(version) ? Number(version) : undefined;
 }
 
 function isEarlierVersion({ projection }: ProjectionKeeping, table: string): boolean {

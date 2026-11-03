@@ -1,6 +1,3 @@
-import { Buffer } from 'node:buffer';
-import { createHash } from 'node:crypto';
-
 import {
   ActedContextSchema,
   Conflict,
@@ -10,6 +7,7 @@ import {
   type Context,
   type Decided,
   type Decider,
+  uuidV5,
 } from '@on.auto/operations';
 import { Effect, Equal, Option, Result, Schema } from 'effect';
 
@@ -54,7 +52,7 @@ export interface PublishEvent {
 
 export type PublishedEventState = RecordedEventPublished | undefined;
 
-const publishedEvents = Buffer.from('e897efc8cb4b47b2b2ba2be1a76aeefb', 'hex');
+const publishedEvents = 'e897efc8-cb4b-47b2-b2ba-2be1a76aeefb';
 
 const anotherEvent = new Conflict({
   detail: 'Another event was published with this source and id; give a different event an id of its own',
@@ -109,14 +107,7 @@ export const publishedEventDecider: Decider<PublishedEventState, PublishEvent, R
 };
 
 export function publishedEventStreamOf(source: string, id: string): string {
-  const hash = createHash('sha1')
-    .update(publishedEvents)
-    .update(JSON.stringify([source, id]), 'utf8')
-    .digest();
-  hash.writeUInt8((hash.readUInt8(6) & 0x0f) | 0x50, 6);
-  hash.writeUInt8((hash.readUInt8(8) & 0x3f) | 0x80, 8);
-  const hex = hash.toString('hex', 0, 16);
-  return `events/${[hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20, 32)].join('-')}`;
+  return `events/${uuidV5(publishedEvents, JSON.stringify([source, id]))}`;
 }
 
 export function recordedPublication(state: PublishedEventState): Effect.Effect<RecordedEventPublished> {

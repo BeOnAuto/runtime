@@ -105,9 +105,8 @@ describe.skipIf(skipped)(
       const refused = await Effect.runPromise(Effect.flip(unknown.wrap(aDataKey())));
 
       expect(refused).toMatchObject({ _tag: 'custodian_refused', kid: unknown.kid });
-      expect(refused.detail).toMatch(
-        new RegExp(`^The custodian of the key ${unknown.kid} refused to wrap a data key: NotFoundException: `, 'u'),
-      );
+      const opening = `The custodian of the key ${unknown.kid} refused to wrap a data key: NotFoundException: `;
+      expect(refused.detail.slice(0, opening.length)).toBe(opening);
       expect(refused.detail).not.toMatch(/\d{12}:/u);
     });
 

@@ -63,7 +63,7 @@ describe('the keys a lookup function document refuses', () => {
     ['model: claude', 'model'],
   ])('refuses %s, a key no lookup function takes, at its line', (line, key) => {
     expect(problemsOf(lookupDocument({ front: [line] }))).toEqual([
-      expect.stringMatching(new RegExp(`^Line 12, /${key}: ${key} is not a key`, 'u')),
+      expect.toSatisfy((problem: string) => problem.startsWith(`Line 12, /${key}: ${key} is not a key`)),
     ]);
   });
 

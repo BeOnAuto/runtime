@@ -1,22 +1,19 @@
-import { Buffer } from 'node:buffer';
-import { createHash, randomUUID } from 'node:crypto';
-
 import { describe, expect, it } from 'vitest';
 
 import { uuidV5 } from './uuid-v5.ts';
 
 const dns = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
-function byNodeCrypto(namespace: string, name: string): string {
-  const hash = createHash('sha1')
-    .update(Buffer.from(namespace.replaceAll('-', ''), 'hex'))
-    .update(name, 'utf8')
-    .digest();
-  hash.writeUInt8((hash.readUInt8(6) & 0x0f) | 0x50, 6);
-  hash.writeUInt8((hash.readUInt8(8) & 0x3f) | 0x80, 8);
-  const hex = hash.toString('hex', 0, 16);
-  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20, 32)].join('-');
-}
+const namesOfEveryLength: ReadonlyArray<readonly [string, string]> = [
+  ['', '4ebd0208-8328-5d69-8c44-ec50939c0967'],
+  ['a', '4f3f2898-69e3-5a0d-820a-c4e87987dbce'],
+  ['é', 'ebfe0af8-3997-5ade-b634-ba92cf69f557'],
+  ['😀 run', '88b09bcd-d5e1-54c1-81de-09566c080aac'],
+  ['x'.repeat(55), '4c506c2a-c3a2-508b-b2ce-25c3a06bf481'],
+  ['y'.repeat(56), '4d280fc6-b05a-5094-b818-94a93e901355'],
+  ['z'.repeat(64), 'e7749742-f7ff-5e30-bdfe-cc3db2284dd2'],
+  ['w'.repeat(1000), '1ab1bd42-5cdd-51ce-a5d0-24ef6659f2c8'],
+];
 
 describe('a UUID version 5', () => {
   it('is the one RFC 9562 gives for a name in a namespace', () => {
@@ -24,9 +21,6 @@ describe('a UUID version 5', () => {
   });
 
   it('is the SHA-1 of the namespace and the name in UTF-8, marked as version 5, for names of every length', () => {
-    const names = ['', 'a', 'é', '😀 run', 'x'.repeat(55), 'y'.repeat(56), 'z'.repeat(64), 'w'.repeat(1000)];
-    const namespace = randomUUID();
-
-    expect(names.map((name) => uuidV5(namespace, name))).toEqual(names.map((name) => byNodeCrypto(namespace, name)));
+    expect(namesOfEveryLength.map(([name]) => uuidV5(dns, name))).toEqual(namesOfEveryLength.map(([, uuid]) => uuid));
   });
 });

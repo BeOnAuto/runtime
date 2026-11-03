@@ -146,6 +146,15 @@ const denials: readonly (readonly [string, FakeParameterOperation])[] = [
 
 const unprobed = `The secrets settings are invalid. SECRETS_KEEPER: AWS Parameter Store under ${prefix} could not write, read and delete a parameter at start: AWS Parameter Store could not`;
 
+const probes = /probe-[\da-f-]{36}(?::1)?/gu;
+
+function refusalOf(opening: Promise<Opened>): Promise<string> {
+  return opening.then(
+    () => 'started',
+    (failure: unknown) => String(failure).replaceAll(probes, 'probe-<id>'),
+  );
+}
+
 describe('the stores of a ledger whose prefix in AWS Parameter Store cannot be used', () => {
   it.each(denials)(
     'stop the start for a prefix the identity may not %s, naming the setting, the prefix and the words of the manager, never a credential or the account',
@@ -155,15 +164,13 @@ describe('the stores of a ledger whose prefix in AWS Parameter Store cannot be u
         fake.tell('answering');
       });
 
-      const opened = openedWith(aLedger().fileName, inTheManager);
+      const refusal = await refusalOf(openedWith(aLedger().fileName, inTheManager));
 
-      await expect(opened).rejects.toThrow(
-        new RegExp(
-          `^${unprobed} ${act} the parameter ${prefix}/probe-[\\da-f-]{36}(:1)?: AccessDeniedException: User: user/runtime is not authorized to perform: ssm:${operation} on resource: parameter${prefix}/probe-[\\da-f-]{36} because no identity-based policy allows the ssm:${operation} action$`,
-          'u',
-        ),
+      expect(refusal).toBe(
+        `InvalidSettingsError: ${unprobed} ${act} the parameter ${prefix}/probe-<id>: AccessDeniedException: User: user/runtime is not authorized to perform: ssm:${operation} on resource: parameter${prefix}/probe-<id> because no identity-based policy allows the ssm:${operation} action`,
       );
-      await expect(opened).rejects.not.toThrow(new RegExp(`${account}|${credentials.secretAccessKey}`, 'u'));
+      expect(refusal).not.toContain(account);
+      expect(refusal).not.toContain(credentials.secretAccessKey);
     },
   );
 
