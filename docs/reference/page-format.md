@@ -11,13 +11,14 @@ What a page shows depends on its subject. The format guide of each type gives it
 | Subject                                                | `result`, one run                                                  | `runs`, the runs so far                                                     |
 | ------------------------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------------------- |
 | [Workflow](workflow-format.md#its-page)                | The business outcome of the run, as a headline and its key figures | The main number of each period, with its breakdowns                         |
-| [Reasoning function](reasoning-format.md#its-page)     | The judgement in a sentence, with the fields that decided it       | The outcomes by category over time                                          |
+| [Reasoning function](reasoning-format.md#its-page)     | The judgment in a sentence, with the fields that decided it        | The outcomes by category over time                                          |
 | [Interaction function](interaction-format.md#its-page) | The decision, who made it and when                                 | The decisions over time, what waits now, and how long people took to answer |
 | [Prediction function](prediction-format.md#its-page)   | The forecast as a line, with its horizon                           | The forecast against what happened                                          |
 | [Memory function](memory-format.md#its-page)           | What was remembered or recalled                                    | What its runs kept or recalled over time                                    |
 | [Computation function](computation-format.md#its-page) | The numbers, as figures or a table                                 | Their series over time                                                      |
 | [Lookup function](lookup-format.md#its-page)           | What was found, as a table                                         | The values found over time, where they are numbers                          |
 | [Generation function](generation-format.md#its-page)   | The asset the run produced, linked, in the function's own words    | What was produced over time, as a count or a table of the latest            |
+| [The playbook](#where-the-page-goes)                   | None, since the playbook has no runs of its own                    | Each workflow's main number, once the playbook has more than one workflow   |
 
 Write the page its type's recipe gives. Where the work fits none of them, start with [a minimal page](#a-minimal-page): a headline for each run, and one chart of the runs so far.
 
@@ -303,9 +304,9 @@ Review this brief against the team's criteria: {{ input.brief }}
 
 - A definition has at most one page. A document saved without `page`, or with `page: {}`, has none, and the summary of a workflow or a function saved so ends with `It has no page yet; the page guide says how to give it one.`, where its 400 characters have room for it.
 - Retiring a definition retires its page with it: the page renders nowhere and its views are no longer kept.
-- A definition's name is its id. To rename one, create it under the new name with the same document, point every call and filter that names the old name at the new, and retire the old one at once: until then, a trigger the two share starts both. Its runs so far stay under the old name, so a page or a prediction function's data part that reads them keeps its filter on the old name, beside one on the new.
+- A renamed definition's runs so far stay under its old name, so a page or a prediction function's data part that reads them keeps its filter on the old name, beside one on the new. [Renaming a definition](mcp.md#renaming-a-definition) gives the steps.
 - The playbook's page is the same mapping, with `data` and `runs`. It has no `result`, since the playbook has no runs of its own. `update_playbook` saves it as YAML text in `page`, and `page: null` removes it. Each save is recorded as `playbook_page_saved`, which no fold sees.
-- Give the playbook a page once it has more than one workflow, one that leads with each workflow's main number. Over MCP, `get_playbook` answers its source and renders nothing; [`render_playbook_page`](#the-preview) renders it, over HTTP alone.
+- Over MCP, `get_playbook` answers the source of the playbook's page and renders nothing; [`render_playbook_page`](#the-preview) renders it, over HTTP alone.
 - A page saved as a definition of its own, of the type `page`, is read as its subject's page, in the form of a `page` mapping, without the `of` line that named the subject. It counts only while the subject's document has no `page` key. For the playbook, a save or removal through `update_playbook`, `null` included, replaces it.
 
 ## The views
@@ -317,7 +318,7 @@ Review this brief against the team's criteria: {{ input.brief }}
 The fold sees the events of its own playbook, in the order the playbook recorded them, from the first event of its history:
 
 - the start and the end of every run of each function and workflow, with the output of each run that succeeded and fit its event, and the reason and kind of each run that was rejected;
-- the definitions saved, updated and retired;
+- the definitions saved, updated, paused, resumed and retired;
 - every event published to the playbook, or emitted by its workflows.
 
 These events are not the whole of the playbook's history:
@@ -396,7 +397,7 @@ The module is checked when the page is saved, as a [computation function's progr
 - a top-level statement other than a type or an exported function, such as `let`, a class or a function the module does not export;
 - `import`, `require`, `eval`, `new Function`, `import()`, `import.meta` and declared names such as `declare global`;
 - `async`, `await` and an exported generator, since a fold returns at once;
-- an `enum`, a `namespace`, a parameter property or a decorator;
+- an `enum`, a `namespace` or a parameter property;
 - more than 500 assignments to variables in one function;
 - a name the sandbox lacks, as listed below.
 
@@ -479,7 +480,7 @@ If a fold cannot process an event, updates stop at that event. The views retain 
 | Kind      | At that event                                                                                        |
 | --------- | ---------------------------------------------------------------------------------------------------- |
 | `raised`  | The fold raised an error, a stack overflow among them                                                |
-| `work`    | The fold did more than its work                                                                      |
+| `work`    | The fold did more work than one fold may, 500 checkpoints                                            |
 | `memory`  | The fold used more memory than its sandbox                                                           |
 | `unfit`   | The fold returned what JSON cannot carry, or a value deeper than 512 levels                          |
 | `size`    | The fold returned views larger than 512 KiB together                                                 |
@@ -532,12 +533,12 @@ The first line of the rendered result is the run's headline, which cards and lis
 
 A run that was rejected or failed is not rendered through the template. Its `page.result` is a fixed sentence with its reason:
 
-| The run  | `page.result`                                                                                                                                                      |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Rejected | `The run was rejected as <reason>, <kind>.`, written without `, <kind>` where the rejection has no kind, and followed by the rejection's `detail` where it has one |
-| Failed   | `The run failed.`                                                                                                                                                  |
+| The run  | `page.result`                                                                                                    |
+| -------- | ---------------------------------------------------------------------------------------------------------------- |
+| Rejected | `The run was rejected as <reason>, <kind>. <detail>`, written without `, <kind>` where the rejection has no kind |
+| Failed   | `The run failed.`                                                                                                |
 
-So a run whose request nobody answered in time shows `The run was rejected as unanswered, expired.` as its headline.
+So a run whose request nobody answered in time shows `The run was rejected as unanswered, expired. Nobody answered the request before it expired at 2026-11-04T09:00:00.000Z` as its headline.
 
 ### `runs`
 
@@ -552,7 +553,7 @@ So a run whose request nobody answered in time shows `The run was rejected as un
 
 ### Reading values
 
-- A template may also read names it creates itself with `assign`, `for`, `increment` or `cycle`. Any other name is refused when the page is saved, with its line.
+- A template may also read names it creates itself with `assign`, `for`, `increment` or `decrement`. Any other name is refused when the page is saved, with its line.
 - `views.<name>` must name a view that `data.views` declares.
 - `run` and `subject` have only the fields the tables above name. Any other, such as `run.cost`, is refused when the page is saved, with its line.
 - The fields of `output` are not checked when the page is saved, since the subject may change what it returns from one version to the next.

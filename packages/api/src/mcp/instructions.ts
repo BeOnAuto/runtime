@@ -156,7 +156,7 @@ const whereToStart: Sentences = ({ followed }) =>
 
 const connectingAService = [
   "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links.",
-  'A service cannot be connected when no provider or server matches.',
+  "Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
 ];
 
 const connections: Sentences = ({ listed }) => (listed('search') && listed('add_connection') ? connectingAService : []);

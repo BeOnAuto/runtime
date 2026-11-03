@@ -44,7 +44,7 @@ parameters:
 Welcome to {{ input.shop }}. Today is {{ today }}.
 ```
 
-To save it, call `create_definition` with `type: "generation"`, a function `name` and the document as `source`. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.
+To save it, call `create_definition` with `type: "generation"`, a function `name`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; [The overview](#the-overview) says how to write both. To run it, call `run_definition` with the same type and name and its `input`. Both operations also need the playbook id, unless the MCP connection is scoped to that playbook.
 
 A run answers the [asset](output-shapes.md#asset) it made:
 
@@ -168,6 +168,8 @@ A run reaches outside the runtime, and a run asked again asks the gateway again 
 
 ## A generation the provider finishes later
 
+No model of [the catalogue](#the-models) finishes later, since none produces video, so no run waits this way.
+
 A model whose provider takes minutes to make what it is asked for, as a video's does, is waited for rather than answered within the run's call. The gateway answers the request with the id of what it is making, and the run stays `started`. Its record holds that id as `handle`, and when the run stops waiting as `waits_until`. A workflow's step that runs the function waits for it as a step waits for an answer to a request, and goes on with the asset once it is kept.
 
 Meanwhile the runtime asks the gateway at `/videos/{id}` how the generation stands: five seconds after the request, then every 10, 20 and 30 seconds, or, where the provider says how far it has got, about half the time that leaves, from five seconds to a minute. Once the provider has made it, the runtime fetches its bytes from `/videos/{id}/content` and keeps them as an asset, as for an image, and the run succeeds with the asset's reference. Both are paths of the video API of a LiteLLM gateway.
@@ -200,7 +202,7 @@ A run that succeeds records the asset's reference as its output and, as its `rec
 | `duration_ms` | How long the run took, for a generation the provider finishes later from the request to its bytes kept                                                                           |
 | `cost_usd`    | The cost in US dollars the gateway answered in the header its entry names as `cost_header`, where it names one and answered a cost                                               |
 
-Each run is one run of the runtime's meter, as a run of every other function is, whatever its cost.
+Each run counts once on the runtime's meter, as a run of every other function does. The meter counts the run, not the model call it makes. On hosted Auto, the model call uses credits of its own, in addition to the run's, as [Pricing](https://on.auto/pricing) explains.
 
 ## Bounds
 

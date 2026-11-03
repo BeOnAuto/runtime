@@ -18,7 +18,7 @@ Follow the [quick start](get-started/cloud.md) to connect your agent to `https:/
 
 ## Do a task
 
-The guides show how to [give a function tools](guides/tools.md), [run a workflow on a schedule or event](guides/triggers.md), [make a playbook remember](guides/remember.md), [calculate with a computation function](guides/computation.md), [forecast with a prediction function](guides/forecast.md), [use Auto with Apollo](integrations/apollo.md) and connect [Zoom](integrations/zoom.md) or [Slack](integrations/slack.md) for your playbooks to use.
+The guides show how to [give a function tools](guides/tools.md), [run a workflow on a schedule or event](guides/triggers.md), [act on comments from Studio](guides/comments.md), [make a playbook remember](guides/remember.md), [calculate with a computation function](guides/computation.md), [forecast with a prediction function](guides/forecast.md), [use Auto with Apollo](integrations/apollo.md) and connect [Zoom](integrations/zoom.md) or [Slack](integrations/slack.md) for your playbooks to use.
 
 ## Work with your team
 
@@ -28,7 +28,7 @@ If your organization needs its own deployment, [get in touch about self-hosting]
 
 ## Look up a detail
 
-The references cover the [terminology](concepts/terminology.md), [MCP tools](reference/mcp.md), the [HTTP API](reference/http.md), the format of each definition, starting with the [reasoning function format](reference/reasoning-format.md).
+The references cover the [terminology](concepts/terminology.md), [MCP tools](reference/mcp.md), the [HTTP API](reference/http.md), [addresses](reference/addresses.md), the [page format](reference/page-format.md) and the format of each definition, starting with the [reasoning function format](reference/reasoning-format.md).
 
 ## Contribute
 

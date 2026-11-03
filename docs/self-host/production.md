@@ -38,7 +38,9 @@ The server speaks plain HTTP on `PORT` (`5555` unless set), on every interface, 
 2. Keep port `5555` itself off the internet.
 3. Set `PUBLIC_URL` to the proxy's public `https` address, such as `https://runtime.example.com`. [Let people sign in](security.md#let-people-sign-in) has the rules for it.
 
-Never run a server in [local mode](security.md#local-mode) behind a proxy, which makes remote requests look local. The image runs in local mode only where you declare it with `ACCESS_MODE=local`, which belongs on your own machine alone: it listens on every interface, so without `PUBLIC_URL` or `API_KEYS` it stops at start. A web page may call the API only from Auto Studio or from an origin you list in `ALLOWED_ORIGINS`, and the runtime serves no Studio of its own, which works in local mode alone; see [Calling from a browser](security.md#calling-from-a-browser).
+Since the image listens on every interface, it stops at start unless `PUBLIC_URL` or `API_KEYS` is set. It runs in [local mode](security.md#local-mode) only where you declare it with `ACCESS_MODE=local`, which belongs on your own machine alone. Never run a server in local mode behind a proxy, which makes remote requests look local.
+
+A web page may call the API only from Auto Studio or from an origin you list in `ALLOWED_ORIGINS`; see [Calling from a browser](security.md#calling-from-a-browser). The Studio a runtime serves itself works in local mode alone, so a team runtime serves none by default.
 
 ## Give every client its own key
 
@@ -54,17 +56,17 @@ The ledger holds every playbook, definition, run and its history, and the workfl
 | [PostgreSQL](postgresql.md)                   | A managed database with automated backups. Required for several servers | With the database's own backups                     |
 | [Object storage](object-storage.md), optional | Content such as the results of tool calls, kept out of the database     | [Alongside the database](object-storage.md#back-up) |
 
-Whoever can read the database can read what the runtime recorded:
+Whoever can read the database can read what the runtime recorded, and with object storage, whoever can read the bucket can read the content kept there:
 
 - the inputs and outputs of runs;
 - the documents of workflows;
-- the arguments and results of tool calls, unless a tool server's entry sets `record_content: false`.
+- the arguments and results of tool calls, which object storage keeps in the bucket, unless a tool server's entry sets `record_content: false`.
 
-Restrict access to the database, and to its backups, accordingly.
+Restrict access to the database, to the bucket and to their backups accordingly.
 
 ## Keep the secrets key
 
-The runtime seals the secrets it keeps in the ledger's database under the secrets key, as [Secrets at rest](security.md#secrets-at-rest) describes. A container takes it from your platform's secret store, as it does the other secrets: in `SECRETS_KEY`, or in a file the platform mounts into the container, whose path `SECRETS_KEY_FILE` names; or the key stays in AWS KMS, as [Hold the secrets key in a KMS](#hold-the-secrets-key-in-a-kms) sets out. A file a setting names is read as the platform mounts it, and the file the server makes beside a SQLite ledger is its owner's alone. Either way the key is on no disk the ledger is on and in no backup of it; a ledger in PostgreSQL cannot start without one of them, and every server that shares the database takes the same key. Make one with either command, and keep a copy where your other secrets are kept. A secret sealed under a lost key cannot be read again, and the runtime keeps a key of its own under it, so a server started with another key does not start on that ledger:
+The runtime seals the secrets it keeps in the ledger's database under the secrets key, as [Secrets at rest](security.md#secrets-at-rest) describes. A container takes it from your platform's secret store, as it does the other secrets: in `SECRETS_KEY`, or in a file the platform mounts into the container, whose path `SECRETS_KEY_FILE` names; or the key stays in AWS KMS, as [Hold the secrets key in a KMS](#hold-the-secrets-key-in-a-kms) sets out. A file a setting names is read as the platform mounts it. Kept in any of these ways, the key is on no disk the ledger is on and in no backup of it. With none of `SECRETS_KEY`, `SECRETS_KEY_FILE` and `SECRETS_KEY_KMS` set, a server whose ledger is in SQLite makes the key itself, in `secrets.key` beside the ledger file, readable by its owner alone, and a copy of the volume then carries the key with the ledger. A ledger in PostgreSQL cannot start without one of them, and every server that shares the database takes the same key. Make a key with either command, and keep a copy where your other secrets are kept. A secret sealed under a lost key cannot be read again, and the runtime keeps a key of its own under it, so a server started with another key does not start on that ledger:
 
 ```bash
 openssl rand -base64 32
@@ -102,7 +104,7 @@ The runtime asks KMS in the region the ARN names, with the credentials of the AW
 }
 ```
 
-At start, before it reads any secret, the server wraps and unwraps one key of its own with KMS and forgets it, so a key that does not exist, one that is disabled or pending deletion, and one the identity may not use stop the start, naming the setting, the key's id and the answer of KMS and never a credential, as an alias KMS does not know or will not describe does, naming the alias, such as `The secrets settings are invalid. SECRETS_KEY_KMS: The KMS key 1234abcd-12ab-34cd-56ef-1234567890ab it names could not wrap and unwrap a data key at start: The custodian of the key 1234abcd-12ab-34cd-56ef-1234567890ab refused to wrap a data key: DisabledException: key/1234abcd-12ab-34cd-56ef-1234567890ab is disabled.`; a KMS that does not answer within 10 seconds stops it too. Once started, it logs `Secrets are kept in the ledger's database, sealed under the key <id> that the KMS key <arn> holds, and 0 sealed under the previous key were sealed again under it`.
+At start, before it reads any secret, the server wraps and unwraps one key of its own with KMS and then forgets it. A key that does not exist, one that is disabled or pending deletion, and one the identity may not use stop the start, and so does an alias KMS does not know or will not describe. The error names the setting, the key's id or the alias, and the answer of KMS, and never a credential. A disabled key, for example, stops the start with `The secrets settings are invalid. SECRETS_KEY_KMS: The KMS key 1234abcd-12ab-34cd-56ef-1234567890ab it names could not wrap and unwrap a data key at start: The custodian of the key 1234abcd-12ab-34cd-56ef-1234567890ab refused to wrap a data key: DisabledException: key/1234abcd-12ab-34cd-56ef-1234567890ab is disabled.` A KMS that does not answer within 10 seconds stops the start too. Once started, the server logs `Secrets are kept in the ledger's database, sealed under the key <id> that the KMS key <arn> holds, and 0 sealed under the previous key were sealed again under it`.
 
 The runtime keeps no key unwrapped: it asks KMS for the key of a secret at each read, when a connection is first used in a server's process and when its tokens are renewed, and waits 10 seconds for the answer. So disabling the key, scheduling its deletion or taking the permission away ends the runtime's reading at the next read KMS refuses: a connection's first read in a process fails the call as `connection_unavailable` in KMS's words, a renewal of its tokens fails the call in the same words, both leave the connection connected, and once the key is enabled again the next call reads it. A process that already uses a connection keeps the credential it read until it stops, and a server does not start while the key is disabled.
 

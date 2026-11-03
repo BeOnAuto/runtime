@@ -78,7 +78,7 @@ page:
 ---
 ````
 
-To save it, call `create_definition` with `type: "lookup"`, the `name` `thread-replies`, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `channel` and `thread` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook. The run returns `status: succeeded` with the replies as its `output`.
+To save it, call `create_definition` with `type: "lookup"`, the `name` `thread-replies`, the document as `source`, and its `overview` and `diagram`, as for every function. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; [the overview of a computation function](computation-format.md#the-overview) gives the rules, which a lookup function follows. To run it, call `run_definition` with the same type and name, and with `channel` and `thread` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook. The run returns `status: succeeded` with the replies as its `output`.
 
 ## Writing a lookup
 
@@ -117,7 +117,7 @@ A template may use the filters listed in [Templates](template.md#filters), the `
 
 Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Posts the notes in #deliveries'` or `{ note: 'Costs 1,000 a month' }`. Unquoted, YAML reads ` #` as the start of a comment and a comma there, even the one in `1,000`, as the start of another key, so the text ends early, and the save does not always say so.
 
-Every template of `call.with` is checked when the document is saved, as an interaction function's call is: it is rejected with its line when it does not compile, names another value than `input`, `today` and `now`, names a property the input schema does not allow, or renders a structure inside a longer text. `call.read` is a JSON Pointer such as `/messages`: it starts with a slash, writes `~` as `~0`, and writes a slash within a name as `~1`.
+Every template of `call.with` is checked when the document is saved, as an interaction function's call is: it is rejected with its line when it does not compile, names another value than `input`, `today` and `now`, or names a property the input schema does not allow. A template that reads no `input` is also rejected when it renders a structure inside a longer text. One that reads `input` is checked when the run renders it: a structure it renders inside a longer text ends the run as a `conflict` of the kind `unworkable`, as [How a run ends](#how-a-run-ends) says. `call.read` is a JSON Pointer such as `/messages`: it starts with a slash, writes `~` as `~0`, and writes a slash within a name as `~1`.
 
 ## The mark of its tool
 
@@ -134,17 +134,17 @@ When a lookup function runs, the runtime reads the mark again, as it lists the s
 
 ## How a run ends
 
-| Ending                                   | When                                                                                                                                                                              |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `succeeded`                              | The tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                         |
-| `invalid_input`                          | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads                                                         |
-| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass 16 KiB                                                                                                          |
-| `conflict`, kind `unworkable`            | The tool refused the arguments, the answer has nothing to read or nothing where `read` points, the part at `read` is more than a run may record, or `output.schema` refuses it    |
-| `unavailable`, kind `tool_not_read_only` | The tool is no longer marked `reads`. Nothing was sent                                                                                                                            |
-| `unavailable`, kind `tool_not_offered`   | The server no longer serves the playbook, its operator no longer allows the tool, or the server no longer lists it. Nothing was sent                                              |
-| `unavailable`, kind `tool_server_failed` | The tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                     |
-| `unavailable`, kind `tools_unfinished`   | The call was sent and then failed: the server failed on it or did not respond within 30 seconds, `because` `server_failed`, or the tool returned an error, `because` `tool_error` |
-| `failed`                                 | The runtime itself broke down                                                                                                                                                     |
+| Ending                                   | When                                                                                                                                                                                                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `succeeded`                              | The tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                                                                                              |
+| `invalid_input`                          | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads                                                                                                                              |
+| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass 16 KiB                                                                                                                                                                               |
+| `conflict`, kind `unworkable`            | The tool refused the arguments, the answer has nothing to read or nothing where `read` points, the part at `read` is more than a run may record, or `output.schema` refuses it                                                                         |
+| `unavailable`, kind `tool_not_read_only` | The tool is no longer marked `reads`. Nothing was sent                                                                                                                                                                                                 |
+| `unavailable`, kind `tool_not_offered`   | The server no longer serves the playbook, its operator no longer allows the tool, the server no longer lists it, or the connection that serves it is not ready, with a `because` such as `connection_pending` or `connection_broken`. Nothing was sent |
+| `unavailable`, kind `tool_server_failed` | The tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                                                                                          |
+| `unavailable`, kind `tools_unfinished`   | The call was sent and then failed: the server failed on it or did not respond within 30 seconds, `because` `server_failed`, or the tool returned an error, `because` `tool_error`                                                                      |
+| `failed`                                 | The runtime itself broke down                                                                                                                                                                                                                          |
 
 Every call of a lookup function reads, so a run that could not finish changed nothing, and trying again under a new run id is safe. A run that called its tool and did not succeed is never run again under its run id: a request with that id returns `conflict` with the kind `tools_called` and the because `only_read`. [Retrying under a run id](http.md#retrying-under-a-run-id) gives every case.
 

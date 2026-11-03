@@ -2,7 +2,7 @@
 
 # Prediction function format
 
-A prediction function forecasts one quantity for one series at a time from the playbook's own history, one or more periods ahead. Each prediction is a [series](output-shapes.md#series): the last periods observed, and each period ahead as a likely value with a low and a high. The API stores the function as a definition of the type `prediction`.
+A prediction function forecasts one quantity for one series at a time from the playbook's own history, one or more periods ahead. Each prediction is a [series](output-shapes.md#series): the last periods observed, and each period ahead as a likely value with its range, from `low` to `high`. The API stores the function as a definition of the type `prediction`.
 
 Its document says:
 
@@ -51,7 +51,7 @@ page:
 ---
 ````
 
-`create_definition` takes `type: "prediction"`, a function `name` such as `weekly-orders` and the document as `source`. The saved function has the `media_type` `text/markdown`. The playbook writes its `input_schema` itself, from the document: the question of [The input and the output](#the-input-and-the-output). Its `output_schema` is the [series shape](output-shapes.md#series), what a question answers, and its `details.shape` is `series`. So a document that names `input` or `output` is refused, as is one with any text after its front matter.
+`create_definition` takes `type: "prediction"`, a function `name` such as `weekly-orders`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; [The overview](#the-overview) says how to write both. The saved function has the `media_type` `text/markdown`. The playbook writes its `input_schema` itself, from the document: the question of [The input and the output](#the-input-and-the-output). Its `output_schema` is the [series shape](output-shapes.md#series), what a question answers, and its `details.shape` is `series`. So a document that names `input` or `output` is refused, as is one with any text after its front matter.
 
 Before you write one, settle these with the person:
 
@@ -110,7 +110,7 @@ A question's output is the **prediction**, a [series](output-shapes.md#series) o
 
 ### A total to the end of a period
 
-Some questions ask where a period will land, such as a quarter's orders from the days so far. That is a total, not a value some periods ahead. `predicts.accumulates` names the enclosing period (`week`, `month`, `quarter` or `year`) in place of `horizons`. A question then asks for the target summed over the rest of an enclosing period. The sum starts at the period after the last observed one. It ends where the enclosing period that holds that period ends. So a question asked as a quarter closes predicts the whole next quarter.
+Some questions ask where a period will land, such as a quarter's orders from the days so far. That is a total, not a value some periods ahead. `predicts.accumulates` names the enclosing period (`week`, `month`, `quarter` or `year`) in place of `horizons`. A question then asks for the target summed over the rest of an enclosing period. The sum starts at the period after the last observed one. It ends where the enclosing period that holds that period ends. So a question asked in the first period of a quarter predicts that whole quarter, and one asked in its last period predicts that period alone.
 
 A day sums to a week, a month or a quarter; a week to a quarter or a year; and a month to a quarter or a year. These are refused at save:
 
@@ -134,7 +134,7 @@ How edits affect the dataset:
 
 - Two functions whose data parts fold the same rows at the same grain share one dataset.
 - An edit that leaves the rows alone changes nothing. A wider `window` is such an edit, since a question reads it from the same rows.
-- An edit that changes the rows (a filter, a pointer, an aggregation or the grain) starts a new dataset from the first event of the history. The old one is dropped once no active function names it.
+- An edit that changes the rows (a filter, a pointer, an aggregation or the grain) starts a new dataset from the first event of the history. The old one is dropped once no active or paused function names it.
 
 | Field         | Meaning                                                                                                                                                                                                                          |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -160,19 +160,19 @@ When each period has one value, such as the revenue of a week that a workflow re
 
 An event adds to one row: one series, one period. So a run whose output tallies several series at once, such as the week's sales of seven coffees, feeds one of them alone. Record each series with a run of its own: in a workflow, a `for` task calls a computation function once for each series, and the data part reads that function's runs. The function returns what it is given, as `record-week` of [this example](#forecast-from-a-run-the-workflow-just-recorded) does. Each of those runs counts on the runtime's meter. To fill the dataset with the periods before the playbook began, run that recording function by hand, once for each series and period, with the period's own date in its input. Its runs are folded as the workflow's are, and none of the workflow's other steps runs. A data part whose filter names `calldepth` leaves out such runs, since a run by hand carries none.
 
-The dataset passes over an event, counts it and notes it in the server's log, when:
+The dataset passes over an event and counts it in `passed_over` when:
 
 - its time is not on a day of the calendar, names a leap second, or is neither an ISO 8601 date nor a date and time with its offset, as `2026-10-25T09:00:00` is not;
 - its series is not text of 1 to 256 bytes;
 - its target is a value that is not a finite number;
 - its data test fails.
 
-Such an event adds to no row.
+Such an event adds to no row. The server's log notes up to ten such events from each page of events the dataset folds.
 
-A data test can also run out of time or memory, and the work that judges a page's data tests can be stopped at a limit of the server's. No event causes that, so the event is never passed over. Instead:
+A data test can also run out of time or memory, and the work that judges the data tests of a page of events can be stopped at a limit of the server's. No event causes that, so the event is never passed over. Instead:
 
 - The dataset stops before that event. It tries the event again at the server's next wake-up that sweeps its pending work.
-- After twenty tries without folding a whole page, the dataset stalls. Its phase becomes `stalled`, the server's log notes it, and it folds nothing more.
+- After twenty tries without folding a whole page of events, the dataset stalls. Its phase becomes `stalled`, the server's log notes it, and it folds nothing more.
 - A data part that changes starts a dataset of its own.
 
 `get_definition` of a prediction function adds the dataset's `standing`, as `standing.dataset`:
@@ -305,7 +305,7 @@ Its record, over 70 weeks of the region's history:
 
 ### A run that ended a moment ago
 
-A question counts every run that ended before it started. Before it reads the dataset, it waits until the dataset has folded what the playbook had recorded when the question started. That takes moments: the time it takes to fold a page, as the views of pages are kept, and up to a pass (a second) for an event another server recorded. A dataset that has not caught up within 3 seconds is read as far as it has folded, and the record's `dataset_checkpoint` says how far that was. So a question asked in the step after a run, in the same workflow, counts that run, and needs no wait or retry before it.
+A question counts every run that ended before it started. Before it reads the dataset, it waits until the dataset has folded what the playbook had recorded when the question started. That takes moments: the time it takes to fold a page of events, as the views of pages are kept, and up to a pass (a second) for an event another server recorded. A dataset that has not caught up within 3 seconds is read as far as it has folded, and the record's `dataset_checkpoint` says how far that was. So a question asked in the step after a run, in the same workflow, counts that run, and needs no wait or retry before it.
 
 Whether the run falls in the window depends on its period. The window ends at the origin, the period before the one the question is asked in. A run read with `time: event` falls in the period it ran in, which no question reads until that period has passed. A run about a period that has ended, such as last week, carries a date of that period in its output for `time` to read; [Forecast from a run the workflow just recorded](#forecast-from-a-run-the-workflow-just-recorded) shows one.
 
@@ -344,7 +344,7 @@ A save is refused past these bounds:
 | Season               | 2 to 366 periods                                                                                                                                                               |
 | Coverage             | 0.5 to 0.95, 0.8 when left out                                                                                                                                                 |
 | Filters              | 1 to 8                                                                                                                                                                         |
-| Functions a playbook | 32 active, unless the server's `PREDICTION_MAX_FUNCTIONS` says otherwise, from 1 to 1,000                                                                                      |
+| Functions a playbook | 32 active or paused, unless the server's `PREDICTION_MAX_FUNCTIONS` says otherwise, from 1 to 1,000. Retiring one frees its place                                              |
 
 The data and the runs are bounded so:
 

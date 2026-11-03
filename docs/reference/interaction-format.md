@@ -14,7 +14,14 @@ A run that asks a person renders the message from its input. Then it waits until
 
 ## How a request reaches its party
 
-Write in `deliver` how the request reaches its party: the tool of a connection that sends to them, or `agent`. A person answers a request where it reaches them, so a request that names neither is refused when it is saved. A connection carries a request when its server offers a tool that sends to a party, one whose name says it sends, posts, publishes, replies, comments or mails, or creates or writes a message, a comment or mail, and names no other operation, such as update, delete, pin or list, that deletes nothing and is not described as answering without a body, since `sent` points into what it answers, and a tool marked `reads` that reads the replies, such as:
+Write in `deliver` how the request reaches its party: the tool of a connection that sends to them, or `agent`. A person answers a request where it reaches them, so a request that names neither is refused when it is saved.
+
+A connection carries a request when its server offers two tools:
+
+- A tool that sends to a party. Its name says it sends, posts, publishes, replies, comments or mails, or creates or writes a message, a comment or mail, and names no other operation, such as update, delete, pin or list. It deletes nothing, and where an OpenAPI document describes it, that document does not say it answers without a body, since `sent` points into what it answers.
+- A tool marked `reads` that reads the replies.
+
+For example:
 
 - a chat tool: the tool that posts a message in a channel or a thread, and the one that lists the replies of a thread;
 - an email provider: the tool that sends mail, and the one that lists the messages of a thread;
@@ -24,13 +31,22 @@ Write in `deliver` how the request reaches its party: the tool of a connection t
 
 A notification takes no answer, so no agent holds it: it goes through a connection, `deliver` naming the tool that sends it, and any connection with a tool that sends can carry it. Its run succeeds with the output `{}`, so nothing after it learns where the message landed. To post something whose replies a later step reads, write a function that [asks a system](#asking-a-system) instead: its `call` posts the message, and its output keeps the tool's answer, such as the message's `ts`, for a lookup function to read the replies by.
 
-Ask the person once where they want to be asked. `create_definition` and `update_definition` refuse a request that names no way with words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way, and refuse a notification that names no tool, or `agent`, with words that name each connection whose tools can send it. A tool server of the server's own settings is named a tool server. A playbook with none is told so, and why for each connection that cannot be used just now. Wherever no connection can carry it, it is told that one can be connected with `search` and `add_connection`, where the agent's tools include both. When the agent's MCP client answers forms, the server asks the person itself before it refuses, "Where should the owner be asked?", or "told?" for a notification, with each such connection, and for a request the agent way, to choose from. Once they choose, the refusal names the connection's sending tool and its reading tool, or says to write `deliver: agent`. The agent then learns what each tool takes with `introspect`. Once the person agrees, it calls the sending tool with `execute_connection` and a message the party would want anyway, to see what the tool answers for `sent`. Then it writes `deliver` from that answer. For a request, it also calls the reading tool on a thread that already has replies, and writes `replies` from what it lists, as [Sending through a tool](#sending-through-a-tool) sets out.
+Ask the person once where they want to be asked. When a document names no way to reach its party, `create_definition` and `update_definition` refuse it, and the refusal names the ways this playbook has:
+
+- For a request, each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way.
+- For a notification that names no tool, or names `agent`, each connection whose tools can send it.
+
+A tool server of the server's own settings is named as a tool server. A playbook with none is told so, with the reason for each connection that cannot be used just now. Wherever no connection can carry it, the refusal says that one can be connected with `search` and `add_connection`, where the agent's tools include both.
+
+When the agent's MCP client answers forms, the server itself asks the person before it refuses, in words such as "Where should the owner be asked?", or "Where should the owner be told?" for a notification. The person chooses from each such connection and, for a request, the agent way. Once they choose, the refusal names the connection's sending tool and, for a request, its reading tool, or says to write `deliver: agent`.
+
+The agent then learns what each tool takes with `introspect`. Once the person agrees, it calls the sending tool with `execute_connection` and a message the party would want anyway, to see what the tool answers for `sent`. Then it writes `deliver` from that answer. For a request, it also calls the reading tool on a thread that already has replies, and writes `replies` from what it lists, as [Sending through a tool](#sending-through-a-tool) sets out.
 
 ### Whom a request waits on
 
-A request waits on a member of the org when its party, its `to` as rendered, is an email address, one that holds an `@`: it waits on the member whose address that is, compared without regard to case. Any other party, such as a channel, a role or a name, waits on any member of the org, whether the request goes through a connection or is held for an agent, and any member may answer it.
+A request waits on a member of the org when its party, its `to` as rendered, is an email address, one that holds an `@`: it waits on the member whose address that is, compared without regard to case. Any other party, such as a channel, a role or a name, waits on any member of the org, whether the request goes through a connection or is held for an agent. Whom a request waits on does not limit who may answer it: any caller that may write to the playbook can answer, as [Answering a request](#answering-a-request) says.
 
-So write `to: "{{ input.reviewer }}"`, given the reviewer's address such as `priya@acme.example`, for a request one person should see as theirs. [The organization's activity](http.md#the-organization-s-activity) shows each open request as `needs_you`, with the address in lower case, or `any_member`, in `waits_on`, and counts it for the caller it waits on.
+So write `to: "{{ input.reviewer }}"`, given the reviewer's address such as `priya@acme.example`, for a request one person should see as theirs. A request answered by reply takes a reply only when the reading tool names its sender exactly as the answerer is written: `from`, or `to` when there is no `from`. So a chat request that waits on an address also writes `from` as the chat names the person, and gives the sending tool the conversation to post in from the input rather than from `to`; see [Answering by reply](#answering-by-reply). [The organization's activity](http.md#the-organization-s-activity) shows each open request as a `needs_you` row whose `waits_on` holds the address in lower case, or `any_member`, and counts it for the caller it waits on.
 
 ## A function document
 
@@ -138,7 +154,7 @@ The review of your campaign brief is ready:
 Reply **approve**, or **revise** with a note of what to change.
 ````
 
-To save it, call `create_definition` with `type: "interaction"`, the `name` `approve-campaign-brief`, and the document as `source`. To run it, call `run_definition` with the same type and name, and with `owner` and `review` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook.
+To save it, call `create_definition` with `type: "interaction"`, the `name` `approve-campaign-brief`, the document as `source`, and its `overview` and `diagram`. A save without a `diagram` is refused, so give the word `none` when a picture would add nothing; [The overview](#the-overview) says how to write both. To run it, call `run_definition` with the same type and name, and with `owner` and `review` in the `input` object. Both operations also take the playbook id, unless the MCP connection is scoped to that playbook.
 
 The run returns `status: started` with its `run_id`, and sends the review to the owner through the chat's `post_message`. The owner answers by replying in the thread of the message, or tells their agent, which answers with `answer_interaction`. The same request held for an agent writes `deliver: agent` in place of `deliver`, `replies` and `reply`. The function's page heads each run with the owner's answer and the day it came, and counts the requests still waiting and the answers of each day; see [Its page](#its-page).
 
@@ -173,7 +189,7 @@ The arguments in `with` are the tool's own, named as its `input_schema` names th
 
 How a call ends when it goes wrong:
 
-- Before anything is sent: the playbook may not use the tool server, the operator does not allow the tool, the server does not list it, or the server cannot be reached. The run ends `unavailable`, in words that name `search`, and can be run again.
+- Before anything is sent: when the playbook may not use the tool server, the operator does not allow the tool, or the server does not list it, the run ends `unavailable` as `tool_not_offered`, in words that name `search`. When the server cannot be reached, it ends `unavailable` as `tool_server_failed`. Either can be run again.
 - Once the call is sent, it is in the run's history. When the tool server fails on it, or the tool returns an error:
   - a tool marked `reads` ends the run `unavailable` as `tools_unfinished`, status 503. A workflow may try it again.
   - any other tool may have changed something, so the run ends `conflict` as `effect_unknown`, status 409. A workflow's retry on status 503 does not match it.
@@ -267,7 +283,7 @@ Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Po
 | `reply`                       | Refused       | Optional, with `output.schema`; read only with `replies`         | Optional, with `output.schema`; nothing reads it |
 | `description`, `input.schema` | Optional      | Optional                                                         | Optional                                         |
 
-A request that names no `deliver` is refused when saved, in words that name the connections whose tools can send a request and read its replies, and the agent way, and so is a notification that names no tool, or `agent`, in words that name the connections whose tools can send it; see [How a request reaches its party](#how-a-request-reaches-its-party).
+A request that names no `deliver` is refused when saved, and so is a notification that names no tool, whether it leaves `deliver` out or writes `deliver: agent`; [How a request reaches its party](#how-a-request-reaches-its-party) says what the refusal names.
 
 A function that reads replies needs a reply rule: the one `reply` writes, or one made from the answer schema. Without either, it is refused when saved.
 
@@ -287,7 +303,7 @@ Every template is checked when the document is saved, against the names its plac
 | `replies.with`                         | `to`, `sent.conversation`, `sent.id`, `conversation`, `since`                                                      |
 | `tell.with`                            | `to`, `sent.conversation`, `sent.id`, `message`                                                                    |
 
-A template is rejected with its line when it does not compile, names another value, or names a property the input schema does not allow. So is a structure inside a longer text.
+A template is rejected with its line when it does not compile, names another value, or names a property the input schema does not allow. So is a structure inside a longer text, in a template that reads no `input`; one that reads `input` is checked when the run renders it.
 
 Other rules checked when saved:
 
@@ -464,27 +480,27 @@ How replies are taken:
 
 ## How a run ends
 
-| Ending                                         | When                                                                                                                                                                                                  |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `succeeded`                                    | The request was answered, and the answer is the output                                                                                                                                                |
-| `succeeded`                                    | A notification was delivered, with the output `{}`                                                                                                                                                    |
-| `succeeded`                                    | A function with `call`: the tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                     |
-| `invalid_input`                                | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads, as `money` refuses text: `The message cannot be rendered with this input`  |
-| `conflict`, kind `unworkable`                  | `to` or `from` rendered empty, as something that is not text, with a control character, or longer than 256 bytes                                                                                      |
-| `conflict`, kind `unworkable`                  | The message is longer than 8 KiB, or the arguments of `deliver` pass 16 KiB or one renders no text                                                                                                    |
-| `conflict`, kind `unworkable`                  | A function with `call`: an argument renders a structure among text, or the arguments pass 16 KiB                                                                                                      |
-| `conflict`, kind `unworkable`                  | A function with `call`: the tool refused the arguments                                                                                                                                                |
-| `conflict`, kind `unworkable`                  | A function with `call`: the answer has nothing to read, or nothing where `read` points                                                                                                                |
-| `conflict`, kind `unworkable`                  | A function with `call`: the part at `read` is more than a run may record (1 MiB with its record), or holds a value `output.schema` refuses                                                            |
-| `unavailable`, kind `tool_not_offered`         | A server the function names does not serve the playbook, or its operator does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent |
-| `unavailable`, kind `tool_server_failed`       | A function with `call`: the tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                 |
-| `unavailable`, kind `tools_unfinished`         | A function with `call`: the call was sent and then failed, and the tool is marked `reads`. Trying again under a new run id is safe                                                                    |
-| `conflict`, kind `effect_unknown`              | The same, for a tool not marked `reads`, which may have changed something. No retry on status 503 matches it; a person, or a workflow rule that names the kind, decides                               |
-| `unavailable`, kind `requests_full`            | The playbook already has as many open requests as the runtime allows: 10,000 unless its operator sets another number with `INTERACTION_OPEN_REQUESTS`                                                 |
-| `rejected` as `unanswered`, kind `expired`     | Nobody answered the request before it expired                                                                                                                                                         |
-| `rejected` as `unanswered`, kind `undelivered` | Every attempt to deliver a notification failed                                                                                                                                                        |
-| `rejected` as `cancelled`                      | `cancel_run` cancelled the run, or the workflow that waited for it ran out of time or ended first                                                                                                     |
-| `failed`                                       | The runtime itself broke down                                                                                                                                                                         |
+| Ending                                         | When                                                                                                                                                                                                                              |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `succeeded`                                    | The request was answered, and the answer is the output                                                                                                                                                                            |
+| `succeeded`                                    | A notification was delivered, with the output `{}`                                                                                                                                                                                |
+| `succeeded`                                    | A function with `call`: the tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                                                 |
+| `invalid_input`                                | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads, as `money` refuses text that is not a decimal number: `The message cannot be rendered with this input` |
+| `conflict`, kind `unworkable`                  | `to` or `from` rendered empty, as something that is not text, with a control character, or longer than 256 bytes                                                                                                                  |
+| `conflict`, kind `unworkable`                  | The message is longer than 8 KiB, or the arguments of `deliver` pass 16 KiB or one renders no text                                                                                                                                |
+| `conflict`, kind `unworkable`                  | A function with `call`: an argument renders a structure among text, or the arguments pass 16 KiB                                                                                                                                  |
+| `conflict`, kind `unworkable`                  | A function with `call`: the tool refused the arguments                                                                                                                                                                            |
+| `conflict`, kind `unworkable`                  | A function with `call`: the answer has nothing to read, or nothing where `read` points                                                                                                                                            |
+| `conflict`, kind `unworkable`                  | A function with `call`: the part at `read` is more than a run may record (1 MiB with its record), or holds a value `output.schema` refuses                                                                                        |
+| `unavailable`, kind `tool_not_offered`         | A server the function names does not serve the playbook, or its operator does not allow a tool the function names. For a function with `call`, also a tool the server does not list. Nothing was sent                             |
+| `unavailable`, kind `tool_server_failed`       | A function with `call`: the tool server could not be reached, or refused the connection or the listing of its tools. Nothing was sent                                                                                             |
+| `unavailable`, kind `tools_unfinished`         | A function with `call`: the call was sent and then failed, and the tool is marked `reads`. Trying again under a new run id is safe                                                                                                |
+| `conflict`, kind `effect_unknown`              | The same, for a tool not marked `reads`, which may have changed something. No retry on status 503 matches it; a person, or a workflow rule that names the kind, decides                                                           |
+| `unavailable`, kind `requests_full`            | The playbook already has as many open requests as the runtime allows: 10,000 unless its operator sets another number with `INTERACTION_OPEN_REQUESTS`                                                                             |
+| `rejected` as `unanswered`, kind `expired`     | Nobody answered the request before it expired                                                                                                                                                                                     |
+| `rejected` as `unanswered`, kind `undelivered` | Every attempt to deliver a notification failed                                                                                                                                                                                    |
+| `rejected` as `cancelled`                      | `cancel_run` cancelled the run, or the workflow that waited for it ran out of time or ended first                                                                                                                                 |
+| `failed`                                       | The runtime itself broke down                                                                                                                                                                                                     |
 
 More rules:
 
@@ -499,7 +515,7 @@ The run's history shows, in order:
 1. `interaction_requested`: the delivery, the party, the size of the message, whether it takes an answer, and the expiry.
 2. Each delivery attempt as `delivery_started`, with the tool and the size and digest of its arguments, and then how it ended:
    - `delivery_succeeded`, with the size and digest of what the tool returned. Where the delivery writes `sent`, it also shows what the message was delivered as and where its replies are read.
-   - `delivery_failed`, with `because` (`tool_error`, `arguments_refused`, `server_failure`, `timed_out`, `tool_not_offered` or `lost`), its words, and the wait a server asked for as `retry_after_ms`.
+   - `delivery_failed`, with `because` (`tool_error`, `arguments_refused`, `server_failure`, `timed_out`, `too_large` for an answer larger than one call may take, `tool_not_offered` or `lost`), its words, and the wait a server asked for as `retry_after_ms`.
    - `delivery_refused`, with `because` `too_large` or `unworkable`.
 3. The answer as `request_answered`, with the answer, the claim and, for a reply, its identity.
 4. Each refused reply as `reply_refused`, with the reply's identity and never its words.

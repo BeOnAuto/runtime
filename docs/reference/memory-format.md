@@ -147,7 +147,7 @@ A run of a `remember` block renders its fields from its input and keeps the text
 
 With `replaces`, it keeps the text as the next version of that memory, under the same id, and answers that version. A recall finds the latest version alone.
 
-A scope keeps at most 10,000 memories. A new memory past that is refused as `unavailable`, of the kind `memories_full`, until some are forgotten. A new version of a memory is never refused for it.
+A scope keeps at most 10,000 memories, and an expired memory counts among them until it is forgotten. A new memory past that is refused as `unavailable`, of the kind `memories_full`, until some are forgotten. A new version of a memory is never refused for it.
 
 ## Recalling
 
@@ -169,7 +169,7 @@ A run of a `recall` block renders its words and its tags, and answers the memori
 }
 ```
 
-- A memory recalled is kept, not expired, has every tag asked and holds every word asked. Words are compared without regard to case or form, in their Unicode compatibility form and with Unicode full case folding, so `STRASSE` finds `Straße`, and `İstanbul` is found by `i̇stanbul`, with its dotted `i`, not by `istanbul`.
+- A memory recalled is kept, not expired, has every tag asked and holds every word asked anywhere in its text, even inside a longer word, so `price` also finds `overpriced`. Words are compared without regard to case or form, in their Unicode compatibility form and with Unicode full case folding, so `STRASSE` finds `Straße`, and `İstanbul` is found by `i̇stanbul`, with its dotted `i`, not by `istanbul`.
 - Memories come newest first, by when their latest version was written.
 - A recall stops at the first memory that would take its text past `most_characters`.
 - It reads at most the 2,000 newest memories of each scope it recalls from.
@@ -218,7 +218,7 @@ Beside its functions, a playbook serves its memory as operations, relative to `/
 
 The fields of `remember` take the bounds of a document's literals, each refused at its field, `invalid_input`. Its `expires` is counted from the moment it is asked. A `replaces` naming a memory that is not among the scope's memories is refused as `not_found`; one naming a memory forgotten, erased or moved, as `conflict`, in words that say which.
 
-Each call your agent makes of `remember`, `recall` or `forget` is one action of the runtime, counted under the operation and what it acts on, `remember:<id>` for a new memory and `remember:` with an id of its own for each new version, `recall:<id>` and `forget:<id>`; a call refused before it acts, such as a field out of bounds, a full scope or a `replaces` or a `forget` that names no memory, is not counted; a run of a memory function counts once, as every run does. These actions never count against the free rate of a runtime that holds no license.
+Each call your agent makes of `remember`, `recall` or `forget` counts once on the runtime's meter, as a run does, and so does each run of a memory function. On hosted Auto, each of them uses one credit, and [Pricing](https://on.auto/pricing) explains what credits cover. A call refused before it acts is not counted, such as one with a field out of bounds, a `remember` into a full scope, or a `replaces` or a `forget` that names no memory. A runtime without a license key, or one that has fallen back to the free rate, admits your agent's memory calls without counting them among its first 100 runs or toward its free rate. [What is counted](../self-host/licensing.md#what-is-counted) sets out the meter's rules.
 
 ## Forgetting and erasing
 
@@ -269,7 +269,7 @@ A fact a memory function's run records names the run and the function; a fact an
 
 ## In a workflow
 
-A workflow calls a memory function as it calls any function, with `call: run_definition` and `type: memory`; see [Calling a function](workflow-format.md#calling-a-function). A step that remembers gives the next step the memory's id; a step that recalls gives it the memories, which a reasoning function reads with the `memories` filter. A memory function reaches nothing outside the playbook. A run that remembers keeps a new memory each time it runs, so a retry policy that runs it again keeps it again: write `replaces` where the memory should be kept once.
+A workflow calls a memory function as it calls any function, with `call: run_definition` and `type: memory`; see [Calling a function](workflow-format.md#calling-a-function). A step that remembers gives the next step the memory's id; a step that recalls gives it the memories, which a reasoning function reads with the `memories` filter. A memory function reaches nothing outside the runtime. A run that remembers keeps a new memory each time it runs, so a retry policy that runs it again keeps it again: write `replaces` where the memory should be kept once.
 
 A `replaces` that renders empty is no id, so the run ends `conflict` as `unworkable`; it never keeps a new memory instead. To keep one memory of a thing, whether or not it was kept before, recall it first, then call one of two memory functions with `if`: one that remembers it anew, and one whose `replaces` is `'{{ input.kept }}'`. These steps keep a café's delivery details, tagged with the café, through `recall-cafe`, `remember-cafe` and `refresh-cafe`:
 

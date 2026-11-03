@@ -13,19 +13,19 @@ import {
 import { instructionsActingAs, instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,161 characters on /mcp, 1,162 on the org endpoint and 892 on the playbook endpoint after their opening line', () => {
+  it('take 1,263 characters on /mcp, 1,264 on the org endpoint and 892 on the playbook endpoint after their opening line', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1162, 892, 1161]);
+    ).toEqual([1264, 892, 1263]);
   });
 
-  it('take 1,291, 1,292 and 1,022 with the opening line of the person the bound holds, which takes 130 of them', () => {
+  it('take 1,393, 1,394 and 1,022 with the opening line of the person the bound holds, which takes 130 of them', () => {
     expect(
       everyEndpoint.map(
         ([endpoint, served]) =>
           instructionsActingAs(callerTheInstructionsHold, endpoint, served, { definitionTypes, pages: false }).length,
       ),
-    ).toEqual([1292, 1022, 1291]);
+    ).toEqual([1394, 1022, 1393]);
   });
 });
 
@@ -72,7 +72,7 @@ describe('what the instructions say of calling a tool', () => {
 describe('the instructions of an endpoint that lists search and add_connection', () => {
   const connecting = [
     "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links.",
-    'A service cannot be connected when no provider or server matches.',
+    "Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
   ].join(' ');
 
   it('say after the sentence on the guides that search finds the provider of a service and add_connection connects it, on /mcp and the org endpoint', () => {

@@ -40,12 +40,14 @@ No trigger has an input of its own. A run that a schedule starts gets only `{ "s
 - A workflow started by an event takes its data from the event. `input.from` shapes the run's input before the first step.
 - A workflow that your agent also runs tells the two apart in `input.from`, as steps 1 and 6 show.
 
-A run that a trigger starts acts as the playbook itself, not as you. Its `started_by` names the playbook: its `id` is `playbook:` followed by the playbook's id, and its `name` the playbook's id, and its steps can read and write that playbook and nothing else. It is kept in the playbook's history like any other run.
+A run that a trigger starts acts as the playbook itself, not as you. Its `started_by` names the playbook: the `id` is `playbook:` followed by the playbook's id, and the `name` is the playbook's id. The run's steps can read and write that playbook and nothing else. The run is kept in the playbook's history like any other run.
 
 ### Overlap and cost
 
 - A schedule has one run at a time. A time that falls due while its previous run still runs is skipped.
-- Each run may call models and send requests to people. Test with a short schedule, and replace it once it has started a run.
+- Each run counts toward usage, and so does each run of a function or workflow that one of its steps calls. On hosted Auto, runs use your organization's credits, and so do the model calls they make; [Pricing](https://on.auto/pricing) explains what each costs.
+- Each run may also send requests to people. Test with a short schedule, and replace it once it has started a run.
+- When a usage limit stops a run that a trigger would start, such as once the organization's credits or a self-hosted runtime's free runs are spent, that run never starts and is not tried again.
 - Event triggers have limits on how many runs they start, how many filters they take and how long a chain of runs may grow. [Trigger limits](../reference/workflow-format.md#trigger-limits) lists them.
 
 What a trigger did not start is recorded as a `reaction_refused` event of the workflow, which `list_playbook_events` shows.
@@ -74,18 +76,18 @@ small workflow, with a page that shows what each of its runs did. Tell me which
 you chose, and show me the document before saving it.
 ```
 
-For example, a workflow that takes a campaign can fill in a fixed one when a schedule starts it. If the workflow already has an input schema, one that requires no field the schedule's input lacks, `from` goes beside its `schema`:
+For example, a workflow that takes a campaign can fill in a fixed one when a schedule starts it. If the workflow already has an input schema, and that schema requires no field the schedule's input lacks, `from` goes beside its `schema`:
 
 ```yaml
 input:
   from: '${ $data.schedule ? { campaign: "autumn-reporting-trial" } : $data }'
 ```
 
-A workflow whose input schema requires a field the schedule's input lacks takes a small scheduled workflow instead. The schema checks the input of every run your agent or another workflow starts, so the test in step 2, which gives the schedule's input, would be refused before it starts, while the call the small workflow makes gives the fields the schema requires. [Example: review a standing brief every Monday](#example-review-a-standing-brief-every-monday) shows a small scheduled workflow.
+A workflow whose input schema requires a field the schedule's input lacks takes a small scheduled workflow instead. The schema checks the input of every run that your agent or another workflow starts. The test in step 2 gives the schedule's input, so the schema would refuse it before it starts. The small workflow's call gives the fields the schema requires, so it passes. [Example: review a standing brief every Monday](#example-review-a-standing-brief-every-monday) shows a small scheduled workflow.
 
 ### 2. Test it with a schedule's input
 
-Before you turn on a schedule, run the workflow once with the input a schedule would give it. If you added a small scheduled workflow, run that one: its call of your workflow is checked against your workflow's input schema exactly as the call it makes when the schedule starts it will be. Ask:
+Before you turn on a schedule, run the workflow once with the input a schedule would give it. If you added a small scheduled workflow, run that one instead. Its call of your workflow is checked against your workflow's input schema, just as it will be each time the schedule starts the small workflow. Ask:
 
 ```text
 Run the "<workflow name>" workflow in my "<playbook name>" playbook with the
@@ -420,7 +422,7 @@ page:
 ## If something goes wrong
 
 - **No run at the time you expected.** Check that the schedule names your `time_zone`, since without one its times are in UTC, and that Auto was running then. A time that falls due while the trigger's previous run still runs is skipped. After Auto was stopped, only the latest of the times it missed runs.
-- **No run after you published an event.** The filter's `type` must match the event's type exactly, and events recorded before the trigger was saved never start it. Ask the agent to list the playbook's events of the type `reaction_refused` with `list_playbook_events`. They say what a trigger did not start and why, such as "the run its every schedule started before still runs".
+- **No run after you published an event.** The filter's `type` must match the event's type exactly, and events recorded before the trigger was saved never start it. Ask the agent to list the playbook's events of the type `reaction_refused` with `list_playbook_events`. They say what a trigger did not start and why, such as "The workflow could not be started by its event trigger:" followed by the reason.
 - **A run started and was rejected.** Ask the agent for the run's rejection. A rejection for its input means the steps did not get what they expect. A scheduled run gets only its due time, and a run an event started gets a list holding the event. Give it its input as in step 1, or shape it with `input.from` as in step 6.
 - **A workflow does not start for its own events.** That is by design. A workflow does not start for its own runs, for runs they started, or for events its runs emit.
 - **Requests pile up.** Each run of a workflow that asks for an approval sends a request, which `list_interactions` shows while it is open. Replace a test trigger once it has started its first run, and cancel the runs you do not need.

@@ -133,7 +133,7 @@ Review this brief for its audience, offer and channel, a budget of at most USD 1
 
 The interaction function `approve-campaign-brief` is the example of the [interaction function format](interaction-format.md#a-function-document). It gives the owner two days to answer in the team chat: `{ verdict: approve | revise, note? }`.
 
-Save the two functions first: `create_definition` takes each one's `type` (`reasoning` or `interaction`), `name` and document as `source`. Then save the workflow with `type: "workflow"` and the name `review-and-approve`. `run_definition` takes the same type and name, with `brief` and `owner` in `input`. The run then:
+Save the two functions first. `create_definition` takes each one's `type` (`reasoning` or `interaction`), `name`, document as `source`, and `diagram`: a Mermaid flowchart or state diagram of how it works, or the word `none`. A function saved without one is refused. Then save the workflow, which takes no diagram, with `type: "workflow"` and the name `review-and-approve`. `run_definition` takes the same type and name, with `brief` and `owner` in `input`. The run then:
 
 1. Reviews the brief. A review that raises status 503 is tried again after 5, 10 and 20 seconds. After the third retry, the run raises its own error; [Errors, retries and timeouts](#errors-retries-and-timeouts) explains this pattern.
 2. Asks the owner to approve the review. The interaction function's run posts the request in the chat, and the workflow waits for the answer without using server resources. The owner answers by replying in the thread of the message, or through their agent with `answer_interaction`, such as `{ "verdict": "approve" }`; see [Interaction function format](interaction-format.md).
@@ -165,7 +165,7 @@ An approval, or any other question for a person or a system, is an interaction f
 - The input schema holds the rules of the fields the steps need; a field's `description` and `examples` are what a person is shown when it is refused. Output is not checked against `output.schema`.
 - `output.shape`, the runtime's own beside the DSL's keys, names an [output shape](output-shapes.md): `series`, `categories`, `table`, `text` or `memories`. Its schema is published as the definition's `output_schema`, and `output.schema` beside it is refused. When the run ends, its output, after `output.as`, is checked against the shape; one that does not match ends the run `rejected` as `conflict` of the kind `unworkable`, naming the issues. A task's `output` takes no shape.
 - Schemas are written inline under `document`, as JSON Schema.
-- `document.version` is part of the document you write. The definition's `version` counts saved changes: it is 1 when the workflow is created and increases each time `update_definition` changes the document.
+- `document.version` is part of the document you write. The definition's `version` counts saved changes: it is 1 when the workflow is created and increases each time `update_definition` changes the document or [the overview](#the-overview).
 
 ## Triggers
 
@@ -250,11 +250,11 @@ Each filter is held to its own bounds, and its failure affects no other workflow
 - A workflow's event trigger starts at most 60 runs of it a minute, across its filters. More wait for a later minute, up to 1,000 of them; one more is refused. The runs of its schedules are not counted.
 - A schedule trigger has one run at a time. A time that comes due while the schedule's previous run is still running, of this version or an earlier one, is skipped. After the runtime was stopped, only the latest of the times it missed runs.
 - An event and a due time in one moment start two runs, and so do a `cron` and an `every` due at the same time.
-- A start that the playbook refuses, for example once the playbook is retired, is not tried again. One it cannot take at that moment is tried again at each sweep, about twenty times, before it is given up.
+- A start that the playbook refuses, for example once the playbook is retired, or once the organization's credits or a self-hosted runtime's free runs are spent, is not tried again. An event trigger's start the playbook cannot take at that moment is tried again at each sweep, about twenty times; a schedule records such a start as refused and moves on.
 
 When a trigger does not start a run, the playbook records a `reaction_refused` event of its workflow, at most once a minute. The event counts the runs not started and gives the last reason, which names the trigger by its kind. `list_playbook_events` shows it beside the runs triggers started.
 
-The runtime's meter counts every run, and each function or workflow a step calls is a run of its own. A runtime you host without a license key has 100 runs, then 15 a UTC day and 75 a UTC month. When the meter refuses a run a trigger would start, because those runs or the organization's credits are spent, that run never starts and is not tried again. A step's call waits and asks again instead; see [When the runtime will not start the run for now](#when-the-runtime-will-not-start-the-run-for-now). [Self-hosted licensing reference](../self-host/licensing.md) gives every rule of the meter.
+The runtime's meter counts every run, and each function or workflow a step calls is a run of its own. A step's call that the meter refuses waits and asks again; see [When the runtime will not start the run for now](#when-the-runtime-will-not-start-the-run-for-now). [Pricing](https://on.auto/pricing) explains an organization's credits, and the [Self-hosted licensing reference](../self-host/licensing.md) gives the rules of a runtime you host.
 
 ## Tasks
 
@@ -344,9 +344,9 @@ Each sentence is plain text, not an expression. Quote one that contains `: ` or 
 
 ### Calling a function
 
-`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`lookup`](lookup-format.md), [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`computation`](computation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
+`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`lookup`](lookup-format.md), [`memory`](memory-format.md), [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`computation`](computation-format.md), [`generation`](generation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
 
-The task's output is that run's output: a reasoning function's text or JSON, what a lookup function's tool answered, an interaction function's answer from its tool or its request, a prediction function's series, the value a computation function's program gave, or the output of the workflow it ran.
+The task's output is that run's output: a reasoning function's text or JSON, what a lookup function's tool answered, the memories a memory function recalled or the id of the memory it kept, an interaction function's answer from its tool or its request, a prediction function's series, the value a computation function's program gave, a generation function's reference to its asset, or the output of the workflow it ran.
 
 Each time the task runs, including on a retry, it starts a separate run of the function, recorded under its own `run_id`. That run acts for the caller who started the workflow, with the permissions that caller had when the workflow started, and names that caller, by id and name, as its `started_by`. It carries `within`, the workflow's `run_id` and the step, and `list_runs` lists it unless given `steps: false`.
 
@@ -356,10 +356,12 @@ Some runs finish within their call, and others later. A task waits for the longe
 | ------------------------------------------ | --------------- | ------------------------------------------------------------------ |
 | A reasoning function                       | Within its call | Its model's deadline, or its tool loop's bound when it names tools |
 | A lookup function                          | Within its call | 70 seconds                                                         |
+| A memory function                          | Within its call | 10 minutes                                                         |
 | An interaction function that calls a tool  | Within its call | 70 seconds                                                         |
 | An interaction function that asks a person | Later           | The `expires` of its document                                      |
 | A computation function                     | Within its call | 10 seconds                                                         |
 | A prediction function's question           | Within its call | 10 seconds                                                         |
+| A generation function                      | Within its call | 300 seconds                                                        |
 | A workflow                                 | Later           | The longest a run may last                                         |
 
 - A run that finishes later records the task that waits for it. Its ending reaches the task whenever it comes and on whichever server it is recorded. While the task waits, it holds none of the calls the server runs at once. A restart of the server does not start the run again.
@@ -386,28 +388,22 @@ The run stays `started` while it waits. Its history and the events of the playbo
 
 A run of the function that does not succeed raises an error the workflow can catch:
 
-| The function's run                                         | Error type                                   | Status |
-| ---------------------------------------------------------- | -------------------------------------------- | ------ |
-| Rejected with `invalid_input`                              | `validation`                                 | 400    |
-| Rejected with `forbidden`                                  | `authorization`                              | 403    |
-| Rejected with `not_found`                                  | `configuration`                              | 404    |
-| Rejected with `conflict`                                   | `runtime`                                    | 409    |
-| Rejected with `conflict` of the kind `tools_called`        | `https://on.auto/problems/tools_called`      | 409    |
-| Rejected with `conflict` of the kind `effect_unknown`      | `https://on.auto/problems/effect_unknown`    | 409    |
-| Rejected with `conflict` of the kind `credits_exhausted`   | `https://on.auto/problems/credits_exhausted` | 409    |
-| Rejected with `conflict` of the kind `license_required`    | `https://on.auto/problems/license_required`  | 409    |
-| Rejected with `conflict` of the kind `license_invalid`     | `https://on.auto/problems/license_invalid`   | 409    |
-| Rejected with `conflict` of the kind `account_closed`      | `https://on.auto/problems/account_closed`    | 409    |
-| Rejected with `unavailable`                                | `communication`                              | 503    |
-| Rejected with `unavailable` of the kind `tools_unfinished` | `https://on.auto/problems/tools_unfinished`  | 503    |
-| Rejected with `unavailable` of the kind `rebuilding`       | `https://on.auto/problems/rebuilding`        | 503    |
-| Rejected with `cancelled`                                  | `https://on.auto/problems/cancelled`         | 409    |
-| Rejected with `unanswered`                                 | `https://on.auto/problems/unanswered`        | 410    |
-| Ran past the wait of its task                              | `timeout`                                    | 408    |
-| Failed                                                     | `runtime`                                    | 500    |
-| Could not be reached                                       | `communication`                              | 503    |
+| The function's run                                                                                                                                    | Error type                            | Status |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- | ------ |
+| Rejected with `invalid_input`                                                                                                                         | `validation`                          | 400    |
+| Rejected with `forbidden`                                                                                                                             | `authorization`                       | 403    |
+| Rejected with `not_found`                                                                                                                             | `configuration`                       | 404    |
+| Rejected with `conflict`                                                                                                                              | `runtime`                             | 409    |
+| Rejected with `conflict` of the kind `tools_called`, `effect_unknown`, `credits_exhausted`, `license_required`, `license_invalid` or `account_closed` | `https://on.auto/problems/<kind>`     | 409    |
+| Rejected with `unavailable`                                                                                                                           | `communication`                       | 503    |
+| Rejected with `unavailable` of the kind `tools_unfinished` or `rebuilding`                                                                            | `https://on.auto/problems/<kind>`     | 503    |
+| Rejected with `cancelled`                                                                                                                             | `https://on.auto/problems/cancelled`  | 409    |
+| Rejected with `unanswered`                                                                                                                            | `https://on.auto/problems/unanswered` | 410    |
+| Ran past the wait of its task                                                                                                                         | `timeout`                             | 408    |
+| Failed                                                                                                                                                | `runtime`                             | 500    |
+| Could not be reached                                                                                                                                  | `communication`                       | 503    |
 
-The status is the workflow error's own. It equals the HTTP status of the same rejection except for `invalid_input`: the HTTP API responds 422, while a workflow raises a `validation` error of status 400. A `catch` for that rejection matches status 400 or the `validation` type, never 422. The error's `title` names the definition and what its run did, in plain words, such as `The computation function month-window refused its input`. Its `detail` carries the detail the run gave. A rejection that has a kind carries it as the error's `kind`, and its cause as `because`, as the [HTTP problem document](http.md#responses-and-errors) does. `when: '${ $error.kind == "tool_not_offered" }'` handles only that kind, and `${ $error.because }` names why.
+The status is the workflow error's own: the HTTP status of the same rejection, except that `invalid_input`, 422 over HTTP, is raised as a `validation` error of status 400, so a `catch` for it matches status 400 or the `validation` type, never 422. The error's `title` names the definition and what its run did, such as `The computation function month-window refused its input`, and its `detail` carries the detail the run gave. A rejection that has a kind carries it as the error's `kind`, and its cause as `because`, as the [HTTP problem document](http.md#responses-and-errors) does. `when: '${ $error.kind == "tool_not_offered" }'` handles only that kind, and `${ $error.because }` names why.
 
 A function that called tools may have changed something outside the playbook, so a run of it that called tools and did not succeed is never run again under its run id ([Retrying under a run id](http.md#retrying-under-a-run-id)). In a workflow:
 
@@ -417,7 +413,7 @@ A function that called tools may have changed something outside the playbook, so
 
 Other function types:
 
-- The refusals of a [lookup](lookup-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and which a retry may resolve, are under In a workflow on its page.
+- The refusals of a [lookup](lookup-format.md#in-a-workflow), [memory](memory-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and what a retry of it does, are under In a workflow on its page.
 - A prediction function's question counts every run that ended before it started, as in [this example](prediction-format.md#forecast-from-a-run-the-workflow-just-recorded).
 - A run that was cancelled raises `https://on.auto/problems/cancelled` with the kind of its cancellation: `requested`, `deadline`, `overrun` or `parent_ended` ([How a run ends](#how-a-run-ends)). Catch it on purpose, for example with `errors: { with: { type: https://on.auto/problems/cancelled } }` and `when: '${ $error.kind == "requested" }'`. Uncaught, it rejects the workflow as `invalid_input`, by its status 409, not as `cancelled`, since the workflow itself was not cancelled.
 - A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.
@@ -506,7 +502,7 @@ A `try` task runs its `try` list. Its `catch` takes optional `errors.with`, `as`
 
 Those conditions read the task's input as `$data` and `$input`, and the error as `$error`, or under the name given in `catch.as`. An error that is not caught passes to the enclosing `try`, or ends the run.
 
-A `catch` that names none of `errors.with`, `when` and `exceptWhen` catches every error, including the problem types of a function's run: `cancelled`, `unanswered`, `tools_called`, `effect_unknown`, `tools_unfinished` and `rebuilding`. Those are not short types, so a `catch` of the `runtime` or `communication` type does not take them; one that names only a status takes each that has that status.
+A `catch` that names none of `errors.with`, `when` and `exceptWhen` catches every error, including the [problem types of a function's run](#when-the-function-s-run-does-not-succeed). Those are not short types, so a `catch` of the `runtime` or `communication` type does not take them; one that names only a status takes each that has that status.
 
 When a caught error has a `retry` policy that allows another attempt, the run waits for the retry delay and runs the whole `try` list again from its first task. When no retry remains, `catch.do` runs with the task's input and the error, and its output becomes the task's output.
 
@@ -665,7 +661,7 @@ An overview holds 1 character to 16,384 bytes in UTF-8. The version keeps it as 
 
 ## Its page
 
-A workflow's page is the `page` key of its document, written with the document and saved with it. It shows the person what each run achieved:
+A workflow's page is the `page` key of its document, written and saved with it. It shows the person what each run achieved:
 
 - `result`: the business outcome of the run, as a headline and its key figures.
 - `runs`: the main number of each period, with its breakdowns.
@@ -684,25 +680,24 @@ Show numbers over time as a chart keyed by the period a run is about, and anythi
 
 The rejection gives a `reason`, and a `kind` where it has one:
 
-| Reason          | Kind                             | When                                                                       |
-| --------------- | -------------------------------- | -------------------------------------------------------------------------- |
-| `invalid_input` | None                             | An uncaught error had a 4xx status other than 408 and 429                  |
-| `invalid_input` | `input_schema`                   | Its input schema refused the input a caller gave, before any step ran      |
-| `unavailable`   | None                             | Any other uncaught error, such as a `timeout`                              |
-| `unavailable`   | `tools_unfinished`, `rebuilding` | An uncaught error of the problem type of that kind                         |
-| `conflict`      | `effect_unknown`, `tools_called` | An uncaught error of the problem type of that kind                         |
-| `conflict`      | `oversized`                      | Its output is larger than 1,048,574 bytes as JSON                          |
-| `conflict`      | `unworkable`                     | Its output does not match the shape its `output.shape` names               |
-| `cancelled`     | `requested`                      | `cancel_run` cancelled it                                                  |
-| `cancelled`     | `deadline`                       | The workflow that waited for it ran out of time                            |
-| `cancelled`     | `overrun`                        | It was still running at the longest a run may last                         |
-| `cancelled`     | `parent_ended`                   | The workflow waiting for it ended first, or its waiting branch lost a race |
-| `unanswered`    | `expired`, `undelivered`         | It did not catch an unanswered request of an interaction function          |
+| Reason          | Kind                                                                                                           | When                                                                       |
+| --------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `invalid_input` | None                                                                                                           | An uncaught error had a 4xx status other than 408 and 429                  |
+| `invalid_input` | `input_schema`                                                                                                 | Its input schema refused the input a caller gave, before any step ran      |
+| `unavailable`   | None                                                                                                           | Any other uncaught error, such as a `timeout`                              |
+| `unavailable`   | `tools_unfinished`, `rebuilding`                                                                               | An uncaught error of the problem type of that kind                         |
+| `conflict`      | `effect_unknown`, `tools_called`, `credits_exhausted`, `license_required`, `license_invalid`, `account_closed` | An uncaught error of the problem type of that kind                         |
+| `conflict`      | `oversized`                                                                                                    | Its output is larger than 1,048,574 bytes as JSON                          |
+| `conflict`      | `unworkable`                                                                                                   | Its output does not match the shape its `output.shape` names               |
+| `cancelled`     | `requested`                                                                                                    | `cancel_run` cancelled it                                                  |
+| `cancelled`     | `deadline`                                                                                                     | The workflow that waited for it ran out of time                            |
+| `cancelled`     | `overrun`                                                                                                      | It was still running at the longest a run may last                         |
+| `cancelled`     | `parent_ended`                                                                                                 | The workflow waiting for it ended first, or its waiting branch lost a race |
+| `unanswered`    | `expired`, `undelivered`                                                                                       | It did not catch an unanswered request of an interaction function          |
 
-- A rejection of the kind `tools_unfinished`, `effect_unknown` or `rebuilding` keeps the error's `because`. A rejection's `detail` gives the error's title, or else its type, then the step that raised it by its name, then its detail, such as `The brief is not usable, at the step stop: Missing: audience.`
+- A rejection of a kind with its own problem type, other than `tools_called`, keeps the error's `because`. A rejection's `detail` gives the error's title, or else its type, then the step that raised it by its name, then its detail, such as `The brief is not usable, at the step stop: Missing: audience.`
 - A step whose function refused its input keeps its `issues`, each at its pointer and in the field's words: `The computation function month-window refused its input, at the step work-out-month: month, The month to report on: expected at least 6 characters.` A workflow that called it reads `The workflow monthly stopped, at the step report: ` before those words.
 - A cancelled run's `detail` says why, in the words of whoever cancelled it.
-- A call rejected with `invalid_input`, or a cancellation of a run it called, that is not caught rejects it as `invalid_input`.
 
 ### Starting and cancelling a run
 
@@ -711,7 +706,8 @@ The rejection gives a `reason`, and a `kind` where it has one:
 - A start the server cannot take at that moment is refused `unavailable`: "The workflow cannot start now; try again shortly".
 - `cancel_run` cancels a workflow run that has not ended, from any server. The request is recorded at once, so it outlasts a restart. The run stops its tasks and cancels each run it waits for with the kind `parent_ended`. Within a moment it ends `rejected` as `cancelled`, unless it ends first.
 - `cancel_run` cancels the run of an interaction function whose request waits in the same way.
-- A run that has ended, or a run of a function that finishes within its call, cannot be cancelled.
+- `cancel_run` also cancels the run of a reasoning function that is still `started`; [Cancelling a run](http.md#cancelling-a-run) says when it stops.
+- A run that has ended cannot be cancelled, and neither can any other run that finishes within its call.
 
 ## Limits
 

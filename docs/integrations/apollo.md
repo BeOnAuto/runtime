@@ -161,7 +161,7 @@ Check that each call to the graph appears there, with the tool, its arguments an
 
 - **A required input is missing.** Compare the function's input schema with the mapping your agent made.
 - **A graph operation is not available to your agent.** Check which Apollo server the agent is connected to and the permissions of that connection before you change the function.
-- **`search` does not show `graph`, or shows it as unavailable.** Check that the entry's `org` and `playbooks` cover the playbook, and the key in `.env`. `key_refused` means Apollo did not accept the key. [Add a tool server](../self-host/tool-servers.md#if-something-goes-wrong) lists the other causes.
+- **`search` does not show `graph`, or shows it as unavailable.** Ask your agent to list your organization's connections. `pending` means nobody has approved `graph` yet: open its Studio link, or ask your agent to reconnect it for a new link, and enter the key. `broken`, of the kind `credential_refused`, means Apollo did not accept the key: ask your agent to reconnect `graph`, and enter the key again on the page it links. Where the connection names some playbooks, check that this playbook is one of them. [How a function uses a connection](../self-host/connections.md#how-a-function-uses-a-connection) lists the other causes.
 - **The function's answer says a field was denied.** The application's policy in Apollo refused it. Change the policy in Apollo, not the function.
 
 ## Next

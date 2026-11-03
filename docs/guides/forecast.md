@@ -54,7 +54,7 @@ You should see a document of YAML front matter between `---` lines and nothing a
 
 Approve it, and the agent saves it with `create_definition`. A save that breaks a rule is refused at its line, and nothing is saved.
 
-The playbook then builds the function's dataset from its history: one row for each series and period. `get_definition` shows it under `standing.dataset`, `rebuilding` at first and `live` once it has read the history.
+The playbook then builds the function's dataset from its history: one row for each series and period. `get_definition` shows its `phase` under `standing.dataset`: `waiting` until the build starts, `rebuilding` while the build reads the history, and `live` once the history is read.
 
 ## 3. Ask for a forecast
 
@@ -68,7 +68,7 @@ Ask the "<function name>" function in my "<playbook name>" playbook for
 The agent runs the function with a question, such as `{ "series": "north", "horizon": 1 }`, and the run returns the forecast at once. Without `horizon`, it forecasts every horizon the function names. The forecast is a series, which the function's page draws where Auto Studio shows the run, with its lines named in your words, as [The lines on a page](../reference/prediction-format.md#the-lines-on-a-page) shows. Read it like this:
 
 - `origin` is the last observed period, the one before the period you asked in.
-- The `observed` line holds the last periods of the data up to the origin, twice the longest horizon unless the document's `predicts.history` says how many.
+- The `observed` line holds the last periods of the data up to the origin: twice the longest horizon, at most the window, unless the document's `predicts.history` says how many.
 - The `predicted` line holds a point for each period forecast. Its `value` is the likely value.
 - Its `low` and `high` are the range meant to hold the true value eight times in ten, or as often as the document's `coverage` says.
 - The run's record names the `method` the forecaster used, the `coverage`, and in `history` the periods it forecast from and the earlier points it checked itself at.
@@ -77,14 +77,17 @@ A function that predicts a total to the end of a period takes no horizon; [A que
 
 ## Keep it current
 
-Nothing needs to be done: every question answers from the dataset as the playbook has folded it then. To change what the function forecasts from, update its document. An edit to the events, the target or the grain starts a new dataset from the history; a wider window or other horizons do not.
+Nothing needs to be done: every question answers from the dataset as it stands when the question is asked. To change what the function forecasts from, update its document. An edit to the events, the target or the period starts a new dataset from the history; a wider window or other horizons do not.
 
 ## If something goes wrong
 
 - **A question is refused `history_too_short`.** The series' history is too short for the forecaster to check its own forecasts on. The refusal names the periods the series has and the first period from which the same question answers, so ask again from then.
 - **A question is refused `dataset_not_ready`.** The dataset is still being built from the playbook's history, so ask again once `get_definition` shows it `live`. With `because: stalled`, it stopped at an event its data test could not take; `get_definition` names the event, and a corrected data part starts a dataset of its own.
 - **A question is refused at `/input/series`.** The dataset holds no row of that series in its window. Check the series' name, as the events spell it.
-- **A forecast leaves out a run that just ended.** A question reads the periods before the one it is asked in. A run read by the time it ran is in the current period, so it counts once that period has passed. A run about a period that has ended counts in any question started after the run ended, as [A run that ended a moment ago](../reference/prediction-format.md#a-run-that-ended-a-moment-ago) says, so a workflow that records the period asks in the next step, with no wait or retry. A run still going when the question starts is not counted.
+- **A forecast leaves out a run that just ended.** A question reads only the periods before the one it is asked in.
+  - A run dated by when it ran (`time: event`) falls in the current period, so it counts once that period has passed.
+  - A run about a period that has ended, with a date of that period in its output, counts in any question started after the run ended, as [A run that ended a moment ago](../reference/prediction-format.md#a-run-that-ended-a-moment-ago) says. So a workflow that records the period asks in the next step, with no wait or retry.
+  - A run still going when the question starts is not counted. Ask once it has ended.
 
 [How a run ends](../reference/prediction-format.md#how-a-run-ends) lists every refusal.
 

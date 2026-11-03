@@ -27,7 +27,7 @@ Each function a step calls has a run of its own, with its own id, so you can ins
 
 ## Starting a run
 
-Your agent puts the work you ask for into a workflow, even if it needs only one step. Its steps use the playbook's functions. The agent runs the workflow and shows you the result; later requests can change that workflow. It runs individual functions separately to test them.
+Your agent puts the work you ask for into a workflow, even if it needs only one step. Its steps use the playbook's functions. The agent runs the workflow and shows you the result; later requests can change that workflow. The agent also runs individual functions on their own to test them.
 
 The agent supplies the workflow's input when it starts a run. The run then continues on its own, and the agent can check on it later. Every step acts for whoever started the run, with the permissions they had when it started.
 
@@ -55,7 +55,7 @@ A run can wait for a function that takes time, for a timer or for an event. It c
 Two kinds of input reach a run that is already waiting, and neither starts a new run:
 
 - an answer to a request that one of its steps made;
-- an event sent to the run, for input that is not an answer, such as a revised brief.
+- an event, for input that is not an answer, such as a revised brief: one sent to the run, or one the playbook records while the run listens for its type.
 
 An approval is an interaction function. The workflow calls it as it calls any function. The function asks the person through a connection they chose, such as a chat message, or holds the request for an agent they answer through, and the workflow waits. The person's answer is the result of that step. If nobody answers before the request expires, the workflow can catch that and take another path.
 

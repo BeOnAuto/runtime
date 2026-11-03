@@ -5,7 +5,10 @@
 These are [Liquid](https://shopify.github.io/liquid/) templates:
 
 - a reasoning function's prompt;
+- a lookup function's texts in `call.with`;
+- a memory function's templates in `remember` and `recall`;
 - an interaction function's `to`, `from` and message, and the templates of the tools it names;
+- a generation function's prompt;
 - a page's `result` and `runs`, which render Markdown; see [Page format](page-format.md#the-templates).
 
 Each format says which variables its templates read. Every template may use the same filters.
@@ -27,7 +30,7 @@ The runtime adds four filters:
 
 A template that names any other filter is refused when it is saved. Not available:
 
-- The date filters. They read the server's clock and time zone, so the same template would render differently on another server. Reasoning, interaction and page templates read `today` and `now` instead.
+- The date filters. They read the server's clock and time zone, so the same template would render differently on another server. Templates read `today` and `now` instead, except those of an interaction function's `replies`, `tell` included, which read neither; [Templates and pointers](interaction-format.md#templates-and-pointers) lists the names each place reads.
 - `sample`, which is random.
 - The digest filters, `strip_html` and the URL encoders.
 - The filters that evaluate an expression given as text, such as `where_exp`.

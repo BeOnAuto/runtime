@@ -33,7 +33,7 @@ In my "<playbook name>" playbook, remember that <the fact, in your words>.
 It is about <this playbook's work, or the team>. Tag it <a word or two>.
 ```
 
-Your agent calls `remember` once a fact, with a short plain text, its tags and its scope. A fact that holds for some days alone can name them, and one that stops mattering can expire, such as after `P90D`.
+Your agent calls `remember` once for each fact, with a short plain text, its tags and its scope. A fact about certain days can name those days in `about`, which recall returns with the memory. A fact that will stop mattering can expire, such as after `P90D`.
 
 ## 2. Recall it
 
@@ -49,7 +49,7 @@ Your agent calls `recall`. It answers the memories that hold every word and have
 
 - When a fact changes, ask your agent to remember the new one in place of the old. It calls `remember` with `replaces`, naming the old memory, and recall finds the new version from then on.
 - When a fact no longer holds, ask your agent to forget it. It calls `forget`, and recall no longer finds it.
-- When something must not be kept at all, ask your agent to erase it. It calls `forget` with `erase`, which also takes the text, the tags and the days out of the playbook's history, every version of it, and leaves who wrote it, when, and its links: the version each replaced and where it was moved from.
+- When something must not be kept at all, ask your agent to erase it. It calls `forget` with `erase`, which also takes the text, the tags and the days of every version out of the memory's history, and leaves who wrote it, when, and its links: the version each replaced and where it was moved from. Runs from before the erasure keep what they recorded: the output of a run that recalled the memory, and the prompt of a reasoning function's run that held it, still hold the text.
 
 ## 4. Remember and recall in a workflow
 

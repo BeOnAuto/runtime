@@ -90,11 +90,13 @@ tool call with its tool, its arguments and how it ended.
 
 Auto marks `run_definition` as destructive, as it marks every tool that does more than read. A function's tools may change something, so your agent's client may ask you to approve the run.
 
-Check the run's status and output. Then check its history, which the agent reads with `list_playbook_events`, given the run's `run_id`. A run that made one call shows these events, oldest first:
+Check the run's status and output. Then check its history, which the agent reads with `list_playbook_events`, given the run's `run_id`. It lists the newest events first, or the oldest first when given `order: asc`. A run that made one call shows these events, oldest first:
 
 - `run_started`: the run started, with its input.
+- `model_call_started` and `model_call_answered`: the model's first turn, whose answer asks for the tool.
 - `tool_call_started`: the call's number, its server and tool, its arguments, and `read_only: true` for a tool marked `reads`.
 - `tool_call_answered`: the tool's answer, its size and how long it took, with `is_error: true` for an error. A call that got no answer shows `tool_call_failed` instead, with a `because`.
+- `model_call_started` and `model_call_answered` again: the model's next turn, after it read the tool's answer.
 - `run_succeeded`: the run finished, with its output.
 
 The agent can read a call's whole arguments and answer with `get_event`, unless the server's entry keeps only their sizes.
@@ -138,7 +140,7 @@ Its `tools` names one tool, so it cannot list the folder. Its page shows each re
 
 ## Connect a provider
 
-Where whoever runs your Auto lets people add connections, `search` also lists the providers you may connect that nothing serves yet: services Auto knows by name, each with a title and a description. It lists them to an agent signed in as you, where you may change the org, or to any agent in local mode; an agent connected with a key, or as someone who may only read, sees none. Ask your agent:
+Where whoever runs your Auto lets people add connections, `search` also lists the providers you may connect that nothing serves yet: services Auto knows by name, each with a title and a description. It lists them to an agent signed in as you, if you may change the organization, or to any agent in local mode. An agent connected with a key, or as someone who may only read, sees none. Ask your agent:
 
 ```text
 Connect the "<provider title>" provider to Auto, so that the functions in my
@@ -147,11 +149,11 @@ Connect the "<provider title>" provider to Auto, so that the functions in my
 
 The agent adds the connection by the provider's name and gives you a link to Studio's page. There you approve it and give its credential, such as a key, which never goes through your agent. When it is connected, start again at [Find the tools](#find-the-tools).
 
-If `search` lists no provider for the service, the agent can add its server by hand instead: its address and how it takes its key, never the key itself. If your Auto does not let people add connections, `search` lists no providers, and you [ask for a tool server](#ask-for-a-tool-server).
+If `search` lists no provider for the service, the agent can add its server by hand instead, from the service's remote MCP address or OpenAPI document and how it takes its key, never the key itself. The [connection reference](../reference/http.md#connections) describes these options. As with a provider, you approve it and give its credential on the Studio page the agent gives you. If your Auto does not let people add connections, `search` lists no providers, and you [ask for a tool server](#ask-for-a-tool-server).
 
 ## Ask for a tool server
 
-For hosted Auto, ask your agent to add a connection using the service's remote MCP address or OpenAPI document. The [connection reference](../reference/http.md#connections) describes these options. Enter credentials on the Studio page the agent gives you. If Auto cannot connect the service, [get in touch](https://on.auto/contact-us) with its name and the error.
+For hosted Auto, if Auto cannot connect the service, [get in touch](https://on.auto/contact-us) with its name and the error.
 
 ::: details For an existing self-hosted deployment
 
@@ -175,7 +177,7 @@ When they confirm, start again at [Find the tools](#find-the-tools).
 ## If something goes wrong
 
 - **`search` lists no server.** No tool server serves your playbook yet. [Connect a provider](#connect-a-provider) it lists, or send the request in [Ask for a tool server](#ask-for-a-tool-server).
-- **`search` shows a server as unavailable.** Its `because` says why. `unreachable`, `failing` or `rate_limited` may pass, so try again later. `key_refused` means the server did not accept Auto's key, and `scope_lacking` that its credential lacks a scope the words name. If it does not pass, send the `because` to whoever runs Auto; [Add a tool server](../self-host/tool-servers.md#if-something-goes-wrong) lists the fixes.
+- **`search` shows a server as unavailable.** Its `because` says why. `connection_pending` means nobody has approved the connection yet: the person who added it opens its link, or reconnects it for a new one. `connection_broken` means its credential no longer works, and the words say what mends it, most often that the person who added it reconnects it. `unreachable`, `failing`, `rate_limited` or `connection_unavailable` may pass, so try again later. `key_refused` means the server did not accept Auto's key, and `scope_lacking` that its credential lacks a scope the words name. For these and any other reason, or one that does not pass, send the `because` to whoever runs Auto; [Add a tool server](../self-host/tool-servers.md#if-something-goes-wrong) lists the fixes.
 - **A tool is missing.** The server's entry does not allow it, or the server does not list it. Ask whoever runs Auto to add it to the entry's `allowed`.
 - **A call returns an error.** The model reads it as a tool error and may recover. Check the arguments with `dry_run`, or call the tool once with `query_connection` or `execute_connection`. With the filesystem server, `ENOENT` means no such file: give the file name alone, as `list_directory` shows it. A name that starts with `briefs/` points to a folder inside `briefs`.
 - **A run ends `unavailable` before the model is called.** The function names a tool that the playbook's servers do not offer, or the server cannot be used. Compare `tools` with what `search` shows.
