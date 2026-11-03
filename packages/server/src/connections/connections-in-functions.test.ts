@@ -54,7 +54,7 @@ describe('an interaction function that delivers through a connection', () => {
 });
 
 describe('the tools of a connection over MCP', () => {
-  it('are searched with the connection named, checked by dry_run and called by execute', async () => {
+  it('are searched with the connection named, checked by dry_run and called by execute_connection', async () => {
     const chat = await chatServer();
     const server = await servingInteractions(agentDelivery, connectionsOnLoopback);
     const id = await connectedWith(server, aSecretHeader('chat', chat.url), `Bearer ${chatKey}`);
@@ -65,7 +65,7 @@ describe('the tools of a connection over MCP', () => {
     const searched = await withMcpSession('current revision', onAcme, (session) => session.callTool('search', {}));
     const [checked, executed] = await withMcpSession('current revision', onAlpha, async (session) => [
       await session.callTool('dry_run', tool),
-      await session.callTool('execute', tool),
+      await session.callTool('execute_connection', tool),
     ]);
 
     expect(decodeStructured(searched).structuredContent).toMatchObject({

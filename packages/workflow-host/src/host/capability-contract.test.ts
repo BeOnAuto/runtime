@@ -73,6 +73,7 @@ interface ContractOne {
     readonly longestAnyRunMs: number;
     readonly reachesOutside: boolean;
     readonly mayChangeOutside: boolean;
+    readonly outsideTheDirectoryListing?: true;
     readonly mostActive: number;
     readonly standing: Standing;
     readonly cancel: CancelDecision;

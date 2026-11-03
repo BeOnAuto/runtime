@@ -9,7 +9,7 @@ import { ForgottenSchema } from './memory-outputs.ts';
 
 const description = [
   'Forgets a memory, so no recall finds it any more; its history still shows that it was kept.',
-  'Use it when the person says a memory is wrong or no longer holds; to correct one instead, remember the new text with `replaces`.',
+  'Use it when the person says a memory is wrong or no longer holds; to correct one, remember the new text with `replaces`.',
   "`erase` true also erases its text from the playbook's ledger, every version of it and wherever it was moved, for what must not be kept at all; who wrote it and when stay.",
   'Forgetting a memory forgotten already answers as before.',
 ].join(' ');

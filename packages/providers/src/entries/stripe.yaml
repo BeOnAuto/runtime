@@ -4,6 +4,7 @@ description: Read and write with the Stripe API methods Stripe's MCP server supp
 website: https://docs.stripe.com/mcp
 type: mcp
 url: https://mcp.stripe.com
+handles_money: true
 credentials:
   - kind: authorization
     issuer: https://access.stripe.com/mcp

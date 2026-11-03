@@ -147,6 +147,7 @@ export { keptContentOf } from './reading/kept-content.ts';
 export { shownData, type EventView } from './reading/shown-data.ts';
 export { ServedAsTool } from './dispatch/served-as-tool.ts';
 export { OperationsServed } from './dispatch/operations-served.ts';
+export { DirectoryListing } from './dispatch/request.ts';
 export type { HandlerServices } from './definition/handler-services.ts';
 export { PlaybookIdSchema, OrgIdSchema } from './caller/identifiers.ts';
 export { IncidentReporter, type CallSummary, type Incident } from './dispatch/incident-reporter.ts';

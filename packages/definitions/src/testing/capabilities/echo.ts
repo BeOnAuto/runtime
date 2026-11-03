@@ -1,7 +1,7 @@
 import { InvalidInput } from '@on.auto/operations';
 import { Effect, Predicate, Result, Schema, SchemaIssue } from 'effect';
 
-import { defineCapability } from '../../index.ts';
+import { defineCapability, type CapabilityDeclaration } from '../../index.ts';
 import { TriggerSchema } from '../../registry/definition-triggers.ts';
 
 const decodeDocument = Schema.decodeUnknownEffect(
@@ -34,7 +34,9 @@ const notAnObject = new InvalidInput({
   issues: [{ detail: 'Expected a JSON object', pointer: '' }],
 });
 
-export const echo = defineCapability({
+type EchoDocument = Effect.Success<ReturnType<typeof parseDocument>>;
+
+export const echoDeclaration: CapabilityDeclaration<EchoDocument> = {
   type: 'echo',
   title: 'Echo',
   guide: { name: 'echo' },
@@ -57,4 +59,6 @@ export const echo = defineCapability({
     Predicate.isObject(input) && !Array.isArray(input)
       ? Effect.succeed({ output: { greeting, input }, record: { greeting } })
       : Effect.fail(notAnObject),
-});
+};
+
+export const echo = defineCapability(echoDeclaration);

@@ -72,11 +72,11 @@ const connectionTools = [
 ];
 
 describe('the tools of connections', () => {
-  it('are five operations on /mcp and on the org endpoint, and neither get_connection nor any of the three of the link', async () => {
+  it("are five operations on /mcp and on the org endpoint, with the two that call a connection's tool inside a playbook on /mcp, and neither get_connection nor any of the three of the link", async () => {
     const [own, org] = [await toolsOn('/mcp'), await toolsOn('/orgs/local/mcp')];
 
     expect([own, org].map((names) => names.filter((name) => name.includes('connection')))).toEqual([
-      connectionTools,
+      [...connectionTools, 'query_connection', 'execute_connection'],
       connectionTools,
     ]);
     expect(

@@ -21,6 +21,7 @@ export interface RegisteredFieldsOf<S extends OperationScope, K extends Operatio
   readonly successStatus: SuccessStatusByKind[K];
   readonly reachesOutside: boolean;
   readonly mayChangeOutside: boolean;
+  readonly readsOnly: boolean;
   readonly irreversible: boolean;
   readonly repeatable: boolean;
   readonly permissions: readonly Permission[];

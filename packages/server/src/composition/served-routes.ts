@@ -10,7 +10,7 @@ import {
   type RegisterRoutes,
   type RetryStateKeys,
 } from '@on.auto/api';
-import type { Capability } from '@on.auto/definitions';
+import { inTheDirectoryListing, type Capability } from '@on.auto/definitions';
 import type { ContentAddressKey } from '@on.auto/identity';
 import {
   makeCatalog,
@@ -29,6 +29,7 @@ type Operations = Parameters<typeof makeCatalog>[0];
 
 export interface ServedCatalog {
   readonly catalog: Catalog;
+  readonly directoryCatalog: Catalog;
   readonly dispatcher: Dispatcher;
   readonly capabilities: readonly Capability[];
   readonly pages: boolean;
@@ -42,6 +43,7 @@ export async function routesFor(
   runtime: AppRuntime<DispatcherServices>,
   {
     catalog,
+    directoryCatalog,
     dispatcher,
     capabilities,
     pages,
@@ -52,6 +54,7 @@ export async function routesFor(
   }: ServedCatalog,
 ): Promise<readonly RegisterRoutes[]> {
   const shelf = await guideShelfFrom(shippedFiles, capabilities, { pages });
+  const directoryShelf = await guideShelfFrom(shippedFiles, inTheDirectoryListing(capabilities), { pages });
   return [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
     openApiDocumentRoutes({ catalog, serverInfo: release, shelf, identityIssuer }),
@@ -64,6 +67,7 @@ export async function routesFor(
       runCall: runtime.run,
       serverInfo: release,
       shelf,
+      directoryListing: { catalog: directoryCatalog, shelf: directoryShelf },
       retryStateKeys,
       reportError: (error) => {
         void runtime.run(logMcpError(error));
@@ -84,6 +88,7 @@ export function routesServing(
   const catalog = makeCatalog(operations);
   const served = {
     catalog,
+    directoryCatalog: catalog,
     dispatcher: makeDispatcher([]),
     capabilities: [],
     pages: false,

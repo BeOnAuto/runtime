@@ -1,8 +1,9 @@
 import { foundPlaybook } from '@on.auto/playbooks';
 import {
   defineDryRun,
-  defineExecute,
+  defineExecuteConnection,
   defineIntrospect,
+  defineQueryConnection,
   defineListConnectionTools,
   defineSearch,
   defineSearchInOrg,
@@ -23,7 +24,8 @@ export function toolOperationsOf(tools: ToolAccess, { offering }: ProvidersOffer
       defineIntrospect(tools),
       defineValidate(tools),
       defineDryRun(tools),
-      defineExecute(tools),
+      defineQueryConnection(tools),
+      defineExecuteConnection(tools),
     ],
   };
 }

@@ -14,11 +14,14 @@ const reportedErrors: string[] = [];
 
 const emptyShelf = guideShelfOf([], [], []);
 
+type Operations = readonly { readonly registration: Registration }[];
+
 interface Serving {
-  readonly operations: readonly { readonly registration: Registration }[];
+  readonly operations: Operations;
+  readonly directoryOperations?: Operations;
 }
 
-function handlerOf({ operations }: Serving) {
+function handlerOf({ operations, directoryOperations = [] }: Serving) {
   return createTestHandler({
     routes: [
       mcpRoutes({
@@ -28,6 +31,7 @@ function handlerOf({ operations }: Serving) {
         serverInfo: testServerInfo,
         retryStateKeys: testRetryStateKeys,
         shelf: emptyShelf,
+        directoryListing: { catalog: makeCatalog(directoryOperations), shelf: emptyShelf },
         reportError: (error) => {
           reportedErrors.push(error.message);
         },
@@ -98,17 +102,25 @@ interface Listing {
   readonly servingWith: (extra: number) => Serving;
 }
 
+function ownOrgToolsFilled(extra: number): Operations {
+  return [
+    ...orgToolsFilled(8, descriptionRoom * 8, longestArgument),
+    ...playbookToolsFilled(29, extra, longestArgument),
+  ];
+}
+
 const listings: readonly Listing[] = [
   {
     endpoint: 'own org',
     path: '/mcp',
-    most: 58_800,
-    servingWith: (extra) => ({
-      operations: [
-        ...orgToolsFilled(8, descriptionRoom * 8, longestArgument),
-        ...playbookToolsFilled(28, extra, longestArgument),
-      ],
-    }),
+    most: 60_000,
+    servingWith: (extra) => ({ operations: ownOrgToolsFilled(extra) }),
+  },
+  {
+    endpoint: 'directory',
+    path: '/directory',
+    most: 59_800,
+    servingWith: (extra) => ({ operations: [], directoryOperations: ownOrgToolsFilled(extra) }),
   },
   {
     endpoint: 'org',
@@ -119,7 +131,7 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'playbook',
     path: '/orgs/acme/playbooks/alpha/mcp',
-    most: 40_800,
+    most: 41_900,
     servingWith: (extra) => ({ operations: playbookToolsFilled(31, extra, longestArgument) }),
   },
 ];

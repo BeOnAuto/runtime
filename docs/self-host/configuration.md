@@ -395,7 +395,7 @@ tool_servers:
 | `security`       | `openapi`        | The credential for each of the document's security schemes that the entry gives, by the scheme's name, placed where the scheme says. Always a reference, such as `${BILLING_API_KEY}` or `ada:${BILLING_PASSWORD}`. See [The credentials of an HTTP API](#the-credentials-of-an-http-api)                                                                                                                                                                                                                                                                                                                                            |
 | `org`            | every type       | Required. The org whose functions may use the server, a list of orgs, or `*` for every org of the runtime. One entry serves each org under one name, with one credential and one connection, and each org sees the same tools                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `playbooks`      | every type       | The playbooks that may use it within each org it names, by id, the same list in each. Every playbook of each org when left out. Refused beside `*`, since a playbook id belongs to one org                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `allowed`        | every type       | The tools of the server that a function may name and that a call made by hand with `execute` may call, each named as the server lists it, without the server's name and without `*`. Every tool of the server when left out                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `allowed`        | every type       | The tools of the server that a function may name and that a call made by hand with `query_connection` or `execute_connection` may call, each named as the server lists it, without the server's name and without `*`. Every tool of the server when left out                                                                                                                                                                                                                                                                                                                                                                         |
 | `marks`          | every type       | The mark of the tools it names, in place of the one their server's hints or their HTTP method give: `reads` lists the tools that only read, `acts` those that may change something, each named as the server lists it. A tool named in neither keeps the mark it is listed with. A name the server does not list is ignored, with a warning in the log at each listing. See [The mark of a tool](#the-mark-of-a-tool)                                                                                                                                                                                                                |
 | `record_content` | every type       | Whether the arguments and results of calls are kept whole, scrubbed of secrets, in the playbook's ledger, where anyone who may read the playbook reads them. `true` when left out; `false` keeps their sizes alone                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `request_id`     | every type       | The response header, or for an MCP server the key of a result's metadata, in which the server returns its own id of a request, recorded with each call                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
@@ -426,7 +426,7 @@ The server scrubs every secret from every message, event and result:
 
 There is one exception: a value shorter than 8 characters is not scrubbed, since scrubbing it would erase ordinary words. Give a server a key at least that long.
 
-One set of secrets serves all the tool servers, for runs and for calls made by hand with `execute` alike, so a token minted for a run is scrubbed from a call made by hand too. A minted token is scrubbed until the token after the one that replaces it is minted, since a call in flight as a token is renewed may still carry the one before it in a result recorded a moment later.
+One set of secrets serves all the tool servers, for runs and for calls made by hand alike, so a token minted for a run is scrubbed from a call made by hand too. A minted token is scrubbed until the token after the one that replaces it is minted, since a call in flight as a token is renewed may still carry the one before it in a result recorded a moment later.
 
 ### Run a server as a process
 
@@ -482,7 +482,7 @@ The server refuses the documents as it reads them, naming the entry, when:
 
 ### How an HTTP API becomes tools
 
-The server reads each `openapi` entry's document the first time a request needs the tool servers, such as a `search`, a call made with `execute`, a run of a function that calls tools, or a request of an interaction function that comes due: at most 4 MiB and 500 operations, within 10 seconds. It refuses the documents, naming the entry, when:
+The server reads each `openapi` entry's document the first time a request needs the tool servers, such as a `search`, a call made by hand, a run of a function that calls tools, or a request of an interaction function that comes due: at most 4 MiB and 500 operations, within 10 seconds. It refuses the documents, naming the entry, when:
 
 - it cannot read the document;
 - the document's URL responds with a redirect, which the server does not follow;
@@ -548,7 +548,7 @@ Listing an HTTP API's tools asks the API nothing: the document is the list.
 `allowed` narrows what a function may name, as `allowed_models` narrows the models. A server's own policy remains the hard boundary.
 
 - A function's `server/*` offers exactly the tools its server's entry allows.
-- `allowed` is the one list of a server's tools. The five operations over the playbook's tool servers, `search`, `introspect`, `validate`, `dry_run` and `execute`, show and call the tools it allows and no other.
+- `allowed` is the one list of a server's tools. The six operations over the playbook's tool servers, `search`, `introspect`, `validate`, `dry_run`, `query_connection` and `execute_connection`, show and call the tools it allows and no other.
 
 ### The mark of a tool
 
@@ -580,11 +580,11 @@ An agent or a person can look at a server's tools, and call one, before a functi
 - `search` shows anyone who may read a playbook the entries that serve it, with the tools that each entry lets functions name. At the org level, a caller who may read every playbook of the org (with `org:read` or `playbook:read`) sees every entry that serves the org, whether the entry names the org in `org` or uses `*`. Each comes with its `playbooks` (`["*"]` when they are left out).
 - `search` and `dry_run` answer the [mark](#the-mark-of-a-tool) of each tool, and `introspect` and `list_connection_tools` its mark and `marked_by` beside the hints its server gives, `list_connection_tools` all but the read-only one, which the mark says.
 - `search` and `introspect` add no header, environment value, URL, command or credential of their own. What a server writes is passed on with the secrets above scrubbed out, except values shorter than 8 characters.
-- `execute` calls one tool as a run would, under the entry's credential, which is the playbook's. So it needs `playbook:write` whatever the tool does, and it is live.
-- While a tool server is configured, `execute` is marked destructive, so a client that honours the MCP hints asks the person before a call.
-- Every call made with `execute` is recorded in the playbook's history under the caller, with its content where the entry keeps it.
+- `query_connection` and `execute_connection` call one tool as a run would, under the entry's credential, which is the playbook's. So they need `playbook:write` whatever the tool does, and the call is live.
+- `query_connection` calls only a tool marked `reads`, so it is marked read-only. `execute_connection` calls a tool whatever its mark, so it is marked destructive, and a client that honours the MCP hints asks the person before a call.
+- Every call made by hand is recorded in the playbook's history under the caller, with its content where the entry keeps it.
 
-[Tool servers](../reference/http.md#tool-servers) in the HTTP reference sets out the routes, fields and permissions of the five tools.
+[Tool servers](../reference/http.md#tool-servers) in the HTTP reference sets out the routes, fields and permissions of the six operations.
 
 ### What the server checks at start
 
@@ -610,7 +610,7 @@ The server checks every entry at start. It stops at any of these, naming the set
 
 An unknown key in an entry is refused, like any other unknown key.
 
-The server does not connect to an MCP server or start a process until a run needs one, or until `search`, `introspect`, `validate`, `dry_run` or `execute` asks it for its tools. The servers' messages, a process's output on stderr and every failed call go to the server's log, scrubbed of the entry's secrets.
+The server does not connect to an MCP server or start a process until a run needs one, or until `search`, `introspect`, `validate`, `dry_run`, `query_connection` or `execute_connection` asks it for its tools. The servers' messages, a process's output on stderr and every failed call go to the server's log, scrubbed of the entry's secrets.
 
 ## Connections
 

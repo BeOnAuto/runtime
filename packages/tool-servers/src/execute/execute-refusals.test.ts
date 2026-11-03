@@ -27,7 +27,7 @@ function executingOn(fake: FakeMcpServer, entry: Readonly<Record<string, unknown
   );
   closing.push(access.close);
   const { call } = playbookToolCalls(access);
-  return (input: unknown, asking = {}) => call('execute', input, asking);
+  return (input: unknown, asking = {}) => call('execute_connection', input, asking);
 }
 
 describe('a tool this playbook is not offered', () => {

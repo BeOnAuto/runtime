@@ -78,7 +78,7 @@ describe('the tools of memories over MCP', () => {
 });
 
 describe('episode 11: asked to keep what the team decided, to ask for it later', () => {
-  it('finds in the instructions of /mcp that what the person wants kept is remembered in a memory function, and a recipe that keeps it so', async () => {
+  it('finds in the instructions of /mcp that a memory function keeps what the playbook recalls later, and a recipe that keeps it so', async () => {
     const { instructions, prompt } = await on('/mcp', async (session) => ({
       instructions: String(session.instructions),
       prompt: Schema.decodeUnknownSync(PromptSchema)(
@@ -86,8 +86,8 @@ describe('episode 11: asked to keep what the team decided, to ask for it later',
       ),
     }));
 
-    expect(sentenceNaming(instructions, 'wants kept')).toBe(
-      'Remember what the person wants kept in a memory function, not your notes.',
+    expect(sentenceNaming(instructions, 'recalls later')).toBe(
+      'A memory function keeps what the playbook recalls later.',
     );
     expect(String(prompt.messages[0]?.content.text)).toContain(
       '2. Keep each fact with remember, one memory a fact, in plain words with a few tags to find it by:',

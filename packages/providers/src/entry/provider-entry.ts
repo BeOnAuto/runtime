@@ -42,6 +42,12 @@ const ProviderEntryFieldsSchema = Schema.Struct({
     description: `For openapi, query parameters sent with every call, ${ofWhoeverRunsIt}`,
   }),
   request_id,
+  handles_money: Schema.optionalKey(
+    Schema.Boolean.annotate({
+      description:
+        'true for a provider whose tools pay, refund, transfer or pay out money, which the directory listing does not offer',
+    }),
+  ),
   marks: marks.annotate({
     description:
       'The mark of each tool named, for the tools the server marks wrongly or not at all: reads for a tool that only reads, acts for one that may change something, each named as the server lists it; for openapi, a tool of the document beside the entries',

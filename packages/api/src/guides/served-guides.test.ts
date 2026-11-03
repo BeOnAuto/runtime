@@ -216,16 +216,16 @@ describe('the recipes that give a playbook tools', () => {
     const texts = recipeTextsOf(served);
 
     expect(String(texts['give-tools'])).toContain(
-      "4. To learn what a tool answers, call it with execute, with the arguments its input_schema takes, and read its `text`: that is what the function's model will see. Never make a function to look. A tool whose `mark` is acts or unmarked may change something, so call it only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+      "4. To learn what a tool answers, call it with the arguments its input_schema takes and read its `text`: that is what the function's model will see. Never make a function to look. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
     );
     expect(String(texts['give-tools'])).toContain(
       'the org it serves, with `allowed` naming the tools a function may call. The server reads them when it starts again.',
     );
     expect(String(texts['first-playbook'])).toContain(
-      "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with execute, and never make a function to look.",
+      "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with query_connection, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3630, 3894,
+      3701, 3903,
     ]);
   });
 });
@@ -235,7 +235,7 @@ describe('the recipes of a server that serves interaction functions', () => {
     const texts = recipeTextsOf(servedWithInteraction);
 
     expect(texts['give-tools']).toContain(
-      "5. Ask the person what the function should do with the tools, and which of them it needs. To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
+      "5. Ask the person what the function should do with the tools, and which of them it needs. To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute_connection gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
     );
     expect(texts['first-playbook']).toContain(
       'give it tools with the give-tools recipe. They can also ask someone through a connection and take their answer with an interaction function.',
@@ -244,8 +244,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4281, 1665, 4219, 1741],
-      [3894, 1665, 3630, 1741],
+      [4290, 1640, 4301, 1741],
+      [3903, 1640, 3701, 1741],
     ]);
   });
 });
@@ -261,7 +261,7 @@ function toolsNamedIn(text: string): readonly string[] {
     ...new Set(
       text
         .replaceAll(/`[^`]*`/gu, '')
-        .match(/\b(?:[a-z]+(?:_[a-z]+)+|search|introspect|validate|execute|remember|recall|forget)\b/gu),
+        .match(/\b(?:[a-z]+(?:_[a-z]+)+|search|introspect|validate|remember|recall|forget)\b/gu),
     ),
   ].filter((name) => !calledWhereListed.has(name) && !fieldsNamed.has(name));
 }

@@ -178,11 +178,18 @@ interface Named {
   readonly provider: string | null;
 }
 
+const handlingMoney: Pick<Providing, 'handles_money'> = { handles_money: true };
+
+function moneyOf(providing: Providing | undefined): Pick<Providing, 'handles_money'> {
+  return providing?.handles_money === true ? handlingMoney : {};
+}
+
 export interface Providing {
   readonly documents: ReadonlyMap<string, ShippedDocument>;
   readonly values: ReadonlyMap<string, Redacted.Redacted>;
   readonly documentServer: string | undefined;
   readonly marks?: ServerEntryFields['marks'];
+  readonly handles_money?: true;
 }
 
 interface Reading {
@@ -212,7 +219,7 @@ export function readPlaced(
   const { org, modelProviders, providing } = reading;
   const read = readEntry(
     name,
-    { ...written, ...marksOf(providing?.marks), type, org },
+    { ...written, ...marksOf(providing?.marks), ...moneyOf(providing), type, org },
     { ...operatorEnvironmentOf(providing), ...environment },
     { modelProviders, documents: documentsOf(providing), placedValues },
   );

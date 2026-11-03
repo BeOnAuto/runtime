@@ -3,7 +3,7 @@ import { isKeyHolder } from '@on.auto/identity';
 import type { CallerIdentity } from '@on.auto/operations';
 import { listed as listedInWords } from '@on.auto/phrasing';
 
-export type McpEndpoint = 'org' | 'playbook' | 'own org';
+export type McpEndpoint = 'org' | 'playbook' | 'own org' | 'directory';
 
 export interface DefinitionType {
   readonly type: string;
@@ -40,7 +40,7 @@ const reasoningFunctionType = 'reasoning';
 
 const workflowType = 'workflow';
 
-const whatIsAskedOfAPlaybook = 'Put the work the person asks for into a workflow whose steps use its functions';
+const whatAWorkflowUses = "A workflow's steps use the playbook's functions";
 
 const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
   reasoning: 'prompts a model',
@@ -54,7 +54,7 @@ const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
 
 const whatAFunctionTypeAlsoNeedsSaid: Readonly<Record<string, string>> = {
   lookup: 'A lookup function fetches what a reasoning function interprets.',
-  memory: 'Remember what the person wants kept in a memory function, not your notes.',
+  memory: 'A memory function keeps what the playbook recalls later.',
 };
 
 const familyOrder: readonly string[] = functionTypeOrder;
@@ -87,9 +87,7 @@ const workflows: Sentences = ({ definitionTypes, listed }) =>
   definitionTypes.some(({ type }) => type === workflowType)
     ? [
         'A workflow waits for input and can start on a schedule or event.',
-        listed('run_definition')
-          ? `${whatIsAskedOfAPlaybook}; run the workflow and show its result.`
-          : `${whatIsAskedOfAPlaybook}.`,
+        listed('run_definition') ? `${whatAWorkflowUses}, and run_definition runs it.` : `${whatAWorkflowUses}.`,
       ]
     : [];
 
@@ -97,13 +95,10 @@ const whatAPageIs: Sentences = (serving) =>
   serving.pages ? ['A page shows the person the results of a workflow or function, run by run and over time.'] : [];
 
 export const whatThisServerIsFor = [
-  'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer.',
+  'A playbook holds work that keeps running after a conversation, in any line of business.',
   'Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client.',
   'A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.',
 ];
-
-const howToAnswer =
-  "Say what was done and what the person can do next in the words of playbooks, functions, workflows and runs, not tools' names, fields or rules; an id or status only where needed to act.";
 
 const whenAToolCannot = 'A tool that cannot do what was asked says why and what to change.';
 
@@ -119,8 +114,12 @@ function joinedClauses(opening: string, playbooks: readonly string[], rest: read
   return `${opening}${playbookWords}${restWords}.`;
 }
 
+const ownOrg = (serving: Serving) =>
+  joinedClauses("The org is the caller's own", playbooksClause(serving, 'its playbooks'), []);
+
 const whatTheConnectionDoes: Readonly<Record<McpEndpoint, (serving: Serving) => string>> = {
-  'own org': (serving) => joinedClauses("The org is the caller's own", playbooksClause(serving, 'its playbooks'), []),
+  'own org': ownOrg,
+  directory: ownOrg,
   org: (serving) =>
     joinedClauses("This connection manages the org's playbooks", playbooksClause(serving, 'them'), [
       "each playbook's definitions are made on /orgs/{org}/playbooks/{playbook}/mcp",
@@ -136,28 +135,26 @@ const modelsBeforeWriting: Sentences = ({ reasoning, listed }) =>
     : [];
 
 function overviewWords(serving: Serving): string {
-  return serving.pages ? 'give a function or workflow an overview' : 'give it an overview';
+  return serving.pages ? 'a function or workflow takes an overview' : 'a definition takes an overview';
 }
 
 const guides: Sentences = (serving) => [
   serving.listed('create_definition')
-    ? `Read a definition's format with get_guide; ${overviewWords(serving)}.`
+    ? `get_guide holds each definition's format; ${overviewWords(serving)}.`
     : 'get_guide explains these words and the format of each definition.',
 ];
 
 const connectingAService = [
-  "A service a playbook will use is connected here, whatever connector you have: asked to connect, link, sign in to or use one, call search with its words, then add_connection with the provider's name; the person approves on the page it links.",
-  'Say a service cannot be connected only if no provider or server matches.',
+  "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links.",
+  'A service cannot be connected when no provider or server matches.',
 ];
 
 const connections: Sentences = ({ listed }) => (listed('search') && listed('add_connection') ? connectingAService : []);
 
 const answeringWhatRunsWaitOn: Sentences = ({ listed }) =>
-  listed('answer_interaction')
-    ? ['When the person answers what a run waits on, use answer_interaction, not a new run.']
-    : [];
+  listed('answer_interaction') ? ['answer_interaction answers what a run waits on.'] : [];
 
-const closing: Sentences = () => [howToAnswer, whenAToolCannot];
+const closing: Sentences = () => [whenAToolCannot];
 
 const orientation: readonly Sentences[] = [
   functionTypes,

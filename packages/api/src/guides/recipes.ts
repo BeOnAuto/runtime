@@ -12,7 +12,7 @@ const outlines: readonly RecipeOutline[] = [
     description: 'Creates a playbook with a first reasoning function, and runs it once the person has agreed to it.',
     arguments: [],
     formatGuide: 'reasoning-function',
-    calls: ['list_playbooks', 'create_playbook', 'create_definition', 'execute', 'run_definition'],
+    calls: ['list_playbooks', 'create_playbook', 'create_definition', 'query_connection', 'run_definition'],
     request: () => 'Create my first playbook.',
   },
   {
@@ -43,7 +43,15 @@ const outlines: readonly RecipeOutline[] = [
       },
     ],
     formatGuide: 'reasoning-function',
-    calls: ['search', 'introspect', 'execute', 'create_definition', 'run_definition', 'list_playbook_events'],
+    calls: [
+      'search',
+      'introspect',
+      'query_connection',
+      'execute_connection',
+      'create_definition',
+      'run_definition',
+      'list_playbook_events',
+    ],
     request: ({ server }) =>
       server === undefined ? 'Give the playbook tools.' : `Give the playbook the tools of the tool server ${server}.`,
   },
@@ -88,7 +96,7 @@ const whereInteractionIsServed: AdditionsByRecipe = {
       {
         after: 'and which of them it needs.',
         words: [
-          " To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute gave. Keep a reasoning function's `tools` for judgement over what the tools answer.",
+          " To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute_connection gave. Keep a reasoning function's `tools` for judgement over what the tools answer.",
           " To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.",
         ].join(''),
       },

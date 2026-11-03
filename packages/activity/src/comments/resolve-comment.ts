@@ -59,10 +59,7 @@ const usedOnceDone = [
   'Use it once what the comment asked is done, with `how` acted, or with `how` dismissed when the person says to drop it.',
 ];
 
-const toldAfter = [
-  'Resolving a comment resolved already records nothing and answers it as it stands.',
-  'The person is told what was changed for each comment, and which were left open and why; make_comment is no tool, since a comment is what a person says and an agent reports its work to the person instead.',
-];
+const toldAfter = ['Resolving a comment resolved already records nothing and answers it as it stands.'];
 
 const resolvedInWords: PlainLanguage<Resolving, typeof CommentSchema.Type> = {
   task: 'resolve a comment',

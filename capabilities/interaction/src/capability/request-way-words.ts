@@ -91,8 +91,8 @@ export function reachInWords(asked: WayAsked, carriers: readonly RequestCarrier[
 export function throughInWords({ server, sending, reading }: RequestCarrier): string {
   const deliver = `Deliver through ${server}: write deliver with server ${server} and tool ${sending}`;
   return reading === undefined
-    ? `${deliver}; learn what it takes with introspect, and call it with execute once the person agrees.`
-    : `${deliver}, its sent pointing into what ${sending} answers, and replies with tool ${reading}; learn what each tool takes with introspect, and call ${sending} with execute once the person agrees.`;
+    ? `${deliver}; learn what it takes with introspect, and call it with execute_connection once the person agrees.`
+    : `${deliver}, its sent pointing into what ${sending} answers, and replies with tool ${reading}; learn what each tool takes with introspect, and call ${sending} with execute_connection once the person agrees.`;
 }
 
 export function questionOf({ party, answered }: WayAsked): string {

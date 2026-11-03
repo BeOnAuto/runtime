@@ -106,7 +106,7 @@ function sourceOf(h: Harness) {
 
 export async function searchedThrough(h: Harness): Promise<Called> {
   const { access } = await describedAccess({}, { timing: patientTiming, connections: sourceOf(h), consent: h.consent });
-  const called = await playbookToolCalls(access).call('execute', {
+  const called = await playbookToolCalls(access).call('execute_connection', {
     server: 'files',
     tool: 'search',
     arguments: { query: 'acme' },

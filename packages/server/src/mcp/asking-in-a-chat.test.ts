@@ -76,13 +76,13 @@ afterAll(async () => {
 
 async function askedToSendADraft(session: McpSession) {
   const guide = textOf(await session.callTool('get_guide', { guide: 'interaction-function' }));
-  const sent = await session.callTool('execute', {
+  const sent = await session.callTool('execute_connection', {
     ...inMeetings,
     server: 'chat',
     tool: 'post_message',
     arguments: { channel: '#drafts', text: 'A draft to look at' },
   });
-  const read = await session.callTool('execute', {
+  const read = await session.callTool('execute_connection', {
     ...inMeetings,
     server: 'chat',
     tool: 'thread_replies',
@@ -165,7 +165,7 @@ const readingAThread = [
 
 async function askedForTheRepliesOfAThread(session: McpSession) {
   const recipe = textOf(await session.callTool('get_guide', { guide: 'give-tools' }));
-  const called = await session.callTool('execute', {
+  const called = await session.callTool('execute_connection', {
     ...inMeetings,
     server: 'chat',
     tool: 'thread_replies',
@@ -219,7 +219,7 @@ const savingIt = {
 };
 
 const throughTheChat =
-  'Line 1, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute once the person agrees.';
+  'Line 1, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute_connection once the person agrees.';
 
 const namingTheChatAndTheAgent: unknown = expect.stringMatching(
   /deliver: agent holds the request for an agent, .* This playbook can send a request and read its replies through the tool server chat \(post_message, thread_replies\); a connection can also be added with search and add_connection\.$/u,

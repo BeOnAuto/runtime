@@ -19,6 +19,7 @@ export {
   defineCapability,
   predictionCapabilityPoint,
   defaultRunWords,
+  inTheDirectoryListing,
   type CancelDecision,
   type CancelledAttempt,
   type CancelledRun,

@@ -2,9 +2,9 @@ import { unsuccessfulWords, type RejectionBecause } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineExecute } from '../index.ts';
+import { defineExecuteConnection } from '../index.ts';
 
-const { registration } = defineExecute({
+const { registration } = defineExecuteConnection({
   open: () => Effect.die(new Error('A test of the words opens nothing')),
   configured: true,
 });

@@ -154,6 +154,18 @@ describe('the reach of a registration', () => {
 
     expect([addNote.registration.mayChangeOutside, acting.registration.mayChangeOutside]).toEqual([false, true]);
   });
+
+  it('says a command only reads outside the server only when its definition says so', () => {
+    const reading = defineCommand('org', {
+      ...about,
+      name: 'read_outside',
+      route: { method: 'POST', path: '/read-outside' },
+      reachesOutside: true,
+      readsOnly: true,
+    });
+
+    expect([addNote.registration.readsOnly, reading.registration.readsOnly]).toEqual([false, true]);
+  });
 });
 
 describe('what a registration says of a repeated call', () => {

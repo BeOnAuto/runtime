@@ -39,7 +39,7 @@ const description = [
   "Answers a request a function's run waits on; the run takes the answer within the host's sweep, a second by default,",
   "and an interaction function's run succeeds with it.",
   'Use it when the person approves, rejects, revises or otherwise answers a request list_interactions shows, held for an agent or sent through a tool;',
-  'a new run asks again and answers nothing, and send_run_event gives an event to a waiting workflow instead.',
+  'a new run asks again and answers nothing, and send_run_event gives an event to a waiting workflow.',
   '`run_id` is the run of the request, and `answer` takes the shape of the request\'s answer_schema, which list_interactions shows, such as {"decision": "approve"}.',
   '`claimed_for` is whom the caller says it answers for, kept as a claim.',
   'The same answer again answers as before, another is a conflict, and one that does not match leaves the request open.',

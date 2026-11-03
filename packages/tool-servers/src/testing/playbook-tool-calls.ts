@@ -16,7 +16,7 @@ import {
 import { Effect, Layer, type Tracer } from 'effect';
 
 import type { ToolAccess } from '../access/tool-access.ts';
-import { defineExecute } from '../execute/execute.ts';
+import { defineExecuteConnection, defineQueryConnection } from '../execute/execute.ts';
 import { defineSearch } from '../search/search.ts';
 import { defineDryRun } from '../tool-reads/dry-run.ts';
 import { defineIntrospect } from '../tool-reads/introspect.ts';
@@ -32,13 +32,14 @@ export const toolCaller: CallerIdentity = {
 
 export const toolReader: CallerIdentity = { ...toolCaller, id: 'acme-reader', permissions: ['playbook:read'] };
 
-export type PlaybookTool = 'search' | 'introspect' | 'validate' | 'dry_run' | 'execute';
+export type PlaybookTool = 'search' | 'introspect' | 'validate' | 'dry_run' | 'query_connection' | 'execute_connection';
 
 export interface Asking {
   readonly caller?: CallerIdentity;
   readonly playbook?: string;
   readonly signal?: AbortSignal;
   readonly tracer?: Tracer.Tracer;
+  readonly directoryListing?: true;
 }
 
 export interface PlaybookToolCalls {
@@ -73,7 +74,8 @@ function registrationsOf(access: ToolAccess): PlaybookToolCalls['registrations']
     introspect: defineIntrospect(access).registration,
     validate: defineValidate(access).registration,
     dry_run: defineDryRun(access).registration,
-    execute: defineExecute(access).registration,
+    query_connection: defineQueryConnection(access).registration,
+    execute_connection: defineExecuteConnection(access).registration,
   };
 }
 
@@ -99,7 +101,7 @@ export function playbookToolCalls(
   const dispatcher = makeDispatcher([]);
   return {
     registrations,
-    call: (tool, input, { caller = toolCaller, playbook = 'alpha', signal, tracer } = {}) => {
+    call: (tool, input, { caller = toolCaller, playbook = 'alpha', signal, tracer, directoryListing } = {}) => {
       const settled = settle(
         dispatcher.dispatchToPlaybook(registrations[tool], {
           caller,
@@ -107,6 +109,7 @@ export function playbookToolCalls(
           playbook,
           input,
           encoding: 'json',
+          ...(directoryListing === undefined ? {} : { directoryListing }),
         }),
         signal,
       ).pipe(Effect.provide(services));

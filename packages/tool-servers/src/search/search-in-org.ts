@@ -12,7 +12,13 @@ import { Effect } from 'effect';
 import type { ToolAccess } from '../access/tool-access.ts';
 import type { ToolServer } from '../listing/tool-server.ts';
 import { everyPlaybook } from '../settings/server-settings.ts';
-import { offersNoProvider, providersOf, type ProviderOffering } from './found-providers.ts';
+import {
+  offersNoProvider,
+  providersInTheListing,
+  providersOf,
+  serversInTheListing,
+  type ProviderOffering,
+} from './found-providers.ts';
 import { foundIn, searchedServer } from './found-tools.ts';
 import { OrgFoundSchema, OrgSearchInputSchema, type OrgSearchAsked, type OrgSearchedServer } from './search-schemas.ts';
 import { orgSearchAttempted, orgSearched, searchTask } from './search-words.ts';
@@ -57,14 +63,14 @@ export function defineSearchInOrg(
       const { org } = yield* OrgContext;
       const caller = yield* Caller;
       const listing = yield* tools.listServersInOrg({ org, playbook }, server);
-      const { servers } = listing;
+      const servers = yield* serversInTheListing(listing.servers);
       if (server !== undefined && servers.length === 0) {
         return yield* noServerNamed(server, playbook === undefined ? 'This org' : 'This playbook');
       }
       return {
         ...foundIn(servers, asked),
         servers: servers.map((listed) => withServedPlaybooks(listed, asked, caller.playbooks)),
-        ...providersOf(yield* offering(caller), listing, asked),
+        ...providersOf(yield* providersInTheListing(yield* offering(caller)), listing, asked),
       };
     }),
     plainLanguage: {

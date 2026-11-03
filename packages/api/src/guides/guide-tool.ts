@@ -11,7 +11,7 @@ export const guideToolName = 'get_guide';
 
 export const guideToolDescription = [
   "Reads one of the playbook's guides: what its words mean, how each kind of definition is written, with its format, examples and bounds, and how the common tasks are done.",
-  'Read a format guide before writing that type of definition, and a recipe before its task.',
+  'A format guide says how to write that type of definition, and a recipe how its task is done.',
   '`guide` names one of them, and the answer is its whole text in Markdown.',
 ].join(' ');
 

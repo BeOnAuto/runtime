@@ -102,7 +102,12 @@ function resolvedOf(
 ) {
   const placing = placedReference({ provider: addition.provider, entry: addition.entry, credential }, reference);
   const resolved: ProviderResolved = {
-    written: { ...placing.written, ...marksOf(entry.marks), type: addition.type },
+    written: {
+      ...placing.written,
+      ...marksOf(entry.marks),
+      ...(entry.handles_money === true ? { handles_money: true } : {}),
+      type: addition.type,
+    },
     placedValues: placing.placedValues,
     documents: { kind: 'shipped', byName: documents },
     writtenAt: writtenAtOf(placing),

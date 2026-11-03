@@ -17,7 +17,7 @@ export type { ApiEnv } from './api-env.ts';
 export type { TraceParent } from './tracing/trace-parent.ts';
 export { operationRoutes } from './operations/operation-routes.ts';
 export type { OperationRoutesOptions, RunCall } from './operations/operation-handler.ts';
-export { heartbeatEveryMs, mcpRoutes, type McpRoutesOptions } from './mcp/mcp-routes.ts';
+export { heartbeatEveryMs, mcpRoutes, type DirectoryListingServing, type McpRoutesOptions } from './mcp/mcp-routes.ts';
 export { hearingFetch, type AnswerHearing, type HeardAnswer } from './answer-streams/hearing-fetch.ts';
 export { stoppedWords } from './answer-streams/answers-at-stop.ts';
 export { serverStopping } from './problem/outcome-problem.ts';

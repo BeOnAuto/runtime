@@ -46,9 +46,9 @@ describe('the recipe that gives a playbook tools, on a server that serves lookup
     expect(giveToolsOf(servedWithoutLookup)).not.toContain('lookup');
   });
 
-  it('stays within the bound of a recipe with every addition, at 4,294 bytes', () => {
+  it('stays within the bound of a recipe with every addition, at 4,376 bytes', () => {
     const bytes = new TextEncoder().encode(giveToolsOf(servedWithLookup)).byteLength;
 
-    expect([bytes, bytes <= mostRecipeBytes]).toEqual([4294, true]);
+    expect([bytes, bytes <= mostRecipeBytes]).toEqual([4376, true]);
   });
 });

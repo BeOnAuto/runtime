@@ -8,7 +8,7 @@ import type { LedgerPorts } from '../ledger/ledger.ts';
 import { playbookReaderOf, playbookWriterOf } from '../ledger/playbook-ledger.ts';
 import { PlaybookReader } from '../ledger/playbook-reader.ts';
 import { PlaybookWriter } from '../ledger/playbook-writer.ts';
-import type { PlaybookRequest } from './request.ts';
+import { DirectoryListing, type PlaybookRequest } from './request.ts';
 
 export interface PlaybookBinding {
   readonly ledger: LedgerPorts;
@@ -16,11 +16,23 @@ export interface PlaybookBinding {
 }
 
 export function playbookServicesOf(
-  { caller, org, playbook, lineage, depth, callDepth, calledBy, trigger, attemptDied }: PlaybookRequest,
+  {
+    caller,
+    org,
+    playbook,
+    lineage,
+    depth,
+    callDepth,
+    calledBy,
+    trigger,
+    attemptDied,
+    directoryListing,
+  }: PlaybookRequest,
   { ledger, lifecycle }: PlaybookBinding,
 ) {
   const forQueries = Context.make(Caller, caller).pipe(
     Context.add(PlaybookContext, { org, playbook }),
+    Context.add(DirectoryListing, directoryListing === true),
     Context.add(PlaybookLifecycle, lifecycle),
     Context.add(PlaybookReader, playbookReaderOf(ledger, { org, playbook })),
   );

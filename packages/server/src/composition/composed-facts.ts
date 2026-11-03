@@ -3,6 +3,7 @@ import { workflowFacts } from '@on.auto/coordination';
 import {
   playbookOwnNamesOf,
   composedFactsOf,
+  inTheDirectoryListing,
   runFactsOf,
   workRecorder,
   type PlaybookOwnNames,
@@ -31,4 +32,10 @@ export function factsComposedOf(
     names: playbookOwnNamesOf(declarations, facts),
     record: workRecorder(runtimeLedger(runtime), runFactsOf(facts.onRuns)),
   };
+}
+
+export function directoryFactsOf(capabilities: readonly Capability[]): Pick<ComposedFacts, 'facts' | 'names'> {
+  const declarations = [...inTheDirectoryListing(capabilities), workflowFacts];
+  const facts = composedFactsOf(declarations);
+  return { facts, names: playbookOwnNamesOf(declarations, facts) };
 }

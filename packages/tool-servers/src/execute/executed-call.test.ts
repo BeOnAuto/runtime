@@ -63,7 +63,7 @@ describe('a call answered by tools that do not behave as a server’s do', () =>
   it('refuses a tool the opened tools do not offer as one its server does not list', async () => {
     const { call } = executingOver(runToolsOffering([]));
 
-    expect(await call('execute', { server: 'graph', tool: 'search' })).toMatchObject({
+    expect(await call('execute_connection', { server: 'graph', tool: 'search' })).toMatchObject({
       status: 'rejected',
       reason: 'unavailable',
       kind: 'tool_not_offered',
@@ -75,7 +75,7 @@ describe('a call answered by tools that do not behave as a server’s do', () =>
   it('fails with an incident when the call answers that it was never sent, which a call that was sent never does', async () => {
     const { call, incidents } = executingOver(runToolsOffering([search]));
 
-    expect(await call('execute', { server: 'graph', tool: 'search' })).toMatchObject({ status: 'failed' });
+    expect(await call('execute_connection', { server: 'graph', tool: 'search' })).toMatchObject({ status: 'failed' });
     expect(String(incidents()[0]?.original)).toContain('answered not_sent');
   });
 });

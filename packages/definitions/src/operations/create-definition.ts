@@ -13,7 +13,7 @@ import { SavedDefinitionSchema, withDefinitionPageInStudio } from './studio-page
 function descriptionOf(typesInWords: string): string {
   return [
     'Saves a new function or workflow from its document, without running it.',
-    'Use it once the person agrees; update_definition changes one saved, and a name is never reused.',
+    'update_definition changes one saved, and a name is never reused.',
     `\`type\` is ${typesInWords}, and \`name\` how workflows and tools refer to it.`,
     "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
     'A function needs `diagram` too; a workflow takes none.',

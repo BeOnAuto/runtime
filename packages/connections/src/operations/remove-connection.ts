@@ -18,7 +18,7 @@ export function defineRemoveConnection(services: RemovalServices) {
     title: 'Remove connection',
     description: [
       'Removes a connection of the org for good: no playbook may use it any more, and its credential is forgotten.',
-      'Use it only when the person asks to remove that connection.',
+      'Use it when the person asks to remove that connection.',
       'Removing a removed connection changes nothing.',
     ].join(' '),
     irreversible: true,

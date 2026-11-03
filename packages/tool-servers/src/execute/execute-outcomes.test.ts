@@ -17,7 +17,7 @@ async function executingWith(timing: Timing = patientTiming) {
   const { access, messages } = reportingAccess({ graph }, { timing, environment: { GRAPH_API_KEY: fakeApiKey } });
   closing.push(access.close);
   const { call } = playbookToolCalls(access);
-  return { fake, messages, execute: (input: unknown) => call('execute', input) };
+  return { fake, messages, execute: (input: unknown) => call('execute_connection', input) };
 }
 
 const aNumber: unknown = expect.any(Number);

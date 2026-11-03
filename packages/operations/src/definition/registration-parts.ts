@@ -57,6 +57,7 @@ type RegisteredDefinition<K extends OperationKind> = Pick<
   | 'successStatus'
   | 'reachesOutside'
   | 'mayChangeOutside'
+  | 'readsOnly'
   | 'irreversible'
   | 'repeatable'
   | 'permittedBy'
@@ -88,6 +89,7 @@ export function registeredFieldsOf<S extends OperationScope, K extends Operation
     successStatus: definition.successStatus ?? 200,
     reachesOutside: definition.reachesOutside ?? false,
     mayChangeOutside: definition.mayChangeOutside ?? false,
+    readsOnly: definition.readsOnly ?? false,
     irreversible: definition.irreversible ?? false,
     repeatable: definition.repeatable ?? false,
     permissions,

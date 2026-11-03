@@ -5,7 +5,11 @@ import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { WorkflowHost } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
-import { playbookOperationsServing, type ServedPages } from '../composition/playbook-operations.ts';
+import {
+  directoryOperationsServing,
+  playbookOperationsServing,
+  type ServedPages,
+} from '../composition/playbook-operations.ts';
 import { routesFor, type ServedCatalog } from '../composition/served-routes.ts';
 import type { Served } from '../server-options/server-options.ts';
 import { openedHost, type HostParts, type HostRuntime } from './host-dependencies.ts';
@@ -63,15 +67,15 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     { startVersion: defineStartVersion(capabilities), names },
   );
   opening.resolve(host);
-  const catalog = makeCatalog([
-    ...parts.orgOperations,
-    ...playbookOperationsServing(capabilities, parts),
-    ...parts.playbookOperations,
-    defineSendRunEvent(host, names),
-  ]);
+  const sendRunEvent = defineSendRunEvent(host, names);
+  const catalogOf = (definitionOperations: ReturnType<typeof playbookOperationsServing>) =>
+    makeCatalog([...parts.orgOperations, ...definitionOperations, ...parts.playbookOperations, sendRunEvent]);
+  const catalog = catalogOf(playbookOperationsServing(capabilities, parts));
+  const directoryCatalog = catalogOf(directoryOperationsServing(capabilities, parts));
   const { identityIssuer, retryStateKeys, contentAddressKey, shippedFiles } = parts;
   const served = {
     catalog,
+    directoryCatalog,
     dispatcher,
     capabilities,
     pages: true,

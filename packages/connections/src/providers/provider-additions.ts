@@ -94,6 +94,8 @@ type ListingServices = Omit<AdditionServices, 'consent'> & { readonly consent: C
   readonly studioBase: string;
 };
 
+const handlingMoney: Pick<Providing, 'handles_money'> = { handles_money: true };
+
 export function providingOf(
   { provider }: Pick<AdditionInput, 'provider'>,
   { providers, providerValues }: ProviderServices,
@@ -104,7 +106,14 @@ export function providingOf(
   const named = providerNamed(providers, provider);
   const documentServer = Result.getOrUndefined(Result.map(named, documentServerOf));
   const marks = Result.getOrUndefined(Result.map(named, ({ entry }) => entry.marks));
-  return { documents: providers.documents, values: providerValues, documentServer, marks };
+  const money = Result.getOrUndefined(Result.map(named, ({ entry }) => entry.handles_money)) === true;
+  return {
+    documents: providers.documents,
+    values: providerValues,
+    documentServer,
+    marks,
+    ...(money ? handlingMoney : {}),
+  };
 }
 
 function isWrittenBy(pointer: string, written: string): boolean {

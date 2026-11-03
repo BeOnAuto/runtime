@@ -34,6 +34,7 @@ export function makeGenerationFunctionAdapter(ports: GenerationPorts): Capabilit
     longestAnyRunMs: longestGenerationMs,
     reachesOutside: true,
     mayChangeOutside: ports.gateways.length > 0,
+    outsideTheDirectoryListing: true,
     facts: generationFacts,
   });
 }

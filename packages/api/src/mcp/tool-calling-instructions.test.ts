@@ -13,19 +13,19 @@ import {
 import { instructionsActingAs, instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,613 characters on /mcp, 1,578 on the org endpoint and 1,246 on the playbook endpoint after their opening line', () => {
+  it('take 1,161 characters on /mcp, 1,162 on the org endpoint and 892 on the playbook endpoint after their opening line', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1578, 1246, 1613]);
+    ).toEqual([1162, 892, 1161]);
   });
 
-  it('take 1,743, 1,708 and 1,376 with the opening line of the person the bound holds, which takes 130 of them', () => {
+  it('take 1,291, 1,292 and 1,022 with the opening line of the person the bound holds, which takes 130 of them', () => {
     expect(
       everyEndpoint.map(
         ([endpoint, served]) =>
           instructionsActingAs(callerTheInstructionsHold, endpoint, served, { definitionTypes, pages: false }).length,
       ),
-    ).toEqual([1708, 1376, 1743]);
+    ).toEqual([1292, 1022, 1291]);
   });
 });
 
@@ -35,16 +35,16 @@ describe('what the instructions say of calling a tool', () => {
     playbookTools: queriesInsideAPlaybook,
   };
 
-  it('leave the model and tools of a reasoning function, a run that finishes later, execute and dry_run to their tools and guides, and keep the closing sentence', () => {
+  it('leave the model and tools of a reasoning function, a run that finishes later, query_connection, execute_connection and dry_run to their tools and guides, and keep the closing sentence', () => {
     expect(instructionsFor('own org', ownOrg, definitionTypes)).toContain(
-      "Read a definition's format with get_guide; give it an overview. When the person answers",
+      "get_guide holds each definition's format; a definition takes an overview. answer_interaction answers",
     );
     expect(instructionsFor('playbook', playbookEndpoint, definitionTypes)).toContain(
-      "Read a definition's format with get_guide; give it an overview. When the person answers",
+      "get_guide holds each definition's format; a definition takes an overview. answer_interaction answers",
     );
     expect(
       everyEndpoint.filter(([endpoint, served]) =>
-        /\b(?:execute|dry_run)\b/u.test(instructionsFor(endpoint, served, definitionTypes)),
+        /\b(?:query_connection|execute_connection|dry_run)\b/u.test(instructionsFor(endpoint, served, definitionTypes)),
       ),
     ).toEqual([]);
     expect(
@@ -65,22 +65,22 @@ describe('what the instructions say of calling a tool', () => {
       instructionsFor('playbook', { orgTools: [], playbookTools: queriesInsideAPlaybook }, definitionTypes),
     ];
 
-    expect(lengths.map(({ length }) => length)).toEqual([1149, 1149, 1234, 1126]);
+    expect(lengths.map(({ length }) => length)).toEqual([831, 831, 916, 808]);
   });
 });
 
 describe('the instructions of an endpoint that lists search and add_connection', () => {
   const connecting = [
-    "A service a playbook will use is connected here, whatever connector you have: asked to connect, link, sign in to or use one, call search with its words, then add_connection with the provider's name; the person approves on the page it links.",
-    'Say a service cannot be connected only if no provider or server matches.',
+    "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links.",
+    'A service cannot be connected when no provider or server matches.',
   ].join(' ');
 
-  it('say after the sentence on the guides that a service is connected through search and add_connection, on /mcp and the org endpoint', () => {
+  it('say after the sentence on the guides that search finds the provider of a service and add_connection connects it, on /mcp and the org endpoint', () => {
     expect(instructionsFor('own org', withConnections(ownOrg), definitionTypes)).toContain(
-      `give it an overview. ${connecting} When the person answers`,
+      `a definition takes an overview. ${connecting} answer_interaction answers`,
     );
     expect(instructionsFor('org', withConnections(orgEndpoint), definitionTypes)).toContain(
-      `the format of each definition. ${connecting} Say what was done`,
+      `the format of each definition. ${connecting} A tool that cannot`,
     );
   });
 
@@ -97,14 +97,14 @@ describe('the instructions of an endpoint that lists search and add_connection',
 });
 
 describe('what the instructions say of the guides', () => {
-  it("point to get_guide for a definition's format and ask for its overview on every endpoint that writes one, and name no recipe, which get_guide names", () => {
+  it("say that get_guide holds a definition's format and that a definition takes an overview on every endpoint that writes one, and name no recipe, which get_guide names", () => {
     const writing = everyEndpoint.filter(([endpoint]) => endpoint !== 'org');
 
     expect(
       writing.filter(
         ([endpoint, served]) =>
           !instructionsFor(endpoint, served, definitionTypes).includes(
-            "Read a definition's format with get_guide; give it an overview.",
+            "get_guide holds each definition's format; a definition takes an overview.",
           ),
       ),
     ).toEqual([]);

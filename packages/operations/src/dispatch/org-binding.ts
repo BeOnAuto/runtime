@@ -14,16 +14,17 @@ import type { LedgerPorts } from '../ledger/ledger.ts';
 import { OrgReader } from '../ledger/org-reader.ts';
 import { OrgWriter } from '../ledger/org-writer.ts';
 import type { Succeeded, Rejected } from '../outcome/outcome.ts';
-import type { OrgRequest } from './request.ts';
+import { DirectoryListing, type OrgRequest } from './request.ts';
 
 export function runInOrg<A extends Succeeded>(
   registration: Runnable<'org', A>,
-  { caller, org, input, encoding }: OrgRequest,
+  { caller, org, input, encoding, directoryListing }: OrgRequest,
   ledger: LedgerPorts,
 ): Effect.Effect<A, Rejected> {
   const prefix = streamPrefixOfOrg({ org });
   const forQueries = Context.make(Caller, caller).pipe(
     Context.add(OrgContext, { org }),
+    Context.add(DirectoryListing, directoryListing === true),
     Context.add(OrgReader, {
       ...prefixedReader(ledger, prefix),
       ...orgBoundAppendedFactsReader(ledger, { org }),

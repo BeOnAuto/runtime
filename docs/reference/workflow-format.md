@@ -93,7 +93,7 @@ Check the brief against four criteria: the audience names a job role and a type 
 {{ input.brief }}
 ```
 
-The interaction function `approve-campaign-brief` sends the review to its owner through the chat connection of the playbook, and takes their reply in the thread of the message as the answer; the request expires after two days. Its answer is `{ verdict: approve | revise, note? }`. `search` names the chat's server and its two tools, and `execute` shows what each answers; [How a request reaches its party](interaction-format.md#how-a-request-reaches-its-party) says how to choose the connection with the person:
+The interaction function `approve-campaign-brief` sends the review to its owner through the chat connection of the playbook, and takes their reply in the thread of the message as the answer; the request expires after two days. Its answer is `{ verdict: approve | revise, note? }`. `search` names the chat's server and its two tools, and `query_connection` and `execute_connection` show what each answers; [How a request reaches its party](interaction-format.md#how-a-request-reaches-its-party) says how to choose the connection with the person:
 
 <!-- prettier-ignore -->
 ```markdown

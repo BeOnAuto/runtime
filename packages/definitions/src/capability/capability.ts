@@ -117,6 +117,7 @@ export interface CapabilityDeclaration<Parsed> {
   readonly longestAnyRunMs?: number;
   readonly reachesOutside?: boolean;
   readonly mayChangeOutside?: boolean;
+  readonly outsideTheDirectoryListing?: true;
   readonly callsTools?: (parsed: NoInfer<Parsed>) => boolean;
   readonly finishesLater?: boolean | ((parsed: NoInfer<Parsed>) => boolean);
   readonly finishesLaterFor?: (parsed: NoInfer<Parsed>, input: Schema.Json) => boolean;
@@ -177,6 +178,7 @@ export interface Capability {
   readonly longestAnyRunMs: number;
   readonly reachesOutside: boolean;
   readonly mayChangeOutside: boolean;
+  readonly outsideTheDirectoryListing?: true;
   readonly mostActive: number;
   readonly standing: Standing;
   readonly cancel: CancelDecision;
@@ -196,6 +198,12 @@ export function isDefinitionTypeName(name: string): boolean {
   return definitionTypePattern.test(name);
 }
 
+const outsideTheListing: Pick<Capability, 'outsideTheDirectoryListing'> = { outsideTheDirectoryListing: true };
+
+function listingOf<Parsed>(definition: CapabilityDeclaration<Parsed>): Pick<Capability, 'outsideTheDirectoryListing'> {
+  return definition.outsideTheDirectoryListing === true ? outsideTheListing : {};
+}
+
 function declaredBounds<Parsed>(definition: CapabilityDeclaration<Parsed>) {
   return {
     longestAnyRunMs: definition.longestAnyRunMs ?? defaultLongestAnyRunMs,
@@ -206,6 +214,7 @@ function declaredBounds<Parsed>(definition: CapabilityDeclaration<Parsed>) {
     cancel: definition.cancel ?? cancelledAsAsked,
     runWords: { ...defaultRunWords, ...definition.runWords },
     facts: definition.facts ?? noFacts,
+    ...listingOf(definition),
   };
 }
 
@@ -268,4 +277,10 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
         })),
       ),
   };
+}
+
+export function inTheDirectoryListing<Kind extends Pick<Capability, 'outsideTheDirectoryListing'>>(
+  capabilities: readonly Kind[],
+): readonly Kind[] {
+  return capabilities.filter(({ outsideTheDirectoryListing }) => outsideTheDirectoryListing !== true);
 }

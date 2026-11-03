@@ -1,16 +1,20 @@
-import { Unavailable, type Remedies } from '@on.auto/operations';
+import { Unavailable, type RejectionBecause, type Remedies, type UnavailableKind } from '@on.auto/operations';
 
-import type { ToolsNotOpened } from '../access/caller-context.ts';
 import { cutToFailureBound } from '../bounds/call-bounds.ts';
 import type { UnavailableServer } from '../listing/tool-server.ts';
 import { refusalOf } from '../org-servers/server-refusals.ts';
 
-export function unavailableOf({
-  _tag: kind,
-  because,
-  detail,
-}: Pick<ToolsNotOpened, '_tag' | 'because' | 'detail'>): Unavailable {
-  return new Unavailable({ detail: cutToFailureBound(detail), kind, because });
+interface ToolRefusal {
+  readonly _tag: UnavailableKind;
+  readonly because?: RejectionBecause;
+  readonly detail: string;
+}
+
+export function unavailableOf({ _tag: kind, because, detail }: ToolRefusal): Unavailable {
+  const cut = cutToFailureBound(detail);
+  return because === undefined
+    ? new Unavailable({ detail: cut, kind })
+    : new Unavailable({ detail: cut, kind, because });
 }
 
 export function unavailableServerOf({

@@ -25,7 +25,7 @@ const theAgentWay =
 const sayHow = `Line 1, /deliver: Say how the owner is reached: deliver names the tool of a connection that sends the request, with replies naming its tool that reads the replies, or ${theAgentWay}.`;
 
 const throughTheChat =
-  'Line 1, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute once the person agrees.';
+  'Line 1, /deliver: Deliver through chat: write deliver with server chat and tool post_message, its sent pointing into what post_message answers, and replies with tool thread_replies; learn what each tool takes with introspect, and call post_message with execute_connection once the person agrees.';
 
 const forAnAgent =
   'Line 1, /deliver: Write deliver: agent; an agent reads the request with list_interactions and answers it with answer_interaction.';
@@ -71,7 +71,7 @@ describe('a request saved without saying how its party is reached', () => {
 });
 
 function throughTheChatAlone(line: number): string {
-  return `Line ${line}, /deliver: Deliver through chat: write deliver with server chat and tool post_message; learn what it takes with introspect, and call it with execute once the person agrees.`;
+  return `Line ${line}, /deliver: Deliver through chat: write deliver with server chat and tool post_message; learn what it takes with introspect, and call it with execute_connection once the person agrees.`;
 }
 
 const reachedThroughTheChat = 'This playbook can send it through the connection chat (post_message).';

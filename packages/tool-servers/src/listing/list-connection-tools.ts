@@ -12,8 +12,9 @@ import {
 import { counted, quoted, type Noun } from '@on.auto/phrasing';
 import { Effect, Option, Order, Schema, Struct } from 'effect';
 
+import { refusedOutsideTheListing } from '../access/directory-listing.ts';
 import { MarkedBySchema, marksMeant, ToolAnnotationsSchema, ToolMarkSchema } from '../bounds/tool-results.ts';
-import { unavailableServerOf } from '../tool-reads/tool-refusals.ts';
+import { unavailableOf, unavailableServerOf } from '../tool-reads/tool-refusals.ts';
 import type { ListingWays } from './listing-ways.ts';
 import type { ServerTool } from './tool-server.ts';
 
@@ -21,7 +22,7 @@ const description = [
   "Lists the tools a connection's server offers now, those its entry allows, by name, a page at a time.",
   'Each has its title where the server gives one, its whole description, its hints and its mark.',
   'Use it to show the person what one connection can do; search finds tools across servers.',
-  '`cursor` is the next_cursor of the page before, to read on only as the person needs.',
+  '`cursor` is the next_cursor of the page before.',
 ].join(' ');
 
 const HintsSchema = Schema.Struct(Struct.omit(ToolAnnotationsSchema.fields, ['readOnlyHint'])).annotate({
@@ -124,6 +125,7 @@ export function defineListConnectionTools(tools: Pick<ListingWays, 'listConnecti
       if ('unavailable' in server) {
         return yield* Effect.fail(unavailableServerOf(server));
       }
+      yield* Effect.mapError(refusedOutsideTheListing(server.name, server), unavailableOf);
       const remaining = server.tools.toSorted(byName).filter(({ name }) => after === undefined || name > after);
       const page = remaining.slice(0, limit);
       const last = page.at(-1);

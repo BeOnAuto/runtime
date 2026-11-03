@@ -59,7 +59,8 @@ const commands = [
   'run_definition',
   'cancel_run',
   'publish_event',
-  'execute',
+  'query_connection',
+  'execute_connection',
   'answer_interaction',
   'remember',
   'forget',
@@ -218,7 +219,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
 });
 
 describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
-  it('lists the thirty-seven tools and the playbooks of its org', async () => {
+  it('lists the thirty-eight tools and the playbooks of its org', async () => {
     const outcome = await asKey(
       acmeAdmin.key,
       async (session) => ({
@@ -229,7 +230,7 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
       kind,
     );
 
-    expect(outcome.tools).toBe(37);
+    expect(outcome.tools).toBe(38);
     expect(outcome.playbooks.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });
 });

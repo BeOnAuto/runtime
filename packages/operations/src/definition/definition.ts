@@ -59,6 +59,7 @@ export interface Definition<
   readonly successStatus?: SuccessStatusByKind[K];
   readonly reachesOutside?: boolean;
   readonly mayChangeOutside?: boolean;
+  readonly readsOnly?: boolean;
   readonly irreversible?: boolean;
   readonly repeatable?: boolean;
   readonly permittedBy?: readonly Permission[];

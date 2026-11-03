@@ -53,7 +53,7 @@ describe('episode 1: asked "what is a playbook?"', () => {
     const answer = sentencesOf(surfaces.instructions).slice(1, 4).join(' ');
 
     expect(answer).toBe(
-      'Whatever the person wants done that keeps working after this conversation, however they put it and in any line of business, is a playbook here, not a document, plan, note or one-off answer. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.',
+      'A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.',
     );
     expect(internalTermsIn(answer)).toEqual([]);
     expect(answer).not.toMatch(/[a-z]+_[a-z_]+|\bid\b/u);
@@ -80,7 +80,7 @@ describe('episode 3: asked to use Slack', () => {
     const listed = await onMcp((session) => session.callTool('search', { playbook: 'meetings' }));
 
     expect(descriptionOf('search')).toContain(
-      "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute.",
+      "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection.",
     );
     expect(plainTextIn(listed)).toMatch(/^This playbook's functions may use 2 tool servers\. /u);
     expect(plainTextIn(listed)).toContain('“slack” offers');
@@ -156,7 +156,7 @@ function channelsIn(called: unknown) {
 async function lookedAtOverMcp(session: McpSession) {
   const before = await session.callTool('list_definitions', { playbook: 'meetings', type: 'reasoning' });
   const found = await session.callTool('search', { playbook: 'meetings', server: 'slack', terms: 'search rows' });
-  const called = await session.callTool('execute', {
+  const called = await session.callTool('query_connection', {
     playbook: 'meetings',
     server: 'slack',
     tool: 'search',
@@ -167,13 +167,11 @@ async function lookedAtOverMcp(session: McpSession) {
 }
 
 describe('episode 8: asked what a gateway-style tool server offers, and then to post to #random', () => {
-  it('finds what search and execute do in their descriptions, finds the search tool by its words, calls it, and makes no function to look', async () => {
+  it('finds what search and query_connection do in their descriptions, finds the search tool by its words, calls it, and makes no function to look', async () => {
     const seen = await onMcp(lookedAtOverMcp);
 
     expect(descriptionOf('search')).toContain('Searches the tools of the tool servers');
-    expect(descriptionOf('execute')).toContain(
-      "as a run of a reasoning function would call it, and answers what that run's model would see.",
-    );
+    expect(descriptionOf('query_connection')).toContain('and answers what a run of a reasoning function would see.');
     expect(seen.found.structuredContent).toMatchObject({
       servers: [{ name: 'slack' }],
       tools: [{ server: 'slack', tool: 'search', mark: 'reads' }],
@@ -183,13 +181,13 @@ describe('episode 8: asked what a gateway-style tool server offers, and then to 
     );
     expect(seen.called.structuredContent).toMatchObject({ outcome: 'result', text: 'Found 2 rows for standups.' });
     expect(seen.after.structuredContent).toEqual(seen.before.structuredContent);
-    expect(descriptionOf('execute')).toContain('in place of a function made to look');
+    expect(descriptionOf('query_connection')).toContain('or to find an id a prompt needs');
   });
 
   it('calls the tool that lists the channels and takes the id of #random from its answer, as the give-tools recipe says', async () => {
     const { prompt, called } = await onMcp(async (session) => ({
       prompt: Schema.decodeUnknownSync(PromptSchema)(await session.getPrompt('give-tools', { server: 'slack' })),
-      called: await session.callTool('execute', {
+      called: await session.callTool('query_connection', {
         playbook: 'meetings',
         server: 'slack',
         tool: 'list_channels',

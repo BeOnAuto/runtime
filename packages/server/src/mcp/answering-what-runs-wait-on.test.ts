@@ -152,9 +152,7 @@ describe('episode 7: the person approves, in the chat, a draft a workflow sent t
     const { instructions } = meetings.surfaces;
     const guide = await meetings.onMcp((session) => session.callTool('get_guide', { guide: 'interaction-function' }));
 
-    expect(sentenceNaming(instructions, 'answer_interaction')).toBe(
-      'When the person answers what a run waits on, use answer_interaction, not a new run.',
-    );
+    expect(sentenceNaming(instructions, 'answer_interaction')).toBe('answer_interaction answers what a run waits on.');
     expect(descriptionIn(meetings.surfaces, 'run_definition')).toContain(
       'a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
     );
@@ -204,6 +202,6 @@ describe('the shape of the answer an open request takes, as the agent reads it',
     expect(descriptionIn(meetings.surfaces, 'answer_interaction')).toContain(
       "`answer` takes the shape of the request's answer_schema, which list_interactions shows,",
     );
-    expect([description.length, sentencesOf(description).length]).toEqual([799, 5]);
+    expect([description.length, sentencesOf(description).length]).toEqual([762, 5]);
   });
 });

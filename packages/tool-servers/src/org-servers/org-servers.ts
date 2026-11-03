@@ -10,7 +10,16 @@ import { refusalOf, type Unusable } from './server-refusals.ts';
 
 export type Served = Pick<
   LinkedServerSettings,
-  'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'connection' | 'provider'
+  | 'name'
+  | 'type'
+  | 'orgs'
+  | 'playbooks'
+  | 'allowed'
+  | 'record_content'
+  | 'request_id'
+  | 'connection'
+  | 'provider'
+  | 'handles_money'
 >;
 
 export type Linked = { readonly link: ServerLink } | { readonly refused: Unusable };

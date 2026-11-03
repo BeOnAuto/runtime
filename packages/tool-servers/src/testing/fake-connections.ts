@@ -141,8 +141,18 @@ function brokenByItsServer(held: Held, { id, name }: FakeConnection): Effect.Eff
 
 function listedOf(held: Held, kept: Kept): OrgConnection {
   const { id, name, provider = null } = kept.connection;
-  const { type, orgs, playbooks, allowed, record_content, request_id } = kept.settings;
-  const serving = { name, type, provider, orgs, playbooks, allowed, record_content, request_id };
+  const { type, orgs, playbooks, allowed, record_content, request_id, handles_money } = kept.settings;
+  const serving = {
+    name,
+    type,
+    provider,
+    orgs,
+    playbooks,
+    allowed,
+    record_content,
+    request_id,
+    ...(handles_money === undefined ? {} : { handles_money }),
+  };
   const unready = unreadyOf(name, standingOf(held, id));
   return unready === undefined
     ? { id, serving, state: { status: 'connected', connectedAt: kept.connectedAt, server: preparedOf(held, kept) } }

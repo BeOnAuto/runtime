@@ -42,6 +42,7 @@ interface ServedBy {
   readonly secrets: readonly Redacted.Redacted[];
   readonly connection: string | null;
   readonly provider: string | null;
+  readonly handles_money?: true;
 }
 
 export interface McpServerSettings extends ServedBy {

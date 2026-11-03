@@ -49,7 +49,7 @@ function callsByHand(access: ReturnType<typeof accessTo>, writes: WritesOptions 
   return {
     ...calls,
     execute: (input: unknown, signal?: AbortSignal) =>
-      calls.call('execute', input, signal === undefined ? {} : { signal }),
+      calls.call('execute_connection', input, signal === undefined ? {} : { signal }),
   };
 }
 
@@ -177,7 +177,7 @@ describe('a call the ledger cannot record', () => {
     expect(incidents()).toHaveLength(1);
     expect(incidents()[0]).toMatchObject({
       original: { message: 'The ledger refused the write' },
-      call: { operation: 'execute', org: 'acme', playbook: 'alpha', caller: 'acme-builder' },
+      call: { operation: 'execute_connection', org: 'acme', playbook: 'alpha', caller: 'acme-builder' },
     });
     expect(fake.received()).toEqual([]);
     await until(() => fake.endedSessions() === 1);

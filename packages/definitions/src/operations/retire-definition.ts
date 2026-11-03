@@ -18,7 +18,7 @@ export function defineRetireDefinition(capabilities: readonly Capability[]) {
       title: 'Retire definition',
       description: [
         'Retires a function or workflow for good, with its page, and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it.',
-        'Use it only when the person asks to retire that definition; update_definition changes it instead.',
+        'Use it when the person asks to retire that definition; update_definition changes one.',
         '`type` and `name` say which definition, and retiring one already retired changes nothing.',
       ].join(' '),
       irreversible: true,

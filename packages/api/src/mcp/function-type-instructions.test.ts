@@ -16,7 +16,7 @@ const sevenFunctionTypesSentence =
 
 const whatALookupLeavesToReasoning = 'A lookup function fetches what a reasoning function interprets.';
 
-const rememberingWhatThePersonWantsKept = 'Remember what the person wants kept in a memory function, not your notes.';
+const whatAMemoryFunctionKeeps = 'A memory function keeps what the playbook recalls later.';
 
 const sevenServedTypes: readonly DefinitionType[] = [
   ...definitionTypes.filter(({ type }) => type !== 'workflow'),
@@ -53,7 +53,7 @@ describe('what the instructions say of the function types', () => {
 
   it('name a function type the terminology does not yet order after those it does, in the order the server runs them', () => {
     expect(instructionsFor('playbook', playbookEndpoint, sevenServedTypes)).toContain(
-      `runs belong to the playbook. ${sevenFunctionTypesSentence} ${whatALookupLeavesToReasoning} ${rememberingWhatThePersonWantsKept} A workflow waits`,
+      `runs belong to the playbook. ${sevenFunctionTypesSentence} ${whatALookupLeavesToReasoning} ${whatAMemoryFunctionKeeps} A workflow waits`,
     );
   });
 
@@ -68,10 +68,8 @@ describe('what the instructions say of the function types', () => {
     ).toEqual([]);
   });
 
-  it('say, where the server runs memory functions, that the agent remembers what the person wants kept in one', () => {
-    expect(instructionsFor('own org', withConnections(ownOrg), sevenServedTypes)).toContain(
-      rememberingWhatThePersonWantsKept,
-    );
+  it('say, where the server runs memory functions, that a memory function keeps what the playbook recalls later', () => {
+    expect(instructionsFor('own org', withConnections(ownOrg), sevenServedTypes)).toContain(whatAMemoryFunctionKeeps);
   });
 
   it('say nothing of lookup or memory functions where the server runs neither', () => {

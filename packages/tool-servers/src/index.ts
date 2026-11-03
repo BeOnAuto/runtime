@@ -145,7 +145,7 @@ export { defineIntrospect } from './tool-reads/introspect.ts';
 export { defineListConnectionTools } from './listing/list-connection-tools.ts';
 export { defineValidate } from './tool-reads/validate.ts';
 export { defineDryRun } from './tool-reads/dry-run.ts';
-export { defineExecute } from './execute/execute.ts';
+export { defineExecuteConnection, defineQueryConnection } from './execute/execute.ts';
 export { answeredInWords, failedInWords, toolInWords } from './names/tool-words.ts';
 export { HandCallEventSchema } from './hand-calls/hand-call-events.ts';
 export { handCallPresenter } from './hand-calls/hand-call-presenter.ts';

@@ -1,4 +1,4 @@
-import { NotFound, type JsonSchemaDocument, type RouteRegistration } from '@on.auto/operations';
+import { DirectoryListing, NotFound, type JsonSchemaDocument, type RouteRegistration } from '@on.auto/operations';
 import { alternatives } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
@@ -79,12 +79,16 @@ function knownOf(capabilities: readonly Capability[], expected: string): KnownCa
         input: withTypeField(operation.registration.input, capabilities, meaning),
       },
     }),
-    capabilityOfType: (name) => {
+    capabilityOfType: Effect.fnUntraced(function* (name: string) {
       const capability = byName.get(name);
-      return capability === undefined
-        ? Effect.fail(new NotFound({ detail: `There is no definition type ${name}` }))
-        : Effect.succeed(capability);
-    },
+      if (capability === undefined) {
+        return yield* Effect.fail(new NotFound({ detail: `There is no definition type ${name}` }));
+      }
+      if ((yield* DirectoryListing) && capability.outsideTheDirectoryListing === true) {
+        return yield* Effect.fail(new NotFound({ detail: `The directory listing keeps no definition type ${name}` }));
+      }
+      return capability;
+    }),
   };
 }
 

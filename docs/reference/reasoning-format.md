@@ -173,7 +173,7 @@ Do not guess tool names. Ask the runtime:
 
 1. Call `search` (MCP, or `GET /v1/orgs/{org}/playbooks/{playbook}/tool-servers/search`). It returns the servers set up for the playbook and the tools the operator allows on each. It asks each server for its tools, as a run does. When the servers offer many tools, pass a few words describing what the function should do as `terms`. See [Tool servers](http.md#tool-servers).
 2. Call `introspect` to read one tool in full, with the schema of its arguments.
-3. Call the tool with `execute` to see what it returns before you name it. `execute` calls the tool once, as a run would, and returns what the run's model would see. The call is recorded in the playbook's history. `dry_run` reports beforehand what the call would check. See [Calling a tool by hand](http.md#calling-a-tool-by-hand).
+3. Call the tool to see what it returns before you name it: `query_connection` calls a tool marked `reads`, and `execute_connection` calls a tool whatever its mark, once the person agrees. Each calls the tool once, as a run would, and returns what the run's model would see. The call is recorded in the playbook's history. `dry_run` reports beforehand what the call would check. See [Calling a tool by hand](http.md#calling-a-tool-by-hand).
 
 ### Before the model is called
 

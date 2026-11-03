@@ -1,14 +1,21 @@
+import { Context } from 'effect';
+
 import type { CallLink, TriggerLink } from '../caller/call-lineage.ts';
 import type { CallerIdentity } from '../caller/caller.ts';
 import type { InputEncoding } from '../definition/registered-run.ts';
 import type { Lineage } from '../ledger/message-lineage.ts';
 import type { CallSummary } from './incident-reporter.ts';
 
+export const DirectoryListing = Context.Reference<boolean>('@on.auto/operations/DirectoryListing', {
+  defaultValue: () => false,
+});
+
 export interface OrgRequest {
   readonly caller: CallerIdentity;
   readonly org: string;
   readonly input: unknown;
   readonly encoding: InputEncoding;
+  readonly directoryListing?: true;
 }
 
 export interface PlaybookRequest extends OrgRequest {

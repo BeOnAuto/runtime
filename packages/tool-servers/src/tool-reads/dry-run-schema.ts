@@ -19,18 +19,22 @@ const ReachedSchema = Schema.Struct({
 export const DryRunSchema = Schema.Struct({
   would_run: Schema.Boolean.annotate({
     description:
-      'Whether execute would call the tool now: the caller may, the playbook is not retired, whoever runs this server allows it, and its server answered',
+      'Whether execute_connection would call the tool now: the caller may, the playbook is not retired, whoever runs this server allows it, and its server answered',
   }),
   needs: Schema.Literal('playbook:write').annotate({
-    description: 'The permission execute needs, whatever the tool does, since a call acts as the playbook',
+    description:
+      'The permission query_connection and execute_connection need, whatever the tool does, since a call acts as the playbook',
   }),
-  caller_may: Schema.Boolean.annotate({ description: 'Whether the caller holds the permission execute needs' }),
+  caller_may: Schema.Boolean.annotate({
+    description: 'Whether the caller holds the permission query_connection and execute_connection need',
+  }),
   playbook_retired: Schema.Boolean.annotate({
     description:
-      'Whether the playbook is retired, which execute refuses, since a retired playbook can no longer change',
+      'Whether the playbook is retired. query_connection and execute_connection refuse a retired playbook, since it can no longer change',
   }),
   allowed: Schema.Boolean.annotate({
-    description: "Whether whoever runs this server allows the tool on its server's entry, for runs and execute alike",
+    description:
+      "Whether whoever runs this server allows the tool on its server's entry, for runs and calls by hand alike",
   }),
   mark: Schema.NullOr(ToolMarkSchema).annotate({
     description: `The mark of the tool: ${marksMeant}; null when its listing was not read, as for a tool that is not allowed or a server that could not be asked`,

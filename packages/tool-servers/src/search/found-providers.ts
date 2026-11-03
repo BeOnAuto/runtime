@@ -1,6 +1,7 @@
 import type { CallerIdentity } from '@on.auto/operations';
 import { Effect, Order } from 'effect';
 
+import { offeredInTheListing } from '../access/directory-listing.ts';
 import type { OrgListing } from '../listing/listing-ways.ts';
 import type { ServerFields } from '../listing/tool-server.ts';
 import type { OrgFound, OrgSearchAsked } from './search-schemas.ts';
@@ -10,6 +11,7 @@ export interface OfferedProvider {
   readonly name: string;
   readonly title: string;
   readonly description: string;
+  readonly handles_money?: true;
 }
 
 export type ProviderOffering = (caller: CallerIdentity) => Effect.Effect<readonly OfferedProvider[] | undefined>;
@@ -44,4 +46,18 @@ export function providersOf(
   { server, terms }: OrgSearchAsked,
 ): Pick<OrgFound, 'providers'> {
   return offered === undefined || server !== undefined ? {} : { providers: providersFoundIn(offered, settings, terms) };
+}
+
+export const serversInTheListing = offeredInTheListing;
+
+function shownOf({ name, title, description: said }: OfferedProvider): OfferedProvider {
+  return { name, title, description: said };
+}
+
+export function providersInTheListing(
+  offered: readonly OfferedProvider[] | undefined,
+): Effect.Effect<readonly OfferedProvider[] | undefined> {
+  return offered === undefined
+    ? Effect.undefined
+    : Effect.map(offeredInTheListing(offered), (listed) => listed.map((provider) => shownOf(provider)));
 }

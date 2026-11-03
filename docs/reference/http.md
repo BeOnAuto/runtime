@@ -1515,21 +1515,22 @@ The result comes from a table the runtime updates as each run is recorded, so it
 
 ## Tool servers
 
-Five operations find and call the tools of the tool servers of a playbook: those the operator set up, and the [connections](#connections) people added to its org, MCP servers and HTTP APIs described by an OpenAPI document alike. A [reasoning function](reasoning-format.md#tools) names their tools in `tools` as `server/tool` or `server/*`, a connection by its name. These routes are relative to `/v1/orgs/{org}`:
+Six operations find and call the tools of the tool servers of a playbook: those the operator set up, and the [connections](#connections) people added to its org, MCP servers and HTTP APIs described by an OpenAPI document alike. A [reasoning function](reasoning-format.md#tools) names their tools in `tools` as `server/tool` or `server/*`, a connection by its name. These routes are relative to `/v1/orgs/{org}`:
 
-| Operation    | Method and route                                                         | Permission                    | Input                                                      |
-| ------------ | ------------------------------------------------------------------------ | ----------------------------- | ---------------------------------------------------------- |
-| `search`     | `GET /tool-servers/search`                                               | `org:read` or `playbook:read` | Optional `playbook`, `terms`, `server` and `only`          |
-| `search`     | `GET /playbooks/{playbook}/tool-servers/search`                          | `playbook:read`               | Playbook id in path; optional `terms`, `server` and `only` |
-| `introspect` | `GET /playbooks/{playbook}/tool-servers/{server}/tools/{tool}`           | `playbook:read`               | Server and tool in the path                                |
-| `validate`   | `POST /playbooks/{playbook}/tool-servers/{server}/tools/{tool}/validate` | `playbook:read`               | Server and tool in the path; `arguments` in the body       |
-| `dry_run`    | `POST /playbooks/{playbook}/tool-servers/{server}/tools/{tool}/dry-run`  | `playbook:read`               | Server and tool in the path; optional `arguments`          |
-| `execute`    | `POST /playbooks/{playbook}/tool-servers/{server}/tools/{tool}/execute`  | `playbook:write`              | Server and tool in the path; optional `arguments`          |
+| Operation            | Method and route                                                         | Permission                    | Input                                                      |
+| -------------------- | ------------------------------------------------------------------------ | ----------------------------- | ---------------------------------------------------------- |
+| `search`             | `GET /tool-servers/search`                                               | `org:read` or `playbook:read` | Optional `playbook`, `terms`, `server` and `only`          |
+| `search`             | `GET /playbooks/{playbook}/tool-servers/search`                          | `playbook:read`               | Playbook id in path; optional `terms`, `server` and `only` |
+| `introspect`         | `GET /playbooks/{playbook}/tool-servers/{server}/tools/{tool}`           | `playbook:read`               | Server and tool in the path                                |
+| `validate`           | `POST /playbooks/{playbook}/tool-servers/{server}/tools/{tool}/validate` | `playbook:read`               | Server and tool in the path; `arguments` in the body       |
+| `dry_run`            | `POST /playbooks/{playbook}/tool-servers/{server}/tools/{tool}/dry-run`  | `playbook:read`               | Server and tool in the path; optional `arguments`          |
+| `query_connection`   | `POST /playbooks/{playbook}/tool-servers/{server}/tools/{tool}/query`    | `playbook:write`              | Server and tool in the path; optional `arguments`          |
+| `execute_connection` | `POST /playbooks/{playbook}/tool-servers/{server}/tools/{tool}/execute`  | `playbook:write`              | Server and tool in the path; optional `arguments`          |
 
-- `execute` needs `playbook:write` for every tool, since a call acts as the playbook, under the credential of the server's entry or of the connection.
+- `query_connection` and `execute_connection` need `playbook:write` for every tool, since a call acts as the playbook, under the credential of the server's entry or of the connection.
 - `validate` and `dry_run` are routed by `POST` because their `arguments` are an object a query string cannot carry. They are still reads: they change nothing, call no tool and need only `playbook:read`. A query string beside their body returns `bad_request`.
 - The four reads ask each server they need for its tool list when you call them, as a run does, with the same time limits to connect and to list. They record nothing. An HTTP API is not asked, since its OpenAPI document is the list.
-- On a playbook route, a playbook that does not exist returns `not_found`. A retired playbook serves the reads like any other. It refuses `execute` with `conflict` of the kind `retired`, as it refuses every command.
+- On a playbook route, a playbook that does not exist returns `not_found`. A retired playbook serves the reads like any other. It refuses `query_connection` and `execute_connection` with `conflict` of the kind `retired`, as it refuses every command.
 
 ### Searching the tools
 
@@ -1692,20 +1693,20 @@ Content-Type: application/json
 { "valid": false, "issues": [{ "path": "/id", "message": "Expected string" }] }
 ```
 
-`dry_run` reports what `execute` would check for the tool and its `arguments`, without calling the tool:
+`dry_run` reports what `execute_connection` would check for the tool and its `arguments`, without calling the tool:
 
 | Field              | Contents                                                                                                                                                                                       |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `would_run`        | Whether `execute` would call the tool now: the caller may, the playbook is not retired, the operator allows the tool, and its server responded                                                 |
-| `needs`            | `playbook:write`, the permission `execute` needs whatever the tool does                                                                                                                        |
+| `would_run`        | Whether `execute_connection` would call the tool now: the caller may, the playbook is not retired, the operator allows the tool, and its server responded                                      |
+| `needs`            | `playbook:write`, the permission `query_connection` and `execute_connection` need whatever the tool does                                                                                       |
 | `caller_may`       | Whether the caller has that permission                                                                                                                                                         |
-| `playbook_retired` | Whether the playbook is retired, which `execute` refuses, since a retired playbook can no longer change                                                                                        |
-| `allowed`          | Whether the operator allows the tool on its server's entry, for runs and for `execute` alike                                                                                                   |
+| `playbook_retired` | Whether the playbook is retired. `query_connection` and `execute_connection` refuse a retired playbook, since it can no longer change                                                          |
+| `allowed`          | Whether the operator allows the tool on its server's entry, for runs and for calls made by hand alike                                                                                          |
 | `mark`             | The tool's [mark](#the-mark-of-a-tool), `reads`, `acts` or `unmarked`; `null` when the tool's listing was not read, for a tool the operator does not allow or a server that could not be asked |
 | `arguments`        | The `arguments` checked as `validate` checks them, `valid: null` with one issue saying why when the tool's input schema was not read; `null` when none were given                              |
 | `server`           | `reachable` (`yes` or `no`) and, with `no`, the `because` field that says why the server could not be asked                                                                                    |
 
-`dry_run` returns `would_run: true` even for arguments the tool's schema does not accept. `execute` does not check arguments, and the tool returns its own error for them. The `arguments` field reports the problem beforehand.
+`dry_run` returns `would_run: true` even for arguments the tool's schema does not accept. `query_connection` and `execute_connection` do not check arguments, and the tool returns its own error for them. The `arguments` field reports the problem beforehand.
 
 When a server or a tool cannot be used, the reads respond as below. Each refusal is `unavailable`, and no tool is called:
 
@@ -1715,11 +1716,14 @@ When a server or a tool cannot be used, the reads respond as below. Each refusal
 | A tool the operator does not allow   | Kind `tool_not_offered`, `because: "tool_not_allowed"`, before any server is asked           | Returns `allowed: false`                                                                                         |
 | A tool the server does not list      | Kind `tool_not_offered`, `because: "tool_not_listed"`                                        | The same                                                                                                         |
 | A connection that is not ready       | Kind `tool_not_offered`, with its `because`, as [below](#a-connection-that-is-not-ready)     | The same, or `server.reachable: "no"` with `because: "connection_not_allowed"` for an address its document names |
-| A server that cannot be asked        | Kind `tool_server_failed`, with its `because`, as `execute` returns it                       | Returns `server.reachable: "no"`, with its `because`                                                             |
+| A server that cannot be asked        | Kind `tool_server_failed`, with its `because`, as `execute_connection` returns it            | Returns `server.reachable: "no"`, with its `because`                                                             |
 
 ### Calling a tool by hand
 
-`execute` calls one tool of one tool server with the `arguments` given, as a run of a reasoning function would call it. It returns what that run's model would see, and the document an interaction function's call reads. Use it to see what a tool returns before a function names it, or to find an id a prompt needs. Use it, too, to do what the person asked of the tool without first creating a function.
+`query_connection` and `execute_connection` call one tool of one tool server with the `arguments` given, as a run of a reasoning function would call it. Each returns what that run's model would see, and the document an interaction function's call reads. They take the same input and return the same fields.
+
+- `query_connection` calls only a tool marked `reads`. Use it to see what a tool returns before a function names it, or to find an id a prompt needs. It refuses a tool with any other mark as `unavailable` of the kind `tool_not_read_only`, before anything is sent, in words that say `execute_connection` calls it.
+- `execute_connection` calls a tool whatever its mark. Use it to do what the person asked of a tool that may change something, such as sending, creating or deleting, without first creating a function.
 
 `arguments` is the object the tool's `input_schema` takes, `{}` when left out. It may be at most 16 KiB as JSON; larger arguments return `invalid_input` at `/arguments` before anything is called.
 
@@ -1767,9 +1771,10 @@ Content-Type: application/json
 The response is `200` whenever the call was made, whatever the tool returned. Nothing is called when:
 
 - the operator does not allow the tool, the server is not set up for the playbook, or the server does not list the tool: `unavailable` with kind `tool_not_offered` and `because` set to `tool_not_allowed`, `tool_server_not_configured` or `tool_not_listed`, or for a connection that is not ready `connection_pending`, `connection_broken`, `connection_not_allowed` or `connection_unavailable`;
-- the server cannot be used: `unavailable` with kind `tool_server_failed`.
+- the server cannot be used: `unavailable` with kind `tool_server_failed`;
+- `query_connection` names a tool not marked `reads`: `unavailable` with kind `tool_not_read_only`.
 
-A call is live: a tool that is not marked `reads` may change something. That is why `execute` is marked destructive over MCP while a tool server is configured or people may add connections.
+A call is live: a tool that is not marked `reads` may change something. That is why `execute_connection` is marked destructive over MCP, and `query_connection`, which calls only a tool marked `reads`, is marked read-only.
 
 Each call is recorded in the playbook's history: as `tool_call_started` before it is sent, with `connection_id` beside `server` for a connection, and as `tool_call_answered` or `tool_call_failed` after. These are the same facts a run's tool calls record, with the caller who made the call as the one who acted.
 
@@ -1891,7 +1896,7 @@ It answers `providers`, sorted by name, `may_add`, `refusal` and `return_address
 
 ### A connection that is not ready
 
-A connected connection is a tool server of its org: `search` lists it with `connection`, its id, `list_connection_tools` lists its tools, a function names it by its name as `name/tool`, and `introspect`, `validate`, `dry_run` and `execute` reach it, as [Tool servers](#tool-servers) describes. The runtime checks the operator's rules and the entry, as `add_connection` checks them, and reads its credential when it is first used after the runtime starts. A connection that is not ready is refused as `unavailable` of the kind `tool_not_offered`, and `search` lists it unavailable with the same `because` and words:
+A connected connection is a tool server of its org: `search` lists it with `connection`, its id, `list_connection_tools` lists its tools, a function names it by its name as `name/tool`, and `introspect`, `validate`, `dry_run`, `query_connection` and `execute_connection` reach it, as [Tool servers](#tool-servers) describes. The runtime checks the operator's rules and the entry, as `add_connection` checks them, and reads its credential when it is first used after the runtime starts. A connection that is not ready is refused as `unavailable` of the kind `tool_not_offered`, and `search` lists it unavailable with the same `because` and words:
 
 | `because`                | The connection                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2056,11 +2061,12 @@ A `500` response contains an incident reference: its `instance` and the `x-reque
 
 ### Models and tools a function may not use
 
-| Case                                                                                      | Response                                                                                                      |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| A function names a model outside the deployment's allow list                              | `unavailable` with kind `model_not_offered` and `because: "model_not_allowed"`, before the provider is called |
-| A function names a model whose provider is missing                                        | `unavailable` with kind `model_not_offered` and `because: "provider_not_configured"`                          |
-| A function names a tool the playbook's servers do not offer                               | `unavailable` with kind `tool_not_offered`                                                                    |
-| `introspect`, `validate`, `dry_run` or `execute` names a tool the playbook is not offered | `unavailable` with kind `tool_not_offered`                                                                    |
+| Case                                                                                                                     | Response                                                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| A function names a model outside the deployment's allow list                                                             | `unavailable` with kind `model_not_offered` and `because: "model_not_allowed"`, before the provider is called |
+| A function names a model whose provider is missing                                                                       | `unavailable` with kind `model_not_offered` and `because: "provider_not_configured"`                          |
+| A function names a tool the playbook's servers do not offer                                                              | `unavailable` with kind `tool_not_offered`                                                                    |
+| `introspect`, `validate`, `dry_run`, `query_connection` or `execute_connection` names a tool the playbook is not offered | `unavailable` with kind `tool_not_offered`                                                                    |
+| `query_connection` names a tool not marked `reads`                                                                       | `unavailable` with kind `tool_not_read_only`                                                                  |
 
 Use `list_models` to see the model references the server offers, and `search` to see the servers and tools a function may name.

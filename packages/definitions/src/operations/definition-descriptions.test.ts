@@ -91,10 +91,8 @@ describe('the JSON Schema of the input of the operations', () => {
 });
 
 describe('the description of list_runs', () => {
-  it('says that its pages are read on only as the person needs', () => {
-    expect(described('list_runs')).toContain(
-      '`cursor` is the next_cursor of the page before, to read on only as the person needs.',
-    );
+  it('says that `cursor` is the next_cursor of the page before', () => {
+    expect(described('list_runs')).toContain('`cursor` is the next_cursor of the page before.');
   });
 });
 

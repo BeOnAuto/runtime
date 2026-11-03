@@ -90,8 +90,8 @@ function hasNoConstraint({ keywords }: Argument): boolean {
 }
 
 describe('the descriptions of the tools of /mcp', () => {
-  it('are thirty-seven, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(37);
+  it('are thirty-eight, each under 800 characters, in three to eight sentences', () => {
+    expect(tools).toHaveLength(38);
     expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
     expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
   });
@@ -103,7 +103,7 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow takes none and that its page is a key of its document, at 680 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('name each type of definition in create_definition, say that a function needs a diagram and a workflow takes none and that its page is a key of its document, at 649 characters in six sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
@@ -116,24 +116,24 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(description).toContain(
       "The document's `page` key, optional, shows the person its runs, as the page guide says.",
     );
-    expect([description.length, sentencesOf(description)]).toEqual([680, 7]);
+    expect([description.length, sentencesOf(description)]).toEqual([649, 6]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });
   });
 
-  it('say that a function that calls a tool may change something, in run_definition at 799 characters, and that a reasoning run may be cancelled while one that ends within its call cannot, in cancel_run at 738', () => {
+  it('say that a function that calls a tool may change something, in run_definition at 797 characters, and that a reasoning run may be cancelled while one that ends within its call cannot, in cancel_run at 733', () => {
     const [running, cancelling] = [descriptionOf('run_definition'), descriptionOf('cancel_run')];
 
     expect(running).toContain('A function that calls a tool may change something outside the playbook');
     expect(cancelling).toContain('such as a workflow or a reasoning function');
     expect(cancelling).toContain('or an interaction function that calls a tool, cannot be cancelled.');
-    expect([running.length, cancelling.length]).toEqual([799, 738]);
+    expect([running.length, cancelling.length]).toEqual([797, 733]);
   });
 });
 
 describe('the descriptions of the tools that find and connect a provider', () => {
-  it('name in search the providers that match a service and no server serves yet, and the mark of each tool, at 553 characters', () => {
+  it('name in search the providers that match a service and no server serves yet, and the mark of each tool, at 584 characters', () => {
     const searching = descriptionOf('search');
 
     expect(searching).toContain(
@@ -142,20 +142,20 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(searching).toContain(
       'each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts.',
     );
-    expect(searching).toHaveLength(553);
+    expect(searching).toHaveLength(584);
   });
 
-  it("open add_connection with a person's account at a service that search lists, claim a service a playbook will use, say an MCP server given by hand says how it authenticates, and end it with what the call does not grant, at 573 characters", () => {
+  it("open add_connection with a person's account at a service that search lists, say that once approved the connection's tools serve the org's playbooks, say an MCP server given by hand says how it authenticates, and end it with what the call does not grant, at 529 characters", () => {
     const adding = descriptionOf('add_connection');
 
     expect(adding).toMatch(
-      /^Starts connecting a person's account at a service, by the name of a provider that search lists, .*\. A service a playbook will use is connected here, whatever connector the agent has of its own for it\. /u,
+      /^Starts connecting a person's account at a service, by the name of a provider that search lists, .*\. Once approved, the connection's tools serve the org's playbooks\. /u,
     );
     expect(adding).toMatch(/ Nothing is granted by this call and no credential passes through it\.$/u);
     expect(adding).toMatch(
       / An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none\. /u,
     );
-    expect(adding).toHaveLength(565);
+    expect(adding).toHaveLength(529);
   });
 });
 
@@ -166,11 +166,10 @@ describe('the descriptions that say what the instructions leave to them', () => 
     );
   });
 
-  it('say in each paged tool that its pages are read on only as the person needs', () => {
+  it('say in each paged tool that `cursor` is the next_cursor of the page before', () => {
     expect(
       ['list_runs', 'list_playbook_events', 'list_interactions'].filter(
-        (name) =>
-          !descriptionOf(name).includes('the next_cursor of the page before, to read on only as the person needs.'),
+        (name) => !descriptionOf(name).includes('the next_cursor of the page before.'),
       ),
     ).toEqual([]);
   });
@@ -203,22 +202,22 @@ describe('the arguments of the tools of /mcp', () => {
 type Hints = readonly [boolean, boolean, boolean, boolean];
 
 const served: Readonly<Record<string, Hints>> = {
-  create_playbook: [false, false, false, false],
+  create_playbook: [false, true, false, false],
   list_playbooks: [true, false, true, false],
   get_playbook: [true, false, true, false],
-  update_playbook: [false, false, true, false],
+  update_playbook: [false, true, true, false],
   retire_playbook: [false, true, true, false],
   list_models: [true, false, true, true],
-  add_connection: [false, false, false, false],
+  add_connection: [false, true, false, false],
   list_connections: [true, false, true, false],
-  reconnect_connection: [false, false, false, false],
+  reconnect_connection: [false, true, false, false],
   remove_connection: [false, true, true, false],
   list_connection_tools: [true, false, true, true],
-  activate_license: [false, false, true, true],
-  create_definition: [false, false, false, true],
+  activate_license: [false, true, true, true],
+  create_definition: [false, true, false, true],
   list_definitions: [true, false, true, false],
   get_definition: [true, false, true, false],
-  update_definition: [false, false, true, true],
+  update_definition: [false, true, true, true],
   retire_definition: [false, true, true, false],
   run_definition: [false, true, false, true],
   get_run: [true, false, true, false],
@@ -226,19 +225,20 @@ const served: Readonly<Record<string, Hints>> = {
   list_runs: [true, false, true, false],
   list_playbook_events: [true, false, true, false],
   get_event: [true, false, true, false],
-  publish_event: [false, false, false, false],
-  remember: [false, false, false, false],
+  publish_event: [false, true, false, false],
+  remember: [false, true, false, false],
   recall: [true, false, true, false],
   forget: [false, true, true, false],
   search: [true, false, true, true],
   introspect: [true, false, true, true],
   dry_run: [true, false, true, true],
-  execute: [false, true, false, true],
+  query_connection: [true, false, false, true],
+  execute_connection: [false, true, false, true],
   answer_interaction: [false, true, true, false],
   list_interactions: [true, false, true, false],
   list_comments: [true, false, true, false],
-  resolve_comment: [false, false, true, false],
-  send_run_event: [false, false, false, false],
+  resolve_comment: [false, true, true, false],
+  send_run_event: [false, true, false, false],
   get_guide: [true, false, true, false],
 };
 
@@ -278,7 +278,8 @@ describe('the open-world hint of the tools of /mcp', () => {
       'run_definition',
       'introspect',
       'dry_run',
-      'execute',
+      'query_connection',
+      'execute_connection',
     ]);
   });
 });

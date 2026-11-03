@@ -4,7 +4,15 @@ import type { Unusable } from '../org-servers/server-refusals.ts';
 import { everyPlaybook } from '../settings/server-settings.ts';
 import type { ServerFields, UnavailableServer } from './tool-server.ts';
 
-export function serverFieldsOf({ name, type, record_content, playbooks, connection, provider }: Served): ServerFields {
+export function serverFieldsOf({
+  name,
+  type,
+  record_content,
+  playbooks,
+  connection,
+  provider,
+  handles_money: handlesMoney,
+}: Served): ServerFields {
   return {
     name,
     type,
@@ -12,6 +20,7 @@ export function serverFieldsOf({ name, type, record_content, playbooks, connecti
     playbooks: playbooks ?? [everyPlaybook],
     ...(connection === null ? {} : { connection }),
     provider,
+    ...(handlesMoney === true ? { handles_money: handlesMoney } : {}),
   };
 }
 

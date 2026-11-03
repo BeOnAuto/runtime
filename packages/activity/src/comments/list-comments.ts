@@ -208,7 +208,7 @@ export const listCommentsInOrg = defineQuery('org', {
   title: 'List comments',
   description: [
     "Lists the comments people made in Studio, newest first, the open ones unless `open` is false: with `playbook`, that playbook's, and without it, the organization's own, on its connections, members, Settings or itself.",
-    "Use it when the person says they left comments in Studio or pastes the line Studio copies; to act on all, read the organization's own and each playbook's.",
+    "Use it when the person says they left comments in Studio or pastes the line Studio copies; the organization's own and each playbook's are listed apart.",
     'Each names what it is about by its `address`, which says which tool reads and changes the thing, such as get_definition for a step or list_connections for a connection.',
     ...keptAndClosed,
     'Once one is acted on, resolve_comment closes it, with the same `playbook` or none; its `studio` is its place in Studio to give the person.',

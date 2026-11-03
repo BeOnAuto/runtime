@@ -18,18 +18,12 @@ export interface ToolDefinition {
   readonly annotations: ToolAnnotations;
 }
 
-function annotationsOf({
-  title,
-  kind,
-  reachesOutside,
-  mayChangeOutside,
-  irreversible,
-  repeatable,
-}: Registration): ToolAnnotations {
+function annotationsOf({ title, kind, reachesOutside, readsOnly, repeatable }: Registration): ToolAnnotations {
+  const onlyReads = kind === 'query' || readsOnly;
   return {
     title,
-    readOnlyHint: kind === 'query',
-    destructiveHint: irreversible || mayChangeOutside,
+    readOnlyHint: onlyReads,
+    destructiveHint: !onlyReads,
     idempotentHint: kind === 'query' || repeatable,
     openWorldHint: reachesOutside,
   };

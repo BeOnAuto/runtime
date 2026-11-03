@@ -13,7 +13,7 @@ import { entryIssuesOf, readAddition } from '../entries/entry-checks.ts';
 import { reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
-import { newestFirst, type KeptConnection } from '../registry/registry.ts';
+import { newestFirst } from '../registry/registry.ts';
 import {
   connectedAtOf,
   consentAuthOf,
@@ -25,8 +25,17 @@ import {
 import type { Serving, ServingServices } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
-function servingOf(org: string, { name, type, provider, entry }: KeptConnection['connection']): ConnectionServing {
-  return { name, type, provider, orgs: [org], ...servedFieldsOf(entry) };
+function servingOf({ org, kept, services }: Serving): ConnectionServing {
+  const { name, type, provider, entry } = kept.connection;
+  const handlesMoney = providingOf(kept.connection, services)?.handles_money;
+  return {
+    name,
+    type,
+    provider,
+    orgs: [org],
+    ...servedFieldsOf(entry),
+    ...(handlesMoney === undefined ? {} : { handles_money: handlesMoney }),
+  };
 }
 
 function unchecked(name: string, issues: ReturnType<typeof entryIssuesOf>): ConnectionUnready {
@@ -69,7 +78,7 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
 function orgConnectionOf(serving: Serving): OrgConnection {
   const { connection } = serving.kept;
   const { id, name, status } = connection;
-  const serves = { id, serving: servingOf(serving.org, connection) };
+  const serves = { id, serving: servingOf(serving) };
   if (status === 'pending') {
     return {
       ...serves,

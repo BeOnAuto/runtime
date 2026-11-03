@@ -93,6 +93,11 @@ export interface Harness {
     input?: unknown,
     at?: string,
   ) => Promise<Outcome>;
+  readonly callListed: (
+    operation: { readonly registration: Runnable<'org'> },
+    caller: CallerIdentity,
+    input: unknown,
+  ) => Promise<Outcome>;
 }
 
 type ConnectionServices = Parameters<typeof makeConnectionOperations>[0];
@@ -121,6 +126,19 @@ function composedOf(
     resolve: publicEverywhere,
     ...given,
   };
+}
+
+function dispatchedAt<R>(
+  at: string,
+  services: Layer.Layer<R>,
+  dispatched: Effect.Effect<Outcome, never, R>,
+): Promise<Outcome> {
+  return Effect.runPromise(
+    TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(at))).pipe(
+      Effect.andThen(dispatched),
+      Effect.provide(services),
+    ),
+  );
 }
 
 export function harness({ beforeKeeping, mostSecretCharacters, consenting, ...given }: HarnessOptions = {}): Harness {
@@ -154,13 +172,22 @@ export function harness({ beforeKeeping, mostSecretCharacters, consenting, ...gi
     operations,
     operationsWith: (changes) => makeConnectionOperations({ ...composed, ...changes }),
     call: (operation, caller, input = {}, at = firstMoment) =>
-      Effect.runPromise(
-        TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(at))).pipe(
-          Effect.andThen(
-            dispatcher.dispatchToOrg(operation.registration, { caller, org: 'acme', input, encoding: 'json' }),
-          ),
-          Effect.provide(services),
-        ),
+      dispatchedAt(
+        at,
+        services,
+        dispatcher.dispatchToOrg(operation.registration, { caller, org: 'acme', input, encoding: 'json' }),
+      ),
+    callListed: (operation, caller, input) =>
+      dispatchedAt(
+        firstMoment,
+        services,
+        dispatcher.dispatchToOrg(operation.registration, {
+          caller,
+          org: 'acme',
+          input,
+          encoding: 'json',
+          directoryListing: true,
+        }),
       ),
   };
 }

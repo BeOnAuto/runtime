@@ -59,15 +59,15 @@ const searched = { server: 'graph', tool: 'search', arguments: { query: 'acme' }
 
 const answered = { server: 'graph', tool: 'search', outcome: 'result', text: 'Found 2 rows for acme.' };
 
-describe('execute over MCP', () => {
+describe('execute_connection over MCP', () => {
   it('is served on /mcp with the playbook as an argument and on the playbook endpoint, never on the org endpoint', async () => {
     const { server } = await serving();
 
     const called = await on(server, '/mcp', builder.key, (session) =>
-      session.callTool('execute', { playbook: 'alpha', ...searched }),
+      session.callTool('execute_connection', { playbook: 'alpha', ...searched }),
     );
     const onThePlaybook = await on(server, '/orgs/acme/playbooks/alpha/mcp', builder.key, (session) =>
-      session.callTool('execute', searched),
+      session.callTool('execute_connection', searched),
     );
     const onTheOrg = await on(server, '/orgs/acme/mcp', builder.key, (session) => session.listTools());
 
@@ -75,30 +75,41 @@ describe('execute over MCP', () => {
     expect(plainTextIn(called)).toMatch(
       /^The search tool of graph answered in [\d,]+ ms with \d+ bytes; what a reasoning function's model would see is in the details\.$/u,
     );
-    expect(listedTools(onTheOrg).map(({ name }) => name)).not.toContain('execute');
+    expect(listedTools(onTheOrg).map(({ name }) => name)).not.toContain('execute_connection');
   });
 
-  it('says that a call may change something outside, while a tool server is configured', async () => {
+  it('is marked destructive, while query_connection, which calls only a tool marked reads, is marked read-only', async () => {
     const { server } = await serving();
 
     const listed = await on(server, '/mcp', builder.key, async (session) => listedTools(await session.listTools()));
 
-    expect(listed.find(({ name }) => name === 'execute')?.annotations).toEqual({
-      title: 'Execute a tool call',
-      readOnlyHint: false,
-      destructiveHint: true,
-      idempotentHint: false,
-      openWorldHint: true,
-    });
+    expect(
+      ['execute_connection', 'query_connection'].map((tool) => listed.find(({ name }) => name === tool)?.annotations),
+    ).toEqual([
+      {
+        title: 'Execute a connection tool',
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+      {
+        title: 'Query a connection tool',
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    ]);
   });
 });
 
-describe('execute refused over MCP', () => {
+describe('execute_connection refused over MCP', () => {
   it('says to name a tool server that search shows when none of the name serves the playbook', async () => {
     const { server, graph } = await serving();
 
     const refused = await on(server, '/orgs/acme/playbooks/alpha/mcp', builder.key, (session) =>
-      session.callTool('execute', { server: 'wiki', tool: 'search' }),
+      session.callTool('execute_connection', { server: 'wiki', tool: 'search' }),
     );
 
     expect(refused.isError).toBe(true);
@@ -110,8 +121,8 @@ describe('execute refused over MCP', () => {
   });
 });
 
-describe('execute for a key that may only read', () => {
-  it('is not offered on either endpoint, while search, introspect and dry_run are', async () => {
+describe('execute_connection and query_connection for a key that may only read', () => {
+  it('are not offered on either endpoint, while search, introspect and dry_run are', async () => {
     const { server } = await serving();
 
     const offered: readonly (readonly string[])[] = await Promise.all(
@@ -120,7 +131,9 @@ describe('execute for a key that may only read', () => {
       ),
     );
 
-    expect(offered.map((names) => names.includes('execute'))).toEqual([false, false]);
+    expect(
+      offered.map((names) => ['execute_connection', 'query_connection'].some((name) => names.includes(name))),
+    ).toEqual([false, false]);
     expect(offered.map((names) => ['search', 'introspect', 'dry_run'].every((name) => names.includes(name)))).toEqual([
       true,
       true,
@@ -132,7 +145,7 @@ describe('a call made by hand whose caller goes away over MCP while the tool is 
   it('records a start and no answer, sends no second call, and still lets the session go', async () => {
     const { server, graph } = await serving();
     const leaving = new AbortController();
-    const call = { name: 'execute', arguments: { server: 'graph', tool: 'sleep', arguments: { ms: 5000 } } };
+    const call = { name: 'execute_connection', arguments: { server: 'graph', tool: 'sleep', arguments: { ms: 5000 } } };
 
     const gone: Promise<unknown> = fetch(`${server.origin}/orgs/acme/playbooks/alpha/mcp`, {
       method: 'POST',

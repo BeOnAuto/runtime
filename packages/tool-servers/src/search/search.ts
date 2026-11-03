@@ -1,13 +1,14 @@
 import { InvalidInput, PlaybookContext, defineQuery } from '@on.auto/operations';
 import { Effect } from 'effect';
 
+import { offeredInTheListing } from '../access/directory-listing.ts';
 import type { ToolAccess } from '../access/tool-access.ts';
 import { foundIn } from './found-tools.ts';
 import { FoundSchema, SearchInputSchema } from './search-schemas.ts';
 import { searchAttempted, searchTask, searched } from './search-words.ts';
 
 export const searchSentences = [
-  "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by execute.",
+  "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection.",
   'It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts.',
   'A server that cannot be asked says why.',
 ];
@@ -28,7 +29,7 @@ export function defineSearch(access: Pick<ToolAccess, 'listServers' | 'takesConn
     outputSchema: FoundSchema,
     reasons: ['invalid_input'],
     handle: Effect.fnUntraced(function* (asked) {
-      const servers = yield* access.listServers(yield* PlaybookContext, asked.server);
+      const servers = yield* offeredInTheListing(yield* access.listServers(yield* PlaybookContext, asked.server));
       if (asked.server !== undefined && servers.length === 0) {
         return yield* noServerNamed(asked.server, 'This playbook');
       }

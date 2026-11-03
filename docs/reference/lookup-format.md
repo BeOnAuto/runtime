@@ -49,13 +49,13 @@ To save it, call `create_definition` with `type: "lookup"`, the `name` `thread-r
 Write the call from what the tool returns, not from memory:
 
 1. Call `search` with `only: read` to see the tools this playbook may use that only read, each with its mark. Call `introspect` for the `input_schema` a tool takes.
-2. Call the tool with `execute`, with the arguments its `input_schema` takes, and read its `answer`. A tool marked `reads` changes nothing, so this is safe. The answer is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
+2. Call the tool with `query_connection`, with the arguments its `input_schema` takes, and read its `answer`. `query_connection` calls only a tool marked `reads` and refuses any other. The answer is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
 3. Write `call`:
    - `server` and `tool`, as `search` names them;
    - `with`, the arguments;
    - `read`, a JSON Pointer to the part of the answer the function returns, such as `/messages`. Leave `read` out to return the whole answer.
 
-   Then write `output.schema`: the shape that part has in the answer `execute` gave.
+   Then write `output.schema`: the shape that part has in the answer `query_connection` gave.
 
 4. Show the person the whole document. Once they agree, save it with `create_definition`, `type` lookup. `run_definition` runs it and returns its output at once.
 

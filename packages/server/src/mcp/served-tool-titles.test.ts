@@ -24,7 +24,7 @@ function titledAgainAsItsAnnotation({ title, annotations }: ListedTool): boolean
 }
 
 describe('the titles of the tools of /mcp', () => {
-  it('are given again as the title annotation, which a directory of connectors shows as the name of each tool', () => {
+  it('are given again as the title annotation, which the directory listing shows as the name of each tool', () => {
     expect(tools.filter((tool) => !titledAgainAsItsAnnotation(tool)).map(({ name }) => name)).toEqual([]);
   });
 });

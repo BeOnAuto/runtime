@@ -36,8 +36,8 @@ grep --quiet '"id":"smoke","name":"Smoke test"' listed.txt
 test "$(answered read.json --header "authorization: Bearer $key" http://127.0.0.1:$port/v1/orgs/demo/playbooks/smoke)" = 200
 grep --quiet '"id":"smoke","name":"Smoke test"' read.json
 call_mcp /mcp '{"jsonrpc":"2.0","id":4,"method":"tools/list"}' all-tools.txt
-test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 37
-for tool in list_models list_runs get_event list_playbook_events publish_event search introspect dry_run execute list_connection_tools list_interactions answer_interaction remember recall forget send_run_event cancel_run get_guide; do
+test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 38
+for tool in list_models list_runs get_event list_playbook_events publish_event search introspect dry_run query_connection execute_connection list_connection_tools list_interactions answer_interaction remember recall forget send_run_event cancel_run get_guide; do
   grep --quiet "\"name\":\"$tool\"" all-tools.txt
 done
 call_mcp /mcp '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"list_definitions","arguments":{"playbook":"smoke","type":"reasoning"}}}' definitions.txt
@@ -50,13 +50,14 @@ call_mcp /mcp '{"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"
 grep --quiet '"structuredContent":{"servers":\[\],"tools":\[\],"scopes":\[\]}' org-tool-servers.txt
 test "$(answered org-servers.json --header "authorization: Bearer $read_key" http://127.0.0.1:$port/v1/orgs/demo/tool-servers/search)" = 200
 test "$(cat org-servers.json)" = '{"servers":[],"tools":[],"scopes":[]}'
-call_mcp /mcp '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"execute","arguments":{"playbook":"smoke","server":"graph","tool":"search"}}}' executed.txt
+call_mcp /mcp '{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"execute_connection","arguments":{"playbook":"smoke","server":"graph","tool":"search"}}}' executed.txt
 grep --quiet '"isError":true' executed.txt
 grep --quiet 'tool_server_not_configured' executed.txt
 call_mcp_as "$read_key" /mcp '{"jsonrpc":"2.0","id":14,"method":"tools/list"}' read-tools.txt
 grep --quiet '"name":"search"' read-tools.txt
 grep --quiet '"name":"dry_run"' read-tools.txt
-test "$(grep --count '"name":"execute"' read-tools.txt)" = 0
+test "$(grep --count '"name":"execute_connection"' read-tools.txt)" = 0
+test "$(grep --count '"name":"query_connection"' read-tools.txt)" = 0
 test "$(answered refused.json \
   --header "authorization: Bearer $read_key" --header 'content-type: application/json' --data '{"arguments":{}}' \
   http://127.0.0.1:$port/v1/orgs/demo/playbooks/smoke/tool-servers/graph/tools/search/execute)" = 403
@@ -80,6 +81,12 @@ call_mcp /mcp '{"jsonrpc":"2.0","id":10,"method":"resources/list"}' resources.tx
 test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 15
 grep --quiet '"uri":"guide://lookup-function"' resources.txt
 grep --quiet '"uri":"guide://memory-function"' resources.txt
+call_mcp /directory '{"jsonrpc":"2.0","id":23,"method":"tools/list"}' directory-tools.txt
+test "$(grep --only-matching '"name":"[a-z_]*","title"' directory-tools.txt | wc -l)" -eq 38
+test "$(grep --count 'generation' directory-tools.txt)" = 0
+call_mcp /directory '{"jsonrpc":"2.0","id":24,"method":"resources/list"}' directory-resources.txt
+test "$(grep --only-matching '"uri":"guide://[a-z-]*"' directory-resources.txt | wc -l)" -eq 14
+test "$(grep --count 'guide://generation-function' directory-resources.txt)" = 0
 call_mcp /mcp '{"jsonrpc":"2.0","id":11,"method":"prompts/list"}' prompts.txt
 for prompt in first-playbook give-tools schedule; do
   grep --quiet "\"name\":\"$prompt\"" prompts.txt

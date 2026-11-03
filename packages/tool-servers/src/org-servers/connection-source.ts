@@ -11,7 +11,7 @@ export function isConnectionServerSettings(settings: ServerSettings): settings i
 
 export type ConnectionServing = Pick<
   ConnectionServerSettings,
-  'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'provider'
+  'name' | 'type' | 'orgs' | 'playbooks' | 'allowed' | 'record_content' | 'request_id' | 'provider' | 'handles_money'
 >;
 
 export const unreadyReasons = [

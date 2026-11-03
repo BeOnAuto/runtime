@@ -95,10 +95,13 @@ describe('a connection whose credential the secret store cannot read now', () =>
     const calls = playbookToolCalls(access);
 
     custodian.refuse();
-    const refused = [await calls.call('execute', searched), await calls.call('execute', searched)];
+    const refused = [
+      await calls.call('execute_connection', searched),
+      await calls.call('execute_connection', searched),
+    ];
     const listedWhileRefused = (await connectionOf(source, id)).state.status;
     custodian.answer();
-    const answered = await calls.call('execute', searched);
+    const answered = await calls.call('execute_connection', searched);
 
     expect(refused).toEqual([refusedCallBy(custodian), refusedCallBy(custodian)]);
     expect(listedWhileRefused).toBe('connected');

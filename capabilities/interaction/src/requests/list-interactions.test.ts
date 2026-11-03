@@ -40,10 +40,8 @@ async function listed(playbook: Awaited<ReturnType<typeof playbookWithThreeReque
 }
 
 describe('the description of the open requests', () => {
-  it('says that their pages are read on only as the person needs', () => {
-    expect(listInteractions.registration.description).toContain(
-      '`cursor` is the next_cursor of the page before, to read on only as the person needs.',
-    );
+  it('says that `cursor` is the next_cursor of the page before', () => {
+    expect(listInteractions.registration.description).toContain('`cursor` is the next_cursor of the page before.');
   });
 });
 

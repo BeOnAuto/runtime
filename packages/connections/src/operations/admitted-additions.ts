@@ -1,4 +1,4 @@
-import type { Conflict, Forbidden, InvalidInput } from '@on.auto/operations';
+import type { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
 import type { NamedWay, WayRefusal } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 
@@ -8,6 +8,7 @@ import { checkedAdditionOf, refusalOfTheAddition, type GivenAddition } from '../
 import type { Credential, CredentialKind } from '../registry/credential.ts';
 import type { AdditionGiven } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
+import { refusedInTheDirectoryListing } from './money-refused.ts';
 
 type Admitting = Pick<
   ConnectionServices,
@@ -92,7 +93,7 @@ function askedHowItAuthenticates(
 export function admittedAdditionOf(
   given: AdditionGiven,
   admitting: Admitting,
-): Effect.Effect<GivenAddition, InvalidInput | Forbidden | Conflict | WayRefused> {
+): Effect.Effect<GivenAddition, InvalidInput | Forbidden | Conflict | WayRefused | Unavailable> {
   const { org, modelProviders, policy, fileEntries } = admitting;
   return Effect.gen(function* () {
     const checked = yield* checkedAdditionOf(given, { org, modelProviders }, admitting);
@@ -100,6 +101,7 @@ export function admittedAdditionOf(
     if (refusal !== undefined) {
       return yield* Effect.fail(refusal);
     }
+    yield* refusedInTheDirectoryListing(admitting.providers, checked);
     return yield* askedHowItAuthenticates(checked, given, admitting);
   });
 }

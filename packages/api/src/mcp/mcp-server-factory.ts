@@ -2,25 +2,16 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import {
   type CallerIdentity,
   type OperationScope,
-  type RegisteredLink,
   type RegisteredPlainLanguage,
   type Registration,
   type RouteRegistration,
-  type Dispatcher,
   OperationsServed,
 } from '@on.auto/operations';
-import { Context, Effect, Result } from 'effect';
+import { Context } from 'effect';
 
-import {
-  playbookCallOf,
-  orgCallOf,
-  type PlaybookCall,
-  type HandedOff,
-  type OrgCall,
-} from '../hand-off/caller-hand-off.ts';
-import { toolCallbackOf, type AnsweringServing, type ToolLink } from '../tools/linked-answers.ts';
-import { namesAPlaybook, playbookArgumentOf, withoutPlaybook } from '../tools/playbook-argument.ts';
-import type { Arguments, CalledTool, Dispatch } from '../tools/tool-callback.ts';
+import { playbookCallOf, orgCallOf, type HandedOff, type OrgCall } from '../hand-off/caller-hand-off.ts';
+import { toolCallbackOf, type AnsweringServing } from '../tools/linked-answers.ts';
+import type { Arguments, CalledTool } from '../tools/tool-callback.ts';
 import {
   orgToolDefinitionsBeside,
   toolDefinitionOf,
@@ -31,6 +22,17 @@ import {
 } from '../tools/tool-definition.ts';
 import type { ServedTools } from './instructions.ts';
 import { connectionOf, serverOf, type Connection, type EveryTool, type McpServing } from './mcp-connection.ts';
+import {
+  everyListing,
+  orgDispatchOf,
+  playbookArgumentDispatchOf,
+  playbookDispatchOf,
+  asGiven,
+  orgInputBeside,
+  withoutThePlaybook,
+  type Dispatching,
+  type Listed,
+} from './tool-dispatch.ts';
 
 export type ToolServing = McpServing & AnsweringServing;
 
@@ -40,11 +42,6 @@ interface Offered<R extends Registration> {
   readonly registration: R;
   readonly definition: ToolDefinition;
   readonly plainLanguage: RegisteredPlainLanguage;
-}
-
-interface Dispatching {
-  readonly dispatch: Dispatch;
-  readonly link?: ToolLink;
 }
 
 interface Tool extends CalledTool, Dispatching {
@@ -109,10 +106,6 @@ function everyToolOf(
   };
 }
 
-function asGiven(input: Arguments): Arguments {
-  return input;
-}
-
 function toolsOf<R extends Registration>(
   offers: readonly Offered<R>[],
   dispatchOf: (registration: R) => Dispatching,
@@ -126,29 +119,6 @@ function toolsOf<R extends Registration>(
     operationInputOf: operationInputOf(registration),
     ...dispatchOf(registration),
   }));
-}
-
-function orgInputBeside(twins: Twins): (registration: Registration<'org'>) => (input: Arguments) => Arguments {
-  return ({ name }) => (twins.has(name) ? withoutPlaybook : asGiven);
-}
-
-function dispatchingOf<R>(
-  dispatchTo: (registration: R) => Dispatch,
-  registration: R,
-  link: RegisteredLink<R> | undefined,
-): Dispatching {
-  const dispatch = dispatchTo(registration);
-  return link === undefined
-    ? { dispatch }
-    : {
-        dispatch,
-        link: {
-          toOpen: link.toOpen,
-          idOf: link.idOf,
-          dispatchAfter: (offeredLink) => dispatchTo(link.answerAfter(offeredLink)),
-          linkLastsMs: link.linkLastsMs,
-        },
-      };
 }
 
 interface ConnectedCall {
@@ -175,55 +145,6 @@ function serverWithTools(connected: ConnectedCall, served: ServedTools, tools: r
       server.registerTool(tool.name, tool.definition, toolCallbackOf(serving, callBeside, tool));
     }
   });
-}
-
-function orgDispatchOf(
-  dispatcher: Dispatcher,
-  call: OrgCall,
-  twins: Twins,
-): (registration: Registration<'org'>) => Dispatching {
-  const { caller, org } = call;
-  const dispatchToTwin = playbookArgumentDispatchTo(dispatcher, call);
-  const dispatchTo =
-    (registration: Registration<'org'>): Dispatch =>
-    (input) => {
-      const twin = twins.get(registration.name);
-      return twin !== undefined && namesAPlaybook(input)
-        ? dispatchToTwin(twin)(input)
-        : dispatcher.dispatchToOrg(registration, { caller, org, input, encoding: 'json' });
-    };
-  return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
-}
-
-function playbookDispatchOf(
-  dispatcher: Dispatcher,
-  { caller, org, playbook }: PlaybookCall,
-): (registration: Registration<'playbook'>) => Dispatching {
-  const dispatchTo =
-    (registration: Registration<'playbook'>): Dispatch =>
-    (input) =>
-      dispatcher.dispatchToPlaybook(registration, { caller, org, playbook, input, encoding: 'json' });
-  return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
-}
-
-function playbookArgumentDispatchTo(
-  dispatcher: Dispatcher,
-  { caller, org }: OrgCall,
-): (registration: Registration<'playbook'>) => Dispatch {
-  return (registration) => (input) => {
-    const argument = playbookArgumentOf(input);
-    return Result.isFailure(argument)
-      ? Effect.succeed(argument.failure)
-      : dispatcher.dispatchToPlaybook(registration, { caller, org, ...argument.success, encoding: 'json' });
-  };
-}
-
-function playbookArgumentDispatchOf(
-  dispatcher: Dispatcher,
-  call: OrgCall,
-): (registration: Registration<'playbook'>) => Dispatching {
-  const dispatchTo = playbookArgumentDispatchTo(dispatcher, call);
-  return (registration) => dispatchingOf(dispatchTo, registration, registration.link);
 }
 
 interface OrgServing {
@@ -268,21 +189,33 @@ function namedInPlaybookAlone(
   return playbookRegistrations.filter(({ name }) => !orgNames.has(name));
 }
 
-export function catalogServerFactory(serving: ToolServing): McpServerFactory {
+function ownOrgServerFactory(
+  serving: ToolServing,
+  endpoint: 'own org' | 'directory',
+  listed: Listed,
+): McpServerFactory {
   const { registrations: orgRegistrations, twins, offers: orgOffers } = orgServingOf(serving);
   const playbookOffers = offered(
     namedInPlaybookAlone(servedAsTools(serving.catalog.operationsIn('playbook')), orgRegistrations),
     toolDefinitionTakingPlaybookOf,
   );
-  const connection = connectionOf('own org', serving, everyToolOf(orgOffers, playbookOffers));
+  const connection = connectionOf(endpoint, serving, everyToolOf(orgOffers, playbookOffers));
   return (context) => {
     const call = orgCallOf(context);
     const listedInOrg = permittedTo(call.caller, orgOffers);
     const listedInPlaybook = permittedTo(call.caller, playbookOffers);
     const tools = [
-      ...toolsOf(listedInOrg, orgDispatchOf(serving.dispatcher, call, twins), orgInputBeside(twins)),
-      ...toolsOf(listedInPlaybook, playbookArgumentDispatchOf(serving.dispatcher, call), () => withoutPlaybook),
+      ...toolsOf(listedInOrg, orgDispatchOf(serving.dispatcher, call, twins, listed), orgInputBeside(twins)),
+      ...toolsOf(listedInPlaybook, playbookArgumentDispatchOf(serving.dispatcher, call, listed), withoutThePlaybook),
     ];
     return serverWithTools({ connection, serving, call }, servedTools(listedInOrg, listedInPlaybook), tools);
   };
+}
+
+export function catalogServerFactory(serving: ToolServing): McpServerFactory {
+  return ownOrgServerFactory(serving, 'own org', everyListing);
+}
+
+export function directoryServerFactory(serving: ToolServing): McpServerFactory {
+  return ownOrgServerFactory(serving, 'directory', { directoryListing: true });
 }

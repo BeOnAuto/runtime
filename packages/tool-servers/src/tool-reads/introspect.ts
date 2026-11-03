@@ -10,7 +10,7 @@ import { toolRemedies } from './tool-refusals.ts';
 const description = [
   "Describes one tool of a tool server this playbook's functions may use, whole: what it does, the JSON Schema of the arguments it takes, its server's hints and its mark.",
   'Use it once search has found a tool, before writing its arguments or naming it in the tools of a function as server/tool.',
-  'Its server is asked for its tools when this is called, and nothing is sent to the tool; dry_run checks arguments and execute calls it.',
+  'Its server is asked for its tools when this is called, and nothing is sent to the tool; dry_run checks arguments, and query_connection or execute_connection calls it.',
   '`server` and `tool` name the tool as search lists it.',
 ].join(' ');
 

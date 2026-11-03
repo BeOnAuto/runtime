@@ -129,6 +129,12 @@ const servedFields = {
         "Whether the arguments and the answers of this server's calls are kept whole, scrubbed of secrets, in the playbook's ledger, where anyone who may read the playbook reads them; false keeps their sizes alone. Default true",
     }),
   ),
+  handles_money: Schema.optionalKey(
+    Schema.Boolean.annotate({
+      description:
+        'Whether the tools of this server pay, refund, transfer or pay out money; the directory listing does not offer such a server. Default false',
+    }),
+  ),
   request_id: Schema.optionalKey(
     Schema.String.annotate({
       description:

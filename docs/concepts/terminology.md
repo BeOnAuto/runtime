@@ -96,7 +96,7 @@ An interaction function asks a system and returns its result at once, or asks a 
 | Forget   | Keep a memory from being recalled any more; to erase it is also to take its text out of the ledger, leaving who wrote it and when.                              |
 | Move     | Keep a memory in the other scope, under a new id, and mark the one moved.                                                                                       |
 
-A memory function remembers or recalls; your agent does the same with the tools `remember`, `recall` and `forget`. What the playbook keeps there is the playbook's, for anyone who uses it and for its workflows, not an agent's own notes. A memory function is not a recall function: a recall function keeps a view folded from the playbook's events.
+A memory function remembers or recalls; your agent does the same with the tools `remember`, `recall` and `forget`. What the playbook keeps there is the playbook's, for anyone who uses it and for its workflows. A memory function is not a recall function: a recall function keeps a view folded from the playbook's events.
 
 ## Prediction
 

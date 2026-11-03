@@ -34,9 +34,9 @@ describe('list_playbook_events', () => {
     );
   });
 
-  it('says that its pages are read on only as the person needs', () => {
+  it('says that `cursor` is the next_cursor of the page before', () => {
     expect(listPlaybookEvents.registration.description).toContain(
-      'and `cursor` is the next_cursor of the page before, to read on only as the person needs.',
+      'and `cursor` is the next_cursor of the page before.',
     );
   });
 

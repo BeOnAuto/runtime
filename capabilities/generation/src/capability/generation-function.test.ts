@@ -34,6 +34,10 @@ describe('the generation capability', () => {
     });
     expect(generationHarness({ gateways: [] }).capability.mayChangeOutside).toBe(false);
   });
+
+  it('is left out of the directory listing', () => {
+    expect(generationHarness().capability.outsideTheDirectoryListing).toBe(true);
+  });
 });
 
 describe('a generation function definition as the capability reads it', () => {

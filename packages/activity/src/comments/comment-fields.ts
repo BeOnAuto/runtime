@@ -67,7 +67,7 @@ export const LimitField = Schema.Int.check(Schema.isBetween({ minimum: 1, maximu
 });
 
 export const CursorField = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(longestCursor)).annotate({
-  description: 'The next_cursor of the page before, to read on only as the person needs',
+  description: 'The next_cursor of the page before',
 });
 
 export function refusedAt(pointer: string, detail: string): InvalidInput {

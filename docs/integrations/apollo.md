@@ -140,7 +140,7 @@ Check that each call to the graph appears there, with the tool, its arguments an
 
 ## Next
 
-- [Give a function tools](../guides/tools.md) covers finding a tool, trying it with `execute` and checking a run's tool calls.
+- [Give a function tools](../guides/tools.md) covers finding a tool, trying it with `query_connection` or `execute_connection` and checking a run's tool calls.
 - [Add a tool server](../self-host/tool-servers.md) covers adding any tool server, for whoever runs Auto.
 - [Reasoning function format](../reference/reasoning-format.md#tools) has the rules and limits of `tools`.
 - The [configuration reference](../self-host/configuration.md#tool-servers) lists every field of a tool server entry.

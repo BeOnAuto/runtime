@@ -112,7 +112,7 @@ describe('a function that names a connection a person added and gave its credent
 });
 
 describe('the tools of a connection called by hand', () => {
-  it('are checked by dry_run and called by execute, which records the connection beside its server', async () => {
+  it('are checked by dry_run and called by execute_connection, which records the connection beside its server', async () => {
     const crm = await crmServer();
     const server = await serving();
     const id = await connectedWith(server, aSecretHeader('crm', crm.url), `Bearer ${crmKey}`);

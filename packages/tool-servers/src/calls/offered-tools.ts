@@ -18,7 +18,7 @@ import { caller, sending, type ToolSending } from './tool-caller.ts';
 export interface OfferedTool extends ToolSending {
   readonly name: string;
   readonly reference: ToolReference;
-  readonly server: Pick<OfferedOnServer['slot']['settings'], 'type' | 'connection'>;
+  readonly server: Pick<OfferedOnServer['slot']['settings'], 'type' | 'connection' | 'handles_money'>;
   readonly description: string;
   readonly inputSchema: Schema.JsonObject;
   readonly annotations: ToolAnnotations | undefined;
@@ -31,7 +31,11 @@ export function offeredToolOf(parts: RunToolsParts, state: RunState, tool: Named
   return {
     name: tool.name,
     reference: tool.reference,
-    server: { type: tool.slot.settings.type, connection: tool.slot.settings.connection },
+    server: {
+      type: tool.slot.settings.type,
+      connection: tool.slot.settings.connection,
+      ...(tool.slot.settings.handles_money === true ? { handles_money: true } : {}),
+    },
     description: cutToDescriptionBound(parts.secrets.scrub(tool.tool.description ?? '')),
     inputSchema: scrubbedSchema(tool.tool.inputSchema, parts.secrets.scrub),
     annotations: tool.tool.annotations,

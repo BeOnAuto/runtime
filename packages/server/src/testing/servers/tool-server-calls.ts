@@ -67,7 +67,8 @@ export async function toolServerToolsCalled(
     ['search', await session.callTool('search', inPlaybook({ terms: 'rows' }))],
     ['introspect', await session.callTool('introspect', inPlaybook(asked))],
     ['dry_run', await session.callTool('dry_run', inPlaybook(searchedFor))],
-    ['execute', await session.callTool('execute', inPlaybook(searchedFor))],
+    ['query_connection', await session.callTool('query_connection', inPlaybook(searchedFor))],
+    ['execute_connection', await session.callTool('execute_connection', inPlaybook(searchedFor))],
   ];
 }
 

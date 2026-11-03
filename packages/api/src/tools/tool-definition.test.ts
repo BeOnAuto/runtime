@@ -1,4 +1,4 @@
-import { defineQuery } from '@on.auto/operations';
+import { defineCommand, defineQuery } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -6,7 +6,7 @@ import { toolDefinitionOf } from './tool-definition.ts';
 
 const Nothing = Schema.Record(Schema.String, Schema.Never);
 
-function askingWith(reach: { readonly reachesOutside?: boolean; readonly mayChangeOutside?: boolean }) {
+function askingWith(reach: { readonly reachesOutside?: boolean }) {
   return defineQuery('org', {
     name: 'ask_weather',
     title: 'Ask weather',
@@ -77,12 +77,42 @@ describe('an argument that takes any JSON value', () => {
   });
 });
 
-describe('the destructive hint of a tool', () => {
-  it('is true when its operation says it may change something outside the server, and false otherwise', () => {
-    const changing = toolDefinitionOf(askingWith({ reachesOutside: true, mayChangeOutside: true }).registration);
-    const reading = toolDefinitionOf(askingWith({ reachesOutside: true }).registration);
+function fetchingWith(readsOnly: boolean) {
+  return defineCommand('org', {
+    name: 'fetch_weather',
+    title: 'Fetch weather',
+    description: 'Fetches the weather and keeps it. Use it for the weather. It answers nothing.',
+    route: { method: 'POST', path: '/weather' },
+    inputSchema: Nothing,
+    outputSchema: Nothing,
+    reasons: [],
+    handle: () => Effect.succeed({}),
+    reachesOutside: true,
+    readsOnly,
+  });
+}
 
-    expect([changing.annotations.destructiveHint, reading.annotations.destructiveHint]).toEqual([true, false]);
+describe('the read-only hint of a tool', () => {
+  it('is true for a query and for a command that only reads outside the server, and false otherwise', () => {
+    const asking = toolDefinitionOf(askingWith({}).registration);
+    const fetching = toolDefinitionOf(fetchingWith(true).registration);
+    const keeping = toolDefinitionOf(fetchingWith(false).registration);
+
+    expect([asking, fetching, keeping].map(({ annotations }) => annotations.readOnlyHint)).toEqual([true, true, false]);
+  });
+});
+
+describe('the destructive hint of a tool', () => {
+  it('is true for every tool that does not only read, whatever it changes, and false for one that only reads', () => {
+    const asking = toolDefinitionOf(askingWith({ reachesOutside: true }).registration);
+    const fetching = toolDefinitionOf(fetchingWith(true).registration);
+    const keeping = toolDefinitionOf(fetchingWith(false).registration);
+
+    expect([asking, fetching, keeping].map(({ annotations }) => annotations.destructiveHint)).toEqual([
+      false,
+      false,
+      true,
+    ]);
   });
 });
 

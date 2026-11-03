@@ -11,14 +11,21 @@ import type { McpServing } from './mcp-connection.ts';
 import {
   playbookServerFactory,
   catalogServerFactory,
+  directoryServerFactory,
   orgServerFactory,
   type McpServerFactory,
 } from './mcp-server-factory.ts';
+
+export interface DirectoryListingServing {
+  readonly catalog: McpServing['catalog'];
+  readonly shelf: McpServing['shelf'];
+}
 
 export interface McpRoutesOptions extends McpServing {
   readonly reportError: (error: Readonly<Error>) => void;
   readonly retryStateKeys: RetryStateKeys;
   readonly heartbeatEveryMs?: number;
+  readonly directoryListing?: DirectoryListingServing;
 }
 
 export const heartbeatEveryMs = 5000;
@@ -81,12 +88,14 @@ export function mcpRoutes(options: McpRoutesOptions): RegisterRoutes {
     const catalog = handlerFor(catalogServerFactory(serving), options);
     const org = handlerFor(orgServerFactory(serving), options);
     const playbook = handlerFor(playbookServerFactory(serving), options);
+    const directory = handlerFor(directoryServerFactory({ ...serving, ...options.directoryListing }), options);
     routes.add('POST', '/mcp', ownOrgEndpoint(handOffs.to(catalog.fetch), routes));
+    routes.add('POST', '/directory', ownOrgEndpoint(handOffs.to(directory.fetch), routes));
     routes.add('POST', '/orgs/:org/mcp', endpoint(handOffs.to(org.fetch), 'org', routes));
     routes.add('POST', '/orgs/:org/playbooks/:playbook/mcp', endpoint(handOffs.to(playbook.fetch), 'playbook', routes));
     routes.onClose(async () => {
       handOffs.stop();
-      await Promise.all([catalog.close(), org.close(), playbook.close()]);
+      await Promise.all([catalog.close(), org.close(), playbook.close(), directory.close()]);
     });
   };
 }

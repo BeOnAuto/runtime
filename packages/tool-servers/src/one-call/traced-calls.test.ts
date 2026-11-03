@@ -47,7 +47,7 @@ async function spansOfOneCall(access: ToolAccess, input = echoCall.input): Promi
 async function spansOfExecute(access: ToolAccess, input: unknown = echoCall.input): Promise<readonly RecordedSpan[]> {
   const recording = recordingTracer();
   const { call } = playbookToolCalls(access);
-  await call('execute', { server: 'graph', tool: 'echo', arguments: input }, { tracer: recording.tracer });
+  await call('execute_connection', { server: 'graph', tool: 'echo', arguments: input }, { tracer: recording.tracer });
   return recording.spans();
 }
 
@@ -86,7 +86,7 @@ describe('a call of a tool of an MCP server made by hand with execute, traced', 
   it('is a client span named for the tool beneath the operation, and hands the trace to the server', async () => {
     const fake = await oneCallServer();
     const spans = await spansOfExecute(tracedAccess(fake.url));
-    const operation = spans.find(({ name }) => name === 'execute');
+    const operation = spans.find(({ name }) => name === 'execute_connection');
 
     expect(toolCallsAmong(spans)).toMatchObject([
       { kind: 'client', ending: 'succeeded', parentSpanId: operation?.spanId, attributes: toolAttributes },
@@ -106,7 +106,7 @@ describe('a call of a tool of an MCP server made by hand with execute, traced', 
       { ...toolAttributes, 'error.type': 'server_failure' },
     ]);
     expect(unopened.map(({ name, attributes }) => [name, attributes['auto.on.rejection.because']])).toEqual([
-      ['execute', 'unreachable'],
+      ['execute_connection', 'unreachable'],
     ]);
   });
 });
@@ -140,7 +140,7 @@ describe('a call of an operation of an HTTP API', () => {
     const access = await tracedApiAccess(fake.documentUrl);
 
     expect(await spansOfOneCall(access, echoedBody)).toEqual([]);
-    expect((await spansOfExecute(access, echoedBody)).map(({ name }) => name)).toEqual(['execute']);
+    expect((await spansOfExecute(access, echoedBody)).map(({ name }) => name)).toEqual(['execute_connection']);
     expect(fake.seen()).toMatchObject([
       { method: 'POST', path: '/v1/echo' },
       { method: 'POST', path: '/v1/echo' },

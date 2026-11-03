@@ -38,7 +38,13 @@ const modelSentence =
 
 const firstPlaybookFile = readFileSync(new URL('recipes/first-playbook.md', import.meta.url), 'utf8');
 
-const callsOfTheFunction = ['list_playbooks', 'create_playbook', 'create_definition', 'execute', 'run_definition'];
+const callsOfTheFunction = [
+  'list_playbooks',
+  'create_playbook',
+  'create_definition',
+  'query_connection',
+  'run_definition',
+];
 
 describe('the first-playbook recipe where the workflow guide is carried', () => {
   it('says that a first playbook holds the workflow whose step its function is, which does what the person asked', () => {

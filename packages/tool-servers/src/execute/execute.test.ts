@@ -49,23 +49,25 @@ async function executing() {
     fake,
     access,
     registrations,
-    execute: (input: unknown) => call('execute', input),
+    execute: (input: unknown) => call('execute_connection', input),
+    query: (input: unknown) => call('query_connection', input),
   };
 }
 
-describe('execute', () => {
+describe('execute_connection', () => {
   it('is a command of the playbook at POST /tool-servers/{server}/tools/{tool}/execute that may change something outside', async () => {
     const { registrations } = await executing();
 
-    expect(registrations.execute).toMatchObject({
+    expect(registrations.execute_connection).toMatchObject({
       scope: 'playbook',
       kind: 'command',
-      name: 'execute',
-      title: 'Execute a tool call',
+      name: 'execute_connection',
+      title: 'Execute a connection tool',
       route: { method: 'POST', path: '/tool-servers/{server}/tools/{tool}/execute' },
       pathParameters: ['server', 'tool'],
       reachesOutside: true,
       mayChangeOutside: true,
+      readsOnly: false,
       irreversible: false,
       repeatable: false,
       permissions: ['playbook:write'],
@@ -76,7 +78,50 @@ describe('execute', () => {
   it('may change nothing outside on a server with no tool server', () => {
     const { registrations } = playbookToolCalls(reportingAccess({}).access);
 
-    expect(registrations.execute.mayChangeOutside).toBe(false);
+    expect(registrations.execute_connection.mayChangeOutside).toBe(false);
+  });
+});
+
+describe('query_connection', () => {
+  it('is a command of the playbook at POST /tool-servers/{server}/tools/{tool}/query that only reads outside', async () => {
+    const { registrations } = await executing();
+
+    expect(registrations.query_connection).toMatchObject({
+      scope: 'playbook',
+      kind: 'command',
+      name: 'query_connection',
+      title: 'Query a connection tool',
+      route: { method: 'POST', path: '/tool-servers/{server}/tools/{tool}/query' },
+      pathParameters: ['server', 'tool'],
+      reachesOutside: true,
+      mayChangeOutside: false,
+      readsOnly: true,
+      permissions: ['playbook:write'],
+      reasons: ['unavailable'],
+    });
+  });
+
+  it('calls a tool marked reads and answers as execute_connection does', async () => {
+    const { fake, query } = await executing();
+
+    expect(await query({ server: 'graph', tool: 'search', arguments: { query: 'acme' } })).toMatchObject({
+      status: 'succeeded',
+      output: { server: 'graph', tool: 'search', outcome: 'result', text: 'Found 2 rows for acme.' },
+    });
+    expect(fake.received()).toMatchObject([{ tool: 'search', arguments: { query: 'acme' } }]);
+  });
+
+  it('refuses a tool not marked reads, naming execute_connection, and sends nothing', async () => {
+    const { fake, query } = await executing();
+
+    expect(await query({ server: 'graph', tool: 'echo', arguments: { said: 'hello' } })).toMatchObject({
+      status: 'rejected',
+      reason: 'unavailable',
+      kind: 'tool_not_read_only',
+      detail:
+        'The echo tool of graph is not marked reads, so query_connection did not call it; execute_connection calls a tool that may change something',
+    });
+    expect(fake.received()).toEqual([]);
   });
 });
 
@@ -159,7 +204,7 @@ describe('a call of an operation of an HTTP API', () => {
     );
     closing.push(access.close);
 
-    const called = await playbookToolCalls(access).call('execute', {
+    const called = await playbookToolCalls(access).call('execute_connection', {
       server: 'graph',
       tool: 'echo',
       arguments: { body: { said: 'hello' } },

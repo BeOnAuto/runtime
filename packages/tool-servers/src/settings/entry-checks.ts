@@ -212,5 +212,6 @@ export function checkedEntry(
     secrets,
     connection: null,
     provider,
+    ...(fields.handles_money === true ? { handles_money: true } : {}),
   });
 }

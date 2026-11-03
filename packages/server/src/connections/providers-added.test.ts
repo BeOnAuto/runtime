@@ -68,7 +68,11 @@ async function listedBy(server: ReasoningServer) {
   return Schema.decodeUnknownSync(ListedSchema)(body).providers;
 }
 
-const notes = { name: 'notes', title: 'Notes', description: 'Read and write the notes of a team.' };
+const notes: (typeof offeredByTheServer)[number] = {
+  name: 'notes',
+  title: 'Notes',
+  description: 'Read and write the notes of a team.',
+};
 
 describe('a provider the settings file adds', () => {
   it('is listed, offered by search and connected by its name, as a provider the runtime ships is', async () => {

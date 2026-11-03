@@ -1,6 +1,6 @@
 # Make the playbook remember something
 
-The playbook keeps memories: what the person wants kept, each a short text with a few tags, kept by the playbook or by its organization, for anyone who uses the playbook and for its workflows, never in your own notes. Read the memory-function guide with get_guide before you write a memory function.
+The playbook keeps memories: what the person wants kept, each a short text with a few tags, kept by the playbook or by its organization, for anyone who uses the playbook and for its workflows. Read the memory-function guide with get_guide before you write a memory function.
 
 1. Ask the person what the playbook should remember, in their words, and what it is about: this playbook's work, or the team and the business, which every playbook of the organization should know.
 2. Keep each fact with remember, one memory a fact, in plain words with a few tags to find it by: `scope` playbook for this playbook's work, organization for the team or the business. Give `about` when it holds for some days alone, and `expires` when it stops mattering.

@@ -24,7 +24,7 @@ Write in `deliver` how the request reaches its party: the tool of a connection t
 
 A notification takes no answer, so no agent holds it: it goes through a connection, `deliver` naming the tool that sends it, and any connection with a tool that sends can carry it.
 
-Ask the person once where they want to be asked. `create_definition` and `update_definition` refuse a request that names no way with words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way, and refuse a notification that names no tool, or `agent`, with words that name each connection whose tools can send it. A tool server of the server's own settings is named a tool server. A playbook with none is told so, and why for each connection that cannot be used just now. Wherever no connection can carry it, it is told that one can be connected with `search` and `add_connection`, where the agent's tools include both. When the agent's MCP client answers forms, the server asks the person itself before it refuses, "Where should the owner be asked?", or "told?" for a notification, with each such connection, and for a request the agent way, to choose from. Once they choose, the refusal names the connection's sending tool and its reading tool, or says to write `deliver: agent`; the agent learns what each tool takes with `introspect`, calls the sending tool with `execute` once the person agrees, to see what it answers for `sent`, and writes `deliver` and `replies` from it.
+Ask the person once where they want to be asked. `create_definition` and `update_definition` refuse a request that names no way with words that name each connection of the playbook whose tools can send a request and read its replies, with those two tools, and the agent way, and refuse a notification that names no tool, or `agent`, with words that name each connection whose tools can send it. A tool server of the server's own settings is named a tool server. A playbook with none is told so, and why for each connection that cannot be used just now. Wherever no connection can carry it, it is told that one can be connected with `search` and `add_connection`, where the agent's tools include both. When the agent's MCP client answers forms, the server asks the person itself before it refuses, "Where should the owner be asked?", or "told?" for a notification, with each such connection, and for a request the agent way, to choose from. Once they choose, the refusal names the connection's sending tool and its reading tool, or says to write `deliver: agent`; the agent learns what each tool takes with `introspect`, calls the sending tool with `execute_connection` once the person agrees, to see what it answers for `sent`, and writes `deliver` and `replies` from it.
 
 ### Whom a request waits on
 
@@ -107,13 +107,13 @@ Such a function makes no request, sends no message and asks no model. So it has 
 Write a call from what the tool returns, not from memory:
 
 1. Call `search` to see the tool servers this playbook may use, the tools each offers and the mark of each. Call `introspect` for the `input_schema` a tool takes.
-2. Once the person agrees, since the tool may change something, call it with `execute`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
+2. Once the person agrees, since the tool may change something, call it with `execute_connection`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
 3. Write `call`:
    - `server` and `tool`, as `search` names them;
    - `with`, the arguments;
    - `read`, a JSON Pointer to the part of the answer the function returns, such as `/messages`. Leave `read` out to return the whole answer.
 
-   Then write `output.schema`: the shape that part has in the answer `execute` gave.
+   Then write `output.schema`: the shape that part has in the answer `execute_connection` gave.
 
 4. Show the person the whole document. Once they agree, save it with `create_definition`, `type` interaction. `run_definition` runs it and returns its output at once.
 
@@ -144,8 +144,8 @@ A function sends its request through a tool by naming the tool in `deliver`, wit
 Write a delivery from what the tool returns, not from memory:
 
 1. Call `search` to see the servers this playbook may use and the tools each offers, and `introspect` for the `input_schema` a tool takes.
-2. The sending tool sends a message, so wait until the person agrees. Then call it with `execute`, with the arguments its `input_schema` takes, and read its answer. That is the document `deliver.sent` points into. `sent` holds two JSON Pointers: to the conversation the message landed in, and to the message's identity. A chat's tool that posts a message returns the conversation it posted in and the message's timestamp or id.
-3. If the person will answer where the message reached them, call the tool that reads what came since a point with `execute`. Then write `replies`:
+2. The sending tool sends a message, so wait until the person agrees. Then call it with `execute_connection`, with the arguments its `input_schema` takes, and read its answer. That is the document `deliver.sent` points into. `sent` holds two JSON Pointers: to the conversation the message landed in, and to the message's identity. A chat's tool that posts a message returns the conversation it posted in and the message's timestamp or id.
+3. If the person will answer where the message reached them, call the tool that reads what came since a point, with `query_connection` where it is marked `reads` and `execute_connection` where it is not. Then write `replies`:
    - `conversation`, the key the playbook reads the conversation by;
    - `tool` and `with`, the reading tool and its arguments, over `sent` and the cursor `since`;
    - `read`, the pointers to the list of replies and, within each, to its id, its sender, its words and the message it answers;

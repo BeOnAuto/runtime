@@ -35,7 +35,8 @@ Before a function uses a tool, have your agent call it once and see what it retu
 
 ```text
 Call the "<tool name>" tool of the "<server name>" server once, with Auto's
-execute tool, to <what you want it to do>. Show me the text a function's model
+query_connection tool if it only reads, or its execute_connection tool if it
+does more, to <what you want it to do>. Show me the text a function's model
 would see. If the tool does not only read, ask me before you call it.
 ```
 
@@ -46,8 +47,9 @@ The call is live. It acts as the playbook and uses the server's key, as every ca
 ::: details More about calling a tool by hand
 
 - The playbook records the call in its history, which `list_playbook_events` shows, but not as a run.
-- Calling a tool with `execute` needs `playbook:write`, whatever the tool does.
-- To check a call without making it, the agent can use `dry_run`. It checks the arguments against what the tool accepts and says whether `execute` would call the tool now, without calling it. The [MCP reference](../reference/mcp.md#tool-servers) describes all four tools.
+- `query_connection` calls only a tool marked `reads`. `execute_connection` calls a tool whatever its mark.
+- Calling a tool with either needs `playbook:write`, whatever the tool does.
+- To check a call without making it, the agent can use `dry_run`. It checks the arguments against what the tool accepts and says whether `execute_connection` would call the tool now, without calling it. The [MCP reference](../reference/mcp.md#tool-servers) describes all five tools.
 - When a prompt needs a value that a tool lists, such as a chat channel's id, the agent can call that tool and take the value from what it returns. Confirm the choice before it goes into a function.
 
 :::
@@ -83,7 +85,7 @@ Run the "<function name>" function in my "<playbook name>" playbook with
 tool call with its tool, its arguments and how it ended.
 ```
 
-While a tool server is configured, Auto marks `run_definition` as possibly destructive, since a function's tools may change something. Your agent's client may ask you to approve the run.
+Auto marks `run_definition` as destructive, as it marks every tool that does more than read. A function's tools may change something, so your agent's client may ask you to approve the run.
 
 Check the run's status and output. Then check its history, which the agent reads with `list_playbook_events`, given the run's `run_id`. A run that made one call shows these events, oldest first:
 
@@ -169,10 +171,11 @@ When they confirm, start again at [Find the tools](#find-the-tools).
 - **`search` lists no server.** No tool server serves your playbook yet. [Connect a provider](#connect-a-provider) it lists, or send the request in [Ask for a tool server](#ask-for-a-tool-server).
 - **`search` shows a server as unavailable.** Its `because` says why. `unreachable`, `failing` or `rate_limited` may pass, so try again later. `key_refused` means the server did not accept Auto's key, and `scope_lacking` that its credential lacks a scope the words name. If it does not pass, send the `because` to whoever runs Auto; [Add a tool server](../self-host/tool-servers.md#if-something-goes-wrong) lists the fixes.
 - **A tool is missing.** The server's entry does not allow it, or the server does not list it. Ask whoever runs Auto to add it to the entry's `allowed`.
-- **A call returns an error.** The model reads it as a tool error and may recover. Check the arguments with `dry_run`, or call the tool once with `execute`. With the filesystem server, `ENOENT` means no such file: give the file name alone, as `list_directory` shows it. A name that starts with `briefs/` points to a folder inside `briefs`.
+- **A call returns an error.** The model reads it as a tool error and may recover. Check the arguments with `dry_run`, or call the tool once with `query_connection` or `execute_connection`. With the filesystem server, `ENOENT` means no such file: give the file name alone, as `list_directory` shows it. A name that starts with `briefs/` points to a folder inside `briefs`.
 - **A run ends `unavailable` before the model is called.** The function names a tool that the playbook's servers do not offer, or the server cannot be used. Compare `tools` with what `search` shows.
 - **A run that called tools did not succeed.** Start a new run. Auto does not run it again under the same run id (the id Auto gave that run), since its tools may already have acted ([Retrying under a run id](../reference/http.md#retrying-under-a-run-id)). [Tools](../reference/reasoning-format.md#tools) explains how such a run ends and the limits on tool calls.
-- **Your agent cannot call `execute`.** Its connection may only read. Calling a tool needs `playbook:write`.
+- **Your agent cannot call `query_connection` or `execute_connection`.** Its connection may only read. Calling a tool needs `playbook:write`.
+- **`query_connection` refuses a tool.** The tool is not marked `reads`, so it may change something. Your agent calls it with `execute_connection` once you agree.
 
 ## Next
 

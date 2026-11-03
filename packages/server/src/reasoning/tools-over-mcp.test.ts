@@ -106,14 +106,14 @@ async function annotationsOf(server: ReasoningServer) {
 const searched = callingTools([['graph__search', { query: 'acme' }]], answers(textResult('Acme has 2 rows.')));
 
 describe('run_definition over MCP on a server with tool servers', () => {
-  it('is destructive when a tool server is configured or people may add connections, so an assistant asks before running a function', async () => {
+  it('is destructive whether or not a tool server is configured or people may add connections, so an assistant asks before running a function', async () => {
     const configured = await serving(await fakeGraph(), []);
     const takingConnections = await serving(undefined, []);
     const neither = await serving(undefined, [], { CONNECTIONS: JSON.stringify({ people_may_add: false }) });
 
     expect(await annotationsOf(configured)).toMatchObject({ destructiveHint: true, openWorldHint: true });
     expect(await annotationsOf(takingConnections)).toMatchObject({ destructiveHint: true });
-    expect(await annotationsOf(neither)).toMatchObject({ destructiveHint: false });
+    expect(await annotationsOf(neither)).toMatchObject({ destructiveHint: true });
   });
 
   it('runs a reasoning function with its tools, whose history shows the calls', async () => {

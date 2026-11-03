@@ -137,18 +137,18 @@ describe('the definition tools on a playbook endpoint', () => {
 });
 
 describe('the annotations of a tool', () => {
-  it('derive from what the operation declares: read-only for a query, idempotent for a query or a repeatable command, destructive when it cannot be undone, open world only when it reaches outside', async () => {
+  it('derive from what the operation declares: read-only for a query, idempotent for a query or a repeatable command, destructive for every command, open world only when it reaches outside', async () => {
     const listing = await onAlpha((session) => session.listTools());
     const annotationsByName = Object.fromEntries(
       operationToolsIn(listing).map(({ name, annotations }) => [name, annotations]),
     );
 
     expect(annotationsByName).toMatchObject({
-      create_definition: { readOnlyHint: false, idempotentHint: false, destructiveHint: false, openWorldHint: false },
+      create_definition: { readOnlyHint: false, idempotentHint: false, destructiveHint: true, openWorldHint: false },
       list_definitions: { readOnlyHint: true, idempotentHint: true, destructiveHint: false, openWorldHint: false },
-      update_definition: { readOnlyHint: false, idempotentHint: true, destructiveHint: false, openWorldHint: false },
+      update_definition: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },
       retire_definition: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },
-      run_definition: { readOnlyHint: false, idempotentHint: false, destructiveHint: false, openWorldHint: false },
+      run_definition: { readOnlyHint: false, idempotentHint: false, destructiveHint: true, openWorldHint: false },
       cancel_run: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },
     });
   });

@@ -49,7 +49,7 @@ describe('what a call made by hand records', () => {
     const argumentsJson = JSON.stringify({ query: 'acme' });
 
     const callId = decodeExecuted(
-      await call('execute', { server: 'graph', tool: 'search', arguments: { query: 'acme' } }),
+      await call('execute_connection', { server: 'graph', tool: 'search', arguments: { query: 'acme' } }),
     ).output.call_id;
     const [started, answered, ...more] = await recorded();
 
@@ -101,8 +101,8 @@ describe('the content a call made by hand records', () => {
     const keeping = await callsOn();
     const notKeeping = await callsOn({ record_content: false });
 
-    await keeping.call('execute', { server: 'graph', tool: 'echo', arguments: said });
-    await notKeeping.call('execute', { server: 'graph', tool: 'echo', arguments: said });
+    await keeping.call('execute_connection', { server: 'graph', tool: 'echo', arguments: said });
+    await notKeeping.call('execute_connection', { server: 'graph', tool: 'echo', arguments: said });
     const [kept, unkept] = [await keeping.recorded(), await notKeeping.recorded()];
     const resultSha256 = String(Reflect.get(new Object(kept[1]?.data), 'result_sha256'));
     const keptResult = String(await keeping.kept(resultSha256));
@@ -130,8 +130,8 @@ describe('the content a call made by hand records', () => {
     const silent = await callsOn();
     const asked = { server: 'graph', tool: 'search', arguments: { query: 'acme' } };
 
-    const named = await naming.call('execute', asked);
-    await silent.call('execute', asked);
+    const named = await naming.call('execute_connection', asked);
+    await silent.call('execute_connection', asked);
 
     expect(named).toMatchObject({ output: { server_request_id: 'call-1' } });
     expect((await naming.recorded())[1]?.data).toMatchObject({ server_request_id: 'call-1' });

@@ -28,19 +28,23 @@ function isOfferedOneWay({ credentials }: ListedProvider): boolean {
   return credentials.some(({ offered }) => offered);
 }
 
-function offeredOf({ name, title, description }: ListedProvider): OfferedProvider {
-  return { name, title, description };
+function offeredOf({ name, title, description }: ListedProvider, money: ReadonlySet<string>): OfferedProvider {
+  return { name, title, description, ...(money.has(name) ? { handles_money: true } : {}) };
 }
 
-function offeredAmong(listed: readonly ListedProvider[]): readonly OfferedProvider[] {
-  return listed.filter((provider) => isOfferedOneWay(provider)).map((provider) => offeredOf(provider));
+function handlingMoney({ providers }: OfferingServices['providers']): ReadonlySet<string> {
+  return new Set(providers.filter(({ entry }) => entry.handles_money === true).map(({ entry }) => entry.name));
+}
+
+function offeredAmong(listed: readonly ListedProvider[], money: ReadonlySet<string>): readonly OfferedProvider[] {
+  return listed.filter((provider) => isOfferedOneWay(provider)).map((provider) => offeredOf(provider, money));
 }
 
 export function makeProviderOffering(services: OfferingServices): ProviderOffering {
   return (caller) =>
     refusalToAdd(services, caller) === null
       ? Effect.map(services.consent.hadSources(studioBaseFor(services.pages)), (consent) =>
-          offeredAmong(listedProviders({ ...services, consent })),
+          offeredAmong(listedProviders({ ...services, consent }), handlingMoney(services.providers)),
         )
       : Effect.undefined;
 }

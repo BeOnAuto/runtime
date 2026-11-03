@@ -31,7 +31,7 @@ async function recordedCalls(entry: Readonly<Record<string, unknown>>, callMs: n
   );
   closing.push(access.close);
   const { call, recorded } = playbookToolCalls(access);
-  await inTurn(called, (input) => call('execute', input));
+  await inTurn(called, (input) => call('execute_connection', input));
   const records = await recorded();
   const digests = records
     .flatMap(({ data }) => digestFields.map((field): unknown => Reflect.get(new Object(data), field)))

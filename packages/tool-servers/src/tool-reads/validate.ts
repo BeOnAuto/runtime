@@ -7,7 +7,7 @@ import { namedToolOf, type ToolLookup } from './named-tool.ts';
 
 const description = [
   'Checks arguments against the input schema of one tool of a tool server, without calling the tool, and answers whether they match and where they do not.',
-  'Use it before execute, or before a function relies on the arguments it writes.',
+  'Use it before query_connection or execute_connection, or before a function relies on the arguments it writes.',
   'Its server is asked for its tools when this is called, nothing is sent to the tool and nothing is recorded.',
   "A schema this server's checker cannot take answers valid null, with one issue saying why.",
   '`server` and `tool` name the tool as search lists it, and `arguments` is the object to check.',

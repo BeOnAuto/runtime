@@ -10,7 +10,7 @@ import { RememberInputSchema } from './memory-fields.ts';
 import { RememberedSchema } from './memory-outputs.ts';
 
 const description = [
-  'Keeps one thing the playbook should know from now on, as a memory its functions and its agent recall later, for anyone who uses the playbook: not your own notes.',
+  'Keeps one thing the playbook should know from now on, as a memory its functions and its agent recall later, for anyone who uses the playbook.',
   'Use it when the person says what to keep, or the work turns up a fact, a decision or a preference worth keeping.',
   "`scope` is playbook by default, for what is learned about this playbook's own work; write organization when the fact is about the team or the business rather than this playbook's work, so every playbook of the organization recalls it.",
   '`text` is what to remember, at most 2,000 characters; `tags` at most 8 words to recall it by; `about` the days it is about; `expires` how long to keep it, such as P30D.',

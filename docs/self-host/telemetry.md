@@ -75,16 +75,16 @@ A request is a trace:
 
 Beneath the request:
 
-| Span                                                  | What it is                                                                                                                                                                             |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The operation, such as `run_definition` or `get_run`  | The work the request asked for, with `auto.on.org`, `auto.on.playbook`, `auto.on.caller` and `auto.on.outcome`. A rejection adds `error.type` and the rejection's `kind` and `because` |
-| `eventStore.appendToStream`, `eventStore.readStream`  | The ledger's appends and reads. An append names the run in `auto.on.run_id`, and its chain in `messaging.message.correlation_id` and `messaging.message.causation_id`                  |
-| `invoke_agent <model>`, `step <n>`, `chat <model>`    | Each call of its model a reasoning function's run makes, the one round of it, and each request to the provider. They carry the provider, the model, the tokens and why it finished     |
-| `execute_tool <tool>`                                 | A tool the model called, made by the run between its model calls. Where its tool server is reached over HTTP, the HTTP request is beneath it                                           |
-| `tools/call <tool>`                                   | A tool of an MCP server called once, for an interaction function or for `execute`. It names the tool server and how the call ended                                                     |
-| `POST`, `GET` and the other methods                   | Each HTTP request the server sends, to a model provider, a gateway or a tool server. Every value of its query is replaced by `REDACTED`                                                |
-| `S3.GetObject`, `S3.PutObject` and the other commands | Each request to the bucket of the [object store](object-storage.md), naming the bucket and never a key                                                                                 |
-| `program <kind>`                                      | A job of the server's workers, with how it ended. A job is, for example, a computation, a fold of a page's views or a check of a definition                                            |
+| Span                                                  | What it is                                                                                                                                                                                   |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The operation, such as `run_definition` or `get_run`  | The work the request asked for, with `auto.on.org`, `auto.on.playbook`, `auto.on.caller` and `auto.on.outcome`. A rejection adds `error.type` and the rejection's `kind` and `because`       |
+| `eventStore.appendToStream`, `eventStore.readStream`  | The ledger's appends and reads. An append names the run in `auto.on.run_id`, and its chain in `messaging.message.correlation_id` and `messaging.message.causation_id`                        |
+| `invoke_agent <model>`, `step <n>`, `chat <model>`    | Each call of its model a reasoning function's run makes, the one round of it, and each request to the provider. They carry the provider, the model, the tokens and why it finished           |
+| `execute_tool <tool>`                                 | A tool the model called, made by the run between its model calls. Where its tool server is reached over HTTP, the HTTP request is beneath it                                                 |
+| `tools/call <tool>`                                   | A tool of an MCP server called once, for an interaction function or for a call made by hand with `query_connection` or `execute_connection`. It names the tool server and how the call ended |
+| `POST`, `GET` and the other methods                   | Each HTTP request the server sends, to a model provider, a gateway or a tool server. Every value of its query is replaced by `REDACTED`                                                      |
+| `S3.GetObject`, `S3.PutObject` and the other commands | Each request to the bucket of the [object store](object-storage.md), naming the bucket and never a key                                                                                       |
+| `program <kind>`                                      | A job of the server's workers, with how it ended. A job is, for example, a computation, a fold of a page's views or a check of a definition                                                  |
 
 ### Workflow spans
 
@@ -172,7 +172,7 @@ Never recorded, whatever `TELEMETRY_CONTENT` is:
 - the query values of the URLs the server calls, each replaced by `REDACTED`;
 - the token of a connection's link in the URL of a request, replaced by `REDACTED`;
 - the keys of objects in [object storage](object-storage.md), which is named by its bucket alone;
-- the arguments and results of a tool of an MCP server called once, for an interaction function or for `execute`. Its span names the tool and how the call ended.
+- the arguments and results of a tool of an MCP server called once, for an interaction function or for a call made by hand with `query_connection` or `execute_connection`. Its span names the tool and how the call ended.
 
 With `TELEMETRY_CONTENT=true`, the spans of model calls carry what was sent and returned, with the arguments and results of the tools the model called. Each event's log record carries its data in `auto.on.data`, cut to 2,048 characters. Turn it on only for a collector whose readers may read the playbooks.
 
