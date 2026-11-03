@@ -88,7 +88,7 @@ describe('a page saved as a definition of its own', () => {
     expect(await asked.ask(pages.playbookPageOf())).toMatchObject({
       output: { answer: { version: 1, source: mapping } },
     });
-    expect(await asked.ask(pages.latelyOf('playbook'))).toMatchObject({ output: { answer: building } });
+    expect(await asked.ask(pages.viewsOf('playbook'))).toMatchObject({ output: { answer: { lately: building } } });
   });
 
   it('keeps the forms its save stripped, for the views', async () => {

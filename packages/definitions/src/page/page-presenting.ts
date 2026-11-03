@@ -59,29 +59,42 @@ function viewsShownOf(kept: KeptViewState | undefined): ViewsShown {
   return { state: 'live', views: kept.view };
 }
 
-export function pageLatelyOf(views: KeptViews, placed: PlacedPage): Effect.Effect<string | undefined> {
+interface PageViewsRead {
+  readonly lately?: string;
+  readonly standing?: Schema.JsonObject;
+}
+
+interface ViewsAsRead {
+  readonly kept: KeptViewState | undefined;
+  readonly newestAt: string | undefined;
+  readonly moment: ReadMoment;
+}
+
+function latelyOver(placed: PlacedPage, { kept, moment }: ViewsAsRead): PageViewsRead {
   const document = documentOf(placed);
   const template = document?.templates.lately;
   if (document?.data === undefined || template === undefined) {
-    return Effect.undefined;
+    return {};
   }
-  const declared = document.data.views;
-  return Effect.all([views.viewOf(placed.place, placed.view), readMoment]).pipe(
-    Effect.map(([kept, moment]: readonly [KeptViewState | undefined, ReadMoment]) =>
-      latelyShown(template, viewsShownOf(kept), { declared, subject: placed.subject }, moment),
-    ),
-  );
+  const context = { declared: document.data.views, subject: placed.subject };
+  return { lately: latelyShown(template, viewsShownOf(kept), context, moment) };
 }
 
-export function pageStandingOf(views: KeptViews, placed: PlacedPage): Effect.Effect<Schema.JsonObject | undefined> {
+function standingOver(placed: PlacedPage, { kept, newestAt }: ViewsAsRead): PageViewsRead {
   return placed.page.details.data === undefined
-    ? Effect.undefined
-    : Effect.all([views.viewOf(placed.place, placed.view), views.newestRecordAt(placed.place)]).pipe(
-        Effect.map(([kept, newestAt]: readonly [KeptViewState | undefined, string | undefined]) =>
-          viewStandingOf(kept?.version ?? placed.page.version, kept, newestAt),
-        ),
-      );
+    ? {}
+    : { standing: viewStandingOf(kept?.version ?? placed.page.version, kept, newestAt) };
 }
+
+export const pageViewsOf = Effect.fnUntraced(function* (views: KeptViews, placed: PlacedPage) {
+  const read: ViewsAsRead = {
+    kept: yield* views.viewOf(placed.place, placed.view),
+    newestAt: yield* views.newestRecordAt(placed.place),
+    moment: yield* readMoment,
+  };
+  const shown: PageViewsRead = { ...latelyOver(placed, read), ...standingOver(placed, read) };
+  return shown;
+});
 
 function momentOfTheRun(kept: KeptViewState | undefined): Effect.Effect<ReadMoment> {
   return kept?.checkpointAt === undefined || kept.checkpointAt === null ? readMoment : momentAt(kept.checkpointAt);

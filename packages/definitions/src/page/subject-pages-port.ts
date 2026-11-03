@@ -32,7 +32,7 @@ export type PageCheck = (
   writtenIn: PageWrittenIn,
 ) => Effect.Effect<PageContent | null | undefined, InvalidInput | Unavailable>;
 
-interface PageViewsAsOf {
+interface PageViewsShown {
   readonly lately?: string;
   readonly standing?: Schema.JsonObject;
 }
@@ -52,9 +52,8 @@ export interface SubjectPages {
   readonly pageOf: (type: string, name: string) => Read<SubjectPage | undefined>;
   readonly playbookPageOf: () => Read<SubjectPage | undefined>;
   readonly resultOf: (type: string, name: string, over: ResultOver) => Read<string | undefined, InvalidInput>;
-  readonly latelyOf: (subject: PageSubject) => ReadInPlace<string | undefined>;
-  readonly standingOf: (subject: PageSubject) => ReadInPlace<Schema.JsonObject | undefined>;
-  readonly asOfRun: (subject: DefinitionSubject, run: string) => ReadInPlace<PageViewsAsOf>;
+  readonly viewsOf: (subject: PageSubject) => ReadInPlace<PageViewsShown>;
+  readonly asOfRun: (subject: DefinitionSubject, run: string) => ReadInPlace<PageViewsShown>;
   readonly savePlaybookPage: (
     saved: PlaybookPageSave | null,
   ) => Effect.Effect<SubjectPage | undefined, Conflict, PlaybookReader | PlaybookWriter | Caller>;

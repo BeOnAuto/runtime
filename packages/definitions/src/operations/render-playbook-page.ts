@@ -3,7 +3,6 @@ import { Effect, Schema } from 'effect';
 
 import { playbookSubject } from '../page/subject-pages-port.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
-import { viewsShownOf } from './saved-pages.ts';
 
 const PlaybookPageSchema = Schema.Struct({
   lately: Schema.optionalKey(
@@ -45,11 +44,7 @@ export function defineRenderPlaybookPage(pages: SubjectPages) {
       if (page === undefined) {
         return yield* noPlaybookPage;
       }
-      const lately = yield* pages.latelyOf(playbookSubject);
-      const standing = yield* pages.standingOf(playbookSubject);
-      return {
-        page: viewsShownOf(lately, standing),
-      };
+      return { page: yield* pages.viewsOf(playbookSubject) };
     }),
   });
 }

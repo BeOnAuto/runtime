@@ -127,8 +127,7 @@ describe('the preview of a page as of a run that is still going, or that it refu
       ...uncheckedPages,
       pageOf: () => Effect.succeed(page),
       resultOf: () => Effect.undefined,
-      latelyOf: () => Effect.succeed('As the views stand'),
-      standingOf: () => Effect.undefined,
+      viewsOf: () => Effect.succeed({ lately: 'As the views stand' }),
     });
 
     expect(

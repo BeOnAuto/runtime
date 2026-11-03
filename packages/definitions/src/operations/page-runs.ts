@@ -6,7 +6,6 @@ import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import type { RunDetail } from '../runs/run.ts';
 import { foundRun } from './get-run.ts';
-import { viewsShownOf } from './saved-pages.ts';
 
 interface Reading {
   readonly pages: SubjectPages;
@@ -36,9 +35,7 @@ export const runOfThePage = Effect.fnUntraced(function* ({ type, stored }: Readi
 
 export function viewsRead({ pages, type, stored }: Reading, run: RunDetail | undefined) {
   const subject = { type, name: stored.name };
-  return run === undefined || run.status === 'started'
-    ? Effect.zipWith(pages.latelyOf(subject), pages.standingOf(subject), viewsShownOf)
-    : pages.asOfRun(subject, run.run_id);
+  return run === undefined || run.status === 'started' ? pages.viewsOf(subject) : pages.asOfRun(subject, run.run_id);
 }
 
 export function overOf(sample: Schema.Json | undefined, run: RunDetail | undefined): ResultOver {

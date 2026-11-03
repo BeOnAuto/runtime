@@ -147,7 +147,7 @@ describe('the page of a definition', () => {
     await asked.record('workflow', { type: 'retire', name: 'morning' });
 
     expect(await asked.ask(pages.pageOf('workflow', 'morning'))).toMatchObject({ output: { answer: null } });
-    expect(await asked.ask(pages.latelyOf(morning))).toMatchObject({ output: { answer: null } });
+    expect(await asked.ask(pages.viewsOf(morning))).toMatchObject({ output: { answer: {} } });
     expect(await asked.ask(pages.asOfRun(morning, 'a-run'))).toMatchObject({ output: { answer: {} } });
   });
 });
@@ -221,17 +221,16 @@ describe('lately on the page of a definition', () => {
     const asked = await withTheMorning();
     const building = pagesOver({ 'workflow/morning': { ...liveAt(1, days), phase: 'rebuilding' } });
 
-    expect(await asked.ask(pagesOver({ 'workflow/morning': liveAt(1, days) }).latelyOf(morning))).toMatchObject({
-      output: { answer: containing(JSON.stringify(days.by_day)) },
+    expect(await asked.ask(pagesOver({ 'workflow/morning': liveAt(1, days) }).viewsOf(morning))).toMatchObject({
+      output: {
+        answer: { lately: containing(JSON.stringify(days.by_day)), standing: { state: 'live', version: 1, folded: 2 } },
+      },
     });
-    expect(await asked.ask(building.latelyOf(morning))).toMatchObject({
-      output: { answer: containing('Building') },
+    expect(await asked.ask(building.viewsOf(morning))).toMatchObject({
+      output: { answer: { lately: containing('Building'), standing: { state: 'rebuilding' } } },
     });
-    expect(await asked.ask(pagesOver({ 'workflow/morning': liveAt(1, days) }).standingOf(morning))).toMatchObject({
-      output: { answer: { state: 'live', version: 1, folded: 2 } },
-    });
-    expect(await asked.ask(pages.standingOf(morning))).toMatchObject({
-      output: { answer: { state: 'rebuilding', version: 1 } },
+    expect(await asked.ask(pages.viewsOf(morning))).toMatchObject({
+      output: { answer: { lately: containing('Building'), standing: { state: 'rebuilding', version: 1 } } },
     });
   });
 
@@ -239,11 +238,10 @@ describe('lately on the page of a definition', () => {
     const asked = await withTheMorning(workflowWithPage());
     await asked.created('workflow', 'evening', 'name: evening\ndo: []\n');
 
-    expect(await asked.ask(pages.latelyOf(morning))).toMatchObject({ output: { answer: null } });
+    expect(await asked.ask(pages.viewsOf(morning))).toMatchObject({ output: { answer: {} } });
     expect(await asked.ask(pages.asOfRun(morning, 'a-run'))).toMatchObject({ output: { answer: {} } });
-    expect(await asked.ask(pages.standingOf(morning))).toMatchObject({ output: { answer: null } });
-    expect(await asked.ask(pages.standingOf({ type: 'workflow', name: 'evening' }))).toMatchObject({
-      output: { answer: null },
+    expect(await asked.ask(pages.viewsOf({ type: 'workflow', name: 'evening' }))).toMatchObject({
+      output: { answer: {} },
     });
   });
 });
@@ -269,16 +267,13 @@ describe('the page of the playbook', () => {
   it('renders lately over the views kept under the playbook’s name', async () => {
     const asked = playbookAsked();
 
-    expect(await asked.ask(pages.latelyOf('playbook'))).toMatchObject({ output: { answer: null } });
+    expect(await asked.ask(pages.viewsOf('playbook'))).toMatchObject({ output: { answer: {} } });
     await asked.ask(
       pages.savePlaybookPage({ source: playbookPage, content: await contentOf(playbookPage, 'playbook') }),
     );
 
-    expect(await asked.ask(pagesOver({ 'playbook/alpha': liveAt(1, days) }).latelyOf('playbook'))).toMatchObject({
-      output: { answer: containing(JSON.stringify(days.by_day)) },
-    });
-    expect(await asked.ask(pagesOver({ 'playbook/alpha': liveAt(1, days) }).standingOf('playbook'))).toMatchObject({
-      output: { answer: { state: 'live' } },
+    expect(await asked.ask(pagesOver({ 'playbook/alpha': liveAt(1, days) }).viewsOf('playbook'))).toMatchObject({
+      output: { answer: { lately: containing(JSON.stringify(days.by_day)), standing: { state: 'live' } } },
     });
   });
 });
