@@ -162,6 +162,10 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     why: 'the playbook, or its organization, already keeps as many memories as it may',
     remedy: 'Once some of them are forgotten, it can be tried again.',
   },
+  generation_timed_out: {
+    why: 'the provider did not finish what it was asked to make within the time a run waits for it',
+    remedy: 'A new run asks the provider again, which may cost again; a shorter or simpler request may finish in time.',
+  },
   tools_unfinished: {
     why: 'it called tools but could not finish',
     remedy:

@@ -1,7 +1,14 @@
 import { once } from 'node:events';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { costHeader, onePixelPng, spokenBytes } from '@on.auto/generation/testing';
+import {
+  askedHandle,
+  costHeader,
+  filmedBytes,
+  madeInTime,
+  onePixelPng,
+  spokenBytes,
+} from '@on.auto/generation/testing';
 import { onTestFinished } from 'vitest';
 
 import { compositionRoot } from '../../composition/composition-root.ts';
@@ -27,7 +34,34 @@ async function bodyOf(incoming: IncomingMessage): Promise<unknown> {
   for await (const chunk of incoming) {
     chunks.push(Buffer.from(String(chunk)));
   }
-  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  return incoming.method === 'GET' ? undefined : JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+const videos = '/v1/videos';
+
+function json(response: ServerResponse, body: unknown, headers: Readonly<Record<string, string>> = {}): void {
+  response.writeHead(200, { 'content-type': 'application/json', ...headers }).end(JSON.stringify(body));
+}
+
+function answeredOfAVideo(
+  response: ServerResponse,
+  path: string,
+  standings: readonly unknown[],
+  polls: number,
+): boolean {
+  if (path === videos) {
+    json(response, { id: askedHandle, object: 'video', status: 'queued', progress: 0 }, { [costHeader]: '0.8' });
+    return true;
+  }
+  if (path.endsWith('/content')) {
+    response.writeHead(200, { 'content-type': 'video/mp4' }).end(filmedBytes);
+    return true;
+  }
+  if (path.startsWith(`${videos}/`)) {
+    json(response, standings[Math.min(polls, standings.length - 1)]);
+    return true;
+  }
+  return false;
 }
 
 function answered(response: ServerResponse, path: string): void {
@@ -40,13 +74,20 @@ function answered(response: ServerResponse, path: string): void {
     .end(JSON.stringify({ data: [{ b64_json: onePixelPng.toString('base64') }] }));
 }
 
-export async function gatewayOnTheLoopback(): Promise<GatewayOnTheLoopback> {
+function polledIn(asked: readonly AskedOfTheGateway[]): number {
+  return asked.filter(({ path }) => path.startsWith(`${videos}/`) && !path.endsWith('/content')).length;
+}
+
+export async function gatewayOnTheLoopback(standings: readonly unknown[] = madeInTime): Promise<GatewayOnTheLoopback> {
   const asked: AskedOfTheGateway[] = [];
   const server = createServer((incoming, response) => {
     const path = String(incoming.url);
     void bodyOf(incoming).then((body) => {
+      const polls = polledIn(asked);
       asked.push({ path, authorization: incoming.headers.authorization, body });
-      answered(response, path);
+      if (!answeredOfAVideo(response, path, standings, polls)) {
+        answered(response, path);
+      }
       return path;
     });
   }).listen(0, '127.0.0.1');

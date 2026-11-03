@@ -16,7 +16,7 @@ import type { GenerationRequest } from './generation-gateway.ts';
 
 const image: GenerationRequest = {
   kind: 'image',
-  model: 'openai/gpt-image-1',
+  model: 'openai/gpt-image-2',
   prompt: 'A lighthouse at dawn',
   parameters: { size: '1024x1024', quality: 'high' },
   references: [],
@@ -59,7 +59,7 @@ function webp(riff: string): Readonly<Buffer> {
 
 describe('an answer the gateway gave and the runtime then refuses', () => {
   it('carries the cost the gateway answered and the record of the call, which a refusal before an answer does not', async () => {
-    const recorded = { ...callOn(answeredByKind()), record: { model: 'gateway/openai/gpt-image-1' } };
+    const recorded = { ...callOn(answeredByKind()), record: { model: 'gateway/openai/gpt-image-2' } };
 
     expect([
       (await refusalOf(callOn(answeredByKind()), image, 10)).record,
@@ -72,7 +72,7 @@ describe('an answer the gateway gave and the runtime then refuses', () => {
       (await refusalOf(callOn(typedAs('text/html')), speech)).record,
       (await refusalOf(callOn(answeredWith(500, {})), image)).record,
       (await refusalOf(recorded, image, 10)).record,
-    ]).toEqual([{ cost_usd: 0.04 }, {}, {}, undefined, { model: 'gateway/openai/gpt-image-1', cost_usd: 0.04 }]);
+    ]).toEqual([{ cost_usd: 0.04 }, {}, {}, undefined, { model: 'gateway/openai/gpt-image-2', cost_usd: 0.04 }]);
   });
 
   it('reads a WebP by its RIFF header and its WEBP mark both, and refuses bytes that carry the mark alone', async () => {

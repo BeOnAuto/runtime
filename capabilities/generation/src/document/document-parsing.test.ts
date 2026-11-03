@@ -11,7 +11,7 @@ function issuesOf(source: string): readonly string[] {
   });
 }
 
-const image = ['produces: image', 'model: gateway/openai/gpt-image-1'];
+const image = ['produces: image', 'model: gateway/openai/gpt-image-2'];
 
 describe('a generation function document', () => {
   it('reads what it produces, its model, its input, its parameters, its references, its expiry and its prompt', () => {
@@ -29,7 +29,7 @@ describe('a generation function document', () => {
     }).toEqual({
       description: 'A picture of the product for its listing',
       produces: 'image',
-      model: 'gateway/openai/gpt-image-1',
+      model: 'gateway/openai/gpt-image-2',
       input: ['product'],
       parameters: { size: '1024x1024', quality: 'high' },
       references: [],
@@ -57,7 +57,7 @@ describe('the refusals of the front matter of a generation function document', (
   it('is refused for a kind it cannot produce, a model written another way, and a parameter of another kind', () => {
     expect(issuesOf(sourceWith(['produces: document', 'model: openai', 'parameters: { voice: alloy }']))).toEqual([
       '2 /produces Expected image, audio or video',
-      '3 /model A model is written gateway/model, such as gateway/openai/gpt-image-1',
+      '3 /model A model is written gateway/model, such as gateway/openai/gpt-image-2',
     ]);
     expect(issuesOf(sourceWith([...image, 'parameters:', '  voice: alloy', '  duration: 3']))).toEqual([
       '5 /parameters/voice voice is not a parameter of image, which takes size, aspect, and quality',
@@ -66,7 +66,7 @@ describe('the refusals of the front matter of a generation function document', (
     expect(
       issuesOf(sourceWith(['produces: audio', 'model: Gateway/openai/tts-1', 'parameters: { size: big }'])),
     ).toEqual([
-      '3 /model A model is written gateway/model, such as gateway/openai/gpt-image-1',
+      '3 /model A model is written gateway/model, such as gateway/openai/gpt-image-2',
       '4 /parameters/size size is not a parameter of audio, which takes voice, format, and duration',
     ]);
   });

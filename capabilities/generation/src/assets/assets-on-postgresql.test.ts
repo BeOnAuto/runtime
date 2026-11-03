@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
+import type { KeyedProjection } from '@on.auto/operations';
 import { Client } from 'pg';
 import { describe, onTestFinished } from 'vitest';
 
 import { assetsOnStoresSuite } from '../store-testing/assets-on-stores.ts';
+import { waitingOnStoresSuite } from '../store-testing/waiting-on-stores.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
@@ -22,15 +24,21 @@ async function administered(statement: string): Promise<void> {
   }
 }
 
-describe.skipIf(skipped)(`the assets of playbooks on PostgreSQL${notice}`, () => {
-  assetsOnStoresSuite(async (projections) => {
-    const name = `generation_${randomUUID().replaceAll('-', '')}`;
-    await administered(`CREATE DATABASE ${name}`);
-    onTestFinished(async () => {
-      await administered(`DROP DATABASE ${name} WITH (FORCE)`);
-    });
-    const database = new URL(server);
-    database.pathname = `/${name}`;
-    return postgresqlLedgerLayer({ pools: plainPoolsOn(database.href), projections });
+async function onPostgreSQL(projections: readonly KeyedProjection[]) {
+  const name = `generation_${randomUUID().replaceAll('-', '')}`;
+  await administered(`CREATE DATABASE ${name}`);
+  onTestFinished(async () => {
+    await administered(`DROP DATABASE ${name} WITH (FORCE)`);
   });
+  const database = new URL(server);
+  database.pathname = `/${name}`;
+  return postgresqlLedgerLayer({ pools: plainPoolsOn(database.href), projections });
+}
+
+describe.skipIf(skipped)(`the assets of playbooks on PostgreSQL${notice}`, () => {
+  assetsOnStoresSuite(onPostgreSQL);
+});
+
+describe.skipIf(skipped)(`the generations playbooks wait for on PostgreSQL${notice}`, () => {
+  waitingOnStoresSuite(onPostgreSQL);
 });

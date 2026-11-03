@@ -102,7 +102,13 @@ export {
 } from './runs/run-events.ts';
 export { recordedAnswerOf, type RecordedAnswer, type RecordedAnswerFact, type RecordedWork } from './runs/run-state.ts';
 export { RequestRecordSchema, isRequestRecord, takesAnAnswer, type RequestRecord } from './requests/request-record.ts';
-export { runEventOf, recordedRunIn, recordedRunInPlaybook, type RecordedRun } from './run-work/recorded-runs.ts';
+export {
+  runCorrelationIn,
+  runEventOf,
+  recordedRunIn,
+  recordedRunInPlaybook,
+  type RecordedRun,
+} from './run-work/recorded-runs.ts';
 export {
   composedFactsOf,
   declaredFact,

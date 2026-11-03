@@ -1,9 +1,0 @@
-model: openai/sora-2
-kind: video
-media_types: []
-limits:
-  sizes: [720x1280, 1280x720]
-  seconds:
-    least: 4
-    most: 12
-  prompt_characters: 4000

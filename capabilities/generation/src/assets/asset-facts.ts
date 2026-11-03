@@ -20,33 +20,40 @@ const ParametersSchema = Schema.Struct({
 
 const ReferenceSchema = Schema.Struct({ id: Schema.String, sha256: DigestSchema });
 
+export const madeByFields = {
+  kind: KindSchema,
+  model: Schema.String,
+  prompt: Schema.String,
+  parameters: ParametersSchema,
+  references: Schema.Array(ReferenceSchema),
+  cost_usd: Schema.optionalKey(Schema.Number.check(Schema.isGreaterThanOrEqualTo(0))),
+  own_key: Schema.Boolean,
+};
+
 export const AssetKeptSchema = factOf(
   'asset_kept',
   Schema.Struct({
     media_type: Schema.String,
     bytes: BytesSchema,
     sha256: DigestSchema,
-    kind: KindSchema,
-    model: Schema.String,
-    prompt: Schema.String,
-    parameters: ParametersSchema,
-    references: Schema.Array(ReferenceSchema),
-    cost_usd: Schema.optionalKey(Schema.Number.check(Schema.isGreaterThanOrEqualTo(0))),
-    own_key: Schema.Boolean,
+    ...madeByFields,
     expires_at: Schema.String,
   }),
   RunContextSchema,
   { content: { holds: ['/sha256'] } },
 );
 
-const AssetExpiredSchema = factOf(
-  'asset_expired',
-  Schema.Struct({ bytes: BytesSchema, content_removed: Schema.Boolean }),
+const AssetExpiredSchema = factOf('asset_expired', Schema.Struct({ bytes: BytesSchema }), ActedContextSchema, {
+  content: { releases: 'all' },
+});
+
+const AssetContentRemovedSchema = factOf(
+  'asset_content_removed',
+  Schema.Struct({ bytes: BytesSchema, sha256: DigestSchema }),
   ActedContextSchema,
-  { content: { releases: 'all' } },
 );
 
-export const AssetEventSchema = Schema.Union([AssetKeptSchema, AssetExpiredSchema]);
+export const AssetEventSchema = Schema.Union([AssetKeptSchema, AssetExpiredSchema, AssetContentRemovedSchema]);
 
 export type AssetEvent = typeof AssetEventSchema.Type;
 

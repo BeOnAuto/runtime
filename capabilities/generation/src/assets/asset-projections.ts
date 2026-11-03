@@ -28,7 +28,7 @@ export type AssetRow = typeof AssetRowSchema.Type;
 
 const decodeAssetRow = Schema.decodeUnknownOption(AssetRowSchema);
 
-export const assetRowFrom: (row: ProjectedRow) => AssetRow = Schema.decodeUnknownSync(AssetRowSchema);
+export const assetRowFrom: (row: unknown) => AssetRow = Schema.decodeUnknownSync(AssetRowSchema);
 
 export function assetRowOf(row: ProjectedRow | undefined): AssetRow | undefined {
   return row === undefined ? undefined : Option.getOrUndefined(decodeAssetRow(row));

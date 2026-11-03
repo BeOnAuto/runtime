@@ -37,7 +37,15 @@ export async function servingReasoning(
   replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
   fetch: Fetch = noNetwork,
-  { programPoolOf = patientWorkerPool, ledgerOver, admit, ledger: shared, meter, ...composing }: ServedParts = {},
+  {
+    programPoolOf = patientWorkerPool,
+    ledgerOver,
+    admit,
+    ledger: shared,
+    meter,
+    shippedFilesOver,
+    ...composing
+  }: ServedParts = {},
 ): Promise<ReasoningServer> {
   const ledger = shared ?? temporaryLedger();
   const scripted = scriptedLanguageModel(...replies);
@@ -51,7 +59,7 @@ export async function servingReasoning(
   );
   const server = await startServer(
     { ...loopbackSettingsOver(ledger), ...environment },
-    composedWithTheParts(composition, { ledgerOver, meter }),
+    composedWithTheParts(composition, { ledgerOver, meter, shippedFilesOver }),
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,

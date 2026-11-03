@@ -3,6 +3,7 @@ import {
   OrgIdSchema,
   recordedDecoder,
   streamPrefixOfPlaybook,
+  type RecordedReader,
   type StreamReader,
 } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
@@ -68,4 +69,16 @@ export function recordedRunIn(reader: StreamReader, address: RunStreamAddress): 
 export function recordedRunInPlaybook(reader: StreamReader, id: string): Effect.Effect<RecordedRun | undefined> {
   const run = id.toLowerCase();
   return reader.load(runStreamNameOf(run), runDecider).pipe(Effect.flatMap(({ state }) => recordedOf(run, state)));
+}
+
+const decodeFirst = Schema.decodeUnknownSync(Schema.NonEmptyArray(Schema.Struct({ correlationId: Schema.String })));
+
+export function runCorrelationIn(
+  reader: Pick<RecordedReader, 'readRecorded'>,
+  address: RunStreamAddress,
+): Effect.Effect<string> {
+  return reader.readRecorded(address, { kind: 'run', run: address.id }, { order: 'asc', limit: 1, dataOf: [] }).pipe(
+    Effect.map(({ records }) => decodeFirst(records)[0].correlationId),
+    Effect.orDie,
+  );
 }

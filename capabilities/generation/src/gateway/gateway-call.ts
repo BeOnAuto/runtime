@@ -1,9 +1,15 @@
-import { Conflict } from '@on.auto/operations';
 import { Effect, Predicate, type Schema } from 'effect';
 
-import { sizeInWords } from '../assets/asset-words.ts';
 import { audioMediaTypeOf, bodyWithin, costIn, imageIn, isAudio, jsonOf, namedMediaTypeOf } from './gateway-answers.ts';
-import { notAudio, refusalOf, unreachedBy, unreadableAnswer, type GatewayRefusal } from './gateway-refusals.ts';
+import {
+  notOfTheKind,
+  refusalOf,
+  tooLargeAnAsset,
+  unreachedBy,
+  unreadableAnswer,
+  type GatewayRefusal,
+  type Rejecting,
+} from './gateway-refusals.ts';
 import { gatewayRequestOf } from './gateway-requests.ts';
 import {
   gatewayAnswerMs,
@@ -23,25 +29,21 @@ export interface GatewayCall {
 
 const mebibyte = 1_048_576;
 
-function tooLargeAnAsset(kind: string, mostBytes: number, record: Schema.JsonObject): Conflict {
-  return new Conflict({
-    detail: `The ${kind} the model made is larger than the ${sizeInWords(mostBytes)} this runtime keeps of one ${kind}`,
-    kind: 'oversized',
-    record,
-  });
-}
-
 function base64Bytes(mostBytes: number): number {
   return Math.ceil((mostBytes * 4) / 3) + mebibyte;
 }
 
-function isTimeout(error: unknown): boolean {
+export function isTimeout(error: unknown): boolean {
   return Predicate.hasProperty(error, 'name') && error.name === 'TimeoutError';
 }
 
-async function refusalIn(gateway: string, response: Readonly<Response>): Promise<GatewayRefusal> {
+export async function refusalIn(
+  gateway: string,
+  response: Readonly<Response>,
+  rejected?: Rejecting,
+): Promise<GatewayRefusal> {
   const read = await bodyWithin(response.body, mostRefusalBytes);
-  return refusalOf(gateway, response.status, 'bytes' in read ? jsonOf(read.bytes) : undefined);
+  return refusalOf(gateway, response.status, 'bytes' in read ? jsonOf(read.bytes) : undefined, rejected);
 }
 
 type Answered = { readonly generated: Generated } | { readonly refused: GatewayRefusal };
@@ -73,7 +75,7 @@ async function audioAnswered(
 ): Promise<Answered> {
   const named = namedMediaTypeOf(response.headers.get('content-type'));
   if (named !== undefined && !isAudio(named)) {
-    return { refused: notAudio(gateway, named, spent) };
+    return { refused: notOfTheKind(gateway, named, 'audio', spent) };
   }
   const read = await bodyWithin(response.body, mostBytes);
   if (!('bytes' in read)) {
@@ -84,7 +86,7 @@ async function audioAnswered(
   };
 }
 
-function spentAt(call: GatewayCall, cost: number | undefined): Schema.JsonObject {
+export function spentAt(call: Pick<GatewayCall, 'record'>, cost?: number): Schema.JsonObject {
   return Object.assign({}, call.record, cost === undefined ? {} : { cost_usd: cost });
 }
 

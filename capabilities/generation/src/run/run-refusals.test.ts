@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { generationBounds } from '../capability/generation-ports.ts';
 import { numberedHarness, outcomeOfRun, ran, refusalOf, runIdOf } from '../run-testing/run-outcomes.ts';
-import { answeredWith, imageSource, onePixelPng, sourceWith, videoSource } from '../testing/index.ts';
+import { answeredWith, imageSource, onePixelPng, sourceWith } from '../testing/index.ts';
 
 const moderated = {
   reason: 'conflict',
@@ -27,7 +27,7 @@ describe('the bytes a run may keep of one asset', () => {
     });
     expect(outcomeOfRun(await playbook.runOf(runIdOf(1)))).toEqual({
       status: 'rejected',
-      record: { model: 'gateway/openai/gpt-image-1', own_key: true, cost_usd: 0.04 },
+      record: { model: 'gateway/openai/gpt-image-2', own_key: true, cost_usd: 0.04 },
     });
     expect(await playbook.totals()).toEqual({ bytes: 0, assets: 0 });
   });
@@ -84,29 +84,11 @@ describe('a run the provider refuses under its moderation', () => {
   });
 });
 
-describe('a run of a generation function that produces video', () => {
-  it('is saved, and refused as it runs until the runtime can wait for a video', async () => {
-    const playbook = numberedHarness();
-
-    const saved = await playbook.define('flight', videoSource);
-    const outcome = await ran(playbook, 'flight', {});
-
-    expect(saved.status).toBe('succeeded');
-    expect(refusalOf(outcome)).toEqual({
-      reason: 'unavailable',
-      kind: undefined,
-      detail:
-        'This runtime saves a generation function that produces video, but does not run one yet: it cannot yet wait while a provider makes a video',
-    });
-    expect(playbook.gateway.asked()).toEqual([]);
-  });
-});
-
 describe('a run whose model or input the runtime cannot take', () => {
   it('is unavailable where the model names a gateway the runtime is not given', async () => {
     const elsewhere = numberedHarness();
     const none = numberedHarness({ gateways: [] });
-    await elsewhere.define('picture', sourceWith(['produces: image', 'model: elsewhere/openai/gpt-image-1']));
+    await elsewhere.define('picture', sourceWith(['produces: image', 'model: elsewhere/openai/gpt-image-2']));
     await none.define('picture', imageSource);
 
     expect([

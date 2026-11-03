@@ -16,7 +16,7 @@ const catalogBounds = {
 
 const ModelIdSchema = Schema.String.check(Schema.isPattern(modelIdPattern)).annotate({
   description:
-    'The model as the gateway names it, such as openai/gpt-image-1: lowercase letters, digits, dots, underscores and hyphens, in up to three parts joined by /',
+    'The model as the gateway names it, such as openai/gpt-image-2: lowercase letters, digits, dots, underscores and hyphens, in up to three parts joined by /',
 });
 
 const ChoiceSchema = Schema.String.check(
@@ -63,8 +63,7 @@ const AudioLimitsSchema = Schema.Struct({
 
 const VideoLimitsSchema = Schema.Struct({
   sizes: Schema.optionalKey(ChoicesSchema),
-  aspects: Schema.optionalKey(ChoicesSchema),
-  seconds: Schema.optionalKey(SecondsSchema),
+  seconds: SecondsSchema,
   prompt_characters: PromptCharactersSchema,
   references: Schema.optionalKey(ReferenceLimitsSchema),
 });
@@ -98,7 +97,7 @@ type ImageEntry = typeof entrySchemas.image.Type;
 
 export type AudioEntry = typeof entrySchemas.audio.Type;
 
-type VideoEntry = typeof entrySchemas.video.Type;
+export type VideoEntry = typeof entrySchemas.video.Type;
 
 export type CatalogEntry = ImageEntry | AudioEntry | VideoEntry;
 

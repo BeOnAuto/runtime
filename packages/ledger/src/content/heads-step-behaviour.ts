@@ -3,7 +3,7 @@ import { alpha, json, resultOf } from '@on.auto/content/testing';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { ledgerLayout, ledgerLayoutFloor } from '../layout/ledger-layout.ts';
+import { ledgerLayoutFloor } from '../layout/ledger-layout.ts';
 import { ledgerLayoutSteps } from '../layout/ledger-steps.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 
@@ -13,13 +13,15 @@ const HeadRows = Schema.Array(
 
 const theClocksApartMs = 1000;
 
+const theLayoutOfTheHeads = 12;
+
 async function headsAtTheLayoutBefore(entry: LedgerEntry, database: string): Promise<void> {
   const ledger = await aLedger(entry, database);
   await resultOf(ledger.content.put(alpha, textToKeep('{"kept":"before the step"}', json)));
   await entry.queried(database, 'ALTER TABLE recorded_content_heads DROP COLUMN removing_since');
   await entry.queried(database, 'ALTER TABLE recorded_content_heads DROP COLUMN kept_in');
   await entry.queried(database, 'ALTER TABLE recorded_content_heads DROP COLUMN kept_at');
-  await entry.queried(database, `UPDATE ledger_layout SET layout = ${String(ledgerLayout - 1)}`);
+  await entry.queried(database, `UPDATE ledger_layout SET layout = ${String(theLayoutOfTheHeads - 1)}`);
 }
 
 export function headsStepBehaviour(entry: LedgerEntry): void {
@@ -29,7 +31,11 @@ export function headsStepBehaviour(entry: LedgerEntry): void {
       await headsAtTheLayoutBefore(entry, database);
 
       const before = Date.now();
-      await entry.carriedOn(database, { kept: ledgerLayout, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps });
+      await entry.carriedOn(database, {
+        kept: theLayoutOfTheHeads,
+        floor: ledgerLayoutFloor,
+        steps: ledgerLayoutSteps,
+      });
       const after = Date.now();
       const heads = Schema.decodeUnknownSync(HeadRows)(
         await entry.queried(

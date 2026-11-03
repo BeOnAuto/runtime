@@ -14,7 +14,7 @@ const picture = [
   '---',
   'description: A picture of the product for its listing',
   'produces: image',
-  'model: gateway/openai/gpt-image-1',
+  'model: gateway/openai/gpt-image-2',
   'parameters: { size: 1024x1024 }',
   '---',
   'A studio photograph of {{ input.product }}.',
@@ -72,7 +72,7 @@ describe('a generation function over MCP that names a model of no catalogue', ()
       session.callTool('create_definition', {
         type: 'generation',
         name: 'picture',
-        source: picture.replace('openai/gpt-image-1', 'openai/gpt-9-image'),
+        source: picture.replace('openai/gpt-image-2', 'openai/gpt-9-image'),
         diagram: 'none',
       }),
     );
@@ -85,7 +85,7 @@ describe('a generation function over MCP that names a model of no catalogue', ()
         errors: [
           {
             detail:
-              "Line 4, /model: openai/gpt-9-image is no model of the catalogue of generation models; the catalogue's models that produce image are openai/gpt-image-1 or openai/gpt-image-1-mini",
+              "Line 4, /model: openai/gpt-9-image is no model of the catalogue of generation models; the catalogue's models that produce image are openai/gpt-image-1-mini or openai/gpt-image-2",
           },
         ],
       },

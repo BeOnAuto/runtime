@@ -36,7 +36,7 @@ export const RunRejectionSchema = Schema.Union([
     kind: Schema.optionalKey(
       UnavailableKindSchema.annotate({
         description:
-          'What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and rebuilding for a function that answers from what it keeps of the history of the playbook while that is still being built, which trying again later may resolve',
+          'What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, rebuilding for a function that answers from what it keeps of the history of the playbook while that is still being built, which trying again later may resolve, and generation_timed_out for a generation function whose provider had not finished when the run had waited as long as it may',
       }),
     ),
     because: Schema.optionalKey(

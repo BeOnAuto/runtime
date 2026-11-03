@@ -1,0 +1,29 @@
+{
+  "type": "run_deferred",
+  "data": {
+    "record": {
+      "kind": "video",
+      "model": "gateway/example/short-film",
+      "prompt": "A drone flight over the warehouse.",
+      "parameters": {
+        "size": "720x1280",
+        "duration": 8
+      },
+      "references": [],
+      "cost_usd": 0.8,
+      "own_key": true,
+      "handle": "video_68d7512d07848190b3e45da0ecbebcde",
+      "kept_for_ms": 7776000000,
+      "asked_at": "2026-11-01T10:00:00.000Z",
+      "waits_until": "2026-11-01T10:10:01.000Z"
+    }
+  },
+  "context": {
+    "at": "2026-11-01T10:00:01.000Z",
+    "by": "key_7f3a",
+    "runId": "019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e6f",
+    "definitionType": "generation",
+    "definitionName": "drone-flight",
+    "definitionVersion": 2
+  }
+}

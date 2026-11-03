@@ -2,7 +2,7 @@ import type { StreamWriter } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { playbookBoundSettler, recordedRunIn, recordedRunInPlaybook, runEventOf } from '../index.ts';
+import { playbookBoundSettler, recordedRunIn, recordedRunInPlaybook, runCorrelationIn, runEventOf } from '../index.ts';
 import { asked, askedRun as run, askedRunId, attempted, question } from '../testing/asked-runs.ts';
 import { askedRequest } from '../testing/asking.ts';
 
@@ -33,6 +33,14 @@ describe('a run as it was recorded', () => {
       await Effect.runPromise(recordedRunIn(ledger.service, { ...run, id: '0199a3c4-7d2e-7c1a-9b3f-000000000000' })),
     ).toBeUndefined();
     expect(runEventOf({ type: 'run_failed', data: { incident: 1 } })).toBeUndefined();
+  });
+});
+
+describe('the correlation of a run', () => {
+  it('is read from the first record of its stream, the run at the top of its tree, itself for a run nothing started', async () => {
+    const { ledger } = await asked();
+
+    expect(await Effect.runPromise(runCorrelationIn(ledger.service, run))).toBe(askedRunId);
   });
 });
 

@@ -25,6 +25,13 @@ function gatewaysInWords(gateways: readonly GenerationGateway[]): string {
     : `its gateways are ${alternatives(gateways.map(({ name }) => name))}`;
 }
 
+export function noGatewayNamed(named: string, gateways: readonly GenerationGateway[]): Unavailable {
+  return new Unavailable({
+    detail: `There is no model gateway named ${named}: ${gatewaysInWords(gateways)}`,
+    kind: 'model_not_offered',
+  });
+}
+
 export function runnableModel(
   { catalog, gateways }: Offering,
   document: GenerationFunctionDefinitionDocument,
@@ -38,12 +45,5 @@ export function runnableModel(
   }
   const { gateway: named, entry } = choice.chosen;
   const gateway = gateways.find(({ name }) => name === named);
-  return gateway === undefined
-    ? Effect.fail(
-        new Unavailable({
-          detail: `There is no model gateway named ${named}: ${gatewaysInWords(gateways)}`,
-          kind: 'model_not_offered',
-        }),
-      )
-    : Effect.succeed({ gateway, entry });
+  return gateway === undefined ? Effect.fail(noGatewayNamed(named, gateways)) : Effect.succeed({ gateway, entry });
 }

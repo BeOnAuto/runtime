@@ -1,8 +1,7 @@
 {
   "type": "asset_expired",
   "data": {
-    "bytes": 182044,
-    "content_removed": true
+    "bytes": 182044
   },
   "context": {
     "at": "2027-01-30T10:00:05.000Z",

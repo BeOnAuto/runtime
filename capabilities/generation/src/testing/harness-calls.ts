@@ -62,3 +62,26 @@ export function callsOn(ledger: MemoryLedger, capability: Capability, now: () =>
     runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages).registration, { run_id: runId }),
   };
 }
+
+interface DueItems {
+  readonly due: (
+    now: number,
+    most: number,
+    callsOut: boolean,
+  ) => Effect.Effect<readonly { readonly perform: (now: number) => Effect.Effect<void> }[]>;
+}
+
+export function performedAt(work: DueItems, now: number, callsOut: boolean): Promise<number> {
+  const clock = Layer.succeed(
+    Clock.Clock,
+    clockAt(() => now),
+  );
+  return Effect.runPromise(
+    Effect.flatMap(work.due(now, 256, callsOut), (items) =>
+      Effect.as(
+        Effect.forEach(items, (item) => item.perform(now), { discard: true }),
+        items.length,
+      ),
+    ).pipe(Effect.provide(clock)),
+  );
+}

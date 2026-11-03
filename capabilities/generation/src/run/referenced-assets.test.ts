@@ -34,7 +34,7 @@ function listing(pointers: string): string {
   return [
     '---',
     'produces: image',
-    'model: gateway/openai/gpt-image-1',
+    'model: gateway/openai/gpt-image-2',
     `references: [${pointers}]`,
     '---',
     'Both',
@@ -126,13 +126,13 @@ describe('a reference to an asset the model cannot take', () => {
       [
         {
           pointer: '/input/photo',
-          detail: `The asset ${assetIdOf(2)} is audio/mpeg, which openai/gpt-image-1 does not take; it takes image/png, image/jpeg, or image/webp`,
+          detail: `The asset ${assetIdOf(2)} is audio/mpeg, which openai/gpt-image-2 does not take; it takes image/png, image/jpeg, or image/webp`,
         },
       ],
       [
         {
           pointer: '/input/photo',
-          detail: `The asset ${assetIdOf(1)} takes 1.2 MiB, more than the 1 MiB openai/gpt-image-1 takes of one reference`,
+          detail: `The asset ${assetIdOf(1)} takes 1.2 MiB, more than the 1 MiB openai/gpt-image-2 takes of one reference`,
         },
       ],
     ]);

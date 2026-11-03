@@ -12,6 +12,10 @@ import type { TemporaryLedger } from '../records/temporary-ledger.ts';
 
 export type LedgerOver = (ledger: Ledger['Service']) => Ledger['Service'];
 
+type ShippedFiles = ComposedServerOptions['shippedFiles'];
+
+type ShippedFilesOver = (files: ShippedFiles) => ShippedFiles;
+
 export interface ServedParts {
   readonly programPoolOf?: NonNullable<CompositionParts['programPoolOf']>;
   readonly clock?: HostClock;
@@ -23,6 +27,7 @@ export interface ServedParts {
   readonly meter?: Meter;
   readonly installed?: NonNullable<CompositionParts['installed']>;
   readonly features?: Layer.Layer<LicensedFeatures>;
+  readonly shippedFilesOver?: ShippedFilesOver;
 }
 
 function composedWithTheLedgerOver(options: ComposedServerOptions, ledgerOver: LedgerOver): ComposedServerOptions {
@@ -54,12 +59,15 @@ function composedWithTheMeter(options: ComposedServerOptions, meter: Meter): Com
 interface ComposedParts {
   readonly ledgerOver: LedgerOver | undefined;
   readonly meter: Meter | undefined;
+  readonly shippedFilesOver: ShippedFilesOver | undefined;
 }
 
 export function composedWithTheParts(
   options: ComposedServerOptions,
-  { ledgerOver, meter }: ComposedParts,
+  { ledgerOver, meter, shippedFilesOver }: ComposedParts,
 ): ComposedServerOptions {
-  const metered = meter === undefined ? options : composedWithTheMeter(options, meter);
+  const shipped =
+    shippedFilesOver === undefined ? options : { ...options, shippedFiles: shippedFilesOver(options.shippedFiles) };
+  const metered = meter === undefined ? shipped : composedWithTheMeter(shipped, meter);
   return ledgerOver === undefined ? metered : composedWithTheLedgerOver(metered, ledgerOver);
 }

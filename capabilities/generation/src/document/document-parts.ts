@@ -31,7 +31,7 @@ export function modelOf(written: string, lines: SourceLines): Checked<string> {
     split > 0 && gatewayPrefix.test(written.slice(0, split)) && modelIdPattern.test(written.slice(split + 1));
   return named
     ? Result.succeed(written)
-    : one(lines, '/model', 'A model is written gateway/model, such as gateway/openai/gpt-image-1');
+    : one(lines, '/model', 'A model is written gateway/model, such as gateway/openai/gpt-image-2');
 }
 
 export function inputOf(document: Schema.JsonObject | undefined, lines: SourceLines): Checked<ValueContract> {

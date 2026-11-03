@@ -1,3 +1,4 @@
+import { runCorrelationIn } from '@on.auto/definitions';
 import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -12,7 +13,7 @@ import {
 import type { DeliveryParts, DueRequest } from './delivery-parts.ts';
 import { lostAttempt, nextAttempt } from './request-attempts.ts';
 import { expiredSettlement, undeliveredSettlement } from './request-endings.ts';
-import { correlationOf, settled, settledAnswered, settledDelivered } from './request-ledger.ts';
+import { settled, settledAnswered, settledDelivered } from './request-ledger.ts';
 
 export interface DueRequestItem {
   readonly key: string;
@@ -68,7 +69,7 @@ function performedNow(parts: DeliveryParts, request: DueRequest, now: number): E
 
 function performedRow(parts: DeliveryParts, kept: PlaybookProjectedRow, row: OpenRequestRow, now: number) {
   const address = { org: kept.org, playbook: kept.playbook, id: kept.key };
-  return Effect.flatMap(correlationOf(parts.ledger, address), (correlationId) =>
+  return Effect.flatMap(runCorrelationIn(parts.ledger, address), (correlationId) =>
     performedNow(parts, { address, row, lineage: { causationId: row.request_id, correlationId } }, now),
   );
 }

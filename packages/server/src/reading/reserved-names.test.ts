@@ -35,6 +35,7 @@ const reserved = [
   'reading_failed',
   'asset_kept',
   'asset_expired',
+  'asset_content_removed',
   'workflow_input_applied',
   'step_started',
   'step_waiting',

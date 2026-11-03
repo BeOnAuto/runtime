@@ -11,6 +11,8 @@ export const onePixelPng = Buffer.from(
 
 export const spokenBytes = Buffer.from('ID3 spoken words of the test');
 
+export const filmedBytes = Buffer.from('ftypmp42 the frames of the test');
+
 interface SentFile {
   readonly name: string;
   readonly type: string;
@@ -25,7 +27,7 @@ export interface AskedOfTheGateway {
   readonly files: readonly SentFile[];
 }
 
-export type GatewayAnswering = (asked: AskedOfTheGateway) => Response;
+export type GatewayAnswering = (asked: AskedOfTheGateway) => Response | Promise<Response>;
 
 export interface FakeGateway {
   readonly settings: GenerationGateway;
@@ -55,6 +57,50 @@ export function answeredWith(status: number, body: unknown): GatewayAnswering {
   return () => Response.json(body, { status });
 }
 
+export const askedHandle = 'video_68d7512d07848190b3e45da0ecbebcde';
+
+const videos = '/v1/videos';
+
+export interface VideoScript {
+  readonly standings?: readonly unknown[];
+  readonly content?: () => Response | Promise<Response>;
+  readonly cost?: string;
+}
+
+export const madeInTime = [
+  { id: askedHandle, status: 'in_progress', progress: 40 },
+  { id: askedHandle, status: 'completed', progress: 100 },
+];
+
+function filmed(): Response {
+  return new Response(filmedBytes, { headers: { 'content-type': 'video/mp4' } });
+}
+
+export function answeredInTime({
+  standings = madeInTime,
+  content = filmed,
+  cost = '0.8',
+}: VideoScript = {}): GatewayAnswering {
+  const asked = { polls: 0 };
+  return (seen) => {
+    if (seen.path === videos) {
+      return Response.json(
+        { id: askedHandle, object: 'video', status: 'queued', progress: 0 },
+        { headers: { [costHeader]: cost } },
+      );
+    }
+    if (seen.path.endsWith('/content')) {
+      return content();
+    }
+    if (seen.path.startsWith(`${videos}/`)) {
+      const standing = standings[Math.min(asked.polls, standings.length - 1)];
+      asked.polls += 1;
+      return Response.json(standing);
+    }
+    return answeredByKind()(seen);
+  };
+}
+
 const partOfAForm = /name="([^"]*)"(?:; filename="([^"]*)"\r\nContent-Type: ([^\r]*))?\r\n\r\n([\s\S]*?)\r\n--/gu;
 
 interface Form {
@@ -78,6 +124,9 @@ function formOf(text: string): Form {
 async function askedOf(request: Readonly<Request>): Promise<AskedOfTheGateway> {
   const { pathname, search } = new URL(request.url);
   const headers = Object.fromEntries(request.headers);
+  if (request.method === 'GET') {
+    return { path: pathname, search, headers, body: undefined, files: [] };
+  }
   if (!String(headers['content-type']).startsWith('multipart/form-data')) {
     const body: unknown = await request.json();
     return { path: pathname, search, headers, body, files: [] };

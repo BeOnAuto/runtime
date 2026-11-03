@@ -2,10 +2,12 @@ import type { AppRuntime } from '@on.auto/api';
 import type { Capability } from '@on.auto/definitions';
 import {
   assetsDue,
+  generationsDue,
   makeGenerationFunctionAdapter,
   readGenerationCatalog,
   type AssetsDue,
   type GatewayFetch,
+  type GenerationsDue,
 } from '@on.auto/generation';
 import { contentAddressesUnder, type ContentAddressKey } from '@on.auto/identity';
 import type { DispatcherServices } from '@on.auto/operations';
@@ -23,7 +25,7 @@ export interface GenerationWiring {
 
 export interface ServedGeneration {
   readonly capability: Capability;
-  readonly dueWork: AssetsDue;
+  readonly dueWork: readonly (AssetsDue | GenerationsDue)[];
 }
 
 const fetchOutward: GatewayFetch = (request) => fetch(request);
@@ -36,17 +38,16 @@ export async function generationServedBy(
   const catalog = Result.getOrThrow(await readGenerationCatalog(shippedFiles));
   const ledger = runtimeLedger(runtime);
   const { signedContentAddress } = contentAddressesUnder(contentAddressKey);
+  const ports = {
+    gateways: models.gateways,
+    fetch: fetchOutward,
+    ledger,
+    content: ledger.content,
+    addresses: { signedContentAddress, ownOrigin },
+    bounds: generation,
+  };
   return {
-    capability: makeGenerationFunctionAdapter({
-      catalog,
-      gateways: models.gateways,
-      fetch: fetchOutward,
-      ownKey: true,
-      ledger,
-      content: ledger.content,
-      addresses: { signedContentAddress, ownOrigin },
-      bounds: generation,
-    }),
-    dueWork: assetsDue({ ledger }),
+    capability: makeGenerationFunctionAdapter({ ...ports, catalog, ownKey: true }),
+    dueWork: [assetsDue({ ledger }), generationsDue(ports)],
   };
 }

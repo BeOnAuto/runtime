@@ -2,7 +2,7 @@ import type { ContentOwner } from '@on.auto/content';
 import type { InvalidInput } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
-import type { AudioEntry } from '../catalog/catalog-entry.ts';
+import type { AudioEntry, VideoEntry } from '../catalog/catalog-entry.ts';
 import type { GenerationFunctionDefinitionDocument, GenerationParameters } from '../document/generation-document.ts';
 import type { GenerationRequest } from '../gateway/generation-gateway.ts';
 import { preparedInput } from './prepared-input.ts';
@@ -16,7 +16,7 @@ export interface PreparedRequest {
 }
 
 interface Preparing {
-  readonly document: GenerationFunctionDefinitionDocument & { readonly produces: 'image' | 'audio' };
+  readonly document: GenerationFunctionDefinitionDocument;
   readonly model: RunnableModel;
   readonly playbook: ContentOwner;
   readonly now: number;
@@ -28,8 +28,15 @@ function audioDefaults(parameters: GenerationParameters, { limits }: AudioEntry)
   return { ...parameters, voice: parameters.voice ?? String(voice), format: parameters.format ?? String(format) };
 }
 
+function videoDefaults(parameters: GenerationParameters, { limits }: VideoEntry): GenerationParameters {
+  return { ...parameters, duration: parameters.duration ?? limits.seconds.least };
+}
+
 function parametersSent({ entry }: RunnableModel, parameters: GenerationParameters): GenerationParameters {
-  return entry.kind === 'audio' ? audioDefaults(parameters, entry) : parameters;
+  if (entry.kind === 'audio') {
+    return audioDefaults(parameters, entry);
+  }
+  return entry.kind === 'video' ? videoDefaults(parameters, entry) : parameters;
 }
 
 export function preparedRequest(

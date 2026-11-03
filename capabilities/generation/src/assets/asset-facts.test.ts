@@ -18,7 +18,7 @@ const kept: AssetEvent = {
     bytes: 182_044,
     sha256,
     kind: 'image',
-    model: 'gateway/openai/gpt-image-1',
+    model: 'gateway/openai/gpt-image-2',
     prompt: 'A studio photograph of a teapot on a white table.',
     parameters: { size: '1024x1024', quality: 'high' },
     references: [{ id: '019a4f2e-0000-7000-8000-000000000001', sha256 }],
@@ -38,7 +38,13 @@ const kept: AssetEvent = {
 
 const expired: AssetEvent = {
   type: 'asset_expired',
-  data: { bytes: 182_044, content_removed: true },
+  data: { bytes: 182_044 },
+  context: { at: '2027-01-30T10:00:05.000Z', by: 'runtime' },
+};
+
+const removed: AssetEvent = {
+  type: 'asset_content_removed',
+  data: { bytes: 182_044, sha256 },
   context: { at: '2027-01-30T10:00:05.000Z', by: 'runtime' },
 };
 
@@ -46,23 +52,31 @@ describe('the facts of an asset', () => {
   recordedFactsBehaviour({
     schema: AssetEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.56.0': [kept, expired] },
+    releases: { '0.56.0': [kept, expired, removed] },
   });
 });
 
 describe('the stream of an asset', () => {
-  it('records that it is kept once and that it expired once after, and refuses either out of turn', () => {
+  it('records that it is kept once, that it expired once after, and that its content was removed once after that, and refuses each out of turn', () => {
     const keeping = { event: { type: kept.type, data: kept.data }, context: kept.context };
     const expiring = { event: { type: expired.type, data: expired.data }, context: expired.context };
+    const removing = { event: { type: removed.type, data: removed.data }, context: removed.context };
 
     expect([
       Result.isSuccess(assetDecider.decide(keeping, 'none')),
       Result.isSuccess(assetDecider.decide(expiring, 'kept')),
+      Result.isSuccess(assetDecider.decide(removing, 'expired')),
       Result.isFailure(assetDecider.decide(expiring, 'none')),
       Result.isFailure(assetDecider.decide(keeping, 'kept')),
       Result.isFailure(assetDecider.decide(expiring, 'expired')),
-    ]).toEqual([true, true, true, true, true]);
-    expect([assetDecider.evolve('none', kept), assetDecider.evolve('kept', expired)]).toEqual(['kept', 'expired']);
+      Result.isFailure(assetDecider.decide(removing, 'kept')),
+      Result.isFailure(assetDecider.decide(removing, 'removed')),
+    ]).toEqual([true, true, true, true, true, true, true, true]);
+    expect([
+      assetDecider.evolve('none', kept),
+      assetDecider.evolve('kept', expired),
+      assetDecider.evolve('expired', removed),
+    ]).toEqual(['kept', 'expired', 'removed']);
     expect(assetDecider.context(keeping, 'none')).toBe(kept.context);
   });
 });

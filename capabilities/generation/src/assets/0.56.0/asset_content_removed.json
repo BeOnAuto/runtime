@@ -1,0 +1,11 @@
+{
+  "type": "asset_content_removed",
+  "data": {
+    "bytes": 182044,
+    "sha256": "c1f5e9a7d3b2a8f4e6c0d9b7a5f3e1c2d4b6a8f0e2c4d6b8a0f2e4c6d8b0a2f4"
+  },
+  "context": {
+    "at": "2027-01-30T10:00:05.000Z",
+    "by": "runtime"
+  }
+}

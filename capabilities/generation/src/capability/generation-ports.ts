@@ -8,18 +8,22 @@ import type { GatewayFetch, GenerationGateway } from '../gateway/generation-gate
 
 const mebibyte = 1_048_576;
 
+const minute = 60_000;
+
 const day = 86_400_000;
 
 export interface GenerationBounds {
   readonly mostBytes: Readonly<Record<GenerationKind, number>>;
   readonly mostPlaybookBytes: number;
   readonly keptMs: number;
+  readonly waitMs: number;
 }
 
 export const generationBounds: GenerationBounds = {
   mostBytes: { image: 20 * mebibyte, audio: 50 * mebibyte, video: 200 * mebibyte },
   mostPlaybookBytes: 2048 * mebibyte,
   keptMs: 90 * day,
+  waitMs: 10 * minute,
 };
 
 interface AssetLedger extends StreamWriter, Pick<ProjectionReader, 'readProjectedRows'> {}

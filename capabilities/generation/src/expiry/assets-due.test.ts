@@ -1,28 +1,17 @@
+import { contentOfBytes } from '@on.auto/content';
+import { at } from '@on.auto/content/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { alpha, generationHarness, harnessStartsAt, sourceWith, type GenerationHarness } from '../testing/index.ts';
+import { assetIdOf, day, numberedHarness, runIdOf } from '../run-testing/run-outcomes.ts';
+import { alpha, harnessStartsAt, onePixelPng, sourceWith, type GenerationHarness } from '../testing/index.ts';
 
-const day = 86_400_000;
-
-function assetIdOf(index: number): string {
-  return `019a4f2e-0000-7000-8000-${String(index).padStart(12, '0')}`;
-}
-
-function runIdOf(index: number): string {
-  return `019a4f2e-5c1b-7d3a-8e6f-${String(index).padStart(12, '0')}`;
-}
+const image = ['produces: image', 'model: gateway/openai/gpt-image-2'];
 
 async function twoOfTheSameBytes(): Promise<GenerationHarness> {
-  const made = { count: 0 };
-  const playbook = generationHarness({
-    newAssetId: () => {
-      made.count += 1;
-      return assetIdOf(made.count);
-    },
-  });
-  await playbook.define('short', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-1', 'expires: P1D']));
-  await playbook.define('long', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-1', 'expires: P3D']));
+  const playbook = numberedHarness();
+  await playbook.define('short', sourceWith([...image, 'expires: P1D']));
+  await playbook.define('long', sourceWith([...image, 'expires: P3D']));
   await playbook.run('short', {}, runIdOf(1));
   await playbook.run('long', {}, runIdOf(2));
   return playbook;
@@ -31,6 +20,26 @@ async function twoOfTheSameBytes(): Promise<GenerationHarness> {
 async function contentOf(playbook: GenerationHarness, id: string): Promise<boolean> {
   const row = await playbook.rowOf(id);
   return (await Effect.runPromise(playbook.ledger.service.content.get(alpha, String(row?.sha256)))) !== undefined;
+}
+
+interface FactSeen {
+  readonly type: string;
+  readonly data: unknown;
+  readonly at: string;
+  readonly by: string;
+}
+
+async function factsIn(playbook: GenerationHarness, id: string): Promise<readonly FactSeen[]> {
+  return (await playbook.factsOf(id)).map(({ type, data, context }) => ({
+    type,
+    data,
+    at: context.at,
+    by: context.by,
+  }));
+}
+
+async function typesIn(playbook: GenerationHarness, id: string): Promise<readonly string[]> {
+  return (await playbook.factsOf(id)).map(({ type }) => type);
 }
 
 describe('the expiry of assets', () => {
@@ -48,35 +57,70 @@ describe('the expiry of assets', () => {
     ).toEqual([{ key: `acme/alpha/${assetIdOf(1)}`, callsOut: false }]);
     expect(await playbook.expireAt(harnessStartsAt + day - 1)).toBe(0);
   });
+});
 
-  it('records each expiry, takes the asset from the totals and removes no content, which other holders may share', async () => {
+describe('the expiry of an asset whose bytes another asset holds', () => {
+  it('records each expiry and takes the asset from the totals, and keeps its content while another asset holds the same bytes', async () => {
     const playbook = await twoOfTheSameBytes();
 
     await playbook.expireAt(harnessStartsAt + day);
-    const afterTheFirst = [await contentOf(playbook, assetIdOf(1)), await playbook.totals()];
-    await playbook.expireAt(harnessStartsAt + 3 * day);
 
-    expect(afterTheFirst).toEqual([true, { bytes: 70, assets: 1 }]);
-    expect(await contentOf(playbook, assetIdOf(2))).toBe(true);
-    expect(await playbook.totals()).toEqual({ bytes: 0, assets: 0 });
-    expect(
-      (await playbook.factsOf(assetIdOf(1))).map(({ type, data, context }) => ({
-        type,
-        data,
-        at: context.at,
-        by: context.by,
-      })),
-    ).toEqual([
+    expect([await contentOf(playbook, assetIdOf(1)), await playbook.totals()]).toEqual([
+      true,
+      { bytes: onePixelPng.byteLength, assets: 1 },
+    ]);
+    expect(await factsIn(playbook, assetIdOf(1))).toEqual([
       expect.objectContaining({ type: 'asset_kept' }),
       {
         type: 'asset_expired',
-        data: { bytes: 70, content_removed: false },
+        data: { bytes: onePixelPng.byteLength },
         at: new Date(harnessStartsAt + day).toISOString(),
         by: 'runtime',
       },
     ]);
-    expect((await playbook.factsOf(assetIdOf(2)))[1]?.data).toEqual({ bytes: 70, content_removed: false });
-    expect(await playbook.rowOf(assetIdOf(2))).toMatchObject({ live: false, expires_at: null });
+    expect(await playbook.rowOf(assetIdOf(1))).toMatchObject({ live: false, expires_at: null });
+  });
+});
+
+describe('the expiry of the last asset that holds its bytes', () => {
+  it('removes the content once the last asset that holds it expires, and records its removal on that asset', async () => {
+    const playbook = await twoOfTheSameBytes();
+    const sha256 = String((await playbook.rowOf(assetIdOf(2)))?.sha256);
+
+    await playbook.expireAt(harnessStartsAt + day);
+    await playbook.expireAt(harnessStartsAt + 3 * day);
+
+    expect(await contentOf(playbook, assetIdOf(2))).toBe(false);
+    expect(await playbook.totals()).toEqual({ bytes: 0, assets: 0 });
+    expect((await factsIn(playbook, assetIdOf(2))).slice(1)).toEqual([
+      {
+        type: 'asset_expired',
+        data: { bytes: onePixelPng.byteLength },
+        at: new Date(harnessStartsAt + 3 * day).toISOString(),
+        by: 'runtime',
+      },
+      {
+        type: 'asset_content_removed',
+        data: { bytes: onePixelPng.byteLength, sha256 },
+        at: new Date(harnessStartsAt + 3 * day).toISOString(),
+        by: 'runtime',
+      },
+    ]);
+  });
+});
+
+describe('the expiry of an asset whose bytes were kept again lately', () => {
+  it('keeps the content of an asset whose bytes were kept again within the hour before it expired, and records no removal', async () => {
+    const playbook = numberedHarness();
+    await playbook.define('short', sourceWith([...image, 'expires: P1D']));
+    await playbook.run('short', {}, runIdOf(1));
+    const keptAgainAt = harnessStartsAt + day - 600_000;
+    await at(keptAgainAt, playbook.ledger.service.content.put(alpha, contentOfBytes(onePixelPng, 'image/png')));
+
+    await playbook.expireAt(harnessStartsAt + day);
+
+    expect(await contentOf(playbook, assetIdOf(1))).toBe(true);
+    expect(await typesIn(playbook, assetIdOf(1))).toEqual(['asset_kept', 'asset_expired']);
   });
 });
 
@@ -90,7 +134,7 @@ describe('an expiry performed more than once', () => {
     );
 
     expect(await playbook.factsOf(assetIdOf(1))).toHaveLength(2);
-    expect(await playbook.totals()).toEqual({ bytes: 70, assets: 1 });
+    expect(await playbook.totals()).toEqual({ bytes: onePixelPng.byteLength, assets: 1 });
   });
 
   it('records the expiry of one performer, and lets the one that comes second record nothing', async () => {
@@ -105,5 +149,21 @@ describe('an expiry performed more than once', () => {
     );
 
     expect(await playbook.factsOf(assetIdOf(1))).toHaveLength(2);
+  });
+
+  it('records a removal once, though the content is found unheld by two performers of the last expiry', async () => {
+    const playbook = numberedHarness();
+    await playbook.define('short', sourceWith([...image, 'expires: P1D']));
+    await playbook.run('short', {}, runIdOf(1));
+    const items = await Effect.runPromise(playbook.due.due(harnessStartsAt + day, 10, false));
+
+    await Effect.runPromise(
+      Effect.forEach([...items, ...items], (item) => item.perform(harnessStartsAt + day), {
+        concurrency: 'unbounded',
+        discard: true,
+      }),
+    );
+
+    expect(await typesIn(playbook, assetIdOf(1))).toEqual(['asset_kept', 'asset_expired', 'asset_content_removed']);
   });
 });

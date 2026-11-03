@@ -19,7 +19,7 @@ const picture = [
   '---',
   'description: A picture of the product for its listing',
   'produces: image',
-  'model: gateway/openai/gpt-image-1',
+  'model: gateway/openai/gpt-image-2',
   'input:',
   '  schema: { type: object, required: [product], properties: { product: { type: string } } }',
   'parameters: { size: 1024x1024, quality: high }',
@@ -109,14 +109,14 @@ describe('a generation function over HTTP', () => {
       run.output.bytes,
       run.output.address.startsWith(`${server.origin}${alpha}/content/`),
     ]).toEqual(['image/png', onePixelPng.byteLength, true]);
-    expect(run.record).toEqual({ model: 'gateway/openai/gpt-image-1', own_key: true, cost_usd: 0.04 });
+    expect(run.record).toEqual({ model: 'gateway/openai/gpt-image-2', own_key: true, cost_usd: 0.04 });
     expect(read).toEqual({ status: 200, type: 'image/png', bytes: [...onePixelPng] });
     expect(gateway.asked()).toEqual([
       {
         path: '/v1/images/generations',
         authorization: 'Bearer gateway-test-key',
         body: {
-          model: 'openai/gpt-image-1',
+          model: 'openai/gpt-image-2',
           prompt: 'A studio photograph of a teapot on a white table.',
           n: 1,
           size: '1024x1024',
@@ -139,7 +139,7 @@ describe('a generation function over HTTP', () => {
 });
 
 describe('an asset past its time', () => {
-  it('expires as the server finds it due, its expiry in the feed, its content kept and read at its address until the address ends', async () => {
+  it('expires as the server finds it due, its expiry in the feed, and its content, kept again within the hour before, read at its address until the address ends', async () => {
     const gateway = await gatewayOnTheLoopback();
     const ledger = aLedger();
     const { server: first } = await withAFunction(gateway, ledger, picture);
@@ -161,7 +161,7 @@ describe('an asset past its time', () => {
     expect(feed.events).toEqual([
       {
         type: 'asset_expired',
-        summary: `An asset of ${onePixelPng.byteLength} bytes expired, and its content was kept.`,
+        summary: `An asset of ${onePixelPng.byteLength} bytes expired.`,
       },
     ]);
   });

@@ -82,9 +82,9 @@ describe('a catalogue of entries', () => {
   });
 
   it('refuses a model named twice, references and media types that disagree, and a replacement that is none', () => {
-    const image = entryNamed('openai/gpt-image-1');
+    const image = entryNamed('openai/gpt-image-2');
     const square = entryNamed('example/square-image');
-    const video = entryNamed('openai/sora-2');
+    const video = entryNamed('example/short-film');
     const old = entryNamed('example/old-image');
 
     expect(refusals([square, square])).toEqual([
@@ -97,7 +97,7 @@ describe('a catalogue of entries', () => {
       ]),
     ).toEqual([
       {
-        model: 'openai/gpt-image-1',
+        model: 'openai/gpt-image-2',
         detail: 'media_types: a model that takes references names the media types it takes',
       },
       { model: 'example/square-image', detail: 'media_types: a model that takes no references names no media types' },
@@ -105,7 +105,7 @@ describe('a catalogue of entries', () => {
     expect(refusals([old])).toEqual([
       {
         model: 'example/old-image',
-        detail: 'retired.replacement: openai/gpt-image-1 is no other model of the catalogue',
+        detail: 'retired.replacement: openai/gpt-image-2 is no other model of the catalogue',
       },
     ]);
     expect(refusals([{ ...old, retired: { on: '2026-06-30', replacement: 'example/old-image' } }])).toEqual([
@@ -116,9 +116,9 @@ describe('a catalogue of entries', () => {
     ]);
     expect(
       refusals([old, { ...image, retired: { on: '2026-06-30', replacement: 'example/square-image' } }, square]),
-    ).toEqual([{ model: 'example/old-image', detail: 'retired.replacement: openai/gpt-image-1 is retired too' }]);
-    expect(refusals([{ ...old, retired: { on: '2026-06-30', replacement: 'openai/sora-2' } }, video])).toEqual([
-      { model: 'example/old-image', detail: 'retired.replacement: openai/sora-2 produces video, not image' },
+    ).toEqual([{ model: 'example/old-image', detail: 'retired.replacement: openai/gpt-image-2 is retired too' }]);
+    expect(refusals([{ ...old, retired: { on: '2026-06-30', replacement: 'example/short-film' } }, video])).toEqual([
+      { model: 'example/old-image', detail: 'retired.replacement: example/short-film produces video, not image' },
     ]);
   });
 });

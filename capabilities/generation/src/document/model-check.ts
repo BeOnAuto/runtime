@@ -49,7 +49,8 @@ function parameterIssues(choosing: Choosing, entry: CatalogEntry, given: Generat
       ...secondsIssue(choosing, given.duration, entry.limits.seconds),
     ];
   }
-  const { sizes, aspects } = entry.limits;
+  const { sizes } = entry.limits;
+  const aspects = entry.kind === 'image' ? entry.limits.aspects : undefined;
   const qualities = entry.kind === 'image' ? entry.limits.qualities : undefined;
   const seconds = entry.kind === 'video' ? entry.limits.seconds : undefined;
   return [

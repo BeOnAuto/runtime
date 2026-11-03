@@ -1,5 +1,6 @@
 import type { Redacted } from 'effect';
 
+import type { GenerationKind } from '../catalog/catalog-entry.ts';
 import type { GenerationParameters } from '../document/generation-document.ts';
 
 export interface GenerationGateway {
@@ -19,7 +20,7 @@ export interface ReferenceContent {
 }
 
 export interface GenerationRequest {
-  readonly kind: 'image' | 'audio';
+  readonly kind: GenerationKind;
   readonly model: string;
   readonly prompt: string;
   readonly parameters: GenerationParameters;
@@ -33,5 +34,7 @@ export interface Generated {
 }
 
 export const gatewayAnswerMs = 240_000;
+
+export const standingAnswerMs = 30_000;
 
 export const mostRefusalBytes = 65_536;

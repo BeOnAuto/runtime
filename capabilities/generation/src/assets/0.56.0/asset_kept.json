@@ -5,7 +5,7 @@
     "bytes": 182044,
     "sha256": "c1f5e9a7d3b2a8f4e6c0d9b7a5f3e1c2d4b6a8f0e2c4d6b8a0f2e4c6d8b0a2f4",
     "kind": "image",
-    "model": "gateway/openai/gpt-image-1",
+    "model": "gateway/openai/gpt-image-2",
     "prompt": "A studio photograph of a teapot on a white table.",
     "parameters": {
       "size": "1024x1024",

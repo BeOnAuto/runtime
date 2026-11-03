@@ -59,6 +59,8 @@ export function imageIn(answer: unknown): Image | undefined {
 
 const audioMediaType = /^audio\/[a-z0-9][a-z0-9.+-]*$/u;
 
+const videoMediaType = /^video\/[a-z0-9][a-z0-9.+-]*$/u;
+
 export function namedMediaTypeOf(contentType: string | null): string | undefined {
   const named = contentType?.split(';')[0]?.trim().toLowerCase();
   return named === '' ? undefined : named;
@@ -66,6 +68,27 @@ export function namedMediaTypeOf(contentType: string | null): string | undefined
 
 export function isAudio(mediaType: string): boolean {
   return audioMediaType.test(mediaType);
+}
+
+export function isVideo(mediaType: string): boolean {
+  return videoMediaType.test(mediaType);
+}
+
+export const mostHandleCharacters = 1024;
+
+const VideoAnswerSchema = Schema.Struct({
+  id: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(mostHandleCharacters)),
+  status: Schema.String,
+  progress: Schema.optionalKey(Schema.NullOr(Schema.Number)),
+  error: Schema.optionalKey(Schema.Unknown),
+});
+
+export type VideoAnswer = typeof VideoAnswerSchema.Type;
+
+const decodeVideoAnswer = Schema.decodeUnknownOption(VideoAnswerSchema);
+
+export function videoAnswerIn(answer: unknown): VideoAnswer | undefined {
+  return Option.getOrUndefined(decodeVideoAnswer(answer));
 }
 
 export function audioMediaTypeOf(named: string | undefined, format: string): string {

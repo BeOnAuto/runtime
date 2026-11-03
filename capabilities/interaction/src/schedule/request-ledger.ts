@@ -30,18 +30,6 @@ export interface RequestLedger
     Pick<RecordedReader, 'readRecorded'>,
     Pick<ProjectionReader, 'readDueRows' | 'nextDueOf'> {}
 
-const decodeFirst = Schema.decodeUnknownSync(Schema.NonEmptyArray(Schema.Struct({ correlationId: Schema.String })));
-
-export function correlationOf(
-  ledger: Pick<RecordedReader, 'readRecorded'>,
-  address: RequestAddress,
-): Effect.Effect<string> {
-  return ledger.readRecorded(address, { kind: 'run', run: address.id }, { order: 'asc', limit: 1, dataOf: [] }).pipe(
-    Effect.map(({ records }) => decodeFirst(records)[0].correlationId),
-    Effect.orDie,
-  );
-}
-
 export function settled(
   ledger: StreamWriter,
   address: RequestAddress,

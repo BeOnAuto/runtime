@@ -9,7 +9,8 @@ export {
   shippedCatalog,
 } from './catalog/catalog-reading.ts';
 export type { GenerationCatalog } from './catalog/generation-catalog.ts';
-export { generationFacts, generationType, makeGenerationFunctionAdapter } from './capability/generation-function.ts';
+export { generationFacts, makeGenerationFunctionAdapter } from './capability/generation-function.ts';
+export { generationType } from './capability/generation-type.ts';
 export {
   generationBounds,
   type AssetAddresses,
@@ -18,4 +19,7 @@ export {
 } from './capability/generation-ports.ts';
 export type { GenerationFunctionDefinitionDocument } from './document/generation-document.ts';
 export { assetsDue, type AssetsDue, type ExpiryParts } from './expiry/assets-due.ts';
+export { generationsDue, type GenerationsDue } from './waiting/generations-due.ts';
+export type { WaitingLedger, WaitingParts } from './waiting/waiting-parts.ts';
+export { generationsWaiting, generationsWaitingName } from './waiting/waiting-rows.ts';
 export type { GatewayFetch, GenerationGateway } from './gateway/generation-gateway.ts';

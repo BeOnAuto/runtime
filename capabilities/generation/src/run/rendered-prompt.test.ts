@@ -12,7 +12,7 @@ const RefusalSchema = Schema.Struct({
 
 const decodeRefusal = Schema.decodeUnknownSync(RefusalSchema);
 
-const image = ['produces: image', 'model: gateway/openai/gpt-image-1'];
+const image = ['produces: image', 'model: gateway/openai/gpt-image-2'];
 
 async function refusalOf(prompt: string, input: unknown = {}) {
   const playbook = generationHarness();

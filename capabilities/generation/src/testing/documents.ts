@@ -2,7 +2,7 @@ export const imageSource = [
   '---',
   'description: A picture of the product for its listing',
   'produces: image',
-  'model: gateway/openai/gpt-image-1',
+  'model: gateway/openai/gpt-image-2',
   'input:',
   '  schema:',
   '    type: object',
@@ -21,7 +21,7 @@ export const imageSource = [
 export const referringSource = [
   '---',
   'produces: image',
-  'model: gateway/openai/gpt-image-1',
+  'model: gateway/openai/gpt-image-2',
   'references: [/photo]',
   '---',
   'The same product, {{ input.product }}, in a garden.',
@@ -40,7 +40,7 @@ export const audioSource = [
 export const videoSource = [
   '---',
   'produces: video',
-  'model: gateway/openai/sora-2',
+  'model: gateway/example/short-film',
   'parameters:',
   '  size: 720x1280',
   '  duration: 8',

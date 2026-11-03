@@ -5,9 +5,16 @@ import { catalogOf, type GenerationCatalog } from '../catalog/generation-catalog
 
 const mebibyte = 1_048_576;
 
+export const shortFilm: CatalogEntry = {
+  model: 'example/short-film',
+  kind: 'video',
+  media_types: [],
+  limits: { sizes: ['720x1280'], seconds: { least: 4, most: 12 }, prompt_characters: 400 },
+};
+
 export const testEntries: readonly CatalogEntry[] = [
   {
-    model: 'openai/gpt-image-1',
+    model: 'openai/gpt-image-2',
     kind: 'image',
     media_types: ['image/png', 'image/jpeg', 'image/webp'],
     limits: {
@@ -35,18 +42,13 @@ export const testEntries: readonly CatalogEntry[] = [
     media_types: [],
     limits: { voices: ['wind'], formats: ['flac'], seconds: { least: 1, most: 30 }, prompt_characters: 400 },
   },
-  {
-    model: 'openai/sora-2',
-    kind: 'video',
-    media_types: [],
-    limits: { sizes: ['720x1280'], seconds: { least: 4, most: 12 }, prompt_characters: 400 },
-  },
+  shortFilm,
   {
     model: 'example/old-image',
     kind: 'image',
     media_types: [],
     limits: { sizes: ['1024x1024'], prompt_characters: 400 },
-    retired: { on: '2026-06-30', replacement: 'openai/gpt-image-1' },
+    retired: { on: '2026-06-30', replacement: 'openai/gpt-image-2' },
   },
 ];
 

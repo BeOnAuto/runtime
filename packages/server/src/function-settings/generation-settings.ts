@@ -7,6 +7,8 @@ import { countsIn, type CountBounds } from './counted-settings.ts';
 
 const mebibyte = 1_048_576;
 
+const minute = 60_000;
+
 const day = 86_400_000;
 
 const bounds = {
@@ -15,6 +17,7 @@ const bounds = {
   video: { setting: 'GENERATION_MAX_VIDEO_MIB', least: 1, most: 4096, example: 200 },
   playbook: { setting: 'GENERATION_MAX_PLAYBOOK_MIB', least: 1, most: 1_048_576, example: 2048 },
   days: { setting: 'GENERATION_RETENTION_DAYS', least: 1, most: 3650, example: 90 },
+  wait: { setting: 'GENERATION_WAIT_MINUTES', least: 1, most: 60, example: 10 },
 } satisfies Readonly<Record<string, CountBounds>>;
 
 export type GenerationSettings = GenerationBounds;
@@ -26,10 +29,11 @@ export function readGenerationSettings(
 ): Effect.Effect<GenerationSettings, InvalidSettingsError> {
   return Effect.map(
     countsIn(environment, { settings: 'generation function settings', bounds }),
-    ({ image, audio, video, playbook, days }) => ({
+    ({ image, audio, video, playbook, days, wait }) => ({
       mostBytes: { image: image * mebibyte, audio: audio * mebibyte, video: video * mebibyte },
       mostPlaybookBytes: playbook * mebibyte,
       keptMs: days * day,
+      waitMs: wait * minute,
     }),
   );
 }

@@ -6,6 +6,7 @@ const gatewayPaths = {
   image: '/images/generations',
   imageWithReferences: '/images/edits',
   audio: '/audio/speech',
+  video: '/videos',
 } as const;
 
 type Body = Readonly<Record<string, string | number>>;
@@ -63,6 +64,15 @@ function audioFields({ model, prompt, parameters }: GenerationRequest): Body {
   });
 }
 
+function videoFields({ model, prompt, parameters }: GenerationRequest): Body {
+  return given({
+    model,
+    prompt,
+    seconds: parameters.duration === undefined ? undefined : String(parameters.duration),
+    size: parameters.size,
+  });
+}
+
 const extensions: ReadonlyMap<string, string> = new Map([
   ['image/png', 'png'],
   ['image/jpeg', 'jpg'],
@@ -76,13 +86,13 @@ function referenceFile({ mediaType, bytes }: ReferenceContent, index: number): F
   });
 }
 
-function formOf(fields: Body, references: readonly ReferenceContent[]): FormData {
+function formOf(fields: Body, references: readonly ReferenceContent[], fileField: string): FormData {
   const form = new FormData();
   for (const [name, value] of Object.entries(fields)) {
     form.append(name, String(value));
   }
   references.forEach((reference, index) => {
-    form.append('image[]', referenceFile(reference, index));
+    form.append(fileField, referenceFile(reference, index));
   });
   return form;
 }
@@ -99,22 +109,81 @@ function jsonRequest(gateway: GenerationGateway, path: string, body: Body, signa
   });
 }
 
+interface Form {
+  readonly fields: Body;
+  readonly references: readonly ReferenceContent[];
+  readonly fileField: string;
+}
+
+function formRequest(gateway: GenerationGateway, path: string, form: Form, signal: Readonly<AbortSignal>): Request {
+  return new Request(addressOf(gateway, path), {
+    method: 'POST',
+    headers: headersOf(gateway),
+    body: formOf(form.fields, form.references, form.fileField),
+    redirect: 'manual',
+    signal,
+  });
+}
+
+function videoRequest(gateway: GenerationGateway, request: GenerationRequest, signal: Readonly<AbortSignal>): Request {
+  const fields = videoFields(request);
+  return request.references.length === 0
+    ? jsonRequest(gateway, gatewayPaths.video, fields, signal)
+    : formRequest(
+        gateway,
+        gatewayPaths.video,
+        { fields, references: request.references, fileField: 'input_reference' },
+        signal,
+      );
+}
+
 export function gatewayRequestOf(
   gateway: GenerationGateway,
   request: GenerationRequest,
   signal: Readonly<AbortSignal>,
 ): Request {
+  if (request.kind === 'video') {
+    return videoRequest(gateway, request, signal);
+  }
   if (request.kind === 'audio') {
     return jsonRequest(gateway, gatewayPaths.audio, audioFields(request), signal);
   }
   if (request.references.length === 0) {
     return jsonRequest(gateway, gatewayPaths.image, imageFields(request), signal);
   }
-  return new Request(addressOf(gateway, gatewayPaths.imageWithReferences), {
-    method: 'POST',
+  return formRequest(
+    gateway,
+    gatewayPaths.imageWithReferences,
+    { fields: imageFields(request), references: request.references, fileField: 'image[]' },
+    signal,
+  );
+}
+
+function readRequest(gateway: GenerationGateway, path: string, signal: Readonly<AbortSignal>): Request {
+  return new Request(addressOf(gateway, path), {
+    method: 'GET',
     headers: headersOf(gateway),
-    body: formOf(imageFields(request), request.references),
     redirect: 'manual',
     signal,
   });
+}
+
+function videoPathOf(handle: string): string {
+  return `${gatewayPaths.video}/${encodeURIComponent(handle)}`;
+}
+
+export function videoStandingRequestOf(
+  gateway: GenerationGateway,
+  handle: string,
+  signal: Readonly<AbortSignal>,
+): Request {
+  return readRequest(gateway, videoPathOf(handle), signal);
+}
+
+export function videoContentRequestOf(
+  gateway: GenerationGateway,
+  handle: string,
+  signal: Readonly<AbortSignal>,
+): Request {
+  return readRequest(gateway, `${videoPathOf(handle)}/content`, signal);
 }

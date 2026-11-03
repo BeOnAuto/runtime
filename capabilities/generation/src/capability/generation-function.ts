@@ -8,13 +8,12 @@ import {
 
 import { assetPresenter } from '../assets/asset-presenter.ts';
 import { generationRun } from '../run/generation-run.ts';
+import { cancelledWaiting } from '../waiting/waiting-ends.ts';
 import { checkedAgainst, parse, summarize } from './definition-reading.ts';
 import type { GenerationPorts } from './generation-ports.ts';
-import { describeOutput } from './generation-words.ts';
-
-export const generationType = 'generation';
-
-export const longestGenerationMs = 300_000;
+import { generationType } from './generation-type.ts';
+import { describeOutput, waitingAccount } from './generation-words.ts';
+import { finishesLater, longestGenerationMs, longestRunOf } from './run-declarations.ts';
 
 export const generationFacts: CapabilityFacts = { onRuns: [], streams: [assetPresenter] };
 
@@ -31,7 +30,12 @@ export function makeGenerationFunctionAdapter(ports: GenerationPorts): Capabilit
     check: checkedAgainst(ports.catalog),
     summarize,
     run: (document, input, context) => run(document, input, context),
-    longestAnyRunMs: longestGenerationMs,
+    whenCancelled: 'finish',
+    cancel: cancelledWaiting,
+    finishesLater,
+    longestRunOf: longestRunOf(ports),
+    longestAnyRunMs: Math.max(longestGenerationMs, longestRunOf(ports)({ produces: 'video' })),
+    runWords: { deferral: waitingAccount },
     reachesOutside: true,
     mayChangeOutside: ports.gateways.length > 0,
     outsideTheDirectoryListing: true,

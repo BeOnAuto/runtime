@@ -1,0 +1,1 @@
+export const generationType = 'generation';

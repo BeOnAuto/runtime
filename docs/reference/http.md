@@ -1964,6 +1964,7 @@ An error is an RFC 9457 problem document, with `Content-Type: application/proble
 - An `unavailable` or `conflict` rejection that has a `because` carries it.
 - A `conflict` may have the kind `oversized`, for a workflow whose output is larger than a run can record, or for an asset a generation function made that is larger than the runtime keeps of one asset or would take the playbook's assets past their total.
 - A `conflict` may have the kind `blocked_by_moderation`, for a generation function whose request the provider of its model refused under its moderation.
+- A run rejected as `unavailable` may have the kind `generation_timed_out`, for a generation the provider finishes later that it had not made when the run had waited as long as it may.
 - A refusal a person resolves somewhere carries `resolve_at`, the absolute URL of that page, and a refusal of the runtime's license or meter carries `runtime_id`, the runtime's id. A self-hosted runtime's refusal at the free rate also carries `lifts_at`, when the limit lifts, and, where the runtime holds a key, `limited_because`, why it is limited to the free rate. The [license refusals](#the-refusals-of-the-meter) below say which carry what.
 
 A refusal of the input of a function or a workflow says each issue in its `detail`, one sentence each, in the words of the input schema. A sentence names the field, then its `description` and `examples`, then the rule it broke. Each entry of `errors` holds one sentence and the field's pointer, so a reader can show it at its field:

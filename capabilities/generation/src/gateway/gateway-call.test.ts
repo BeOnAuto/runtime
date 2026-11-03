@@ -18,7 +18,7 @@ import type { GatewayFetch, GenerationRequest } from './generation-gateway.ts';
 
 const image: GenerationRequest = {
   kind: 'image',
-  model: 'openai/gpt-image-1',
+  model: 'openai/gpt-image-2',
   prompt: 'A lighthouse at dawn',
   parameters: { size: '1024x1024', quality: 'high' },
   references: [],
@@ -87,7 +87,7 @@ describe('an image asked of the gateway', () => {
       {
         path: '/v1/images/generations',
         search: '?region=eu',
-        body: { model: 'openai/gpt-image-1', prompt: 'A lighthouse at dawn', n: 1, aspect_ratio: '16:9' },
+        body: { model: 'openai/gpt-image-2', prompt: 'A lighthouse at dawn', n: 1, aspect_ratio: '16:9' },
         files: [],
         auth: 'Bearer gateway-test-key',
         team: 'team-7',
@@ -115,7 +115,7 @@ describe('an image asked of the gateway from references', () => {
         path: '/v1/images/edits',
         search: '',
         body: {
-          model: 'openai/gpt-image-1',
+          model: 'openai/gpt-image-2',
           prompt: 'A lighthouse at dawn',
           n: '1',
           size: '1024x1024',

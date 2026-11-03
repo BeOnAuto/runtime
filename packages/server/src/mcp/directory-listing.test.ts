@@ -45,7 +45,7 @@ afterAll(async () => {
   await server.stop();
 });
 
-const generationWords = /\bgeneration\b|generation-function|asset_kept|asset_expired/u;
+const generationWords = /\bgeneration\b|generation-function|asset_kept|asset_expired|asset_content_removed/u;
 
 describe('the directory listing at /directory', () => {
   it('names no generation function, its guide or its facts, which /mcp names', () => {

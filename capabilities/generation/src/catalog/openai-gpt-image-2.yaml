@@ -1,4 +1,4 @@
-model: openai/gpt-image-1
+model: openai/gpt-image-2
 kind: image
 media_types: [image/png, image/jpeg, image/webp]
 limits:

@@ -22,14 +22,13 @@ describe('the catalogue of generation models the runtime ships', () => {
     expect(shipped.entries.map(({ model }) => fileNameOf(model)).toSorted()).toEqual(files.toSorted());
   });
 
-  it('names the image, audio and video models of the gateway the runtime calls, none of them retired', () => {
+  it('names the image and audio models of the gateway the runtime calls, none of them retired', () => {
     expect(shipped.entries.map(({ model, kind }) => `${kind} ${model}`).toSorted()).toEqual([
       'audio openai/gpt-4o-mini-tts',
       'audio openai/tts-1',
       'audio openai/tts-1-hd',
-      'image openai/gpt-image-1',
       'image openai/gpt-image-1-mini',
-      'video openai/sora-2',
+      'image openai/gpt-image-2',
     ]);
     expect(shipped.entries.filter(({ retired }) => retired !== undefined)).toEqual([]);
   });
@@ -41,8 +40,8 @@ describe('the catalogue of generation models the runtime ships', () => {
         .filter((entry) => referenceLimitsOf(entry) !== undefined)
         .map(({ model, media_types: mediaTypes }) => [model, mediaTypes]),
     ).toEqual([
-      ['openai/gpt-image-1', ['image/png', 'image/jpeg', 'image/webp']],
       ['openai/gpt-image-1-mini', ['image/png', 'image/jpeg', 'image/webp']],
+      ['openai/gpt-image-2', ['image/png', 'image/jpeg', 'image/webp']],
     ]);
   });
 

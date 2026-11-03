@@ -15,19 +15,29 @@ function presentedFactOf(event: AssetEvent): PresentedFact {
       data,
     };
   }
+  if (event.type === 'asset_content_removed') {
+    const { data } = event;
+    return {
+      type: event.type,
+      summary: `The content of an expired asset, ${sizeInWords(data.bytes)}, was removed, since nothing else of the playbook holds it.`,
+      data,
+    };
+  }
   const { data } = event;
   return {
     type: event.type,
-    summary: data.content_removed
-      ? `An asset of ${sizeInWords(data.bytes)} expired, and its content was removed.`
-      : `An asset of ${sizeInWords(data.bytes)} expired, and its content was kept.`,
+    summary: `An asset of ${sizeInWords(data.bytes)} expired.`,
     data,
   };
 }
 
 export const assetPresenter: Presenter = {
   streamKind: assetsKind,
-  publicNames: { asset_kept: ['asset_kept'], asset_expired: ['asset_expired'] },
+  publicNames: {
+    asset_kept: ['asset_kept'],
+    asset_expired: ['asset_expired'],
+    asset_content_removed: ['asset_content_removed'],
+  },
   present: ({ type, data, context }) => [presentedFactOf(decodeAssetEvent({ type, data, context }))],
-  changes: changingEvents(['asset_kept', 'asset_expired']),
+  changes: changingEvents(['asset_kept', 'asset_expired', 'asset_content_removed']),
 };

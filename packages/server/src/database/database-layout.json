@@ -1,5 +1,5 @@
 {
-  "layout": 12,
+  "layout": 13,
   "catalog": [
     {
       "name": "activity_1",
@@ -100,6 +100,18 @@
     {
       "name": "conversations_3_due",
       "sql": "CREATE INDEX conversations_3_due ON conversations_3 (due_at) WHERE due_at IS NOT NULL"
+    },
+    {
+      "name": "generations_due_1",
+      "sql": "CREATE TABLE generations_due_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, deferred_id TEXT, handle TEXT, gateway TEXT, deferred_at INTEGER, waits_until INTEGER, open INTEGER, polls INTEGER, progress INTEGER, next_poll_at INTEGER, poll_due_at INTEGER, ending_due_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+    },
+    {
+      "name": "generations_due_1_endings_due",
+      "sql": "CREATE INDEX generations_due_1_endings_due ON generations_due_1 (ending_due_at) WHERE ending_due_at IS NOT NULL"
+    },
+    {
+      "name": "generations_due_1_polls_due",
+      "sql": "CREATE INDEX generations_due_1_polls_due ON generations_due_1 (poll_due_at) WHERE poll_due_at IS NOT NULL"
     },
     {
       "name": "kept_secrets",

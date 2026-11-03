@@ -55,13 +55,13 @@ describe('a run of a generation function that makes an image', () => {
       },
     });
     expect(recordIn(outcome)).toEqual({
-      model: 'gateway/openai/gpt-image-1',
+      model: 'gateway/openai/gpt-image-2',
       own_key: true,
       duration_ms: 0,
       cost_usd: 0.04,
     });
     expect(playbook.gateway.asked().map(({ body }) => body)).toEqual([
-      { model: 'openai/gpt-image-1', prompt: teapot, n: 1, size: '1024x1024', quality: 'high' },
+      { model: 'openai/gpt-image-2', prompt: teapot, n: 1, size: '1024x1024', quality: 'high' },
     ]);
   });
 });
@@ -77,7 +77,7 @@ describe('the stream of the asset a run of a generation function keeps', () => {
         type: 'asset_kept',
         data: {
           kind: 'image',
-          model: 'gateway/openai/gpt-image-1',
+          model: 'gateway/openai/gpt-image-2',
           prompt: teapot,
           parameters: { size: '1024x1024', quality: 'high' },
           references: [],
@@ -114,7 +114,7 @@ describe('the assets a playbook keeps', () => {
       bytes: onePixelPng.byteLength,
       sha256: pngDigest,
       kind: 'image',
-      model: 'gateway/openai/gpt-image-1',
+      model: 'gateway/openai/gpt-image-2',
       run: runIdOf(2),
       kept_at: harnessStartsAt,
       expires_at: harnessStartsAt + 30 * day,
@@ -148,12 +148,12 @@ describe('the time a generation keeps its asset, and what it records of its key 
       ownKey: false,
       bounds: { ...generationBounds, keptMs: 7 * day },
     });
-    await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-1']));
+    await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-2']));
 
     const outcome = await ran(playbook, 'picture', {});
     const kept = keptDataOf(await playbook.factsOf(assetIdOf(1)));
 
-    expect(recordIn(outcome)).toEqual({ model: 'gateway/openai/gpt-image-1', own_key: false, duration_ms: 0 });
+    expect(recordIn(outcome)).toEqual({ model: 'gateway/openai/gpt-image-2', own_key: false, duration_ms: 0 });
     expect([kept.cost_usd, kept.own_key, kept.expires_at]).toEqual([
       undefined,
       false,
@@ -163,7 +163,7 @@ describe('the time a generation keeps its asset, and what it records of its key 
 
   it('keeps an asset 90 days where neither the document nor the runtime says otherwise, and waits as long as it is told', async () => {
     const playbook = generationHarness({ answerMs: 60_000 });
-    await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-1']));
+    await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-2']));
 
     const outcome = await ran(playbook, 'picture', {});
 

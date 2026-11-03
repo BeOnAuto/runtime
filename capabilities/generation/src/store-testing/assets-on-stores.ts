@@ -25,7 +25,7 @@ function keptOf(sha256: string, bytes: number, expiresAt: string): AssetKeptData
     bytes,
     sha256,
     kind: 'image',
-    model: 'gateway/openai/gpt-image-1',
+    model: 'gateway/openai/gpt-image-2',
     prompt: 'A lighthouse',
     parameters: {},
     references: [],
@@ -55,7 +55,7 @@ function kept(playbook: ContentOwner, id: string, data: AssetKeptData) {
 function expired(playbook: ContentOwner, id: string, bytes: number) {
   return Effect.flatMap(Effect.service(Ledger), (ledger) =>
     ledger.execute(`${streamPrefixOfPlaybook(playbook)}assets/${id}`, assetDecider, {
-      event: { type: 'asset_expired', data: { bytes, content_removed: false } },
+      event: { type: 'asset_expired', data: { bytes } },
       context: { at: '2026-11-02T10:00:00.000Z', by: 'runtime' },
     }),
   );

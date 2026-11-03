@@ -36,11 +36,7 @@ function message(type: string, data: unknown, context: ProjectedMessage['context
 
 const keptMessage = message('asset_kept', keptData, onTheRun);
 
-const expiredMessage = message(
-  'asset_expired',
-  { bytes: 2048, content_removed: false },
-  { at: '2026-12-01T10:00:05.000Z', by: 'runtime' },
-);
+const expiredMessage = message('asset_expired', { bytes: 2048 }, { at: '2026-12-01T10:00:05.000Z', by: 'runtime' });
 
 const otherMessage = message('run_started', {}, onTheRun);
 
@@ -117,19 +113,19 @@ function shown(type: string, data: unknown, context: ProjectedMessage['context']
 }
 
 describe('the facts of an asset as the feed shows them', () => {
-  it('says what was kept and until when, and whether its content was removed as it expired', () => {
+  it('says what was kept and until when, that it expired, and that its content was removed once nothing else held it', () => {
     expect([
       shown('asset_kept', keptData, onTheRun),
       shown('asset_kept', { ...keptData, kind: 'image', bytes: 3_500_000 }, onTheRun),
       shown('asset_kept', { ...keptData, kind: 'video', bytes: 1 }, onTheRun),
-      shown('asset_expired', { bytes: 2048, content_removed: true }, expiredMessage.context),
-      shown('asset_expired', { bytes: 2048, content_removed: false }, expiredMessage.context),
+      shown('asset_expired', { bytes: 2048 }, expiredMessage.context),
+      shown('asset_content_removed', { bytes: 2048, sha256 }, expiredMessage.context),
     ]).toEqual([
       'The playbook kept audio of 2 KiB that a generation function made, until 2026-12-01.',
       'The playbook kept an image of 3.3 MiB that a generation function made, until 2026-12-01.',
       'The playbook kept a video of 1 byte that a generation function made, until 2026-12-01.',
-      'An asset of 2 KiB expired, and its content was removed.',
-      'An asset of 2 KiB expired, and its content was kept.',
+      'An asset of 2 KiB expired.',
+      'The content of an expired asset, 2 KiB, was removed, since nothing else of the playbook holds it.',
     ]);
   });
 
