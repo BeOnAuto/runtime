@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.56.0](https://github.com/BeOnAuto/runtime/compare/v0.55.1...v0.56.0) (2026-11-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **definitions:** a page's lately is now runs
+* **generation:** a later-finishing generation is waited for, and expiry removes content
+* **api:** split execute and serve the directory listing at /directory
+* **definitions:** a definition's page is part of it
+* **global:** the recall function type leaves, and pages keep the fold and the views
+* **lookup:** a lookup function obtains information through one tool that only reads
+* **tool-servers:** every tool carries a mark, reads, acts or unmarked
+
+### Features
+
+* **activity:** a comment is pinned where it was made, on anything of a playbook or the org ([77ef7a2](https://github.com/BeOnAuto/runtime/commit/77ef7a28f15c81748a60adef74cde5beaa71a5c1))
+* **activity:** comments on anything, copied to the agent and read by agents ([89509d9](https://github.com/BeOnAuto/runtime/commit/89509d9363145a66256f6e03e9feffacba730634))
+* **activity:** the organization's activity, kept by the runtime and seen by each person ([7ba0482](https://github.com/BeOnAuto/runtime/commit/7ba04827b35e2cbe1f8f6b9baf734f8462dbc4b2))
+* **api:** split execute and serve the directory listing at /directory ([413d9fb](https://github.com/BeOnAuto/runtime/commit/413d9fb8cc7335baab66aebc7518bb712794d6ba))
+* **api:** the instructions name the function families in one sentence ([c463f3e](https://github.com/BeOnAuto/runtime/commit/c463f3e21ccd35b73cfc018bd8d00e71422079a9))
+* **api:** the served Studio may send feedback to PostHog ([7c09ee8](https://github.com/BeOnAuto/runtime/commit/7c09ee8880f49e11eca000f2b7945a4adff7376e))
+* **api:** tools carry their title as an annotation and name a type for every argument ([353f507](https://github.com/BeOnAuto/runtime/commit/353f507724b2be69fd93f22f3537b39c9e51d8a2))
+* **content:** recorded content can be removed, and served by a signed address ([31a25da](https://github.com/BeOnAuto/runtime/commit/31a25da0b2a8bad3efe7acb22983f5daace1bf41))
+* **definitions:** a definition is paused and resumed ([04f78be](https://github.com/BeOnAuto/runtime/commit/04f78be8876d3906e620e2a5d40c3c3a6e595309))
+* **definitions:** a definition's page is part of it ([e447090](https://github.com/BeOnAuto/runtime/commit/e44709035b0f316f741f971c7db22005ff7c0d38))
+* **definitions:** a page for every workflow and function, with a recipe in each format guide ([9e45772](https://github.com/BeOnAuto/runtime/commit/9e457723143fc85ed024fe07972d750e36445498))
+* **definitions:** a page presents a workflow's, a function's or a playbook's results ([0a67345](https://github.com/BeOnAuto/runtime/commit/0a6734513fd4a1ee016e4ea14f77a6de7b2fe325))
+* **definitions:** a page's lately is now runs ([3e0e08a](https://github.com/BeOnAuto/runtime/commit/3e0e08a6783e6bcaf843e708664244c614ef607f))
+* **definitions:** step runs say where they ran, and render_page renders a page as of a run ([2b32ba1](https://github.com/BeOnAuto/runtime/commit/2b32ba14606ba0cbc06eb815090297456a09642f))
+* **generation:** a generation function produces an image or audio and keeps it as an asset ([d4544ef](https://github.com/BeOnAuto/runtime/commit/d4544ef897edcc34ee3568e4eef4a5ba080e1ff7))
+* **generation:** a later-finishing generation is waited for, and expiry removes content ([8b6f5d8](https://github.com/BeOnAuto/runtime/commit/8b6f5d814a6688e260840409a396cace3e60d792))
+* **global:** the recall function type leaves, and pages keep the fold and the views ([64e8fc3](https://github.com/BeOnAuto/runtime/commit/64e8fc3d99730ea6b65e5eb0402ac354588330cb))
+* **ledger:** projections over an organization's streams, and a fact scrubbed in place ([9368339](https://github.com/BeOnAuto/runtime/commit/936833938ade16663697423e80f4b7496926e4db))
+* **ledger:** the ledger knows every holder of a digest and removes content nothing holds ([e4bd948](https://github.com/BeOnAuto/runtime/commit/e4bd948634eb48380209e76237a9a65d7d3d17c6))
+* **lookup:** a lookup function obtains information through one tool that only reads ([cd41540](https://github.com/BeOnAuto/runtime/commit/cd415405f5ae8e406b3977f66c8b7418afa83306))
+* **memory:** a memory function remembers and recalls, and an agent has the same tools ([5056f7d](https://github.com/BeOnAuto/runtime/commit/5056f7d12e442d7ab1d7ae16b0c0c670c0e5cb6a))
+* **memory:** the organization's memories are kept through a port ([abf3e8c](https://github.com/BeOnAuto/runtime/commit/abf3e8cdc356a8807c3798455569dcbc869496b1))
+* **tool-servers:** every tool carries a mark, reads, acts or unmarked ([6206a5d](https://github.com/BeOnAuto/runtime/commit/6206a5d741d886489b5b6313c6bb4556f565559d))
+
+
+### Bug Fixes
+
+* **definitions:** a page's figures and standing come from one read of its view ([451b0dd](https://github.com/BeOnAuto/runtime/commit/451b0ddf02e1573c6232565ca758dbdc0beb8e4f))
+* **global:** clarify product messages and documentation ([ad5f566](https://github.com/BeOnAuto/runtime/commit/ad5f566703b4d306f6e3d6f84d8957998bb19af1))
+* **server:** update Node to 26.12.1 for the October security release ([#446](https://github.com/BeOnAuto/runtime/issues/446)) ([8acd6a1](https://github.com/BeOnAuto/runtime/commit/8acd6a10a31df255f8ad6328eb918e720e319516))
+
 ## [0.55.1](https://github.com/BeOnAuto/runtime/compare/v0.55.0...v0.55.1) (2026-11-01)
 
 
