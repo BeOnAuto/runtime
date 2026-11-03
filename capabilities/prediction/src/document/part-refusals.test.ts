@@ -56,14 +56,14 @@ const predicts: readonly Refusal[] = [
     'a history past 500 periods',
     [['  unit: orders', '  unit: orders\n  history: 501']],
     [
-      'Line 9, /predicts/history: The history is a whole number of periods from 0 to 500, not 501; leave it out for twice the longest horizon',
+      'Line 9, /predicts/history: The history is a whole number of periods from 0 to 500, not 501; leave it out for the smaller of twice the longest horizon and the window',
     ],
   ],
   [
     'a history that is not whole',
     [['  unit: orders', '  unit: orders\n  history: 2.5']],
     [
-      'Line 9, /predicts/history: The history is a whole number of periods from 0 to 500, not 2.5; leave it out for twice the longest horizon',
+      'Line 9, /predicts/history: The history is a whole number of periods from 0 to 500, not 2.5; leave it out for the smaller of twice the longest horizon and the window',
     ],
   ],
   [

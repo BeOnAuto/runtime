@@ -115,6 +115,23 @@ describe('the defaults of a prediction function document', () => {
     expect([documentOf(weeklyOrders).predicts.history, historyOf('0'), historyOf('156')]).toEqual([8, 0, 156]);
     expect(() => weeklyOrdersWith(['no such line', ''])).toThrow('The example has no line no such line');
   });
+
+  it('answer the whole window of history when twice the longest horizon is longer than the window', () => {
+    const narrow = weeklyOrdersWith(
+      ['  season: 52', ''],
+      ['  horizons: [1, 4]', '  horizons: [4]'],
+      ['  window: 156', '  window: 7'],
+    );
+
+    expect(documentOf(narrow).predicts).toEqual({
+      target: 'orders',
+      period: 'week',
+      horizons: [4],
+      unit: 'orders',
+      history: 7,
+      coverage: 0.8,
+    });
+  });
 });
 
 describe('a text that is not a prediction function document', () => {

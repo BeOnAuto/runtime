@@ -100,7 +100,7 @@ function historyIssues(history: number | undefined, window: number, lines: Sourc
     return refusedAt(
       lines,
       at,
-      `The history is a whole number of periods from 0 to ${mostHistory}, not ${figure(history)}; leave it out for twice the longest horizon`,
+      `The history is a whole number of periods from 0 to ${mostHistory}, not ${figure(history)}; leave it out for the smaller of twice the longest horizon and the window`,
     );
   }
   return history > window
@@ -177,7 +177,7 @@ export function predictsOf(written: WrittenPredicts, data: WrittenData, lines: S
     ...(season === undefined ? {} : { season }),
     ...reach,
     unit: unit.trim(),
-    history: history ?? 2 * longestHorizonOf(reach),
+    history: history ?? Math.min(2 * longestHorizonOf(reach), data.window),
     coverage,
   }));
 }
