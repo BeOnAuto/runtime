@@ -2,6 +2,7 @@ import type { AppRuntime } from '@on.auto/api';
 import type { Capability } from '@on.auto/definitions';
 import {
   assetsDue,
+  defineGetAsset,
   generationsDue,
   makeGenerationFunctionAdapter,
   readGenerationCatalog,
@@ -10,7 +11,7 @@ import {
   type GenerationsDue,
 } from '@on.auto/generation';
 import { contentAddressesUnder, type ContentAddressKey } from '@on.auto/identity';
-import type { DispatcherServices } from '@on.auto/operations';
+import type { DispatcherServices, RouteRegistration } from '@on.auto/operations';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import { Result } from 'effect';
 
@@ -23,8 +24,13 @@ export interface GenerationWiring {
   readonly ownOrigin: () => string;
 }
 
+interface PlaybookOperation {
+  readonly registration: RouteRegistration<'playbook'>;
+}
+
 export interface ServedGeneration {
   readonly capability: Capability;
+  readonly operations: readonly PlaybookOperation[];
   readonly dueWork: readonly (AssetsDue | GenerationsDue)[];
 }
 
@@ -48,6 +54,7 @@ export async function generationServedBy(
   };
   return {
     capability: makeGenerationFunctionAdapter({ ...ports, catalog, ownKey: true }),
+    operations: [defineGetAsset(ports)],
     dueWork: [assetsDue({ ledger }), generationsDue(ports)],
   };
 }

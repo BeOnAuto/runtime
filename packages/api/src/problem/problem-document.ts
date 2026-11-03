@@ -36,6 +36,7 @@ const reasons = [
   reasonOf('method_not_allowed', 405, 'Method not allowed', 'The path does not take that method'),
   reasonOf('content_too_large', 413, 'Content too large', 'The body is larger than the operation takes'),
   reasonOf('unsupported_media_type', 415, 'Unsupported media type', 'The body is not of a type the operation takes'),
+  reasonOf('range_not_satisfiable', 416, 'Range not satisfiable', 'The range of bytes asked starts past the end'),
   reasonOf('internal', 500, 'Internal error', 'Something went wrong inside the server'),
 ];
 

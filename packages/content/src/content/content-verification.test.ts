@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { deliveredBeforeFailing, readThrough } from '../testing/content-samples.ts';
 import { sha256Of } from './content-digest.ts';
-import { notTheBytesOfItsDigest } from './content-refusals.ts';
-import { verifiedStream } from './content-verification.ts';
+import { notTheBytesOfItsDigest, notTheBytesOfItsPart } from './content-refusals.ts';
+import { measuredStream, verifiedStream } from './content-verification.ts';
 
 interface Source {
   readonly stream: ReadableStream<Uint8Array>;
@@ -130,5 +130,48 @@ describe('a stream verified against the digest and the size of a content, that i
     await stream.cancel('The reader left');
 
     expect(source.cancelled()).toBe('The reader left');
+  });
+});
+
+describe('a stream of a part of a content, held to the length of the part', () => {
+  it('hands over every piece of a part of its length', async () => {
+    expect(await readThrough(measuredStream(sha256Of(whole), 16, sourceOf(pieces).stream))).toEqual({
+      bytes: 16,
+      sha256: sha256Of(whole),
+      largestPiece: 6,
+    });
+  });
+
+  it('fails a part that ends short of its length, and one that goes past it without the piece that did, cancelling what is left', async () => {
+    const passingIt = sourceOf(pieces);
+
+    const delivered = await Promise.all([
+      deliveredBeforeFailing(measuredStream(sha256Of(whole), 20, sourceOf(pieces).stream)),
+      deliveredBeforeFailing(measuredStream(sha256Of(whole), 9, passingIt.stream)),
+    ]);
+
+    expect(delivered).toEqual([
+      { bytes: 16, failure: notTheBytesOfItsPart(sha256Of(whole), 20) },
+      { bytes: 6, failure: notTheBytesOfItsPart(sha256Of(whole), 9) },
+    ]);
+    expect(passingIt.cancelled()).toBe('cancelled');
+  });
+
+  it('fails a piece that is not bytes, and cancels its source when its reader cancels it', async () => {
+    const source = new ReadableStream<unknown>({
+      pull: (controller) => {
+        controller.enqueue('alpha');
+      },
+    });
+    const left = sourceOf(pieces);
+
+    const delivered = await deliveredBeforeFailing(measuredStream(sha256Of(whole), 16, source));
+    await measuredStream(sha256Of(whole), 16, left.stream).cancel('The reader left');
+
+    expect(delivered).toEqual({
+      bytes: 0,
+      failure: new Error(`The content kept under ${sha256Of(whole)} was read back in a piece that is not bytes`),
+    });
+    expect(left.cancelled()).toBe('The reader left');
   });
 });

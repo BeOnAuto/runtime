@@ -14,7 +14,7 @@ const madeInWords: ReadonlyMap<string, string> = new Map([
   ['video', 'a video'],
 ]);
 
-function whatOf(mediaType: string): string {
+export function whatOf(mediaType: string): string {
   return madeInWords.get(mediaType.slice(0, mediaType.indexOf('/'))) ?? 'an asset';
 }
 

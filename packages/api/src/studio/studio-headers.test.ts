@@ -16,6 +16,7 @@ function policyAllowing(...scripts: readonly string[]): string {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data:",
+    "media-src 'self'",
     "connect-src 'self' https://us.i.posthog.com",
     "base-uri 'self'",
     "form-action 'self'",
@@ -81,6 +82,18 @@ describe('the security headers of a runtime that serves Studio', () => {
     expect(
       await policiesAt(handler, ['/studio/', '/studio/unreachable', '/studio', '/studio/assets/index-4f2a9c.js']),
     ).toEqual([policyAllowing(), policyAllowing(), policyAllowing(), policyAllowing()]);
+  });
+
+  it("let the page play audio and video from this origin alone, where the addresses the runtime signs for a playbook's content lead", async () => {
+    const { handler } = createTestHandler({ studio });
+
+    const [policy] = await policiesAt(handler, ['/studio/']);
+
+    expect(
+      String(policy)
+        .split('; ')
+        .filter((directive) => directive.startsWith('media-src')),
+    ).toEqual(["media-src 'self'"]);
   });
 
   it("allow the inline scripts of the host's page by their hashes, read from the page the host answers, and those alone", async () => {

@@ -35,6 +35,7 @@ const headersOfReasons: Readonly<Partial<Record<ProblemReason, readonly Header[]
   unauthenticated: headerOf('WWW-Authenticate', 'Bearer, with error="invalid_token" when the key is not one'),
   method_not_allowed: headerOf('Allow', 'The methods the path takes'),
   unavailable: headerOf('Retry-After', 'The seconds to wait, when the same request may then succeed'),
+  range_not_satisfiable: headerOf('Content-Range', 'bytes */<size>, the size the content holds'),
 };
 
 const problemSchemaReference = { $ref: '#/components/schemas/problem' };

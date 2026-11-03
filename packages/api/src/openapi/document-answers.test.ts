@@ -83,6 +83,7 @@ describe('the problems operations answer', () => {
       'conflict',
       'content_too_large',
       'unsupported_media_type',
+      'range_not_satisfiable',
       'invalid_input',
       'internal',
       'unavailable',

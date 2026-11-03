@@ -37,6 +37,13 @@ const streamedPieceBytes = 65_536;
 
 const keyed = Schema.decodeUnknownSync(Schema.Struct({ Key: Schema.String }));
 
+const ranged = Schema.decodeUnknownSync(Schema.Struct({ Range: Schema.optionalKey(Schema.String) }));
+
+function partOfTheBody(body: Readonly<Uint8Array>, asked: string | undefined): Readonly<Uint8Array> {
+  const [, start = '0', end = String(body.byteLength - 1)] = /^bytes=(\d+)-(\d+)$/u.exec(asked ?? '') ?? [];
+  return body.subarray(Number(start), Number(end) + 1);
+}
+
 const put = Schema.decodeUnknownSync(
   Schema.Struct({
     Key: Schema.String,
@@ -155,8 +162,9 @@ function objectAnswers(shelves: Shelves, honoursConditionalCopy: boolean): Reado
     },
     GetObjectCommand: (input) => {
       const { body, mediaType } = shelves.objectAt(keyed(input).Key, 'NoSuchKey');
-      const stream = sdkStreamMixin(Readable.from(piecesOf(body)));
-      return { $metadata: answered, Body: stream, ContentLength: body.byteLength, ContentType: mediaType };
+      const asked = partOfTheBody(body, ranged(input).Range);
+      const stream = sdkStreamMixin(Readable.from(piecesOf(asked)));
+      return { $metadata: answered, Body: stream, ContentLength: asked.byteLength, ContentType: mediaType };
     },
     PutObjectCommand: (input) => {
       const { Key, Body = new Uint8Array(), ContentType, IfNoneMatch } = put(input);

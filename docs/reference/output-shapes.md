@@ -155,6 +155,8 @@ An asset a generation function made: an image or audio the playbook keeps until 
 | `address`       | Yes      | A [signed address](http.md#content-at-a-signed-address) its bytes are read at without a key, or `null` where the runtime signs none |
 | `address_until` | Yes      | When the address stops being answered, 15 minutes after the run at the most, or `null`                                              |
 
+`get_asset` reads the asset again by its `id`, with an address signed as it is read, while the playbook keeps it ([Generation functions](http.md#generation-functions)).
+
 ## Examples
 
 This reasoning function answers values by category. Replace the model reference with one that [`list_models`](mcp.md#model-information) offers:

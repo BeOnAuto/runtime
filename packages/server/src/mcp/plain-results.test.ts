@@ -15,6 +15,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { commentsCalled, interactionsCalled, runWhenPaused } from '../testing/interaction-servers/interaction-calls.ts';
 import { servingReasoning } from '../testing/servers/reasoning-server.ts';
 import {
+  assetsCalled,
+  cancelCalled,
   licenseActivated,
   memoriesCalled,
   servingWithAToolServer,
@@ -171,14 +173,10 @@ async function workflowsCalled(session: McpSession): Promise<Called> {
     ['run_definition', started],
     ['get_run', await session.callTool('get_run', inSales({ run_id: runId }))],
     ['send_run_event', await session.callTool('send_run_event', inSales({ run_id: runId, event }))],
-    ['cancel_run', await cancelled(session, await session.callTool('run_definition', inSales(workflow)))],
+    ...(await cancelCalled(session, inSales, workflow)),
     ...(await standingsCalled(session, inSales, workflow)),
     ['retire_definition', await session.callTool('retire_definition', inSales(workflow))],
   ];
-}
-
-function cancelled(session: McpSession, { structuredContent }: ToolResult): Promise<ToolResult> {
-  return session.callTool('cancel_run', inSales({ run_id: String(structuredContent?.['run_id']) }));
 }
 
 async function errorsCalled(session: McpSession): Promise<Called> {
@@ -259,6 +257,7 @@ describe('the plain words that lead each result over MCP', () => {
         ...(await interactionsCalled(session, inSales)),
         ...(await memoriesCalled(session, inSales)),
         ...(await toolServerToolsCalled(session, inSales, server)),
+        ...(await assetsCalled()),
       ],
       errors: await errorsCalled(session),
     }));

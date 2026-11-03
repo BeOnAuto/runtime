@@ -70,7 +70,7 @@ export function generationHarness({ answering, clockStepMs = 0, ...given }: Harn
     capability,
     due,
     waiting,
-    ...callsOn(ledger, capability, () => {
+    ...callsOn(ledger, capability, ports, () => {
       time.now += clockStepMs;
       return time.now;
     }),

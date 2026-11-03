@@ -41,3 +41,7 @@ export function beingRemoved(sha256: string): ContentRefused {
 export function notTheBytesOfItsDigest(sha256: string): Error {
   return new Error(`The content kept under ${sha256} is not the bytes that digest names`);
 }
+
+export function notTheBytesOfItsPart(sha256: string, bytes: number): Error {
+  return new Error(`A part of the content kept under ${sha256} was read back other than its ${String(bytes)} bytes`);
+}

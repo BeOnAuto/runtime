@@ -23,7 +23,7 @@ For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization 
 
 - Every endpoint uses streamable HTTP without sessions and accepts `POST`.
 - `/directory` is the directory listing. It leaves out two things.
-  - No generation function: the definition tools take no `generation` type, `get_guide` holds no generation guide, and `list_playbook_events` names none of its events. A call that names a generation function is refused as `not_found`.
+  - No generation function: the definition tools take no `generation` type, `get_guide` holds no generation guide, `list_playbook_events` names none of its events, and `get_asset`, which reads what one made, is not listed. A call that names a generation function is refused as `not_found`.
   - No tool server whose tools pay, refund, transfer or pay out money, which its provider's entry or its configuration marks `handles_money: true`, such as Stripe. `search` lists neither the server nor its provider, and `add_connection`, `list_connection_tools`, `query_connection` and `execute_connection` refuse it as `unavailable`, saying the directory listing does not offer it. Through `/mcp` the same calls work.
 - The answer to a request the runtime handles comes as an event stream that carries a heartbeat, an SSE comment, every 5 seconds while the request runs, so an MCP client can tell a call that is still running from a server that has stopped. A request refused before it is handled keeps its JSON answer and its status, and a notification is answered `202 Accepted`. A stream that breaks is not resumed: closing it cancels the request.
 - When the runtime stops while it handles a request, it answers the request with the JSON-RPC error `Auto Runtime stopped while it handled this request, so it may or may not have taken effect` before the stream ends, and a request that comes while it stops gets a `503`.
@@ -155,6 +155,7 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 | `list_runs`      | `GET /runs`                           | List the playbook's runs, newest first; `steps: false` leaves out those a step started              |
 | `cancel_run`     | `POST /runs/{run_id}/cancel`          | Cancel a run that is still going                                                                    |
 | `send_run_event` | `POST /runs/{run_id}/events`          | Deliver an event to a workflow run that is still `started`                                          |
+| `get_asset`      | `GET /assets/{id}`                    | Read an asset a generation function made, with an address to its bytes signed as it is read         |
 
 `create_playbook` answers the playbook's page in Studio as `studio`, `create_definition` and `update_definition` the definition's, and `run_definition` its playbook's Ledger with the run chosen, so the agent gives the person the link without being asked; [Links to Studio](http.md#links-to-studio) says what each link opens.
 

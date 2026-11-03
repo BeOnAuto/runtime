@@ -1,3 +1,5 @@
+import type { ByteRange } from '@on.auto/content';
+
 export interface ObjectHead {
   readonly bytes: number;
   readonly mediaType: string;
@@ -20,6 +22,7 @@ export interface UnfinishedPut {
 export interface Bucket {
   readonly put: (key: string, body: ObjectBody) => Promise<boolean>;
   readonly get: (key: string) => Promise<ObjectRead | undefined>;
+  readonly getPart: (key: string, range: ByteRange) => Promise<ObjectRead | undefined>;
   readonly head: (key: string) => Promise<ObjectHead | undefined>;
   readonly delete: (keys: readonly string[]) => Promise<void>;
   readonly list: (prefix: string) => AsyncIterable<string>;

@@ -1,4 +1,11 @@
-import { factReaderOf, type KeyedProjection, type ProjectedMessage, type ProjectedRow } from '@on.auto/operations';
+import {
+  factReaderOf,
+  rowKeyColumn,
+  type KeyedProjection,
+  type ProjectedMessage,
+  type ProjectedRow,
+  type ProjectedRowsQuery,
+} from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import { AssetEventSchema, assetsKind } from './asset-facts.ts';
@@ -32,6 +39,14 @@ export const assetRowFrom: (row: unknown) => AssetRow = Schema.decodeUnknownSync
 
 export function assetRowOf(row: ProjectedRow | undefined): AssetRow | undefined {
   return row === undefined ? undefined : Option.getOrUndefined(decodeAssetRow(row));
+}
+
+export function rowKeyed(key: string): ProjectedRowsQuery {
+  return { where: [{ column: rowKeyColumn, equals: key }], orderBy: [], order: 'asc', limit: 1 };
+}
+
+export function hasExpired(row: AssetRow, now: number): boolean {
+  return !row.live || (row.expires_at !== null && row.expires_at <= now);
 }
 
 const TotalsRowSchema = Schema.Struct({ bytes: Schema.Int, assets: Schema.Int });

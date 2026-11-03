@@ -19,7 +19,6 @@ export {
   defineCapability,
   predictionCapabilityPoint,
   defaultRunWords,
-  inTheDirectoryListing,
   type CancelDecision,
   type CancelledAttempt,
   type CancelledRun,
@@ -38,6 +37,12 @@ export {
   type Standing,
   type StandingRequest,
 } from './capability/capability.ts';
+export {
+  inTheDirectoryListing,
+  operationsInTheDirectoryListing,
+  operationsOfCapabilities,
+  type CapabilityOperations,
+} from './capability/directory-listing.ts';
 export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
 export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
 export {

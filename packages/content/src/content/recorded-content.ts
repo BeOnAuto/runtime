@@ -1,6 +1,7 @@
 import type { Effect } from 'effect';
 
 import type { Taken } from './content-intake.ts';
+import type { AskedRange, ContentPart } from './content-parts.ts';
 import type { ContentRefused } from './content-refusals.ts';
 import type { ContentToKeep, StreamedContent } from './streamed-content.ts';
 
@@ -21,6 +22,11 @@ export interface ContentKept extends Digested {
 export interface RecordedContent {
   readonly put: (playbook: ContentOwner, content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
   readonly get: (playbook: ContentOwner, sha256: string) => Effect.Effect<StreamedContent | undefined>;
+  readonly getPart: (
+    playbook: ContentOwner,
+    sha256: string,
+    asked: AskedRange,
+  ) => Effect.Effect<ContentPart | undefined>;
 }
 
 export type UnheldRemoval = 'removed' | 'held' | 'fresh';
@@ -35,6 +41,11 @@ export interface ContentStore {
   readonly stage: (playbook: ContentOwner, content: ContentToKeep) => Effect.Effect<StagedContent, ContentRefused>;
   readonly holds: (playbook: ContentOwner, sha256: string) => Effect.Effect<boolean>;
   readonly read: (playbook: ContentOwner, sha256: string) => Effect.Effect<StreamedContent | undefined>;
+  readonly readPart: (
+    playbook: ContentOwner,
+    sha256: string,
+    asked: AskedRange,
+  ) => Effect.Effect<ContentPart | undefined>;
   readonly delete: (playbook: ContentOwner, sha256: string) => Effect.Effect<void>;
   readonly sweepContent: (before: number) => Promise<void>;
 }

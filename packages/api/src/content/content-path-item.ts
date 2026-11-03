@@ -8,7 +8,9 @@ export const contentPath = '/orgs/{org}/playbooks/{playbook}/content/{sha256}';
 
 export const contentTag = 'content';
 
-export const contentProblems = problemAnswersOf(new Set(['forbidden', 'not_found', 'method_not_allowed', 'internal']));
+export const contentProblems = problemAnswersOf(
+  new Set(['forbidden', 'not_found', 'method_not_allowed', 'range_not_satisfiable', 'internal']),
+);
 
 const hex = { type: 'string', pattern: '^[0-9a-f]{64}$' };
 
@@ -16,6 +18,7 @@ const description = [
   'Answers the bytes of a content a playbook keeps, with the media type it was kept with, at an address the runtime signed for that content.',
   `The address is what a browser follows, so it needs no credential: its signature and the time it lasts until are its credential, and it lasts ${String(contentAddressLastsSeconds / 60)} minutes at the most.`,
   'An address past its time, or not signed for this content, is refused as forbidden.',
+  'One range of bytes asked in Range, from a first byte to a last or to the end, is answered with that part, and any other range with the whole content.',
 ].join(' ');
 
 const parameters = [
@@ -42,15 +45,35 @@ const parameters = [
     description: 'The signature the runtime made of the org, the playbook, the digest and the time, in lowercase hex',
     schema: hex,
   },
+  {
+    name: 'Range',
+    in: 'header',
+    required: false,
+    description: 'One range of bytes, bytes=<first>-<last> or bytes=<first>- to the end, counted from 0',
+    schema: { type: 'string' },
+  },
 ];
+
+function headerOf(words: string): OpenApiObject {
+  return { description: words, schema: { type: 'string' } };
+}
+
+const cacheControl = headerOf('private, with a max-age of the seconds the address has left');
+
+const acceptRanges = headerOf('bytes, as every answer of the content says');
 
 const bytes = {
   description: "The content's bytes, with the media type it was kept with as their Content-Type",
+  headers: { 'Cache-Control': cacheControl, 'Accept-Ranges': acceptRanges },
+  content: { '*/*': {} },
+};
+
+const part = {
+  description: 'The bytes of the range asked, to the end of the content at the most, with its media type',
   headers: {
-    'Cache-Control': {
-      description: 'private, with a max-age of the seconds the address has left',
-      schema: { type: 'string' },
-    },
+    'Content-Range': headerOf('bytes <first>-<last>/<size>, the part answered and the size of the whole'),
+    'Cache-Control': cacheControl,
+    'Accept-Ranges': acceptRanges,
   },
   content: { '*/*': {} },
 };
@@ -62,7 +85,7 @@ export const contentPathItem: OpenApiObject = {
     description,
     tags: [contentTag],
     parameters,
-    responses: { 200: bytes, ...referencesTo(contentProblems) },
+    responses: { 200: bytes, 206: part, ...referencesTo(contentProblems) },
     security: [],
   },
 };

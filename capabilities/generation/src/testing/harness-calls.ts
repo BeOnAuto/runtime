@@ -1,8 +1,17 @@
 import { defineCreateDefinition, defineGetRun, defineRunDefinition, type Capability } from '@on.auto/definitions';
 import { admittingMeter, uncheckedPages } from '@on.auto/definitions/testing';
-import { allPermissions, makeDispatcher, type CallerIdentity, type Outcome } from '@on.auto/operations';
+import {
+  allPermissions,
+  makeDispatcher,
+  type CallerIdentity,
+  type Outcome,
+  type PlaybookAddress,
+} from '@on.auto/operations';
 import { memoryPlaybookRegistry, recordingReporter, type MemoryLedger } from '@on.auto/operations/testing';
 import { Clock, Effect, Layer } from 'effect';
+
+import type { GenerationPorts } from '../capability/generation-ports.ts';
+import { defineGetAsset } from '../operations/get-asset.ts';
 
 export const acmeAdmin: CallerIdentity = {
   id: 'acme-admin',
@@ -13,6 +22,8 @@ export const acmeAdmin: CallerIdentity = {
 };
 
 export const alpha = { org: 'acme', playbook: 'alpha' };
+
+export const beta = { org: 'acme', playbook: 'beta' };
 
 export function clockAt(at: () => number): Clock.Clock {
   const wall = Clock.Clock.defaultValue();
@@ -31,24 +42,35 @@ export interface HarnessCalls {
   readonly define: (name: string, source: string) => Promise<Outcome>;
   readonly run: (name: string, input: unknown, runId: string) => Promise<Outcome>;
   readonly runOf: (runId: string) => Promise<Outcome>;
+  readonly assetOf: (id: string, playbook?: PlaybookAddress) => Promise<Outcome>;
 }
 
-export function callsOn(ledger: MemoryLedger, capability: Capability, now: () => number): HarnessCalls {
+export function callsOn(
+  ledger: MemoryLedger,
+  capability: Capability,
+  ports: Pick<GenerationPorts, 'addresses'>,
+  now: () => number,
+): HarnessCalls {
   const services = Layer.mergeAll(
     ledger.layer,
-    memoryPlaybookRegistry([alpha]),
+    memoryPlaybookRegistry([alpha, beta]),
     recordingReporter().layer,
     Layer.succeed(Clock.Clock, clockAt(now)),
     admittingMeter,
   );
   const dispatcher = makeDispatcher([]);
-  const call = (registration: Parameters<typeof dispatcher.dispatchToPlaybook>[0], input: unknown) =>
+  const call = (
+    registration: Parameters<typeof dispatcher.dispatchToPlaybook>[0],
+    input: unknown,
+    playbook: PlaybookAddress = alpha,
+  ) =>
     Effect.runPromise(
       dispatcher
-        .dispatchToPlaybook(registration, { caller: acmeAdmin, ...alpha, input, encoding: 'json' })
+        .dispatchToPlaybook(registration, { caller: acmeAdmin, ...playbook, input, encoding: 'json' })
         .pipe(Effect.provide(services)),
     );
   const capabilities = [capability];
+  const getAsset = defineGetAsset(ports);
   return {
     define: (name, source) =>
       call(defineCreateDefinition(capabilities, uncheckedPages).registration, {
@@ -60,6 +82,7 @@ export function callsOn(ledger: MemoryLedger, capability: Capability, now: () =>
     run: (name, input, runId) =>
       call(defineRunDefinition(capabilities).registration, { type: 'generation', name, input, run_id: runId }),
     runOf: (runId) => call(defineGetRun(capabilities, uncheckedPages).registration, { run_id: runId }),
+    assetOf: (id, playbook) => call(getAsset.registration, { id }, playbook),
   };
 }
 

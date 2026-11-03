@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 
 import { mostContentChunkBytes } from '../content/content-chunks.ts';
 import { requireExpected, takenInChunks } from '../content/content-intake.ts';
+import { contentPartOf, type AskedRange, type ContentPart } from '../content/content-parts.ts';
 import { keptOutside } from '../content/kept-outside.ts';
 import type {
   ContentHead,
@@ -42,6 +43,14 @@ function readFrom(kept: KeptBytes | undefined): StreamedContent | undefined {
     : { stream: kept.chunks.stream(), bytes: kept.chunks.size, mediaType: kept.mediaType };
 }
 
+function partFrom(kept: KeptBytes | undefined, asked: AskedRange): ContentPart | undefined {
+  return kept === undefined
+    ? undefined
+    : contentPartOf(kept.chunks.size, kept.mediaType, asked, ({ start, end }) =>
+        kept.chunks.slice(start, end + 1).stream(),
+      );
+}
+
 function stagedIn(kept: Map<string, KeptBytes>, key: string, chunks: Blob): Omit<StagedContent, 'taken'> {
   return {
     placed: (mediaType) =>
@@ -68,6 +77,7 @@ export function memoryContentStore(): ContentStore {
       }),
     holds: (playbook, sha256) => Effect.sync(() => kept.has(keyOf(playbook, sha256))),
     read: (playbook, sha256) => Effect.sync(() => readFrom(kept.get(keyOf(playbook, sha256)))),
+    readPart: (playbook, sha256, asked) => Effect.sync(() => partFrom(kept.get(keyOf(playbook, sha256)), asked)),
     delete: (playbook, sha256) =>
       Effect.sync(() => {
         kept.delete(keyOf(playbook, sha256));

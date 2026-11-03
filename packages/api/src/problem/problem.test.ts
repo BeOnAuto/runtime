@@ -17,6 +17,7 @@ const statusAndTitleByReason: ReadonlyArray<readonly [ProblemReason, number, str
   ['method_not_allowed', 405, 'Method not allowed'],
   ['content_too_large', 413, 'Content too large'],
   ['unsupported_media_type', 415, 'Unsupported media type'],
+  ['range_not_satisfiable', 416, 'Range not satisfiable'],
   ['internal', 500, 'Internal error'],
 ];
 

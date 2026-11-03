@@ -13,9 +13,24 @@ export type {
   UnheldRemoval,
 } from './content/recorded-content.ts';
 export { mostContentChunkBytes } from './content/content-chunks.ts';
+export {
+  bytesIn,
+  contentPartOf,
+  rangeWithin,
+  streamedPartOf,
+  type AskedRange,
+  type ByteRange,
+  type ContentPart,
+  type StreamedPart,
+} from './content/content-parts.ts';
 export { leftUnread, requireExpected, takenInChunks, type TakeChunk, type Taken } from './content/content-intake.ts';
-export { ContentRefused, notTheBytesOfItsDigest, type ContentRefusedBecause } from './content/content-refusals.ts';
-export { verifiedStream } from './content/content-verification.ts';
+export {
+  ContentRefused,
+  notTheBytesOfItsDigest,
+  notTheBytesOfItsPart,
+  type ContentRefusedBecause,
+} from './content/content-refusals.ts';
+export { measuredStream, verifiedStream } from './content/content-verification.ts';
 export { keptOutside, removalLastsMs, removalPollMs, removalWaitMs, type KeptOutside } from './content/kept-outside.ts';
 export {
   contentOfBytes,

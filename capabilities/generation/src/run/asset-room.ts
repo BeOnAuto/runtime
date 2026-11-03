@@ -2,19 +2,14 @@ import type { ContentOwner } from '@on.auto/content';
 import { Conflict, type ProjectionReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { assetTotalsName, totalsKey, totalsRowOf } from '../assets/asset-projections.ts';
+import { assetTotalsName, rowKeyed, totalsKey, totalsRowOf } from '../assets/asset-projections.ts';
 import { sizeInWords } from '../assets/asset-words.ts';
 
 export type TotalsReading = Pick<ProjectionReader, 'readProjectedRows'>;
 
 function bytesKeptBy(ledger: TotalsReading, playbook: ContentOwner): Effect.Effect<number> {
   return Effect.map(
-    ledger.readProjectedRows(assetTotalsName, playbook, {
-      where: [{ column: 'row_key', equals: totalsKey }],
-      orderBy: [],
-      order: 'asc',
-      limit: 1,
-    }),
+    ledger.readProjectedRows(assetTotalsName, playbook, rowKeyed(totalsKey)),
     ([kept]) => totalsRowOf(kept?.row).bytes,
   );
 }

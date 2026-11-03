@@ -3,6 +3,7 @@ import { accountFake, accountServerOver, testSigners } from '@on.auto/meter/test
 import type { ScriptedReplies } from '@on.auto/reasoning/testing';
 import { serveFakeMcp } from '@on.auto/tool-servers/served-fakes';
 
+import { assetMadeBy, onAlphaOf, servingAPicture } from './asset-calls.ts';
 import { linkIn } from './connected-servers.ts';
 import { servingReasoning, type ReasoningServer } from './reasoning-server.ts';
 
@@ -72,6 +73,18 @@ export async function toolServerToolsCalled(
   ];
 }
 
+export async function assetsCalled(): Promise<readonly (readonly [string, ToolResult])[]> {
+  const server = await servingAPicture();
+  return onAlphaOf(server, async (session) => {
+    const ran = await session.callTool('run_definition', {
+      type: 'generation',
+      name: 'picture',
+      input: { product: 'a teapot' },
+    });
+    return [['get_asset', await session.callTool('get_asset', { id: assetMadeBy(ran) })]];
+  });
+}
+
 export async function memoriesCalled(
   session: McpSession,
   inPlaybook: InPlaybook,
@@ -86,6 +99,16 @@ export async function memoriesCalled(
 }
 
 type Named = Readonly<{ type: string; name: string }>;
+
+export async function cancelCalled(
+  session: McpSession,
+  inPlaybook: InPlaybook,
+  definition: Named,
+): Promise<readonly (readonly [string, ToolResult])[]> {
+  const started = await session.callTool('run_definition', inPlaybook(definition));
+  const runId = String(started.structuredContent?.['run_id']);
+  return [['cancel_run', await session.callTool('cancel_run', inPlaybook({ run_id: runId }))]];
+}
 
 export async function standingsCalled(
   session: McpSession,

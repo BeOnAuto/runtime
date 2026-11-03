@@ -5,7 +5,7 @@ import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { contentAddressRoutes } from '../index.ts';
-import { call, createTestHandler } from '../testing/api-calls.ts';
+import { call, createTestHandler, type Answer } from '../testing/api-calls.ts';
 import { acmeAdmin } from '../testing/operation-server.ts';
 
 const key = Redacted.make(new Uint8Array(32).fill(5));
@@ -39,18 +39,52 @@ async function holding(): Promise<RecordedContent> {
   return content;
 }
 
-function servedBy(now: () => number, content: Pick<RecordedContent, 'get'>) {
+type Served = Pick<RecordedContent, 'get' | 'getPart'>;
+
+function servedBy(now: () => number, content: Served) {
   return createTestHandler({
     authenticator: authenticatorFor({ host: '0.0.0.0', apiKeys: [acmeAdmin.entry] }),
     routes: [contentAddressRoutes({ key, content, now })],
   }).handler;
 }
 
-function readingInASecond(kept: RecordedContent, aSecondPasses: () => void): Pick<RecordedContent, 'get'> {
-  return { get: (playbook, digest) => Effect.andThen(Effect.sync(aSecondPasses), kept.get(playbook, digest)) };
+function readingInASecond(kept: RecordedContent, aSecondPasses: () => void): Served {
+  return {
+    get: (playbook, digest) => Effect.andThen(Effect.sync(aSecondPasses), kept.get(playbook, digest)),
+    getPart: (playbook, digest, asked) =>
+      Effect.andThen(Effect.sync(aSecondPasses), kept.getPart(playbook, digest, asked)),
+  };
 }
 
-function servedAt(seconds: number, content: Pick<RecordedContent, 'get'>) {
+function streaming(stream: ReadableStream<Uint8Array>): Served {
+  return {
+    get: () => Effect.succeed({ stream, bytes: 10, mediaType: 'image/png' }),
+    getPart: () => Effect.die(new Error('No part of this content is read')),
+  };
+}
+
+function cancelledStream(): { readonly stream: ReadableStream<Uint8Array>; readonly cancelled: Promise<string> } {
+  const cancelled = Promise.withResolvers<string>();
+  const stream = new ReadableStream<Uint8Array>({
+    cancel: () => {
+      cancelled.resolve('cancelled');
+    },
+  });
+  return { stream, cancelled: cancelled.promise };
+}
+
+function partOf({ status, text: body, headers }: Omit<Answer, 'body'>) {
+  return {
+    status,
+    body,
+    type: headers.get('content-type'),
+    length: headers.get('content-length'),
+    range: headers.get('content-range'),
+    accepts: headers.get('accept-ranges'),
+  };
+}
+
+function servedAt(seconds: number, content: Served) {
   return servedBy(at(seconds), content);
 }
 
@@ -108,15 +142,20 @@ describe('an address of a content the runtime refuses', () => {
     );
   });
 
-  it('is not found where the playbook holds no content under the digest, though the address was signed for it', async () => {
+  it('is not found where the playbook holds no content under the digest, though the address was signed for it, whether a range of it is asked or not', async () => {
     const handler = servedAt(signedAt, memoryRecordedContent());
 
-    const answer = await call(handler, addressOf(sha256));
+    const answers = [
+      await call(handler, addressOf(sha256)),
+      await call(handler, addressOf(sha256), { headers: { range: 'bytes=0-4' } }),
+    ];
 
-    expect(answer).toMatchObject({
-      status: 404,
-      body: { reason: 'not_found', detail: 'The playbook holds no content under this digest' },
-    });
+    expect(answers).toMatchObject(
+      Array.from({ length: 2 }, () => ({
+        status: 404,
+        body: { reason: 'not_found', detail: 'The playbook holds no content under this digest' },
+      })),
+    );
   });
 });
 
@@ -134,26 +173,19 @@ describe('the route of the content of a playbook', () => {
 });
 
 describe('the headers of a content at its address', () => {
-  it('answers HEAD with the headers of the content and no body, and cancels the stream the store opened for it', async () => {
-    const cancelled = Promise.withResolvers<string>();
-    const opened = new ReadableStream<Uint8Array>({
-      cancel: () => {
-        cancelled.resolve('cancelled');
-      },
-    });
-    const handler = servedAt(signedAt, {
-      get: () => Effect.succeed({ stream: opened, bytes: 10, mediaType: 'image/png' }),
-    });
+  it('answers HEAD with the headers of the whole content and no body, a Range ignored as RFC 9110 has it, and cancels the stream the store opened for it', async () => {
+    const whole = cancelledStream();
+    const ranged = cancelledStream();
+    const asked = { method: 'HEAD', headers: { range: 'bytes=2-5' } };
 
-    const head = await call(handler, addressOf(sha256), { method: 'HEAD' });
+    const heads = [
+      await call(servedAt(signedAt, streaming(whole.stream)), addressOf(sha256), { method: 'HEAD' }),
+      await call(servedAt(signedAt, streaming(ranged.stream)), addressOf(sha256), asked),
+    ];
 
-    expect([head.status, head.text, head.headers.get('content-type'), head.headers.get('content-length')]).toEqual([
-      200,
-      '',
-      'image/png',
-      '10',
-    ]);
-    expect(await cancelled.promise).toBe('cancelled');
+    const headersOfTheWhole = { status: 200, body: '', type: 'image/png', length: '10', range: null, accepts: 'bytes' };
+    expect(heads.map((head) => partOf(head))).toEqual([headersOfTheWhole, headersOfTheWhole]);
+    expect(await Promise.all([whole.cancelled, ranged.cancelled])).toEqual(['cancelled', 'cancelled']);
   });
 
   it('counts the seconds an address has left before the store reads the content, and never fewer than none', async () => {
@@ -204,12 +236,61 @@ describe('the stream of a content at its address', () => {
         controller.error(new Error('The content kept under it is missing its chunk 1'));
       },
     });
-    const handler = servedAt(signedAt, {
-      get: () => Effect.succeed({ stream: failing, bytes: 10, mediaType: 'image/png' }),
-    });
+    const handler = servedAt(signedAt, streaming(failing));
 
     const answered = call(handler, addressOf(sha256));
 
     await expect(answered).rejects.toThrow('The content kept under it is missing its chunk 1');
+  });
+});
+
+function rangesOf(
+  handler: ReturnType<typeof servedAt>,
+  ranges: readonly string[],
+): Promise<readonly Omit<Answer, 'body'>[]> {
+  return Promise.all(
+    ranges.map(async (range) => {
+      const answer = await handler.fetch(new Request(`http://localhost${addressOf(sha256)}`, { headers: { range } }));
+      return { status: answer.status, text: await answer.text(), headers: answer.headers };
+    }),
+  );
+}
+
+const answeredWhole = ['bytes=0-1,4-5', 'bytes=-5', 'bytes=5-3', 'items=0-1'];
+
+describe('a range of the bytes of a content at its address', () => {
+  it('is answered 206 with the bytes from its first to its last, or to the end, and the Content-Range and Content-Length of the part', async () => {
+    const answers = await rangesOf(servedAt(signedAt, await holding()), ['bytes=0-4', 'bytes=10-', 'bytes=5-100']);
+
+    const json = { status: 206, type: 'application/json', accepts: 'bytes' };
+    expect(answers.map((answer) => partOf(answer))).toEqual([
+      { ...json, body: text.slice(0, 5), length: '5', range: 'bytes 0-4/17' },
+      { ...json, body: text.slice(10), length: '7', range: 'bytes 10-16/17' },
+      { ...json, body: text.slice(5), length: '12', range: 'bytes 5-16/17' },
+    ]);
+  });
+
+  it('is answered 416 range_not_satisfiable where it starts past the end, with the size the content holds', async () => {
+    const past = await call(servedAt(signedAt, await holding()), addressOf(sha256), {
+      headers: { range: 'bytes=17-' },
+    });
+
+    expect([past.status, past.headers.get('content-range'), past.headers.get('accept-ranges')]).toEqual([
+      416,
+      'bytes */17',
+      'bytes',
+    ]);
+    expect(past.body).toMatchObject({
+      reason: 'range_not_satisfiable',
+      detail: 'The content holds 17 bytes, so the range asked starts past its end',
+    });
+  });
+
+  it('is answered with the whole content, 200, where several ranges, a suffix, a range ending before it starts or other units are asked', async () => {
+    const answers = await rangesOf(servedAt(signedAt, await holding()), answeredWhole);
+
+    expect(answers.map(({ status, text: body, headers }) => [status, body, headers.get('accept-ranges')])).toEqual(
+      Array.from({ length: 4 }, () => [200, text, 'bytes']),
+    );
   });
 });

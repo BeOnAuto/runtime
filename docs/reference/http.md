@@ -84,17 +84,21 @@ This route serves the bytes a playbook keeps by their digest at an address the r
 - `until` is the time the address lasts until, in whole seconds since 1970-01-01T00:00:00Z. An address lasts 15 minutes at the most. The runtime accepts an `until` up to 30 seconds later than that, for servers whose clocks differ, and refuses one beyond it.
 - `sig` is the runtime's signature of the org, the playbook, the digest and `until`, under a key the runtime keeps for itself.
 - The runtime signs an address only on an `https` origin or on `localhost`, `127.0.0.1` or `[::1]`, as it does for [links to Studio](#links-to-studio).
+- An asset a generation function made has its address in the output of its run, and [`get_asset`](#generation-functions) answers a new one each time it reads the asset.
 - The response carries `Content-Type`, `Content-Length` and `Cache-Control: private, max-age={seconds}`, the seconds the address has left, at most 900.
 - The route takes no key and makes no `Origin` check. `HEAD` returns the headers without the bytes, and any other method gets `405`.
 - Every response of this route carries `Cross-Origin-Resource-Policy: cross-origin`, so a page on another origin can embed the bytes in an `img`, `audio` or `video` element. Every other route answers `same-origin`.
 - Every response of this route carries a `Content-Security-Policy` with `sandbox`, so HTML or SVG content opened at the address runs no script and submits no form. An image still displays.
-- The route does not serve `Range` requests yet. It answers every request with the whole content, so a player that needs ranges, as some do for video, cannot use the address.
+- Every response with the content carries `Accept-Ranges: bytes`, so an `audio` or `video` element can seek. A `Range` of one range, `bytes={first}-{last}` or `bytes={first}-` to the end, counted from 0, returns `206` with that part, its `Content-Range: bytes {first}-{last}/{size}` and the part's size as `Content-Length`. A range that runs past the end stops at the last byte.
+- Any other `Range`, such as several ranges, a suffix such as `bytes=-500`, or a range whose last byte comes before its first, returns the whole content with `200`.
+- A part is checked against its length only, since the digest is of the whole content. Read the whole content to check its digest.
 
 | Case                                                                                         | Response                                                                              |
 | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | The time in `until` has passed                                                               | `403` `forbidden`, "The address to this content expired at {time}; ask for a new one" |
 | The signature is not for this org, playbook, digest and time, or `until` or `sig` is missing | `403` `forbidden`, "The address is not one this runtime signed for this content"      |
 | The playbook holds no content under the digest, such as content it no longer keeps           | `404` `not_found`, "The playbook holds no content under this digest"                  |
+| The `Range` starts at or past the end of the content                                         | `416` `range_not_satisfiable`, with `Content-Range: bytes */{size}`                   |
 
 ## Playbooks
 
@@ -449,6 +453,34 @@ Prediction functions use the operations of reasoning functions, with `prediction
 - A question finishes within the request that asks it, and the runtime's forecaster makes the prediction. A question such as `{ "series": "north", "horizon": 1 }` answers a [series](output-shapes.md#series) whose `observed` line holds the last periods of the dataset and whose `predicted` line holds the period asked, with its `value`, `low` and `high`; without `horizon` it holds every horizon the function names. The run's `record` holds the `method` the forecaster used, the `coverage` and the `history` it backtested. [The input and the output](prediction-format.md#the-input-and-the-output) has every field, and [A question](prediction-format.md#a-question) an answer in full.
 - A series whose history is too short to forecast from is refused as `conflict` with the kind `history_too_short`, its `detail` naming the periods it has and the periods it needs.
 - `get_definition` adds the dataset's `standing`.
+
+## Generation functions
+
+Generation functions use the operations of reasoning functions, with `generation` in place of `reasoning` in each route, such as `POST /definitions/generation` and `POST /definitions/generation/{name}/run`. The `source` is a [generation function document](generation-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions). A run's output is the [asset](output-shapes.md#asset) it made, with an address that lasts 15 minutes from the end of the run.
+
+The assets of a playbook have an operation of their own, relative to `/v1/orgs/{org}/playbooks/{playbook}`, which reads an asset again with an address signed as it is read:
+
+| Operation   | Method and route   | Permission      | Input            |
+| ----------- | ------------------ | --------------- | ---------------- |
+| `get_asset` | `GET /assets/{id}` | `playbook:read` | Asset id in path |
+
+| Field                      | Value                                                                                                                                                                                                                                                |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                       | The asset's id, as the output of the run that made it gives it                                                                                                                                                                                       |
+| `media_type`, `bytes`      | The media type and the size of its bytes                                                                                                                                                                                                             |
+| `sha256`                   | The SHA-256 of its bytes, in lowercase hex                                                                                                                                                                                                           |
+| `model`                    | The model that made it                                                                                                                                                                                                                               |
+| `kept_at`                  | When the playbook kept it                                                                                                                                                                                                                            |
+| `expires_at`               | When it expires, or `null` once its expiry is recorded                                                                                                                                                                                               |
+| `expired_at`               | When its expiry was recorded, or `null` while it is kept                                                                                                                                                                                             |
+| `expired`                  | `true` from the moment the asset expires, whether or not its expiry is recorded yet                                                                                                                                                                  |
+| `content_removed`          | `true` once its content was removed, which happens when it expires and nothing else of the playbook holds the same bytes                                                                                                                             |
+| `address`, `address_until` | A [signed address](#content-at-a-signed-address) its bytes are read at without a key, signed as it is read and answered for 15 minutes, until `address_until`; both `null` from the moment the asset expires, and where the runtime signs no address |
+
+| Case                                                                           | Response                                               |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| An `id` that is no UUID                                                        | `invalid_input` at `/id`                               |
+| No asset of the playbook has the `id`, an asset of another playbook among them | `not_found`, "There is no such asset in this playbook" |
 
 ## Workflows
 
@@ -2008,6 +2040,7 @@ A nested field is named by its path, such as `address, then city`, and an item o
 | 410    | `unanswered`                               |
 | 413    | `content_too_large`                        |
 | 415    | `unsupported_media_type`                   |
+| 416    | `range_not_satisfiable`                    |
 | 422    | `invalid_input`                            |
 | 500    | `internal`                                 |
 | 503    | `unavailable`                              |
@@ -2033,6 +2066,7 @@ A problem document's `type` is a URI that names its kind of problem:
 | `https://on.auto/problems/unanswered`             | 410    | Nobody answered the request a run waited on, of an interaction function, with the `kind` `expired` or `undelivered`                                                                                                                                                                                                                                        |
 | `https://on.auto/problems/content_too_large`      | 413    | The body is larger than the operation accepts: 1,048,576 bytes of JSON                                                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/unsupported_media_type` | 415    | The body is not sent as the media type the operation accepts, `application/json` in UTF-8 unless the route says otherwise, or is sent compressed                                                                                                                                                                                                           |
+| `https://on.auto/problems/range_not_satisfiable`  | 416    | The `Range` of a [content at a signed address](#content-at-a-signed-address) starts at or past its end                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/invalid_input`          | 422    | The input does not fit, with the `errors` that point at it                                                                                                                                                                                                                                                                                                 |
 | `https://on.auto/problems/cursor_not_held`        | 422    | The `since` of `list_org_changes` or `list_playbook_changes` is not a cursor the ledger holds; its `reason` is `invalid_input`; ask again without `since`                                                                                                                                                                                                  |
 | `https://on.auto/problems/client_closed_request`  | 499    | The client disconnected before the response                                                                                                                                                                                                                                                                                                                |

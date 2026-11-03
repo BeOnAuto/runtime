@@ -23,6 +23,8 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
   connections:
     "The tool servers people add to the org, which its playbooks share, and the routes of Studio's page that approves them",
   memories: 'What a playbook and its organization remember: kept, recalled, forgotten, erased, moved and listed',
+  assets:
+    "The images and audio a playbook's generation functions made, each read by its id with an address to its bytes signed as it is read",
   providers: 'The providers a person may connect to the org by name, and whether the caller may add a connection',
   license:
     'The license of the runtime, activated with the key Studio gives, by which each new action is admitted against the account of an org at Auto',

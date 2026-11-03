@@ -1,8 +1,45 @@
 import { sha256Digest } from './content-digest.ts';
-import { notTheBytesOfItsDigest } from './content-refusals.ts';
+import { notTheBytesOfItsDigest, notTheBytesOfItsPart } from './content-refusals.ts';
 
 function notBytes(sha256: string): Error {
   return new Error(`The content kept under ${sha256} was read back in a piece that is not bytes`);
+}
+
+export function measuredStream(
+  sha256: string,
+  bytes: number,
+  source: ReadableStream<unknown>,
+): ReadableStream<Uint8Array> {
+  const reader = source.getReader();
+  let read = 0;
+  const failed = async (controller: ReadableStreamDefaultController<Uint8Array>, failure: Readonly<Error>) => {
+    controller.error(failure);
+    await reader.cancel();
+  };
+  return new ReadableStream<Uint8Array>({
+    pull: async (controller) => {
+      const next = await reader.read();
+      if (next.done) {
+        if (read === bytes) {
+          controller.close();
+          return;
+        }
+        controller.error(notTheBytesOfItsPart(sha256, bytes));
+        return;
+      }
+      if (!(next.value instanceof Uint8Array)) {
+        await failed(controller, notBytes(sha256));
+        return;
+      }
+      read += next.value.byteLength;
+      if (read > bytes) {
+        await failed(controller, notTheBytesOfItsPart(sha256, bytes));
+        return;
+      }
+      controller.enqueue(next.value);
+    },
+    cancel: (reason) => reader.cancel(reason),
+  });
 }
 
 export function verifiedStream(

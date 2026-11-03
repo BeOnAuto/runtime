@@ -2,7 +2,12 @@ import { DirectoryListing, NotFound } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { defineCapability, inTheDirectoryListing } from '../index.ts';
+import {
+  defineCapability,
+  inTheDirectoryListing,
+  operationsInTheDirectoryListing,
+  operationsOfCapabilities,
+} from '../index.ts';
 import { echo, echoDeclaration } from '../testing/capabilities/echo.ts';
 import { knownCapabilities } from './known-capabilities.ts';
 
@@ -17,6 +22,18 @@ describe('a capability outside the directory listing', () => {
 
   it('is left out of the capabilities the directory listing serves', () => {
     expect(inTheDirectoryListing([echo, outside])).toEqual([echo]);
+  });
+
+  it('has the operations it serves beside its definitions left out of those the directory listing serves', () => {
+    const served = [
+      { capability: echo, operations: ['echo_back'] },
+      { capability: outside, operations: ['get_outside', 'list_outside'] },
+    ];
+
+    expect([operationsOfCapabilities(served), operationsInTheDirectoryListing(served)]).toEqual([
+      ['echo_back', 'get_outside', 'list_outside'],
+      ['echo_back'],
+    ]);
   });
 
   it('is not found in a call through the directory listing, and found in any other', () => {

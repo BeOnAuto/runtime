@@ -16,7 +16,7 @@ export interface AssetAddress {
   readonly address_until: string | null;
 }
 
-const noAddress: AssetAddress = { address: null, address_until: null };
+export const noAddress: AssetAddress = { address: null, address_until: null };
 
 export function addressOf(
   addresses: AssetAddresses | undefined,

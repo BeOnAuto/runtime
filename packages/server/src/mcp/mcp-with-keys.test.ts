@@ -47,6 +47,7 @@ const definitionTools = [
   'remember',
   'recall',
   'forget',
+  'get_asset',
   'send_run_event',
 ];
 

@@ -1,4 +1,4 @@
-import type { Fold, ProjectedRowsQuery } from '@on.auto/operations';
+import type { Fold } from '@on.auto/operations';
 import type { MemoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 
@@ -8,6 +8,7 @@ import {
   assetRowOf,
   assetsName,
   assetTotalsName,
+  rowKeyed,
   totalsKey,
   totalsRowOf,
   type AssetRow,
@@ -29,19 +30,15 @@ const collected: Fold<readonly AssetEvent[], AssetEvent> = {
   eventSchema: AssetEventSchema,
 };
 
-function keyedRow(key: string): ProjectedRowsQuery {
-  return { where: [{ column: 'row_key', equals: key }], orderBy: [], order: 'asc', limit: 1 };
-}
-
 export function readersOn({ service }: MemoryLedger): HarnessReaders {
   return {
     factsOf: async (id) => (await Effect.runPromise(service.load(assetStreamIn(alpha, id), collected))).state,
     rowOf: async (id) => {
-      const [kept] = await Effect.runPromise(service.readProjectedRows(assetsName, alpha, keyedRow(id)));
+      const [kept] = await Effect.runPromise(service.readProjectedRows(assetsName, alpha, rowKeyed(id)));
       return assetRowOf(kept?.row);
     },
     totals: async () => {
-      const [kept] = await Effect.runPromise(service.readProjectedRows(assetTotalsName, alpha, keyedRow(totalsKey)));
+      const [kept] = await Effect.runPromise(service.readProjectedRows(assetTotalsName, alpha, rowKeyed(totalsKey)));
       return totalsRowOf(kept?.row);
     },
   };

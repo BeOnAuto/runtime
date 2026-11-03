@@ -4,6 +4,7 @@ import { internalTermsIn } from '@on.auto/operations/testing';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
+import { assetMadeBy, onAlphaOf, servingAPicture } from '../testing/servers/asset-calls.ts';
 import {
   gatewayOnTheLoopback,
   servingGeneration,
@@ -63,6 +64,34 @@ describe('a generation function over MCP, on the endpoint of its playbook', () =
       `It made an image of ${onePixelPng.byteLength} bytes, kept as an asset of the playbook.`,
     );
     expect(internalTermsIn(plainTextIn(used.ran))).toEqual([]);
+  });
+});
+
+describe('an asset a generation function made, over MCP', () => {
+  it('is read again by its id, with an address signed as it is read, in plain words that name no internal term', async () => {
+    const server = await servingAPicture();
+
+    const { ran, read } = await onAlphaOf(server, async (session) => {
+      const made = await session.callTool('run_definition', {
+        type: 'generation',
+        name: 'picture',
+        input: { product: 'a teapot' },
+      });
+      return { ran: made, read: await session.callTool('get_asset', { id: assetMadeBy(made) }) };
+    });
+
+    expect(read.structuredContent).toMatchObject({
+      id: assetMadeBy(ran),
+      media_type: 'image/png',
+      bytes: onePixelPng.byteLength,
+      model: 'gateway/openai/gpt-image-2',
+      content_removed: false,
+    });
+    expect(
+      String(read.structuredContent?.['address']).startsWith(`${server.origin}/v1/orgs/acme/playbooks/alpha/content/`),
+    ).toBe(true);
+    expect(plainTextIn(read)).toContain('its address, in the details below, opens it for 15 minutes.');
+    expect(internalTermsIn(plainTextIn(read))).toEqual([]);
   });
 });
 

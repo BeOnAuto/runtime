@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { mostContentChunkBytes } from '../content/content-chunks.ts';
 import { sha256Of } from '../content/content-digest.ts';
+import type { AskedRange, ContentPart } from '../content/content-parts.ts';
 import { textOfContent, textToKeep } from '../content/streamed-content.ts';
 import type { ContentEntry } from './content-entry.ts';
 import {
   alpha,
   answerOfAbout,
+  generatedStream,
   beta,
   brokenAfter,
   generated,
@@ -171,10 +173,74 @@ function putRaced(entry: ContentEntry): void {
   });
 }
 
+const bytesInParts = 2_500_000;
+
+async function bytesOf(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> {
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+interface PartRead {
+  readonly size: number;
+  readonly mediaType: string;
+  readonly part: { readonly start: number; readonly end: number; readonly bytes: number; readonly sha256: string };
+}
+
+async function partReadOf({ size, mediaType, part }: ContentPart): Promise<PartRead | Omit<ContentPart, 'part'>> {
+  if (part === undefined) return { size, mediaType };
+  const { start, end, bytes, stream } = part;
+  return { size, mediaType, part: { start, end, bytes, sha256: sha256Of(await bytesOf(stream)) } };
+}
+
+function partOfTheWhole(whole: Readonly<Uint8Array>, start: number, end: number): PartRead['part'] {
+  return { start, end, bytes: end - start + 1, sha256: sha256Of(whole.subarray(start, end + 1)) };
+}
+
+function keptInParts(entry: ContentEntry): void {
+  it('reads a part from its first byte to its last, across chunks, to the end where the range is open or runs past it, with the size of the whole', async () => {
+    const store = await entry.aStore();
+    const { sha256, content } = await generated(bytesInParts);
+    await resultOf(store.content.put(alpha, content()));
+    const whole = await bytesOf(generatedStream(bytesInParts, 7));
+    const readOf = async (asked: AskedRange) => partReadOf(await present(store.content.getPart(alpha, sha256, asked)));
+
+    const parts = [
+      await readOf({ start: 0, end: 0 }),
+      await readOf({ start: 1_000_000, end: 2_100_000 }),
+      await readOf({ start: 2_400_000, end: undefined }),
+      await readOf({ start: 10, end: 9_999_999 }),
+    ];
+
+    expect(parts).toEqual([
+      { size: bytesInParts, mediaType: octets, part: partOfTheWhole(whole, 0, 0) },
+      { size: bytesInParts, mediaType: octets, part: partOfTheWhole(whole, 1_000_000, 2_100_000) },
+      { size: bytesInParts, mediaType: octets, part: partOfTheWhole(whole, 2_400_000, bytesInParts - 1) },
+      { size: bytesInParts, mediaType: octets, part: partOfTheWhole(whole, 10, bytesInParts - 1) },
+    ]);
+  });
+
+  it('answers no part where the range starts past the content or is no range of bytes, with its size, and nothing for a digest it does not hold', async () => {
+    const store = await entry.aStore();
+    const { sha256, content } = await generated(100);
+    await resultOf(store.content.put(alpha, content()));
+    const noPart = async (asked: AskedRange) => partReadOf(await present(store.content.getPart(alpha, sha256, asked)));
+
+    const parts = [
+      await noPart({ start: 100, end: undefined }),
+      await noPart({ start: -1, end: 9 }),
+      await noPart({ start: 9, end: 2 }),
+    ];
+
+    expect(parts).toEqual(Array.from({ length: 3 }, () => ({ size: 100, mediaType: octets })));
+    expect(await resultOf(store.content.getPart(alpha, 'a'.repeat(64), { start: 0, end: 9 }))).toBeUndefined();
+    expect(await resultOf(store.content.getPart(beta, sha256, { start: 0, end: 9 }))).toBeUndefined();
+  });
+}
+
 export function recordedContentBehaviour(entry: ContentEntry): void {
   describe('the content a playbook recorded', () => {
     keptWhole(entry);
     keptOnce(entry);
+    keptInParts(entry);
   });
   describe('the content a playbook was given to keep, refused', () => {
     putRefused(entry);

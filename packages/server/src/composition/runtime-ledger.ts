@@ -11,7 +11,7 @@ interface RuntimeLedger
     ConversationLedger,
     Pick<ProjectionReader, 'countProjectedRows'>,
     Pick<Ledger['Service'], 'scrubFact' | 'removeUnheld'> {
-  readonly content: Pick<RecordedContent, 'put' | 'get'>;
+  readonly content: Pick<RecordedContent, 'put' | 'get' | 'getPart'>;
 }
 
 export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeLedger {
@@ -35,6 +35,7 @@ export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeL
     content: {
       put: (playbook, content) => viaLedger((ledger) => ledger.content.put(playbook, content)),
       get: (playbook, sha256) => viaLedger((ledger) => ledger.content.get(playbook, sha256)),
+      getPart: (playbook, sha256, asked) => viaLedger((ledger) => ledger.content.getPart(playbook, sha256, asked)),
     },
   };
 }

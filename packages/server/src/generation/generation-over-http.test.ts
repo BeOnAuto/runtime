@@ -47,6 +47,26 @@ const RunSchema = Schema.Struct({
 
 const runOf = Schema.decodeUnknownSync(RunSchema);
 
+const ReadSchema = Schema.Struct({
+  id: Schema.String,
+  media_type: Schema.String,
+  bytes: Schema.Int,
+  sha256: Schema.String,
+  model: Schema.String,
+  kept_at: Schema.String,
+  expires_at: Schema.NullOr(Schema.String),
+  expired_at: Schema.NullOr(Schema.String),
+  content_removed: Schema.Boolean,
+  address: Schema.NullOr(Schema.String),
+  address_until: Schema.NullOr(Schema.String),
+});
+
+const readOf = Schema.decodeUnknownSync(ReadSchema);
+
+function assetAt(server: GenerationServer, playbook: string, id: string) {
+  return server.call('GET', `/v1/orgs/acme/playbooks/${playbook}/assets/${id}`);
+}
+
 const EventsSchema = Schema.Struct({
   events: Schema.Array(Schema.Struct({ type: Schema.String, summary: Schema.String })),
 });
@@ -83,6 +103,25 @@ async function bytesAt(address: string): Promise<Read> {
   return {
     status: answered.status,
     type: answered.headers.get('content-type'),
+    bytes: [...new Uint8Array(await answered.arrayBuffer())],
+  };
+}
+
+interface PartRead {
+  readonly status: number;
+  readonly range: string | null;
+  readonly length: string | null;
+  readonly accepts: string | null;
+  readonly bytes: readonly number[];
+}
+
+async function partAt(address: string, range: string, method = 'GET'): Promise<PartRead> {
+  const answered = await fetch(address, { method, headers: { range } });
+  return {
+    status: answered.status,
+    range: answered.headers.get('content-range'),
+    length: answered.headers.get('content-length'),
+    accepts: answered.headers.get('accept-ranges'),
     bytes: [...new Uint8Array(await answered.arrayBuffer())],
   };
 }
@@ -138,8 +177,82 @@ describe('a generation function over HTTP', () => {
   });
 });
 
+describe('the audio of a generation function at its address', () => {
+  it('answers a player the range of the audio it asks for, and a HEAD that asks a range with the headers of the whole', async () => {
+    const gateway = await gatewayOnTheLoopback();
+    const { server } = await withAFunction(gateway, aLedger(), welcome);
+    onTestFinished(server.stop);
+    const run = runOf((await made(server, {}, '019a4f2e-5c1b-7d3a-8e6f-000000000006')).body);
+    const size = spokenBytes.byteLength;
+    const last = String(size - 1);
+
+    const parts = [
+      await partAt(run.output.address, 'bytes=0-'),
+      await partAt(run.output.address, 'bytes=1-2'),
+      await partAt(run.output.address, 'bytes=1-2', 'HEAD'),
+    ];
+    const refused = await partAt(run.output.address, `bytes=${String(size)}-`);
+
+    expect(parts).toEqual([
+      {
+        status: 206,
+        range: `bytes 0-${last}/${String(size)}`,
+        length: String(size),
+        accepts: 'bytes',
+        bytes: [...spokenBytes],
+      },
+      {
+        status: 206,
+        range: `bytes 1-2/${String(size)}`,
+        length: '2',
+        accepts: 'bytes',
+        bytes: [...spokenBytes.subarray(1, 3)],
+      },
+      { status: 200, range: null, length: String(size), accepts: 'bytes', bytes: [] },
+    ]);
+    expect([refused.status, refused.range, refused.accepts]).toEqual([416, `bytes */${String(size)}`, 'bytes']);
+  });
+});
+
+describe('an asset read again by its id', () => {
+  it('answers what the playbook keeps of it and an address signed as it is read, which answers its bytes without a key', async () => {
+    const gateway = await gatewayOnTheLoopback();
+    const { server } = await withAFunction(gateway, aLedger(), picture);
+    onTestFinished(server.stop);
+    const run = runOf((await made(server, { product: 'a teapot' }, '019a4f2e-5c1b-7d3a-8e6f-000000000004')).body);
+
+    const answered = await assetAt(server, 'alpha', run.output.id);
+    const read = readOf(answered.body);
+
+    expect(answered.status).toBe(200);
+    expect(read).toMatchObject({
+      id: run.output.id,
+      media_type: 'image/png',
+      bytes: onePixelPng.byteLength,
+      sha256: run.output.sha256,
+      model: 'gateway/openai/gpt-image-2',
+      expired_at: null,
+      content_removed: false,
+    });
+    expect(Date.parse(String(read.address_until))).toBeGreaterThanOrEqual(Date.parse(run.output.address_until));
+    expect(await bytesAt(String(read.address))).toEqual({ status: 200, type: 'image/png', bytes: [...onePixelPng] });
+  });
+
+  it('answers not_found where another playbook of the org asks for it', async () => {
+    const { server } = await withAFunction(await gatewayOnTheLoopback(), aLedger(), picture);
+    onTestFinished(server.stop);
+    const run = runOf((await made(server, { product: 'a teapot' }, '019a4f2e-5c1b-7d3a-8e6f-000000000005')).body);
+    await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'beta', name: 'Beta' } });
+
+    expect(await assetAt(server, 'beta', run.output.id)).toMatchObject({
+      status: 404,
+      body: { reason: 'not_found', detail: 'There is no such asset in this playbook' },
+    });
+  });
+});
+
 describe('an asset past its time', () => {
-  it('expires as the server finds it due, its expiry in the feed, and its content, kept again within the hour before, read at its address until the address ends', async () => {
+  it('expires as the server finds it due, its expiry in the feed and its read, and its content, kept again within the hour before, read at its address until the address ends', async () => {
     const gateway = await gatewayOnTheLoopback();
     const ledger = aLedger();
     const { server: first } = await withAFunction(gateway, ledger, picture);
@@ -158,6 +271,14 @@ describe('an asset past its time', () => {
     );
 
     expect((await bytesAt(`${second.origin}${pathname}${search}`)).status).toBe(200);
+    const expired = readOf((await assetAt(second, 'alpha', run.output.id)).body);
+    expect([
+      expired.expires_at,
+      typeof expired.expired_at,
+      expired.content_removed,
+      expired.address,
+      expired.address_until,
+    ]).toEqual([null, 'string', false, null, null]);
     expect(feed.events).toEqual([
       {
         type: 'asset_expired',

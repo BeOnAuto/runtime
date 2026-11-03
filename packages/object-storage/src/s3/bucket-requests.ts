@@ -11,6 +11,7 @@ import {
   S3ServiceException,
   type S3Client,
 } from '@aws-sdk/client-s3';
+import type { ByteRange } from '@on.auto/content';
 
 import type { ObjectHead, ObjectRead } from '../bucket/bucket.ts';
 
@@ -161,8 +162,14 @@ export async function heldAt({ client, name }: S3Bucket, key: string): Promise<O
     : { bytes: sizeOf(key, head.ContentLength), mediaType: head.ContentType ?? octets };
 }
 
-export async function readAt({ client, name }: S3Bucket, key: string, waitMs: number): Promise<ObjectRead | undefined> {
-  const object = await unlessNotFound(client().send(new GetObjectCommand({ Bucket: name, Key: key })));
+export async function readAt(
+  { client, name }: S3Bucket,
+  key: string,
+  waitMs: number,
+  range?: ByteRange,
+): Promise<ObjectRead | undefined> {
+  const asked = range === undefined ? {} : { Range: `bytes=${String(range.start)}-${String(range.end)}` };
+  const object = await unlessNotFound(client().send(new GetObjectCommand({ Bucket: name, Key: key, ...asked })));
   if (object === undefined) {
     return undefined;
   }

@@ -5,7 +5,7 @@ import { InvalidInput, type ProjectionReader } from '@on.auto/operations';
 import { alternatives } from '@on.auto/phrasing';
 import { Effect, JsonPointer, Predicate, Result, type Schema } from 'effect';
 
-import { assetRowOf, assetsName, type AssetRow } from '../assets/asset-projections.ts';
+import { assetRowOf, assetsName, hasExpired, rowKeyed, type AssetRow } from '../assets/asset-projections.ts';
 import { sizeInWords } from '../assets/asset-words.ts';
 import { referenceLimitsOf, type CatalogEntry } from '../catalog/catalog-entry.ts';
 import type { ReferenceContent } from '../gateway/generation-gateway.ts';
@@ -63,19 +63,13 @@ function idAt(input: Schema.JsonObject, pointer: string): Effect.Effect<string, 
 }
 
 function rowOf(reading: ReferenceReading, playbook: ContentOwner, id: string): Effect.Effect<AssetRow | undefined> {
-  return Effect.map(
-    reading.ledger.readProjectedRows(assetsName, playbook, {
-      where: [{ column: 'row_key', equals: id }],
-      orderBy: [],
-      order: 'asc',
-      limit: 1,
-    }),
-    ([kept]) => assetRowOf(kept?.row),
+  return Effect.map(reading.ledger.readProjectedRows(assetsName, playbook, rowKeyed(id)), ([kept]) =>
+    assetRowOf(kept?.row),
   );
 }
 
 function problemOf(row: AssetRow, id: string, { entry, now }: Referring): string | undefined {
-  if (!row.live || (row.expires_at !== null && row.expires_at <= now)) {
+  if (hasExpired(row, now)) {
     return `The asset ${id} has expired`;
   }
   const limits = referenceLimitsOf(entry);

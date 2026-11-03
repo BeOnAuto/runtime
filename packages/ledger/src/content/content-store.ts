@@ -23,6 +23,7 @@ import {
   hexOf,
   keptRemovedWithin,
   readOn,
+  readPartOn,
   uploadOf,
   uploadRemoved,
   valuesOf,
@@ -157,6 +158,7 @@ export function contentStoreOn(execute: StatementExecutor, dialect: ContentDiale
     content: {
       put: (playbook, content) => placedOn(keeping, playbookPlaceOf(playbook), content),
       get: (playbook, sha256) => readOn(keeping, playbookPlaceOf(playbook), sha256),
+      getPart: (playbook, sha256, asked) => readPartOn(keeping, playbookPlaceOf(playbook), sha256, asked),
     },
     removalWithin,
     sweepContent: contentSweepOn(execute),

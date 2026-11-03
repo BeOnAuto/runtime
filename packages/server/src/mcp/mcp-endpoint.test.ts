@@ -17,38 +17,9 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { toolsInsideAPlaybook as definitionTools } from '../testing/servers/served-tool-names.ts';
 
 const playbookTools = ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook'];
-
-const definitionTools = [
-  'create_definition',
-  'list_definitions',
-  'get_definition',
-  'update_definition',
-  'pause_definition',
-  'resume_definition',
-  'retire_definition',
-  'run_definition',
-  'get_run',
-  'cancel_run',
-  'list_runs',
-  'list_playbook_events',
-  'get_event',
-  'publish_event',
-  'list_comments',
-  'resolve_comment',
-  'search',
-  'introspect',
-  'dry_run',
-  'query_connection',
-  'execute_connection',
-  'answer_interaction',
-  'list_interactions',
-  'remember',
-  'recall',
-  'forget',
-  'send_run_event',
-];
 
 const connectionTools = [
   'list_connection_tools',

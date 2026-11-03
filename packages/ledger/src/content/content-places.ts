@@ -1,5 +1,16 @@
 import { SQL } from '@event-driven-io/dumbo';
-import { verifiedStream, type ContentKept, type StreamedContent } from '@on.auto/content';
+import {
+  bytesIn,
+  contentPartOf,
+  measuredStream,
+  mostContentChunkBytes,
+  verifiedStream,
+  type AskedRange,
+  type ByteRange,
+  type ContentKept,
+  type ContentPart,
+  type StreamedContent,
+} from '@on.auto/content';
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import { Clock, Effect, Schema } from 'effect';
 
@@ -160,12 +171,18 @@ export async function keptRemovedWithin(
   return standing.rows.length > 0 ? 'fresh' : 'removed';
 }
 
-function chunksOf(shelved: Shelved, place: Key, head: KeptHead): ReadableStream<Uint8Array> {
-  let index = 0;
+interface ChunksAsked {
+  readonly first: number;
+  readonly last: number;
+  readonly within: (chunk: Readonly<Uint8Array>, index: number) => Uint8Array;
+}
+
+function chunkStreamOf(shelved: Shelved, place: Key, head: KeptHead, asked: ChunksAsked): ReadableStream<Uint8Array> {
+  let index = asked.first;
   return new ReadableStream<Uint8Array>(
     {
       pull: async (controller) => {
-        if (index === head.chunks) {
+        if (index > asked.last) {
           controller.close();
           return;
         }
@@ -174,12 +191,27 @@ function chunksOf(shelved: Shelved, place: Key, head: KeptHead): ReadableStream<
           controller.error(shelved.shelf.chunkMissing(head.sha256, index));
           return;
         }
+        controller.enqueue(asked.within(chunk, index));
         index += 1;
-        controller.enqueue(chunk);
       },
     },
     { highWaterMark: 0 },
   );
+}
+
+function chunksOf(shelved: Shelved, place: Key, head: KeptHead): ReadableStream<Uint8Array> {
+  return chunkStreamOf(shelved, place, head, { first: 0, last: head.chunks - 1, within: (chunk) => chunk.subarray() });
+}
+
+function chunksWithin(shelved: Shelved, place: Key, head: KeptHead, { start, end }: ByteRange) {
+  return chunkStreamOf(shelved, place, head, {
+    first: Math.floor(start / mostContentChunkBytes),
+    last: Math.floor(end / mostContentChunkBytes),
+    within: (chunk, index) => {
+      const offset = index * mostContentChunkBytes;
+      return chunk.subarray(Math.max(0, start - offset), Math.min(chunk.byteLength, end - offset + 1));
+    },
+  });
 }
 
 export function readOn(shelved: Shelved, place: Key, sha256: string): Effect.Effect<StreamedContent | undefined> {
@@ -191,6 +223,21 @@ export function readOn(shelved: Shelved, place: Key, sha256: string): Effect.Eff
           bytes: head.bytes,
           mediaType: head.mediaType,
         },
+  );
+}
+
+export function readPartOn(
+  shelved: Shelved,
+  place: Key,
+  sha256: string,
+  asked: AskedRange,
+): Effect.Effect<ContentPart | undefined> {
+  return Effect.map(headOf(shelved, place, sha256), (head) =>
+    head === undefined
+      ? head
+      : contentPartOf(head.bytes, head.mediaType, asked, (range) =>
+          measuredStream(sha256, bytesIn(range), chunksWithin(shelved, place, head, range)),
+        ),
   );
 }
 

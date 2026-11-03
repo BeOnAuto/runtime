@@ -278,9 +278,3 @@ export function defineCapability<Parsed>(definition: CapabilityDeclaration<Parse
       ),
   };
 }
-
-export function inTheDirectoryListing<Kind extends Pick<Capability, 'outsideTheDirectoryListing'>>(
-  capabilities: readonly Kind[],
-): readonly Kind[] {
-  return capabilities.filter(({ outsideTheDirectoryListing }) => outsideTheDirectoryListing !== true);
-}

@@ -27,9 +27,11 @@ function servedAt(path: string): Promise<Served> {
   }));
 }
 
-function namesAt(path: string) {
-  return on(path, async (session) => JSON.stringify(await session.listTools()).match(/"name":"[a-z_]+"/gu));
+function namesAt(path: string): Promise<readonly string[]> {
+  return on(path, async (session) => JSON.stringify(await session.listTools()).match(/"name":"[a-z_]+"/gu) ?? []);
 }
+
+const readingAnAsset = '"name":"get_asset"';
 
 let everything: string;
 
@@ -56,7 +58,10 @@ describe('the directory listing at /directory', () => {
     expect([/"name":"stripe"/u.test(everything), /"name":"stripe"/u.test(directory)]).toEqual([true, false]);
   });
 
-  it('lists the tools /mcp lists', async () => {
-    expect(await namesAt('/directory')).toEqual(await namesAt('/mcp'));
+  it('lists the tools /mcp lists but get_asset, which reads what a generation function made', async () => {
+    const everyName = await namesAt('/mcp');
+
+    expect(everyName).toContain(readingAnAsset);
+    expect(await namesAt('/directory')).toEqual(everyName.filter((name) => name !== readingAnAsset));
   });
 });

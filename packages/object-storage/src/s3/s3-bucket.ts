@@ -58,6 +58,7 @@ export function bucketOnS3(bucket: S3Bucket, { requestMs }: StorageWaits = stora
   return {
     put: (key, body) => putIn(bucket, key, body),
     get: (key) => readAt(bucket, key, requestMs),
+    getPart: (key, range) => readAt(bucket, key, requestMs, range),
     head: (key) => heldAt(bucket, key),
     delete: (keys) => removed(bucket, keys),
     list: (prefix) => keysUnder(bucket, prefix),

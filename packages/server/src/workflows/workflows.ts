@@ -1,5 +1,13 @@
 import { callMarginMs, defineSendRunEvent, makeWorkflowAdapter, type ExpressionCheck } from '@on.auto/coordination';
-import { defineStartVersion, type PlaybookOwnNames, type Capability, type CapabilityFacts } from '@on.auto/definitions';
+import {
+  defineStartVersion,
+  operationsInTheDirectoryListing,
+  operationsOfCapabilities,
+  type PlaybookOwnNames,
+  type Capability,
+  type CapabilityFacts,
+  type CapabilityOperations,
+} from '@on.auto/definitions';
 import { makeCatalog, makeDispatcher, type RouteRegistration } from '@on.auto/operations';
 import type { ShippedFiles } from '@on.auto/shipped-files';
 import type { WorkflowHost } from '@on.auto/workflow-host';
@@ -25,6 +33,7 @@ interface PlaybookOperation {
 export interface WorkflowParts extends HostParts, ServedPages {
   readonly orgOperations: readonly OrgOperation[];
   readonly playbookOperations: readonly PlaybookOperation[];
+  readonly capabilityOperations: readonly CapabilityOperations<PlaybookOperation>[];
   readonly check: ExpressionCheck;
   readonly facts: CapabilityFacts;
   readonly names: PlaybookOwnNames;
@@ -48,6 +57,34 @@ function onceOpened(opening: Promise<WorkflowHost>): Pick<WorkflowHost, 'start'>
   };
 }
 
+function catalogsOf(
+  parts: WorkflowParts,
+  capabilities: readonly Capability[],
+  sendRunEvent: ReturnType<typeof defineSendRunEvent>,
+) {
+  const catalogOf = (
+    definitionOperations: ReturnType<typeof playbookOperationsServing>,
+    capabilityOperations: readonly PlaybookOperation[],
+  ) =>
+    makeCatalog([
+      ...parts.orgOperations,
+      ...definitionOperations,
+      ...parts.playbookOperations,
+      ...capabilityOperations,
+      sendRunEvent,
+    ]);
+  return {
+    catalog: catalogOf(
+      playbookOperationsServing(capabilities, parts),
+      operationsOfCapabilities(parts.capabilityOperations),
+    ),
+    directoryCatalog: catalogOf(
+      directoryOperationsServing(capabilities, parts),
+      operationsInTheDirectoryListing(parts.capabilityOperations),
+    ),
+  };
+}
+
 export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts): Promise<Served> {
   const dispatcher = makeDispatcher([]);
   const opening = Promise.withResolvers<WorkflowHost>();
@@ -67,11 +104,7 @@ export async function serveWorkflows(runtime: HostRuntime, parts: WorkflowParts)
     { startVersion: defineStartVersion(capabilities), names },
   );
   opening.resolve(host);
-  const sendRunEvent = defineSendRunEvent(host, names);
-  const catalogOf = (definitionOperations: ReturnType<typeof playbookOperationsServing>) =>
-    makeCatalog([...parts.orgOperations, ...definitionOperations, ...parts.playbookOperations, sendRunEvent]);
-  const catalog = catalogOf(playbookOperationsServing(capabilities, parts));
-  const directoryCatalog = catalogOf(directoryOperationsServing(capabilities, parts));
+  const { catalog, directoryCatalog } = catalogsOf(parts, capabilities, defineSendRunEvent(host, names));
   const { identityIssuer, retryStateKeys, contentAddressKey, shippedFiles } = parts;
   const served = {
     catalog,

@@ -1,4 +1,9 @@
-import { CreateMultipartUploadCommand, ListBucketsCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  CreateMultipartUploadCommand,
+  DeleteObjectsCommand,
+  ListBucketsCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3';
 import { sha256Of, textOfContent, textToKeep } from '@on.auto/content';
 import { alpha, generated, octets, present, resultOf } from '@on.auto/content/testing';
 import { Effect } from 'effect';
@@ -40,6 +45,21 @@ describe('a read on object storage', () => {
 
     expect(await resultOf(store.content.get(alpha, sha256Of('missing')))).toBeUndefined();
     expect([read.mediaType, await resultOf(textOfContent(read))]).toEqual([octets, 'bare']);
+  });
+
+  it('answers no part of an object removed between the read of its head and the read of its part', async () => {
+    const store = fakeContentStore(location);
+    const kept = await resultOf(store.content.put(alpha, textToKeep('kept', octets)));
+    const removal = new DeleteObjectsCommand({
+      Bucket: location.bucket,
+      Delete: { Objects: [{ Key: keys.kept(alpha, kept.sha256) }] },
+    });
+    store.bucket.intercepting('GetObjectCommand', async (asked) => {
+      await store.client().send(removal);
+      return asked();
+    });
+
+    expect(await resultOf(store.content.getPart(alpha, kept.sha256, { start: 0, end: 1 }))).toBeUndefined();
   });
 
   it('fails as a defect when the store answers an object without its body or its size', async () => {

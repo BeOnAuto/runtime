@@ -11,6 +11,7 @@ import { answers, textResult, type ScriptedReply } from '@on.auto/reasoning/test
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { toolsInsideAPlaybook as definitionTools } from '../testing/servers/served-tool-names.ts';
 
 const summary = [
   '---',
@@ -21,36 +22,6 @@ const summary = [
   '---',
   '{% system %}Be brief.{% endsystem %}Summarize: {{ input.text }}',
 ].join('\n');
-
-const definitionTools = [
-  'create_definition',
-  'list_definitions',
-  'get_definition',
-  'update_definition',
-  'pause_definition',
-  'resume_definition',
-  'retire_definition',
-  'run_definition',
-  'get_run',
-  'cancel_run',
-  'list_runs',
-  'list_playbook_events',
-  'get_event',
-  'publish_event',
-  'list_comments',
-  'resolve_comment',
-  'search',
-  'introspect',
-  'dry_run',
-  'query_connection',
-  'execute_connection',
-  'answer_interaction',
-  'list_interactions',
-  'remember',
-  'recall',
-  'forget',
-  'send_run_event',
-];
 
 const withAnthropicThroughGateway = {
   MODEL_GATEWAYS: JSON.stringify([{ name: 'gateway', base_url: 'https://gateway.example.com/v1' }]),
@@ -121,7 +92,7 @@ describe('a reasoning function definition over MCP, on the endpoint of its playb
 });
 
 describe('the definition tools an agent sees on the endpoint of a playbook', () => {
-  it('are the twenty-seven operations inside a playbook and the guide tool, none of them carrying the format of a document', async () => {
+  it('are the twenty-eight operations inside a playbook and the guide tool, none of them carrying the format of a document', async () => {
     const tools = listedTools(await onAlpha([], (session) => session.listTools()));
 
     expect(tools.map(({ name }) => name)).toEqual([...definitionTools, guideToolName]);
@@ -143,7 +114,7 @@ describe('the definition tools an agent sees on the endpoint of a playbook', () 
     const tools = listedTools(await onAlpha([], (session) => session.listTools()));
     const schemas = tools.map(({ inputSchema }) => inputSchema);
 
-    expect(schemas).toHaveLength(28);
+    expect(schemas).toHaveLength(29);
     expect(schemas.map((schema) => schema['type'])).toEqual(schemas.map(() => 'object'));
     expect(schemas.flatMap((schema) => danglingReferencesIn(schema))).toEqual([]);
   });

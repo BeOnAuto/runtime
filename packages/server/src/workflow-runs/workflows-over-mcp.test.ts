@@ -4,6 +4,7 @@ import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { ReasoningServer } from '../testing/servers/reasoning-server.ts';
+import { toolsInsideAPlaybook as playbookTools } from '../testing/servers/served-tool-names.ts';
 import { servingWorkflows, settledOverMcp, workflowSource } from '../testing/servers/workflow-server.ts';
 
 const verdict = [
@@ -50,36 +51,6 @@ do:
 `,
 );
 
-const playbookTools = [
-  'create_definition',
-  'list_definitions',
-  'get_definition',
-  'update_definition',
-  'pause_definition',
-  'resume_definition',
-  'retire_definition',
-  'run_definition',
-  'get_run',
-  'cancel_run',
-  'list_runs',
-  'list_playbook_events',
-  'get_event',
-  'publish_event',
-  'list_comments',
-  'resolve_comment',
-  'search',
-  'introspect',
-  'dry_run',
-  'query_connection',
-  'execute_connection',
-  'answer_interaction',
-  'list_interactions',
-  'remember',
-  'recall',
-  'forget',
-  'send_run_event',
-];
-
 let server: ReasoningServer;
 
 afterEach(async () => {
@@ -112,7 +83,7 @@ function typesOfCreateDefinition(listing: unknown): readonly string[] {
 }
 
 describe('workflows over MCP', () => {
-  it('lists twenty-eight tools on the endpoint of a playbook, and every capability in the definition tools', async () => {
+  it('lists twenty-nine tools on the endpoint of a playbook, and every capability in the definition tools', async () => {
     const listing = await onAlpha([], (session) => session.listTools());
 
     expect(toolNamesIn(listing)).toEqual([...playbookTools, 'get_guide']);

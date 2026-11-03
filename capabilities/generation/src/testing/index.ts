@@ -17,6 +17,6 @@ export {
   type VideoScript,
 } from './gateway-fakes.ts';
 export { generationHarness, harnessStartsAt, type GenerationHarness } from './generation-harness.ts';
-export { acmeAdmin, alpha, clockAt } from './harness-calls.ts';
+export { acmeAdmin, alpha, beta, clockAt } from './harness-calls.ts';
 export { shippedWithAFilm } from './shipped-with-a-film.ts';
 export { testCatalog, testEntries } from './test-catalog.ts';

@@ -13,7 +13,7 @@ import type {
   RecordedContent,
   UnheldRemoval,
 } from './recorded-content.ts';
-import type { ContentToKeep, StreamedContent } from './streamed-content.ts';
+import type { ContentToKeep } from './streamed-content.ts';
 
 export const removalWaitMs = 5000;
 
@@ -137,12 +137,13 @@ function removedKeptBefore(keeping: Keeping, before: number): Effect.Effect<Unhe
   });
 }
 
-function readAsHeld(
-  { heads, store }: Outside,
+function readAsHeld<Read extends { readonly mediaType: string }>(
+  { heads }: Outside,
   playbook: ContentOwner,
   sha256: string,
-): Effect.Effect<StreamedContent | undefined> {
-  return Effect.zipWith(heads.read(playbook, sha256), store.read(playbook, sha256), (head, read) =>
+  stored: Effect.Effect<Read | undefined>,
+): Effect.Effect<Read | undefined> {
+  return Effect.zipWith(heads.read(playbook, sha256), stored, (head, read) =>
     read === undefined ? read : { ...read, mediaType: head?.mediaType ?? read.mediaType },
   );
 }
@@ -152,7 +153,9 @@ export function keptOutside(heads: ContentHeads, store: ContentStore): KeptOutsi
   return {
     content: {
       put: (playbook, content) => put(outside, playbook, content),
-      get: (playbook, sha256) => readAsHeld(outside, playbook, sha256),
+      get: (playbook, sha256) => readAsHeld(outside, playbook, sha256, store.read(playbook, sha256)),
+      getPart: (playbook, sha256, asked) =>
+        readAsHeld(outside, playbook, sha256, store.readPart(playbook, sha256, asked)),
     },
     removedKeptBefore: (playbook, sha256, before) => removedKeptBefore({ ...outside, playbook, sha256 }, before),
   };
