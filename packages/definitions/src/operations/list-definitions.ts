@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionsListed, definitionWordsFor } from '../plain-language/definition-words.ts';
-import { ListedDefinitionSchema } from '../registry/definition.ts';
+import { isRetired, ListedDefinitionSchema } from '../registry/definition.ts';
 import { IncludeRetiredField } from './definition-fields.ts';
 import { byName, listedDefinitionOf } from './definition-views.ts';
 import { loadRegistry } from './registry-access.ts';
@@ -31,7 +31,7 @@ export function defineListDefinitions(capabilities: readonly Capability[]) {
       handle: Effect.fnUntraced(function* ({ type, include_retired: includeRetired = false }) {
         const capability = yield* known.capabilityOfType(type);
         const registry = yield* loadRegistry(capability.type);
-        const definitions = [...registry.values()].filter(({ status }) => includeRetired || status === 'active');
+        const definitions = [...registry.values()].filter((definition) => includeRetired || !isRetired(definition));
         return {
           definitions: definitions.toSorted(byName).map((definition) => listedDefinitionOf(capability, definition)),
         };

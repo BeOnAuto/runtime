@@ -2,7 +2,7 @@ import { streamPrefixOfPlaybook, type Fold, type PlaybookAddress, type StreamRea
 import { Effect } from 'effect';
 
 import type { StrippedForms } from '../capability/stripped-forms.ts';
-import { DefinitionEventSchema, type RecordedDefinitionEvent } from './definition-events.ts';
+import { DefinitionEventSchema, isDefinitionSaved, type RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionTypeStreamOf } from './definitions-decider.ts';
 
 export interface RecordedVersion {
@@ -23,7 +23,7 @@ function evolvedSearch(
   return ({ position, found }, event) => {
     const at = position + 1;
     const { definitionName, definitionVersion } = event.context;
-    if (event.type === 'definition_retired' || definitionName !== name || definitionVersion !== version) {
+    if (!isDefinitionSaved(event) || definitionName !== name || definitionVersion !== version) {
       return { position: at, found };
     }
     const { source, stripped } = event.data.content;

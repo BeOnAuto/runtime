@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { recordedAdmin } from '../testing/callers.ts';
 import { playbookAsked } from '../testing/page-asking.ts';
 import { pageData, pageOf, resultOfTheDate, workflowWithPage } from '../testing/pages.ts';
 import { carriedPagesIn, sourceWithoutItsSubject } from './pages-saved-as-definitions.ts';
@@ -127,6 +128,14 @@ describe('a page saved as a definition of its own that gives way', () => {
     await asked.ask(pages.savePlaybookPage(null));
 
     expect(await asked.ask(pages.playbookPageOf())).toMatchObject({ output: { answer: null } });
+  });
+
+  it('stays its subject’s page while it is paused', async () => {
+    const asked = await withPagesOfTheirOwn();
+    const before = await asked.ask(Effect.map(carriedPagesIn, (carried) => [...carried.keys()]));
+    await asked.record('page', { type: 'pause', name: 'morning-posts', paused_by: recordedAdmin });
+
+    expect(await asked.ask(Effect.map(carriedPagesIn, (carried) => [...carried.keys()]))).toEqual(before);
   });
 
   it('is no page once it was retired, nor where its details name no subject or its source no longer reads as a page', async () => {

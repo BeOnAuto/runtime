@@ -73,7 +73,7 @@ describe('the JSON Schema of the input of the operations', () => {
   });
 
   it('takes any JSON value as the input of a run, and a UUID as its id', () => {
-    expect(operations[7]?.input.schema).toMatchObject({
+    expect(operations.find(({ name }) => name === 'run_definition')?.input.schema).toMatchObject({
       properties: {
         input: {
           description:
@@ -83,7 +83,7 @@ describe('the JSON Schema of the input of the operations', () => {
       },
       required: ['type', 'name'],
     });
-    expect(operations[8]?.input.schema).toMatchObject({
+    expect(operations.find(({ name }) => name === 'get_run')?.input.schema).toMatchObject({
       properties: { run_id: { type: 'string', format: 'uuid' } },
       required: ['run_id'],
     });
@@ -112,7 +112,7 @@ describe('the JSON Schema of the filters of the runs', () => {
 });
 
 describe('what the operations declare of a repeated call', () => {
-  it('declares retiring a definition and cancelling a run irreversible, and updating and retiring repeatable', () => {
+  it('declares retiring a definition and cancelling a run irreversible, and updating, pausing, resuming and retiring repeatable', () => {
     const declared = Object.fromEntries(
       operations
         .filter(({ kind }) => kind === 'command')
@@ -122,6 +122,8 @@ describe('what the operations declare of a repeated call', () => {
     expect(declared).toEqual({
       create_definition: { irreversible: false, repeatable: false },
       update_definition: { irreversible: false, repeatable: true },
+      pause_definition: { irreversible: false, repeatable: true },
+      resume_definition: { irreversible: false, repeatable: true },
       retire_definition: { irreversible: true, repeatable: true },
       run_definition: { irreversible: false, repeatable: false },
       cancel_run: { irreversible: true, repeatable: true },

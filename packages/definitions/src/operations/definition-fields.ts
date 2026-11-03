@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { Schema, SchemaTransformation } from 'effect';
 
+import { refusingBlankText, refusingForbiddenCharacters } from '../events/cloud-event.ts';
 import { jsonBytesOf, mostInputBytes, mostInputDepth, nestsWithin } from '../runs/recorded-size.ts';
 
 const mostSourceBytes = 65_536;
@@ -76,6 +77,17 @@ export const InputField = Schema.Json.annotate({
     expected: `an input that nests at most ${mostInputDepth} levels deep`,
   }),
 );
+
+const mostReasonLength = 1024;
+
+export function reasonFieldOf(why: string) {
+  return Schema.String.annotate({ description: `${why}, 1 to ${mostReasonLength} characters` }).check(
+    Schema.isMinLength(1),
+    Schema.isMaxLength(mostReasonLength),
+    refusingForbiddenCharacters,
+    refusingBlankText,
+  );
+}
 
 export const IncludeRetiredField = Schema.Boolean.annotate({
   description: 'Whether to list retired definitions as well; false when left out',

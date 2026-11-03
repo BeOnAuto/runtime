@@ -21,7 +21,13 @@ const warmReads = 3;
 
 const measuredReads = 20;
 
-const definitionTypes = ['definition_created', 'definition_updated', 'definition_retired'];
+const definitionTypes = [
+  'definition_created',
+  'definition_updated',
+  'definition_retired',
+  'definition_paused',
+  'definition_resumed',
+];
 
 interface Explained {
   readonly 'Run Time': number;

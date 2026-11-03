@@ -2,6 +2,7 @@ import {
   DefinitionEventSchema,
   PageEventSchema,
   functionTypeOrder,
+  isDefinitionSaved,
   pageDetailsIn,
   playbookPageViewNameOf,
   shapedViewsSchemaOf,
@@ -75,6 +76,9 @@ function pagesOfASubject(type: string, pages: Pages, event: RecordedDefinitionEv
   const key = `${type}/${definitionName}`;
   if (event.type === 'definition_retired') {
     return closed(pages, key, version, at);
+  }
+  if (!isDefinitionSaved(event)) {
+    return pages;
   }
   const { page } = event.data.content;
   return page === undefined ? withoutPage(pages, key) : withPage(pages, key, page, { version, at });

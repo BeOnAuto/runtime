@@ -2,7 +2,12 @@ import { recordedDecoder } from '@on.auto/operations';
 import { Option } from 'effect';
 
 import { noStrippedForms, runnableAttributes, type StrippedForms } from '../capability/stripped-forms.ts';
-import { DefinitionEventSchema } from './definition-events.ts';
+import {
+  DefinitionEventSchema,
+  isDefinitionSaved,
+  type DefinitionSaved,
+  type RecordedDefinitionEvent,
+} from './definition-events.ts';
 import type { Trigger } from './definition-triggers.ts';
 
 export type DefinitionChange =
@@ -14,6 +19,9 @@ export type DefinitionChange =
       readonly at: string;
     }
   | { readonly kind: 'deactivated'; readonly name: string }
+  | { readonly kind: 'retired'; readonly name: string }
+  | { readonly kind: 'paused'; readonly name: string }
+  | { readonly kind: 'resumed'; readonly name: string; readonly at: string }
   | { readonly kind: 'unchanged' }
   | { readonly kind: 'unreadable' };
 
@@ -33,14 +41,22 @@ function runnableTrigger(trigger: Trigger, stripped: StrippedForms): Trigger {
     : trigger;
 }
 
+function standingChangeOf(event: Exclude<RecordedDefinitionEvent, DefinitionSaved>): DefinitionChange {
+  const { at, definitionName: name } = event.context;
+  if (event.type === 'definition_paused') {
+    return { kind: 'paused', name };
+  }
+  return event.type === 'definition_resumed' ? { kind: 'resumed', name, at } : { kind: 'retired', name };
+}
+
 export function definitionChangeOf(recorded: unknown): DefinitionChange {
   return Option.match(decodeDefinitionEvent(recorded), {
     onNone: () => unreadable,
     onSome: (event): DefinitionChange => {
-      const { at, definitionName: name, definitionVersion: version } = event.context;
-      if (event.type === 'definition_retired') {
-        return { kind: 'deactivated', name };
+      if (!isDefinitionSaved(event)) {
+        return standingChangeOf(event);
       }
+      const { at, definitionName: name, definitionVersion: version } = event.context;
       const { triggers = [], stripped = noStrippedForms } = event.data.content;
       if (triggers.length > 0) {
         return {

@@ -20,7 +20,21 @@ export interface DefinitionRetirement {
   readonly name: string;
 }
 
-export type DefinitionCommandData = DefinitionCreation | DefinitionUpdate | DefinitionRetirement;
+export interface DefinitionPause {
+  readonly type: 'pause';
+  readonly name: string;
+  readonly paused_by: RecordedCaller;
+  readonly reason?: string;
+}
+
+export interface DefinitionResumption {
+  readonly type: 'resume';
+  readonly name: string;
+}
+
+type DefinitionStandingChange = DefinitionRetirement | DefinitionPause | DefinitionResumption;
+
+export type DefinitionCommandData = DefinitionCreation | DefinitionUpdate | DefinitionStandingChange;
 
 export interface CommandMetadata {
   readonly by: string;

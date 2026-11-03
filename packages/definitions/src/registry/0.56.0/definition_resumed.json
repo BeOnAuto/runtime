@@ -1,0 +1,11 @@
+{
+  "type": "definition_resumed",
+  "data": {},
+  "context": {
+    "at": "2026-11-04T08:30:00.000Z",
+    "by": "person:user_2ada",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 2
+  }
+}

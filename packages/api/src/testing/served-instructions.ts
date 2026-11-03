@@ -9,6 +9,8 @@ const insideAPlaybook = [
   'list_definitions',
   'get_definition',
   'update_definition',
+  'pause_definition',
+  'resume_definition',
   'retire_definition',
   'run_definition',
   'get_run',

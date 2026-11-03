@@ -15,7 +15,7 @@ const catalog = makeCatalog(operations);
 const playbookOperations = playbookOperationsOf({ pageOf: () => Effect.undefined, save: () => Effect.undefined });
 
 describe('the definition operations', () => {
-  it('make one catalog of thirteen playbook operations', () => {
+  it('make one catalog of fifteen playbook operations', () => {
     expect(catalog.operationsIn('playbook').map(({ name, title }) => `${name}: ${title}`)).toEqual([
       'create_definition: Create definition',
       'list_definitions: List definitions',
@@ -23,6 +23,8 @@ describe('the definition operations', () => {
       'render_page: Render page',
       'render_playbook_page: Render playbook page',
       'update_definition: Update definition',
+      'pause_definition: Pause definition',
+      'resume_definition: Resume definition',
       'retire_definition: Retire definition',
       'run_definition: Run definition',
       'get_run: Get run',
@@ -34,7 +36,7 @@ describe('the definition operations', () => {
     expect(catalog.operationsIn('org')).toEqual([]);
   });
 
-  it('answer at thirteen routes relative to the playbook', () => {
+  it('answer at fifteen routes relative to the playbook', () => {
     expect(catalog.operations.map(({ route }) => `${route.method} ${route.path}`)).toEqual([
       'POST /definitions/{type}',
       'GET /definitions/{type}',
@@ -42,6 +44,8 @@ describe('the definition operations', () => {
       'POST /definitions/{type}/{name}/render',
       'POST /render',
       'PUT /definitions/{type}/{name}',
+      'POST /definitions/{type}/{name}/pause',
+      'POST /definitions/{type}/{name}/resume',
       'POST /definitions/{type}/{name}/retire',
       'POST /definitions/{type}/{name}/run',
       'GET /runs/{run_id}',
@@ -67,6 +71,8 @@ describe('a catalog of the definition operations', () => {
       'render_page',
       'render_playbook_page',
       'update_definition',
+      'pause_definition',
+      'resume_definition',
       'retire_definition',
       'run_definition',
       'get_run',

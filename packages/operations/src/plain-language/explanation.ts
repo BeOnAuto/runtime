@@ -64,6 +64,10 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     why: 'it has been retired',
     remedy: 'What is retired stays retired; a new one can be made under another name.',
   },
+  paused: {
+    why: 'it is paused',
+    remedy: 'It starts no runs while it is paused; once someone resumes it, it can be run again.',
+  },
   concurrent_change: { why: 'something else changed it at the same moment', remedy: 'Trying again should work.' },
   unworkable: { why: 'it cannot work as it is written', remedy: correctable },
   stalled: {

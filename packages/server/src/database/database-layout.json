@@ -1,5 +1,5 @@
 {
-  "layout": 13,
+  "layout": 14,
   "catalog": [
     {
       "name": "activity_1",
@@ -292,6 +292,10 @@
     {
       "name": "workflow_passed_runs",
       "sql": "CREATE TABLE workflow_passed_runs (run_key TEXT NOT NULL PRIMARY KEY, passed_through BIGINT NOT NULL)"
+    },
+    {
+      "name": "workflow_pauses",
+      "sql": "CREATE TABLE workflow_pauses (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, PRIMARY KEY (playbook_key, workflow))"
     },
     {
       "name": "workflow_pending_cancels",

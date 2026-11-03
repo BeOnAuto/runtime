@@ -92,11 +92,12 @@ export function firstDueOf(
   timing: ScheduleTrigger,
   anchor: number,
   inZone: InZone,
+  after = anchor,
 ): Result.Result<number | null, string> {
   return computed(() =>
     timing.kind === 'every'
-      ? periodTimes(timing.milliseconds, { anchor, due: anchor, now: anchor }).next
-      : walkedFrom(zonedCronOf(timing, inZone), anchor).next,
+      ? periodTimes(timing.milliseconds, { anchor, due: after, now: after }).next
+      : walkedFrom(zonedCronOf(timing, inZone), after).next,
   );
 }
 

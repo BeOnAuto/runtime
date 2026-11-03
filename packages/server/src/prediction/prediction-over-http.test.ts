@@ -139,7 +139,7 @@ describe('the prediction functions a playbook keeps', () => {
     expect(second.status).toBe(409);
     expect(second.body).toMatchObject({
       detail:
-        'The playbook keeps 1 active prediction functions, and a playbook may keep at most 1; retire one before creating another',
+        'The playbook keeps 1 prediction functions, and a playbook may keep at most 1; retire one before creating another',
     });
   });
 });

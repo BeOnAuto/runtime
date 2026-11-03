@@ -139,6 +139,8 @@ export {
   type CancelRequested,
   type RunEnding,
 } from './runs/run-endings.ts';
+export { definePauseDefinition } from './operations/pause-definition.ts';
+export { defineResumeDefinition } from './operations/resume-definition.ts';
 export { defineRetireDefinition } from './operations/retire-definition.ts';
 export { defineUpdateDefinition } from './operations/update-definition.ts';
 export {
@@ -170,6 +172,8 @@ export { cutAtCodePoint, issuesShown, mostNameBytes } from './presenting/event-d
 export { playbookEventOf, playbookFactOf } from './events/playbook-facts.ts';
 export {
   DefinitionEventSchema,
+  definitionFactTypes,
+  isDefinitionSaved,
   type DefinitionEvent,
   type RecordedDefinitionEvent,
 } from './registry/definition-events.ts';

@@ -26,6 +26,7 @@ export interface PlaybookAppends {
   readonly pageRemoved: (subject: string, version: number) => Promise<void>;
   readonly subjectSaved: (subject: string, version: number) => Promise<void>;
   readonly subjectRetired: (subject: string) => Promise<void>;
+  readonly subjectPaused: (subject: string) => Promise<void>;
   readonly playbookPageSaved: (details: Schema.JsonObject) => Promise<void>;
   readonly playbookPageRemoved: () => Promise<void>;
   readonly ran: Ran;
@@ -153,6 +154,12 @@ function pageAppendsOf(append: Append) {
     subjectSaved: (subject: string, version: number) => saving(subject, version),
     subjectRetired: (subject: string) =>
       onTheSubject(append, next(), subject)([{ type: 'definition_retired', data: {} }]),
+    subjectPaused: (subject: string) =>
+      onTheSubject(
+        append,
+        next(),
+        subject,
+      )([{ type: 'definition_paused', data: { paused_by: { id: 'acme-admin', name: 'acme-admin' } } }]),
     playbookPageSaved: (details: Schema.JsonObject) => onThePlaybook({ source: 'runs: |\n  Posts', details }),
     playbookPageRemoved: () => onThePlaybook(null),
   };

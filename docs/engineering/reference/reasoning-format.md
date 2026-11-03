@@ -211,7 +211,7 @@ Names are counted in the text inside `{{ }}` and `{% %}`: every variable, proper
 
 ## Creating and running a reasoning function
 
-The definition and run operations of [`@on.auto/definitions`](../../../packages/definitions) store reasoning function definitions and record their runs: `create_definition`, `list_definitions`, `get_definition`, `update_definition`, `retire_definition`, `run_definition` and `get_run`, under `/v1/orgs/{org}/playbooks/{playbook}`, with `type: "reasoning"`. Give the server a key for the provider first; it reads the model settings when it starts:
+The definition and run operations of [`@on.auto/definitions`](../../../packages/definitions) store reasoning function definitions and record their runs: `create_definition`, `list_definitions`, `get_definition`, `update_definition`, `pause_definition`, `resume_definition`, `retire_definition`, `run_definition` and `get_run`, under `/v1/orgs/{org}/playbooks/{playbook}`, with `type: "reasoning"`. Give the server a key for the provider first; it reads the model settings when it starts:
 
 ```bash
 export ANTHROPIC_API_KEY=sk-ant-...
@@ -264,7 +264,7 @@ curl --request POST http://localhost:5555/v1/orgs/acme/playbooks/sales/definitio
 curl http://localhost:5555/v1/orgs/acme/playbooks/sales/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a
 ```
 
-An agent calls the same operations as MCP tools on `POST /mcp`, where the tools inside a playbook take its id as `playbook`: `get_guide` serves the format of the document as the guide `reasoning-function`, the public reference page with what this server offers at its end, and a rejection comes back as `isError` with the same problem document. A retry with the same `run_id`, definition and input returns a recorded success or invalid-input rejection without calling the model. Other failures may permit another attempt, except where tool calls may already have changed something; [rejection and retry rules](#when-a-run-is-rejected) cover those cases. `update_definition` (`PUT …/definitions/reasoning/account-summary` with a new `source`) makes version 2, and `retire_definition` (`POST …/retire`) retires the function for good. The [definitions README](../../../packages/definitions/README.md) has the rules of each operation.
+An agent calls the same operations as MCP tools on `POST /mcp`, where the tools inside a playbook take its id as `playbook`: `get_guide` serves the format of the document as the guide `reasoning-function`, the public reference page with what this server offers at its end, and a rejection comes back as `isError` with the same problem document. A retry with the same `run_id`, definition and input returns a recorded success or invalid-input rejection without calling the model. Other failures may permit another attempt, except where tool calls may already have changed something; [rejection and retry rules](#when-a-run-is-rejected) cover those cases. `update_definition` (`PUT …/definitions/reasoning/account-summary` with a new `source`) makes version 2, `pause_definition` (`POST …/pause`) stops it from running until `resume_definition` (`POST …/resume`), and `retire_definition` (`POST …/retire`) retires the function for good. The [definitions README](../../../packages/definitions/README.md) has the rules of each operation.
 
 `scripts/try-reasoning.sh` at the root of the repository does all of this against a server that is already running, with a small reasoning function of its own, and prints the run and its record. It starts nothing, and needs `curl` and `jq`:
 

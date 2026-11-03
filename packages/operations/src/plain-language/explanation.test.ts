@@ -31,6 +31,7 @@ const byReason: ReadonlyArray<readonly [Exclude<RejectionReason, 'conflict'>, st
 const byConflict: ReadonlyArray<readonly [ConflictKind, string, string]> = [
   ['taken', 'that name is already taken', 'A different name will work.'],
   ['retired', 'it has been retired', 'What is retired stays retired; a new one can be made under another name.'],
+  ['paused', 'it is paused', 'It starts no runs while it is paused; once someone resumes it, it can be run again.'],
   ['concurrent_change', 'something else changed it at the same moment', 'Trying again should work.'],
   ['unworkable', 'it cannot work as it is written', correctable],
   [

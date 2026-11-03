@@ -19,6 +19,8 @@ const TriggerRow = Schema.Struct({
 
 const RefusalRow = Schema.Struct({ workflow: Schema.String, reason: Schema.String });
 
+const PauseRow = Schema.Struct({ workflow: Schema.String });
+
 export function triggerRowsOf(database: HostDatabase): Promise<readonly (typeof TriggerRow.Type)[]> {
   return Effect.runPromise(
     rowsOf(
@@ -28,6 +30,25 @@ export function triggerRowsOf(database: HostDatabase): Promise<readonly (typeof 
           FROM workflow_subscriptions ORDER BY workflow, reference`,
       ),
     ),
+  );
+}
+
+export function pausesOf(database: HostDatabase): Promise<readonly string[]> {
+  return Effect.runPromise(
+    rowsOf(PauseRow, database.read(statement`SELECT workflow FROM workflow_pauses ORDER BY workflow`)),
+  ).then((rows) => rows.map(({ workflow }) => workflow));
+}
+
+export function untilPaused(database: HostDatabase, paused: readonly string[]) {
+  return until(
+    () => pausesOf(database),
+    (found) => found.join() === paused.join(),
+  );
+}
+
+export function refusalsOf(database: HostDatabase) {
+  return Effect.runPromise(
+    rowsOf(RefusalRow, database.read(statement`SELECT workflow, reason FROM workflow_reaction_refusals`)),
   );
 }
 

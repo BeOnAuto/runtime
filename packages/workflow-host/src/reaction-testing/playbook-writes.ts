@@ -125,6 +125,30 @@ export function definitionRetired(store: LedgerStreams, name: string, version: n
   );
 }
 
+export interface StandingChange {
+  readonly name: string;
+  readonly version: number;
+  readonly when: string;
+}
+
+export function definitionPaused(store: LedgerStreams, { name, version, when }: StandingChange) {
+  return recorded(
+    store,
+    `${alpha}definitions/workflow`,
+    { type: 'definition_paused', data: { paused_by: { id: 'acme-admin', name: 'acme-admin' } } },
+    { ...byAdmin, at: when, definitionType: 'workflow', definitionName: name, definitionVersion: version },
+  );
+}
+
+export function definitionResumed(store: LedgerStreams, { name, version, when }: StandingChange) {
+  return recorded(
+    store,
+    `${alpha}definitions/workflow`,
+    { type: 'definition_resumed', data: {} },
+    { ...byAdmin, at: when, definitionType: 'workflow', definitionName: name, definitionVersion: version },
+  );
+}
+
 export function playbookCreated(store: LedgerStreams, playbook: string) {
   return recorded(store, playbooksStreamOfOrg('acme'), {
     type: 'playbook_created',

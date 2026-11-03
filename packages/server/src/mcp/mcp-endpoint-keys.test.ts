@@ -55,6 +55,8 @@ const commands = [
   'retire_playbook',
   'create_definition',
   'update_definition',
+  'pause_definition',
+  'resume_definition',
   'retire_definition',
   'run_definition',
   'cancel_run',
@@ -219,7 +221,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
 });
 
 describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
-  it('lists the thirty-eight tools and the playbooks of its org', async () => {
+  it('lists the forty tools and the playbooks of its org', async () => {
     const outcome = await asKey(
       acmeAdmin.key,
       async (session) => ({
@@ -230,7 +232,7 @@ describe.each(mcpClientKinds)('the %s client on /mcp', (kind) => {
       kind,
     );
 
-    expect(outcome.tools).toBe(38);
+    expect(outcome.tools).toBe(40);
     expect(outcome.playbooks.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });
 });

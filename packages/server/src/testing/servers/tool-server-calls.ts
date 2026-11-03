@@ -84,3 +84,17 @@ export async function memoriesCalled(
     ['forget', await session.callTool('forget', inPlaybook({ id }))],
   ];
 }
+
+type Named = Readonly<{ type: string; name: string }>;
+
+export async function standingsCalled(
+  session: McpSession,
+  inPlaybook: InPlaybook,
+  definition: Named,
+): Promise<readonly (readonly [string, ToolResult])[]> {
+  const pausing = { ...definition, reason: 'The approvals wait for the audit' };
+  return [
+    ['pause_definition', await session.callTool('pause_definition', inPlaybook(pausing))],
+    ['resume_definition', await session.callTool('resume_definition', inPlaybook(definition))],
+  ];
+}

@@ -13,6 +13,8 @@ const carriedData: ReadonlyMap<string, Carries> = new Map([
   ['definition_created', carriesNothing],
   ['definition_updated', carriesNothing],
   ['definition_retired', carriesNothing],
+  ['definition_paused', carriesNothing],
+  ['definition_resumed', carriesNothing],
   ['run_succeeded', (tokens) => tokens[0] === 'output' || (tokens.length === 1 && tokens[0] === 'output_bytes')],
   [
     'run_rejected',

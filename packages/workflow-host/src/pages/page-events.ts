@@ -1,4 +1,4 @@
-import { definitionTypeStreamOf, playbookEventOf, type CloudEvent } from '@on.auto/definitions';
+import { definitionFactTypes, definitionTypeStreamOf, playbookEventOf, type CloudEvent } from '@on.auto/definitions';
 import type { LedgerStreams, StoredPage, StoredPlace } from '@on.auto/ledger';
 
 import type { Point } from './history-points.ts';
@@ -34,8 +34,6 @@ interface PageRead {
 
 type StoredRecord = StoredPage['records'][number];
 
-const definitionEvents = ['definition_created', 'definition_updated', 'definition_retired'];
-
 const savesOfPages: ReadonlySet<string> = new Set(['playbook_page_saved']);
 
 const factTypes: ReadonlySet<string> = new Set([
@@ -43,7 +41,7 @@ const factTypes: ReadonlySet<string> = new Set([
   'run_succeeded',
   'run_rejected',
   'run_failed',
-  ...definitionEvents,
+  ...definitionFactTypes,
 ]);
 
 export function typesToRead(named: readonly string[]): readonly string[] {
@@ -51,7 +49,7 @@ export function typesToRead(named: readonly string[]): readonly string[] {
   const read = new Set([
     ...named.filter((type) => factTypes.has(type)),
     ...published,
-    ...definitionEvents,
+    ...definitionFactTypes,
     ...savesOfPages,
   ]);
   return [...read].toSorted();

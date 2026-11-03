@@ -1,17 +1,16 @@
+import { definitionFactTypes } from '@on.auto/definitions';
 import { recordedReaderOf, type LedgerStreams } from '@on.auto/ledger';
 import type { PlaybookAddress, RecordedEvent, RecordedPage } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 const recordsInAPage = 100;
 
-const definitionTypes: readonly string[] = ['definition_created', 'definition_updated', 'definition_retired'];
-
 const factTypes: ReadonlySet<string> = new Set([
   'run_started',
   'run_succeeded',
   'run_rejected',
   'run_failed',
-  ...definitionTypes,
+  ...definitionFactTypes,
 ]);
 
 export const noRecordTypes: ReadonlySet<string> = new Set();
@@ -44,7 +43,7 @@ export function playbookRecordsOf(store: LedgerStreams): PlaybookRecords {
           {
             order: 'asc',
             limit: recordsInAPage,
-            dataOf: [...new Set([...definitionTypes, ...delivers])],
+            dataOf: [...new Set([...definitionFactTypes, ...delivers])],
             ...(cursor === null ? {} : { cursor }),
           },
         ),

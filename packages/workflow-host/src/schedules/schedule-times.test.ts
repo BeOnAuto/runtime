@@ -67,6 +67,20 @@ describe('the first time a schedule is due', () => {
     ]);
   });
 
+  it('after a moment past its activation is the first multiple of its period after it, or the first time its cron names after it', () => {
+    const resumed = anchor + 2.5 * aMinute;
+
+    expect([
+      firstDueOf(every, anchor, zoneClockOf, resumed),
+      firstDueOf(every, anchor, zoneClockOf, anchor + 3 * aMinute),
+      firstDueOf(cron('30 2 * * *'), anchor, zoneClockOf, at('2026-10-02T02:30:00.000Z')),
+    ]).toEqual([
+      Result.succeed(anchor + 3 * aMinute),
+      Result.succeed(anchor + 4 * aMinute),
+      Result.succeed(at('2026-10-03T02:30:00.000Z')),
+    ]);
+  });
+
   it('cannot be computed for a time zone the platform does not know, or an expression it cannot read', () => {
     expect([
       firstDueOf(cron('30 2 * * *', 'Mars/Olympus'), anchor, zoneClockOf),

@@ -60,6 +60,36 @@ describe('the definitions a playbook keeps', () => {
   });
 });
 
+describe('the definitions a playbook keeps through a pause and a resumption', () => {
+  it('keeps a function as it was through its pause and its resumption, each a version of the stream', () => {
+    const ofTheRuns = {
+      by: 'acme-admin',
+      at: 'now',
+      definitionType: 'view',
+      definitionName: 'runs',
+      definitionVersion: 1,
+    };
+    const definitions = definitionsAfter(
+      noDefinitions,
+      [
+        savedAs('runs', { source: 'the runs document', details: { fold } }),
+        {
+          type: 'definition_paused',
+          data: { paused_by: { id: 'acme-admin', name: 'acme-admin' } },
+          context: ofTheRuns,
+        },
+        { type: 'definition_resumed', data: {}, context: ofTheRuns },
+      ],
+      runnableDetailsOf,
+    );
+
+    expect([definitions.version, [...definitions.functions]]).toEqual([
+      3,
+      [['runs', { version: 1, saved: 1, details: { fold } }]],
+    ]);
+  });
+});
+
 describe('the fold a playbook keeps for a definition', () => {
   it('is the module and the filters its save stripped, and the details as written when it stripped none', () => {
     const typed = detailsOf(fold, [{ type: 'noted', data: '${ $data.n as number > 1 }' }]);

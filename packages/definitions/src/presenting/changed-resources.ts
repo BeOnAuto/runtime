@@ -10,10 +10,14 @@ import { Schema } from 'effect';
 import { defaultRunWords } from '../capability/capability.ts';
 import type { DefinitionWords } from '../plain-language/definition-words.ts';
 
-export const definitionChanged = changeKindOf('definition', 'A function or workflow saved or retired', {
-  type: 'The type of the definition',
-  name: 'The name of the definition',
-});
+export const definitionChanged = changeKindOf(
+  'definition',
+  'A function or workflow saved, paused, resumed or retired',
+  {
+    type: 'The type of the definition',
+    name: 'The name of the definition',
+  },
+);
 
 export const runChanged = changeKindOf('run', 'A run that started, took an input or ended', {
   run_id: 'The id of the run',

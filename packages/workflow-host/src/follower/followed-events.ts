@@ -1,4 +1,10 @@
-import { playbookFactOf, publishedEventOf, type CloudEvent, type RecordedEventPublished } from '@on.auto/definitions';
+import {
+  definitionFactTypes,
+  playbookFactOf,
+  publishedEventOf,
+  type CloudEvent,
+  type RecordedEventPublished,
+} from '@on.auto/definitions';
 import { streamKindOf, type RecordedEvent } from '@on.auto/operations';
 
 interface Emitter {
@@ -18,11 +24,7 @@ export type EventOfRecord = FollowedEvent | 'none' | 'unreadable';
 
 const runFacts: ReadonlySet<string> = new Set(['run_started', 'run_succeeded', 'run_rejected', 'run_failed']);
 
-const definitionFacts: ReadonlySet<string> = new Set([
-  'definition_created',
-  'definition_updated',
-  'definition_retired',
-]);
+const definitionFacts: ReadonlySet<string> = new Set(definitionFactTypes);
 
 function otherRun(correlation: string | null, runId: string): string | undefined {
   return correlation === null || correlation === runId ? undefined : correlation;

@@ -330,13 +330,13 @@ These events are not the whole of the playbook's history:
 
 So `run_started` is in both, with the run's input in the history and with no data for a fold. A tool call, a step or an answer is in the history alone, and a fold never sees it. The events a fold sees:
 
-| Events                                                           | `source`                     | `subject`       | `data`                                                                                          |
-| ---------------------------------------------------------------- | ---------------------------- | --------------- | ----------------------------------------------------------------------------------------------- |
-| `run_started`, `run_failed`                                      | `/runs/<run id>`             | `<type>/<name>` | none                                                                                            |
-| `run_succeeded`                                                  | `/runs/<run id>`             | `<type>/<name>` | `output`; or `output_bytes`, its size, when the output would make the event larger than 240 KiB |
-| `run_rejected`                                                   | `/runs/<run id>`             | `<type>/<name>` | `reason`, and `kind` where the rejection has one                                                |
-| `definition_created`, `definition_updated`, `definition_retired` | `/definitions/<type>/<name>` | none            | none                                                                                            |
-| An event published to the playbook, of any other type            | as its publisher gave it     | as given        | as given; see [Publishing events](http.md#publishing-events)                                    |
+| Events                                                                                                      | `source`                     | `subject`       | `data`                                                                                          |
+| ----------------------------------------------------------------------------------------------------------- | ---------------------------- | --------------- | ----------------------------------------------------------------------------------------------- |
+| `run_started`, `run_failed`                                                                                 | `/runs/<run id>`             | `<type>/<name>` | none                                                                                            |
+| `run_succeeded`                                                                                             | `/runs/<run id>`             | `<type>/<name>` | `output`; or `output_bytes`, its size, when the output would make the event larger than 240 KiB |
+| `run_rejected`                                                                                              | `/runs/<run id>`             | `<type>/<name>` | `reason`, and `kind` where the rejection has one                                                |
+| `definition_created`, `definition_updated`, `definition_retired`, `definition_paused`, `definition_resumed` | `/definitions/<type>/<name>` | none            | none                                                                                            |
+| An event published to the playbook, of any other type                                                       | as its publisher gave it     | as given        | as given; see [Publishing events](http.md#publishing-events)                                    |
 
 Each event is a CloudEvent with its `id`, `type`, `source`, `time` and `data`. Its `time` is when it happened, as the playbook recorded it. An event the playbook recorded as the effect of another names that one in `causationid`, and the run at the top of its chain in `correlationid`. The playbook's own events also carry extension attributes that say how they came about, each where the playbook has it:
 

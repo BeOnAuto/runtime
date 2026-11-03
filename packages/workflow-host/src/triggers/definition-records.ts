@@ -6,7 +6,13 @@ import { Effect } from 'effect';
 import type { HostDatabase } from '../database/host-database.ts';
 import type { FilterStops } from '../filtering/filter-matching.ts';
 import type { InZone } from '../schedules/zone-clock.ts';
-import { triggersActivated, triggersRemoved } from './trigger-rows.ts';
+import {
+  triggersActivated,
+  triggersPaused,
+  triggersRemoved,
+  triggersResumed,
+  triggersRetired,
+} from './trigger-rows.ts';
 
 export type DefinitionRecord = Pick<RecordedEvent, 'id' | 'type' | 'data' | 'context'>;
 
@@ -24,9 +30,17 @@ export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, 
       stops.activated(playbookKey, workflow, version);
       return Effect.as(triggersActivated(database, playbookKey, activation, inZone), 'applied');
     }
-    if (change.kind === 'deactivated') {
+    if (change.kind === 'deactivated' || change.kind === 'retired') {
       stops.retired(playbookKey, change.name);
-      return Effect.as(triggersRemoved(database, playbookKey, change.name), 'applied');
+      const removed = change.kind === 'retired' ? triggersRetired : triggersRemoved;
+      return Effect.as(removed(database, playbookKey, change.name), 'applied');
+    }
+    if (change.kind === 'paused') {
+      return Effect.as(triggersPaused(database, playbookKey, change.name), 'applied');
+    }
+    if (change.kind === 'resumed') {
+      const resumption = { workflow: change.name, resumedAt: Date.parse(change.at) };
+      return Effect.as(triggersResumed(database, playbookKey, resumption, inZone), 'applied');
     }
     return Effect.succeed(change.kind === 'unreadable' ? 'unreadable' : 'applied');
   };

@@ -259,6 +259,16 @@ Check that the saved workflow shows no `triggers`. A stopped trigger starts noth
 
 A trigger you change or add applies from the version that saves it, never to anything recorded earlier. A changed schedule counts its times from then.
 
+### 10. Pause the workflow for a while
+
+To stop every trigger for a while and keep the workflow as it is, pause it, and resume it when it should run again:
+
+```text
+Pause the "<workflow name>" workflow, because <why>. Then show me how it stands.
+```
+
+Check that it shows `status: paused`, with who paused it, when and why. While it is paused, its schedule and its event trigger start nothing, and nobody can run it by hand or from another workflow; the runs already going finish. Resuming it makes up nothing it missed: its next run comes at the first scheduled time or matching event after the resume.
+
 ## Example: review each submitted brief
 
 This workflow starts each time the campaign tool publishes a `com.acme.campaigns.brief-submitted` event with the brief in its data. Your agent can also run it with the input `{"brief": "..."}`. It passes the brief to `review-campaign-brief`, a reasoning function in the same playbook that takes a `brief`. A workflow names a function by the name it is saved under. Its page heads each run with the review, and charts the briefs reviewed each day.

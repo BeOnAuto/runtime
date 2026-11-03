@@ -111,7 +111,7 @@ describe('the active definitions of a type a playbook may keep', () => {
       status: 'rejected',
       reason: 'conflict',
       detail:
-        'The playbook keeps 2 active keeper definitions, and a playbook may keep at most 2; retire one before creating another',
+        'The playbook keeps 2 keeper definitions, and a playbook may keep at most 2; retire one before creating another',
     });
     expect(again).toMatchObject({ status: 'succeeded' });
   });
@@ -139,7 +139,7 @@ describe('the active definitions of a type a playbook may keep', () => {
     expect(refused).toMatchObject({
       reason: 'conflict',
       detail:
-        'The playbook keeps 2 active keeper definitions, and a playbook may keep at most 1; retire one before saving another version',
+        'The playbook keeps 2 keeper definitions, and a playbook may keep at most 1; retire one before saving another version',
     });
     expect(retired).toMatchObject({ status: 'succeeded', output: { status: 'retired' } });
   });

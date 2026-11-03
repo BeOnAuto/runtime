@@ -25,6 +25,8 @@ const playbookFeedTypes: Readonly<Record<PlaybookFeedType, true>> = {
   definition_created: true,
   definition_updated: true,
   definition_retired: true,
+  definition_paused: true,
+  definition_resumed: true,
   playbook_page_saved: true,
   event_published: true,
   reaction_refused: true,

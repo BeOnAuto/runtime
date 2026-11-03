@@ -90,8 +90,8 @@ function hasNoConstraint({ keywords }: Argument): boolean {
 }
 
 describe('the descriptions of the tools of /mcp', () => {
-  it('are thirty-eight, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(38);
+  it('are forty, each under 800 characters, in three to eight sentences', () => {
+    expect(tools).toHaveLength(40);
     expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
     expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
   });
@@ -218,6 +218,8 @@ const served: Readonly<Record<string, Hints>> = {
   list_definitions: [true, false, true, false],
   get_definition: [true, false, true, false],
   update_definition: [false, true, true, true],
+  pause_definition: [false, true, true, false],
+  resume_definition: [false, true, true, false],
   retire_definition: [false, true, true, false],
   run_definition: [false, true, false, true],
   get_run: [true, false, true, false],

@@ -12,12 +12,13 @@ import { answers, textResult, type ScriptedReply } from '@on.auto/reasoning/test
 import { Effect, Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { commentsCalled, interactionsCalled } from '../testing/interaction-servers/interaction-calls.ts';
+import { commentsCalled, interactionsCalled, runWhenPaused } from '../testing/interaction-servers/interaction-calls.ts';
 import { servingReasoning } from '../testing/servers/reasoning-server.ts';
 import {
   licenseActivated,
   memoriesCalled,
   servingWithAToolServer,
+  standingsCalled,
   toolServerToolsCalled,
 } from '../testing/servers/tool-server-calls.ts';
 import { servingWorkflows, workflowSource } from '../testing/servers/workflow-server.ts';
@@ -171,6 +172,7 @@ async function workflowsCalled(session: McpSession): Promise<Called> {
     ['get_run', await session.callTool('get_run', inSales({ run_id: runId }))],
     ['send_run_event', await session.callTool('send_run_event', inSales({ run_id: runId, event }))],
     ['cancel_run', await cancelled(session, await session.callTool('run_definition', inSales(workflow)))],
+    ...(await standingsCalled(session, inSales, workflow)),
     ['retire_definition', await session.callTool('retire_definition', inSales(workflow))],
   ];
 }
@@ -204,6 +206,7 @@ async function errorsCalled(session: McpSession): Promise<Called> {
     ],
     ['something missing', await session.callTool('get_definition', inSales({ type: 'reasoning', name: 'nowhere' }))],
     ['a run that did not go through', await session.callTool('get_run', inSales({ run_id: unconnectedRun }))],
+    ['a paused thing', await runWhenPaused(session, inSales)],
   ];
 }
 
@@ -235,6 +238,7 @@ const audienceWords: Readonly<Record<string, string>> = {
   'a name already taken': 'that name is already taken',
   'a retired thing': 'it has been retired',
   'a retired playbook': 'it has been retired',
+  'a paused thing': 'it is paused',
   'something missing': 'it, or something it refers to, could not be found',
   'a run that did not go through': 'did not go through: something the server relies on is not available',
 };

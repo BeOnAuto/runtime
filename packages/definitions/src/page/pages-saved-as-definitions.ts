@@ -2,7 +2,11 @@ import { PlaybookReader, type Fold } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
 import type { StrippedForms } from '../capability/stripped-forms.ts';
-import { DefinitionEventSchema, type RecordedDefinitionEvent } from '../registry/definition-events.ts';
+import {
+  DefinitionEventSchema,
+  isDefinitionSaved,
+  type RecordedDefinitionEvent,
+} from '../registry/definition-events.ts';
 import { definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { carriedPageSourceOf } from './old-page-sources.ts';
 import { pageDetailsOf } from './page-details-of.ts';
@@ -44,6 +48,9 @@ export function pagesSavedAsDefinitionsAfter(
   if (event.type === 'definition_retired') {
     kept.delete(name);
     return kept;
+  }
+  if (!isDefinitionSaved(event)) {
+    return pages;
   }
   const { source, details, stripped } = event.data.content;
   return Option.match(subjectOf(details), {

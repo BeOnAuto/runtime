@@ -33,7 +33,7 @@ function unversioned(event: DefinitionEvent) {
 }
 
 describe('the change a record of a definition makes to what starts on its own', () => {
-  it('activates a version with triggers, and deactivates the definition at a version without or at its retirement', () => {
+  it('activates a version with triggers, deactivates the definition at a version without, and retires it at its retirement', () => {
     expect([
       changeOf({ type: 'definition_created', data: { content: reacting, created_by: recordedAdmin } }),
       changeOf({ type: 'definition_updated', data: { content: plain } }, 'close', 2),
@@ -42,8 +42,18 @@ describe('the change a record of a definition makes to what starts on its own', 
     ]).toEqual([
       { kind: 'activated', name: 'close', version: 1, triggers, at: at.at },
       { kind: 'deactivated', name: 'close' },
-      { kind: 'deactivated', name: 'close' },
+      { kind: 'retired', name: 'close' },
       { kind: 'unchanged' },
+    ]);
+  });
+
+  it('pauses the definition, and resumes it from the time of its resumption', () => {
+    expect([
+      changeOf({ type: 'definition_paused', data: { paused_by: recordedAdmin, reason: 'The month is closed' } }),
+      changeOf({ type: 'definition_resumed', data: {} }),
+    ]).toEqual([
+      { kind: 'paused', name: 'close' },
+      { kind: 'resumed', name: 'close', at: at.at },
     ]);
   });
 

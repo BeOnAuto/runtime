@@ -1,4 +1,11 @@
-import { EventTriggerSchema, TriggerSchema, type Trigger, type TriggerFilter } from '@on.auto/definitions';
+import {
+  EventTriggerSchema,
+  ScheduleTriggerSchema,
+  TriggerSchema,
+  type ScheduleTrigger,
+  type Trigger,
+  type TriggerFilter,
+} from '@on.auto/definitions';
 import { statement } from '@on.auto/ledger';
 import { Effect, Result, Schema } from 'effect';
 
@@ -20,6 +27,7 @@ interface Activating {
   readonly playbookKey: string;
   readonly activation: Activation;
   readonly inZone: InZone;
+  readonly paused: boolean;
 }
 
 export interface EventPage {
@@ -36,6 +44,13 @@ export interface EventSubscription {
 }
 
 const KeptRow = Schema.Struct({ rule: Schema.fromJsonString(TriggerSchema) });
+
+const ScheduleRow = Schema.Struct({
+  rule: Schema.fromJsonString(ScheduleTriggerSchema),
+  activated_at: WholeNumber,
+});
+
+const PauseRow = Schema.Struct({ workflow: Schema.String });
 
 const EventRow = Schema.Struct({
   workflow: Schema.String,
@@ -66,10 +81,12 @@ function typesOf(triggers: readonly Trigger[]): readonly string[] {
   return triggers.flatMap((trigger) => (trigger.kind === 'event' ? trigger.filters.map(({ type }) => type) : []));
 }
 
-function firstDueAt(trigger: Trigger, activatedAt: number, inZone: InZone): number | null {
-  return trigger.kind === 'event'
-    ? null
-    : Result.getOrElse(firstDueOf(trigger, activatedAt, inZone), () => activatedAt);
+function firstDueAt(trigger: ScheduleTrigger, activatedAt: number, inZone: InZone, after = activatedAt): number | null {
+  return Result.getOrElse(firstDueOf(trigger, activatedAt, inZone, after), () => after);
+}
+
+function firstDueOnActivation({ activation, inZone, paused }: Activating, trigger: Trigger): number | null {
+  return trigger.kind === 'event' || paused ? null : firstDueAt(trigger, activation.activatedAt, inZone);
 }
 
 function keptTriggersOf(
@@ -87,13 +104,14 @@ function keptTriggersOf(
   ).pipe(Effect.map((rows) => rows.map(({ rule }) => rule)));
 }
 
-function activatedRow({ database, playbookKey, activation, inZone }: Activating, trigger: Trigger) {
+function activatedRow(activating: Activating, trigger: Trigger) {
+  const { database, playbookKey, activation } = activating;
   const { workflow, version, activatedBy, activatedAt } = activation;
   return database.write(
     statement`INSERT INTO workflow_subscriptions
         (playbook_key, workflow, reference, version, kind, rule, activated_by, activated_at, next_due, running)
       VALUES (${playbookKey}, ${workflow}, ${trigger.reference}, ${version}, ${trigger.kind}, ${JSON.stringify(trigger)},
-        ${activatedBy}, ${activatedAt}, ${firstDueAt(trigger, activatedAt, inZone)}, NULL)
+        ${activatedBy}, ${activatedAt}, ${firstDueOnActivation(activating, trigger)}, NULL)
       ON CONFLICT (playbook_key, workflow, reference) DO UPDATE SET version = excluded.version, kind = excluded.kind,
         rule = excluded.rule, activated_by = excluded.activated_by, activated_at = excluded.activated_at,
         next_due = excluded.next_due`,
@@ -117,13 +135,25 @@ function rowWritten(activating: Activating, change: TriggerChange) {
       );
 }
 
+function isPaused(database: HostDatabase, playbookKey: string, workflow: string): Effect.Effect<boolean> {
+  return Effect.orDie(
+    rowsOf(
+      PauseRow,
+      database.read(
+        statement`SELECT workflow FROM workflow_pauses WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
+      ),
+    ),
+  ).pipe(Effect.map((rows) => rows.length > 0));
+}
+
 export function triggersActivated(database: HostDatabase, playbookKey: string, activation: Activation, inZone: InZone) {
   return Effect.gen(function* () {
     const kept = yield* keptTriggersOf(database, playbookKey, activation.workflow);
+    const paused = yield* isPaused(database, playbookKey, activation.workflow);
     yield* Effect.orDie(
       Effect.forEach(
         triggerChangesOf(kept, activation.triggers),
-        (change) => rowWritten({ database, playbookKey, activation, inZone }, change),
+        (change) => rowWritten({ database, playbookKey, activation, inZone, paused }, change),
         { discard: true },
       ),
     );
@@ -141,6 +171,71 @@ export function triggersRemoved(database: HostDatabase, playbookKey: string, wor
   ).pipe(Effect.andThen(typesKept(database, playbookKey, workflow, [])));
 }
 
+export function triggersRetired(database: HostDatabase, playbookKey: string, workflow: string) {
+  return Effect.andThen(
+    triggersRemoved(database, playbookKey, workflow),
+    Effect.orDie(
+      database.write(
+        statement`DELETE FROM workflow_pauses WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
+      ),
+    ),
+  );
+}
+
+export function triggersPaused(database: HostDatabase, playbookKey: string, workflow: string) {
+  return Effect.asVoid(
+    Effect.orDie(
+      database.transaction([
+        statement`UPDATE workflow_subscriptions SET next_due = NULL
+          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND kind <> 'event'`,
+        statement`INSERT INTO workflow_pauses (playbook_key, workflow) VALUES (${playbookKey}, ${workflow})
+          ON CONFLICT DO NOTHING`,
+      ]),
+    ),
+  );
+}
+
+function schedulesOf(database: HostDatabase, playbookKey: string, workflow: string) {
+  return Effect.orDie(
+    rowsOf(
+      ScheduleRow,
+      database.read(
+        statement`SELECT rule, activated_at FROM workflow_subscriptions
+          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND kind <> 'event'`,
+      ),
+    ),
+  );
+}
+
+interface Resumption {
+  readonly workflow: string;
+  readonly resumedAt: number;
+}
+
+export function triggersResumed(
+  database: HostDatabase,
+  playbookKey: string,
+  { workflow, resumedAt }: Resumption,
+  inZone: InZone,
+) {
+  return Effect.gen(function* () {
+    if (!(yield* isPaused(database, playbookKey, workflow))) {
+      return;
+    }
+    const schedules = yield* schedulesOf(database, playbookKey, workflow);
+    yield* Effect.orDie(
+      database.transaction([
+        ...schedules.map(
+          ({ rule, activated_at: activatedAt }) =>
+            statement`UPDATE workflow_subscriptions SET next_due = ${firstDueAt(rule, activatedAt, inZone, resumedAt)}
+              WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND reference = ${rule.reference}`,
+        ),
+        statement`DELETE FROM workflow_pauses WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
+      ]),
+    );
+  });
+}
+
 export function eventSubscriptionsOf(
   database: HostDatabase,
   playbookKey: string,
@@ -154,6 +249,7 @@ export function eventSubscriptionsOf(
           statement`SELECT s.workflow, s.version, s.rule FROM workflow_subscription_types t
             JOIN workflow_subscriptions s ON s.playbook_key = t.playbook_key AND s.workflow = t.workflow AND s.kind = 'event'
             WHERE t.playbook_key = ${playbookKey} AND t.type = ${type} AND t.workflow > ${after}
+              AND NOT EXISTS (SELECT 1 FROM workflow_pauses p WHERE p.playbook_key = t.playbook_key AND p.workflow = t.workflow)
             ORDER BY t.workflow LIMIT ${most + 1}`,
         ),
       ),

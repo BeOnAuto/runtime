@@ -115,3 +115,28 @@ describe('the presenter of the changes to a definition', () => {
     );
   });
 });
+
+describe('the presenter of the standing of a definition', () => {
+  it('presents a pause with who paused it and why, at most a thousand and twenty-four bytes of it, and a resumption with no data', () => {
+    const reason = `${'é'.repeat(512)}more`;
+
+    expect([
+      presented({ type: 'definition_paused', data: { paused_by: recordedAdmin, reason } }, 2),
+      presented({ type: 'definition_paused', data: { paused_by: recordedAdmin } }, 2),
+      presented({ type: 'definition_resumed', data: {} }, 2),
+    ]).toMatchObject([
+      {
+        type: 'definition_paused',
+        summary: 'The greeting “greet” was paused, so it starts no runs until it is resumed.',
+        data: { paused_by: recordedAdmin, reason: 'é'.repeat(512) },
+        metadata: { definition: { type: 'echo', name: 'greet', version: 2 } },
+      },
+      { type: 'definition_paused', data: { paused_by: recordedAdmin } },
+      {
+        type: 'definition_resumed',
+        summary: 'The greeting “greet” was resumed, so it starts runs again.',
+        data: {},
+      },
+    ]);
+  });
+});

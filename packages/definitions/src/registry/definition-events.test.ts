@@ -100,10 +100,28 @@ const paged: readonly (typeof DefinitionEventSchema.Type)[] = [
   },
 ];
 
+const ofThePausedWorkflow = { ...ofTheWorkflow, at: '2026-11-03T08:30:00.000Z', by: 'person:user_2ada' };
+
+const paused: readonly (typeof DefinitionEventSchema.Type)[] = [
+  {
+    type: 'definition_paused',
+    data: {
+      paused_by: { id: 'person:user_2ada', name: 'Ada Lovelace' },
+      reason: 'The books of October are being closed by hand',
+    },
+    context: { ...ofThePausedWorkflow, definitionVersion: 2 },
+  },
+  {
+    type: 'definition_resumed',
+    data: {},
+    context: { ...ofThePausedWorkflow, at: '2026-11-04T08:30:00.000Z', definitionVersion: 2 },
+  },
+];
+
 describe('the facts of the definitions of a playbook', () => {
   recordedFactsBehaviour({
     schema: DefinitionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.54.0': drawn, '0.56.0': paged },
+    releases: { '0.46.0': baseline, '0.54.0': drawn, '0.56.0': [...paged, ...paused] },
   });
 });

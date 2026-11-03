@@ -7,13 +7,15 @@ import type {
   CommandMetadata,
   DefinitionCommand,
   DefinitionCreation,
+  DefinitionPause,
+  DefinitionResumption,
   DefinitionRetirement,
   DefinitionUpdate,
 } from './definition-commands.ts';
 import type { DefinitionContent, DefinitionEvent } from './definition-events.ts';
 import type { DefinitionRegistry } from './definition-registry.ts';
 import { hasTriggers } from './definition-triggers.ts';
-import type { StoredDefinition } from './definition.ts';
+import { isRetired, type StoredDefinition } from './definition.ts';
 import { definitionNotFound } from './registry-lookup.ts';
 
 type Decision = Result.Result<readonly DefinitionEvent[], Rejection<'not_found' | 'conflict'>>;
@@ -24,7 +26,7 @@ export const mostReactingDefinitions = 1024;
 
 function reactingOtherThan(registry: DefinitionRegistry, name: string): number {
   return [...registry.values()].filter(
-    (definition) => definition.status === 'active' && hasTriggers(definition) && definition.name !== name,
+    (definition) => !isRetired(definition) && hasTriggers(definition) && definition.name !== name,
   ).length;
 }
 
@@ -44,12 +46,12 @@ function recording(event: DefinitionEvent): Decision {
   return Result.succeed([event]);
 }
 
-function takenBy(type: string, { name, status }: StoredDefinition): Conflict {
+function takenBy(type: string, existing: StoredDefinition): Conflict {
+  const { name } = existing;
   return new Conflict({
-    detail:
-      status === 'active'
-        ? `The playbook already has the ${definitionResourceLabel(type)} ${name}`
-        : `The ${definitionResourceLabel(type)} ${name} was retired, and a definition name is never reused`,
+    detail: isRetired(existing)
+      ? `The ${definitionResourceLabel(type)} ${name} was retired, and a definition name is never reused`
+      : `The playbook already has the ${definitionResourceLabel(type)} ${name}`,
     kind: 'taken',
   });
 }
@@ -59,14 +61,14 @@ export interface RegistryRules {
   readonly mostActive: number;
 }
 
-function activeIn(registry: DefinitionRegistry): number {
-  return [...registry.values()].filter(({ status }) => status === 'active').length;
+function keptIn(registry: DefinitionRegistry): number {
+  return [...registry.values()].filter((definition) => !isRetired(definition)).length;
 }
 
-function tooMany({ type, mostActive }: RegistryRules, active: number, saving: string): Conflict {
+function tooMany({ type, mostActive }: RegistryRules, kept: number, saving: string): Conflict {
   const label = definitionResourceLabel(type);
   return new Conflict({
-    detail: `The playbook keeps ${plainNumber(active)} active ${label}s, and a playbook may keep at most ${plainNumber(mostActive)}; retire one before ${saving}`,
+    detail: `The playbook keeps ${plainNumber(kept)} ${label}s, and a playbook may keep at most ${plainNumber(mostActive)}; retire one before ${saving}`,
   });
 }
 
@@ -79,9 +81,9 @@ function decideCreation(
   if (existing !== undefined) {
     return Result.fail(takenBy(rules.type, existing));
   }
-  const active = activeIn(registry);
-  if (active >= rules.mostActive) {
-    return Result.fail(tooMany(rules, active, 'creating another'));
+  const kept = keptIn(registry);
+  if (kept >= rules.mostActive) {
+    return Result.fail(tooMany(rules, kept, 'creating another'));
   }
   const beyond = beyondTheReactingBound(rules.type, registry, { name, content });
   return beyond === undefined
@@ -107,7 +109,7 @@ function decideUpdate(
   if (existing === undefined) {
     return Result.fail(definitionNotFound(type, name));
   }
-  if (existing.status === 'retired') {
+  if (isRetired(existing)) {
     return Result.fail(
       new Conflict({
         detail: `The ${definitionResourceLabel(type)} ${name} is retired and can no longer change`,
@@ -119,9 +121,9 @@ function decideUpdate(
   if (isAsSaved(content, existing)) {
     return nothingToRecord;
   }
-  const active = activeIn(registry);
-  if (active > rules.mostActive) {
-    return Result.fail(tooMany(rules, active, 'saving another version'));
+  const kept = keptIn(registry);
+  if (kept > rules.mostActive) {
+    return Result.fail(tooMany(rules, kept, 'saving another version'));
   }
   const beyond = beyondTheReactingBound(type, registry, { name, content });
   return beyond === undefined ? recording({ type: 'definition_updated', data: { content } }) : Result.fail(beyond);
@@ -136,7 +138,44 @@ function decideRetirement(
   if (existing === undefined) {
     return Result.fail(definitionNotFound(type, name));
   }
-  return existing.status === 'retired' ? nothingToRecord : recording({ type: 'definition_retired', data: {} });
+  return isRetired(existing) ? nothingToRecord : recording({ type: 'definition_retired', data: {} });
+}
+
+function standingToChange(
+  type: string,
+  name: string,
+  registry: DefinitionRegistry,
+): Result.Result<StoredDefinition, Rejection<'not_found' | 'conflict'>> {
+  const existing = registry.get(name);
+  if (existing === undefined) {
+    return Result.fail(definitionNotFound(type, name));
+  }
+  return isRetired(existing)
+    ? Result.fail(
+        new Conflict({
+          detail: `The ${definitionResourceLabel(type)} ${name} is retired and can no longer be paused or resumed`,
+          kind: 'retired',
+        }),
+      )
+    : Result.succeed(existing);
+}
+
+function decidePause(
+  type: string,
+  { name, paused_by, reason }: DefinitionPause,
+  registry: DefinitionRegistry,
+): Decision {
+  return Result.flatMap(standingToChange(type, name, registry), ({ status }) =>
+    status === 'paused'
+      ? nothingToRecord
+      : recording({ type: 'definition_paused', data: { paused_by, ...(reason === undefined ? {} : { reason }) } }),
+  );
+}
+
+function decideResumption(type: string, { name }: DefinitionResumption, registry: DefinitionRegistry): Decision {
+  return Result.flatMap(standingToChange(type, name, registry), ({ status }) =>
+    status === 'paused' ? recording({ type: 'definition_resumed', data: {} }) : nothingToRecord,
+  );
 }
 
 function versionSaved(command: DefinitionCommand, registry: DefinitionRegistry): Pick<Context, 'definitionVersion'> {
@@ -147,7 +186,7 @@ function versionSaved(command: DefinitionCommand, registry: DefinitionRegistry):
   if (existing === undefined) {
     return {};
   }
-  return { definitionVersion: command.type === 'retire' ? existing.version : existing.version + 1 };
+  return { definitionVersion: command.type === 'update' ? existing.version + 1 : existing.version };
 }
 
 export function definitionContextOf(type: string, command: DefinitionCommand, registry: DefinitionRegistry): Context {
@@ -166,5 +205,10 @@ export function decideOnDefinitions(
   if (command.type === 'update') {
     return decideUpdate(rules, command, registry);
   }
-  return decideRetirement(rules.type, command, registry);
+  if (command.type === 'pause') {
+    return decidePause(rules.type, command, registry);
+  }
+  return command.type === 'resume'
+    ? decideResumption(rules.type, command, registry)
+    : decideRetirement(rules.type, command, registry);
 }

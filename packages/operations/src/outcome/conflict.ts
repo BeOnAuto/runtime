@@ -5,6 +5,7 @@ import type { LimitedBecause, RejectionBecause } from './rejection-because.ts';
 export const ConflictKindSchema = Schema.Literals([
   'taken',
   'retired',
+  'paused',
   'concurrent_change',
   'unworkable',
   'stalled',

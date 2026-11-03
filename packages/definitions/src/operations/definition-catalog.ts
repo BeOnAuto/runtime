@@ -5,8 +5,8 @@ import { defineGetDefinition } from './get-definition.ts';
 import { defineGetRun } from './get-run.ts';
 import { defineListDefinitions } from './list-definitions.ts';
 import { pageRenderings } from './render-page.ts';
-import { defineRetireDefinition } from './retire-definition.ts';
 import { defineRunDefinition } from './run-definition.ts';
+import { standingChangesOf } from './standing-changes.ts';
 import { defineUpdateDefinition } from './update-definition.ts';
 
 export function operationsOnDefinitions(capabilities: readonly Capability[], pages: SubjectPages) {
@@ -16,7 +16,7 @@ export function operationsOnDefinitions(capabilities: readonly Capability[], pag
     defineGetDefinition(capabilities, pages),
     ...pageRenderings(capabilities, pages),
     defineUpdateDefinition(capabilities, pages),
-    defineRetireDefinition(capabilities),
+    ...standingChangesOf(capabilities),
     defineRunDefinition(capabilities),
     defineGetRun(capabilities, pages),
   ];

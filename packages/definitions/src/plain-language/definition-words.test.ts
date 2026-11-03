@@ -175,9 +175,11 @@ describe('the plain language of get_definition', () => {
   it('says whether the definition is in use and what it does', () => {
     expect([
       outcomeOf('get_definition', { ...greet, description: 'Greets' }, { type: 'echo', name: 'greet' }),
+      outcomeOf('get_definition', { ...greet, status: 'paused' }, { type: 'echo', name: 'greet' }),
       outcomeOf('get_definition', { ...greet, status: 'retired' }, { type: 'echo', name: 'greet' }),
     ]).toEqual([
       'The greeting “greet” is in use. What it does: Greets.',
+      'The greeting “greet” is paused; it starts no runs until it is resumed.',
       'The greeting “greet” has been retired; it can no longer be run or changed.',
     ]);
   });
@@ -201,6 +203,14 @@ const definitionListings: ReadonlyArray<readonly [readonly unknown[], string]> =
   [
     [greeting('greet'), greeting('old', 'retired')],
     'This playbook has 1 greeting: “greet”. Also listed, 1 retired greeting: “old”.',
+  ],
+  [
+    [greeting('greet'), greeting('hold', 'paused'), greeting('wait', 'paused')],
+    'This playbook has 1 greeting: “greet”, and 2 paused greetings: “hold” and “wait”.',
+  ],
+  [
+    [greeting('hold', 'paused'), greeting('old', 'retired')],
+    'This playbook has 1 paused greeting: “hold”. Also listed, 1 retired greeting: “old”.',
   ],
 ];
 

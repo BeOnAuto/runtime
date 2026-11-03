@@ -9,15 +9,22 @@ import { sourceToPrepare } from './definition-views.ts';
 import type { Rejection } from './issue-pointers.ts';
 import { loadRegistry, versionOf } from './registry-access.ts';
 
-const activeDefinition = Effect.fnUntraced(function* (type: string, name: string) {
+const refusalsToRun = {
+  retired: (label: string, name: string) =>
+    new Conflict({ detail: `The ${label} ${name} is retired and can no longer be run`, kind: 'retired' }),
+  paused: (label: string, name: string) =>
+    new Conflict({ detail: `The ${label} ${name} is paused and starts no runs until it is resumed`, kind: 'paused' }),
+};
+
+const runnableDefinition = Effect.fnUntraced(function* (type: string, name: string) {
   const definition = yield* findDefinition(yield* loadRegistry(type), type, name);
-  if (definition.status === 'retired') {
-    return yield* new Conflict({
-      detail: `The ${definitionResourceLabel(type)} ${name} is retired and can no longer be run`,
-      kind: 'retired',
-    });
-  }
-  return definition;
+  const { status } = definition;
+  return status === 'active' ? definition : yield* refusalsToRun[status](definitionResourceLabel(type), name);
+});
+
+export const pausedRefusalOf = Effect.fnUntraced(function* (type: string, name: string) {
+  const { status } = yield* findDefinition(yield* loadRegistry(type), type, name);
+  return status === 'paused' ? refusalsToRun.paused(definitionResourceLabel(type), name) : undefined;
 });
 
 function unparseable(
@@ -38,7 +45,7 @@ export interface VersionToRun {
 }
 
 export const preparedDefinition = Effect.fnUntraced(function* (capability: Capability, name: string) {
-  const definition = yield* activeDefinition(capability.type, name);
+  const definition = yield* runnableDefinition(capability.type, name);
   const prepared = yield* capability
     .prepare(sourceToPrepare(capability.type, definition.source), definition.stripped)
     .pipe(Effect.mapError(unparseable(capability.type, definition)));

@@ -2,19 +2,14 @@ import { PlaybookReader, PlaybookWriter, defineCommand } from '@on.auto/operatio
 import { Effect, Schema } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { refusingBlankText, refusingForbiddenCharacters } from '../events/cloud-event.ts';
 import { commandMetadata } from '../operations/command-metadata.ts';
-import { RunIdInputField } from '../operations/definition-fields.ts';
+import { reasonFieldOf, RunIdInputField } from '../operations/definition-fields.ts';
 import { cancellingWordsFor } from '../plain-language/run-words.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
 import { RunSchema } from '../runs/run.ts';
 import { runAfterItsAttemptHere } from './run-cancels.ts';
 
-const mostReasonLength = 1024;
-
-const ReasonField = Schema.String.annotate({
-  description: `Why the run is cancelled, in words the run's history keeps, 1 to ${mostReasonLength} characters`,
-}).check(Schema.isMinLength(1), Schema.isMaxLength(mostReasonLength), refusingForbiddenCharacters, refusingBlankText);
+const ReasonField = reasonFieldOf("Why the run is cancelled, in words the run's history keeps");
 
 const description = [
   'Cancels a run that is still going, such as a workflow or a reasoning function, at the request of the person:',

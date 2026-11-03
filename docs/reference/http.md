@@ -234,6 +234,8 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 | `list_definitions`  | `GET /definitions/reasoning`                | `playbook:read`  | Optional `include_retired`                       |
 | `get_definition`    | `GET /definitions/reasoning/{name}`         | `playbook:read`  | Name in path                                     |
 | `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`, `diagram`, optional `overview`         |
+| `pause_definition`  | `POST /definitions/reasoning/{name}/pause`  | `playbook:write` | Optional `reason`                                |
+| `resume_definition` | `POST /definitions/reasoning/{name}/resume` | `playbook:write` | Name in path                                     |
 | `retire_definition` | `POST /definitions/reasoning/{name}/retire` | `playbook:write` | Name in path                                     |
 | `run_definition`    | `POST /definitions/reasoning/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id`         |
 | `render_page`       | `POST /definitions/reasoning/{name}/render` | `playbook:read`  | Optional `sample_output` or `run_id`             |
@@ -245,17 +247,20 @@ The `source` is a [reasoning function document](reasoning-format.md). These rule
 - A name is unique within its type and playbook, and cannot be reused after retirement.
 - A source document may be at most 65,536 UTF-8 bytes.
 - Changing a document, its overview or its diagram creates a version. Updating it with identical source and diagram, and the same overview or none, records no change.
-- A run uses the latest active version.
-- A retired definition can be read, but cannot be edited or run.
+- A run uses the latest version.
+- A definition's `status` is `active`, `paused` or `retired`.
+- A paused definition starts no runs: `run_definition` of it is refused with `conflict` of the kind `paused`, a workflow step that calls it ends the run `rejected` with `invalid_input` and words that say the function is paused, as a step that calls a retired function does, its triggers start nothing, and the runs already going finish. It can still be read, listed and updated, and an update keeps it paused. Pausing changes neither its version nor its `updated_at`, and it carries `paused_at`, `paused_by`, the caller who paused it by `id` and `name`, and the `reason` given, 1 to 1,024 characters, until it is resumed.
+- A resumed definition is `active` again and runs as before. Pausing a paused definition, or resuming an active one, succeeds and records nothing, so both are safe to retry.
+- A retired definition can be read, but cannot be edited, run, paused or resumed: those are refused with `conflict` of the kind `retired`.
 - A definition carries its `input_schema` and `output_schema` where its document declares them. A reasoning function, a computation function or a workflow whose `output.shape` names an [output shape](output-shapes.md) has the shape's schema as its `output_schema`, and the shape's name as `details.shape`, such as `"details": { "shape": "series" }`; `details` is left out otherwise. A prediction function has the `series` shape so, since its questions answer a series. `list_definitions` shows both too.
 
 A definition names the caller who created it as `created_by`, by `id` and `name`, and keeps it across its versions.
 
-`create_definition`, `update_definition`, `get_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out. `get_definition` of a definition with a page also has `page` ([Pages](#pages)). `create_definition` and `update_definition` return its page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
+`create_definition`, `update_definition`, `get_definition`, `pause_definition`, `resume_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out. `get_definition` of a definition with a page also has `page` ([Pages](#pages)). `create_definition` and `update_definition` return its page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
 
 - `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
 - `diagram` is how a function works as a picture, which Auto Studio draws under the overview. Every `create_definition` and `update_definition` of a function gives it, as one of two choices: Mermaid source of a flowchart or a state diagram, whose first line is `flowchart`, `graph` or `stateDiagram`, optionally with a direction such as `TD`, in at most 8,192 UTF-8 bytes; or the word `none`, when a picture would add nothing. Since Auto Studio draws it at full size in a column, a diagram reads best top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. The version keeps it as given. A version saved before functions took one has none.
-- `used_by` lists the active definitions of the playbook that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`.
+- `used_by` lists the definitions of the playbook, active or paused, that use this one, read from the playbook each time the definition is returned, and is left out when none does. Each gives its `type`, its `name` and its `relation`: `calls` for a workflow whose `run_definition` steps call it, with those `steps`, each its `number`, its place among the workflow's tasks in the order of its document, and its `name`.
 
 The interaction function `approve-brief` that a workflow calls in two steps is returned with this `used_by`, shown here without its other fields:
 
@@ -440,7 +445,7 @@ See [What reads render](page-format.md#what-reads-render).
 
 Prediction functions use the operations of reasoning functions, with `prediction` in place of `reasoning` in each route, such as `POST /definitions/prediction` and `POST /definitions/prediction/{name}/run`. The `source` is a [prediction function document](prediction-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
 
-- A playbook may have at most 32 active prediction functions.
+- A playbook may have at most 32 prediction functions, active or paused.
 - A question finishes within the request that asks it, and the runtime's forecaster makes the prediction. A question such as `{ "series": "north", "horizon": 1 }` answers a [series](output-shapes.md#series) whose `observed` line holds the last periods of the dataset and whose `predicted` line holds the period asked, with its `value`, `low` and `high`; without `horizon` it holds every horizon the function names. The run's `record` holds the `method` the forecaster used, the `coverage` and the `history` it backtested. [The input and the output](prediction-format.md#the-input-and-the-output) has every field, and [A question](prediction-format.md#a-question) an answer in full.
 - A series whose history is too short to forecast from is refused as `conflict` with the kind `history_too_short`, its `detail` naming the periods it has and the periods it needs.
 - `get_definition` adds the dataset's `standing`.
@@ -455,6 +460,8 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 | `list_definitions`  | `GET /definitions/workflow`                | `playbook:read`  | Optional `include_retired`                                             |
 | `get_definition`    | `GET /definitions/workflow/{name}`         | `playbook:read`  | Name in path                                                           |
 | `update_definition` | `PUT /definitions/workflow/{name}`         | `playbook:write` | `source`                                                               |
+| `pause_definition`  | `POST /definitions/workflow/{name}/pause`  | `playbook:write` | Optional `reason`                                                      |
+| `resume_definition` | `POST /definitions/workflow/{name}/resume` | `playbook:write` | Name in path                                                           |
 | `retire_definition` | `POST /definitions/workflow/{name}/retire` | `playbook:write` | Name in path                                                           |
 | `run_definition`    | `POST /definitions/workflow/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id`                               |
 | `render_page`       | `POST /definitions/workflow/{name}/render` | `playbook:read`  | Optional `sample_output` or `run_id`                                   |
@@ -464,7 +471,7 @@ These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
 ### A saved workflow
 
-The `source` is a [workflow document](workflow-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).
+The `source` is a [workflow document](workflow-format.md). Names, document size, versions, pausing and retirement follow the rules for [reasoning functions](#reasoning-functions).
 
 - A saved workflow has the `media_type` `application/yaml`.
 - A workflow takes no `diagram`, and one given is refused: Auto Studio draws a workflow from its steps, with the words [Describing steps](workflow-format.md#describing-steps) sets out.
@@ -479,6 +486,8 @@ The `source` is a [workflow document](workflow-format.md). Names, document size,
 | `expression`   | For a cron trigger: its expression                                                    |
 | `time_zone`    | For a cron trigger whose schedule names one: its time zone; without it, UTC           |
 | `milliseconds` | For an every trigger: its period                                                      |
+
+A paused workflow's triggers start nothing: a time its schedule names and an event its trigger matches while it is paused are not run, and resuming it makes up none of them, so its next run is at the first time or event after it was resumed. A version saved while it is paused takes over its triggers as any version does, and starts nothing until it is resumed.
 
 `get_definition` of an active workflow with triggers adds `triggers_since`: the id of the record that saved its current version. From that record on, every run its triggers start is a run of this version. `triggers_since` is one id for the whole workflow. A trigger that a later version left unchanged continues from the record that first saved it in that form, which `triggers_since` does not show.
 
@@ -696,7 +705,7 @@ Some types, sources and attributes are reserved for what the runtime records its
 | Sources    | Those beginning `/runs/`, `/definitions/` or `/callers/`                                                                              | `/event/source`                    |
 | Attributes | `causationid`, `correlationid`, `caller`, `definitionversion`, `depth`, `calldepth`, `calledby`, `triggerkind` and `triggerreference` | `/event/` and the attribute's name |
 
-The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `definition_created`, `definition_updated`, `definition_retired`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
+The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `definition_created`, `definition_updated`, `definition_retired`, `definition_paused`, `definition_resumed`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
 
 A run of a reasoning function also records each call of its model: `model_call_started`, then `model_call_answered` with the tool calls the model asked for, or `model_call_failed` with `because`. [The run's model calls](reasoning-format.md#the-run-s-model-calls) gives their fields.
 
@@ -1195,7 +1204,7 @@ Each returns `cursor`, `changes` and `more`:
 | `list_org_changes`      | `connection`  | `connection`                                                          | A connection added, connected, broken or removed, or asked for more                                                                                                                |
 | `list_org_changes`      | `comment`     | `comment_id`                                                          | A [comment of the organization's own](#the-organization-s-comments) made, resolved or reopened                                                                                     |
 | `list_playbook_changes` | `playbook`    | None, since the playbook is the route's own: `{ "kind": "playbook" }` | The playbook's page saved or removed; `list_org_changes` names the `playbook` of its own change                                                                                    |
-| `list_playbook_changes` | `definition`  | `type`, `name`                                                        | A function or workflow saved or retired                                                                                                                                            |
+| `list_playbook_changes` | `definition`  | `type`, `name`                                                        | A function or workflow saved, paused, resumed or retired                                                                                                                           |
 | `list_playbook_changes` | `run`         | `run_id`                                                              | A run started, given an input or an event, or ended                                                                                                                                |
 | `list_playbook_changes` | `interaction` | `run_id`                                                              | Everything the run of an interaction function records: its request opened, answered, expired, undelivered or cancelled, beside the run                                             |
 | `list_playbook_changes` | `event`       | `event_id`                                                            | An event published to the playbook, a refusal of its reactions, a call of a tool by hand and a telling or a read of a conversation, by the `id` `list_playbook_events` lists it by |

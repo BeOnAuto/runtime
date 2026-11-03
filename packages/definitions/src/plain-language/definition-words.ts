@@ -81,12 +81,17 @@ export function pageWords({ type, source }: Pick<Definition, 'type' | 'source'>)
   return presentsItsRuns(type) && !carriesAPage(source, writtenInOf(type)) ? noPageYet : '';
 }
 
+const standingsInWords: Readonly<Record<ListedDefinition['status'], string>> = {
+  active: 'is in use.',
+  paused: 'is paused; it starts no runs until it is resumed.',
+  retired: 'has been retired; it can no longer be run or changed.',
+};
+
 export function definitionStanding(
   words: DefinitionWords,
   { type, name, status }: Pick<ListedDefinition, 'type' | 'name' | 'status'>,
 ): string {
-  const named = capitalized(words.named(type, name));
-  return status === 'active' ? `${named} is in use.` : `${named} has been retired; it can no longer be run or changed.`;
+  return `${capitalized(words.named(type, name))} ${standingsInWords[status]}`;
 }
 
 function namesOf(definitions: readonly ListedDefinition[]): string {
@@ -95,17 +100,27 @@ function namesOf(definitions: readonly ListedDefinition[]): string {
   return listed(others === 0 ? named : [...named, `${others} more`]);
 }
 
+function standingNoun(standing: string, noun: Noun): Noun {
+  return { one: `${standing} ${noun.one}`, other: `${standing} ${noun.other}` };
+}
+
+function countedAndNamed(noun: Noun, definitions: readonly ListedDefinition[]): readonly string[] {
+  return definitions.length === 0 ? [] : [`${counted(definitions.length, noun)}: ${namesOf(definitions)}`];
+}
+
 export function definitionsListed(noun: Noun, definitions: readonly ListedDefinition[]): string {
-  const active = definitions.filter(({ status }) => status === 'active');
-  const retired = definitions.filter(({ status }) => status === 'retired');
+  const inStatus = (status: ListedDefinition['status']) =>
+    definitions.filter((definition) => definition.status === status);
+  const held = [
+    ...countedAndNamed(noun, inStatus('active')),
+    ...countedAndNamed(standingNoun('paused', noun), inStatus('paused')),
+  ];
   const inUse =
-    active.length === 0
-      ? `This playbook has no ${noun.other} in use yet.`
-      : `This playbook has ${counted(active.length, noun)}: ${namesOf(active)}.`;
-  const retiredNoun = { one: `retired ${noun.one}`, other: `retired ${noun.other}` };
+    held.length === 0 ? `This playbook has no ${noun.other} in use yet.` : `This playbook has ${held.join(', and ')}.`;
+  const retired = inStatus('retired');
   return retired.length === 0
     ? inUse
-    : `${inUse} Also listed, ${counted(retired.length, retiredNoun)}: ${namesOf(retired)}.`;
+    : `${inUse} Also listed, ${counted(retired.length, standingNoun('retired', noun))}: ${namesOf(retired)}.`;
 }
 
 export function offeredAttemptFor(

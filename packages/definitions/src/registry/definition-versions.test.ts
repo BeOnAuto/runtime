@@ -34,6 +34,8 @@ const history: readonly RecordedDefinitionEvent[] = [
     data: { content: { source: 'two', stripped: { module: 'TWO' } } },
     context: about('greet', 2),
   },
+  { type: 'definition_paused', data: { paused_by: recordedAdmin }, context: about('greet', 2) },
+  { type: 'definition_resumed', data: {}, context: about('greet', 2) },
   { type: 'definition_retired', data: {}, context: about('greet', 2) },
 ];
 
@@ -43,12 +45,12 @@ describe('a search for one version of a definition', () => {
     const first = definitionVersionFold('greet', 1);
 
     expect(history.reduce((found, event) => search.evolve(found, event), search.initialState)).toEqual({
-      position: 4,
+      position: 6,
       found: { source: 'two', stripped: { module: 'TWO' }, position: 3 },
     });
     expect(Object.keys(search).toSorted()).toEqual(['eventSchema', 'evolve', 'initialState']);
     expect(history.reduce((found, event) => first.evolve(found, event), first.initialState)).toEqual({
-      position: 4,
+      position: 6,
       found: { source: 'one', position: 1 },
     });
   });

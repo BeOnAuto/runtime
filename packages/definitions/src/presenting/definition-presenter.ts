@@ -4,10 +4,21 @@ import type { Presenter } from '@on.auto/operations';
 
 import { firstCharacters } from '../plain-language/characters.ts';
 import type { DefinitionWords } from '../plain-language/definition-words.ts';
-import { definitionCreated, definitionRetired, definitionUpdated } from '../plain-language/event-words.ts';
-import type { DefinitionContent, RecordedDefinitionEvent } from '../registry/definition-events.ts';
+import {
+  definitionCreated,
+  definitionPaused,
+  definitionResumed,
+  definitionRetired,
+  definitionUpdated,
+} from '../plain-language/event-words.ts';
+import {
+  definitionFactTypes,
+  type DefinitionContent,
+  type DefinitionPaused,
+  type RecordedDefinitionEvent,
+} from '../registry/definition-events.ts';
 import { jsonBytesOf } from '../runs/recorded-size.ts';
-import { mostDescriptionCharacters } from './event-data.ts';
+import { cutAtCodePoint, mostDescriptionCharacters, mostDetailBytes } from './event-data.ts';
 import { eventPresenter, type Account } from './event-presenter.ts';
 import {
   DefinitionsStreamEventSchema,
@@ -15,12 +26,6 @@ import {
   playbookPageAccountOf,
   type DefinitionsStreamEvent,
 } from './playbook-page-presenting.ts';
-
-const definitionEventTypes: readonly RecordedDefinitionEvent['type'][] = [
-  'definition_created',
-  'definition_updated',
-  'definition_retired',
-];
 
 function contentShown({
   source,
@@ -40,10 +45,20 @@ function contentShown({
   };
 }
 
+function pauseShown({ paused_by, reason }: DefinitionPaused['data']) {
+  return { paused_by, ...(reason === undefined ? {} : { reason: cutAtCodePoint(reason, mostDetailBytes) }) };
+}
+
 function accountOf(words: DefinitionWords, event: RecordedDefinitionEvent, definitionType: string): Account {
   const { definitionName: name, definitionVersion: version } = event.context;
   if (event.type === 'definition_retired') {
     return { summary: definitionRetired(words, definitionType, name), data: {} };
+  }
+  if (event.type === 'definition_paused') {
+    return { summary: definitionPaused(words, definitionType, name), data: pauseShown(event.data) };
+  }
+  if (event.type === 'definition_resumed') {
+    return { summary: definitionResumed(words, definitionType, name), data: {} };
   }
   return {
     summary:
@@ -58,9 +73,9 @@ export function definitionPresenter(words: DefinitionWords): Presenter {
   return eventPresenter<DefinitionsStreamEvent>({
     streamKind: 'definitions',
     eventSchema: DefinitionsStreamEventSchema,
-    types: [...definitionEventTypes, 'playbook_page_saved'],
+    types: [...definitionFactTypes, 'playbook_page_saved'],
     account: (event, definitionType) =>
       event.type === 'playbook_page_saved' ? playbookPageAccountOf(event) : accountOf(words, event, definitionType),
-    changes: definitionsStreamChangesOf(definitionEventTypes),
+    changes: definitionsStreamChangesOf(definitionFactTypes),
   });
 }

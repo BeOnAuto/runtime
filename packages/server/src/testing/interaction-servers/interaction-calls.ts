@@ -50,3 +50,9 @@ export async function commentsCalled(
     ['resolve_comment', await session.callTool('resolve_comment', inPlaybook({ id, how: 'acted' }))],
   ];
 }
+
+export async function runWhenPaused(session: McpSession, inPlaybook: InPlaybook): Promise<ToolResult> {
+  const summary = { type: 'reasoning', name: 'summary' };
+  await session.callTool('pause_definition', inPlaybook(summary));
+  return session.callTool('run_definition', inPlaybook({ ...summary, input: { text: 'the week' } }));
+}

@@ -7,11 +7,11 @@ import { definitionWordsFor } from '../plain-language/definition-words.ts';
 import { runPlainLanguage } from '../plain-language/run-words.ts';
 import { RunDetailSchema } from '../runs/run.ts';
 import { RunIdInputField, InputField, DefinitionNameField } from './definition-fields.ts';
-import { startVersionOnce } from './run-requests.ts';
+import { startVersionOnce } from './start-once.ts';
 
 const description = [
   'Starts a run of one version of a definition under a run id, once: when the playbook has a run under that id,',
-  'it answers that run as it stands and starts nothing. The workflow host calls it in the process for the runs',
+  'it answers that run as it stands and starts nothing, and a paused definition starts none. The workflow host calls it in the process for the runs',
   'that triggers start, as the playbook itself, with their reaction depth, lineage and trigger in the request; no transport serves it.',
 ].join(' ');
 

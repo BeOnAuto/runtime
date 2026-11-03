@@ -55,6 +55,11 @@ const followerTables: readonly Statement[] = [
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_subscriptions_due ON workflow_subscriptions (next_due)
     WHERE next_due IS NOT NULL`,
+  statement`CREATE TABLE IF NOT EXISTS workflow_pauses (
+    playbook_key TEXT NOT NULL,
+    workflow TEXT NOT NULL,
+    PRIMARY KEY (playbook_key, workflow)
+  )`,
   statement`CREATE TABLE IF NOT EXISTS workflow_subscription_types (
     playbook_key TEXT NOT NULL,
     workflow TEXT NOT NULL,
@@ -171,6 +176,7 @@ const hostTables: readonly Statement[] = [
 
 export const hostLayoutSteps: readonly LayoutStep[] = [
   { layout: 9, statements: [statement`DROP TABLE IF EXISTS recall_views`] },
+  { layout: 14, statements: [] },
 ];
 
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {

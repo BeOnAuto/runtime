@@ -1,0 +1,17 @@
+{
+  "type": "definition_paused",
+  "data": {
+    "paused_by": {
+      "id": "person:user_2ada",
+      "name": "Ada Lovelace"
+    },
+    "reason": "The books of October are being closed by hand"
+  },
+  "context": {
+    "at": "2026-11-03T08:30:00.000Z",
+    "by": "person:user_2ada",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 2
+  }
+}

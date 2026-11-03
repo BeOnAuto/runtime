@@ -5,7 +5,7 @@ import type { Capability } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
-import type { StoredDefinition } from '../registry/definition.ts';
+import { isRetired, type StoredDefinition } from '../registry/definition.ts';
 import { readDefinition } from './definition-reading.ts';
 import { overOf, runOfThePage, runWithSample, viewsRead } from './page-runs.ts';
 import { triggersSince } from './registry-access.ts';
@@ -53,7 +53,7 @@ const resultOfAPreview = Effect.fnUntraced(function* (
   refusedWithoutAPage: MissingPageRefusal,
 ) {
   const label = definitionResourceLabel(type);
-  if (stored.status === 'retired') {
+  if (isRetired(stored)) {
     return yield* retiredPage(label, stored.name);
   }
   if ((yield* pages.pageOf(type, stored.name)) === undefined) {
@@ -110,7 +110,7 @@ export function definitionRead(
       playbook,
       name,
       version: definition.version,
-      status: definition.status,
+      status: isRetired(definition) ? 'retired' : 'active',
       ...(stored.details === undefined ? {} : { details: stored.details }),
     });
     const page = yield* pageRead(reading, result, run);

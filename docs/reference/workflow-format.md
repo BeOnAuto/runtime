@@ -209,7 +209,7 @@ input:
 A filter matches the playbook's events:
 
 - events published with `publish_event`, and events workflows emit;
-- the playbook's facts about runs, `run_started`, `run_succeeded`, `run_rejected` and `run_failed`, and about definitions, `definition_created`, `definition_updated` and `definition_retired`.
+- the playbook's facts about runs, `run_started`, `run_succeeded`, `run_rejected` and `run_failed`, and about definitions, `definition_created`, `definition_updated`, `definition_retired`, `definition_paused` and `definition_resumed`.
 
 The rest of the playbook's history, such as tool calls, steps, requests and answers, is not among them. A run's fact has:
 

@@ -2,7 +2,7 @@ import { Option, Order, Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
-import type { StoredDefinition } from '../registry/definition.ts';
+import { isRetired, type StoredDefinition } from '../registry/definition.ts';
 import {
   CalledDefinitionSchema,
   type CalledDefinition,
@@ -62,7 +62,7 @@ function userOf(user: NamedDefinition, use: Use): DefinitionUser {
 
 function usersIn(type: string, registry: DefinitionRegistry, used: NamedDefinition): readonly DefinitionUser[] {
   return [...registry.values()]
-    .filter(({ name, status }) => status === 'active' && !isNamed({ type, name }, used))
+    .filter((definition) => !isRetired(definition) && !isNamed({ type, name: definition.name }, used))
     .flatMap(({ name, details }) => usesOf(namingDetailsOf(details), used).map((use) => userOf({ type, name }, use)));
 }
 

@@ -25,6 +25,19 @@ function foldingTests(settingsOf: SettingsOf): void {
     expect(page.view).toEqual(postsOf(2));
   });
 
+  it('go on folding while the page’s subject is paused, as a run it started before goes on', async () => {
+    const views = await viewHarness(await settingsOf());
+    await views.pageSaved(morning, 1, pageDetails(countingPosts));
+    await views.ran(morning, 1);
+    startedOnPages(views);
+    await views.until(morning, foldedAll(1));
+
+    await views.subjectPaused(morning);
+    await views.ran(morning, 2);
+
+    expect((await views.until(morning, foldedAll(2))).view).toEqual(postsOf(2));
+  });
+
   it('are kept for the playbook’s page under the playbook’s name', async () => {
     const views = await viewHarness(await settingsOf());
     await views.playbookPageSaved(pageDetails(countingPosts));

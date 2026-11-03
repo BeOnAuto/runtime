@@ -1,85 +1,17 @@
-import type { Trigger } from '@on.auto/definitions';
 import { statement } from '@on.auto/ledger';
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { definitionRecordsKeepingTheirOwnStops } from '../reaction-testing/own-stops.ts';
+import { rowsOf, type HostDatabase } from '../database/host-database.ts';
+import { applying, first, retired, row, rowsIn, runningSet, saved } from '../reaction-testing/applied-records.ts';
 import { cronTrigger, eventTrigger, everyTrigger } from '../reaction-testing/playbook-writes.ts';
-import { onSQLite, openedOn } from '../testing/host-files.ts';
-import { definitionRecordsIn, type DefinitionRecord } from './definition-records.ts';
-
-const playbookKey = 'playbook/acme/alpha/';
+import { definitionRecordsIn } from './definition-records.ts';
 
 const aMinute = 60_000;
 
-const first = Date.parse('2026-10-01T09:00:00.000Z');
-
 const nineTomorrow = Date.parse('2026-10-02T09:00:00.000Z');
 
-const TriggerRow = Schema.Struct({
-  workflow: Schema.String,
-  reference: Schema.String,
-  version: WholeNumber,
-  kind: Schema.String,
-  activated_by: Schema.String,
-  activated_at: WholeNumber,
-  next_due: Schema.NullOr(WholeNumber),
-  running: Schema.NullOr(Schema.String),
-});
-
 const TypeRow = Schema.Struct({ workflow: Schema.String, type: Schema.String });
-
-interface Saved {
-  readonly id: string;
-  readonly name: string;
-  readonly version: number;
-  readonly triggers: readonly Trigger[];
-  readonly at?: number;
-}
-
-function about(name: string, version: number, at: string) {
-  return { by: 'acme-admin', at, definitionType: 'workflow', definitionName: name, definitionVersion: version };
-}
-
-function saved({ id, name, version, triggers, at = first }: Saved): DefinitionRecord {
-  const content = triggers.length === 0 ? { source: 'do: []' } : { source: 'schedule: {}', triggers };
-  const context = about(name, version, new Date(at).toISOString());
-  return version === 1
-    ? {
-        id,
-        type: 'definition_created',
-        data: { content, created_by: { id: 'acme-admin', name: 'acme-admin' } },
-        context,
-      }
-    : { id, type: 'definition_updated', data: { content }, context };
-}
-
-function retired(id: string, name: string): DefinitionRecord {
-  return { id, type: 'definition_retired', data: {}, context: about(name, 1, '2026-10-02T00:00:00Z') };
-}
-
-async function applying() {
-  const database = await openedOn(await onSQLite());
-  const apply = definitionRecordsKeepingTheirOwnStops(database);
-  return {
-    database,
-    applied: (...records: readonly DefinitionRecord[]) =>
-      Effect.runPromise(Effect.forEach(records, (record) => apply(playbookKey, record))),
-  };
-}
-
-function rowsIn(database: HostDatabase) {
-  return Effect.runPromise(
-    rowsOf(
-      TriggerRow,
-      database.read(
-        statement`SELECT workflow, reference, version, kind, activated_by, activated_at, next_due, running
-          FROM workflow_subscriptions ORDER BY workflow, reference`,
-      ),
-    ),
-  );
-}
 
 function typesIn(database: HostDatabase) {
   return Effect.runPromise(
@@ -87,12 +19,6 @@ function typesIn(database: HostDatabase) {
       TypeRow,
       database.read(statement`SELECT workflow, type FROM workflow_subscription_types ORDER BY workflow, type`),
     ),
-  );
-}
-
-function runningSet(database: HostDatabase, reference: string, running: string) {
-  return Effect.runPromise(
-    database.write(statement`UPDATE workflow_subscriptions SET running = ${running} WHERE reference = ${reference}`),
   );
 }
 
@@ -149,28 +75,6 @@ describe('the triggers of a version', () => {
     ]);
   });
 });
-
-interface Row {
-  readonly reference: string;
-  readonly version: number;
-  readonly kind: string;
-  readonly by: string;
-  readonly at: number;
-  readonly due: number | null;
-}
-
-function row({ reference, version, kind, by, at, due }: Row) {
-  return {
-    workflow: 'close',
-    reference,
-    version,
-    kind,
-    activated_by: by,
-    activated_at: at,
-    next_due: due,
-    running: null,
-  };
-}
 
 describe('a new version of a workflow with triggers', () => {
   it('keeps the row of a trigger it leaves unchanged, with its anchor, its next due time and its running run', async () => {

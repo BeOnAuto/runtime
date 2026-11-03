@@ -39,6 +39,8 @@ const definitionTools = [
   'list_definitions',
   'get_definition',
   'update_definition',
+  'pause_definition',
+  'resume_definition',
   'retire_definition',
   'run_definition',
   'get_run',
@@ -55,7 +57,7 @@ describe('the tools of each endpoint', () => {
     expect(listedTools(listing).map(({ name }) => name)).toEqual(['label_playbook', 'list_labels', guideToolName]);
   });
 
-  it('lists the nine definition operations served as tools on a playbook endpoint and no org operation', async () => {
+  it('lists the eleven definition operations served as tools on a playbook endpoint and no org operation', async () => {
     expect(listedTools(await onAlpha((session) => session.listTools())).map(({ name }) => name)).toEqual([
       ...definitionTools,
       guideToolName,
@@ -147,6 +149,8 @@ describe('the annotations of a tool', () => {
       create_definition: { readOnlyHint: false, idempotentHint: false, destructiveHint: true, openWorldHint: false },
       list_definitions: { readOnlyHint: true, idempotentHint: true, destructiveHint: false, openWorldHint: false },
       update_definition: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },
+      pause_definition: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },
+      resume_definition: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },
       retire_definition: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },
       run_definition: { readOnlyHint: false, idempotentHint: false, destructiveHint: true, openWorldHint: false },
       cancel_run: { readOnlyHint: false, idempotentHint: true, destructiveHint: true, openWorldHint: false },

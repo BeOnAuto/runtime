@@ -140,14 +140,16 @@ function startedEvent({ input, started_by, calls_tools, finishes_later, resumes,
   };
 }
 
-function startsAgain(start: RunStart, state: RecordedRunState): boolean {
-  return !isRunning(state) && !needsNoRun(state) && !mayHaveChangedSomething(state) && isSameRequest(state, start);
+function startsAgain(request: RunRequest, state: RecordedRunState): boolean {
+  return !isRunning(state) && !needsNoRun(state) && !mayHaveChangedSomething(state) && isSameRequest(state, request);
+}
+
+export function takesAStartOnce(state: RunState, request: RunRequest): boolean {
+  return state !== undefined && !startsAgain(request, state);
 }
 
 function decideCreateOnly(start: RunStart, state: RunState): Decision {
-  return state === undefined || startsAgain(start, state)
-    ? Result.succeed([startedEvent(start)])
-    : Result.fail(runTaken);
+  return takesAStartOnce(state, start) ? Result.fail(runTaken) : Result.succeed([startedEvent(start)]);
 }
 
 function decideStart(start: RunStart, state: RunStreamState): Decision {

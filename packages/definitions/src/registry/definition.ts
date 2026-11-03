@@ -18,7 +18,9 @@ const listedDefinitionFields = {
     description:
       'The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram',
   }),
-  status: Schema.Literals(['active', 'retired']).annotate({ description: 'active, or retired for good' }),
+  status: Schema.Literals(['active', 'paused', 'retired']).annotate({
+    description: 'active; paused, when it starts no runs until it is resumed; or retired for good',
+  }),
   media_type: Schema.String.annotate({
     description: 'The media type of the definition document, set by its runtime adapter',
   }),
@@ -55,7 +57,22 @@ const listedDefinitionFields = {
   ),
   created_at: Schema.String.annotate({ description: 'When the definition was created, in ISO 8601 UTC' }),
   created_by: RecordedCallerSchema.annotate({ description: 'The caller who created the definition, by id and name' }),
-  updated_at: Schema.String.annotate({ description: 'When the definition last changed, in ISO 8601 UTC' }),
+  updated_at: Schema.String.annotate({
+    description: 'When the definition was last saved or retired, in ISO 8601 UTC; a pause and a resumption leave it',
+  }),
+  paused_at: Schema.optionalKey(
+    Schema.String.annotate({ description: 'When the definition was paused, in ISO 8601 UTC; only while it is paused' }),
+  ),
+  paused_by: Schema.optionalKey(
+    RecordedCallerSchema.annotate({
+      description: 'The caller who paused the definition, by id and name; only while it is paused',
+    }),
+  ),
+  reason: Schema.optionalKey(
+    Schema.String.annotate({
+      description: 'Why the definition was paused, in the words of whoever paused it; only while it is paused',
+    }),
+  ),
   retired_at: Schema.optionalKey(
     Schema.String.annotate({ description: 'When the definition was retired, in ISO 8601 UTC' }),
   ),
@@ -116,7 +133,7 @@ export const DefinitionSchema = Schema.Struct({
   used_by: Schema.optionalKey(
     Schema.Array(DefinitionUserSchema).annotate({
       description:
-        'The active definitions of the playbook that use this one, read from the playbook when the definition is read: a workflow with the steps that call it',
+        'The definitions of the playbook, active or paused, that use this one, read from the playbook when the definition is read: a workflow with the steps that call it',
     }),
   ),
 }).annotate({ identifier: 'Definition', description: 'A saved definition, with its document' });
@@ -160,6 +177,10 @@ export function isWorkflowDefinition(definition: Definition): definition is Work
 }
 
 export type ListedDefinition = typeof ListedDefinitionSchema.Type;
+
+export function isRetired({ status }: Pick<ListedDefinition, 'status'>): boolean {
+  return status === 'retired';
+}
 
 export type StoredDefinition = Omit<
   Definition,

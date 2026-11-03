@@ -16,7 +16,7 @@ import { DefinitionNameField, RenderField, SampleOutputField } from './definitio
 import { definitionRead, type PageMissing } from './definition-read.ts';
 
 const description = [
-  'Reads one definition with its document, active or retired, with its version and the input and output its document declares.',
+  'Reads one definition with its document, active, paused or retired, with its version and the input and output its document declares.',
   'For a workflow it also returns its triggers, the event trigger and the schedules that start it on its own.',
   'A definition whose document has a page answers page.runs and how its views stand; `render: true` previews the page.',
   'Use it to show the person a definition or to learn the input a run takes; list_definitions lists the definitions of a type.',
