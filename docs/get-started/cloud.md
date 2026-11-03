@@ -20,7 +20,7 @@ Choose Streamable HTTP if your agent asks for a transport, and OAuth if it asks 
 
 Your agent opens Auto in your browser. Sign in or create an account, choose the organization your agent will work in, and allow the connection. You can create an organization during this step.
 
-Return to your agent when sign-in finishes. Auto supplies the models for hosted runs; you do not need to install a runtime or supply a model API key.
+Return to your agent when sign-in finishes. Auto supplies the models for hosted runs; you do not need to install a runtime or supply a model API key. Runs use your organization's credits, and [Pricing](https://on.auto/pricing) explains what they cover.
 
 ## 3. Tell your agent what to do
 

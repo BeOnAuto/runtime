@@ -88,12 +88,12 @@ Open `http://localhost:5555/studio/` to see and manage your playbooks in Studio.
 
 Open `http://localhost:5555` to see which release of Auto runs, since when and from which folder, with buttons that restart and stop it. From a terminal, `npx @on.auto/runtime status`, `restart` and `stop` do the same. Both control Auto only in local mode, which is how your agent starts it. Your work is saved in `~/.auto-runtime/ledger.db`, and Auto writes its log to `~/.auto-runtime/runtime.log`.
 
-Each time it starts, Auto sends one anonymous usage ping to the people who make it: its version, your operating system, how you installed it and a random id for this copy, never your work, your prompts or your keys. To turn it off, put `DO_NOT_TRACK=1` in `~/.auto-runtime/.env` and restart Auto. [Usage ping](../self-host/configuration.md#usage-ping) lists exactly what it sends.
+Each time it starts, Auto sends one anonymous usage ping to the people who make it. The ping holds its version, your operating system and processor, your version of Node.js, how you installed it and a random id for this copy, and never your work, your prompts or your keys. To turn it off, put `DO_NOT_TRACK=1` in `~/.auto-runtime/.env` and restart Auto. [Usage ping](../self-host/configuration.md#usage-ping) lists exactly what it sends.
 
 ## Other ways to run Auto
 
 - **In a terminal.** `npx @on.auto/runtime` starts Auto in the window you run it in, reading its settings from a `.env` in that folder, and shows how to connect your agent. An agent with the entry above uses it while it runs.
-- **Signed in with your Auto account.** Auto on your computer runs in [local mode](../self-host/security.md#local-mode): nobody signs in, and what you make belongs to an organization called `local`. To sign in instead, start Auto in a terminal with `PUBLIC_URL=http://localhost:5555` in that folder's `.env`, and connect your agent over HTTP, such as `claude mcp add --transport http auto-runtime http://localhost:5555/mcp`. Auto then offers no restart or stop: press Ctrl+C in its terminal to stop it.
+- **Signed in with your Auto account.** Start Auto in a terminal with `PUBLIC_URL=http://localhost:5555` in that folder's `.env`, and connect your agent over HTTP, such as `claude mcp add --transport http auto-runtime http://localhost:5555/mcp`. Auto then offers no restart or stop: press Ctrl+C in its terminal to stop it. Without that setting, Auto on your computer runs in [local mode](../self-host/security.md#local-mode): nobody signs in, and what you make belongs to an organization called `local`.
 - **Your team's Auto.** Connect your agent to its address, such as `claude mcp add --transport http auto-runtime https://auto.example.com/mcp`.
 - **On a server for your team.** See [Self-hosting](../self-host.md). Do not expose Auto on your computer through a tunnel or public proxy.
 
