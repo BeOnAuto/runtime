@@ -82,26 +82,30 @@ jobs:
             services: true
           - packages:
               - activity
+              - coordination
+              - definitions
+              - memory
+              - operations
+            services: false
+          - packages:
               - api
+              - identity
+              - interaction
+              - providers
+              - reasoning
+              - secrets
+            services: false
+          - packages:
               - computation
               - config
               - connections
               - content
-              - coordination
-              - definitions
               - documents
-              - identity
-              - interaction
               - json-schema
               - lookup
-              - memory
-              - operations
               - outbound
               - phrasing
               - playbooks
-              - providers
-              - reasoning
-              - secrets
               - shipped-files
               - tool-servers
             services: false
