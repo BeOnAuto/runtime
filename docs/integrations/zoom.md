@@ -146,15 +146,15 @@ Auto then asks Zoom to revoke the connection's tokens and deletes them, and no p
 
 Sign in to the [Zoom App Marketplace](https://marketplace.zoom.us), open Manage, then Added Apps, and remove Auto, or the app you allowed. Zoom then refuses the connection's tokens.
 
-The connection stays in Auto. The next time a function uses it, the connection breaks, and Studio shows it as Broken, with why. Remove it in Auto too, as above, so that Auto deletes its tokens. To use Zoom again, open the row and press Sign in again, or ask your agent to reconnect it, and allow access again.
+Where you allowed Auto's own app on Auto Cloud, Zoom also tells Auto that you removed it, and the connection disappears from Auto: Auto removes it as Remove does in Auto, deletes its tokens, and no playbook may use it any more. If Auto cannot act on Zoom's notice at once, Zoom sends it again, three times over the next hour and a half; a connection Auto could not remove by then stays, and breaks the next time a function uses it, as below.
 
-Where you allowed Auto's own app, Zoom also tells Auto that you removed it. Auto records the notice, with the time Zoom gives and your Zoom user and account, and changes nothing else.
+On a runtime you run yourself, the connection stays, and the next time a function uses it, it breaks, and Studio shows it as Broken, with why. Remove it in Auto too, as above, so that Auto deletes its tokens. To use Zoom again, open the row and press Sign in again, or ask your agent to reconnect it, and allow access again.
 
 ### What remains
 
 Removing Zoom does not remove what Zoom answered before. The playbook's history keeps what earlier calls answered, for anyone who may read the playbook, for as long as whoever runs your Auto keeps it. On Auto Cloud, Auto's [privacy policy](https://on.auto/privacy) says how long that is.
 
-Where you allowed Auto's own app, Auto also keeps a line for each time you allowed access, each renewal and each revocation, naming you, Zoom and the Studio you went back to, and no token. It keeps a line for each notice Zoom sends that you removed the app, naming your Zoom user and account, the app and the time Zoom gives.
+Where you allowed Auto's own app, Auto also keeps a line for each time you allowed access, each renewal and each revocation, naming you, Zoom and the Studio you went back to, and no token. It keeps a line for each notice Zoom sends that you removed the app, naming your Zoom user and account, the app and the time Zoom gives. So that the notice finds your connection, Auto Cloud keeps, for each connection to Zoom made with Auto's own app, a keyed hash of your Zoom user and account, never the identifiers themselves, and deletes it when the connection is removed in Auto, when Zoom tells Auto that you removed the app, or when your organization is deleted.
 
 ## Get help
 
