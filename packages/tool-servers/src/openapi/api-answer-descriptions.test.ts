@@ -115,7 +115,7 @@ function answersDescribing(responses: Schema.JsonObject) {
   return operation?.answers;
 }
 
-const answering = { requestIdHeader: 'x-request-id', now: () => 0 };
+const answering = { requestIdHeader: 'x-request-id', failureCodes: null, now: () => 0 };
 
 async function answeredWith(response: Readonly<Response>, responses: Schema.JsonObject) {
   const settled = await settledOf(response, answering, answersDescribing(responses));

@@ -30,6 +30,7 @@ interface ServiceRefreshAsked {
   readonly refreshToken: string;
   readonly connectionKey: string;
   readonly resource: string | undefined;
+  readonly endingCodes?: readonly string[] | undefined;
 }
 
 interface ServiceRevokeAsked {
@@ -260,8 +261,8 @@ function revokeBodyOf({ issuer, tokens, connectionKey }: ServiceRevokeAsked) {
   return { issuer, access_token: accessToken, refresh_token: refreshToken, connection_key: connectionKey };
 }
 
-function refreshBodyOf({ issuer, refreshToken, connectionKey, resource }: ServiceRefreshAsked) {
-  return { issuer, refresh_token: refreshToken, connection_key: connectionKey, resource };
+function refreshBodyOf({ issuer, refreshToken, connectionKey, resource, endingCodes }: ServiceRefreshAsked) {
+  return { issuer, refresh_token: refreshToken, connection_key: connectionKey, resource, ending_codes: endingCodes };
 }
 
 export function consentServiceOf(requesting: ServiceRequesting): ConsentServiceCalls {

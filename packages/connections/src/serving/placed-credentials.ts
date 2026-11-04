@@ -1,5 +1,6 @@
 import { clientIdPlaceholder } from '@on.auto/providers';
 import {
+  failureCodesOf,
   marksOf,
   readEntry,
   type Environment,
@@ -188,7 +189,10 @@ export interface Providing {
   readonly documents: ReadonlyMap<string, ShippedDocument>;
   readonly values: ReadonlyMap<string, Redacted.Redacted>;
   readonly documentServer: string | undefined;
+  readonly type?: ConnectionType;
   readonly marks?: ServerEntryFields['marks'];
+  readonly failure_codes?: ServerEntryFields['failure_codes'];
+  readonly ending_codes?: readonly string[] | undefined;
   readonly handles_money?: true;
 }
 
@@ -219,7 +223,14 @@ export function readPlaced(
   const { org, modelProviders, providing } = reading;
   const read = readEntry(
     name,
-    { ...written, ...marksOf(providing?.marks), ...moneyOf(providing), type, org },
+    {
+      ...written,
+      ...marksOf(providing?.marks),
+      ...failureCodesOf(providing?.failure_codes),
+      ...moneyOf(providing),
+      type,
+      org,
+    },
     { ...operatorEnvironmentOf(providing), ...environment },
     { modelProviders, documents: documentsOf(providing), placedValues },
   );

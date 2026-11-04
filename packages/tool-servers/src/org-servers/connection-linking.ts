@@ -69,7 +69,7 @@ export async function connectionLinkOf(
   const fetch = fetchWithin(linking.options.fetch, server.reaches);
   const settings: ConnectionServerSettings = { ...server.settings, connection: id };
   const described = await describedConnection(settings, { server, fetch, linking });
-  const refused = () => Effect.runPromise(server.refused);
+  const refused = (answered: string) => Effect.runPromise(server.refused(answered));
   return 'settings' in described
     ? { link: serverLink(described.settings, { ...linking.options, fetch }, refused) }
     : described;

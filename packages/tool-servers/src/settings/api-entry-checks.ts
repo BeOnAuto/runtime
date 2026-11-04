@@ -2,6 +2,7 @@ import { isAbsolute, normalize, resolve, sep } from 'node:path';
 
 import { withoutTrailingSlashes } from '@on.auto/config';
 
+import { failureCodeIssuesOf, type FailureCodes } from '../openapi/failure-codes.ts';
 import {
   accepted,
   isPinnableUrl,
@@ -18,7 +19,7 @@ import type { ApiDocumentSource, DocumentsPlace, OpenApiServerSettings, ShippedD
 
 export type ApiTransport = Pick<
   OpenApiServerSettings,
-  'type' | 'document' | 'base_url' | 'headers' | 'query_params' | 'security' | 'auth'
+  'type' | 'document' | 'base_url' | 'headers' | 'query_params' | 'security' | 'auth' | 'failure_codes'
 >;
 
 const documentShape = `${pinnedUrlShape}, or a path relative to the directory of the configuration file that stays inside it`;
@@ -96,6 +97,26 @@ function checkedSecurity(
   return problems.length === 0 ? accepted(redactedValuesOf(security)) : rejected(problems);
 }
 
+function checkedFailureCodes(name: string, failureCodes: FailureCodes | undefined): Checked<FailureCodes | null> {
+  const problems = problemsOf(
+    ...failureCodeIssuesOf(failureCodes).map(({ path, detail }) =>
+      refused(name, ['failure_codes', ...path.map(String)], detail),
+    ),
+  );
+  return problems.length === 0 ? accepted(failureCodes ?? null) : rejected(problems);
+}
+
+type Sent = Pick<OpenApiServerSettings, 'headers' | 'query_params' | 'security'>;
+
+function checkedSent(name: string, fields: ServerEntryFields): Checked<Sent> {
+  const headers = checkedHeaders(name, fields.headers ?? {}, 'openapi');
+  const query = checkedQuery(name, fields.query_params ?? {});
+  const security = checkedSecurity(name, fields.security ?? {});
+  return headers.ok && query.ok && security.ok
+    ? accepted({ headers: headers.value, query_params: query.value, security: security.value })
+    : rejected(problemsOf(headers, query, security));
+}
+
 export function apiTransport(
   name: string,
   fields: ServerEntryFields,
@@ -104,19 +125,17 @@ export function apiTransport(
 ): Checked<ApiTransport> {
   const source = checkedDocument(name, document, documents);
   const baseUrl = checkedBaseUrl(name, fields.base_url);
-  const headers = checkedHeaders(name, fields.headers ?? {}, 'openapi');
-  const query = checkedQuery(name, fields.query_params ?? {});
-  const security = checkedSecurity(name, fields.security ?? {});
+  const sent = checkedSent(name, fields);
   const auth = checkedAuth(name, fields);
-  return source.ok && baseUrl.ok && headers.ok && query.ok && security.ok && auth.ok
+  const failureCodes = checkedFailureCodes(name, fields.failure_codes);
+  return source.ok && baseUrl.ok && sent.ok && auth.ok && failureCodes.ok
     ? accepted({
         type: 'openapi',
         document: source.value,
         base_url: baseUrl.value,
-        headers: headers.value,
-        query_params: query.value,
-        security: security.value,
+        ...sent.value,
         auth: auth.value,
+        failure_codes: failureCodes.value,
       })
-    : rejected(problemsOf(source, baseUrl, headers, query, security, auth));
+    : rejected(problemsOf(source, baseUrl, sent, auth, failureCodes));
 }

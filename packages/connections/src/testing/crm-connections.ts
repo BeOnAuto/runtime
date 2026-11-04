@@ -17,6 +17,6 @@ export async function connectedCrm(h: Harness): Promise<string> {
 
 export async function brokenCrm(h: Harness): Promise<string> {
   const id = await connectedCrm(h);
-  await Effect.runPromise((await preparedOf(sourceOver(h), id)).refused);
+  await Effect.runPromise((await preparedOf(sourceOver(h), id)).refused('The tool server answered HTTP 401'));
   return id;
 }

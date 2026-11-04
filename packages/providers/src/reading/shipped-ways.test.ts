@@ -63,7 +63,7 @@ const hostsOfTheWays = [
   [[['mcp.posthog.com', 'oauth.posthog.com']]],
   [[['mcp.tryprofound.com', 'auth.tryprofound.com']], [['mcp.tryprofound.com']]],
   [[['searchads360.googleapis.com', google]]],
-  [[['mcp.slack.com', 'mcp.slack.com']]],
+  [[['slack.com', 'mcp.slack.com']]],
   [[['slack.com']]],
   [[['mcp.stripe.com', 'access.stripe.com']]],
   [[['workiq.svc.cloud.microsoft', microsoft, microsoft, microsoft]]],

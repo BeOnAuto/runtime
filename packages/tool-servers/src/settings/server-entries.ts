@@ -1,5 +1,7 @@
 import { Schema } from 'effect';
 
+import { FailureCodesSchema } from '../openapi/failure-codes.ts';
+
 export const toolServersSetting = 'TOOL_SERVERS';
 
 const referencedValues =
@@ -85,6 +87,7 @@ const openApiFields = {
       description: `The credential of each security scheme of an HTTP API's document the entry gives, by the scheme's name, placed as the scheme says: an apiKey in its header or query parameter, a bearer as Authorization: Bearer, a basic as user:password; an oauth2 or openIdConnect scheme takes the auth block instead; each value is a reference such as \${BILLING_API_KEY} or ada:\${BILLING_PASSWORD}, a secret, and one written out is refused`,
     }),
   ),
+  failure_codes: Schema.optionalKey(FailureCodesSchema),
 };
 
 const servedFields = {

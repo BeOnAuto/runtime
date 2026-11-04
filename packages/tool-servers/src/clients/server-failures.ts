@@ -10,6 +10,7 @@ import { causesOf, codesOf, HostRefused, HostUnresolved, isUntrustedCertificate 
 
 import { AnsweredStatus } from '../openapi/answered-status.ts';
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
+import { AnsweredCode } from '../openapi/failure-codes.ts';
 import { ScopeLacking, scopeLackingIn, scopeLackingWords } from '../openapi/scope-lacking.ts';
 
 export type FailureKind =
@@ -111,6 +112,9 @@ function sdkHttpFailure(status: number, body: unknown): ServerFailure {
 function answeredFailureOf(error: unknown): ServerFailure | undefined {
   if (error instanceof AnsweredStatus) {
     return httpFailure(error.status);
+  }
+  if (error instanceof AnsweredCode) {
+    return { kind: error.kind, message: error.message };
   }
   if (error instanceof SdkHttpError) {
     return sdkHttpFailure(error.status, error.data['text']);

@@ -70,27 +70,16 @@ describe('an address written with placeholders and nothing to place in them', ()
 });
 
 describe('the document of an entry', () => {
-  it('is an address, or the document beside the entries named for the provider, and no other path', () => {
+  it('is an address, or a document beside the entries named as a provider is, which the entries of one HTTP API share, and no other path', () => {
     const beside = { ...ledgers, document: 'documents/ledgers.openapi.json' };
+    const besideWords = `${unpinned}, or documents/<name>.openapi.json, a document beside the entries named as a provider is`;
 
     expect([
       problemsOf(beside),
-      problemsOf({ ...beside, document: 'documents/other.openapi.json' }),
+      problemsOf({ ...beside, document: 'documents/books-api.openapi.json' }),
+      problemsOf({ ...beside, document: 'documents/../ledgers.openapi.json' }),
+      problemsOf({ ...beside, document: 'documents/Ledgers.openapi.json' }),
       problemsOf({ ...beside, document: '{tenant}' }),
-    ]).toEqual([
-      [],
-      [
-        [
-          '/document',
-          `${unpinned}, or documents/ledgers.openapi.json, the document beside the entries named for the provider`,
-        ],
-      ],
-      [
-        [
-          '/document',
-          `${unpinned}, or documents/ledgers.openapi.json, the document beside the entries named for the provider`,
-        ],
-      ],
-    ]);
+    ]).toEqual([[], [], [['/document', besideWords]], [['/document', besideWords]], [['/document', besideWords]]]);
   });
 });

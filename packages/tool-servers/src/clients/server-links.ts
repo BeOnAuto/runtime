@@ -3,9 +3,9 @@ import type { LinkedServerSettings } from '../openapi/described-api.ts';
 import { ignored } from './ignored.ts';
 import { openerOf, type LinkOptions } from './link-openers.ts';
 import type { ServedClient, ServerClient } from './server-client.ts';
-import { ConnectionBroken, isCredentialRefused } from './server-failures.ts';
+import { ConnectionBroken, failureOf } from './server-failures.ts';
 
-export type CredentialRefused = () => Promise<string>;
+export type CredentialRefused = (answered: string) => Promise<string>;
 
 export interface ServerLink {
   readonly settings: LinkedServerSettings;
@@ -56,7 +56,8 @@ async function usedOrForgotten(held: HeldClient): Promise<ServerClient> {
 }
 
 async function brokenOrAsIs(refused: CredentialRefused, error: unknown): Promise<unknown> {
-  return isCredentialRefused(error) ? new ConnectionBroken(await refused()) : error;
+  const { kind, message } = failureOf(error);
+  return kind === 'key_refused' ? new ConnectionBroken(await refused(message)) : error;
 }
 
 async function failedOnceTold(refused: CredentialRefused, error: unknown): Promise<never> {

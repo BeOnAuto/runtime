@@ -8,6 +8,7 @@ import {
   type ProviderList,
 } from '@on.auto/providers';
 import {
+  failureCodesOf,
   marksOf,
   type CredentialGiven,
   type ProviderNamed,
@@ -105,6 +106,7 @@ function resolvedOf(
     written: {
       ...placing.written,
       ...marksOf(entry.marks),
+      ...failureCodesOf(entry.failure_codes),
       ...(entry.handles_money === true ? { handles_money: true } : {}),
       type: addition.type,
     },

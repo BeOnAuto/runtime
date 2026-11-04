@@ -105,6 +105,20 @@ function addressIssues({ type, entry }: AdditionInput, { providing }: EntryCheck
     : [];
 }
 
+const servedAs: Readonly<Record<ConnectionType, string>> = { mcp: 'an MCP server', openapi: 'an HTTP API' };
+
+function providerTypeIssues({ type }: AdditionInput, { providing }: EntryChecking): readonly Issue[] {
+  const now = providing?.type;
+  return now === undefined || now === type
+    ? []
+    : [
+        {
+          pointer: '/type',
+          detail: `Its provider reaches ${servedAs[now]} now, where the connection was made for ${servedAs[type]}, so the person who added it removes it and adds it again`,
+        },
+      ];
+}
+
 export function entryIssuesOf(input: AdditionInput, checking: EntryChecking): readonly Issue[] {
   const named = issuesOf(
     serverNameProblems(input.name, checking.modelProviders),
@@ -113,6 +127,7 @@ export function entryIssuesOf(input: AdditionInput, checking: EntryChecking): re
   );
   return [
     ...named,
+    ...providerTypeIssues(input, checking),
     ...addressIssues(input, checking),
     ...writtenIssues(input.name, input.entry, checking.providing),
     ...credentialIssuesOf(input.credential, input.type, input.entry),

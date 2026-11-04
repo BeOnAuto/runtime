@@ -160,6 +160,7 @@ export {
 } from './settings/server-entries.ts';
 export { servedFieldsOf, serverNameProblems } from './settings/entry-checks.ts';
 export { markIssuesOf, marksOf } from './settings/tool-lists.ts';
+export { failureCodeIssuesOf, failureCodesOf } from './openapi/failure-codes.ts';
 export { headerNamePattern, isPinnableUrl, pinnedUrlShape, redactedValuesOf } from './settings/checked.ts';
 export { takenByTheConfiguration } from './org-servers/org-servers.ts';
 export { headersTheRuntimeSets } from './settings/reserved-headers.ts';

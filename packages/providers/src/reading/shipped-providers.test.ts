@@ -117,7 +117,7 @@ const addressesOfTheShipped = [
   ['posthog', 'https://mcp.posthog.com/mcp?mode=tools'],
   ['profound', 'https://mcp.tryprofound.com/mcp'],
   ['search-ads-360', 'https://searchads360.googleapis.com'],
-  ['slack', 'https://mcp.slack.com/mcp'],
+  ['slack', 'https://slack.com/api'],
   ['slack-bot', 'https://slack.com/api'],
   ['stripe', 'https://mcp.stripe.com'],
   ['work-iq', 'https://workiq.svc.cloud.microsoft/mcp'],
@@ -220,7 +220,7 @@ describe('the servers of the shipped providers', () => {
       }),
     );
 
-    expect([...shipped.documents.keys()].toSorted()).toEqual(documentsBesideTheEntries);
+    expect([...shipped.documents.keys()].toSorted()).toEqual([...new Set(documentsBesideTheEntries)]);
     expect(documentsBesideTheEntries.map((written) => shipped.documents.get(written))).toEqual(onDisk);
     expect(documentsBesideTheEntries.length).toBeGreaterThan(0);
   });

@@ -23,6 +23,7 @@ export interface ConsentWay extends WayOfClients {
   readonly authorization_endpoint?: string | undefined;
   readonly token_endpoint?: string | undefined;
   readonly revocation_endpoint?: string | undefined;
+  readonly ending_codes?: readonly string[] | undefined;
 }
 
 export type ConsentServer =

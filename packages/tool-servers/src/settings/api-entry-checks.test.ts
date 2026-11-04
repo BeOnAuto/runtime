@@ -73,6 +73,18 @@ describe('reading an openapi server', () => {
     expect(server?.secrets.map((secret) => Redacted.value(secret))).toEqual([apiKey]);
   });
 
+  it('reads the failure codes it names, and none where it names none', () => {
+    const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['invalid_auth'] };
+
+    expect([
+      ...serversOf({ billing: { ...billing, failure_codes: failureCodes } }),
+      ...serversOf({ billing }),
+    ]).toMatchObject([{ failure_codes: failureCodes }, { failure_codes: null }]);
+    expect(
+      problemsOf({ billing: { url: 'https://billing.example.com/mcp', org: 'acme', failure_codes: failureCodes } }),
+    ).toEqual(['/billing/failure_codes: Not a field of an mcp server']);
+  });
+
   it('reads an auth block whose issuer is pinned, as an mcp server does', () => {
     const auth = { issuer: 'https://auth.example.com', client_id: 'playbook', client_secret: '${BILLING_API_KEY}' };
 
@@ -153,6 +165,15 @@ describe('an openapi server refused for what it sends', () => {
       '/billing/query_params/: Expected a parameter name',
       '/billing/security/: Expected the name of a security scheme',
       '/billing/auth: Set an Authorization header or an auth block, not both',
+    ]);
+  });
+
+  it('for failure codes whose pointer is none or whose code is named twice, at their place', () => {
+    const failureCodes = { succeeded: 'ok', code: '/error', key_refused: ['revoked'], rate_limited: ['revoked'] };
+
+    expect(problemsOf({ billing: { ...billing, failure_codes: failureCodes } })).toEqual([
+      '/billing/failure_codes/succeeded: Expected a JSON pointer into the answer, such as /ok',
+      '/billing/failure_codes/rate_limited/0: revoked is named twice, and a code means one failure',
     ]);
   });
 

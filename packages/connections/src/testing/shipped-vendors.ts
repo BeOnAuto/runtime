@@ -213,15 +213,9 @@ export const vendorsOfTheShippedWays: Readonly<Record<string, VendorOfTheWay>> =
   },
   'search-ads-360': googleApi,
   slack: {
-    metadata: {
-      issuer: 'https://mcp.slack.com',
-      authorizationServers: ['https://mcp.slack.com'],
-      protectedResource: 'https://mcp.slack.com',
-      takesBasicSecrets: false,
-    },
-    protectedResourceAt: 'https://mcp.slack.com/.well-known/oauth-protected-resource',
+    metadata: { issuer: 'https://mcp.slack.com', takesBasicSecrets: false },
     authorizationServerAt: 'https://mcp.slack.com/.well-known/oauth-authorization-server',
-    resource: 'https://mcp.slack.com',
+    resource: null,
   },
   stripe: {
     metadata: {

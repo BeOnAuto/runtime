@@ -64,8 +64,8 @@ const firstConnecting = Date.parse('2026-10-15T14:00:00.000Z');
 
 const oneSecond = 1000;
 
-export function refusedWords(name: string): string {
-  return `The server of the connection ${name} refused its credential`;
+export function refusedWords(name: string, answered = 'The tool server answered HTTP 401'): string {
+  return `${answered}, so the server of the connection ${name} refused its credential`;
 }
 
 export function pendingWords(name: string): string {
@@ -124,15 +124,15 @@ function preparedOf(held: Held, { connection, settings }: Kept): Effect.Effect<C
       ? Effect.succeed({
           settings,
           reaches: connection.reaches ?? everyAddress,
-          refused: brokenByItsServer(held, connection),
+          refused: (answered) => brokenByItsServer(held, connection, answered),
         })
       : Effect.fail(refusal);
   });
 }
 
-function brokenByItsServer(held: Held, { id, name }: FakeConnection): Effect.Effect<string> {
+function brokenByItsServer(held: Held, { id, name }: FakeConnection, answered: string): Effect.Effect<string> {
   return Effect.sync(() => {
-    const reason = refusedWords(name);
+    const reason = refusedWords(name, answered);
     held.refusalTold(id);
     held.standings.set(id, { status: 'broken', reason });
     return reason;

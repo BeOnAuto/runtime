@@ -11,11 +11,11 @@ import {
 } from '@on.auto/tool-servers';
 import { DateTime, Effect, Option, type Context } from 'effect';
 
-import { consentAskedUnderItsClient, type OwnClientUnheld } from '../page/consent-asking.ts';
+import { consentAskedUnderItsClient, type ConsentAsked, type OwnClientUnheld } from '../page/consent-asking.ts';
 import { placesNoValue, type Credential } from '../registry/credential.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
 import type { KeptConnection } from '../registry/registry.ts';
-import type { GivenValue } from './placed-credentials.ts';
+import type { GivenValue, Providing } from './placed-credentials.ts';
 import type { LoggedCauses, Serving } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
@@ -63,20 +63,22 @@ function brokenWith(serving: Serving, kind: BrokenKind, reason: string): Effect.
   return Effect.andThen(recordedBreak(serving, kind, reason), Effect.fail(unready));
 }
 
-function refusedWordsOf({ kind, variable }: Credential): string {
+function refusedWordsOf({ kind, variable }: Credential, answered: string): string {
   if (kind === 'none') {
-    return servingWords.noneRefused;
+    return servingWords.noneRefused(answered);
   }
   return kind === 'reference'
-    ? servingWords.referenceRefused(Option.getOrThrow(Option.fromNullishOr(variable)))
-    : servingWords.keyRefused;
+    ? servingWords.referenceRefused(answered, Option.getOrThrow(Option.fromNullishOr(variable)))
+    : servingWords.keyRefused(answered);
 }
 
 export function credentialRefusedOf(serving: Serving, context: Context.Context<never>): ConnectionServer['refused'] {
   const { credential } = serving.kept.connection;
-  const reason = refusedWordsOf(credential);
   const kind = credential.kind === 'none' ? 'credential_wanted' : 'credential_refused';
-  return Effect.provideContext(Effect.as(recordedBreak(serving, kind, reason), reason), context);
+  return (answered) => {
+    const reason = refusedWordsOf(credential, answered);
+    return Effect.provideContext(Effect.as(recordedBreak(serving, kind, reason), reason), context);
+  };
 }
 
 export function loggedCauses(): LoggedCauses {
@@ -175,7 +177,14 @@ function tokensOfTheRow(serving: Serving, context: Context.Context<never>): Conn
   };
 }
 
-export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | undefined, ConnectionUnready> {
+function wayWithItsEndings(way: ConsentAsked['way'], providing: Providing | undefined): ConsentAsked['way'] {
+  return providing?.ending_codes === undefined ? way : { ...way, ending_codes: providing.ending_codes };
+}
+
+export function consentAuthOf(
+  serving: Serving,
+  providing: Providing | undefined,
+): Effect.Effect<ConsentAuth | undefined, ConnectionUnready> {
   const { connection } = serving.kept;
   const { credential } = connection;
   if (credential.kind !== 'authorization') {
@@ -191,11 +200,12 @@ export function consentAuthOf(serving: Serving): Effect.Effect<ConsentAuth | und
       client_id: Option.getOrThrow(Option.fromNullishOr(credential.client_id)),
       client_source: Option.getOrThrow(Option.fromNullishOr(credential.client_source)),
     };
+    const way = wayWithItsEndings(asked.way, providing);
     return {
-      issuer: asked.way.issuer,
+      issuer: way.issuer,
       client_id: client.client_id,
       scope: connection.granted_scope,
-      credential: { kind: 'consent', ...asked, client, held, tokens: tokensOfTheRow(serving, context) },
+      credential: { kind: 'consent', ...asked, way, client, held, tokens: tokensOfTheRow(serving, context) },
     };
   });
 }

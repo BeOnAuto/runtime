@@ -22,7 +22,7 @@ export type BrokenKind = typeof BrokenKindSchema.Type;
 const BrokenSchema = Schema.Struct({
   kind: BrokenKindSchema.annotate({
     description:
-      "Why, as a kind a client words for a person: credential_refused when its server answered 401 to the credential it holds, credential_wanted when its server answered 401 to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key",
+      "Why, as a kind a client words for a person: credential_refused when its server refused the credential it holds, answering 401 or a code its provider names for a refused credential, credential_wanted when its server answered so to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key",
   }),
   detail: Schema.String.annotate({ description: "Why, in the runtime's words, which say what mends it" }),
   at: Schema.String.annotate({ description: 'When it broke, in ISO 8601 UTC' }),

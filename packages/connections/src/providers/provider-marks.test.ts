@@ -1,5 +1,13 @@
-import type { ProviderList } from '@on.auto/providers';
-import { fixtureProviders, ledgers, metrics, providersOf, regions, tracker } from '@on.auto/providers/testing';
+import type { Provider, ProviderList } from '@on.auto/providers';
+import {
+  fixtureProviders,
+  ledgers,
+  metrics,
+  providerListOf,
+  providersOf,
+  regions,
+  tracker,
+} from '@on.auto/providers/testing';
 import { readToolServerSettings, type ConnectionServerSettings, type ConnectionUnready } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -54,6 +62,67 @@ describe('the marks of a provider, named in the settings', () => {
       [{ reads: ['search_issues'], acts: [] }],
       [{ reads: [], acts: [] }],
     ]);
+  });
+});
+
+const failureCodes = { succeeded: '/ok', code: '/error', key_refused: ['invalid_auth'] };
+
+const coding = providersOf(ledgers, metrics, { ...regions, failure_codes: failureCodes }, tracker);
+
+const regionsAdded = { provider: 'regions', placeholders: { region: 'eu', account: 'acme1' } };
+
+describe('the failure codes of a provider', () => {
+  it('are those its entry gives, for a server named in the settings and for a connection added by it alike, and none where it gives none', async () => {
+    const read = (providers: ProviderList) =>
+      Effect.runSync(
+        readToolServerSettings(
+          {
+            TOOL_SERVERS: JSON.stringify({ campaigns: { ...regionsAdded, credential: '${REGIONS_KEY}', org: 'acme' } }),
+            REGIONS_KEY: 'regions-key-5d1e',
+          },
+          { modelProviders: ['openai'], providers: makeProviderResolver(providers) },
+        ),
+      ).servers;
+    const h = harness();
+    const { id, token } = await added(h, { ...regionsAdded, credential: { kind: 'secret' } });
+    await h.call(operationNamed(h.operations, 'give_credential'), ada, { id, token, value: 'regions-key-5d1e' });
+
+    expect([...read(coding), ...read(fixtureProviders)]).toMatchObject([
+      { failure_codes: failureCodes },
+      { failure_codes: null },
+    ]);
+    expect([await settingsOf(h, id, coding), await settingsOf(h, id, fixtureProviders)]).toMatchObject([
+      { provider: 'regions', failure_codes: failureCodes },
+      { provider: 'regions', failure_codes: null },
+    ]);
+  });
+});
+
+const trackerNowAnApi: Provider = {
+  entry: {
+    ...tracker,
+    type: 'openapi',
+    document: 'https://tracker.example.com/openapi.json',
+    failure_codes: failureCodes,
+  },
+  address: 'https://tracker.example.com/openapi.json',
+};
+
+describe('a connection recorded as an MCP server from a provider that is an HTTP API since', () => {
+  it('is refused in words that tell the person who added it to remove it and add it again', async () => {
+    const h = harness();
+    const tracked = { provider: 'tracker', placeholders: { site: 'acme' }, credential: { kind: 'none' } };
+    const { id, token } = await added(h, tracked);
+    await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
+    const others = fixtureProviders.providers.filter(({ entry }) => entry.name !== 'tracker');
+
+    const served = await settingsOf(h, id, providerListOf(...others, trackerNowAnApi));
+
+    expect(served).toEqual({
+      because: 'connection_not_allowed',
+      detail:
+        'The entry of the connection tracker is not one this runtime takes any more: Its provider reaches an HTTP API now, where the connection was made for an MCP server, so the person who added it removes it and adds it again',
+    });
   });
 });
 

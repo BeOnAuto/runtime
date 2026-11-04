@@ -1,9 +1,15 @@
 name: slack-bot
 title: Slack Bot
-description: Read channels, conversation history, threads and people, and post and update messages and add reactions as the bot of a Slack app installed in your workspace, through the Slack Web API.
+description: Read channels, conversation history, threads, people and reactions, and post and update messages and add reactions as the bot of a Slack app installed in your workspace, through the Slack Web API.
 website: https://docs.slack.dev/apis/web-api/
 type: openapi
-document: documents/slack-bot.openapi.json
+document: documents/slack.openapi.json
+failure_codes:
+  succeeded: /ok
+  code: /error
+  key_refused: [invalid_auth, not_authed, token_revoked, token_expired, account_inactive]
+  scope_lacking: [missing_scope]
+  rate_limited: [ratelimited, rate_limited]
 credentials:
   - kind: secret
     in: security

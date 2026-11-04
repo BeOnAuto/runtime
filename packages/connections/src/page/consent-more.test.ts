@@ -111,7 +111,11 @@ describe('a consent that asks more of a connection connected or broken', () => {
     const h = await sharingHarness();
     const link = await added(h, { provider: 'files' });
     await connectedThrough(h, link);
-    await Effect.runPromise((await preparedOf(sourceOver(h, { policy: loopbackPolicy }), link.id)).refused);
+    await Effect.runPromise(
+      (await preparedOf(sourceOver(h, { policy: loopbackPolicy }), link.id)).refused(
+        'The tool server answered HTTP 401',
+      ),
+    );
 
     const answered = await reconnectingFor(h, link.id, 'share', fiveMinutesLater);
     const scope = await scopeAskedAt(h, await reconnectedFor(h, link.id, 'share', fiveMinutesLater), fiveMinutesLater);

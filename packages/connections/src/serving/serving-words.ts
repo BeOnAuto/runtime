@@ -22,11 +22,11 @@ export const servingWords = {
     `The client secret of the organization's own OAuth client for the connection ${name} is no longer in the secret store, so ${reconnects} and gives its client ID and client secret again`,
   keyUnknown: (name: string) =>
     `Auto's consent service does not know the key of the connection ${name}, so its tokens cannot be renewed, and ${reconnects}`,
-  keyRefused: `The tool server answered HTTP 401: it refused the credential the connection holds, so ${reconnects}`,
-  noneRefused:
-    'The tool server answered HTTP 401: it asks for a credential the connection does not hold, so the person who added it removes it and adds it again with one',
-  referenceRefused: (variable: string) =>
-    `The tool server answered HTTP 401: it refused the value of the variable ${variable}, so whoever runs the runtime sets it right and starts it again, and the person who added the connection reconnects it`,
+  keyRefused: (answered: string) => `${answered}: it refused the credential the connection holds, so ${reconnects}`,
+  noneRefused: (answered: string) =>
+    `${answered}: it asks for a credential the connection does not hold, so the person who added it removes it and adds it again with one`,
+  referenceRefused: (answered: string, variable: string) =>
+    `${answered}: it refused the value of the variable ${variable}, so whoever runs the runtime sets it right and starts it again, and the person who added the connection reconnects it`,
   unchecked: (name: string, details: readonly string[]) =>
     `The entry of the connection ${name} is not one this runtime takes any more: ${listed(details)}`,
 } as const;

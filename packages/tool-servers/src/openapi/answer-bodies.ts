@@ -67,7 +67,7 @@ function headLineOf(name: string | undefined, mediaType: string, size: string): 
   return `[${name === undefined ? 'The answer' : `The file ${name}`}, ${mediaType}, ${size}]`;
 }
 
-async function bytesWithinTheBound(response: Readonly<Response>): Promise<Uint8Array> {
+export async function fileBytesOf(response: Readonly<Response>): Promise<Readonly<Uint8Array>> {
   let larger = false;
   try {
     const bounded = boundedAnswerOf(response, documentBounds.bytes, () => {
@@ -83,13 +83,22 @@ export function shownTextOf(response: Readonly<Response>, tooLarge: () => void):
   return boundedAnswerOf(response, toolBounds.httpAnswerBytes, tooLarge).text();
 }
 
+const decoder = new TextDecoder();
+
+export function shownTextIn(bytes: Readonly<Uint8Array>): string | undefined {
+  return bytes.byteLength > toolBounds.httpAnswerBytes ? undefined : decoder.decode(bytes);
+}
+
 const headLineRoom = 2048;
 
 const documentTextBytes = toolBounds.httpAnswerBytes - headLineRoom;
 
-export async function fileTextOf(response: Readonly<Response>, { named, read }: AnsweredFile): Promise<string> {
+export async function fileTextOf(
+  response: Readonly<Response>,
+  bytes: Readonly<Uint8Array>,
+  { named, read }: AnsweredFile,
+): Promise<string> {
   const name = shownName(fileNameIn(response.headers.get('content-disposition'))) ?? shownName(named ?? '');
-  const bytes = await bytesWithinTheBound(response);
   const size = bytes.byteLength;
   if (size === 0) {
     return '';

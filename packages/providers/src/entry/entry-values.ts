@@ -6,7 +6,6 @@ import { setCombinationsOf, setNamesOfEach, type Placeholder } from './placehold
 import { marked, templatedFieldsOf, wayAddresses, type TemplatedField, type WayAddresses } from './templates.ts';
 
 interface Written {
-  readonly name: string;
   readonly url?: string;
   readonly document?: string;
   readonly base_url?: string;
@@ -37,13 +36,13 @@ const asJson = Schema.decodeUnknownSync(Schema.Json);
 
 type Placed = ReadonlyMap<string, string>;
 
-export function localDocumentOf(name: string): string {
-  return `documents/${name}.openapi.json`;
+const documentBesideTheEntries = /^documents\/[a-z][a-z0-9-]{0,31}\.openapi\.json$/u;
+
+export function isADocumentBesideTheEntries(document: string | undefined): boolean {
+  return document !== undefined && documentBesideTheEntries.test(document);
 }
 
-function documentElsewhere(name: string): string {
-  return `${pinnedTemplateShape}, or ${localDocumentOf(name)}, the document beside the entries named for the provider`;
-}
+const documentElsewhere = `${pinnedTemplateShape}, or documents/<name>.openapi.json, a document beside the entries named as a provider is`;
 
 function pathOf(pointer: string): readonly string[] {
   return pointer
@@ -128,18 +127,18 @@ export function isPinnableTemplate(template: string): boolean {
   return isWrittenOutUpToItsHost(template, new Map());
 }
 
-function isTheLocalDocument({ name }: Written, { path, text }: TemplatedField): boolean {
-  return path[0] === 'document' && text === localDocumentOf(name);
+function isALocalDocument({ path, text }: TemplatedField): boolean {
+  return path[0] === 'document' && isADocumentBesideTheEntries(text);
 }
 
 function addressIssuesOf(written: Written): readonly EntryIssue[] {
   const combinations = setCombinationsOf(written.placeholders ?? {});
   return templatedFieldsOf(written)
-    .filter((field) => field.holds === 'address' && !isTheLocalDocument(written, field))
+    .filter((field) => field.holds === 'address' && !isALocalDocument(field))
     .filter(({ text }) => !combinations.every((placed) => isWrittenOutUpToItsHost(text, placed)))
     .map(({ path }) => ({
       path,
-      issue: path[0] === 'document' ? documentElsewhere(written.name) : pinnedTemplateShape,
+      issue: path[0] === 'document' ? documentElsewhere : pinnedTemplateShape,
     }));
 }
 

@@ -2,6 +2,7 @@ import { servesOrg, servesPlaybook } from '@on.auto/config';
 import type { Redacted } from 'effect';
 
 import type { ConsentServed } from '../consent/consent-client.ts';
+import type { FailureCodes } from '../openapi/failure-codes.ts';
 
 export type MintingCredential =
   | { readonly kind: 'client_secret'; readonly client_secret: Redacted.Redacted }
@@ -81,6 +82,7 @@ export interface OpenApiServerSettings extends ServedBy {
   readonly query_params: ReadonlyMap<string, Redacted.Redacted>;
   readonly security: ReadonlyMap<string, Redacted.Redacted>;
   readonly auth: AuthSettings | null;
+  readonly failure_codes: FailureCodes | null;
 }
 
 export type ServerSettings = McpServerSettings | StdioServerSettings | OpenApiServerSettings;

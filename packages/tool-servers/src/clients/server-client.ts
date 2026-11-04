@@ -13,6 +13,8 @@ export type CallSettled =
   | { readonly result: ToolResult; readonly resultJson: string; readonly observed: Observed }
   | { readonly error: unknown; readonly observed: Observed };
 
+export const unobserved: Observed = { id: null, response: null };
+
 interface ClientListing<Tool extends ServedTool> {
   readonly call: (calling: ToolCalling) => Promise<CallSettled>;
   readonly listTools: (timeoutMs: number) => Promise<readonly Tool[]>;

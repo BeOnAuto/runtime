@@ -3,15 +3,16 @@ import { extractWWWAuthenticateParams } from '@modelcontextprotocol/client';
 import { decodeToolResult } from '../bounds/tool-results.ts';
 import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
-import { fileTextOf, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
+import { fileBytesOf, fileTextOf, shownTextIn, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
 import { AnsweredStatus } from './answered-status.ts';
 import { headersCarriedBy, unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
 import { decodedAnswer } from './byte-strings.ts';
 import { DocumentTooLarge } from './document-too-large.ts';
-import { ScopeLacking, scopeLackingIn } from './scope-lacking.ts';
+import { refusalOf, type FailureCodes } from './failure-codes.ts';
 
 export interface Answering {
   readonly requestIdHeader: string | null;
+  readonly failureCodes: FailureCodes | null;
   readonly now: () => number;
 }
 
@@ -78,14 +79,31 @@ function textAnswer(text: string): Answer {
   return text === '' ? { content: [] } : { content: [{ type: 'text', text }] };
 }
 
-function shownAnswer(status: number, mediaType: string | undefined, text: string, answers: AnswerSchemas): Answer {
+function errorAnswer(text: string): Answer {
+  return { content: [{ type: 'text', text }], isError: true };
+}
+
+type Parsed = ReturnType<typeof parsedJson>;
+
+interface ReadAsJson {
+  readonly text: string;
+  readonly json: Parsed;
+}
+
+function jsonWithinTheBound(bytes: Readonly<Uint8Array>): ReadAsJson | undefined {
+  const text = shownTextIn(bytes);
+  const json = text === undefined ? undefined : parsedJson(text);
+  return text === undefined || json === undefined ? undefined : { text, json };
+}
+
+function jsonOf(text: string, mediaType: string | undefined, failureCodes: FailureCodes | null): Parsed {
+  return isJson(mediaType) || failureCodes !== null ? parsedJson(text) : undefined;
+}
+
+function shownAnswer(status: number, text: string, json: Parsed, answers: AnswerSchemas): Answer {
   if (status >= 300) {
-    return {
-      content: [{ type: 'text', text: text === '' ? `The tool server answered HTTP ${status}` : text }],
-      isError: true,
-    };
+    return errorAnswer(text === '' ? `The tool server answered HTTP ${status}` : text);
   }
-  const json = isJson(mediaType) ? parsedJson(text) : undefined;
   return json === undefined ? textAnswer(text) : jsonAnswer(text, json.parsed, answers);
 }
 
@@ -122,23 +140,23 @@ function isAFile(response: Readonly<Response>, mediaType: string | undefined): b
   return response.status < 300 && response.body !== null && !isJson(mediaType);
 }
 
-interface Shown {
-  readonly mediaType: string | undefined;
-  readonly text: string;
+interface Shown extends ReadAsJson {
   readonly answers: AnswerSchemas;
   readonly carried: Carried;
+  readonly failureCodes: FailureCodes | null;
 }
 
 function shownOrRefused(
   response: Readonly<Response>,
-  { mediaType, text, answers, carried }: Shown,
+  { text, json, answers, carried, failureCodes }: Shown,
   observed: Observed,
 ): CallSettled {
-  const { error, scope } = extractWWWAuthenticateParams(response);
-  const lacking = scopeLackingIn({ status: response.status, body: text, error, scope });
-  return lacking === undefined
-    ? settled(withHeaders(shownAnswer(response.status, mediaType, text, answers), carried), observed)
-    : { error: new ScopeLacking(lacking), observed };
+  const challenge = extractWWWAuthenticateParams(response);
+  const refusal = refusalOf({ status: response.status, text, challenge, json }, failureCodes);
+  if (refusal === undefined) {
+    return settled(withHeaders(shownAnswer(response.status, text, json, answers), carried), observed);
+  }
+  return refusal.error === undefined ? settled(errorAnswer(text), observed) : { error: refusal.error, observed };
 }
 
 async function unreadSettled(response: Readonly<Response>, answering: Answering): Promise<CallSettled> {
@@ -162,14 +180,20 @@ export async function settledOf(
   const carried = headersCarriedBy(response.status, response.headers, answers);
   let tooLarge = false;
   try {
+    const { failureCodes } = answering;
+    const observed = observedOf(response, answering, false);
     if (isAFile(response, mediaType)) {
-      const text = await fileTextOf(response, file);
-      return settled(withHeaders(textAnswer(text), carried), observedOf(response, answering, false));
+      const bytes = await fileBytesOf(response);
+      const read = failureCodes === null ? undefined : jsonWithinTheBound(bytes);
+      return read === undefined
+        ? settled(withHeaders(textAnswer(await fileTextOf(response, bytes, file)), carried), observed)
+        : shownOrRefused(response, { ...read, answers, carried, failureCodes }, observed);
     }
     const text = await shownTextOf(response, () => {
       tooLarge = true;
     });
-    return shownOrRefused(response, { mediaType, text, answers, carried }, observedOf(response, answering, false));
+    const json = jsonOf(text, mediaType, failureCodes);
+    return shownOrRefused(response, { text, json, answers, carried, failureCodes }, observed);
   } catch (error) {
     return { error, observed: observedOf(response, answering, tooLarge || error instanceof DocumentTooLarge) };
   }

@@ -61,7 +61,7 @@ function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, Conne
       return yield* Effect.fail(unchecked(connection.name, issues));
     }
     const given = yield* givenOf(serving);
-    const auth = yield* consentAuthOf(serving);
+    const auth = yield* consentAuthOf(serving, checking.providing);
     const read = readAddition(connection, checking, given);
     if (Result.isFailure(read)) {
       return yield* Effect.fail(unchecked(connection.name, read.failure));

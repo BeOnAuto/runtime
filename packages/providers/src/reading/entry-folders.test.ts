@@ -76,8 +76,8 @@ describe('a folder of entries the runtime refuses', () => {
     ]);
   });
 
-  it('refuses a document that is not the one beside the entries named for the provider', async () => {
-    const elsewhere = notes.replace('documents/notes.openapi.json', 'documents/other.openapi.json');
+  it('refuses a document that is not one beside the entries named as a provider is, or that is not there', async () => {
+    const elsewhere = notes.replace('documents/notes.openapi.json', 'documents/Notes.openapi.json');
     const at = `${invalid}<entries>/notes.yaml:6:11 document`;
 
     expect(
@@ -87,10 +87,22 @@ describe('a folder of entries the runtime refuses', () => {
         entryFolderWith({ 'notes.yaml': notes, 'documents/notes.openapi.json': '{ not json' }).read(),
       ]),
     ).toEqual([
-      `${at}: Expected an https URL, or an http URL on a loopback address, written out up to its host, with each placeholder in its place, or documents/notes.openapi.json, the document beside the entries named for the provider`,
+      `${at}: Expected an https URL, or an http URL on a loopback address, written out up to its host, with each placeholder in its place, or documents/<name>.openapi.json, a document beside the entries named as a provider is`,
       `${at}: Expected documents/notes.openapi.json beside the entries, an OpenAPI document in JSON`,
       `${at}: Expected documents/notes.openapi.json beside the entries, an OpenAPI document in JSON`,
     ]);
+  });
+
+  it('takes one document beside the entries for two entries of one HTTP API, read once under the name both write', async () => {
+    const notesBot = notes.replace('name: notes', 'name: notes-bot');
+
+    expect(
+      await entryFolderWith({
+        'notes.yaml': notes,
+        'notes-bot.yaml': notesBot,
+        'documents/notes.openapi.json': served,
+      }).read(),
+    ).toBe('notes https://api.notes.example.com/v1; notes-bot https://api.notes.example.com/v1');
   });
 });
 

@@ -203,7 +203,7 @@ function exchangedFor(claimed: Claimed, renewing: Renewing): Effect.Effect<Held,
   return refreshing.refreshed(refreshToken, held.tokens, renewing.serving.now()).pipe(
     Effect.matchEffect({
       onFailure: (failure) => {
-        const end = endingOf(failure);
+        const end = endingOf(failure, renewing.served.way);
         return end === undefined ? failedUnder(claimed, failure) : afterRefusedGrant(held, renewing, end);
       },
       onSuccess: (renewed) => keptIn(claimed, renewed, renewing),

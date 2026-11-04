@@ -4,6 +4,7 @@ import { toolBounds } from '../bounds/call-bounds.ts';
 import { metaValueOf, type ToolAnswer, type ToolResult } from '../bounds/tool-results.ts';
 import { ignored } from '../clients/ignored.ts';
 import type { Observed } from '../clients/observed-requests.ts';
+import { unobserved } from '../clients/server-client.ts';
 import { failureOf, type FailureKind } from '../clients/server-failures.ts';
 import { DocumentTooLarge } from '../openapi/document-too-large.ts';
 import type { SentCallFailedBecause } from './call-facts.ts';
@@ -54,8 +55,6 @@ interface Attempt {
   readonly deadline: Readonly<AbortSignal>;
   readonly waitedMs: number;
 }
-
-const unobserved: Observed = { id: null, response: null };
 
 const counted = new Intl.NumberFormat('en');
 

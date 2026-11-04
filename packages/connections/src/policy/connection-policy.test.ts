@@ -112,7 +112,7 @@ describe('the providers of CONNECTIONS', () => {
       name: 'Notes',
       type: 'openapi',
       url: undefined,
-      document: 'documents/Notes.openapi.json',
+      document: 'documents/notes.openapi.json',
     };
 
     expect(refusalOf(JSON.stringify({ providers: [local] }))).toBe(

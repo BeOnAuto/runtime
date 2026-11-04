@@ -136,7 +136,7 @@ describe('a connection connected by consent whose server refuses its tokens', ()
     const { h, id } = await connectedByConsent();
     const server = await Effect.runPromise(await preparedIn(h));
 
-    const refused = await Effect.runPromise(server.refused);
+    const refused = await Effect.runPromise(server.refused('The tool server answered HTTP 401'));
 
     expect(refused).toBe(
       'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it',

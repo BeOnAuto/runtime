@@ -2,8 +2,8 @@ import type { FetchLike } from '@modelcontextprotocol/client';
 import { unreadDocuments, type DocumentReading } from '@on.auto/documents';
 import { Result } from 'effect';
 
-import type { Observed } from '../clients/observed-requests.ts';
-import type { ServedClient } from '../clients/server-client.ts';
+import { unobserved, type CallSettled, type ServedClient } from '../clients/server-client.ts';
+import { isCredentialRefused } from '../clients/server-failures.ts';
 import type { TokenSource } from '../clients/token-source.ts';
 import { settledOf, type Answering } from './api-answers.ts';
 import { apiRequestOf, isUnderBase, type ApiEndpoint, type ApiRequest } from './api-requests.ts';
@@ -16,8 +16,6 @@ export interface ApiOpening {
   readonly now: () => number;
   readonly documents?: DocumentReading | undefined;
 }
-
-const unobserved: Observed = { id: null, response: null };
 
 class AddressOutsideBase extends Error {
   constructor() {
@@ -33,10 +31,15 @@ interface Sending {
   readonly endpoint: ApiEndpoint;
   readonly opening: ApiOpening;
   readonly signal: Readonly<AbortSignal>;
+  readonly settle: (response: Readonly<Response>) => Promise<CallSettled>;
 }
 
-async function sent(request: ApiRequest, sending: Sending, mintedAgain = false): Promise<Response> {
-  const { endpoint, opening, signal } = sending;
+function refusesTheCredential(settled: CallSettled): boolean {
+  return 'error' in settled && isCredentialRefused(settled.error);
+}
+
+async function settledCall(request: ApiRequest, sending: Sending, mintedAgain = false): Promise<CallSettled> {
+  const { endpoint, opening, signal, settle } = sending;
   const tokens = request.usesToken ? opening.tokens : undefined;
   const response = await opening.fetch(request.url, {
     method: request.method,
@@ -45,12 +48,12 @@ async function sent(request: ApiRequest, sending: Sending, mintedAgain = false):
     redirect: 'manual',
     signal,
   });
-  if (response.status !== 401 || tokens === undefined || mintedAgain) {
-    return response;
+  const settled = await settle(response);
+  if (tokens === undefined || mintedAgain || !refusesTheCredential(settled)) {
+    return settled;
   }
-  await response.body?.cancel();
   await tokens.onUnauthorized({ response, serverUrl: new URL(endpoint.baseUrl), fetchFn: opening.fetch });
-  return sent(request, sending, true);
+  return settledCall(request, sending, true);
 }
 
 function listingOf({ operations }: DescribedApiSettings['api']): ServedClient['listTools'] {
@@ -60,6 +63,25 @@ function listingOf({ operations }: DescribedApiSettings['api']): ServedClient['l
     );
 }
 
+function answeringOf(settings: DescribedApiSettings, { now }: ApiOpening): Answering {
+  return { requestIdHeader: settings.request_id, failureCodes: settings.failure_codes, now };
+}
+
+interface Reading {
+  readonly started: number;
+  readonly timeoutMs: number;
+  readonly signal: Readonly<AbortSignal>;
+}
+
+function fileOf(named: string | undefined, { documents = unreadDocuments }: ApiOpening, reading: Reading) {
+  const { started, timeoutMs, signal } = reading;
+  return {
+    named,
+    read: (given: Parameters<DocumentReading>[0], textBytes: number) =>
+      documents(given, { deadlineMs: timeoutMs - (performance.now() - started), textBytes, signal }),
+  };
+}
+
 export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): ServedClient {
   const operations = new Map(settings.api.operations.map((operation) => [operation.tool.name, operation]));
   const endpoint: ApiEndpoint = {
@@ -67,7 +89,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
     headers: settings.headers,
     query: settings.query_params,
   };
-  const answering: Answering = { requestIdHeader: settings.request_id, now: opening.now };
+  const answering = answeringOf(settings, opening);
   const { promise: closed, resolve } = Promise.withResolvers<void>();
   return {
     call: async ({ tool, input, signal, timeoutMs }) => {
@@ -83,21 +105,14 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
       if (!isUnderBase(endpoint.baseUrl, request.success.url)) {
         return { error: new AddressOutsideBase(), observed: unobserved };
       }
+      const file = fileOf(request.success.named, opening, { started, timeoutMs, signal });
       try {
-        return await settledOf(
-          await sent(request.success, { endpoint, opening, signal }),
-          answering,
-          operation.answers,
-          {
-            named: request.success.named,
-            read: (given, textBytes) =>
-              (opening.documents ?? unreadDocuments)(given, {
-                deadlineMs: timeoutMs - (performance.now() - started),
-                textBytes,
-                signal,
-              }),
-          },
-        );
+        return await settledCall(request.success, {
+          endpoint,
+          opening,
+          signal,
+          settle: (response) => settledOf(response, answering, operation.answers, file),
+        });
       } catch (error) {
         return { error, observed: unobserved };
       }

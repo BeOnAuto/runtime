@@ -117,8 +117,12 @@ export function discoveryRefusalOf(error: unknown, observed: ObservedCalls): Ref
     : observed.refusalOf(error);
 }
 
-export function isInvalidGrant(error: unknown): boolean {
+function isInvalidGrant(error: unknown): boolean {
   return error instanceof OAuthError && error.code === invalidGrant;
+}
+
+export function endsTheGrant(error: unknown, endingCodes: readonly string[] = []): boolean {
+  return isInvalidGrant(error) || (error instanceof OAuthError && endingCodes.includes(error.code));
 }
 
 export function exchangeRefusalOf(error: unknown, observed: ObservedCalls): ConsentRefusal {

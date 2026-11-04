@@ -26,6 +26,7 @@ interface Renewed {
 interface RefreshAsked {
   readonly issuer: string;
   readonly resource: string | undefined;
+  readonly endingCodes: readonly string[] | undefined;
   readonly name: string;
 }
 
@@ -56,14 +57,14 @@ function revokedThrough(auto: AutoOn, issuer: string, tokens: KeptTokens): Effec
   return key === undefined ? Effect.fail(unknownKey) : auto.service.revoke({ issuer, tokens, connectionKey: key });
 }
 
-function refreshingOf(auto: AutoOn, { issuer, resource, name }: RefreshAsked): Refreshing {
+function refreshingOf(auto: AutoOn, { issuer, resource, endingCodes, name }: RefreshAsked): Refreshing {
   return {
     refreshed: (refreshToken, previous) => {
       const key = previous.connection_key;
       if (key === undefined) {
         return Effect.fail(new RefreshEnded({ ended: 'key_unknown' }));
       }
-      return auto.service.refresh({ issuer, refreshToken, connectionKey: key, resource }).pipe(
+      return auto.service.refresh({ issuer, refreshToken, connectionKey: key, resource, endingCodes }).pipe(
         Effect.map((handed) => renewedOf({ handed, refreshToken, previous, key })),
         Effect.mapError((refusal) => failureOfARefresh(refusal, name)),
       );
@@ -82,7 +83,7 @@ function refreshingThroughAuto(
     const auto = autoOf(served.client, through);
     return auto === undefined
       ? yield* Effect.fail(clientGone)
-      : refreshingOf(auto, { issuer: served.way.issuer, resource, name });
+      : refreshingOf(auto, { issuer: served.way.issuer, resource, endingCodes: served.way.ending_codes, name });
   });
 }
 

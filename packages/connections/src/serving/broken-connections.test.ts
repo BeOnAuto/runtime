@@ -170,8 +170,9 @@ describe('a break the registry does not take', () => {
   });
 });
 
-const keyRefused =
-  'The tool server answered HTTP 401: it refused the credential the connection holds, so the person who added it reconnects it';
+const answered401 = 'The tool server answered HTTP 401';
+
+const keyRefused = `${answered401}: it refused the credential the connection holds, so the person who added it reconnects it`;
 
 const fiveMinutesLater = '2026-10-15T14:05:00.000Z';
 
@@ -185,7 +186,10 @@ describe('a connection whose server refuses the credential it holds', () => {
     const id = await connectedCrm(h);
     const server = await preparedOf(sourceOf(h), id);
 
-    const answered = [await Effect.runPromise(server.refused), await Effect.runPromise(server.refused)];
+    const answered = [
+      await Effect.runPromise(server.refused(answered401)),
+      await Effect.runPromise(server.refused(answered401)),
+    ];
 
     expect(answered).toEqual([keyRefused, keyRefused]);
     expect(await breaksOf(h)).toMatchObject([
@@ -209,7 +213,7 @@ describe('a connection whose server refuses the credential it holds', () => {
       fiveMinutesLater,
     );
 
-    await Effect.runPromise(before.refused);
+    await Effect.runPromise(before.refused(answered401));
 
     expect(await breaksOf(h)).toEqual([]);
     expect((await connectionOf(sourceOf(h), id)).state.status).toBe('connected');
@@ -217,7 +221,7 @@ describe('a connection whose server refuses the credential it holds', () => {
 });
 
 describe('a connection of client credentials whose server refuses them', () => {
-  it('is broken in the words of a refused credential, which say to reconnect it', async () => {
+  it('is broken in the words of a refused credential, which name what its server answered and say to reconnect it', async () => {
     const h = harness();
     const { id, token } = await added(h, billing);
     await h.call(operationNamed(h.operations, 'give_credential'), ada, {
@@ -226,7 +230,11 @@ describe('a connection of client credentials whose server refuses them', () => {
       client_secret: 'billing-secret-4e1a',
     });
 
-    expect(await Effect.runPromise((await preparedOf(sourceOf(h), id)).refused)).toBe(keyRefused);
+    expect(
+      await Effect.runPromise((await preparedOf(sourceOf(h), id)).refused('The tool server answered invalid_auth')),
+    ).toBe(
+      'The tool server answered invalid_auth: it refused the credential the connection holds, so the person who added it reconnects it',
+    );
   });
 });
 
@@ -236,7 +244,7 @@ describe('a connection whose server asks for a credential it does not hold', () 
     const { id, token } = await added(h, notes);
     await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
 
-    await Effect.runPromise((await preparedOf(sourceOf(h), id)).refused);
+    await Effect.runPromise((await preparedOf(sourceOf(h), id)).refused(answered401));
 
     expect(await breaksOf(h)).toMatchObject([
       {
@@ -259,7 +267,7 @@ describe('a connection of a reference whose server refuses the value of its vari
     await h.call(operationNamed(h.operations, 'approve'), ada, { id, token });
     const variables = new Map([['NOTES_API_KEY', Redacted.make('notes-key-5b2e9d')]]);
 
-    await Effect.runPromise((await preparedOf(sourceOf(h, { ...listing, variables }), id)).refused);
+    await Effect.runPromise((await preparedOf(sourceOf(h, { ...listing, variables }), id)).refused(answered401));
 
     expect(await breaksOf(h)).toMatchObject([
       {

@@ -55,12 +55,16 @@ describe('the providers whoever runs the runtime adds', () => {
 
 describe('the entry of a provider whoever runs the runtime adds', () => {
   it('takes what a shipped entry takes, but a document beside the entries, which are the runtime’s own', () => {
+    const byItsAddress = [
+      '/document',
+      "Expected the https URL of the OpenAPI document, or an http URL on a loopback address: a provider whoever runs the runtime adds names its document by its address, since the documents beside the entries are the runtime's own",
+    ];
+
     expect([ledgers, metrics, notes].map((entry) => addedProblemsOf(entry))).toEqual([[], [], []]);
-    expect(addedProblemsOf({ ...notes, document: 'documents/notes.openapi.json' })).toEqual([
-      [
-        '/document',
-        "Expected the https URL of the OpenAPI document, or an http URL on a loopback address: a provider whoever runs the runtime adds names its document by its address, since the documents beside the entries are the runtime's own",
-      ],
-    ]);
+    expect(
+      ['documents/notes.openapi.json', 'documents/slack.openapi.json'].map((document) =>
+        addedProblemsOf({ ...notes, document }),
+      ),
+    ).toEqual([[byItsAddress], [byItsAddress]]);
   });
 });

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Slack Web API",
-    "version": "2026-10-18",
-    "description": "Ten Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the token is a bot token sent as Authorization: Bearer."
+    "version": "2026-11-04",
+    "description": "Eleven Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the token, the bot token (xoxb-) of an app installed in the workspace or the user token (xoxp-) of the person who connects, is sent as Authorization: Bearer."
   },
   "externalDocs": {
     "url": "https://docs.slack.dev/apis/web-api"
@@ -37,6 +37,9 @@
         "security": [
           {
             "bot_token": []
+          },
+          {
+            "user_token": []
           }
         ]
       }
@@ -116,6 +119,18 @@
           },
           {
             "bot_token": ["mpim:read"]
+          },
+          {
+            "user_token": ["channels:read"]
+          },
+          {
+            "user_token": ["groups:read"]
+          },
+          {
+            "user_token": ["im:read"]
+          },
+          {
+            "user_token": ["mpim:read"]
           }
         ]
       }
@@ -178,6 +193,18 @@
           },
           {
             "bot_token": ["mpim:read"]
+          },
+          {
+            "user_token": ["channels:read"]
+          },
+          {
+            "user_token": ["groups:read"]
+          },
+          {
+            "user_token": ["im:read"]
+          },
+          {
+            "user_token": ["mpim:read"]
           }
         ]
       }
@@ -243,7 +270,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the conversation history hasn't been reached. Maximum of 999.",
+            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the conversation history hasn't been reached. Maximum of 999. For a new installation of an app distributed outside the Slack Marketplace, Slack answers at most 15 objects, as its changelog of 29 May 2025 says: \"The new rate limits will be updated to allow 1 request per minute and will return a maximum of 15 objects per request.\" (https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps)",
             "schema": {
               "type": "integer",
               "default": 100
@@ -274,6 +301,18 @@
           },
           {
             "bot_token": ["mpim:history"]
+          },
+          {
+            "user_token": ["channels:history"]
+          },
+          {
+            "user_token": ["groups:history"]
+          },
+          {
+            "user_token": ["im:history"]
+          },
+          {
+            "user_token": ["mpim:history"]
           }
         ]
       }
@@ -348,7 +387,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached.",
+            "description": "The maximum number of items to return. Fewer than the requested number of items may be returned, even if the end of the users list hasn't been reached. For a new installation of an app distributed outside the Slack Marketplace, Slack answers at most 15 objects, as its changelog of 29 May 2025 says: \"The new rate limits will be updated to allow 1 request per minute and will return a maximum of 15 objects per request.\" (https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps)",
             "schema": {
               "type": "integer",
               "default": 1000
@@ -379,6 +418,18 @@
           },
           {
             "bot_token": ["mpim:history"]
+          },
+          {
+            "user_token": ["channels:history"]
+          },
+          {
+            "user_token": ["groups:history"]
+          },
+          {
+            "user_token": ["im:history"]
+          },
+          {
+            "user_token": ["mpim:history"]
           }
         ]
       }
@@ -439,6 +490,9 @@
         "security": [
           {
             "bot_token": ["users:read"]
+          },
+          {
+            "user_token": ["users:read"]
           }
         ]
       }
@@ -483,6 +537,9 @@
         "security": [
           {
             "bot_token": ["users:read"]
+          },
+          {
+            "user_token": ["users:read"]
           }
         ]
       }
@@ -590,6 +647,9 @@
         "security": [
           {
             "bot_token": ["chat:write"]
+          },
+          {
+            "user_token": ["chat:write"]
           }
         ]
       }
@@ -683,6 +743,9 @@
         "security": [
           {
             "bot_token": ["chat:write"]
+          },
+          {
+            "user_token": ["chat:write"]
           }
         ]
       }
@@ -735,6 +798,80 @@
         "security": [
           {
             "bot_token": ["reactions:write"]
+          },
+          {
+            "user_token": ["reactions:write"]
+          }
+        ]
+      }
+    },
+    "/reactions.get": {
+      "get": {
+        "operationId": "reactions_get",
+        "description": "Gets reactions for an item.",
+        "externalDocs": {
+          "url": "https://docs.slack.dev/reference/methods/reactions.get"
+        },
+        "parameters": [
+          {
+            "name": "channel",
+            "in": "query",
+            "description": "Channel where the message to get reactions for was posted.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "file",
+            "in": "query",
+            "description": "File to get reactions for.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "file_comment",
+            "in": "query",
+            "description": "File comment to get reactions for.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "description": "If true always return the complete reaction list.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "timestamp",
+            "in": "query",
+            "description": "Timestamp of the message to get reactions for.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Answer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bot_token": ["reactions:read"]
+          },
+          {
+            "user_token": ["reactions:read"]
           }
         ]
       }
@@ -766,6 +903,30 @@
         "type": "http",
         "scheme": "bearer",
         "description": "A bot token (xoxb-) of the Slack app installed in the workspace."
+      },
+      "user_token": {
+        "type": "oauth2",
+        "description": "The user token (xoxp-) of the person who connects, from the OAuth flow Slack gives for user tokens alone, sent as Authorization: Bearer.",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://slack.com/oauth/v2_user/authorize",
+            "tokenUrl": "https://slack.com/api/oauth.v2.user.access",
+            "scopes": {
+              "channels:read": "View basic information about public channels in a workspace",
+              "groups:read": "View basic information about private channels that your Slack app has been added to",
+              "im:read": "View basic information about direct messages that your Slack app has been added to",
+              "mpim:read": "View basic information about group direct messages that your Slack app has been added to",
+              "channels:history": "View messages and other content in public channels that your Slack app has been added to",
+              "groups:history": "View messages and other content in private channels that your Slack app has been added to",
+              "im:history": "View messages and other content in direct messages that your Slack app has been added to",
+              "mpim:history": "View messages and other content in group direct messages that your Slack app has been added to",
+              "users:read": "View people in a workspace",
+              "chat:write": "Send messages as your Slack app",
+              "reactions:read": "View emoji reactions and their associated content in channels and conversations that your Slack app has been added to",
+              "reactions:write": "Add and edit emoji reactions"
+            }
+          }
+        }
       }
     }
   }

@@ -115,6 +115,21 @@ describe('the renewal of the tokens of a consent through Auto’s consent servic
   });
 });
 
+describe('the renewal through Auto’s consent service of a consent whose way names ending codes', () => {
+  it('sends the codes with which the token endpoint refuses a refresh because the consent ended', async () => {
+    const connected = await connectedAt();
+    const served = servedOf(connected.connection, connected.row);
+    const way = { ...served.way, ending_codes: ['invalid_refresh_token', 'token_revoked'] };
+    const { source } = servedTokensOf({ ...served, way }, connected.clock.now, consentClientThrough(connected));
+
+    await renewed(connected, source);
+
+    expect(heardAt(connected, '/tokens/refresh').map(({ body }) => body)).toMatchObject([
+      { issuer: connected.fake.origin, ending_codes: ['invalid_refresh_token', 'token_revoked'] },
+    ]);
+  });
+});
+
 describe('a renewal through Auto’s consent service that is refused', () => {
   it('breaks the connection in the words of an ended consent where the service refuses the refresh token its row still holds', async () => {
     const revoked = await connectedAt();

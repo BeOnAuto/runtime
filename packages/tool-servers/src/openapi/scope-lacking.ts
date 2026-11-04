@@ -7,9 +7,9 @@ interface ScopeAnswer {
   readonly scope?: string | undefined;
 }
 
-export function scopeLackingWords(scope: string | undefined): string {
+export function scopeLackingWords(scope: string | undefined, answered = 'HTTP 403'): string {
   const lacking = scope === undefined ? 'a scope' : `the scope ${scope}`;
-  return `The tool server answered HTTP 403: the credential lacks ${lacking} this request needs; a credential granted that scope would allow it`;
+  return `The tool server answered ${answered}: the credential lacks ${lacking} this request needs; a credential granted that scope would allow it`;
 }
 
 function namesInsufficientScope({ body, error }: ScopeAnswer): boolean {

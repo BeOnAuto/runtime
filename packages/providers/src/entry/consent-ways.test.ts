@@ -173,3 +173,50 @@ describe('the fields of a way of consent', () => {
     ]);
   });
 });
+
+describe('the codes with which the token endpoint of a way of consent ends it', () => {
+  it('are taken on a way of consent, each once, beside invalid_grant, which ends every consent already', () => {
+    const endingCodes = ['invalid_refresh_token', 'invalid_grant', 'token_revoked', 'invalid_refresh_token'];
+    const onASecret = { kind: 'secret', in: 'header', name: 'Authorization', ending_codes: ['token_revoked'] };
+
+    expect(consentAs({ ending_codes: ['invalid_refresh_token', 'token_revoked'] })).toEqual([]);
+    expect(consentAs({ ending_codes: endingCodes })).toEqual([
+      [
+        '/credentials/0/ending_codes/1',
+        'Expected no invalid_grant, which ends a consent at every token endpoint already',
+      ],
+      ['/credentials/0/ending_codes/3', 'Expected invalid_refresh_token once in ending_codes'],
+    ]);
+    expect([consentAs({ ending_codes: [] }), problemsOf({ ...tracker, credentials: [onASecret] })]).toEqual([
+      [['/credentials/0/ending_codes', 'Expected a value with a length of at least 1']],
+      [['/credentials/0/ending_codes', 'Expected no ending_codes: a secret way takes in, name, and scheme']],
+    ]);
+  });
+
+  it('are none of the errors of OAuth that never say a consent has ended, each a short code, sixteen at most, as Auto’s consent service takes them', () => {
+    const oauths = [
+      'invalid_request',
+      'invalid_client',
+      'unauthorized_client',
+      'unsupported_grant_type',
+      'invalid_scope',
+      'server_error',
+      'temporarily_unavailable',
+    ];
+    const seventeen = Array.from({ length: 17 }, (_, at) => `ended_${at}`);
+
+    expect(consentAs({ ending_codes: [...oauths, 'token revoked'] })).toEqual([
+      ...oauths.map((code, at) => [
+        `/credentials/0/ending_codes/${at}`,
+        `Expected no ${code}, an error of OAuth that never says a consent has ended`,
+      ]),
+      [
+        '/credentials/0/ending_codes/7',
+        'Expected an error code of at most 64 letters, digits, underscores, dots and hyphens',
+      ],
+    ]);
+    expect(consentAs({ ending_codes: seventeen })).toEqual([
+      ['/credentials/0/ending_codes', 'Expected a value with a length of at most 16'],
+    ]);
+  });
+});

@@ -72,6 +72,7 @@ const settings: DescribedApiSettings = {
   query_params: new Map(),
   security: new Map(),
   auth: null,
+  failure_codes: null,
   orgs: ['acme'],
   playbooks: null,
   allowed: null,

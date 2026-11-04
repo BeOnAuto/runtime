@@ -35,7 +35,7 @@ export interface ConnectionUnready {
 export interface ConnectionServer {
   readonly settings: ConnectionServerSettings;
   readonly reaches: Reaches;
-  readonly refused: Effect.Effect<string>;
+  readonly refused: (answered: string) => Effect.Effect<string>;
 }
 
 export type ConnectionState =

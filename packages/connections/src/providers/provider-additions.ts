@@ -6,6 +6,7 @@ import {
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
+import { failureCodesOf } from '@on.auto/tool-servers';
 import { Effect, Option, Result, type Redacted } from 'effect';
 
 import {
@@ -96,6 +97,19 @@ type ListingServices = Omit<AdditionServices, 'consent'> & { readonly consent: C
 
 const handlingMoney: Pick<Providing, 'handles_money'> = { handles_money: true };
 
+function providedBy(provider: Provider): Omit<Providing, 'documents' | 'values'> {
+  const { entry } = provider;
+  const consenting = entry.credentials.find(({ kind }) => kind === 'authorization');
+  return {
+    documentServer: documentServerOf(provider),
+    type: entry.type,
+    marks: entry.marks,
+    ...failureCodesOf(entry.failure_codes),
+    ...(consenting?.ending_codes === undefined ? {} : { ending_codes: consenting.ending_codes }),
+    ...(entry.handles_money === true ? handlingMoney : {}),
+  };
+}
+
 export function providingOf(
   { provider }: Pick<AdditionInput, 'provider'>,
   { providers, providerValues }: ProviderServices,
@@ -103,17 +117,9 @@ export function providingOf(
   if (provider === null) {
     return undefined;
   }
-  const named = providerNamed(providers, provider);
-  const documentServer = Result.getOrUndefined(Result.map(named, documentServerOf));
-  const marks = Result.getOrUndefined(Result.map(named, ({ entry }) => entry.marks));
-  const money = Result.getOrUndefined(Result.map(named, ({ entry }) => entry.handles_money)) === true;
-  return {
-    documents: providers.documents,
-    values: providerValues,
-    documentServer,
-    marks,
-    ...(money ? handlingMoney : {}),
-  };
+  const named = Result.getOrUndefined(providerNamed(providers, provider));
+  const given = { documents: providers.documents, values: providerValues };
+  return named === undefined ? { ...given, documentServer: undefined } : { ...given, ...providedBy(named) };
 }
 
 function isWrittenBy(pointer: string, written: string): boolean {

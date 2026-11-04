@@ -1,12 +1,13 @@
-import { markIssuesOf, ServerEntrySchema, serverNameProblems } from '@on.auto/tool-servers';
+import { failureCodeIssuesOf, markIssuesOf, ServerEntrySchema, serverNameProblems } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { CredentialWaySchema } from './credential-ways.ts';
 import { placementIssuesOf } from './entry-placeholders.ts';
-import { localDocumentOf, writtenIssuesOf } from './entry-values.ts';
+import { isADocumentBesideTheEntries, writtenIssuesOf } from './entry-values.ts';
 import { PlaceholdersSchema } from './placeholders.ts';
 
-const { type, url, document, base_url, headers, query_params, request_id, marks } = ServerEntrySchema.fields;
+const { type, url, document, base_url, headers, query_params, request_id, marks, failure_codes } =
+  ServerEntrySchema.fields;
 
 const mostDescriptionCharacters = 300;
 
@@ -52,6 +53,10 @@ const ProviderEntryFieldsSchema = Schema.Struct({
     description:
       'The mark of each tool named, for the tools the server marks wrongly or not at all: reads for a tool that only reads, acts for one that may change something, each named as the server lists it; for openapi, a tool of the document beside the entries',
   }),
+  failure_codes: failure_codes.annotate({
+    description:
+      'For openapi, an API that answers a failure in a JSON answer of a successful status: the pointers to whether the call succeeded and to the code of its failure, and the codes that mean a refused credential, a lacking scope or a limited rate',
+  }),
   placeholders: Schema.optionalKey(
     PlaceholdersSchema.annotate({
       description:
@@ -71,7 +76,7 @@ export type ProviderEntry = typeof ProviderEntryFieldsSchema.Type;
 type EntryIssue = Schema.FilterIssue;
 
 const fieldsOfEachType = {
-  mcp: { required: 'url', foreign: ['document', 'base_url', 'query_params'] },
+  mcp: { required: 'url', foreign: ['document', 'base_url', 'query_params', 'failure_codes'] },
   openapi: { required: 'document', foreign: ['url'] },
 } as const;
 
@@ -104,6 +109,13 @@ function markedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
   return markIssuesOf(entry.marks).map(({ path, detail }) => ({ path: ['marks', ...path], issue: detail }));
 }
 
+function codedIssuesOf(entry: ProviderEntry): readonly EntryIssue[] {
+  return failureCodeIssuesOf(entry.failure_codes).map(({ path, detail }) => ({
+    path: ['failure_codes', ...path],
+    issue: detail,
+  }));
+}
+
 function wayIssuesOf({ credentials }: ProviderEntry): readonly EntryIssue[] {
   const kinds = credentials.map(({ kind }) => kind);
   return kinds.flatMap((kind, index): readonly EntryIssue[] =>
@@ -118,6 +130,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...typeIssuesOf(entry),
     ...wayIssuesOf(entry),
     ...markedIssuesOf(entry),
+    ...codedIssuesOf(entry),
     ...placementIssuesOf(entry),
     ...writtenIssuesOf(entry),
   ]),
@@ -128,6 +141,6 @@ const documentByItsAddress =
 
 export const AddedProviderEntrySchema = ProviderEntrySchema.check(
   Schema.makeFilter((entry: ProviderEntry) =>
-    entry.document === localDocumentOf(entry.name) ? [{ path: ['document'], issue: documentByItsAddress }] : [],
+    isADocumentBesideTheEntries(entry.document) ? [{ path: ['document'], issue: documentByItsAddress }] : [],
   ),
 );

@@ -251,6 +251,43 @@
             },
             "description": "The credential of each security scheme of an HTTP API's document the entry gives, by the scheme's name, placed as the scheme says: an apiKey in its header or query parameter, a bearer as Authorization: Bearer, a basic as user:password; an oauth2 or openIdConnect scheme takes the auth block instead; each value is a reference such as ${BILLING_API_KEY} or ada:${BILLING_PASSWORD}, a secret, and one written out is refused"
           },
+          "failure_codes": {
+            "type": "object",
+            "properties": {
+              "succeeded": {
+                "type": "string",
+                "description": "A JSON pointer to the boolean of a JSON answer that says whether the call succeeded, false for a failure, such as /ok"
+              },
+              "code": {
+                "type": "string",
+                "description": "A JSON pointer to the string of a failed answer that names its failure, such as /error"
+              },
+              "key_refused": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The codes that say the API refused the credential, as a 401 says elsewhere"
+              },
+              "scope_lacking": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The codes that say the credential lacks a scope the call needs"
+              },
+              "rate_limited": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "The codes that say the API limits the rate of its calls, as a 429 says elsewhere"
+              }
+            },
+            "required": ["succeeded", "code"],
+            "additionalProperties": false,
+            "description": "For an HTTP API that answers a failure in a JSON answer of a successful status: where the answer says whether the call succeeded and the code that names its failure, and the codes that mean a refused credential, a lacking scope or a limited rate; any other failed answer is an error result carrying the answer"
+          },
           "org": {
             "anyOf": [
               {
@@ -537,6 +574,43 @@
                 "additionalProperties": false,
                 "description": "The mark of each tool named, for the tools the server marks wrongly or not at all: reads for a tool that only reads, acts for one that may change something, each named as the server lists it; for openapi, a tool of the document beside the entries"
               },
+              "failure_codes": {
+                "type": "object",
+                "properties": {
+                  "succeeded": {
+                    "type": "string",
+                    "description": "A JSON pointer to the boolean of a JSON answer that says whether the call succeeded, false for a failure, such as /ok"
+                  },
+                  "code": {
+                    "type": "string",
+                    "description": "A JSON pointer to the string of a failed answer that names its failure, such as /error"
+                  },
+                  "key_refused": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The codes that say the API refused the credential, as a 401 says elsewhere"
+                  },
+                  "scope_lacking": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The codes that say the credential lacks a scope the call needs"
+                  },
+                  "rate_limited": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The codes that say the API limits the rate of its calls, as a 429 says elsewhere"
+                  }
+                },
+                "required": ["succeeded", "code"],
+                "additionalProperties": false,
+                "description": "For openapi, an API that answers a failure in a JSON answer of a successful status: the pointers to whether the call succeeded and to the code of its failure, and the codes that mean a refused credential, a lacking scope or a limited rate"
+              },
               "placeholders": {
                 "type": "object",
                 "additionalProperties": {
@@ -686,6 +760,16 @@
                         "additionalProperties": false
                       },
                       "minItems": 1
+                    },
+                    "ending_codes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 1,
+                      "maxItems": 16,
+                      "description": "For authorization, the error codes beside invalid_grant with which the token endpoint refuses a refresh because the consent has ended, so that the connection is broken rather than failing"
                     },
                     "description": {
                       "type": "string",

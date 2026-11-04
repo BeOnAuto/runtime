@@ -27,7 +27,7 @@ async function connectedReference(h: Harness): Promise<string> {
 
 async function breaking(h: Harness, id: string): Promise<void> {
   const source = sourceOver(h, { policy: sendingAVariable, variables: noteKeySet });
-  await Effect.runPromise((await preparedOf(source, id)).refused);
+  await Effect.runPromise((await preparedOf(source, id)).refused('The tool server answered HTTP 401'));
 }
 
 async function brokenReference(h: Harness): Promise<string> {

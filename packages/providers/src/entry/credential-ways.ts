@@ -22,6 +22,7 @@ export const wayFields = {
   oauth_client: Schema.Literal('required'),
   says: ScopeWordsSchema,
   more: Schema.Array(ScopeGroupSchema).check(Schema.isMinLength(1)),
+  ending_codes: Schema.Array(NamedSchema).check(Schema.isMinLength(1), Schema.isMaxLength(16)),
 };
 
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
@@ -54,6 +55,12 @@ const CredentialWayFieldsSchema = Schema.Struct({
   oauth_client: Schema.optionalKey(wayFields.oauth_client),
   says: Schema.optionalKey(wayFields.says),
   more: Schema.optionalKey(wayFields.more),
+  ending_codes: Schema.optionalKey(
+    wayFields.ending_codes.annotate({
+      description:
+        'For authorization, the error codes beside invalid_grant with which the token endpoint refuses a refresh because the consent has ended, so that the connection is broken rather than failing',
+    }),
+  ),
   description: Schema.optionalKey(NamedSchema),
 });
 
@@ -85,6 +92,7 @@ const everyField: readonly Field[] = [
   'oauth_client',
   'says',
   'more',
+  'ending_codes',
 ];
 
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
@@ -93,7 +101,17 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
   none: { required: [], optional: [] },
   authorization: {
     required: ['issuer'],
-    optional: ['scope', 'says', 'parameters', ...consentEndpoints, 'pkce', 'clients', 'oauth_client', 'more'],
+    optional: [
+      'scope',
+      'says',
+      'parameters',
+      ...consentEndpoints,
+      'pkce',
+      'clients',
+      'oauth_client',
+      'more',
+      'ending_codes',
+    ],
   },
 };
 
@@ -230,10 +248,44 @@ function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: CredentialW
       ];
 }
 
+const endingOfEveryGrant = 'invalid_grant';
+
+const neverEnding: ReadonlySet<string> = new Set([
+  'invalid_request',
+  'invalid_client',
+  'unauthorized_client',
+  'unsupported_grant_type',
+  'invalid_scope',
+  'server_error',
+  'temporarily_unavailable',
+]);
+
+const endingCode = /^[\w.-]{1,64}$/u;
+
+function endingCodeIssueOf(codes: readonly string[], code: string, index: number): string | undefined {
+  if (code === endingOfEveryGrant) {
+    return `Expected no ${endingOfEveryGrant}, which ends a consent at every token endpoint already`;
+  }
+  if (neverEnding.has(code)) {
+    return `Expected no ${code}, an error of OAuth that never says a consent has ended`;
+  }
+  if (!endingCode.test(code)) {
+    return 'Expected an error code of at most 64 letters, digits, underscores, dots and hyphens';
+  }
+  return codes.indexOf(code) < index ? `Expected ${code} once in ending_codes` : undefined;
+}
+
+function endingIssuesOf({ ending_codes: codes = [] }: CredentialWayFields): readonly WayIssue[] {
+  return codes.flatMap((code, index) => {
+    const issue = endingCodeIssueOf(codes, code, index);
+    return issue === undefined ? [] : [{ path: ['ending_codes', String(index)], issue }];
+  });
+}
+
 function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
   const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says)];
   return way.kind === 'authorization'
-    ? [...issues, ...consentIssuesOf(way), ...oauthClientIssuesOf(way), ...groupIssuesOf(way)]
+    ? [...issues, ...consentIssuesOf(way), ...oauthClientIssuesOf(way), ...groupIssuesOf(way), ...endingIssuesOf(way)]
     : issues;
 }
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));

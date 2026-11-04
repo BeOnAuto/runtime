@@ -42,7 +42,7 @@ const serverKinds: Readonly<Record<ServerType, string>> = {
 const fieldsOfKinds = {
   mcp: ['url', 'headers', 'auth'],
   stdio: ['command', 'args', 'env'],
-  openapi: ['document', 'base_url', 'headers', 'query_params', 'security', 'auth'],
+  openapi: ['document', 'base_url', 'headers', 'query_params', 'security', 'auth', 'failure_codes'],
 } as const satisfies Readonly<Record<ServerType, readonly (keyof ServerEntryFields)[]>>;
 
 const sourcesOfKinds = { mcp: 'url', stdio: 'command', openapi: 'document' } as const;

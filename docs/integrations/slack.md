@@ -4,15 +4,15 @@ description: Connect your Slack account to Auto, use your messages, channels and
 
 # Connect Slack
 
-Connect your Slack account to Auto, so that the functions in your playbooks can search and read your messages, channels and threads, and send messages and add reactions as you. Your agent does the setup. You sign in to Slack and allow access.
+Connect your Slack account to Auto, so that the functions in your playbooks can read your messages, channels and threads, look up people, and send messages and add reactions as you. Your agent does the setup. You sign in to Slack and allow access.
 
 ## What you need
 
 - Your agent connected to Auto and signed in as you, with permission to change your org. Follow the [quick start](../get-started/cloud.md) if you have not connected yet. An agent connected with an API key cannot add a connection.
-- A Slack account in the workspace you want to connect. Auto reaches Slack at `slack.com` and `mcp.slack.com`.
+- A Slack account in the workspace you want to connect. Auto reaches Slack at `slack.com`, and reads how to sign you in to Slack at `mcp.slack.com`, where Slack publishes it.
 - If your workspace takes only the apps its owners approve, Slack asks you to request the app, and you allow access once a workspace owner or app manager approves it.
 
-You connect as yourself, through Slack's MCP server. The connection has your access to the workspace: it reads the channels, conversations and people you can see, and a message it sends is from you. The connection belongs to your org, so a function in a playbook it is for acts in Slack as you, whoever in your org runs it.
+You connect as yourself, through the Slack Web API. The connection has your access to the workspace: it reads the channels, conversations and people you can see, and a message it sends is from you. The connection belongs to your org, so a function in a playbook it is for acts in Slack as you, whoever in your org runs it.
 
 This page is about the `slack` provider, which acts as you, the person who connects. The `slack-bot` provider acts instead as the bot of a Slack app installed in your workspace, and connects with that app's bot token, as [the providers Auto ships](../self-host/connections.md#the-providers-auto-ships) lists.
 
@@ -22,7 +22,7 @@ This page is about the `slack` provider, which acts as you, the person who conne
 
    ```text
    Connect my own Slack account to Auto, so that the functions in my
-   "<playbook name>" playbook can search and read my Slack messages.
+   "<playbook name>" playbook can read my Slack messages.
    ```
 
    Your agent may ask which playbook the connection is for. Name the playbooks that may use it, or say that every playbook of your org may. A connection that names no playbook is for every playbook of the org.
@@ -48,15 +48,18 @@ The Slack app you allow depends on how your Auto is set up:
 
 Once Slack is connected, ask your agent to give a function in your playbook the Slack tools it needs, as [Give a function tools](../guides/tools.md) shows. Say what you want done, in your own words:
 
-| A playbook can                                                                            | You might ask                                                                             |
-| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Search messages in public and private channels, direct messages and group direct messages | "Find what the team said about the spring price change this month."                       |
-| Read a channel's history and a thread                                                     | "Summarize yesterday's thread in the support channel about the delayed order."            |
-| Look up people and channels                                                               | "Find the channel about the trade show, and the job titles of the people who post there." |
-| Send a message                                                                            | "Post the weekly summary in the marketing channel."                                       |
-| Add a reaction                                                                            | "Add a check mark to each question in the support channel we answered today."             |
+| A playbook can                                                                          | You might ask                                                                             |
+| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Read the history of a channel, a direct message or a group direct message, and a thread | "Summarize yesterday's thread in the support channel about the delayed order."            |
+| Look up people and channels                                                             | "Find the channel about the trade show, and the job titles of the people who post there." |
+| Send a message, and change one it sent                                                  | "Post the weekly summary in the marketing channel."                                       |
+| Add a reaction, and see the reactions on a message                                      | "Add a check mark to each question in the support channel we answered today."             |
 
 The `slack` row of [the providers Auto ships](../self-host/connections.md#the-providers-auto-ships) is the full list of what a function may do with Slack.
+
+A function cannot search Slack: Slack opens its search for apps, the Real-time Search API, to the apps in the Slack Marketplace and to a workspace's own apps alone. Point the function at the channels and threads to read instead.
+
+[Slack limits](https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps) how often an app distributed outside the Slack Marketplace reads a conversation, and Auto's Slack app is distributed outside it: through it, a playbook reads the history of a channel, or a thread, once a minute in each workspace, at most 15 messages at a time. Slack answers a read past that limit with how long to wait, and the call fails as rate limited where the wait is longer than Auto waits for one call. An app your workspace builds for itself has no such limit, and whoever runs your Auto can register one, as [The providers Auto ships that take consent](../self-host/connections.md#the-providers-auto-ships-that-take-consent) sets out.
 
 What Slack answers each call, the messages a function reads among it, is kept in the playbook's history, for anyone who may read the playbook, as [the configuration reference](../self-host/configuration.md#fields-of-an-entry) says of every tool server. Someone who may read the playbook can then read messages from your private channels and direct messages that Slack would not show them. If you would rather the history keep only the size of each answer, ask your agent to add Slack that way.
 
@@ -72,7 +75,7 @@ In Studio, find Slack among your org's connections, press Remove and confirm. Or
 Remove my Slack connection from Auto.
 ```
 
-Auto then forgets the connection's tokens, and no playbook may use the connection any more. What Slack publishes for signing in to its MCP server names no address that revokes a token, so Auto does not ask Slack to revoke them, and your authorization of the app stands at Slack until you revoke it there, as below.
+Auto then forgets the connection's tokens, and no playbook may use the connection any more. What Slack publishes for signing in names no address that revokes a token, so Auto does not ask Slack to revoke them, and your authorization of the app stands at Slack until you revoke it there, as below.
 
 ### At Slack
 
@@ -85,7 +88,7 @@ To revoke your own authorization, in Slack on your desktop:
 
 To remove the app for the whole workspace instead, choose Remove app on the same Configuration tab. Where app approval is on, only workspace owners and app managers can remove apps. Slack's help on [removing apps](https://slack.com/help/articles/360003125231-Remove-apps-and-custom-integrations-from-your-workspace) has the steps.
 
-Either way, Slack then refuses the connection's tokens, and the functions that use the connection can no longer reach Slack. A connection cannot be mended, so remove it in Auto too, as above, and add Slack again to use it again.
+Either way, Slack then refuses the connection's tokens, and the functions that use the connection can no longer reach Slack. To use Slack again, ask your agent to reconnect it, or press Sign in again on its row where Studio shows it as Broken, and allow access again. If you no longer want it, remove it in Auto too, as above, so that Auto forgets its tokens.
 
 ### What remains
 

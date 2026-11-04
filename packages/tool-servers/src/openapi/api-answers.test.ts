@@ -6,7 +6,11 @@ import type { CallSettled } from '../clients/server-client.ts';
 import { failureOf } from '../clients/server-failures.ts';
 import { settledOf } from './api-answers.ts';
 
-const answering = { requestIdHeader: 'x-request-id', now: () => Date.parse('2026-10-13T09:00:00.000Z') };
+const answering = {
+  requestIdHeader: 'x-request-id',
+  failureCodes: null,
+  now: () => Date.parse('2026-10-13T09:00:00.000Z'),
+};
 
 function streamOf(bytes: number): ReadableStream<Uint8Array> {
   const chunk = new Uint8Array(1_048_576).fill(120);
@@ -167,7 +171,7 @@ describe('an answer of an HTTP API that fails its call', () => {
   it('of JSON larger than a call over HTTP may take is a failure noted as too large', async () => {
     const settled = await settledOf(
       new Response(streamOf(toolBounds.httpAnswerBytes + 1), { headers: { 'content-type': 'application/json' } }),
-      { requestIdHeader: null, now: Date.now },
+      { requestIdHeader: null, failureCodes: null, now: Date.now },
     );
 
     expect(settled).toMatchObject({ observed: { id: null, response: { tooLarge: true, serverRequestId: null } } });

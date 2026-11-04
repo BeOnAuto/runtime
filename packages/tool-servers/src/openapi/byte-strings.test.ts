@@ -6,7 +6,7 @@ import type { CallSettled } from '../clients/server-client.ts';
 import { settledOf } from './api-answers.ts';
 import type { AnswerSchemas } from './api-parameters.ts';
 
-const answering = { requestIdHeader: null, now: () => Date.parse('2026-10-29T09:00:00.000Z') };
+const answering = { requestIdHeader: null, failureCodes: null, now: () => Date.parse('2026-10-29T09:00:00.000Z') };
 
 function resultOf(settled: CallSettled): unknown {
   return 'result' in settled ? settled.result : settled;
