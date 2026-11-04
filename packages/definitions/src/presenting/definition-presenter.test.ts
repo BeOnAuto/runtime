@@ -124,6 +124,10 @@ describe('the presenter of the standing of a definition', () => {
       presented({ type: 'definition_paused', data: { paused_by: recordedAdmin, reason } }, 2),
       presented({ type: 'definition_paused', data: { paused_by: recordedAdmin } }, 2),
       presented({ type: 'definition_resumed', data: {} }, 2),
+      presented(
+        { type: 'definition_restored', data: { content: { source: 'the greeting' }, restored_by: recordedAdmin } },
+        2,
+      ),
     ]).toMatchObject([
       {
         type: 'definition_paused',
@@ -136,6 +140,11 @@ describe('the presenter of the standing of a definition', () => {
         type: 'definition_resumed',
         summary: 'The greeting “greet” was resumed, so it starts runs again.',
         data: {},
+      },
+      {
+        type: 'definition_restored',
+        summary: 'The greeting “greet” was restored, paused; it starts no runs until it is resumed.',
+        data: { restored_by: recordedAdmin },
       },
     ]);
   });

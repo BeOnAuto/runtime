@@ -47,6 +47,7 @@ const typesOfThePlaybook = [
   'definition_retired',
   'definition_paused',
   'definition_resumed',
+  'definition_restored',
   'playbook_page_saved',
   'event_published',
   'reaction_refused',

@@ -112,7 +112,7 @@ describe('the JSON Schema of the filters of the runs', () => {
 });
 
 describe('what the operations declare of a repeated call', () => {
-  it('declares retiring a definition and cancelling a run irreversible, and updating, pausing, resuming and retiring repeatable', () => {
+  it('declares cancelling a run irreversible, and updating, pausing, resuming, retiring and restoring repeatable, retiring no longer irreversible now that restoring undoes it', () => {
     const declared = Object.fromEntries(
       operations
         .filter(({ kind }) => kind === 'command')
@@ -124,7 +124,8 @@ describe('what the operations declare of a repeated call', () => {
       update_definition: { irreversible: false, repeatable: true },
       pause_definition: { irreversible: false, repeatable: true },
       resume_definition: { irreversible: false, repeatable: true },
-      retire_definition: { irreversible: true, repeatable: true },
+      retire_definition: { irreversible: false, repeatable: true },
+      restore_definition: { irreversible: false, repeatable: true },
       run_definition: { irreversible: false, repeatable: false },
       cancel_run: { irreversible: true, repeatable: true },
     });

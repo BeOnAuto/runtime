@@ -1,0 +1,20 @@
+{
+  "type": "definition_restored",
+  "data": {
+    "content": {
+      "source": "document:\n  dsl: 1.0.3\ndo: []\npage: {}\n",
+      "page": null
+    },
+    "restored_by": {
+      "id": "person:user_2ada",
+      "name": "Ada Lovelace"
+    }
+  },
+  "context": {
+    "at": "2026-11-05T08:30:00.000Z",
+    "by": "person:user_2ada",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 2
+  }
+}

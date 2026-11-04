@@ -12,14 +12,15 @@ const listedDefinitionFields = {
       'The type of the definition: reasoning, lookup, interaction, prediction, computation, generation or workflow',
   }),
   name: Schema.String.annotate({
-    description: 'The definition name, unique among definitions of its type in the playbook and never reused',
+    description:
+      'The definition name, unique among definitions of its type in the playbook and never given to another, retired or not',
   }),
   version: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
     description:
       'The definition version: 1 when created, and one more for every update that changes its document, its overview or its diagram',
   }),
   status: Schema.Literals(['active', 'paused', 'retired']).annotate({
-    description: 'active; paused, when it starts no runs until it is resumed; or retired for good',
+    description: 'active; paused, when it starts no runs until it is resumed; or retired, until it is restored',
   }),
   media_type: Schema.String.annotate({
     description: 'The media type of the definition document, set by its runtime adapter',
@@ -58,7 +59,8 @@ const listedDefinitionFields = {
   created_at: Schema.String.annotate({ description: 'When the definition was created, in ISO 8601 UTC' }),
   created_by: RecordedCallerSchema.annotate({ description: 'The caller who created the definition, by id and name' }),
   updated_at: Schema.String.annotate({
-    description: 'When the definition was last saved or retired, in ISO 8601 UTC; a pause and a resumption leave it',
+    description:
+      'When the definition was last saved, retired or restored, in ISO 8601 UTC; a pause and a resumption leave it',
   }),
   paused_at: Schema.optionalKey(
     Schema.String.annotate({ description: 'When the definition was paused, in ISO 8601 UTC; only while it is paused' }),
@@ -74,7 +76,9 @@ const listedDefinitionFields = {
     }),
   ),
   retired_at: Schema.optionalKey(
-    Schema.String.annotate({ description: 'When the definition was retired, in ISO 8601 UTC' }),
+    Schema.String.annotate({
+      description: 'When the definition was retired, in ISO 8601 UTC; only while it is retired',
+    }),
   ),
 };
 

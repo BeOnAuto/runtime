@@ -7,6 +7,7 @@ import type { DefinitionWords } from '../plain-language/definition-words.ts';
 import {
   definitionCreated,
   definitionPaused,
+  definitionRestored,
   definitionResumed,
   definitionRetired,
   definitionUpdated,
@@ -59,6 +60,9 @@ function accountOf(words: DefinitionWords, event: RecordedDefinitionEvent, defin
   }
   if (event.type === 'definition_resumed') {
     return { summary: definitionResumed(words, definitionType, name), data: {} };
+  }
+  if (event.type === 'definition_restored') {
+    return { summary: definitionRestored(words, definitionType, name), data: { restored_by: event.data.restored_by } };
   }
   return {
     summary:

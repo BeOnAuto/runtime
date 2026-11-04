@@ -24,11 +24,17 @@ export function definitionRecordsOn(database: HostDatabase, stops: FilterStops, 
   return (playbookKey, record) => {
     const { id } = record;
     const change = definitionChangeOf(record);
-    if (change.kind === 'activated') {
+    if (change.kind === 'activated' || change.kind === 'restored') {
       const { name: workflow, version, triggers, at } = change;
       const activation = { workflow, version, triggers, activatedBy: id, activatedAt: Date.parse(at) };
       stops.activated(playbookKey, workflow, version);
-      return Effect.as(triggersActivated(database, playbookKey, activation, inZone), 'applied');
+      const activated = triggersActivated(database, playbookKey, activation, inZone);
+      return Effect.as(
+        change.kind === 'restored'
+          ? Effect.andThen(triggersPaused(database, playbookKey, workflow), activated)
+          : activated,
+        'applied',
+      );
     }
     if (change.kind === 'deactivated' || change.kind === 'retired') {
       stops.retired(playbookKey, change.name);

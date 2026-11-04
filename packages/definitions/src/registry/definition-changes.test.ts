@@ -57,6 +57,16 @@ describe('the change a record of a definition makes to what starts on its own', 
     ]);
   });
 
+  it('restores the definition at its version with the triggers its content carries, to start again once it is resumed', () => {
+    expect([
+      changeOf({ type: 'definition_restored', data: { content: reacting, restored_by: recordedAdmin } }, 'close', 3),
+      changeOf({ type: 'definition_restored', data: { content: plain, restored_by: recordedAdmin } }),
+    ]).toEqual([
+      { kind: 'restored', name: 'close', version: 3, triggers, at: at.at },
+      { kind: 'restored', name: 'close', version: 1, triggers: [], at: at.at },
+    ]);
+  });
+
   it('is unreadable for a record without its data, or without the version it is about', () => {
     expect([
       definitionChangeOf({ type: 'definition_created', context: at }),

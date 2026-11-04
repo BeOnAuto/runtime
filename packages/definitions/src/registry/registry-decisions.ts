@@ -1,6 +1,6 @@
 import { Conflict, type Context, type Rejection } from '@on.auto/operations';
 import { plainNumber } from '@on.auto/phrasing';
-import { Result } from 'effect';
+import { Result, Struct } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import type {
@@ -8,12 +8,13 @@ import type {
   DefinitionCommand,
   DefinitionCreation,
   DefinitionPause,
+  DefinitionRestoration,
   DefinitionResumption,
   DefinitionRetirement,
   DefinitionUpdate,
 } from './definition-commands.ts';
 import type { DefinitionContent, DefinitionEvent } from './definition-events.ts';
-import type { DefinitionRegistry } from './definition-registry.ts';
+import type { DefinitionRegistry, RegisteredDefinition } from './definition-registry.ts';
 import { hasTriggers } from './definition-triggers.ts';
 import { isRetired, type StoredDefinition } from './definition.ts';
 import { definitionNotFound } from './registry-lookup.ts';
@@ -50,7 +51,7 @@ function takenBy(type: string, existing: StoredDefinition): Conflict {
   const { name } = existing;
   return new Conflict({
     detail: isRetired(existing)
-      ? `The ${definitionResourceLabel(type)} ${name} was retired, and a definition name is never reused`
+      ? `The ${definitionResourceLabel(type)} ${name} was retired and keeps its name; restore_definition brings it back`
       : `The playbook already has the ${definitionResourceLabel(type)} ${name}`,
     kind: 'taken',
   });
@@ -112,7 +113,7 @@ function decideUpdate(
   if (isRetired(existing)) {
     return Result.fail(
       new Conflict({
-        detail: `The ${definitionResourceLabel(type)} ${name} is retired and can no longer change`,
+        detail: `The ${definitionResourceLabel(type)} ${name} is retired; restore it to change it`,
         kind: 'retired',
       }),
     );
@@ -153,7 +154,7 @@ function standingToChange(
   return isRetired(existing)
     ? Result.fail(
         new Conflict({
-          detail: `The ${definitionResourceLabel(type)} ${name} is retired and can no longer be paused or resumed`,
+          detail: `The ${definitionResourceLabel(type)} ${name} is retired; restore it to pause or resume it`,
           kind: 'retired',
         }),
       )
@@ -176,6 +177,48 @@ function decideResumption(type: string, { name }: DefinitionResumption, registry
   return Result.flatMap(standingToChange(type, name, registry), ({ status }) =>
     status === 'paused' ? recording({ type: 'definition_resumed', data: {} }) : nothingToRecord,
   );
+}
+
+const contentKeys = [
+  'source',
+  'overview',
+  'diagram',
+  'description',
+  'input_schema',
+  'output_schema',
+  'warnings',
+  'triggers',
+  'details',
+  'stripped',
+  'page',
+] as const;
+
+function contentOf(definition: RegisteredDefinition): DefinitionContent {
+  return Struct.pick(definition, contentKeys);
+}
+
+function decideRestoration(
+  rules: RegistryRules,
+  { name, restored_by }: DefinitionRestoration,
+  registry: DefinitionRegistry,
+): Decision {
+  const { type } = rules;
+  const existing = registry.get(name);
+  if (existing === undefined) {
+    return Result.fail(definitionNotFound(type, name));
+  }
+  if (!isRetired(existing)) {
+    return nothingToRecord;
+  }
+  const kept = keptIn(registry);
+  if (kept >= rules.mostActive) {
+    return Result.fail(tooMany(rules, kept, 'restoring one'));
+  }
+  const content = contentOf(existing);
+  const beyond = beyondTheReactingBound(type, registry, { name, content });
+  return beyond === undefined
+    ? recording({ type: 'definition_restored', data: { content, restored_by } })
+    : Result.fail(beyond);
 }
 
 function versionSaved(command: DefinitionCommand, registry: DefinitionRegistry): Pick<Context, 'definitionVersion'> {
@@ -208,7 +251,10 @@ export function decideOnDefinitions(
   if (command.type === 'pause') {
     return decidePause(rules.type, command, registry);
   }
-  return command.type === 'resume'
-    ? decideResumption(rules.type, command, registry)
+  if (command.type === 'resume') {
+    return decideResumption(rules.type, command, registry);
+  }
+  return command.type === 'restore'
+    ? decideRestoration(rules, command, registry)
     : decideRetirement(rules.type, command, registry);
 }

@@ -72,7 +72,7 @@ async function created(type: string, body: object): Promise<void> {
   expect((await server.call('POST', `${alpha}/definitions/${type}`, { body })).status).toBe(201);
 }
 
-function standingChanged(name: string, change: 'pause' | 'resume', body: object = {}) {
+function standingChanged(name: string, change: 'pause' | 'resume' | 'retire' | 'restore', body: object = {}) {
   return server.call('POST', `${alpha}/definitions/workflow/${name}/${change}`, { body });
 }
 
@@ -135,6 +135,33 @@ describe('a workflow paused and resumed over HTTP', () => {
     expect((await settledRun(server, `${alpha}/runs/${runIdIn(ran.body)}`)).body).toMatchObject({
       status: 'succeeded',
     });
+  });
+});
+
+describe('a workflow retired and restored over HTTP', () => {
+  it('comes back paused, by whoever restored it and when, forgetting its retirement, and runs from its triggers again once resumed', async () => {
+    await servingAPlaybook();
+    await created('workflow', { name: 'close-the-month', source: triggered('close-the-month') });
+
+    const retired = await standingChanged('close-the-month', 'retire');
+    const restored = await standingChanged('close-the-month', 'restore');
+    const refused = await server.call('POST', `${alpha}/definitions/workflow/close-the-month/run`, { body: {} });
+    const resumed = await standingChanged('close-the-month', 'resume');
+    await published('once restored');
+    await runsReaching('close-the-month', 1);
+
+    expect(retired).toMatchObject({ status: 200, body: { status: 'retired', version: 1 } });
+    expect(restored).toMatchObject({
+      status: 200,
+      body: { status: 'paused', version: 1, paused_by: { id: 'local', name: localDeveloper.name } },
+    });
+    expect(restored.body).not.toHaveProperty('retired_at');
+    expect(isPausedSince(restored.body)).toBe(true);
+    expect(refused).toMatchObject({ status: 409, body: { reason: 'conflict', kind: 'paused' } });
+    expect(isActive(resumed.body)).toBe(true);
+    expect(await inputsOf('close-the-month')).toContainEqual([
+      expect.objectContaining({ data: { month: 'once restored' } }),
+    ]);
   });
 });
 

@@ -79,6 +79,10 @@ export function definitionResumed(words: DefinitionWords, type: string, name: st
   return `${capitalized(words.named(type, name))} was resumed, so it starts runs again.`;
 }
 
+export function definitionRestored(words: DefinitionWords, type: string, name: string): string {
+  return `${capitalized(words.named(type, name))} was restored, paused; it starts no runs until it is resumed.`;
+}
+
 export function playbookPageSaved(): string {
   return "The playbook's page was saved.";
 }

@@ -5,6 +5,7 @@ import type { PageContent } from '../page/page-facts.ts';
 import type {
   DefinitionCreated,
   DefinitionPaused,
+  DefinitionRestored,
   DefinitionUpdated,
   RecordedDefinitionEvent,
 } from './definition-events.ts';
@@ -54,6 +55,19 @@ function retiredDefinition(definition: RegisteredDefinition, { at }: DefinitionC
   return { ...Struct.omit(definition, whilePaused), status: 'retired', updated_at: at, retired_at: at };
 }
 
+function restoredDefinition(
+  definition: RegisteredDefinition,
+  { data, context: { at } }: DefinitionRestored,
+): RegisteredDefinition {
+  return {
+    ...Struct.omit(definition, ['retired_at']),
+    status: 'paused',
+    paused_at: at,
+    paused_by: data.restored_by,
+    updated_at: at,
+  };
+}
+
 function evolvedDefinition(
   definition: RegisteredDefinition,
   event: Exclude<RecordedDefinitionEvent, DefinitionCreated>,
@@ -63,6 +77,9 @@ function evolvedDefinition(
   }
   if (event.type === 'definition_paused') {
     return pausedDefinition(definition, event);
+  }
+  if (event.type === 'definition_restored') {
+    return restoredDefinition(definition, event);
   }
   return event.type === 'definition_resumed'
     ? resumedDefinition(definition)

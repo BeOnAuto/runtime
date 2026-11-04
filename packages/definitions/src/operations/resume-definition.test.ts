@@ -104,7 +104,7 @@ describe('resume_definition repeated', () => {
       {
         status: 'rejected',
         reason: 'conflict',
-        detail: 'The probe definition plain is retired and can no longer be paused or resumed',
+        detail: 'The probe definition plain is retired; restore it to pause or resume it',
         kind: 'retired',
       },
       { status: 'rejected', reason: 'not_found', detail: 'There is no probe definition missing in this playbook' },

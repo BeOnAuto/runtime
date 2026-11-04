@@ -90,8 +90,8 @@ function hasNoConstraint({ keywords }: Argument): boolean {
 }
 
 describe('the descriptions of the tools of /mcp', () => {
-  it('are thirty-eight, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(38);
+  it('are thirty-nine, each under 800 characters, in three to eight sentences', () => {
+    expect(tools).toHaveLength(39);
     expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
     expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
   });
@@ -221,6 +221,7 @@ const served: Readonly<Record<string, Hints>> = {
   pause_definition: [false, true, true, false],
   resume_definition: [false, true, true, false],
   retire_definition: [false, true, true, false],
+  restore_definition: [false, true, true, false],
   run_definition: [false, true, false, true],
   get_run: [true, false, true, false],
   cancel_run: [false, true, true, false],
@@ -255,10 +256,9 @@ const apiReadme = readFileSync(new URL('../../../api/README.md', import.meta.url
 
 const readmeRow = /^\| `([a-z_]+)` +\| (true|false) +\| (true|false) +\| (true|false) +\| (true|false) +\|$/gmu;
 
-function rowOf([, name = '', readOnly, destructive, idempotent, openWorld]: readonly string[]): readonly [
-  string,
-  Hints,
-] {
+type NamedHints = readonly [string, Hints];
+
+function rowOf([, name = '', readOnly, destructive, idempotent, openWorld]: readonly string[]): NamedHints {
   return [name, [readOnly === 'true', destructive === 'true', idempotent === 'true', openWorld === 'true']];
 }
 

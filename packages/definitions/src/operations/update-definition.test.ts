@@ -131,7 +131,7 @@ describe('update_definition rejecting', () => {
     expect(await call(updateDefinition, updatingGreet('{"greeting": "Howdy"}'))).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The echo definition greet is retired and can no longer change',
+      detail: 'The echo definition greet is retired; restore it to change it',
       kind: 'retired',
     });
     expect(await call(updateDefinition, toAlpha(acmeAdmin, { type: 'reason', name: 'greet', source: hello }))).toEqual({

@@ -180,7 +180,7 @@ describe('the plain language of get_definition', () => {
     ]).toEqual([
       'The greeting “greet” is in use. What it does: Greets.',
       'The greeting “greet” is paused; it starts no runs until it is resumed.',
-      'The greeting “greet” has been retired; it can no longer be run or changed.',
+      'The greeting “greet” is retired; it neither runs nor changes until it is restored.',
     ]);
   });
 
@@ -234,9 +234,9 @@ describe('the plain language of list_definitions', () => {
 });
 
 describe('the plain language of retire_definition', () => {
-  it('says the definition can no longer be run or changed, nor its name used again', () => {
+  it('says the definition neither runs nor changes until it is restored, and that its name stays its own', () => {
     expect(outcomeOf('retire_definition', { ...greet, status: 'retired' }, { type: 'echo', name: 'greet' })).toBe(
-      'Retired the greeting “greet”. It can no longer be run or changed, and its name cannot be used again in this playbook.',
+      'Retired the greeting “greet”. It neither runs nor changes until it is restored, and no other definition takes its name.',
     );
   });
 

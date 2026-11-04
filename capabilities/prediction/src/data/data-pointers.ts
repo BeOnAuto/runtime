@@ -15,6 +15,7 @@ const carriedData: ReadonlyMap<string, Carries> = new Map([
   ['definition_retired', carriesNothing],
   ['definition_paused', carriesNothing],
   ['definition_resumed', carriesNothing],
+  ['definition_restored', carriesNothing],
   ['run_succeeded', (tokens) => tokens[0] === 'output' || (tokens.length === 1 && tokens[0] === 'output_bytes')],
   [
     'run_rejected',

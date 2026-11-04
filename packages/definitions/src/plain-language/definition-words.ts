@@ -84,7 +84,7 @@ export function pageWords({ type, source }: Pick<Definition, 'type' | 'source'>)
 const standingsInWords: Readonly<Record<ListedDefinition['status'], string>> = {
   active: 'is in use.',
   paused: 'is paused; it starts no runs until it is resumed.',
-  retired: 'has been retired; it can no longer be run or changed.',
+  retired: 'is retired; it neither runs nor changes until it is restored.',
 };
 
 export function definitionStanding(

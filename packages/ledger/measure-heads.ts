@@ -27,6 +27,7 @@ const definitionTypes = [
   'definition_retired',
   'definition_paused',
   'definition_resumed',
+  'definition_restored',
 ];
 
 interface Explained {

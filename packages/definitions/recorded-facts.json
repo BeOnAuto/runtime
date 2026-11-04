@@ -11,6 +11,7 @@
   "src/registry/0.56.0/definition_paused.json": "7a6be85f5b816adc266a4a9b9d25fd81e23e061c839c44734669e85c51a195f6",
   "src/registry/0.56.0/definition_resumed.json": "3ff0315b5291b42d29943cbd7287c8838244388af79deb85f13bb4d621ed827e",
   "src/registry/0.56.0/definition_updated.json": "34009470585a8104b86b03196c9523db8f5d2186fceaf0a0b37516aed6125e6d",
+  "src/registry/0.57.0/definition_restored.json": "8425ba7ef826bbe6cb62cb7b6455813a0ea4ec2ece16ade7d01d72fe4f2bd137",
   "src/runs/0.46.0/attempt_resumed.json": "04221493d0abfc336b2a26effc50917130b28f34abe0c1213490e5c7ff2d90b7",
   "src/runs/0.46.0/model_call_answered.json": "e03ca14b39a962027031f9e4bca1f9110cfd545a27b46386eacee42cad718f12",
   "src/runs/0.46.0/model_call_failed.json": "aa7c5ed0e03fbf7e8ddffb33c0c86f94f6bfd0d20e7b6aef902408ed0a21b802",

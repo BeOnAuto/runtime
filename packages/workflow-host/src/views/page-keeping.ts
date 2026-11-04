@@ -2,7 +2,7 @@ import {
   DefinitionEventSchema,
   PageEventSchema,
   functionTypeOrder,
-  isDefinitionSaved,
+  carriesContent,
   pageDetailsIn,
   playbookPageViewNameOf,
   shapedViewsSchemaOf,
@@ -77,7 +77,7 @@ function pagesOfASubject(type: string, pages: Pages, event: RecordedDefinitionEv
   if (event.type === 'definition_retired') {
     return closed(pages, key, version, at);
   }
-  if (!isDefinitionSaved(event)) {
+  if (!carriesContent(event)) {
     return pages;
   }
   const { page } = event.data.content;

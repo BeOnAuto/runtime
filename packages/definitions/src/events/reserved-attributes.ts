@@ -27,6 +27,7 @@ const playbookFeedTypes: Readonly<Record<PlaybookFeedType, true>> = {
   definition_retired: true,
   definition_paused: true,
   definition_resumed: true,
+  definition_restored: true,
   playbook_page_saved: true,
   event_published: true,
   reaction_refused: true,
@@ -68,7 +69,7 @@ export function isReservedSource(source: string): boolean {
   return reservedSourcePrefixes.some((prefix) => source.startsWith(prefix));
 }
 
-export const contextAttributeNames: readonly string[] = [
+const contextAttributeNames: readonly string[] = [
   'caller',
   'definitionversion',
   'depth',

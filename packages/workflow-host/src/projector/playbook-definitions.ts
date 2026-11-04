@@ -1,7 +1,7 @@
 import {
   DefinitionEventSchema,
+  carriesContent,
   definitionTypeStreamOf,
-  isDefinitionSaved,
   type RecordedDefinitionEvent,
   type StrippedForms,
 } from '@on.auto/definitions';
@@ -62,7 +62,7 @@ function evolved(
 ) {
   const kept = new Map(functions);
   const { definitionName: name, definitionVersion: version } = event.context;
-  if (isDefinitionSaved(event)) {
+  if (carriesContent(event)) {
     const { content } = event.data;
     kept.set(name, { version, saved, details: keptOf(content.details, content.stripped) });
   } else if (event.type === 'definition_retired') {

@@ -32,7 +32,13 @@ export interface DefinitionResumption {
   readonly name: string;
 }
 
-type DefinitionStandingChange = DefinitionRetirement | DefinitionPause | DefinitionResumption;
+export interface DefinitionRestoration {
+  readonly type: 'restore';
+  readonly name: string;
+  readonly restored_by: RecordedCaller;
+}
+
+type DefinitionStandingChange = DefinitionRetirement | DefinitionPause | DefinitionResumption | DefinitionRestoration;
 
 export type DefinitionCommandData = DefinitionCreation | DefinitionUpdate | DefinitionStandingChange;
 

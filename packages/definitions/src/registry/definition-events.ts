@@ -37,6 +37,11 @@ export const DefinitionEventSchema = Schema.Union([
     DefinitionContextSchema,
   ),
   factOf('definition_resumed', Schema.Struct({}), DefinitionContextSchema),
+  factOf(
+    'definition_restored',
+    Schema.Struct({ ...SavedSchema.fields, restored_by: RecordedCallerSchema }),
+    DefinitionContextSchema,
+  ),
 ]);
 
 export type RecordedDefinitionEvent = typeof DefinitionEventSchema.Type;
@@ -51,14 +56,23 @@ export type DefinitionSaved = DefinitionCreated | DefinitionUpdated;
 
 export type DefinitionPaused = Extract<RecordedDefinitionEvent, { readonly type: 'definition_paused' }>;
 
+export type DefinitionRestored = Extract<RecordedDefinitionEvent, { readonly type: 'definition_restored' }>;
+
+export type DefinitionWithContent = DefinitionSaved | DefinitionRestored;
+
 export const definitionFactTypes: readonly RecordedDefinitionEvent['type'][] = [
   'definition_created',
   'definition_updated',
   'definition_retired',
   'definition_paused',
   'definition_resumed',
+  'definition_restored',
 ];
 
 export function isDefinitionSaved(event: RecordedDefinitionEvent): event is DefinitionSaved {
   return event.type === 'definition_created' || event.type === 'definition_updated';
+}
+
+export function carriesContent(event: RecordedDefinitionEvent): event is DefinitionWithContent {
+  return isDefinitionSaved(event) || event.type === 'definition_restored';
 }

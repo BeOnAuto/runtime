@@ -237,7 +237,7 @@ describe('create_definition rejecting with conflict', () => {
     expect(await creatingGreet()).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The echo definition greet was retired, and a definition name is never reused',
+      detail: 'The echo definition greet was retired and keeps its name; restore_definition brings it back',
       kind: 'taken',
     });
     expect(

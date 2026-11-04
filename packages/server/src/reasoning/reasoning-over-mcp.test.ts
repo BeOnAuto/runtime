@@ -92,7 +92,7 @@ describe('a reasoning function definition over MCP, on the endpoint of its playb
 });
 
 describe('the definition tools an agent sees on the endpoint of a playbook', () => {
-  it('are the twenty-five operations inside a playbook and the guide tool, none of them carrying the format of a document', async () => {
+  it('are the twenty-six operations inside a playbook and the guide tool, none of them carrying the format of a document', async () => {
     const tools = listedTools(await onAlpha([], (session) => session.listTools()));
 
     expect(tools.map(({ name }) => name)).toEqual([...definitionTools, guideToolName]);
@@ -114,7 +114,7 @@ describe('the definition tools an agent sees on the endpoint of a playbook', () 
     const tools = listedTools(await onAlpha([], (session) => session.listTools()));
     const schemas = tools.map(({ inputSchema }) => inputSchema);
 
-    expect(schemas).toHaveLength(26);
+    expect(schemas).toHaveLength(27);
     expect(schemas.map((schema) => schema['type'])).toEqual(schemas.map(() => 'object'));
     expect(schemas.flatMap((schema) => danglingReferencesIn(schema))).toEqual([]);
   });

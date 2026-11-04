@@ -183,7 +183,7 @@ describe('pause_definition refusing', () => {
     expect(await call(pauseDefinition, pausingPlain)).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The probe definition plain is retired and can no longer be paused or resumed',
+      detail: 'The probe definition plain is retired; restore it to pause or resume it',
       kind: 'retired',
     });
   });

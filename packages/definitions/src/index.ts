@@ -136,6 +136,7 @@ export {
   type RunEnding,
 } from './runs/run-endings.ts';
 export { definePauseDefinition } from './operations/pause-definition.ts';
+export { defineRestoreDefinition } from './operations/restore-definition.ts';
 export { defineResumeDefinition } from './operations/resume-definition.ts';
 export { defineRetireDefinition } from './operations/retire-definition.ts';
 export { defineUpdateDefinition } from './operations/update-definition.ts';
@@ -170,7 +171,7 @@ export { playbookEventOf, playbookFactOf } from './events/playbook-facts.ts';
 export {
   DefinitionEventSchema,
   definitionFactTypes,
-  isDefinitionSaved,
+  carriesContent,
   type DefinitionEvent,
   type RecordedDefinitionEvent,
 } from './registry/definition-events.ts';
@@ -184,7 +185,6 @@ export {
   playbookOwnNamesOf,
   callerSourcePrefix,
   isReservedSource,
-  contextAttributeNames,
   reservedSourcesInWords,
   type PlaybookOwnNames,
 } from './events/reserved-attributes.ts';

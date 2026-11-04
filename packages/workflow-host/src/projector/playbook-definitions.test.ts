@@ -60,6 +60,39 @@ describe('the definitions a playbook keeps', () => {
   });
 });
 
+describe('the definitions a playbook keeps through a retirement and a restoration', () => {
+  it('brings a function back at its restoration, with the details its content carries', () => {
+    const ofTheRuns = {
+      by: 'acme-admin',
+      at: 'now',
+      definitionType: 'view',
+      definitionName: 'runs',
+      definitionVersion: 1,
+    };
+    const definitions = definitionsAfter(
+      noDefinitions,
+      [
+        savedAs('runs', { source: 'the runs document', details: { fold } }),
+        { type: 'definition_retired', data: {}, context: ofTheRuns },
+        {
+          type: 'definition_restored',
+          data: {
+            content: { source: 'the runs document', details: { fold } },
+            restored_by: { id: 'acme-admin', name: 'acme-admin' },
+          },
+          context: ofTheRuns,
+        },
+      ],
+      runnableDetailsOf,
+    );
+
+    expect([definitions.version, [...definitions.functions]]).toEqual([
+      3,
+      [['runs', { version: 1, saved: 3, details: { fold } }]],
+    ]);
+  });
+});
+
 describe('the definitions a playbook keeps through a pause and a resumption', () => {
   it('keeps a function as it was through its pause and its resumption, each a version of the stream', () => {
     const ofTheRuns = {

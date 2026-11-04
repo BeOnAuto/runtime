@@ -84,11 +84,11 @@ describe('creating a definition', () => {
     );
   });
 
-  it('is rejected for the name of a retired definition, because a name is never reused', () => {
+  it('is rejected for the name of a retired definition, which keeps its name', () => {
     expect(decided(creatingGreet, greetCreated, greetRetired)).toEqual(
       Result.fail(
         new Conflict({
-          detail: 'The echo definition greet was retired, and a definition name is never reused',
+          detail: 'The echo definition greet was retired and keeps its name; restore_definition brings it back',
           kind: 'taken',
         }),
       ),
@@ -130,7 +130,7 @@ describe('updating a definition', () => {
   it('is rejected for a retired definition', () => {
     expect(decided(updatingGreet(howdy), greetCreated, greetRetired)).toEqual(
       Result.fail(
-        new Conflict({ detail: 'The echo definition greet is retired and can no longer change', kind: 'retired' }),
+        new Conflict({ detail: 'The echo definition greet is retired; restore it to change it', kind: 'retired' }),
       ),
     );
   });

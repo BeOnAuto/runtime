@@ -17,11 +17,10 @@ export function defineRetireDefinition(capabilities: readonly Capability[]) {
       name: 'retire_definition',
       title: 'Retire definition',
       description: [
-        'Retires a function or workflow for good, with its page, and returns it: it can still be read and listed, but it can no longer run or change, its name is not used again in the playbook, and there is no way to restore it.',
-        'Use it when the person asks to retire that definition; update_definition changes one.',
+        'Retires a function or workflow, with its page, and returns it: it can still be read and listed, but it neither runs nor changes, and no other definition takes its name.',
+        'restore_definition brings it back, paused. Use retire_definition when the person asks to retire that definition; update_definition changes one.',
         '`type` and `name` say which definition, and retiring one already retired changes nothing.',
       ].join(' '),
-      irreversible: true,
       repeatable: true,
       route: { method: 'POST', path: '/definitions/{type}/{name}/retire' },
       inputSchema: Schema.Struct({ type: known.field, name: DefinitionNameField }),
@@ -36,7 +35,7 @@ export function defineRetireDefinition(capabilities: readonly Capability[]) {
         task: `retire a ${words.kinds}`,
         attempt: ({ type, name }) => `retire ${words.named(type, name)}`,
         outcome: ({ type, name }) =>
-          `Retired ${words.named(type, name)}. It can no longer be run or changed, and its name cannot be used again in this playbook.`,
+          `Retired ${words.named(type, name)}. It neither runs nor changes until it is restored, and no other definition takes its name.`,
       },
     }),
   );

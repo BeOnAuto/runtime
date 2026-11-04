@@ -235,35 +235,36 @@ Content-Type: application/json
 
 These routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`:
 
-| Operation           | Method and route                            | Permission       | Input                                               |
-| ------------------- | ------------------------------------------- | ---------------- | --------------------------------------------------- |
-| `create_definition` | `POST /definitions/reasoning`               | `playbook:write` | `name`, `source`, `diagram`, optional `overview`    |
-| `list_definitions`  | `GET /definitions/reasoning`                | `playbook:read`  | Optional `include_retired`                          |
-| `get_definition`    | `GET /definitions/reasoning/{name}`         | `playbook:read`  | Name in path; optional `render` and `sample_output` |
-| `update_definition` | `PUT /definitions/reasoning/{name}`         | `playbook:write` | `source`, `diagram`, optional `overview`            |
-| `pause_definition`  | `POST /definitions/reasoning/{name}/pause`  | `playbook:write` | Optional `reason`                                   |
-| `resume_definition` | `POST /definitions/reasoning/{name}/resume` | `playbook:write` | Name in path                                        |
-| `retire_definition` | `POST /definitions/reasoning/{name}/retire` | `playbook:write` | Name in path                                        |
-| `run_definition`    | `POST /definitions/reasoning/{name}/run`    | `playbook:write` | Optional `input`, optional UUID `run_id`            |
-| `render_page`       | `POST /definitions/reasoning/{name}/render` | `playbook:read`  | Optional `sample_output` or `run_id`                |
-| `get_run`           | `GET /runs/{run_id}`                        | `playbook:read`  | Run id in path                                      |
+| Operation            | Method and route                             | Permission       | Input                                               |
+| -------------------- | -------------------------------------------- | ---------------- | --------------------------------------------------- |
+| `create_definition`  | `POST /definitions/reasoning`                | `playbook:write` | `name`, `source`, `diagram`, optional `overview`    |
+| `list_definitions`   | `GET /definitions/reasoning`                 | `playbook:read`  | Optional `include_retired`                          |
+| `get_definition`     | `GET /definitions/reasoning/{name}`          | `playbook:read`  | Name in path; optional `render` and `sample_output` |
+| `update_definition`  | `PUT /definitions/reasoning/{name}`          | `playbook:write` | `source`, `diagram`, optional `overview`            |
+| `pause_definition`   | `POST /definitions/reasoning/{name}/pause`   | `playbook:write` | Optional `reason`                                   |
+| `resume_definition`  | `POST /definitions/reasoning/{name}/resume`  | `playbook:write` | Name in path                                        |
+| `retire_definition`  | `POST /definitions/reasoning/{name}/retire`  | `playbook:write` | Name in path                                        |
+| `restore_definition` | `POST /definitions/reasoning/{name}/restore` | `playbook:write` | Name in path                                        |
+| `run_definition`     | `POST /definitions/reasoning/{name}/run`     | `playbook:write` | Optional `input`, optional UUID `run_id`            |
+| `render_page`        | `POST /definitions/reasoning/{name}/render`  | `playbook:read`  | Optional `sample_output` or `run_id`                |
+| `get_run`            | `GET /runs/{run_id}`                         | `playbook:read`  | Run id in path                                      |
 
 The `source` is a [reasoning function document](reasoning-format.md). These rules apply to the definitions of every type:
 
 - A name follows the playbook id rule: 3 to 48 lowercase letters, digits and hyphens, beginning with a letter.
-- A name is unique within its type and playbook, and cannot be reused after retirement.
+- A name is unique within its type and playbook. A retired definition keeps its name, so no other definition takes it.
 - A source document may be at most 65,536 UTF-8 bytes.
 - Changing a document, its overview or its diagram creates a version. Updating it with identical source and diagram, and the same overview or none, records no change.
 - A run uses the latest version.
 - A definition's `status` is `active`, `paused` or `retired`.
 - A paused definition starts no runs: `run_definition` of it is refused with `conflict` of the kind `paused`, a workflow step that calls it ends the run `rejected` with `invalid_input` and words that say the function is paused, as a step that calls a retired function does, its triggers start nothing, and the runs already going finish. It can still be read, listed and updated, and an update keeps it paused. Pausing changes neither its version nor its `updated_at`, and it carries `paused_at`, `paused_by`, the caller who paused it by `id` and `name`, and the `reason` given, 1 to 1,024 characters, until it is resumed.
 - A resumed definition is `active` again and runs as before. Pausing a paused definition, or resuming an active one, succeeds and records nothing, so both are safe to retry.
-- A retired definition can be read, but cannot be edited, run, paused or resumed: those are refused with `conflict` of the kind `retired`.
+- A retired definition can be read, but cannot be edited, run, paused or resumed: those are refused with `conflict` of the kind `retired`. It carries `retired_at` until `restore_definition` brings it back, with its page and its history, at its version: it comes back `paused`, with `paused_at` and `paused_by` the caller who restored it, and runs again once resumed. Restoring is refused with `conflict` where the playbook already keeps as many definitions of the type as it may, as creating one is. Retiring a retired definition, or restoring one that is not retired, succeeds and records nothing.
 - A definition carries its `input_schema` and `output_schema` where its document declares them. A reasoning function, a computation function or a workflow whose `output.shape` names an [output shape](output-shapes.md) has the shape's schema as its `output_schema`, and the shape's name as `details.shape`, such as `"details": { "shape": "series" }`. A prediction function has the `series` shape so, since its questions answer a series, and a generation function the `asset` shape. `details` is left out otherwise. `list_definitions` shows both too.
 
 A definition names the caller who created it as `created_by`, by `id` and `name`, and keeps it across its versions.
 
-`create_definition`, `update_definition`, `get_definition`, `pause_definition`, `resume_definition` and `retire_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out. `get_definition` of a definition with a page also has `page` ([Pages](#pages)). `create_definition` and `update_definition` return its page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
+`create_definition`, `update_definition`, `get_definition`, `pause_definition`, `resume_definition`, `retire_definition` and `restore_definition` return the definition with its `overview`, its `diagram` and its `used_by`; `list_definitions` leaves all three out. `get_definition` of a definition with a page also has `page` ([Pages](#pages)). `create_definition` and `update_definition` return its page in Studio as `studio` too ([Links to Studio](#links-to-studio)).
 
 - `overview` is Markdown its author gives beside `source` for the person who runs the business: why the definition exists, what it does and how it fits, in one to three short paragraphs. It holds 1 character to 16,384 UTF-8 bytes. The version keeps it as written, and an update that leaves it out keeps the overview saved. A definition saved without one has none.
 - `diagram` is how a function works as a picture, which Auto Studio draws under the overview. Every `create_definition` and `update_definition` of a function gives it, as one of two choices: Mermaid source of a flowchart or a state diagram, whose first line is `flowchart`, `graph` or `stateDiagram`, optionally with a direction such as `TD`, in at most 8,192 UTF-8 bytes; or the word `none`, when a picture would add nothing. Since Auto Studio draws it at full size in a column, a diagram reads best top to bottom, as `flowchart TD` or a state diagram, in three to eight nodes, each a few plain words for the person who runs the business rather than an expression or code. The version keeps it as given. A version saved before functions took one has none.

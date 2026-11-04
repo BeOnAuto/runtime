@@ -28,6 +28,7 @@ const definitionTools = [
   'pause_definition',
   'resume_definition',
   'retire_definition',
+  'restore_definition',
   'run_definition',
   'get_run',
   'cancel_run',

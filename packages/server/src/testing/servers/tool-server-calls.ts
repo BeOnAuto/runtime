@@ -106,5 +106,8 @@ export async function standingsCalled(
   return [
     ['pause_definition', await session.callTool('pause_definition', inPlaybook(pausing))],
     ['resume_definition', await session.callTool('resume_definition', inPlaybook(definition))],
+    ['retire_definition', await session.callTool('retire_definition', inPlaybook(definition))],
+    ['restore_definition', await session.callTool('restore_definition', inPlaybook(definition))],
+    ['retire_definition', await session.callTool('retire_definition', inPlaybook(definition))],
   ];
 }

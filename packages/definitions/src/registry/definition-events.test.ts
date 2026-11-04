@@ -118,10 +118,21 @@ const paused: readonly (typeof DefinitionEventSchema.Type)[] = [
   },
 ];
 
+const restored: readonly (typeof DefinitionEventSchema.Type)[] = [
+  {
+    type: 'definition_restored',
+    data: {
+      content: { source: 'document:\n  dsl: 1.0.3\ndo: []\npage: {}\n', page: null },
+      restored_by: { id: 'person:user_2ada', name: 'Ada Lovelace' },
+    },
+    context: { ...ofThePausedWorkflow, at: '2026-11-05T08:30:00.000Z', definitionVersion: 2 },
+  },
+];
+
 describe('the facts of the definitions of a playbook', () => {
   recordedFactsBehaviour({
     schema: DefinitionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.54.0': drawn, '0.56.0': [...paged, ...paused] },
+    releases: { '0.46.0': baseline, '0.54.0': drawn, '0.56.0': [...paged, ...paused], '0.57.0': restored },
   });
 });

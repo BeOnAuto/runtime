@@ -174,7 +174,6 @@ async function workflowsCalled(session: McpSession): Promise<Called> {
     ['send_run_event', await session.callTool('send_run_event', inSales({ run_id: runId, event }))],
     ...(await cancelCalled(session, inSales, workflow)),
     ...(await standingsCalled(session, inSales, workflow)),
-    ['retire_definition', await session.callTool('retire_definition', inSales(workflow))],
   ];
 }
 
