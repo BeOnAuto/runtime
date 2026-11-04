@@ -13,19 +13,19 @@ import {
 import { instructionsActingAs, instructionsFor } from './instructions.ts';
 
 describe('the length of the instructions with every tool', () => {
-  it('take 1,365 characters on /mcp, 1,366 on the org endpoint and 994 on the playbook endpoint after their opening line', () => {
+  it('take 1,589 characters on /mcp, 1,590 on the org endpoint and 994 on the playbook endpoint after their opening line', () => {
     expect(
       everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served, definitionTypes).length),
-    ).toEqual([1366, 994, 1365]);
+    ).toEqual([1590, 994, 1589]);
   });
 
-  it('take 1,495, 1,496 and 1,124 with the opening line of the person the bound holds, which takes 130 of them', () => {
+  it('take 1,719, 1,720 and 1,124 with the opening line of the person the bound holds, which takes 130 of them', () => {
     expect(
       everyEndpoint.map(
         ([endpoint, served]) =>
           instructionsActingAs(callerTheInstructionsHold, endpoint, served, { definitionTypes, pages: false }).length,
       ),
-    ).toEqual([1496, 1124, 1495]);
+    ).toEqual([1720, 1124, 1719]);
   });
 });
 
@@ -73,6 +73,7 @@ describe('the instructions of an endpoint that lists search and add_connection',
   const connecting = [
     "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links.",
     "Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
+    "A playbook's runs expect what they act on at a service, such as statuses or channels, to be there already: set it up with the person before the first run, and ask for the access that setup takes when you add the connection.",
   ].join(' ');
 
   it('say after the sentence on the guides that search finds the provider of a service and add_connection connects it, on /mcp and the org endpoint', () => {

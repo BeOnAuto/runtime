@@ -2,83 +2,7 @@ import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
 import { recipesFolder } from './guide-files.ts';
 import type { Guide, Recipe } from './guide-shelf.ts';
-
-type RecipeOutline = Omit<Recipe, 'text'>;
-
-const outlines: readonly RecipeOutline[] = [
-  {
-    name: 'first-playbook',
-    title: 'Create your first playbook',
-    description: 'Creates a playbook with a first reasoning function, and runs it once the person has agreed to it.',
-    arguments: [],
-    formatGuide: 'reasoning-function',
-    calls: ['list_playbooks', 'create_playbook', 'create_definition', 'query_connection', 'run_definition'],
-    request: () => 'Create my first playbook.',
-  },
-  {
-    name: 'give-tools',
-    title: 'Give the playbook tools',
-    description: 'Gives a reasoning function the tools of a tool server the playbook may use.',
-    arguments: [
-      {
-        name: 'server',
-        description: 'The tool server whose tools to give, as search names it',
-        required: false,
-      },
-    ],
-    formatGuide: 'reasoning-function',
-    calls: [
-      'search',
-      'introspect',
-      'query_connection',
-      'execute_connection',
-      'create_definition',
-      'run_definition',
-      'list_playbook_events',
-    ],
-    request: ({ server }) =>
-      server === undefined ? 'Give the playbook tools.' : `Give the playbook the tools of the tool server ${server}.`,
-  },
-  {
-    name: 'schedule',
-    title: 'Run a workflow on a schedule',
-    description: 'Starts a workflow on a schedule or on an event, and reads how its runs went.',
-    arguments: [
-      { name: 'workflow', description: 'The name of the workflow to run', required: true },
-      {
-        name: 'when',
-        description: "When to run it, in the person's words, such as every weekday at 9:00",
-        required: true,
-      },
-    ],
-    formatGuide: 'workflow',
-    calls: [
-      'list_definitions',
-      'create_definition',
-      'update_definition',
-      'list_runs',
-      'get_run',
-      'list_playbook_events',
-    ],
-    request: ({ workflow, when }) => `Run the workflow ${String(workflow)} ${String(when)}.`,
-  },
-  {
-    name: 'keep',
-    title: 'Keep something for later',
-    description:
-      "Keeps what the person wants kept as the output of a run, and reads it back with a lookup of that definition's runs.",
-    arguments: [
-      {
-        name: 'what',
-        description: "What to keep, in the person's words, such as who approves a budget",
-        required: true,
-      },
-    ],
-    formatGuide: 'lookup-function',
-    calls: ['list_definitions', 'create_definition', 'run_definition'],
-    request: ({ what }) => `Keep ${String(what)} for later.`,
-  },
-];
+import { outlines, type RecipeOutline } from './recipe-outlines.ts';
 
 interface Insertion {
   readonly after: string;
@@ -132,7 +56,7 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
       {
         after: 'and that the function can call only the tools it names.',
         words:
-          '\n9. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next.',
+          '\n8. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next.',
       },
     ],
     calls: [],
@@ -281,7 +205,7 @@ export function recipesFor(shippedFiles: ShippedFiles, guides: readonly Guide[])
   const carried = new Set(guides.map(({ name }) => name));
   return Promise.all(
     outlines
-      .filter(({ formatGuide }) => carried.has(formatGuide))
+      .filter(({ formatGuide }) => formatGuide === undefined || carried.has(formatGuide))
       .map((outline) => recipeOf(shippedFiles, outline, carried)),
   );
 }

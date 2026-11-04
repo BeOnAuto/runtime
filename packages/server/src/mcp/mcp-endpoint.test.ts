@@ -126,7 +126,20 @@ const resourcesOnTheTerminologyPage: ReadonlySet<string> = new Set(
 
 const firstPlaybookRecipe = { name: 'first-playbook', calls: [...playbookTools, ...definitionTools] };
 
-const servedBeside = { definitionTypes, pages: true, recipes: [firstPlaybookRecipe] };
+const connectAServiceRecipe = {
+  name: 'connect-a-service',
+  calls: [
+    'search',
+    'introspect',
+    'add_connection',
+    'list_connections',
+    'reconnect_connection',
+    'query_connection',
+    'execute_connection',
+  ],
+};
+
+const servedBeside = { definitionTypes, pages: true, recipes: [firstPlaybookRecipe, connectAServiceRecipe] };
 
 interface Connection {
   readonly path: string;

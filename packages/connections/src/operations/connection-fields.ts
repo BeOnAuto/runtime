@@ -41,7 +41,7 @@ export const AddedSchema = Schema.Struct({
 export type AddedConnection = typeof AddedSchema.Type;
 
 export const GroupOfMoreSchema = Schema.Struct({
-  name: Schema.String.annotate({ description: 'The name reconnect_connection takes as more' }),
+  name: Schema.String.annotate({ description: 'The name add_connection and reconnect_connection take as more' }),
   for: Schema.String.annotate({ description: "What it is for, in the person's words" }),
 }).annotate({ description: 'A group of scopes a later consent may add' });
 
@@ -85,6 +85,12 @@ const AdditionFieldsSchema = Schema.Struct({
   type: Schema.optionalKey(ConnectionTypeSchema),
   entry: Schema.optionalKey(ConnectionEntrySchema),
   credential: Schema.optionalKey(AddedCredentialSchema),
+  more: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "A group of more the provider's way offers, by name, as search lists under providers; its scopes are asked on the page beside the first consent's. None when left out, and an addition by hand takes none",
+    }),
+  ),
 });
 
 export type AdditionGiven = typeof AdditionFieldsSchema.Type;
@@ -167,6 +173,9 @@ function credentialIssuesOf({ credential, type }: AdditionGiven): readonly ModeI
     : credentialFieldIssuesOf(credential).map(({ path, issue }) => ({ path: ['credential', ...path], issue }));
 }
 
+const moreOfAnAdditionByHand =
+  'Expected no more without provider: an addition by hand offers no group of more, since only a provider names one';
+
 function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
   const { placeholders } = given;
   return [
@@ -177,6 +186,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
     ...(placeholders === undefined
       ? []
       : [{ path: ['placeholders'], issue: 'Expected no placeholders without provider' }]),
+    ...(given.more === undefined ? [] : [{ path: ['more'], issue: moreOfAnAdditionByHand }]),
     ...(given.credential?.oauth_client === undefined
       ? []
       : [{ path: ['credential', 'oauth_client'], issue: oauthClientOfAProvider }]),

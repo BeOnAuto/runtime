@@ -1,70 +1,24 @@
 import { readFileSync } from 'node:fs';
 
-import { defineCapability, type Capability, type CapabilityGuide } from '@on.auto/definitions';
-import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
-import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { apiShippedRoots, mostGuideBytes, mostRecipeBytes, type GuideShelf } from '../index.ts';
+import { mostGuideBytes, mostRecipeBytes } from '../index.ts';
+import {
+  byteLengthOf,
+  bytesOf,
+  guideFiles,
+  onThisServer,
+  recipeTextsOf,
+  served,
+  servedForReasoning,
+  servedForReasoningAndWorkflows,
+  servedWithEverything,
+  servedWithInteraction,
+  servedWithLookupAndPages,
+} from '../testing/guide-shelves.ts';
 import { withLinksResolved } from './page-links.ts';
 import { guideShelfFrom } from './served-guides.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
-
-const guideFiles = shippedFilesOnDisk(apiShippedRoots());
-
-function capabilityOf(name: string, noun: string, guide: CapabilityGuide): Capability {
-  return defineCapability({
-    type: name,
-    title: noun,
-    guide,
-    noun: { one: noun, other: `${noun}s` },
-    describeOutput: () => 'It ran.',
-    mediaType: 'text/markdown',
-    parse: () => Effect.succeed({}),
-    summarize: () => ({}),
-    run: () => Effect.succeed({ output: null, record: {} }),
-  });
-}
-
-const onThisServer = 'On this server, a reasoning function names its model through anthropic.';
-
-const reasoning = capabilityOf('reasoning', 'reasoning function', { name: 'reasoning-function', onThisServer });
-
-const computation = capabilityOf('computation', 'computation function', { name: 'computation-function' });
-
-const prediction = capabilityOf('prediction', 'prediction function', { name: 'prediction-function' });
-
-const workflow = capabilityOf('workflow', 'workflow', { name: 'workflow' });
-
-const everyType = [reasoning, computation, prediction, workflow];
-
-const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
-
-const served = await guideShelfFrom(guideFiles, everyType, { pages: false });
-
-const servedWithInteraction = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: false });
-
-const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoning, workflow], { pages: false });
-
-const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning], { pages: false });
-
-const servedWithEverything = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: true });
-
-const lookup = capabilityOf('lookup', 'lookup function', { name: 'lookup-function' });
-
-const servedWithLookupAndPages = await guideShelfFrom(guideFiles, [reasoning, lookup, workflow], { pages: true });
-
-function recipeTextsOf({ recipes }: GuideShelf): Readonly<Record<string, string>> {
-  return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
-}
-
-function byteLengthOf(text: string): number {
-  return new TextEncoder().encode(text).byteLength;
-}
-
-function bytesOf(texts: Readonly<Record<string, string>>, ...names: readonly string[]): readonly number[] {
-  return names.map((name) => byteLengthOf(texts[name] ?? ''));
-}
 
 function page(path: string): string {
   return readFileSync(new URL(`../../../../docs/${path}`, import.meta.url), 'utf8');
@@ -88,11 +42,12 @@ const pages: Readonly<Record<string, string>> = {
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are the terminology, a guide per type in the order of the product whatever order the types are given in, the templates and the three recipes it carries the format guides of', () => {
+  it('are the terminology, a guide per type in the order of the product whatever order the types are given in, the templates and the four recipes it carries the format guides of', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
       'terminology',
       ...Object.keys(pages),
       'first-playbook',
+      'connect-a-service',
       'give-tools',
       'schedule',
     ]);
@@ -177,16 +132,19 @@ describe('the size and the words of the guides of a server', () => {
 });
 
 describe('the recipes of a server', () => {
-  it('leave out a recipe whose format guide the server does not carry', () => {
+  it('leave out a recipe whose format guide the server does not carry, and keep one that names none', () => {
     expect(servedForReasoningAndWorkflows.recipes.map(({ name }) => name)).toEqual([
       'first-playbook',
+      'connect-a-service',
       'give-tools',
       'schedule',
     ]);
   });
 
-  it('are none for a server that runs no type of definition', async () => {
-    expect((await guideShelfFrom(guideFiles, [], { pages: false })).recipes).toEqual([]);
+  it('are connecting a service alone for a server that runs no type of definition', async () => {
+    expect((await guideShelfFrom(guideFiles, [], { pages: false })).recipes.map(({ name }) => name)).toEqual([
+      'connect-a-service',
+    ]);
   });
 
   it('ask the person in their own words, filled into what the prompt asks for', () => {
@@ -194,11 +152,13 @@ describe('the recipes of a server', () => {
 
     expect([
       asked['first-playbook']?.({}),
+      asked['connect-a-service']?.({ service: 'Slack' }),
       asked['give-tools']?.({}),
       asked['give-tools']?.({ server: 'slack' }),
       asked['schedule']?.({ workflow: 'daily-digest', when: 'every weekday at 9:00' }),
     ]).toEqual([
       'Create my first playbook.',
+      'Connect Slack to Auto for my team, then tell me what it can do.',
       'Give the playbook tools.',
       'Give the playbook the tools of the tool server slack.',
       'Run the workflow daily-digest every weekday at 9:00.',
@@ -211,16 +171,16 @@ describe('the recipes that give a playbook tools', () => {
     const texts = recipeTextsOf(served);
 
     expect(String(texts['give-tools'])).toContain(
-      "4. To learn what a tool answers, call it with the arguments its input_schema takes and read its `text`: that is what the function's model will see. Never make a function to look. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+      "3. To learn what a tool answers, call it with the arguments its input_schema takes and read its `text`: that is what the function's model will see. Never make a function to look. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
     );
-    expect(String(texts['give-tools'])).toContain(
-      'the org it serves, with `allowed` naming the tools a function may call. The server reads them when it starts again.',
+    expect(String(texts['connect-a-service'])).toContain(
+      'tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.',
     );
     expect(String(texts['first-playbook'])).toContain(
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with query_connection, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3701, 4011,
+      2703, 4011,
     ]);
   });
 });
@@ -230,7 +190,7 @@ describe('the recipes of a server that serves interaction functions', () => {
     const texts = recipeTextsOf(servedWithInteraction);
 
     expect(texts['give-tools']).toContain(
-      "5. Ask the person what the function should do with the tools, and which of them it needs. To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute_connection gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
+      "4. Ask the person what the function should do with the tools, and which of them it needs. To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute_connection gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
     );
     expect(texts['first-playbook']).toContain(
       'give it tools with the give-tools recipe. They can also ask someone through a connection and take their answer with an interaction function.',
@@ -239,8 +199,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4470, 4301, 3541],
-      [4011, 3701, 3541],
+      [4470, 3303, 3541],
+      [4011, 2703, 3541],
     ]);
   });
 });
@@ -270,12 +230,18 @@ describe('the tools a recipe calls', () => {
     ].flatMap((shelf) => shelf.recipes);
 
     expect(onEveryServer.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
-      onEveryServer.map(({ name, calls }) => [name, calls.toSorted()]),
+      onEveryServer.map(({ name, calls }) => [name, calls.filter((call) => !calledWhereListed.has(call)).toSorted()]),
     );
     expect(recipes[0]?.text).toContain('list_models where this connection has it');
-    expect(recipes.find(({ name }) => name === 'give-tools')?.text).toContain(
-      'and search answers `providers`, call add_connection with the name of a provider there',
+    expect(recipes.find(({ name }) => name === 'connect-a-service')?.text).toContain(
+      'and search answers `providers`, call add_connection with the name of the provider that serves what the person wants',
     );
+    expect(recipes.map(({ name, calls }) => [name, calls.filter((call) => connectionTools.includes(call))])).toEqual([
+      ['first-playbook', []],
+      ['connect-a-service', connectionTools],
+      ['give-tools', []],
+      ['schedule', []],
+    ]);
   });
 });
 

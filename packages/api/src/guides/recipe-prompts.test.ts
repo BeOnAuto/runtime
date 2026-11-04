@@ -1,11 +1,12 @@
 import { Schema } from 'effect';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { notebookGuide, noteRecipe } from '../testing/guides.ts';
+import { connectRecipe, notebookGuide, noteRecipe, testDefinitionTypes, testGuides } from '../testing/guides.ts';
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import { mcpClientKinds, withMcpSession, type McpSession } from '../testing/mcp-clients.ts';
 import { messagesIn, postMcp, requestOf } from '../testing/mcp-requests.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
+import { guideShelfOf } from './guide-shelf.ts';
 
 let server: OperationServer;
 let listening: Listening;
@@ -127,5 +128,31 @@ describe('the prompts of a connection', () => {
         (session) => session.getPrompt('take-a-note', { text: 'buy milk' }),
       ),
     ).rejects.toThrow(/Prompt take-a-note not found/u);
+  });
+});
+
+describe('a recipe that names no format guide', () => {
+  it('answers the words of the person and the recipe alone, with nothing embedded after them', async () => {
+    const connecting = await operationServer({
+      shelf: guideShelfOf(testGuides, [noteRecipe, connectRecipe], testDefinitionTypes),
+    });
+    const serving = await listenOnLoopback(connecting.handler);
+    const answer = await withMcpSession(
+      'current revision',
+      { url: `${serving.origin}/mcp`, headers: { authorization: `Bearer ${acmeAdmin.key}` } },
+      (session) => session.getPrompt('connect-the-notebook', { notebook: 'Field notes' }),
+    );
+    await serving.close();
+    await connecting.runtime.dispose();
+
+    expect(answer).toMatchObject({
+      description: connectRecipe.description,
+      messages: [
+        {
+          role: 'user',
+          content: { type: 'text', text: `Connect the notebook Field notes.\n\n${connectRecipe.text}` },
+        },
+      ],
+    });
   });
 });

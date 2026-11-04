@@ -149,7 +149,19 @@ const connectingAService = [
   "Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
 ];
 
-const connections: Sentences = ({ listed }) => (listed('search') && listed('add_connection') ? connectingAService : []);
+const settingAServiceUp =
+  "A playbook's runs expect what they act on at a service, such as statuses or channels, to be there already: set it up with the person before the first run, and ask for the access that setup takes when you add the connection";
+
+const connectAServiceRecipe = 'connect-a-service';
+
+function settingUpSentence(followed: Serving['followed']): string {
+  return followed(connectAServiceRecipe)
+    ? `${settingAServiceUp}; the guide ${connectAServiceRecipe} sets out how.`
+    : `${settingAServiceUp}.`;
+}
+
+const connections: Sentences = ({ listed, followed }) =>
+  listed('search') && listed('add_connection') ? [...connectingAService, settingUpSentence(followed)] : [];
 
 const answeringWhatRunsWaitOn: Sentences = ({ listed }) =>
   listed('answer_interaction') ? ['answer_interaction answers what a run waits on.'] : [];

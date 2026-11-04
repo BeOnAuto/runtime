@@ -104,7 +104,7 @@ interface Listing {
 
 function ownOrgToolsFilled(extra: number): Operations {
   return [
-    ...orgToolsFilled(8, descriptionRoom * 8, longestArgument),
+    ...orgToolsFilled(9, descriptionRoom * 9, longestArgument),
     ...playbookToolsFilled(30, extra, longestArgument),
   ];
 }
@@ -113,25 +113,25 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'own org',
     path: '/mcp',
-    most: 60_000,
+    most: 60_600,
     servingWith: (extra) => ({ operations: ownOrgToolsFilled(extra) }),
   },
   {
     endpoint: 'directory',
     path: '/directory',
-    most: 58_500,
+    most: 59_100,
     servingWith: (extra) => ({ operations: [], directoryOperations: ownOrgToolsFilled(extra) }),
   },
   {
     endpoint: 'org',
     path: '/orgs/acme/mcp',
-    most: 20_600,
+    most: 21_100,
     servingWith: (extra) => ({ operations: orgToolsFilled(12, extra, longestArgument) }),
   },
   {
     endpoint: 'playbook',
     path: '/orgs/acme/playbooks/alpha/mcp',
-    most: 41_900,
+    most: 42_000,
     servingWith: (extra) => ({ operations: playbookToolsFilled(32, extra, longestArgument) }),
   },
 ];

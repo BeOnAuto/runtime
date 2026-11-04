@@ -140,7 +140,7 @@ export { requestCarriersAmong, type RequestCarrier } from './search/request-carr
 export { unavailableInWords } from './search/search-words.ts';
 export type { ServerTool, ToolServer } from './listing/tool-server.ts';
 export { defineSearchInOrg, type PlaybookLookup } from './search/search-in-org.ts';
-export type { OfferedProvider, ProviderOffering } from './search/found-providers.ts';
+export type { OfferedGroup, OfferedProvider, ProviderOffering } from './search/found-providers.ts';
 export { defineIntrospect } from './tool-reads/introspect.ts';
 export { defineListConnectionTools } from './listing/list-connection-tools.ts';
 export { defineValidate } from './tool-reads/validate.ts';

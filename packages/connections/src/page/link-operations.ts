@@ -121,7 +121,7 @@ export function defineReadLink(reading: LinkReading) {
     description: [
       "Reads the connection an open link names, and when the link expires, so Studio's page can show what the person is asked to approve.",
       'A link is open for 24 hours from when add_connection or reconnect_connection gave it, until the connection is approved or a newer link replaces it.',
-      "A link reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
+      "A link add_connection or reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
       "A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next.",
       'asked_by names the client the link was asked through, where the call that gave it named one.',
       'A token that is unknown, used up, expired or replaced is answered as not found.',

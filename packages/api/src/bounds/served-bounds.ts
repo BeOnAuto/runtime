@@ -22,10 +22,10 @@ export const mostArgumentDescriptionCharacters = 300;
 export const mostToolsOnAConnection = 40;
 
 export const mostListingBytes: Readonly<Record<McpEndpoint, number>> = {
-  'own org': 60_000,
-  directory: 58_500,
-  org: 20_600,
-  playbook: 41_900,
+  'own org': 60_600,
+  directory: 59_100,
+  org: 21_100,
+  playbook: 42_000,
 };
 
 export const mostGuideBytes = 65_536;
@@ -36,7 +36,7 @@ export function mostGuidesBeyondTheRecipes(definitionTypes: number): number {
   return definitionTypes + 3;
 }
 
-export const mostRecipes = 4;
+export const mostRecipes = 5;
 
 export function requireWithin(what: string, size: number, most: number, unit: string): void {
   if (size > most) {

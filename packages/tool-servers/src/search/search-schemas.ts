@@ -114,6 +114,17 @@ const FoundProviderSchema = Schema.Struct({
   name: Schema.String.annotate({ description: "The provider's name, which add_connection takes as provider" }),
   title: Schema.String.annotate({ description: 'What a person reads' }),
   description: Schema.String.annotate({ description: 'What a function may do with it' }),
+  more: Schema.optionalKey(
+    Schema.Array(
+      Schema.Struct({
+        name: Schema.String.annotate({ description: 'The name add_connection and reconnect_connection take as more' }),
+        for: Schema.String.annotate({ description: "What it is for, in the person's words" }),
+      }),
+    ).annotate({
+      description:
+        'The groups of scopes the provider offers beyond its first consent, such as those setting a service up takes, which add_connection asks with the first consent given more; left out where it offers none',
+    }),
+  ),
 });
 
 export const OrgFoundSchema = Schema.Struct({

@@ -39,7 +39,7 @@ describe('the instructions of a server that runs six function types', () => {
 });
 
 describe('the instructions of a server that runs six function types, keeps pages and carries the recipes', () => {
-  it('take 1,626 characters on the org endpoint, 1,264 on the playbook endpoint and 1,731 on /mcp, where the connection can follow first-playbook, with the opening line of the person the bound holds, within 2,000', () => {
+  it('take 1,850 characters on the org endpoint, 1,264 on the playbook endpoint and 1,997 on /mcp, where the connection can follow first-playbook and connect-a-service, with the opening line of the person the bound holds, within 2,000', () => {
     const opened = everyEndpoint.map(
       ([endpoint, served]) =>
         instructionsActingAs(callerTheInstructionsHold, endpoint, served, {
@@ -49,7 +49,7 @@ describe('the instructions of a server that runs six function types, keeps pages
         }).length,
     );
 
-    expect(opened).toEqual([1626, 1264, 1731]);
+    expect(opened).toEqual([1850, 1264, 1997]);
     expect(opened.filter((length) => length > 2000)).toEqual([]);
   });
 });

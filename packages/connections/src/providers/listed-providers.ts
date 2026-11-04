@@ -38,7 +38,9 @@ const ListedWaySchema = Schema.Struct({
   }),
   more: Schema.Array(
     Schema.Struct({
-      name: Schema.String.annotate({ description: 'The name of the group, which reconnect_connection takes as more' }),
+      name: Schema.String.annotate({
+        description: 'The name of the group, which add_connection and reconnect_connection take as more',
+      }),
       for: Schema.String.annotate({ description: "What the group is for, in one sentence of the person's words" }),
       scopes: ListedScopesSchema.annotate({ description: 'The scopes it adds, in its order, each with its words' }),
     }),

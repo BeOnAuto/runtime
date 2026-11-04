@@ -4,7 +4,6 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import { mcpClientKinds, withMcpSession, type McpClientKind, type McpSession } from '../testing/mcp-clients.ts';
-import { messagesIn, postMcp, requestOf } from '../testing/mcp-requests.ts';
 import { notebookOperations } from '../testing/notebook.ts';
 import { acmeAdmin, acmeReader, operationServer, type OperationServer } from '../testing/operation-server.ts';
 
@@ -86,14 +85,6 @@ const listedStarts = [
       'Creates a first playbook with one function, runs it on a made-up example and links the run in Studio.',
     arguments: [],
   },
-  {
-    name: 'connect-a-service',
-    title: 'Connect a service',
-    description: 'Connects a service the team uses to Auto, and says what it can do once it is connected.',
-    arguments: [
-      { name: 'service', description: 'The service to connect, such as Slack or Google Drive', required: true },
-    ],
-  },
 ];
 
 function askOf(text: string) {
@@ -109,28 +100,19 @@ describe.each(mcpClientKinds)('the starting prompts on /mcp, for the %s client',
     expect(prompts.slice(0, listedStarts.length)).toMatchObject(listedStarts);
   });
 
-  it('answer with one ask of the person, the service filled in', async () => {
-    const answers = await onMcp(
-      every,
-      '/mcp',
-      async (session) => [
-        await session.getPrompt('get-started'),
-        await session.getPrompt('connect-a-service', { service: 'Slack' }),
-      ],
-      { kind },
-    );
+  it('answer with one ask of the person', async () => {
+    const answer = await onMcp(every, '/mcp', (session) => session.getPrompt('get-started'), { kind });
 
-    expect(answers).toMatchObject([
+    expect(answer).toMatchObject(
       askOf(
         'Create a playbook in Auto with one function and run it on a made-up example. Ask me what the playbook is for and anything else you need first, then give me a link to the run in Studio.',
       ),
-      askOf('Connect Slack to Auto for my team, then tell me what it can do.'),
-    ]);
+    );
   });
 });
 
-describe('the starting prompts of a connection', () => {
-  it('are each offered only where every tool it asks for is listed: on an org endpoint connecting a service alone, and none on a playbook endpoint or to a key that may only read', async () => {
+describe('the starting prompt of a connection', () => {
+  it('is offered only where every tool it asks for is listed: not on an org endpoint, on a playbook endpoint, to a key that may only read, or where run_definition is not served', async () => {
     const offered = await Promise.all([
       promptNamesOn(every, '/orgs/acme/mcp'),
       promptNamesOn(every, '/orgs/acme/playbooks/alpha/mcp'),
@@ -138,27 +120,12 @@ describe('the starting prompts of a connection', () => {
       promptNamesOn(noRuns, '/mcp'),
     ]);
 
-    expect(offered).toEqual([['connect-a-service'], ['take-a-note'], [], ['connect-a-service', 'take-a-note']]);
+    expect(offered).toEqual([[], ['take-a-note'], [], ['take-a-note']]);
   });
 
-  it('leave out a prompt the connection cannot follow, as a prompt it does not have', async () => {
+  it('is left out where the connection cannot follow it, as a prompt it does not have', async () => {
     await expect(onMcp(every, '/orgs/acme/mcp', (session) => session.getPrompt('get-started'))).rejects.toThrow(
       /Prompt get-started not found/u,
-    );
-  });
-});
-
-describe('connecting a service asked without the service', () => {
-  it('is a protocol error that names the argument', async () => {
-    const answer = await postMcp(
-      every.server.handler,
-      '/mcp',
-      { authorization: `Bearer ${acmeAdmin.key}`, 'mcp-protocol-version': '2025-11-25' },
-      requestOf(1, 'prompts/get', { name: 'connect-a-service', arguments: {} }),
-    );
-
-    expect(JSON.stringify(messagesIn(answer))).toMatch(
-      /"code":-32602,"message":"Invalid arguments for prompt connect-a-service: [^"]*service/u,
     );
   });
 });

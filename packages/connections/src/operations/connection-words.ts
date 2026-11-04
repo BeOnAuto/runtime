@@ -127,8 +127,23 @@ function linkedWordsOf(
     : `${done(connectionNamed(connection))} ${linkWordsOf(connection, providers)}`;
 }
 
-export function addedWordsOf(added: AddedConnection, providers: ProviderList): string {
-  return linkedWordsOf((named) => `Added ${named}.`, added, providers);
+function addedAskingMoreWordsOf(named: string, group: ScopeGroup | undefined): string {
+  return group === undefined
+    ? `Added ${named}.`
+    : `Added ${named}, whose link asks the person to allow ${quoted(group.name)} as well: ${group.for}`;
+}
+
+function groupAskedOf(
+  connection: AddedConnection,
+  providers: ProviderList,
+  more: string | undefined,
+): ScopeGroup | undefined {
+  return more === undefined ? undefined : groupNamed(connection, providers, more);
+}
+
+export function addedWordsOf(added: AddedConnection, providers: ProviderList, more: string | undefined): string {
+  const group = groupAskedOf(added, providers, more);
+  return linkedWordsOf((named) => addedAskingMoreWordsOf(named, group), added, providers);
 }
 
 function newLinkWordsOf(named: string, { status }: AddedConnection): string {
@@ -149,7 +164,7 @@ export function reconnectedWordsOf(
   providers: ProviderList,
   more: string | undefined,
 ): string {
-  const group = more === undefined ? undefined : groupNamed(reconnected, providers, more);
+  const group = groupAskedOf(reconnected, providers, more);
   return linkedWordsOf(
     (named) =>
       group === undefined ? newLinkWordsOf(named, reconnected) : linkForMoreWordsOf(named, reconnected, group),

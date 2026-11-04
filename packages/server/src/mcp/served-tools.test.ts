@@ -145,7 +145,7 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(searching).toHaveLength(584);
   });
 
-  it("open add_connection with a person's account at a service that search lists, say that once approved the connection's tools serve the org's playbooks, say an MCP server given by hand says how it authenticates, and end it with what the call does not grant, at 529 characters", () => {
+  it("open add_connection with a person's account at a service that search lists, say that once approved the connection's tools serve the org's playbooks, say an MCP server given by hand says how it authenticates, and end it with what the call does not grant, at 791 characters", () => {
     const adding = descriptionOf('add_connection');
 
     expect(adding).toMatch(
@@ -155,14 +155,14 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(adding).toMatch(
       / An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none\. /u,
     );
-    expect(adding).toHaveLength(529);
+    expect(adding).toHaveLength(791);
   });
 });
 
 describe('the descriptions that say what the instructions leave to them', () => {
   it('name in get_guide the recipes the tools of /mcp can follow', () => {
     expect(descriptionOf('get_guide')).toContain(
-      'It holds the recipes first-playbook, give-tools, schedule and keep, which the tools listed here can follow.',
+      'It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow.',
     );
   });
 

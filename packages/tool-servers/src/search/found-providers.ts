@@ -7,11 +7,17 @@ import type { ServerFields } from '../listing/tool-server.ts';
 import type { OrgFound, OrgSearchAsked } from './search-schemas.ts';
 import { bestOf, wholeWithinTheBound, type Searchable } from './search-scoring.ts';
 
+export interface OfferedGroup {
+  readonly name: string;
+  readonly for: string;
+}
+
 export interface OfferedProvider {
   readonly name: string;
   readonly title: string;
   readonly description: string;
   readonly handles_money?: true;
+  readonly more?: readonly OfferedGroup[];
 }
 
 export type ProviderOffering = (caller: CallerIdentity) => Effect.Effect<readonly OfferedProvider[] | undefined>;
@@ -50,8 +56,8 @@ export function providersOf(
 
 export const serversInTheListing = offeredInTheListing;
 
-function shownOf({ name, title, description: said }: OfferedProvider): OfferedProvider {
-  return { name, title, description: said };
+function shownOf({ name, title, description: said, more }: OfferedProvider): OfferedProvider {
+  return { name, title, description: said, ...(more === undefined ? {} : { more }) };
 }
 
 export function providersInTheListing(

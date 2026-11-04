@@ -225,11 +225,11 @@ describe('the schedule recipe, on a run an event started that did not succeed', 
 });
 
 describe('the give-tools recipe', () => {
-  it('sends an agent to reconnect_connection where search says a connection is broken and its words say to reconnect it', async () => {
+  it('sends an agent to the connect-a-service recipe where no server offers the tools or a connection is broken', async () => {
     const recipes = await recipesFor(recipeFiles, guidesNamed(['reasoning-function']));
 
     expect(recipes.find(({ name }) => name === 'give-tools')?.text).toContain(
-      "Where search says a server's connection is `connection_broken` and its words say to reconnect it, call reconnect_connection with its `connection` as `id` and give the person the link it answers, rather than removing the connection and adding it again.",
+      "2. When no server is listed, or not the one the person wants, or search says a server's connection is `connection_broken`, follow the connect-a-service recipe: it connects the service, or reconnects it, and sets it up for what the playbook will do there; then call search again.",
     );
   });
 
@@ -237,7 +237,7 @@ describe('the give-tools recipe', () => {
     const recipes = await recipesFor(recipeFiles, guidesNamed(['reasoning-function', 'workflow']));
 
     expect(recipes.find(({ name }) => name === 'give-tools')?.text).toMatch(
-      /the function can call only the tools it names\.\n9\. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
+      /the function can call only the tools it names\.\n8\. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
     );
   });
 

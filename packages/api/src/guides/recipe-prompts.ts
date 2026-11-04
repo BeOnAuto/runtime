@@ -18,18 +18,28 @@ export function wordsSchemaOf(given: readonly RecipeArgument[]): StandardSchemaW
   return { '~standard': { ...standard, jsonSchema: { input: described, output: described } } };
 }
 
+type PromptMessage = GetPromptResult['messages'][number];
+
+function formatMessageOf(format: ShelvedRecipe['format']): readonly PromptMessage[] {
+  return format === undefined
+    ? []
+    : [
+        {
+          role: 'user',
+          content: {
+            type: 'resource',
+            resource: { uri: guideAddress(format), mimeType: guideMediaType, text: format.text },
+          },
+        },
+      ];
+}
+
 function promptOf(recipe: ShelvedRecipe): (words: RecipeWords) => GetPromptResult {
   return (words) => ({
     description: recipe.description,
     messages: [
       { role: 'user', content: { type: 'text', text: `${recipe.request(words)}\n\n${recipe.text}` } },
-      {
-        role: 'user',
-        content: {
-          type: 'resource',
-          resource: { uri: guideAddress(recipe.format), mimeType: guideMediaType, text: recipe.format.text },
-        },
-      },
+      ...formatMessageOf(recipe.format),
     ],
   });
 }

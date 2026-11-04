@@ -1,5 +1,5 @@
 import { operatorVariablesOf } from '@on.auto/providers';
-import type { OfferedProvider } from '@on.auto/tool-servers';
+import type { OfferedGroup, OfferedProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { shippedSettings } from '../settings/shipped-settings.ts';
@@ -11,9 +11,28 @@ export const shippedList = shippedSettings.providers;
 
 export const shippedProviders = shippedList.providers;
 
+type ShippedEntry = (typeof shippedProviders)[number]['entry'];
+
+function groupsOf({ credentials }: ShippedEntry): readonly OfferedGroup[] {
+  const groups = credentials.flatMap(({ more = [] }) => more);
+  return groups
+    .filter((group, index) => groups.findIndex(({ name }) => name === group.name) === index)
+    .map(({ name, for: purpose }) => ({ name, for: purpose }));
+}
+
+function offeredOf(entry: ShippedEntry): OfferedProvider {
+  const more = groupsOf(entry);
+  return {
+    name: entry.name,
+    title: entry.title,
+    description: entry.description,
+    ...(more.length === 0 ? {} : { more }),
+  };
+}
+
 export const offeredByTheServer: readonly OfferedProvider[] = shippedProviders
   .filter(({ entry }) => operatorVariablesOf(entry).length === 0)
-  .map(({ entry }) => ({ name: entry.name, title: entry.title, description: entry.description }));
+  .map(({ entry }) => offeredOf(entry));
 
 const AnswerSchema = Schema.Record(Schema.String, Schema.Unknown);
 

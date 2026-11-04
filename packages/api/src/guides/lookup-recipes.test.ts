@@ -58,18 +58,18 @@ describe('the recipe that gives a playbook tools, on a server that serves lookup
     expect(giveToolsOf(servedWithoutLookup)).not.toContain('lookup');
   });
 
-  it('stays within the bound of a recipe with every addition, at 4,376 bytes', () => {
+  it('stays within the bound of a recipe with every addition, at 3,378 bytes', () => {
     const bytes = new TextEncoder().encode(giveToolsOf(servedWithLookup)).byteLength;
 
-    expect([bytes, bytes <= mostRecipeBytes]).toEqual([4376, true]);
+    expect([bytes, bytes <= mostRecipeBytes]).toEqual([3378, true]);
   });
 });
 
 describe('the keep recipe', () => {
   it('is offered, after the others, on a server that serves lookup functions, and not on one that serves none', () => {
     expect([recipeNamesOf(servedWithLookup), recipeNamesOf(servedWithoutLookup)]).toEqual([
-      ['first-playbook', 'give-tools', 'schedule', 'keep'],
-      ['first-playbook', 'give-tools', 'schedule'],
+      ['first-playbook', 'connect-a-service', 'give-tools', 'schedule', 'keep'],
+      ['first-playbook', 'connect-a-service', 'give-tools', 'schedule'],
     ]);
   });
 

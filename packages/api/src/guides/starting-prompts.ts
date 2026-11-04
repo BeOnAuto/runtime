@@ -22,16 +22,6 @@ const startingPrompts: readonly StartingPrompt[] = [
     ask: () =>
       'Create a playbook in Auto with one function and run it on a made-up example. Ask me what the playbook is for and anything else you need first, then give me a link to the run in Studio.',
   },
-  {
-    name: 'connect-a-service',
-    title: 'Connect a service',
-    description: 'Connects a service the team uses to Auto, and says what it can do once it is connected.',
-    arguments: [
-      { name: 'service', description: 'The service to connect, such as Slack or Google Drive', required: true },
-    ],
-    calls: ['add_connection'],
-    ask: ({ service }) => `Connect ${String(service)} to Auto for my team, then tell me what it can do.`,
-  },
 ];
 
 export function serveStartingPrompts(server: Readonly<Pick<McpServer, 'registerPrompt'>>, served: ServedTools): void {

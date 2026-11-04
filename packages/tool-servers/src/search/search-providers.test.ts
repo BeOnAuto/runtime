@@ -36,6 +36,7 @@ const chat: OfferedProvider = {
   name: 'chat-api',
   title: 'Team chat',
   description: 'Posts messages to channels and reads their replies.',
+  more: [{ name: 'manage', for: 'Create channels and invite people to them.' }],
 };
 
 const offeredToTheAdder =
@@ -98,7 +99,7 @@ function fieldsOf(outcome: Outcome): readonly string[] {
 const anySummary: unknown = expect.any(String);
 
 describe('the providers the search of the org lists', () => {
-  it('are, without terms, every provider offered to the caller that nothing serves, by name', async () => {
+  it('are, without terms, every provider offered to the caller that nothing serves, by name, each with the groups of more it offers', async () => {
     const searched = searchingWith();
 
     expect(await searched()).toEqual({

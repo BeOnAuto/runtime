@@ -19,7 +19,7 @@ const sharedSentences = [
 
 const executeDescription = [
   "Calls one tool of a connected service this playbook's functions may use, whatever its mark, on the service's own API as its tool list names the tool, with the arguments it is given, and answers what a run of a reasoning function would see.",
-  'Use it when the person asks for what a tool that may change something does, such as sending, creating or deleting.',
+  'Use it when the person asks for what a tool that may change something does, such as sending, creating or deleting, and to set a service up for the playbook, before its runs act on it.',
   'The call is live and acts as the playbook, so it needs the permission to change the playbook; search says the mark of each tool, and dry_run what this would check.',
   ...sharedSentences,
 ].join(' ');

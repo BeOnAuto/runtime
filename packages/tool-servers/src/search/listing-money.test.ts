@@ -24,7 +24,12 @@ const payments: OfferedProvider = {
   handles_money: true,
 };
 
-const tracker: OfferedProvider = { name: 'tracker', title: 'Tracker', description: 'Reads the issues of a team.' };
+const tracker: OfferedProvider = {
+  name: 'tracker',
+  title: 'Tracker',
+  description: 'Reads the issues of a team.',
+  more: [{ name: 'admin', for: 'Change the statuses a team moves its issues through.' }],
+};
 
 const services = Layer.mergeAll(memoryLedger().layer, memoryPlaybookRegistry([]), recordingReporter().layer);
 
@@ -65,7 +70,7 @@ function dispatchedBy(registration: RouteRegistration<'org'>) {
 }
 
 describe('the search of the org through the directory listing', () => {
-  it('lists no provider and no server whose tools handle money, which it lists elsewhere', async () => {
+  it('lists no provider and no server whose tools handle money, which it lists elsewhere, and keeps the groups of more a provider offers', async () => {
     const access = await connectedPayments();
     const searched = dispatchedBy(
       defineSearchInOrg(

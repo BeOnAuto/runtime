@@ -41,6 +41,7 @@ const guideNames = [
   'templates',
   'page',
   'first-playbook',
+  'connect-a-service',
   'give-tools',
   'schedule',
   'keep',
@@ -100,7 +101,7 @@ const PromptSchema = Schema.Struct({
 });
 
 describe('the prompts of the server', () => {
-  it('are the two starting prompts and the four recipes, with their titles and arguments', async () => {
+  it('are the starting prompt and the five recipes, with their titles and arguments', async () => {
     const { prompts } = Schema.decodeUnknownSync(PromptsSchema)(await onMcp((session) => session.listPrompts()));
 
     expect(
@@ -111,8 +112,8 @@ describe('the prompts of the server', () => {
       ]),
     ).toEqual([
       ['get-started', 'Get started with Auto', []],
-      ['connect-a-service', 'Connect a service', [['service', true]]],
       ['first-playbook', 'Create your first playbook', []],
+      ['connect-a-service', 'Connect a service', [['service', true]]],
       ['give-tools', 'Give the playbook tools', [['server', false]]],
       [
         'schedule',
@@ -177,16 +178,13 @@ const acmeReader = createApiKey({
 });
 
 describe('the prompts of a connection', () => {
-  it('are the starting prompts and the recipes whose every tool it lists: on a playbook endpoint the recipes but making a first playbook, and on an org endpoint connecting a service alone', async () => {
+  it('are the starting prompt and the recipes whose every tool it lists: on a playbook endpoint the recipes but making a first playbook and connecting a service, and on an org endpoint none, since connecting a service sets it up by hand', async () => {
     const [onAPlaybook, onAnOrg] = await Promise.all([
       onMcp((session) => session.listPrompts(), '/orgs/local/playbooks/alpha/mcp'),
       onMcp((session) => session.listPrompts(), '/orgs/local/mcp'),
     ]);
 
-    expect([promptNamesIn(onAPlaybook), promptNamesIn(onAnOrg)]).toEqual([
-      ['give-tools', 'schedule', 'keep'],
-      ['connect-a-service'],
-    ]);
+    expect([promptNamesIn(onAPlaybook), promptNamesIn(onAnOrg)]).toEqual([['give-tools', 'schedule', 'keep'], []]);
   });
 
   it('are none for a key that may only read, whose instructions name no recipe either', async () => {

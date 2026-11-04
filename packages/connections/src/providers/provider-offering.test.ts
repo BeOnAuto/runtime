@@ -97,3 +97,50 @@ describe('the providers of consent offered to a caller', () => {
     ]);
   });
 });
+
+const driveSharing = {
+  name: 'drive',
+  title: 'Drive',
+  description: 'Read and change the files of an account.',
+  website: 'https://developer.drive.example.com/mcp',
+  type: 'mcp',
+  url: 'https://mcp.drive.example.com/mcp',
+  credentials: [
+    {
+      kind: 'authorization',
+      issuer: 'https://accounts.drive.example.com',
+      scope: 'files.read files.write',
+      says: {
+        'files.read': 'Read the files of the account.',
+        'files.write': 'Create and change the files of the account.',
+      },
+      more: [
+        {
+          name: 'share',
+          for: 'Share your files with other people.',
+          scope: 'files.share',
+          says: { 'files.share': 'Share the files of the account with other people.' },
+        },
+      ],
+      description: 'Sign in to Drive and allow Auto to read and change your files.',
+    },
+  ],
+};
+
+describe('the groups of more a provider offers', () => {
+  it('are offered with the provider, each by name and what it is for, so an agent can ask for one with add_connection', () => {
+    const registered = registeredAt('https://accounts.drive.example.com', {
+      scopes: ['files.read', 'files.write', 'files.share'],
+    });
+    const consent = consentClientWith({ registeredClients: [registered] });
+
+    expect(offeredBy('people', { providers: providersOf(driveSharing), consent })(ada)).toEqual([
+      {
+        name: 'drive',
+        title: 'Drive',
+        description: 'Read and change the files of an account.',
+        more: [{ name: 'share', for: 'Share your files with other people.' }],
+      },
+    ]);
+  });
+});

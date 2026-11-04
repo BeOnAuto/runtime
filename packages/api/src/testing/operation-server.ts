@@ -61,7 +61,7 @@ export const globexAdmin = createApiKey({
   playbooks: '*',
 });
 
-const documented = { serverInfo: testServerInfo, shelf: testShelf, identityIssuer: testIdentityIssuer };
+const documented = { serverInfo: testServerInfo, identityIssuer: testIdentityIssuer };
 
 const keyHolders = authenticatorFor({
   host: '0.0.0.0',
@@ -80,9 +80,10 @@ export interface OperationServerOptions {
   readonly callContext?: CallContext;
   readonly installId?: () => string | undefined;
   readonly routes?: readonly RegisterRoutes[];
+  readonly shelf?: McpRoutesOptions['shelf'];
 }
 
-type McpServed = Pick<McpRoutesOptions, 'catalog' | 'dispatcher' | 'runCall' | 'retryStateKeys'> & {
+type McpServed = Pick<McpRoutesOptions, 'catalog' | 'dispatcher' | 'runCall' | 'retryStateKeys' | 'shelf'> & {
   readonly heartbeatEveryMs: number | undefined;
 };
 
@@ -93,7 +94,6 @@ function mcpRoutesServing(
   return mcpRoutes({
     ...served,
     serverInfo: testServerInfo,
-    shelf: testShelf,
     ...(heartbeatEveryMs === undefined ? {} : { heartbeatEveryMs }),
     reportError,
   });
@@ -101,6 +101,10 @@ function mcpRoutesServing(
 
 function routesBeside(more: readonly RegisterRoutes[] | undefined): readonly RegisterRoutes[] {
   return more ?? [];
+}
+
+function shelfServed(shelf: McpRoutesOptions['shelf'] | undefined): McpRoutesOptions['shelf'] {
+  return shelf ?? testShelf;
 }
 
 export async function operationServer({
@@ -115,7 +119,9 @@ export async function operationServer({
   callContext,
   installId,
   routes: more,
+  shelf: shelfGiven,
 }: OperationServerOptions = {}): Promise<OperationServer> {
+  const shelf = shelfServed(shelfGiven);
   const services = operationServices(tracer);
   const runtime = await makeAppRuntime(services.layer);
   const catalog = makeCatalog(operations);
@@ -123,12 +129,15 @@ export async function operationServer({
   const mcpErrors: string[] = [];
   const routes = [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
-    openApiDocumentRoutes({ catalog, ...documented }),
-    guideRoutes(testShelf),
-    apiCatalogRoutes(testShelf),
-    mcpRoutesServing({ catalog, dispatcher, runCall: runtime.run, retryStateKeys, heartbeatEveryMs }, (error) => {
-      mcpErrors.push(error.message);
-    }),
+    openApiDocumentRoutes({ catalog, ...documented, shelf }),
+    guideRoutes(shelf),
+    apiCatalogRoutes(shelf),
+    mcpRoutesServing(
+      { catalog, dispatcher, runCall: runtime.run, retryStateKeys, heartbeatEveryMs, shelf },
+      (error) => {
+        mcpErrors.push(error.message);
+      },
+    ),
     ...routesBeside(more),
   ];
   const { handler, reported } = createTestHandler({

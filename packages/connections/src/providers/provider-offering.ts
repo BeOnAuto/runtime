@@ -1,5 +1,5 @@
 import { permissionFor, permissionRefusalOf, type CallerIdentity } from '@on.auto/operations';
-import type { OfferedProvider, ProviderOffering } from '@on.auto/tool-servers';
+import type { OfferedGroup, OfferedProvider, ProviderOffering } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
 import { studioBaseFor } from '../links/connect-page.ts';
@@ -28,8 +28,27 @@ function isOfferedOneWay({ credentials }: ListedProvider): boolean {
   return credentials.some(({ offered }) => offered);
 }
 
-function offeredOf({ name, title, description }: ListedProvider, money: ReadonlySet<string>): OfferedProvider {
-  return { name, title, description, ...(money.has(name) ? { handles_money: true } : {}) };
+function groupOf({ name, for: purpose }: ListedProvider['credentials'][number]['more'][number]): OfferedGroup {
+  return { name, for: purpose };
+}
+
+function groupsOfferedBy({ credentials }: ListedProvider): readonly OfferedGroup[] {
+  const groups = credentials.filter(({ offered }) => offered).flatMap(({ more }) => more);
+  return groups
+    .filter((group, index) => groups.findIndex(({ name }) => name === group.name) === index)
+    .map((group) => groupOf(group));
+}
+
+function offeredOf(listed: ListedProvider, money: ReadonlySet<string>): OfferedProvider {
+  const { name, title, description } = listed;
+  const more = groupsOfferedBy(listed);
+  return {
+    name,
+    title,
+    description,
+    ...(money.has(name) ? { handles_money: true } : {}),
+    ...(more.length === 0 ? {} : { more }),
+  };
 }
 
 function handlingMoney({ providers }: OfferingServices['providers']): ReadonlySet<string> {

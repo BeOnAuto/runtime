@@ -25,13 +25,13 @@ export type RecipeWords = Readonly<Record<string, string | undefined>>;
 
 export interface Recipe extends Guide {
   readonly arguments: readonly RecipeArgument[];
-  readonly formatGuide: string;
+  readonly formatGuide?: string;
   readonly calls: readonly string[];
   readonly request: (words: RecipeWords) => string;
 }
 
 export interface ShelvedRecipe extends Recipe {
-  readonly format: Guide;
+  readonly format?: Guide;
 }
 
 export const pageGuideName = 'page';
@@ -71,10 +71,11 @@ export function guideShelfOf(
   for (const { type, guide } of definitionTypes) {
     guideNamed(guides, `The definition type ${type}`, guide);
   }
-  const shelved = recipes.map((recipe) => ({
-    ...recipe,
-    format: guideNamed(guides, `The recipe ${recipe.name}`, recipe.formatGuide),
-  }));
+  const shelved = recipes.map((recipe) =>
+    recipe.formatGuide === undefined
+      ? recipe
+      : { ...recipe, format: guideNamed(guides, `The recipe ${recipe.name}`, recipe.formatGuide) },
+  );
   requireWithin(
     'The guides of the server',
     guides.length,

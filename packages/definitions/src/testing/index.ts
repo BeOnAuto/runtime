@@ -1,6 +1,6 @@
 export { answeringLaterMs, answeringNowMs, asking } from './asking.ts';
 export { savedIn } from './callers.ts';
-export { echo } from './capabilities/echo.ts';
+export { echo, echoDeclaration } from './capabilities/echo.ts';
 export {
   cancelledAfter,
   cancelledByAnother,

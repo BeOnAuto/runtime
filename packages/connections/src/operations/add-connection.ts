@@ -2,17 +2,19 @@ import { Caller, OrgContext, defineCommand } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { connectOf, studioBaseFor } from '../links/connect-page.ts';
-import { issuedLink } from '../links/link-token.ts';
 import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { admittedAdditionOf } from './admitted-additions.ts';
 import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { addedWordsOf, additionAttempted, linkOffering } from './connection-words.ts';
+import { additionLinkIssuedFor } from './more-asked.ts';
 import { additionOf, recordInRegistry, recordedCaller } from './registry-access.ts';
 
 const description = [
   "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
   "Once approved, the connection's tools serve the org's playbooks.",
+  "Work out first what the playbook's runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how.",
+  'With more, a group the provider offers beyond its first consent, the same page asks its scopes too.',
   'An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none.',
   "It answers pending with a link to Studio's page, where the person approves it within 24 hours.",
   'Nothing is granted by this call and no credential passes through it.',
@@ -50,7 +52,7 @@ export function defineAddConnection({
         fileEntries,
         studioBase,
       });
-      const { token, ...link } = yield* issuedLink;
+      const { token, ...link } = yield* additionLinkIssuedFor(given, input.more, { ...serving, pages });
       const addition = additionOf(given, link, yield* recordedCaller);
       const kept = yield* recordInRegistry(addition).pipe(
         Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die, invalid_input: Effect.die }),
@@ -61,7 +63,7 @@ export function defineAddConnection({
     plainLanguage: {
       task: 'add a connection',
       attempt: additionAttempted,
-      outcome: (added) => addedWordsOf(added, serving.providers),
+      outcome: (added, { more }) => addedWordsOf(added, serving.providers, more),
     },
     ...linkOffering(serving.secrets),
   });

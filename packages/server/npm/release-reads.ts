@@ -27,6 +27,7 @@ deepStrictEqual(pages, [
   ['workflow', true],
   ['templates', true],
   ['page', true],
+  ['connect-a-service', true],
   ['schedule', true],
 ]);
 

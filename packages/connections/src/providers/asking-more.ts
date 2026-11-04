@@ -63,9 +63,11 @@ function namesOf(groups: readonly ScopeGroup[]): string {
   return groups.length === 0 ? 'none' : alternatives(groups.map(({ name }) => quoted(name)));
 }
 
-export function unnamedGroupOf(connection: OfAProvider, providers: ProviderList): InvalidInput {
+export type MoreAskedBy = 'added' | 'reconnected';
+
+export function unnamedGroupOf(connection: OfAProvider, providers: ProviderList, askedBy: MoreAskedBy): InvalidInput {
   return new InvalidInput({
-    detail: 'The connection cannot be reconnected as it is given',
+    detail: `The connection cannot be ${askedBy} as it is given`,
     issues: [
       {
         pointer: '/more',

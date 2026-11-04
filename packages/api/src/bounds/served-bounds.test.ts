@@ -177,12 +177,12 @@ describe('the guides a server carries', () => {
     );
   });
 
-  it('start the server with four recipes, and refuse to start it with five', () => {
+  it('start the server with five recipes, and refuse to start it with six', () => {
     expect(
-      starting({ guides: [notebookGuide], recipes: recipesNumbering(4), definitionTypes: notebookTypes }),
+      starting({ guides: [notebookGuide], recipes: recipesNumbering(5), definitionTypes: notebookTypes }),
     ).not.toThrow();
-    expect(starting({ guides: [notebookGuide], recipes: recipesNumbering(5), definitionTypes: notebookTypes })).toThrow(
-      'The recipes of the server: 5 recipes, more than the 4 allowed',
+    expect(starting({ guides: [notebookGuide], recipes: recipesNumbering(6), definitionTypes: notebookTypes })).toThrow(
+      'The recipes of the server: 6 recipes, more than the 5 allowed',
     );
   });
 

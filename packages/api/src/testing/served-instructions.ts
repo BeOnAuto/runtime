@@ -44,7 +44,7 @@ export const queriesInsideAPlaybook = [
 
 const discovering = ['list_models', 'search'];
 
-const connecting = ['add_connection', 'list_connections', 'remove_connection'];
+const connecting = ['add_connection', 'list_connections', 'reconnect_connection', 'remove_connection'];
 
 export const orgEndpoint: ServedTools = {
   orgTools: [...managingPlaybooks, ...discovering, 'get_guide'],
@@ -95,6 +95,18 @@ export const recipes: readonly RecipeCalls[] = [
       'list_runs',
       'get_run',
       'update_playbook',
+    ],
+  },
+  {
+    name: 'connect-a-service',
+    calls: [
+      'search',
+      'introspect',
+      'add_connection',
+      'list_connections',
+      'reconnect_connection',
+      'query_connection',
+      'execute_connection',
     ],
   },
   {

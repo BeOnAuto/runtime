@@ -29,6 +29,16 @@ export const noteRecipe: Recipe = {
     name === undefined ? `Take a note that says ${String(text)}.` : `Take the note ${name}: ${String(text)}.`,
 };
 
+export const connectRecipe: Recipe = {
+  name: 'connect-the-notebook',
+  title: 'Connect the notebook',
+  description: 'Connects the notebook a person names, which no format guide is written for.',
+  text: '# Connect the notebook\n\n1. Ask the person which notebook.\n2. Add a note that says it is connected with add_note.\n',
+  arguments: [{ name: 'notebook', description: 'The notebook to connect', required: true }],
+  calls: ['add_note'],
+  request: ({ notebook }) => `Connect the notebook ${String(notebook)}.`,
+};
+
 export const testGuides: readonly Guide[] = [wordsGuide, notebookGuide];
 
 export const testRecipes: readonly Recipe[] = [noteRecipe];
