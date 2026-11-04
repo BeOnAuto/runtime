@@ -1,5 +1,5 @@
 {
-  "layout": 14,
+  "layout": 15,
   "catalog": [
     {
       "name": "activity_1",
@@ -148,18 +148,6 @@
     {
       "name": "ledger_messages_by_stream",
       "sql": "CREATE INDEX ledger_messages_by_stream ON emt_messages (stream_id, global_position)"
-    },
-    {
-      "name": "memories_1",
-      "sql": "CREATE TABLE memories_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, version INTEGER, text TEXT, characters INTEGER, tags TEXT, about_from TEXT, about_to TEXT, expires_at TEXT, written_at TEXT, written_by TEXT, source_run TEXT, source_definition TEXT, status TEXT, PRIMARY KEY (playbook_key, row_key))"
-    },
-    {
-      "name": "memories_1_by_status",
-      "sql": "CREATE INDEX memories_1_by_status ON memories_1 (playbook_key, status, written_at, row_key)"
-    },
-    {
-      "name": "memories_1_by_written_at",
-      "sql": "CREATE INDEX memories_1_by_written_at ON memories_1 (playbook_key, written_at, row_key)"
     },
     {
       "name": "open_requests_8",

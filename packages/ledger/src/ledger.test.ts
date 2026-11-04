@@ -14,6 +14,7 @@ import {
   keptSecretsBehaviour,
   knownFactsBehaviour,
   ledgerBehaviour,
+  ledgerStepsBehaviour,
   logBehaviour,
   type LedgerEntry,
 } from './testing/index.ts';
@@ -68,5 +69,6 @@ describe('The ledger on SQLite', () => {
   earlierShapesBehaviour(onSQLite);
   databaseStructureBehaviour(onSQLite);
   knownFactsBehaviour(onSQLite);
+  ledgerStepsBehaviour(onSQLite);
   keptSecretsBehaviour({ ...onSQLite, secretRowsOn: (fileName) => sqliteSecretRows({ fileName }) });
 });

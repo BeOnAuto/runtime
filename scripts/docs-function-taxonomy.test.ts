@@ -44,7 +44,6 @@ await test('the published taxonomy comes from the runtime metadata in canonical 
   assert.deepEqual(functionTypeOrder, [
     'reasoning',
     'lookup',
-    'memory',
     'interaction',
     'prediction',
     'computation',

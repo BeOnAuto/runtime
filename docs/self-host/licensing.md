@@ -16,7 +16,6 @@ The rules a runtime you host follows: what it runs without a key and with one, h
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A run                  | A run of a workflow or a function. A workflow's call to a function or another workflow is a run of its own                                                                         |
 | Once by its run id     | A run asked again under its id, retried or resumed counts nothing more. A run asked again before it starts is held for ten minutes, and counts once                                |
-| An agent's memory call | Each `remember`, `recall` or `forget` your agent calls counts once, as a run does; a memory function's run counts once, as every run                                               |
 | Nothing else           | Model calls, tools, computing and storage are never counted                                                                                                                        |
 | The meter's own record | The runtime counts from its record of the runs it admitted, kept in its ledger. It never counts your run history again, so deleting, redacting or restoring history never stops it |
 | The whole runtime      | One key licenses every organization and playbook the runtime holds. All its licensed runs are charged to the organization the key names                                            |
@@ -32,7 +31,7 @@ A runtime without a key never calls Auto's account service. It counts its runs i
 | The first 100 | Admitted, once per runtime                                   |
 | After that    | The free rate: 15 runs a UTC day and 75 a UTC calendar month |
 
-Only runs at the free rate count toward its daily and monthly limits. An agent's memory calls are admitted without counting among the first 100 or toward the free rate. The daily limit lifts at 00:00 UTC, and the monthly one at 00:00 UTC on the first of the next month. Runs at the free rate never use credits.
+Only runs at the free rate count toward its daily and monthly limits. The daily limit lifts at 00:00 UTC, and the monthly one at 00:00 UTC on the first of the next month. Runs at the free rate never use credits.
 
 ## With a key
 

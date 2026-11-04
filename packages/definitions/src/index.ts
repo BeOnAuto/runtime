@@ -45,17 +45,7 @@ export {
 } from './capability/directory-listing.ts';
 export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
 export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
-export {
-  RunMeter,
-  admittedByTheMeter,
-  agentActionOf,
-  isAgentAction,
-  type AgentActionAsked,
-  type Meter,
-  type MeteredAction,
-  type MeteredAgentAction,
-  type MeteredRun,
-} from './metering/run-meter.ts';
+export { RunMeter, type Meter, type MeteredRun } from './metering/run-meter.ts';
 export { nextAttemptOf, type NextAttempt } from './operations/next-attempts.ts';
 export { attemptEnded, type AttemptOfARun } from './operations/attempt-endings.ts';
 export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
@@ -273,6 +263,7 @@ export {
   functionDescriptions,
   functionTypeOrder,
   functionResourceLabels,
+  inDefinitionTypeOrder,
   type FunctionType,
 } from './capability/function-terminology.ts';
 export { checkedInput, refusedByTheInputSchema, refusedInput, wordedIssuesOf } from './checking/schema-refusals.ts';
@@ -282,7 +273,6 @@ export { OutputShapeNameSchema, type OutputShapeName } from './shapes/shape-name
 export { outputShapeNamed, outputShapeNames, outputShapeOf } from './shapes/output-shapes.ts';
 export { declaredShape, type ShapeRefusal } from './shapes/shape-declarations.ts';
 export { publishedOutputOf } from './shapes/published-output.ts';
-export { memoriesBounds, memoriesShape } from './shapes/memories-shape.ts';
 export { seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
 export { rangeHolds } from './shapes/shape-values.ts';
 export type { CalledDefinition, CallingStep, NamedDefinition } from './used-by/called-definitions.ts';

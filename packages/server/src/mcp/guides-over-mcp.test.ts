@@ -33,18 +33,17 @@ const guideNames = [
   'terminology',
   'reasoning-function',
   'lookup-function',
-  'memory-function',
   'interaction-function',
-  'computation-function',
   'prediction-function',
+  'computation-function',
   'generation-function',
   'workflow',
   'templates',
   'page',
   'first-playbook',
-  'remember',
   'give-tools',
   'schedule',
+  'keep',
 ];
 
 async function guidesServed(session: McpSession) {
@@ -114,7 +113,6 @@ describe('the prompts of the server', () => {
       ['get-started', 'Get started with Auto', []],
       ['connect-a-service', 'Connect a service', [['service', true]]],
       ['first-playbook', 'Create your first playbook', []],
-      ['remember', 'Make the playbook remember something', [['what', true]]],
       ['give-tools', 'Give the playbook tools', [['server', false]]],
       [
         'schedule',
@@ -124,6 +122,7 @@ describe('the prompts of the server', () => {
           ['when', true],
         ],
       ],
+      ['keep', 'Keep something for later', [['what', true]]],
     ]);
   });
 
@@ -142,24 +141,6 @@ describe('the prompts of the server', () => {
     ]);
     expect(asked.content.text).toMatch(
       /^Run the workflow weekly-report every Monday\.\n\n# Run a workflow on a schedule\n/u,
-    );
-  });
-});
-
-describe('the remember prompt of the server', () => {
-  it('answers the recipe with what the person wants kept, then the memory-function guide as an embedded resource', async () => {
-    const {
-      messages: [asked, embedded],
-    } = Schema.decodeUnknownSync(PromptSchema)(
-      await onMcp((session) => session.getPrompt('remember', { what: 'who approves a budget' })),
-    );
-
-    expect(embedded.content).toEqual({
-      type: 'resource',
-      resource: { uri: 'guide://memory-function', mimeType: 'text/markdown' },
-    });
-    expect(asked.content.text).toMatch(
-      /^Make the playbook remember who approves a budget\.\n\n# Make the playbook remember something\n/u,
     );
   });
 });
@@ -203,7 +184,7 @@ describe('the prompts of a connection', () => {
     ]);
 
     expect([promptNamesIn(onAPlaybook), promptNamesIn(onAnOrg)]).toEqual([
-      ['remember', 'give-tools', 'schedule'],
+      ['give-tools', 'schedule', 'keep'],
       ['connect-a-service'],
     ]);
   });

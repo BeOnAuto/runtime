@@ -45,19 +45,6 @@ const examples: Readonly<Record<OutputShapeName, Schema.Json>> = {
     ],
   },
   text: { text: '# A heading\n\nA paragraph.' },
-  memories: {
-    memories: [
-      {
-        id: '019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
-        scope: 'organization',
-        text: 'The team ships on Thursdays',
-        tags: ['releases'],
-        about: { from: '2026-10-01', to: '2026-12-31' },
-        written_at: '2026-10-01T09:00:00.000Z',
-        written_by: 'key_7f3a',
-      },
-    ],
-  },
   asset: {
     id: '019a4f2e-5c1b-7d3a-8e6f-1a2b3c4d5e6f',
     media_type: 'image/png',
@@ -79,8 +66,8 @@ function objectSchemasIn(schema: Schema.Json): readonly Schema.JsonObject[] {
 }
 
 describe('the output shapes', () => {
-  it('are series, categories, table, text, memories and asset, each answered by its name and by nothing else', () => {
-    expect(outputShapeNames()).toEqual(['series', 'categories', 'table', 'text', 'memories', 'asset']);
+  it('are series, categories, table, text and asset, each answered by its name and by nothing else', () => {
+    expect(outputShapeNames()).toEqual(['series', 'categories', 'table', 'text', 'asset']);
     expect(outputShapeNames().map((name) => outputShapeNamed(name)?.name)).toEqual(outputShapeNames());
     expect([outputShapeNamed('chart'), outputShapeNamed('Series')]).toEqual([undefined, undefined]);
     expect(outputShapeNames().map((name) => outputShapeOf(name))).toEqual(
@@ -108,7 +95,7 @@ describe('the output shapes', () => {
   it('close every record they describe', () => {
     const records = outputShapeNames().map((name) => objectSchemasIn(shapeNamed(name).schema));
 
-    expect(records.map((each) => each.length)).toEqual([4, 2, 2, 1, 3, 1]);
+    expect(records.map((each) => each.length)).toEqual([4, 2, 2, 1, 1]);
     expect(records.flat().map((record) => record['additionalProperties'])).toEqual(records.flat().map(() => false));
   });
 
@@ -185,7 +172,7 @@ describe('the shape an output declares', () => {
   it('is refused at its name when it names no shape, or is not a name', () => {
     const refusal = Result.fail({
       at: 'shape',
-      detail: 'Expected the name of a shape: series, categories, table, text, or memories',
+      detail: 'Expected the name of a shape: series, categories, table, or text',
     });
 
     expect([declaredShape('chart', false), declaredShape(3, false)]).toEqual([refusal, refusal]);
@@ -195,7 +182,7 @@ describe('the shape an output declares', () => {
     expect(declaredShape('asset', false)).toEqual(
       Result.fail({
         at: 'shape',
-        detail: 'Expected the name of a shape: series, categories, table, text, or memories',
+        detail: 'Expected the name of a shape: series, categories, table, or text',
       }),
     );
   });

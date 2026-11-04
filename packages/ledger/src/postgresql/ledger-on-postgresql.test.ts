@@ -13,6 +13,7 @@ import {
   keptSecretsBehaviour,
   knownFactsBehaviour,
   ledgerBehaviour,
+  ledgerStepsBehaviour,
   logBehaviour,
   type LedgerEntry,
 } from '../testing/index.ts';
@@ -159,6 +160,7 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   earlierShapesBehaviour(onPostgreSQL);
   databaseStructureBehaviour(onPostgreSQL);
   knownFactsBehaviour(onPostgreSQL);
+  ledgerStepsBehaviour(onPostgreSQL);
   keptSecretsBehaviour({
     ...onPostgreSQL,
     secretRowsOn: (database) => postgresqlSecretRows({ pools: plainPoolsOn(database) }),

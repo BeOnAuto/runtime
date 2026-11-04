@@ -125,7 +125,7 @@ Every template of `call.with` is checked when the document is saved, as an inter
 
 ## Reading the playbook's own runs
 
-A lookup function can read what the playbook's own functions found, in place of calling a tool: the outputs of the runs of one definition of the playbook that succeeded. Its document has `runs` in place of `call`, and no `output.schema`, since what it answers has a shape of its own. To keep something for later, run a function whose output is that thing; a lookup function reads it back from its runs.
+A lookup function can read what the playbook's own functions found, in place of calling a tool: the outputs of the runs of one definition of the playbook that succeeded. Its document has `runs` in place of `call`, and no `output.schema`, since what it answers has a shape of its own. What a person wants kept is the output of a run: run a function whose output is that thing, and a lookup function reads it back from the runs of that definition.
 
 This example, `pace-history`, reads the paces that the computation function `campaign-pace` of [Computation function format](computation-format.md#a-function-document) computed for one campaign since a day:
 

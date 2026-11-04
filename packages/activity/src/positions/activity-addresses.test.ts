@@ -22,7 +22,7 @@ describe('the address of an item of the activity', () => {
       { form: 'broken', playbook: 'finance', key: brokenKeyOf('reasoning', 'categorize-invoice') },
       { form: 'result', playbook: 'finance', key: resultKeyOf(runId) },
       { form: 'version', playbook: 'finance', key: versionKeyOf('workflow', 'close-the-week', 4) },
-      { form: 'version', playbook: 'finance', key: versionKeyOf('memory', 'vendor-terms', 2_147_483_646) },
+      { form: 'version', playbook: 'finance', key: versionKeyOf('lookup', 'vendor-terms', 2_147_483_646) },
       { form: 'playbook', playbook: 'finance', key: playbookChangeKeyOf(1_793_552_561_512) },
       { form: 'comment', playbook: 'finance', key: commentKeyOf(runId) },
     ];
@@ -32,7 +32,7 @@ describe('the address of an item of the activity', () => {
       'finance/reasoning/categorize-invoice',
       `finance/runs/${runId}`,
       'finance/definitions/workflow/close-the-week/4',
-      'finance/definitions/memory/vendor-terms/2147483646',
+      'finance/definitions/lookup/vendor-terms/2147483646',
       'playbooks/finance/1793552561512',
       `finance/comments/${runId}`,
     ]);

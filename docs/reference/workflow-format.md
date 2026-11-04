@@ -163,7 +163,7 @@ An approval, or any other question for a person or a system, is an interaction f
 
 - A run a caller starts is checked against `input.schema` before it starts, with its input as given, before `input.from` shapes it: an input it refuses is `invalid_input` of the kind `input_schema`, with a pointer under `/input` and a sentence for each issue. A triggered run is not, as it gets its trigger's input.
 - The input schema holds the rules of the fields the steps need; a field's `description` and `examples` are what a person is shown when it is refused. Output is not checked against `output.schema`.
-- `output.shape`, the runtime's own beside the DSL's keys, names an [output shape](output-shapes.md): `series`, `categories`, `table`, `text` or `memories`. Its schema is published as the definition's `output_schema`, and `output.schema` beside it is refused. When the run ends, its output, after `output.as`, is checked against the shape; one that does not match ends the run `rejected` as `conflict` of the kind `unworkable`, naming the issues. A task's `output` takes no shape.
+- `output.shape`, the runtime's own beside the DSL's keys, names an [output shape](output-shapes.md): `series`, `categories`, `table` or `text`. Its schema is published as the definition's `output_schema`, and `output.schema` beside it is refused. When the run ends, its output, after `output.as`, is checked against the shape; one that does not match ends the run `rejected` as `conflict` of the kind `unworkable`, naming the issues. A task's `output` takes no shape.
 - Schemas are written inline under `document`, as JSON Schema.
 - `document.version` is part of the document you write. The definition's `version` counts saved changes: it is 1 when the workflow is created and increases each time `update_definition` changes the document or [the overview](#the-overview).
 
@@ -344,9 +344,9 @@ Each sentence is plain text, not an expression. Quote one that contains `: ` or 
 
 ### Calling a function
 
-`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`lookup`](lookup-format.md), [`memory`](memory-format.md), [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`computation`](computation-format.md), [`generation`](generation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
+`call: run_definition` runs the active latest version of another definition in the same playbook. `with.type` names its type: `reasoning`, [`lookup`](lookup-format.md), [`interaction`](interaction-format.md), [`prediction`](prediction-format.md), [`computation`](computation-format.md), [`generation`](generation-format.md) or `workflow`. `with.name` names the definition, and `with.input` is a template for its input, `{}` when left out. `run_definition` takes no arguments other than `type`, `name` and `input`.
 
-The task's output is that run's output: a reasoning function's text or JSON, what a lookup function's tool answered, the memories a memory function recalled or the id of the memory it kept, an interaction function's answer from its tool or its request, a prediction function's series, the value a computation function's program gave, a generation function's reference to its asset, or the output of the workflow it ran.
+The task's output is that run's output: a reasoning function's text or JSON, what a lookup function's tool answered or the runs it read, an interaction function's answer from its tool or its request, a prediction function's series, the value a computation function's program gave, a generation function's reference to its asset, or the output of the workflow it ran.
 
 Each time the task runs, including on a retry, it starts a separate run of the function, recorded under its own `run_id`. That run acts for the caller who started the workflow, with the permissions that caller had when the workflow started, and names that caller, by id and name, as its `started_by`. It carries `within`, the workflow's `run_id` and the step, and `list_runs` lists it unless given `steps: false`.
 
@@ -356,7 +356,6 @@ Some runs finish within their call, and others later. A task waits for the longe
 | ------------------------------------------ | --------------- | ------------------------------------------------------------------ |
 | A reasoning function                       | Within its call | Its model's deadline, or its tool loop's bound when it names tools |
 | A lookup function                          | Within its call | 70 seconds                                                         |
-| A memory function                          | Within its call | 10 minutes                                                         |
 | An interaction function that calls a tool  | Within its call | 70 seconds                                                         |
 | An interaction function that asks a person | Later           | The `expires` of its document                                      |
 | A computation function                     | Within its call | 10 seconds                                                         |
@@ -413,7 +412,7 @@ A function that called tools may have changed something outside the playbook, so
 
 Other function types:
 
-- The refusals of a [lookup](lookup-format.md#in-a-workflow), [memory](memory-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and what a retry of it does, are under In a workflow on its page.
+- The refusals of a [lookup](lookup-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and what a retry of it does, are under In a workflow on its page.
 - A prediction function's question counts every run that ended before it started, as in [this example](prediction-format.md#forecast-from-a-run-the-workflow-just-recorded).
 - A run that was cancelled raises `https://on.auto/problems/cancelled` with the kind of its cancellation: `requested`, `deadline`, `overrun` or `parent_ended` ([How a run ends](#how-a-run-ends)). Catch it on purpose, for example with `errors: { with: { type: https://on.auto/problems/cancelled } }` and `when: '${ $error.kind == "requested" }'`. Uncaught, it rejects the workflow as `invalid_input`, by its status 409, not as `cancelled`, since the workflow itself was not cancelled.
 - A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.

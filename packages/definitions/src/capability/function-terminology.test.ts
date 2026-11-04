@@ -7,14 +7,14 @@ import {
   functionDescriptions,
   functionTypeOrder,
   functionResourceLabels,
+  inDefinitionTypeOrder,
 } from '../index.ts';
 
 describe('playbook function terminology', () => {
-  it('keeps the seven function types in product order, without coordination or Dream', () => {
+  it('keeps the six function types in product order, without coordination or Dream', () => {
     expect(functionTypeOrder).toEqual([
       'reasoning',
       'lookup',
-      'memory',
       'interaction',
       'prediction',
       'computation',
@@ -23,7 +23,6 @@ describe('playbook function terminology', () => {
     expect(functionTypeOrder.map((type) => functionCategoryLabels[type])).toEqual([
       'Reasoning',
       'Lookup',
-      'Memory',
       'Interaction',
       'Prediction',
       'Computation',
@@ -39,7 +38,6 @@ describe('playbook function terminology', () => {
     expect(functionTypeOrder.map((type) => functionResourceLabels[type])).toEqual([
       { singular: 'reasoning function', plural: 'reasoning functions' },
       { singular: 'lookup function', plural: 'lookup functions' },
-      { singular: 'memory function', plural: 'memory functions' },
       { singular: 'interaction function', plural: 'interaction functions' },
       { singular: 'prediction function', plural: 'prediction functions' },
       { singular: 'computation function', plural: 'computation functions' },
@@ -48,7 +46,6 @@ describe('playbook function terminology', () => {
     expect(functionTypeOrder.map((type) => functionDescriptions[type])).toEqual([
       'Use a prompt, skills, and tools to interpret information or produce a response.',
       "Obtain information that already exists, through one tool that only reads or from the playbook's own runs.",
-      'Remember what the playbook learns, and recall it later.',
       'Exchange information with people or systems.',
       "Predict a quantity from the playbook's own history, with a likely range.",
       'Run defined code or expressions to calculate or transform data.',
@@ -61,7 +58,6 @@ describe('the resource label of a definition', () => {
   it('labels known resources without reclassifying custom runtime adapters as functions', () => {
     expect(definitionResourceLabel('reasoning')).toBe('reasoning function');
     expect(definitionResourceLabel('lookup')).toBe('lookup function');
-    expect(definitionResourceLabel('memory')).toBe('memory function');
     expect(definitionResourceLabel('interaction')).toBe('interaction function');
     expect(definitionResourceLabel('computation')).toBe('computation function');
     expect(definitionResourceLabel('prediction')).toBe('prediction function');
@@ -69,5 +65,31 @@ describe('the resource label of a definition', () => {
     expect(definitionResourceLabel('workflow')).toBe('workflow');
     expect(definitionResourceLabel('echo')).toBe('echo definition');
     expect(definitionResourceLabel('agent')).toBe('agent definition');
+  });
+});
+
+describe('the order of the types of definition', () => {
+  it('puts the function types in product order, then workflows, then any other type in the order it is given', () => {
+    const given: readonly Readonly<{ type: string }>[] = [
+      'echo',
+      'workflow',
+      'generation',
+      'computation',
+      'prediction',
+      'agent',
+      'lookup',
+      'reasoning',
+    ].map((type) => ({ type }));
+
+    expect(inDefinitionTypeOrder(given).map(({ type }) => type)).toEqual([
+      'reasoning',
+      'lookup',
+      'prediction',
+      'computation',
+      'generation',
+      'workflow',
+      'echo',
+      'agent',
+    ]);
   });
 });

@@ -39,7 +39,7 @@ await test('the reference of templates follows the output shapes in the navigati
 await test('every filter the reference of templates lists is one a template may use', () => {
   const engine = templateEngine();
   assert.equal(standardFilters.length, 67);
-  assert.deepEqual(addedFilters, ['money', 'clip', 'words', 'memories']);
+  assert.deepEqual(addedFilters, ['money', 'clip', 'words']);
   for (const filter of [...standardFilters, ...addedFilters]) {
     assert.ok(Result.isSuccess(parsedTemplate(engine, `{{ input.a | ${filter} }}`, 1)), `No template takes ${filter}`);
   }

@@ -97,7 +97,7 @@ describe('the data of a page', () => {
     ]);
     expect(issuesIn(pageWithData({ views: 'By-Day: series\nby_week: chart' }))).toEqual([
       "Line 9, /data/views/By-Day: A view's name is 1 to 32 lowercase letters, digits and underscores, beginning with a letter, so that a template reads it as views.<name>",
-      'Line 10, /data/views/by_week: Expected the name of a shape: series, categories, table, text, or memories',
+      'Line 10, /data/views/by_week: Expected the name of a shape: series, categories, table, or text',
     ]);
   });
 });

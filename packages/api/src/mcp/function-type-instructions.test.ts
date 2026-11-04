@@ -5,34 +5,32 @@ import {
   definitionTypes,
   everyEndpoint,
   functionTypesSentence,
-  ownOrg,
   playbookEndpoint,
   recipes,
-  withConnections,
 } from '../testing/served-instructions.ts';
 import { instructionsActingAs, instructionsFor, type DefinitionType } from './instructions.ts';
 
-const sevenFunctionTypesSentence =
-  'Its function types: reasoning prompts a model, lookup obtains information, memory remembers and recalls, interaction exchanges information, prediction forecasts from history, computation runs a program, and generation produces assets.';
+const sixFunctionTypesSentence =
+  'Its function types: reasoning prompts a model, lookup obtains information, interaction exchanges information, prediction forecasts from history, computation runs a program, and generation produces assets.';
 
 const whatALookupLeavesToReasoning = 'A lookup function fetches what a reasoning function interprets.';
 
-const whatAMemoryFunctionKeeps = 'A memory function keeps what the playbook recalls later.';
+const whereWhatIsKeptIsReadBack =
+  "What the person wants kept is the output of a run, read back with a lookup of that definition's runs.";
 
-const sevenServedTypes: readonly DefinitionType[] = [
+const sixServedTypes: readonly DefinitionType[] = [
   ...definitionTypes.filter(({ type }) => type !== 'workflow'),
-  { type: 'memory', noun: 'memory function', guide: 'memory-function' },
   { type: 'generation', noun: 'generation function', guide: 'generation-function' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];
 
-describe('the instructions of a server that runs seven function types', () => {
+describe('the instructions of a server that runs six function types', () => {
   it.each(everyEndpoint)(
-    'stay within 2,000 characters on the %s endpoint, opening line included, for a server that runs seven function types, lookup, memory and generation functions among them',
+    'stay within 2,000 characters on the %s endpoint, opening line included, for a server that runs six function types, lookup and generation functions among them',
     (endpoint, served) => {
       expect(
         instructionsActingAs(callerTheInstructionsHold, endpoint, served, {
-          definitionTypes: sevenServedTypes,
+          definitionTypes: sixServedTypes,
           pages: false,
         }).length,
       ).toBeLessThanOrEqual(2000);
@@ -40,18 +38,18 @@ describe('the instructions of a server that runs seven function types', () => {
   );
 });
 
-describe('the instructions of a server that runs seven function types, keeps pages and carries the recipes', () => {
-  it('take 1,611 characters on the org endpoint, 1,249 on the playbook endpoint and 1,716 on /mcp, where the connection can follow first-playbook, with the opening line of the person the bound holds, within 2,000', () => {
+describe('the instructions of a server that runs six function types, keeps pages and carries the recipes', () => {
+  it('take 1,626 characters on the org endpoint, 1,264 on the playbook endpoint and 1,731 on /mcp, where the connection can follow first-playbook, with the opening line of the person the bound holds, within 2,000', () => {
     const opened = everyEndpoint.map(
       ([endpoint, served]) =>
         instructionsActingAs(callerTheInstructionsHold, endpoint, served, {
-          definitionTypes: sevenServedTypes,
+          definitionTypes: sixServedTypes,
           pages: true,
           recipes,
         }).length,
     );
 
-    expect(opened).toEqual([1611, 1249, 1716]);
+    expect(opened).toEqual([1626, 1264, 1731]);
     expect(opened.filter((length) => length > 2000)).toEqual([]);
   });
 });
@@ -68,9 +66,9 @@ describe('what the instructions say of the function types', () => {
     ).toEqual([]);
   });
 
-  it('name a function type the terminology does not yet order after those it does, in the order the server runs them', () => {
-    expect(instructionsFor('playbook', playbookEndpoint, sevenServedTypes)).toContain(
-      `runs belong to the playbook. ${sevenFunctionTypesSentence} ${whatALookupLeavesToReasoning} ${whatAMemoryFunctionKeeps} A workflow waits`,
+  it('name the six function types in the order of the terminology, whatever order the server runs them in', () => {
+    expect(instructionsFor('playbook', playbookEndpoint, sixServedTypes)).toContain(
+      `runs belong to the playbook. ${sixFunctionTypesSentence} ${whatALookupLeavesToReasoning} ${whereWhatIsKeptIsReadBack} A workflow waits`,
     );
   });
 
@@ -85,15 +83,24 @@ describe('what the instructions say of the function types', () => {
     ).toEqual([]);
   });
 
-  it('say, where the server runs memory functions, that a memory function keeps what the playbook recalls later', () => {
-    expect(instructionsFor('own org', withConnections(ownOrg), sevenServedTypes)).toContain(whatAMemoryFunctionKeeps);
+  it("say, where the server runs lookup functions, right after what a lookup fetches, that what the person wants kept is the output of a run, read back with a lookup of that definition's runs", () => {
+    expect(
+      everyEndpoint.filter(
+        ([endpoint, served]) =>
+          !instructionsFor(endpoint, served, definitionTypes).includes(
+            `${whatALookupLeavesToReasoning} ${whereWhatIsKeptIsReadBack}`,
+          ),
+      ),
+    ).toEqual([]);
   });
 
-  it('say nothing of lookup or memory functions where the server runs neither', () => {
-    const neither = definitionTypes.filter(({ type }) => type !== 'lookup');
+  it('say nothing of lookup functions, nor of what is kept, where the server runs none', () => {
+    const withoutLookup = definitionTypes.filter(({ type }) => type !== 'lookup');
 
     expect(
-      everyEndpoint.filter(([endpoint, served]) => /lookup|memory/u.test(instructionsFor(endpoint, served, neither))),
+      everyEndpoint.filter(([endpoint, served]) =>
+        /lookup|kept/u.test(instructionsFor(endpoint, served, withoutLookup)),
+      ),
     ).toEqual([]);
   });
 });

@@ -44,9 +44,6 @@ const definitionTools = [
   'execute_connection',
   'answer_interaction',
   'list_interactions',
-  'remember',
-  'recall',
-  'forget',
   'get_asset',
   'send_run_event',
 ];

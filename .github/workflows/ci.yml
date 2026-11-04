@@ -84,7 +84,6 @@ jobs:
               - activity
               - coordination
               - definitions
-              - memory
               - operations
             services: false
           - packages:

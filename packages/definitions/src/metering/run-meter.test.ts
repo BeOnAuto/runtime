@@ -7,7 +7,6 @@ import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { harness, toPlaybook } from '../testing/harness.ts';
 import { recordingMeter } from '../testing/recording-meter.ts';
 import { relayedId, withHandOn } from '../testing/relaying.ts';
-import { agentActionOf, isAgentAction } from './run-meter.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -112,33 +111,6 @@ describe('a run the meter refuses', () => {
     });
     expect(refused).not.toHaveProperty('kind');
     expect(prober.runs()).toBe(0);
-  });
-});
-
-describe('an action an agent takes on a playbook, under a meter', () => {
-  it('is metered under the id of its operation and what it acts on, with who took it, and is told apart from a run', () => {
-    const action = agentActionOf({
-      org: 'acme',
-      playbook: 'alpha',
-      type: 'memory',
-      operation: 'remember',
-      id: runId,
-      by: 'acme-admin',
-    });
-
-    expect(action).toStrictEqual({
-      org: 'acme',
-      playbook: 'alpha',
-      run_id: `remember:${runId}`,
-      definition_type: 'memory',
-      definition_name: 'remember',
-      correlation_id: `remember:${runId}`,
-      called_by: null,
-      trigger: null,
-      started_by: 'acme-admin',
-      agent_action: true,
-    });
-    expect([isAgentAction(action), isAgentAction(admittedPlain)]).toEqual([true, false]);
   });
 });
 

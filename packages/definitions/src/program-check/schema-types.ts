@@ -195,7 +195,6 @@ const shapeTypeNames: Readonly<Record<OutputShapeName, string>> = {
   categories: 'Categories',
   table: 'Table',
   text: 'Text',
-  memories: 'Memories',
   asset: 'Asset',
 };
 

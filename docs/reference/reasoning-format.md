@@ -72,24 +72,24 @@ A function document contains instructions, never model credentials. Each change 
 
 ## Fields
 
-| Field                      | Required    | Value                                                                                                                                                                                       |
-| -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `description`              | No          | Text of 1 to 1,000 characters. `list_definitions` and `get_definition` show it                                                                                                              |
-| `model`                    | Yes         | A model reference in `provider/model` form, such as `anthropic/claude-sonnet-4-5`                                                                                                           |
-| `config.max_output_tokens` | No          | A whole number from 1 to 64,000; 1,024 when left out. The most tokens the answer may use                                                                                                    |
-| `config.temperature`       | No          | A finite number: the sampling temperature. Each provider accepts its own range                                                                                                              |
-| `config.top_p`             | No          | A finite number: nucleus sampling                                                                                                                                                           |
-| `config.seed`              | No          | A whole number of 0 or more, for providers that accept a seed                                                                                                                               |
-| `config.stop_sequences`    | No          | A list of strings. The answer stops where the model writes one                                                                                                                              |
-| `config.reasoning`         | No          | The reasoning effort, for models that reason: `none`, `minimal`, `low`, `medium`, `high` or `xhigh`                                                                                         |
-| `input.schema`             | No          | A JSON Schema whose root is `"type": "object"`. Without it, any JSON object is accepted                                                                                                     |
-| `input.default`            | No          | Defaults for top-level input fields, as a JSON object. The supplied input's fields override them before validation                                                                          |
-| `output.format`            | No          | `text`, the default, or `json`                                                                                                                                                              |
-| `output.schema`            | With `json` | A JSON Schema the answer must match; see [Answers that are JSON](#answers-that-are-json). Not allowed with `text`                                                                           |
-| `output.shape`             | No          | The name of an [output shape](output-shapes.md), `series`, `categories`, `table`, `text` or `memories`: the answer is JSON of that shape. Not allowed beside `output.schema` or with `text` |
-| `provider_options`         | No          | Options for one provider, under its namespace; see [Provider options](#provider-options)                                                                                                    |
-| `tools`                    | No          | The tools a run may call, each `server/tool` or `server/*`; see [Tools](#tools)                                                                                                             |
-| `page`                     | No          | The [page](page-format.md) that presents its runs                                                                                                                                           |
+| Field                      | Required    | Value                                                                                                                                                                           |
+| -------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `description`              | No          | Text of 1 to 1,000 characters. `list_definitions` and `get_definition` show it                                                                                                  |
+| `model`                    | Yes         | A model reference in `provider/model` form, such as `anthropic/claude-sonnet-4-5`                                                                                               |
+| `config.max_output_tokens` | No          | A whole number from 1 to 64,000; 1,024 when left out. The most tokens the answer may use                                                                                        |
+| `config.temperature`       | No          | A finite number: the sampling temperature. Each provider accepts its own range                                                                                                  |
+| `config.top_p`             | No          | A finite number: nucleus sampling                                                                                                                                               |
+| `config.seed`              | No          | A whole number of 0 or more, for providers that accept a seed                                                                                                                   |
+| `config.stop_sequences`    | No          | A list of strings. The answer stops where the model writes one                                                                                                                  |
+| `config.reasoning`         | No          | The reasoning effort, for models that reason: `none`, `minimal`, `low`, `medium`, `high` or `xhigh`                                                                             |
+| `input.schema`             | No          | A JSON Schema whose root is `"type": "object"`. Without it, any JSON object is accepted                                                                                         |
+| `input.default`            | No          | Defaults for top-level input fields, as a JSON object. The supplied input's fields override them before validation                                                              |
+| `output.format`            | No          | `text`, the default, or `json`                                                                                                                                                  |
+| `output.schema`            | With `json` | A JSON Schema the answer must match; see [Answers that are JSON](#answers-that-are-json). Not allowed with `text`                                                               |
+| `output.shape`             | No          | The name of an [output shape](output-shapes.md), `series`, `categories`, `table` or `text`: the answer is JSON of that shape. Not allowed beside `output.schema` or with `text` |
+| `provider_options`         | No          | Options for one provider, under its namespace; see [Provider options](#provider-options)                                                                                        |
+| `tools`                    | No          | The tools a run may call, each `server/tool` or `server/*`; see [Tools](#tools)                                                                                                 |
+| `page`                     | No          | The [page](page-format.md) that presents its runs                                                                                                                               |
 
 Any other key, at any level, is rejected.
 

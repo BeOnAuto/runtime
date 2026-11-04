@@ -65,7 +65,6 @@ type Decision = Result.Result<Basis, Conflict>;
 function localBasisOf(rule: LocalRule, state: MeterState, installation: string, at: string): Decision {
   const footing = footingOf(state, rule.key_sha256, at);
   if (footing.kind === 'licensed') return Result.succeed('licensed');
-  if (rule.agent_action) return Result.succeed('agent_action');
   if (onFirstRuns(state, rule.allowance)) return Result.succeed('first_runs');
   const rate = freeRateOf(state, rule.free_rate);
   const use = freeRateInUse(state.admitted, at);

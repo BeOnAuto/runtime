@@ -1,4 +1,4 @@
-import type { MeteredAction } from '@on.auto/definitions';
+import type { MeteredRun } from '@on.auto/definitions';
 import {
   Conflict,
   Unavailable,
@@ -31,7 +31,7 @@ type AuthorityRefusal = CreditOrLicenseRefusal | AccountClosedRefusal;
 export type AuthorityAnswer = { readonly admitted: true } | AuthorityRefusal;
 
 export interface AdmissionAuthority {
-  readonly admit: (run: MeteredAction, action: string) => Promise<AuthorityAnswer>;
+  readonly admit: (run: MeteredRun, action: string) => Promise<AuthorityAnswer>;
 }
 
 const authorityUnavailable = new Unavailable({
@@ -51,7 +51,7 @@ function refusalOf({ kind, detail, because, resolve_at: resolveAt }: AuthorityRe
 
 export function admittedByTheAuthority(
   authority: AdmissionAuthority,
-  run: MeteredAction,
+  run: MeteredRun,
 ): Effect.Effect<void, Conflict | Unavailable> {
   return Effect.tryPromise({ try: () => authority.admit(run, actionOf(run)), catch: () => authorityUnavailable }).pipe(
     Effect.flatMap((answer) => (answer.admitted ? Effect.void : Effect.fail(refusalOf(answer)))),

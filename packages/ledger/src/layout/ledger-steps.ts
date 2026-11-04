@@ -14,6 +14,7 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
     layout: 8,
     statements: [statement`DROP TABLE IF EXISTS run_outcomes_4`],
   },
+  { layout: 10, statements: [] },
   {
     layout: 12,
     statements: [
@@ -27,5 +28,9 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
           SET kept_at = CAST(extract(epoch FROM clock_timestamp()) * 1000 AS BIGINT)`,
       },
     ],
+  },
+  {
+    layout: 15,
+    statements: [statement`DROP TABLE IF EXISTS memories_1`],
   },
 ];

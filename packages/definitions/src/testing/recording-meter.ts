@@ -1,13 +1,13 @@
 import { Conflict, Unavailable } from '@on.auto/operations';
 import { Effect, Layer } from 'effect';
 
-import { RunMeter, type MeteredAction } from '../metering/run-meter.ts';
+import { RunMeter, type MeteredRun } from '../metering/run-meter.ts';
 
 export type MeterRefusal = 'credits_exhausted' | 'license_required' | 'license_invalid' | 'meter_unavailable';
 
 export interface RecordingMeter {
   readonly layer: Layer.Layer<RunMeter>;
-  readonly admitted: () => readonly MeteredAction[];
+  readonly admitted: () => readonly MeteredRun[];
   readonly refuseNext: (refusal: MeterRefusal) => void;
 }
 
@@ -19,7 +19,7 @@ const refusals = {
 } as const;
 
 export function recordingMeter(): RecordingMeter {
-  const admitted: MeteredAction[] = [];
+  const admitted: MeteredRun[] = [];
   const refusing: MeterRefusal[] = [];
   return {
     layer: Layer.succeed(

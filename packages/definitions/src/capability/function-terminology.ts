@@ -1,16 +1,8 @@
-export type FunctionType =
-  | 'reasoning'
-  | 'lookup'
-  | 'memory'
-  | 'interaction'
-  | 'prediction'
-  | 'computation'
-  | 'generation';
+export type FunctionType = 'reasoning' | 'lookup' | 'interaction' | 'prediction' | 'computation' | 'generation';
 
 export const functionCategoryLabels = {
   reasoning: 'Reasoning',
   lookup: 'Lookup',
-  memory: 'Memory',
   interaction: 'Interaction',
   prediction: 'Prediction',
   computation: 'Computation',
@@ -20,7 +12,6 @@ export const functionCategoryLabels = {
 export const functionResourceLabels = {
   reasoning: { singular: 'reasoning function', plural: 'reasoning functions' },
   lookup: { singular: 'lookup function', plural: 'lookup functions' },
-  memory: { singular: 'memory function', plural: 'memory functions' },
   interaction: { singular: 'interaction function', plural: 'interaction functions' },
   prediction: { singular: 'prediction function', plural: 'prediction functions' },
   computation: { singular: 'computation function', plural: 'computation functions' },
@@ -30,7 +21,6 @@ export const functionResourceLabels = {
 export const functionDescriptions = {
   reasoning: 'Use a prompt, skills, and tools to interpret information or produce a response.',
   lookup: "Obtain information that already exists, through one tool that only reads or from the playbook's own runs.",
-  memory: 'Remember what the playbook learns, and recall it later.',
   interaction: 'Exchange information with people or systems.',
   prediction: "Predict a quantity from the playbook's own history, with a likely range.",
   computation: 'Run defined code or expressions to calculate or transform data.',
@@ -40,7 +30,6 @@ export const functionDescriptions = {
 export const functionTypeOrder: readonly FunctionType[] = [
   'reasoning',
   'lookup',
-  'memory',
   'interaction',
   'prediction',
   'computation',
@@ -48,6 +37,17 @@ export const functionTypeOrder: readonly FunctionType[] = [
 ];
 
 export const definitionTypeOrder: readonly string[] = [...functionTypeOrder, 'workflow'];
+
+export function definitionTypeRankOf(type: string): number {
+  const rank = definitionTypeOrder.indexOf(type);
+  return rank === -1 ? definitionTypeOrder.length : rank;
+}
+
+export function inDefinitionTypeOrder<Typed extends { readonly type: string }>(
+  typed: readonly Typed[],
+): readonly Typed[] {
+  return typed.toSorted((one, other) => definitionTypeRankOf(one.type) - definitionTypeRankOf(other.type));
+}
 
 const resourceLabels: ReadonlyMap<string, string> = new Map([
   ...functionTypeOrder.map((type): [string, string] => [type, functionResourceLabels[type].singular]),

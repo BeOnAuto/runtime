@@ -88,7 +88,7 @@ describe('a workflow whose output names a shape it cannot have', () => {
   it('is refused for a name no shape has', async () => {
     expect(await creating('no-such-shape', counting('[]', 'output:\n  shape: chart'))).toMatchObject(
       refusedWith(
-        'Line 7, column 10: at /output/shape: Expected the name of a shape: series, categories, table, text, or memories',
+        'Line 7, column 10: at /output/shape: Expected the name of a shape: series, categories, table, or text',
       ),
     );
   });

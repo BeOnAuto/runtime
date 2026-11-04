@@ -1,4 +1,4 @@
-import type { Meter, MeteredAction } from '@on.auto/definitions';
+import type { Meter, MeteredRun } from '@on.auto/definitions';
 import { Effect } from 'effect';
 
 import { meterDefaults, type MeterOptions } from '../admission/metering.ts';
@@ -20,7 +20,7 @@ export interface Metered extends Pick<MeterRuntime, 'executesFail' | 'warnings' 
   readonly meter: Meter;
   readonly license: LicensePorts;
   readonly account: AccountFake;
-  readonly admitted: (action: MeteredAction) => Promise<Answer>;
+  readonly admitted: (run: MeteredRun) => Promise<Answer>;
   readonly activated: (key: string) => Promise<Answer>;
   readonly held: (key: string) => Promise<void>;
   readonly allocated: (allocation: Parameters<LicensePorts['allocate']>[0]) => Promise<Answer>;

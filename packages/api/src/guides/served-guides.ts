@@ -1,3 +1,4 @@
+import { inDefinitionTypeOrder } from '@on.auto/definitions';
 import { capitalized, type Noun } from '@on.auto/phrasing';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
@@ -64,9 +65,10 @@ async function typeGuideOf(
 
 export async function guideShelfFrom(
   shippedFiles: ShippedFiles,
-  types: readonly ServedType[],
+  served: readonly ServedType[],
   { pages }: ServedPages,
 ): Promise<GuideShelf> {
+  const types = inDefinitionTypeOrder(served);
   const definitionTypes: readonly DefinitionType[] = types.map(({ type, noun, guide }) => ({
     type,
     noun: noun.one,

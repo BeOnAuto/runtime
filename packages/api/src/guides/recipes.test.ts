@@ -147,6 +147,34 @@ describe('the first-playbook recipe where the page guide is carried with the wor
   });
 });
 
+describe('the keep recipe', () => {
+  it('says first that every function it writes carries its page, read in the page guide, where the page guide is carried', async () => {
+    const withPages = await recipeCarrying('keep', 'lookup-function', 'page');
+    const withoutPages = await recipeCarrying('keep', 'lookup-function');
+
+    expect(withPages?.text).toContain(
+      "its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.\n",
+    );
+    expect(withoutPages?.text).not.toContain('page');
+  });
+
+  it("keeps what the person wants kept as the output of a run, read back with a lookup of that definition's runs", async () => {
+    const keep = await recipeCarrying('keep', 'lookup-function');
+
+    expect(keep?.text).toContain(
+      "What the person wants kept is the output of a run: each run that succeeds keeps its output in the playbook's history, and a lookup function reads it back from the runs of that definition.",
+    );
+    expect(keep?.text).toContain('4. Write a lookup function with `runs` in place of `call`');
+  });
+
+  it('asks the person in their own words where the lookup-function guide is carried, and is not offered otherwise', async () => {
+    const keep = await recipeCarrying('keep', 'lookup-function');
+
+    expect(keep?.request({ what: 'who approves a budget' })).toBe('Keep who approves a budget for later.');
+    expect(await recipeCarrying('keep', 'reasoning-function', 'workflow', 'page')).toBeUndefined();
+  });
+});
+
 describe('the schedule recipe', () => {
   it("keeps the workflow's page, or writes one in the document it saves, where the page guide is carried, and reads a run's headline", async () => {
     const withPages = await recipeCarrying('schedule', 'workflow', 'page');
@@ -233,27 +261,6 @@ describe('the first-playbook recipe where the workflow guide is not carried', ()
     expect([withoutWorkflows?.text, withoutWorkflows?.calls]).toEqual([firstPlaybookFile, callsOfTheFunction]);
     expect(firstPlaybookFile).toContain(
       'tell the person what it answered, in their words.\n\nThen tell the person what they can do next: give it tools with the give-tools recipe.\n',
-    );
-  });
-});
-
-describe('the remember recipe', () => {
-  it('writes a memory function with its page in the same document, where the page guide is carried', async () => {
-    const withPages = await recipeCarrying('remember', 'memory-function', 'page');
-    const withoutPages = await recipeCarrying('remember', 'memory-function');
-
-    expect(withPages?.text).toContain(
-      'as the memory-function guide says. Write its `page` in the same document, as that guide says under Its page: what each run kept or recalled, and what the runs kept or recalled over time. Show the person the document',
-    );
-    expect(withoutPages?.text).not.toContain('page');
-  });
-
-  it('asks the person in their own words where the format guide it names is carried', async () => {
-    const recipes = await recipesFor(recipeFiles, guidesNamed(['memory-function']));
-    const remember = recipes.find(({ name }) => name === 'remember');
-
-    expect(remember?.request({ what: 'what it posted today' })).toBe(
-      'Make the playbook remember what it posted today.',
     );
   });
 });

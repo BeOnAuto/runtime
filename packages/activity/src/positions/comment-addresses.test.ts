@@ -23,8 +23,8 @@ const forms: readonly (readonly [string, ListedTarget])[] = [
     { kind: 'definition', playbook: 'finance', type: 'reasoning', name: 'categorize-invoice', version: 7 },
   ],
   [
-    'finance/definitions/memory/vendor-terms/2147483646',
-    { kind: 'definition', playbook: 'finance', type: 'memory', name: 'vendor-terms', version: 2_147_483_646 },
+    'finance/definitions/lookup/vendor-terms/2147483646',
+    { kind: 'definition', playbook: 'finance', type: 'lookup', name: 'vendor-terms', version: 2_147_483_646 },
   ],
   [
     'finance/definitions/workflow/close-the-week/4/steps/do/1/review',

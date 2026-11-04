@@ -14,7 +14,6 @@ What a page shows depends on its subject. The format guide of each type gives it
 | [Reasoning function](reasoning-format.md#its-page)     | The judgment in a sentence, with the fields that decided it        | The outcomes by category over time                                          |
 | [Interaction function](interaction-format.md#its-page) | The decision, who made it and when                                 | The decisions over time, what waits now, and how long people took to answer |
 | [Prediction function](prediction-format.md#its-page)   | The forecast as a line, with its horizon                           | The forecast against what happened                                          |
-| [Memory function](memory-format.md#its-page)           | What was remembered or recalled                                    | What its runs kept or recalled over time                                    |
 | [Computation function](computation-format.md#its-page) | The numbers, as figures or a table                                 | Their series over time                                                      |
 | [Lookup function](lookup-format.md#its-page)           | What was found, as a table                                         | The values found over time, where they are numbers                          |
 | [Generation function](generation-format.md#its-page)   | The asset the run produced, linked, in the function's own words    | What was produced over time, as a count or a table of the latest            |
@@ -269,14 +268,14 @@ Adding the figures instead would count a month twice. Add runs together only whe
 
 ## Fields
 
-| Key                  | Purpose                                                                                                                                                    |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data.language`      | Required with `data`; `typescript`, the playbook's one language                                                                                            |
-| `data.source.events` | Required with `data`; 1 to 8 filters, each naming events the fold takes; see [The filters of the events](#the-filters-of-the-events)                       |
-| `data.views`         | Required with `data`; 1 to 8 views, each a name and the shape it takes: `series`, `categories`, `table`, `text` or `memories`; see [The views](#the-views) |
-| `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                               |
-| `result`             | Optional; the template of one run; see [The templates](#the-templates)                                                                                     |
-| `runs`               | Optional; the template of the runs so far, over the views                                                                                                  |
+| Key                  | Purpose                                                                                                                                        |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data.language`      | Required with `data`; `typescript`, the playbook's one language                                                                                |
+| `data.source.events` | Required with `data`; 1 to 8 filters, each naming events the fold takes; see [The filters of the events](#the-filters-of-the-events)           |
+| `data.views`         | Required with `data`; 1 to 8 views, each a name and the shape it takes: `series`, `categories`, `table` or `text`; see [The views](#the-views) |
+| `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                   |
+| `result`             | Optional; the template of one run; see [The templates](#the-templates)                                                                         |
+| `runs`               | Optional; the template of the runs so far, over the views                                                                                      |
 
 - `data` is optional. A page without it has no views and no `runs`.
 - A page has `result`, `runs` or both. Write each as a YAML block scalar, `|`, so that its lines stay as written.
@@ -377,11 +376,11 @@ Each event is a CloudEvent with its `id`, `type`, `source`, `time` and `data`. I
 
 `data.module` is one TypeScript module that exports `fold(view: View, event: Event): View`. The runtime declares these types for it:
 
-| Type                                                | What it is                                                                                                   |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `View`                                              | An object of the views `data.views` names, each optional and of its shape's type                             |
-| `Series`, `Categories`, `Table`, `Text`, `Memories` | The five [output shapes](output-shapes.md), `series`, `categories`, `table`, `text` and `memories`, as types |
-| `Event`, `Json`                                     | The playbook's event, described below, and any JSON value                                                    |
+| Type                                    | What it is                                                                                       |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `View`                                  | An object of the views `data.views` names, each optional and of its shape's type                 |
+| `Series`, `Categories`, `Table`, `Text` | The four [output shapes](output-shapes.md), `series`, `categories`, `table` and `text`, as types |
+| `Event`, `Json`                         | The playbook's event, described below, and any JSON value                                        |
 
 - The fold starts from `{}`, with no views. A view the fold leaves out has no data yet, and `runs` reads it as `null`.
 - A module that exports `answer` is refused, since a page never runs.
@@ -433,7 +432,7 @@ The views do not depend on where a page of events begins or ends:
 ### The views' rules
 
 - `data.views` names 1 to 8 views. A name is 1 to 32 lowercase letters, digits and underscores, beginning with a letter, so that a template reads it as `views.<name>`.
-- Each name takes the name of a shape: `series`, `categories`, `table`, `text` or `memories`, whose fields and bounds the table below gives.
+- Each name takes the name of a shape: `series`, `categories`, `table` or `text`, whose fields and bounds the table below gives.
 - After every fold, each view the fold returned must match its shape, with the rules the shape adds, such as the order of a series' points.
 - After every fold, the fold returns no name that `data.views` does not declare.
 - The views together take at most 512 KiB as JSON: 524,288 bytes in UTF-8, checked after every fold.
@@ -444,7 +443,6 @@ The views do not depend on where a page of events begins or ends:
 | `categories` | `values`, each a `name` and a `value`, with optional `low` and `high`; optional `unit`                                                                                         | 1 to 200 values, each name once                                                                                                                                                                                                    |
 | `table`      | `columns`, each a `name` and an optional `unit`; `rows`, each a list of one cell for each column, in their order                                                               | 1 to 50 columns, each name once; 500 rows. A cell is text, a number, `true`, `false` or `null`                                                                                                                                     |
 | `text`       | `text`, Markdown                                                                                                                                                               | 65,536 bytes in UTF-8                                                                                                                                                                                                              |
-| `memories`   | `memories`, each with its `id`, `scope`, `text`, `tags`, `written_at` and `written_by`, and an optional `about`, as a recall answers them                                      | 16,000 characters of text across them                                                                                                                                                                                              |
 
 A `name`, a `label` and a `unit` are text of 1 to 64 characters. A `value`, a `low` and a `high` are numbers, a `low` at most its `value` and a `high` at least it. [Output shapes](output-shapes.md) gives every rule of each shape.
 
@@ -527,7 +525,7 @@ Each is a [Liquid](https://shopify.github.io/liquid/) template, as a reasoning f
 | `today`               | The date of the read, `YYYY-MM-DD`, in UTC                              |
 | `now`                 | The time of the read, in ISO 8601, in UTC                               |
 
-`result` reads no input, so a headline names what a run was about only where its output carries it. Have a function return what it was asked about beside its answer, such as the campaign whose brief it reviewed. Where the output cannot carry it, as an interaction function's answer or a memory kept cannot, the page of the workflow that calls the function says it, from the workflow's output.
+`result` reads no input, so a headline names what a run was about only where its output carries it. Have a function return what it was asked about beside its answer, such as the campaign whose brief it reviewed. Where the output cannot carry it, as an interaction function's answer cannot, the page of the workflow that calls the function says it, from the workflow's output.
 
 The first line of the rendered result is the run's headline, which cards and lists show alone. Write it as one plain sentence of at most 200 characters. A client cuts a longer one at 200 characters, with an ellipsis (`…`).
 
@@ -619,14 +617,6 @@ A chart is a fenced code block whose info string is the word `chart`, a kind and
 - A line's scale spans all it draws, so one value far above the rest flattens all the others. Cap such values in the fold, and say so in the chart's heading, as `Days of cover, capped at 60`.
 - A `figure` block shows each value's name and the view's one `unit`, so put a value's own unit in its name, as `Revenue (USD)`.
 - `text` reads a view of the shape text, `{"text": "…"}`, and shows it as Markdown.
-- No kind reads `memories`. Write a memories view as a Markdown list instead:
-
-<!-- prettier-ignore -->
-```markdown
-{% if views.kept %}{% for memory in views.kept.memories -%}
-- {{ memory.text | clip: 200 }}
-{% endfor %}{% endif %}
-```
 
 ### Roles
 
@@ -957,7 +947,7 @@ The playbook's page is read with `render_playbook_page`, `POST /render` relative
 `create_definition` and `update_definition` check the whole page as they check the rest of the document: its keys, its module, its templates and the chart fences written in them. Each problem is an issue under `/source`, with its line in the document where it has one, and nothing is saved. `update_playbook` checks the playbook's page the same way, with its issues under `/page`. These are refused, each for the reason given:
 
 - A `page` that is not a mapping, or an unknown key in it, with its line: a page takes the keys above.
-- `data` without `language`, `source.events`, `views` or `module`; more than 8 views; a view's name not of the form above; or a shape that is not `series`, `categories`, `table`, `text` or `memories`.
+- `data` without `language`, `source.events`, `views` or `module`; more than 8 views; a view's name not of the form above; or a shape that is not `series`, `categories`, `table` or `text`.
 - A filter that [The filters of the events](#the-filters-of-the-events) refuse, or a module that [The module](#the-module) refuses, with its line and the compiler's words.
 - A module that exports `answer`: a page never runs.
 - `data` without `runs`, or `runs` without `data`: the views are kept for `runs` alone.

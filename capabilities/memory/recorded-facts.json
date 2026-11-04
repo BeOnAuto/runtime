@@ -1,7 +1,0 @@
-{
-  "src/facts/0.56.0/memory_forgotten.json": "03967ee0fec8fd36f26d9d794aafffa6b9d4a18ff5559b45cc343da4b64778b7",
-  "src/facts/0.56.0/memory_moved.json": "066a718123c6ec80701b1aba5a8dd7873ca1371b0af62f4a6dce071651947ccf",
-  "src/facts/0.56.0/memory_remembered.json": "72df076b05316733dcc7b0e70d9e332782c9adb8308aa6b2302bf412862e3015",
-  "src/forget/0.56.0/memory_erased.json": "9cdd43dccf3df20416c135ebb44995b8d25b85814f77839d4f98c9aa61545520",
-  "src/forget/0.56.0/memory_remembered.json": "49b2b9cae30906c3e24630e3cbd7f7c91eae74a49eba84e0da6949ec8aac1369"
-}

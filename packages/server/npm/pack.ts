@@ -253,7 +253,7 @@ writeFileSync(
     name: root.name,
     version: root.version,
     description:
-      'Auto Runtime runs the playbooks your agent builds: their reasoning, lookup, memory, interaction, prediction and computation functions, and the workflows that coordinate them.',
+      'Auto Runtime runs the playbooks your agent builds: their reasoning, lookup, interaction, prediction, computation and generation functions, and the workflows that coordinate them.',
     keywords: ['auto', 'playbooks', 'workflows', 'mcp', 'agents', 'runtime'],
     homepage: 'https://on.auto/docs/',
     bugs: { url: 'https://github.com/BeOnAuto/runtime/issues' },

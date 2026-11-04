@@ -6,6 +6,7 @@ export { factScrubOnStoresBehaviour } from '../scrub/fact-scrub-on-stores-behavi
 export { keptSecretsBehaviour, type KeptSecretsEntry } from '../secrets/kept-secrets-behaviour.ts';
 export { earlierShapesBehaviour } from '../recorded-facts/earlier-shapes-behaviour.ts';
 export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';
+export { ledgerStepsBehaviour } from '../layout/ledger-steps-behaviour.ts';
 export { recordedFactsBehaviour } from '../recorded-facts/recorded-facts-behaviour.ts';
 export type { RecordedFacts } from '../recorded-facts/recorded-facts.ts';
 export type { LedgerEntry } from './ledger-entry.ts';

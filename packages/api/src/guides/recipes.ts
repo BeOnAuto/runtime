@@ -16,22 +16,6 @@ const outlines: readonly RecipeOutline[] = [
     request: () => 'Create my first playbook.',
   },
   {
-    name: 'remember',
-    title: 'Make the playbook remember something',
-    description:
-      'Keeps what the person wants kept as memories of the playbook or of its organization, which the playbook and its workflows recall later.',
-    arguments: [
-      {
-        name: 'what',
-        description: "What the playbook should remember, in the person's words, such as who approves a budget",
-        required: true,
-      },
-    ],
-    formatGuide: 'memory-function',
-    calls: ['remember', 'recall', 'forget', 'create_definition'],
-    request: ({ what }) => `Make the playbook remember ${String(what)}.`,
-  },
-  {
     name: 'give-tools',
     title: 'Give the playbook tools',
     description: 'Gives a reasoning function the tools of a tool server the playbook may use.',
@@ -77,6 +61,22 @@ const outlines: readonly RecipeOutline[] = [
       'list_playbook_events',
     ],
     request: ({ workflow, when }) => `Run the workflow ${String(workflow)} ${String(when)}.`,
+  },
+  {
+    name: 'keep',
+    title: 'Keep something for later',
+    description:
+      "Keeps what the person wants kept as the output of a run, and reads it back with a lookup of that definition's runs.",
+    arguments: [
+      {
+        name: 'what',
+        description: "What to keep, in the person's words, such as who approves a budget",
+        required: true,
+      },
+    ],
+    formatGuide: 'lookup-function',
+    calls: ['list_definitions', 'create_definition', 'run_definition'],
+    request: ({ what }) => `Keep ${String(what)} for later.`,
   },
 ];
 
@@ -197,16 +197,6 @@ const wherePagesAreServed: AdditionsByRecipe = {
     ],
     calls: [],
   },
-  remember: {
-    insertions: [
-      {
-        after: 'as the memory-function guide says.',
-        words:
-          ' Write its `page` in the same document, as that guide says under Its page: what each run kept or recalled, and what the runs kept or recalled over time.',
-      },
-    ],
-    calls: [],
-  },
   schedule: {
     insertions: [
       {
@@ -216,6 +206,10 @@ const wherePagesAreServed: AdditionsByRecipe = {
       },
       { after: 'and get_run for one run', words: ', whose headline says what it did' },
     ],
+    calls: [],
+  },
+  keep: {
+    insertions: [{ after: 'sets out `runs`.', words: everyDocumentCarriesItsPage }],
     calls: [],
   },
 };

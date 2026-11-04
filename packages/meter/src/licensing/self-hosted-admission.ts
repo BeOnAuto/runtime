@@ -1,4 +1,4 @@
-import { isAgentAction, type MeteredAction } from '@on.auto/definitions';
+import type { MeteredRun } from '@on.auto/definitions';
 import { randomUUIDv7, type Conflict, type Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -10,10 +10,7 @@ import { freeRateRefusalOf } from '../standing/free-rate-refusals.ts';
 import { installationOfKey, keyDigestOf } from './license-key.ts';
 import type { Licensing } from './licensing.ts';
 
-export function admittedSelfHosted(
-  licensing: Licensing,
-  run: MeteredAction,
-): Effect.Effect<void, Conflict | Unavailable> {
+export function admittedSelfHosted(licensing: Licensing, run: MeteredRun): Effect.Effect<void, Conflict | Unavailable> {
   return Effect.gen(function* () {
     const allocation = standingAllocation(yield* meterStateOf(licensing));
     if (allocation !== undefined) return yield* admittedByTheAllocation(licensing, run, allocation);
@@ -24,7 +21,6 @@ export function admittedSelfHosted(
       rule: {
         kind: 'local',
         key_sha256: key === undefined ? undefined : keyDigestOf(key),
-        agent_action: isAgentAction(run),
         allowance: options.allowance,
         free_rate: options.freeRate,
         refusal: freeRateRefusalOf(options),

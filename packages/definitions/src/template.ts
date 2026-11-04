@@ -9,7 +9,6 @@ export {
   type FilterDefinition,
   type TagDefinition,
   type TemplateEngine,
-  type TemplateUse,
 } from './template/template-engine.ts';
 export {
   parsedTemplate,

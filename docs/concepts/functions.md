@@ -2,7 +2,7 @@
 
 A function is one reusable piece of your team's method, saved in a playbook. It defines what goes in, what comes out and what happens in between. A run carries it out once with particular inputs. Your agent can call a function directly, and the same function can be a step in several workflows.
 
-Each function has one of seven types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not an eighth function type. [Terminology](terminology.md) defines these words.
+Each function has one of six types, described below. Workflows coordinate functions around the way your business works; coordination is a capability of its own, not a seventh function type. [Terminology](terminology.md) defines these words.
 
 ## Choose a function type
 
@@ -10,7 +10,6 @@ Each function has one of seven types, described below. Workflows coordinate func
 | ----------- | -------------------------------------------------- | ---------------------------------------------------- |
 | Reasoning   | Interpret, judge or write with a language model    | Review a campaign brief against your team's criteria |
 | Lookup      | Read what another system holds right now           | Read a campaign's figures from the reporting tool    |
-| Memory      | Remember what the playbook learns, and recall it   | Keep who approves budgets, and recall it when asked  |
 | Interaction | Ask a person or a system, and take the answer      | Ask the brief's owner to approve the review          |
 | Prediction  | Predict a quantity from the playbook's own history | Forecast next week's sign-ups in each region         |
 | Computation | Calculate or transform data exactly, with code     | Total a campaign's spend and its pace against budget |
@@ -22,9 +21,9 @@ Real work often combines types. A budget review might compute the totals, reason
 
 ## Availability
 
-Hosted Auto runs reasoning, lookup, memory, interaction, prediction, computation and generation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
+Hosted Auto runs reasoning, lookup, interaction, prediction, computation and generation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
 
-The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, memory, interaction, prediction and computation functions are available, and generation functions once a model gateway is set in `MODEL_GATEWAYS`. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers, and through [the connections people add](../self-host/connections.md#which-runtimes-take-connections) on a runtime that signs people in or runs in local mode. There is nothing to turn on.
+The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction and computation functions are available, and generation functions once a model gateway is set in `MODEL_GATEWAYS`. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers, and through [the connections people add](../self-host/connections.md#which-runtimes-take-connections) on a runtime that signs people in or runs in local mode. There is nothing to turn on.
 
 These are planned and not available yet:
 
@@ -47,20 +46,9 @@ Choose reasoning when the work needs judgment or language. Leave exact arithmeti
 
 A lookup function obtains information that already exists, through one tool that only reads or from the playbook's own runs. Through a tool, it reads the replies of a thread, a contact's record, this week's figures from a reporting tool: a run calls the tool once and returns the part of its result the function points at, at once. From the playbook's runs, it reads the outputs of the runs of one of its definitions that succeeded, newest first, such as the paces a computation function computed this month, kept to those that hold its words and started since its day.
 
-Choose lookup when the playbook needs what another system holds right now, or what its own functions found before. To keep something for later, run a function whose output is that thing, and read it back with a lookup function. A lookup function interprets nothing and changes nothing: it asks no model, and it calls only a tool marked `reads`, or reads the playbook's runs, so running it again is always safe. A reasoning function then interprets what it read.
+Choose lookup when the playbook needs what another system holds right now, or what its own functions found before. What a person wants kept is the output of a run: run a function whose output is that thing, and read it back with a lookup of that definition's runs. A lookup function interprets nothing and changes nothing: it asks no model, and it calls only a tool marked `reads`, or reads the playbook's runs, so running it again is always safe. A reasoning function then interprets what it read.
 
 - [Lookup function format](../reference/lookup-format.md) describes the document and the mark its tool needs.
-
-## Memory
-
-A memory function works the playbook's memory: it remembers what the playbook learns, or recalls what it kept. A memory is one text with its tags, kept by the playbook or by its organization, which every playbook of the organization recalls from. A recall answers the memories that hold the words and the tags it asks, newest first. Your agent does the same with the tools `remember`, `recall` and `forget`, so what the person wants kept goes there rather than into the agent's own notes.
-
-For example, a workflow that reviews a budget recalls what the organization keeps of who approves budgets, and gives it to a reasoning function. When the person corrects a rule, your agent remembers the new one in place of the old.
-
-Choose memory for facts, decisions and preferences that later work should have in front of it. A memory function calls no model and reaches nothing outside the runtime. To show what the playbook's runs and events add up to, give a workflow, a function or the playbook a [page](#pages), whose views are folded from the playbook's events.
-
-- [Make a playbook remember](../guides/remember.md) shows how to keep and recall memories.
-- [Memory function format](../reference/memory-format.md) describes the document, the operations and the bounds, and [Terminology](terminology.md#memory) defines its words.
 
 ## Interaction
 

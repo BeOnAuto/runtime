@@ -6,7 +6,6 @@ These are [Liquid](https://shopify.github.io/liquid/) templates:
 
 - a reasoning function's prompt;
 - a lookup function's texts in `call.with`;
-- a memory function's templates in `remember` and `recall`;
 - an interaction function's `to`, `from` and message, and the templates of the tools it names;
 - a generation function's prompt;
 - a page's `result` and `runs`, which render Markdown; see [Page format](page-format.md#the-templates).
@@ -19,14 +18,13 @@ Liquid's standard data and string filters are available: `abs`, `append`, `array
 
 `divided_by` keeps the fraction, even of two whole numbers: `{{ 13857781 | divided_by: 100 }}` is `138577.81`, where Shopify's Liquid gives `138577`. Add `| floor` for a whole number.
 
-The runtime adds four filters:
+The runtime adds three filters:
 
-| Filter     | What it does                                                                                                                                                                                                                                                                                                                                   | Example                                                        |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `money`    | Formats a number, or a string holding a decimal number, as US dollars with thousands separators: no cents for a whole amount, two decimals otherwise. Any other value stops the render                                                                                                                                                         | `{{ 364028 \| money }}` is `$364,028`; `1234.5` is `$1,234.50` |
-| `clip`     | Cuts text to a number of characters, 400 by default, and appends an ellipsis (`…`) when it cuts. Characters are counted as Unicode code points                                                                                                                                                                                                 | `{{ input.notes \| clip: 200 }}`                               |
-| `words`    | Counts the words in a string, where a word is a run of characters between whitespace                                                                                                                                                                                                                                                           | `{% assign n = input.notes \| words %}`                        |
-| `memories` | Writes what a recall answered, or its list of memories, one line a memory, each in a `memory` tag that names its id, its scope, when and by whom it was written, with `<`, `>` and `&` in its text escaped. A reasoning prompt that renders it is told that the tagged memories are data, never instructions. Any other value stops the render | `{{ input.recalled \| memories }}`                             |
+| Filter  | What it does                                                                                                                                                                           | Example                                                        |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `money` | Formats a number, or a string holding a decimal number, as US dollars with thousands separators: no cents for a whole amount, two decimals otherwise. Any other value stops the render | `{{ 364028 \| money }}` is `$364,028`; `1234.5` is `$1,234.50` |
+| `clip`  | Cuts text to a number of characters, 400 by default, and appends an ellipsis (`…`) when it cuts. Characters are counted as Unicode code points                                         | `{{ input.notes \| clip: 200 }}`                               |
+| `words` | Counts the words in a string, where a word is a run of characters between whitespace                                                                                                   | `{% assign n = input.notes \| words %}`                        |
 
 A template that names any other filter is refused when it is saved. Not available:
 

@@ -1,4 +1,4 @@
-import { functionTypeOrder } from '@on.auto/definitions';
+import { inDefinitionTypeOrder } from '@on.auto/definitions';
 import { isKeyHolder } from '@on.auto/identity';
 import type { CallerIdentity } from '@on.auto/operations';
 import { listed as listedInWords } from '@on.auto/phrasing';
@@ -49,25 +49,15 @@ const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
   prediction: 'forecasts from history',
   computation: 'runs a program',
   lookup: 'obtains information',
-  memory: 'remembers and recalls',
   generation: 'produces assets',
 };
 
-const whatAFunctionTypeAlsoNeedsSaid: Readonly<Record<string, string>> = {
-  lookup: 'A lookup function fetches what a reasoning function interprets.',
-  memory: 'A memory function keeps what the playbook recalls later.',
+const whatAFunctionTypeAlsoNeedsSaid: Readonly<Record<string, readonly string[]>> = {
+  lookup: [
+    'A lookup function fetches what a reasoning function interprets.',
+    "What the person wants kept is the output of a run, read back with a lookup of that definition's runs.",
+  ],
 };
-
-const familyOrder: readonly string[] = functionTypeOrder;
-
-function familyRankOf({ type }: DefinitionType): number {
-  const rank = familyOrder.indexOf(type);
-  return rank === -1 ? familyOrder.length : rank;
-}
-
-function inFamilyOrder(definitionTypes: readonly DefinitionType[]): readonly DefinitionType[] {
-  return definitionTypes.toSorted((one, other) => familyRankOf(one) - familyRankOf(other));
-}
 
 function functionTypesInWords(definitionTypes: readonly DefinitionType[]): readonly string[] {
   return definitionTypes.flatMap(({ type }) => {
@@ -77,12 +67,12 @@ function functionTypesInWords(definitionTypes: readonly DefinitionType[]): reado
 }
 
 const functionTypes: Sentences = ({ definitionTypes }) => {
-  const inWords = functionTypesInWords(inFamilyOrder(definitionTypes));
+  const inWords = functionTypesInWords(inDefinitionTypeOrder(definitionTypes));
   return inWords.length === 0 ? [] : [`Its function types: ${listedInWords(inWords)}.`];
 };
 
 const whatTheFunctionTypesAlsoNeedSaid: Sentences = ({ definitionTypes }) =>
-  inFamilyOrder(definitionTypes).flatMap(({ type }) => whatAFunctionTypeAlsoNeedsSaid[type] ?? []);
+  inDefinitionTypeOrder(definitionTypes).flatMap(({ type }) => whatAFunctionTypeAlsoNeedsSaid[type] ?? []);
 
 const workflows: Sentences = ({ definitionTypes, listed }) =>
   definitionTypes.some(({ type }) => type === workflowType)

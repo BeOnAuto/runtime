@@ -109,10 +109,9 @@ describe('the tools of /mcp', () => {
 const definitionTypes = [
   { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
   { type: 'lookup', noun: 'lookup function', guide: 'lookup-function' },
-  { type: 'memory', noun: 'memory function', guide: 'memory-function' },
   { type: 'interaction', noun: 'interaction function', guide: 'interaction-function' },
-  { type: 'computation', noun: 'computation function', guide: 'computation-function' },
   { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
+  { type: 'computation', noun: 'computation function', guide: 'computation-function' },
   { type: 'generation', noun: 'generation function', guide: 'generation-function' },
   { type: 'workflow', noun: 'workflow', guide: 'workflow' },
 ];

@@ -59,9 +59,6 @@ const servedOverHttpAlone: ReadonlySet<string> = new Set([
   'reopen_comment',
   'reopen_comment_in_org',
   'get_content',
-  'move_memory',
-  'list_memories',
-  'list_org_memories',
 ]);
 
 function inPlaybook({ operation }: DocumentedOperation): boolean {
@@ -93,14 +90,14 @@ describe('the operations of the document and the tools of the endpoints', () => 
     expect(servedAsTools().map((described) => toolsOf(described).map(({ description }) => description))).toEqual(
       servedAsTools().map(({ operation }) => [operation.description]),
     );
-    expect(servedAsTools()).toHaveLength(43);
+    expect(servedAsTools()).toHaveLength(40);
   });
 
   it('leave no tool of an endpoint without its operation, and give none to an operation served over HTTP alone', () => {
     const named = servedAsTools().flatMap((described) => toolsOf(described));
 
     expect(named).toHaveLength(tools.org.length + tools.playbook.length);
-    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(30);
+    expect(documented.filter(({ operation }) => servedOverHttpAlone.has(operation.operationId))).toHaveLength(27);
     expect([...tools.org, ...tools.playbook].filter(({ name }) => servedOverHttpAlone.has(name))).toEqual([]);
   });
 });

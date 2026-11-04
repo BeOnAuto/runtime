@@ -98,14 +98,14 @@ export const RunSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run id, a UUID' }),
   type: Schema.String.annotate({
     description:
-      'The type of the definition: reasoning, lookup, memory, interaction, prediction, computation, generation or workflow',
+      'The type of the definition: reasoning, lookup, interaction, prediction, computation, generation or workflow',
   }),
   name: Schema.String.annotate({ description: 'The definition name' }),
   definition_version: Schema.Int.annotate({ description: 'The definition version that ran' }),
   output_shape: Schema.optionalKey(
     OutputShapeNameSchema.annotate({
       description:
-        'The output shape the output of this run takes, series, categories, table, text, memories or asset, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series and a generation function an asset; left out otherwise',
+        'The output shape the output of this run takes, series, categories, table, text or asset, which Auto Studio draws: that of its definition when the definition declares one and this kind of run answers it, as a question to a prediction function answers a series and a generation function an asset; left out otherwise',
     }),
   ),
   status: Schema.Literals(['started', 'succeeded', 'rejected', 'failed']).annotate({

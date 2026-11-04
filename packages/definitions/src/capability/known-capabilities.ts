@@ -3,6 +3,7 @@ import { alternatives } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
 import { isDefinitionTypeName, type Capability } from './capability.ts';
+import { inDefinitionTypeOrder } from './function-terminology.ts';
 
 interface PublishedOperation {
   readonly registration: RouteRegistration<'playbook'>;
@@ -62,7 +63,8 @@ function withTypeField(
   };
 }
 
-function knownOf(capabilities: readonly Capability[], expected: string): KnownCapabilities {
+function knownOf(given: readonly Capability[], expected: string): KnownCapabilities {
+  const capabilities = inDefinitionTypeOrder(given);
   const names = capabilities.map(({ type }) => type);
   requireSomeCapability(names);
   requireDistinctNames(names);

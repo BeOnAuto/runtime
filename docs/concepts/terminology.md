@@ -6,14 +6,13 @@ A playbook contains one brain and its workflows. The brain is the playbook's col
 
 ## Capabilities and resources
 
-There are eight capabilities: coordination, reasoning, lookup, memory, interaction, prediction, computation and generation. A workflow expresses coordination. Each of the other seven has a function type, listed in this order:
+There are seven capabilities: coordination, reasoning, lookup, interaction, prediction, computation and generation. A workflow expresses coordination. Each of the other six has a function type, listed in this order:
 
 | Capability   | Resource someone defines | Category                |
 | ------------ | ------------------------ | ----------------------- |
 | Coordination | Workflow                 | Workflows               |
 | Reasoning    | Reasoning function       | Functions → Reasoning   |
 | Lookup       | Lookup function          | Functions → Lookup      |
-| Memory       | Memory function          | Functions → Memory      |
 | Interaction  | Interaction function     | Functions → Interaction |
 | Prediction   | Prediction function      | Functions → Prediction  |
 | Computation  | Computation function     | Functions → Computation |
@@ -25,7 +24,6 @@ What each function type is for:
 | ----------- | --------------------------------------------------------------------------------------------------------------- |
 | Reasoning   | Use a prompt and a language model, with tools where configured, to interpret information or produce a response. |
 | Lookup      | Obtain information that already exists, through one tool that only reads or from the playbook's own runs.       |
-| Memory      | Remember what the playbook learns, and recall it later, for the playbook or its whole organization.             |
 | Interaction | Exchange information with people or systems.                                                                    |
 | Prediction  | Predict a quantity from the playbook's own history, with a likely range.                                        |
 | Computation | Run a TypeScript program to calculate or transform data exactly.                                                |
@@ -68,7 +66,7 @@ A reasoning function has a prompt and a language model; it is not limited to a m
 | Attempt          | One try at a step's work, or at a run started again under its id. A retry is another attempt, not another function.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Result           | The output produced by a run.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Headline         | The first line of a run's result as the page of its subject renders it: one plain sentence, which cards and lists show alone.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Shape            | A JSON Schema the runtime owns for what a definition produces, which says what the data is and never what it measures: `series`, `categories`, `table`, `text`, `memories` or `asset`. A definition that names one of the first five in `output.shape` is checked against it, and every prediction function answers a `series`, checked against that shape too. Each run of a generation function answers an `asset`, which no definition declares. Auto Studio draws a run's output from the shape the run names.                                                                                                                                                                                                                                                                                                                           |
+| Shape            | A JSON Schema the runtime owns for what a definition produces, which says what the data is and never what it measures: `series`, `categories`, `table`, `text` or `asset`. A definition that names one of the first four in `output.shape` is checked against it, and every prediction function answers a `series`, checked against that shape too. Each run of a generation function answers an `asset`, which no definition declares. Auto Studio draws a run's output from the shape the run names.                                                                                                                                                                                                                                                                                                                                       |
 | Sweep            | The server's regular pass over the work that waits, such as runs to resume, answers to take and trigger starts to try again. It comes every second by default.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 Definitions, versions, runs and results are separate concepts, and an overview describes a definition without being a second source of it. A workflow can call the functions of its playbook and other workflows; a workflow called this way is a subworkflow. Starting a workflow by hand is a run, not a trigger. Sending an approval or other input to a waiting run answers that run; it does not start a new one. Timers and event waits inside a workflow are control steps, not triggers. [Workflows and runs](workflows.md) explains how versions, retries, waiting and events behave.
@@ -85,19 +83,6 @@ Definitions, versions, runs and results are separate concepts, and an overview d
 | Notification      | A request that takes no answer, so it goes through a connection; its run succeeds once it is delivered.                                                                    |
 
 An interaction function asks a system and returns its result at once, or asks a person and takes the answer later. Answering a request is not sending an event: an event goes to a waiting workflow run, and an answer goes to the run of the function that asked.
-
-## Memory
-
-| Term     | Meaning                                                                                                                                                         |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Memory   | One text the playbook keeps, with its tags, the days it is about and when it expires: a fact, a decision or a preference, recalled later by its words and tags. |
-| Scope    | Who keeps a memory: the playbook, which alone recalls it, or its organization, which every playbook of the organization recalls.                                |
-| Remember | Keep a memory, or a new version of one that replaces the version before.                                                                                        |
-| Recall   | Find the memories kept that hold the words and the tags asked, newest first.                                                                                    |
-| Forget   | Keep a memory from being recalled any more; to erase it is also to take its text out of the ledger, leaving who wrote it and when.                              |
-| Move     | Keep a memory in the other scope, under a new id, and mark the one moved.                                                                                       |
-
-A memory function remembers or recalls; your agent does the same with the tools `remember`, `recall` and `forget`. What the playbook keeps there is the playbook's, for anyone who uses it and for its workflows. A memory is kept only when something remembers it, while a page's views are folded from the playbook's events as they are recorded.
 
 ## Prediction
 

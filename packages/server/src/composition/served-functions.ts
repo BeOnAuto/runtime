@@ -5,7 +5,6 @@ import type { WorkflowParts } from '../workflows/workflows.ts';
 import { factsComposedOf } from './composed-facts.ts';
 import type { ServedWiring } from './function-wiring.ts';
 import { generationServedBy } from './served-generation.ts';
-import { memoryServedBy } from './served-memory.ts';
 import { orgOperationsOfPlaybooks } from './served-org-operations.ts';
 import type { ServedReasoning } from './served-reasoning.ts';
 import { toolUsersServedBy } from './served-tools.ts';
@@ -37,11 +36,9 @@ export async function functionsServedBy(
   const projections = await wiring.served({ projection: settings.projection, database }, computation.pool, folders);
   await prediction.servedIn(runtime, projections.store.database);
   const forecaster = foldedBeforeItRuns({ capability, folders, database: projections.store.database });
-  const memory = memoryServedBy(runtime);
   const capabilities = [
     reasoning.capability,
     lookup,
-    memory.capability,
     interaction.capability,
     computation.capability,
     forecaster,
@@ -58,14 +55,8 @@ export async function functionsServedBy(
         ...orgOperationsOfPlaybooks(runtime, projections.pages),
         ...reasoningOperationsOf(reasoning),
         ...toolOperations.inOrg,
-        ...memory.operations.inOrg,
       ],
-      playbookOperations: [
-        ...toolOperations.inPlaybook,
-        ...interaction.operations,
-        ...memory.operations.inPlaybook,
-        ...operations,
-      ],
+      playbookOperations: [...toolOperations.inPlaybook, ...interaction.operations, ...operations],
       capabilityOperations: [generation],
       dueWork: [...interaction.dueWorkOf(record), ...dueWork, ...generation.dueWork],
       store: projections.store,

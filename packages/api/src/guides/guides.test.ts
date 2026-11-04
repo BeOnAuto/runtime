@@ -104,7 +104,7 @@ describe('what the guide tool says of the recipes', () => {
 
   it('names in turn the recipes a playbook endpoint can follow', () => {
     expect(guideToolDefinitionOf(testShelf, recipesFollowedWith(playbookEndpoint, recipes)).description).toBe(
-      `${guideToolDescription} It holds the recipes remember, give-tools and schedule, which the tools listed here can follow.`,
+      `${guideToolDescription} It holds the recipes give-tools, schedule and keep, which the tools listed here can follow.`,
     );
   });
 });

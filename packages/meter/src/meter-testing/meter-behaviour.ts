@@ -1,6 +1,5 @@
 import { describe } from 'vitest';
 
-import { agentActionBehaviour } from './agent-action-behaviour.ts';
 import { allocationsBehaviour } from './allocation-behaviour.ts';
 import {
   allowanceBehaviour,
@@ -12,6 +11,7 @@ import { countingBehaviour, historyBehaviour, startedRunsBehaviour } from './cou
 import { featuresBehaviour } from './features-behaviour.ts';
 import { licensesBehaviour } from './license-behaviour.ts';
 import type { LedgerOf } from './opened.ts';
+import { releasedFactsBehaviour } from './released-facts-behaviour.ts';
 import { earlyReportBehaviour, reportBehaviour, restoredReportBehaviour } from './report-behaviour.ts';
 import { statusBehaviour } from './status-behaviour.ts';
 
@@ -30,9 +30,6 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
       defaultAllowanceBehaviour(ledgerOf);
       concurrencyBehaviour(ledgerOf);
     });
-    describe('the actions of agents', () => {
-      agentActionBehaviour(ledgerOf);
-    });
     describe('licenses', () => {
       licensesBehaviour(ledgerOf);
     });
@@ -49,6 +46,9 @@ export function meterBehaviour(name: string, ledgerOf: LedgerOf): void {
     });
     describe('its license status', () => {
       statusBehaviour(ledgerOf);
+    });
+    describe('the facts earlier releases recorded', () => {
+      releasedFactsBehaviour(ledgerOf);
     });
   });
 }

@@ -1,6 +1,6 @@
 import { Option, Order, Schema } from 'effect';
 
-import { definitionTypeOrder } from '../capability/function-terminology.ts';
+import { definitionTypeRankOf } from '../capability/function-terminology.ts';
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import { isRetired, type StoredDefinition } from '../registry/definition.ts';
 import {
@@ -25,13 +25,8 @@ const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
 
 type Use = { readonly relation: 'calls'; readonly steps: readonly CallingStep[] } | { readonly relation: 'reads' };
 
-function rankOf({ type }: DefinitionUser): number {
-  const rank = definitionTypeOrder.indexOf(type);
-  return rank === -1 ? definitionTypeOrder.length : rank;
-}
-
 const byTypeThenName = Order.combineAll([
-  Order.mapInput(Order.Number, rankOf),
+  Order.mapInput(Order.Number, ({ type }: DefinitionUser) => definitionTypeRankOf(type)),
   Order.mapInput(Order.String, ({ type }: DefinitionUser) => type),
   Order.mapInput(Order.String, ({ name }: DefinitionUser) => name),
 ]);

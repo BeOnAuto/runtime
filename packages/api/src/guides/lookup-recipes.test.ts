@@ -34,6 +34,18 @@ const servedWithLookup = await guideShelfFrom(guideFiles, [reasoning, lookup, in
 
 const servedWithoutLookup = await guideShelfFrom(guideFiles, [reasoning, interaction, workflow], { pages: false });
 
+const servedWithLookupAndPages = await guideShelfFrom(guideFiles, [reasoning, lookup, interaction, workflow], {
+  pages: true,
+});
+
+function recipeNamesOf({ recipes }: GuideShelf): readonly string[] {
+  return recipes.map(({ name }) => name);
+}
+
+function keepOf({ recipes }: GuideShelf): string {
+  return recipes.find(({ name }) => name === 'keep')?.text ?? '';
+}
+
 function giveToolsOf({ recipes }: GuideShelf): string {
   return recipes.find(({ name }) => name === 'give-tools')?.text ?? '';
 }
@@ -50,5 +62,20 @@ describe('the recipe that gives a playbook tools, on a server that serves lookup
     const bytes = new TextEncoder().encode(giveToolsOf(servedWithLookup)).byteLength;
 
     expect([bytes, bytes <= mostRecipeBytes]).toEqual([4376, true]);
+  });
+});
+
+describe('the keep recipe', () => {
+  it('is offered, after the others, on a server that serves lookup functions, and not on one that serves none', () => {
+    expect([recipeNamesOf(servedWithLookup), recipeNamesOf(servedWithoutLookup)]).toEqual([
+      ['first-playbook', 'give-tools', 'schedule', 'keep'],
+      ['first-playbook', 'give-tools', 'schedule'],
+    ]);
+  });
+
+  it('stays within the bound of a recipe with its page, at 2,111 bytes', () => {
+    const bytes = new TextEncoder().encode(keepOf(servedWithLookupAndPages)).byteLength;
+
+    expect([bytes, bytes <= mostRecipeBytes]).toEqual([2111, true]);
   });
 });

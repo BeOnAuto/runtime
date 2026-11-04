@@ -30,15 +30,13 @@ const onThisServer = 'On this server, a reasoning function names its model throu
 
 const reasoning = capabilityOf('reasoning', 'reasoning function', { name: 'reasoning-function', onThisServer });
 
-const memory = capabilityOf('memory', 'memory function', { name: 'memory-function' });
-
 const computation = capabilityOf('computation', 'computation function', { name: 'computation-function' });
 
 const prediction = capabilityOf('prediction', 'prediction function', { name: 'prediction-function' });
 
 const workflow = capabilityOf('workflow', 'workflow', { name: 'workflow' });
 
-const everyType = [reasoning, memory, computation, prediction, workflow];
+const everyType = [reasoning, computation, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
@@ -51,6 +49,10 @@ const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoni
 const servedForReasoning = await guideShelfFrom(guideFiles, [reasoning], { pages: false });
 
 const servedWithEverything = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: true });
+
+const lookup = capabilityOf('lookup', 'lookup function', { name: 'lookup-function' });
+
+const servedWithLookupAndPages = await guideShelfFrom(guideFiles, [reasoning, lookup, workflow], { pages: true });
 
 function recipeTextsOf({ recipes }: GuideShelf): Readonly<Record<string, string>> {
   return Object.fromEntries(recipes.map(({ name, text }) => [name, text]));
@@ -77,9 +79,8 @@ function outsideCode(text: string): string {
 
 const pages: Readonly<Record<string, string>> = {
   'reasoning-function': 'reference/reasoning-format.md',
-  'memory-function': 'reference/memory-format.md',
-  'computation-function': 'reference/computation-format.md',
   'prediction-function': 'reference/prediction-format.md',
+  'computation-function': 'reference/computation-format.md',
   workflow: 'reference/workflow-format.md',
   templates: 'reference/template.md',
 };
@@ -87,20 +88,18 @@ const pages: Readonly<Record<string, string>> = {
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are the terminology, a guide per type, the templates and the four recipes it carries the format guides of', () => {
+  it('are the terminology, a guide per type in the order of the product whatever order the types are given in, the templates and the three recipes it carries the format guides of', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
       'terminology',
       ...Object.keys(pages),
       'first-playbook',
-      'remember',
       'give-tools',
       'schedule',
     ]);
     expect(definitionTypes).toEqual([
       { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
-      { type: 'memory', noun: 'memory function', guide: 'memory-function' },
-      { type: 'computation', noun: 'computation function', guide: 'computation-function' },
       { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
+      { type: 'computation', noun: 'computation function', guide: 'computation-function' },
       { type: 'workflow', noun: 'workflow', guide: 'workflow' },
     ]);
   });
@@ -124,9 +123,8 @@ describe('the titles and links of the guides of a server that runs every type of
   it('title each type guide and the templates as their pages are titled', () => {
     expect(guides.slice(1).map(({ title }) => title)).toEqual([
       'Reasoning function format',
-      'Memory function format',
-      'Computation function format',
       'Prediction function format',
+      'Computation function format',
       'Workflow format',
       'Templates',
     ]);
@@ -170,9 +168,8 @@ describe('the size and the words of the guides of a server', () => {
   it('describe each guide in a sentence for a person or a client that lists them', () => {
     expect(guides.slice(1).map(({ description }) => description)).toEqual([
       'How reasoning functions are written: their document, fields, examples and bounds.',
-      'How memory functions are written: their document, fields, examples and bounds.',
-      'How computation functions are written: their document, fields, examples and bounds.',
       'How prediction functions are written: their document, fields, examples and bounds.',
+      'How computation functions are written: their document, fields, examples and bounds.',
       'How workflows are written: their document, fields, examples and bounds.',
       'The filters a template may use, the same in every template of every definition.',
     ]);
@@ -197,13 +194,11 @@ describe('the recipes of a server', () => {
 
     expect([
       asked['first-playbook']?.({}),
-      asked['remember']?.({ what: 'who approves a budget' }),
       asked['give-tools']?.({}),
       asked['give-tools']?.({ server: 'slack' }),
       asked['schedule']?.({ workflow: 'daily-digest', when: 'every weekday at 9:00' }),
     ]).toEqual([
       'Create my first playbook.',
-      'Make the playbook remember who approves a budget.',
       'Give the playbook tools.',
       'Give the playbook the tools of the tool server slack.',
       'Run the workflow daily-digest every weekday at 9:00.',
@@ -241,11 +236,11 @@ describe('the recipes of a server that serves interaction functions', () => {
       'give it tools with the give-tools recipe. They can also ask someone through a connection and take their answer with an interaction function.',
     );
     expect([
-      bytesOf(texts, 'first-playbook', 'remember', 'give-tools', 'schedule'),
-      bytesOf(recipeTextsOf(served), 'first-playbook', 'remember', 'give-tools', 'schedule'),
+      bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
+      bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4470, 1640, 4301, 3541],
-      [4011, 1640, 3701, 3541],
+      [4470, 4301, 3541],
+      [4011, 3701, 3541],
     ]);
   });
 });
@@ -258,16 +253,12 @@ const fieldsNamed: ReadonlySet<string> = new Set(['input_schema']);
 
 function toolsNamedIn(text: string): readonly string[] {
   return [
-    ...new Set(
-      text
-        .replaceAll(/`[^`]*`/gu, '')
-        .match(/\b(?:[a-z]+(?:_[a-z]+)+|search|introspect|validate|remember|recall|forget)\b/gu),
-    ),
+    ...new Set(text.replaceAll(/`[^`]*`/gu, '').match(/\b(?:[a-z]+(?:_[a-z]+)+|search|introspect|validate)\b/gu)),
   ].filter((name) => !calledWhereListed.has(name) && !fieldsNamed.has(name));
 }
 
 describe('the tools a recipe calls', () => {
-  it('are every tool its steps name, on a server with or without workflows, interaction functions and pages, but the guide tool, listed on every connection, list_models, add_connection and reconnect_connection, called only where they are listed, and the fields of a tool they name', () => {
+  it('are every tool its steps name, on a server with or without workflows, interaction functions, lookup functions and pages, but the guide tool, listed on every connection, list_models, add_connection and reconnect_connection, called only where they are listed, and the fields of a tool they name', () => {
     const { recipes } = served;
     const onEveryServer = [
       served,
@@ -275,6 +266,7 @@ describe('the tools a recipe calls', () => {
       servedWithEverything,
       servedForReasoningAndWorkflows,
       servedForReasoning,
+      servedWithLookupAndPages,
     ].flatMap((shelf) => shelf.recipes);
 
     expect(onEveryServer.map(({ name, text }) => [name, toolsNamedIn(text).toSorted()])).toEqual(
@@ -287,7 +279,7 @@ describe('the tools a recipe calls', () => {
   });
 });
 
-const notRunThere = ['memory', 'computation', 'interaction', 'prediction'].map((type) => `${type} function`);
+const notRunThere = ['computation', 'interaction', 'prediction'].map((type) => `${type} function`);
 
 describe('the terminology guide of a server', () => {
   it('names only the types of definition the server runs', () => {

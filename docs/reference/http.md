@@ -2,7 +2,7 @@
 
 The HTTP API serves every operation of Auto Runtime. It covers playbooks, function and workflow definitions, runs and their history, and requests. It also covers events, analytics and the tool servers a playbook's functions may use. This page lists every route with its fields, limits and errors.
 
-The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `lookup`, `memory`, `interaction`, `prediction`, `computation`, `generation` or `workflow`.
+The [MCP endpoints](mcp.md) serve the same operations as tools. A definition's `type` is `reasoning`, `lookup`, `interaction`, `prediction`, `computation`, `generation` or `workflow`.
 
 ## Requests and access
 
@@ -43,7 +43,7 @@ These four need no key, and neither does [content at a signed address](#content-
 The server builds the document when it starts, from its operations: the same operations its routes and its MCP tools serve.
 
 - Each operation appears once. Its `operationId` is the operation's name, with `search_in_org` for the org's `search`, and `make_comment_in_org`, `list_comments_in_org`, `resolve_comment_in_org` and `reopen_comment_in_org` for the org's own comments. Its summary is its title. Its tag names the resource it acts on.
-- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `list_memories`, `list_org_memories` and `move_memory`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
+- Its description is its MCP tool's description. An operation served only over HTTP has no tool, so its description is its own: the six routes of Studio's connection page, `read_link`, `approve`, `give_credential`, `give_client`, `start` and `finish`; `get_connection` and `list_providers`; `get_run_history`, `get_playbook_analytics`, `render_page`, `render_playbook_page` and `validate`; `make_comment` and `make_comment_in_org`, and `reopen_comment` and `reopen_comment_in_org`; `list_org_changes`, `list_playbook_changes`, `list_activity` and `mark_activity_seen`; `transcribe` and `get_voice`; `get_content`, the route of [content at a signed address](#content-at-a-signed-address); and `get_license`, `activate_allocation` and `report_allocation`.
 - Its input is in the path, and in the query string of a `GET`. A command, or a query routed by `POST` such as `validate` and `dry_run`, takes it in the JSON body.
 - Its schemas are JSON Schema 2020-12. Each has its own `$id` under `https://on.auto/schemas/runtime/`, with its definitions inside it.
 - Each problem an operation can return is listed under its status.
@@ -259,7 +259,7 @@ The `source` is a [reasoning function document](reasoning-format.md). These rule
 - A paused definition starts no runs: `run_definition` of it is refused with `conflict` of the kind `paused`, a workflow step that calls it ends the run `rejected` with `invalid_input` and words that say the function is paused, as a step that calls a retired function does, its triggers start nothing, and the runs already going finish. It can still be read, listed and updated, and an update keeps it paused. Pausing changes neither its version nor its `updated_at`, and it carries `paused_at`, `paused_by`, the caller who paused it by `id` and `name`, and the `reason` given, 1 to 1,024 characters, until it is resumed.
 - A resumed definition is `active` again and runs as before. Pausing a paused definition, or resuming an active one, succeeds and records nothing, so both are safe to retry.
 - A retired definition can be read, but cannot be edited, run, paused or resumed: those are refused with `conflict` of the kind `retired`.
-- A definition carries its `input_schema` and `output_schema` where its document declares them. A reasoning function, a computation function or a workflow whose `output.shape` names an [output shape](output-shapes.md) has the shape's schema as its `output_schema`, and the shape's name as `details.shape`, such as `"details": { "shape": "series" }`. A prediction function has the `series` shape so, since its questions answer a series, a generation function the `asset` shape, and a memory function that recalls the `memories` shape. `details` is left out otherwise. `list_definitions` shows both too.
+- A definition carries its `input_schema` and `output_schema` where its document declares them. A reasoning function, a computation function or a workflow whose `output.shape` names an [output shape](output-shapes.md) has the shape's schema as its `output_schema`, and the shape's name as `details.shape`, such as `"details": { "shape": "series" }`. A prediction function has the `series` shape so, since its questions answer a series, and a generation function the `asset` shape. `details` is left out otherwise. `list_definitions` shows both too.
 
 A definition names the caller who created it as `created_by`, by `id` and `name`, and keeps it across its versions.
 
@@ -307,29 +307,6 @@ Saving a definition asks the tool server it names for its tools, and a run finis
 | A save while the tool server cannot be asked for its tools                                   | `unavailable`, naming the server; nothing is saved             |
 | A run whose tool its server no longer marks `reads`                                          | `unavailable` with the kind `tool_not_read_only`; nothing sent |
 | A run whose call was sent and could not finish                                               | `unavailable` with the kind `tools_unfinished`                 |
-
-## Memory functions
-
-Memory functions use the operations of reasoning functions, with `memory` in place of `reasoning` in each route, such as `POST /definitions/memory` and `POST /definitions/memory/{name}/run`. The `source` is a [memory function document](memory-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions). A run finishes within the request that starts it.
-
-The memories of a playbook have operations of their own, relative to `/v1/orgs/{org}/playbooks/{playbook}`:
-
-| Operation       | Method and route             | Permission       | Input                                                                   |
-| --------------- | ---------------------------- | ---------------- | ----------------------------------------------------------------------- |
-| `remember`      | `POST /memories`             | `playbook:write` | `text`, and optional `tags`, `scope`, `about`, `expires` and `replaces` |
-| `recall`        | `POST /memories/recall`      | `playbook:read`  | Optional `words`, `tags`, `scope` and `most_characters`                 |
-| `forget`        | `POST /memories/{id}/forget` | `playbook:write` | Memory id in path; optional `erase`                                     |
-| `move_memory`   | `POST /memories/{id}/move`   | `playbook:write` | Memory id in path; `to`, `playbook` or `organization`                   |
-| `list_memories` | `GET /memories`              | `playbook:read`  | Optional `limit` and `cursor`                                           |
-
-`GET /v1/orgs/{org}/memories`, `list_org_memories`, under `org:read`, lists the memories of the organization and of every playbook of it the caller may read. [Memory function format](memory-format.md#the-operations) has every field and answer.
-
-| Case                                                                                           | Response                                    |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| A text, a tag, a day or an expiry out of its bounds                                            | `invalid_input` at its field                |
-| `replaces`, `forget` or `move_memory` names a memory the scope lacks                           | `not_found`                                 |
-| `replaces` names a memory forgotten, erased or moved, or `move_memory` one forgotten or erased | `conflict`, in words that say which         |
-| The playbook, or its organization, keeps 10,000 memories                                       | `unavailable` with the kind `memories_full` |
 
 ## Interaction functions
 
@@ -749,7 +726,7 @@ Some types, sources and attributes are reserved for what the runtime records its
 | Sources    | Those beginning `/runs/`, `/definitions/` or `/callers/`                                                                              | `/event/source`                    |
 | Attributes | `causationid`, `correlationid`, `caller`, `definitionversion`, `depth`, `calldepth`, `calledby`, `triggerkind` and `triggerreference` | `/event/` and the attribute's name |
 
-The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `memory_remembered`, `memory_forgotten`, `memory_erased`, `memory_moved`, `asset_kept`, `asset_expired`, `asset_content_removed`, `definition_created`, `definition_updated`, `definition_retired`, `definition_paused`, `definition_resumed`, `playbook_page_saved`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
+The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_succeeded`, `run_rejected`, `run_failed`, `run_cancel_requested`, `tool_call_started`, `tool_call_answered`, `tool_call_failed`, `model_call_started`, `model_call_answered`, `model_call_failed`, `request_answered`, `delivery_started`, `delivery_succeeded`, `delivery_failed`, `delivery_refused`, `reply_refused`, `telling_started`, `telling_succeeded`, `telling_failed`, `replies_read`, `reading_failed`, `interaction_requested`, `asset_kept`, `asset_expired`, `asset_content_removed`, `definition_created`, `definition_updated`, `definition_retired`, `definition_paused`, `definition_resumed`, `playbook_page_saved`, `event_published`, `workflow_input_applied`, `step_started`, `step_waiting`, `step_finished`, `step_failed`, `step_skipped` and `reaction_refused`.
 
 A run of a reasoning function also records each call of its model: `model_call_started`, then `model_call_answered` with the tool calls the model asked for, or `model_call_failed` with `because`. [The run's model calls](reasoning-format.md#the-run-s-model-calls) gives their fields.
 

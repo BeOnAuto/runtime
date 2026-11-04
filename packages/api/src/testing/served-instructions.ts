@@ -25,9 +25,6 @@ const insideAPlaybook = [
   'execute_connection',
   'list_interactions',
   'answer_interaction',
-  'remember',
-  'recall',
-  'forget',
   'send_run_event',
   'get_guide',
 ];
@@ -100,7 +97,6 @@ export const recipes: readonly RecipeCalls[] = [
       'update_playbook',
     ],
   },
-  { name: 'remember', calls: ['remember', 'recall', 'forget', 'create_definition'] },
   {
     name: 'give-tools',
     calls: [
@@ -124,6 +120,7 @@ export const recipes: readonly RecipeCalls[] = [
       'list_playbook_events',
     ],
   },
+  { name: 'keep', calls: ['list_definitions', 'create_definition', 'run_definition'] },
 ];
 
 export function withConnections({ orgTools, playbookTools }: ServedTools): ServedTools {

@@ -14,11 +14,11 @@ Follow the [quick start](get-started/cloud.md) to connect your agent to `https:/
 
 ## Understand the model
 
-[Playbooks and methods](concepts/playbooks.md) shows how a business method becomes a playbook. [Functions](concepts/functions.md) explains the seven function types and when to use each. [Workflows and runs](concepts/workflows.md) covers how work is coordinated, and [History and events](concepts/history-and-dream.md) covers what a playbook records.
+[Playbooks and methods](concepts/playbooks.md) shows how a business method becomes a playbook. [Functions](concepts/functions.md) explains the six function types and when to use each. [Workflows and runs](concepts/workflows.md) covers how work is coordinated, and [History and events](concepts/history-and-dream.md) covers what a playbook records.
 
 ## Do a task
 
-The guides show how to [give a function tools](guides/tools.md), [run a workflow on a schedule or event](guides/triggers.md), [act on comments from Studio](guides/comments.md), [make a playbook remember](guides/remember.md), [calculate with a computation function](guides/computation.md), [forecast with a prediction function](guides/forecast.md), [use Auto with Apollo](integrations/apollo.md) and connect [Zoom](integrations/zoom.md) or [Slack](integrations/slack.md) for your playbooks to use.
+The guides show how to [give a function tools](guides/tools.md), [run a workflow on a schedule or event](guides/triggers.md), [act on comments from Studio](guides/comments.md), [calculate with a computation function](guides/computation.md), [forecast with a prediction function](guides/forecast.md), [use Auto with Apollo](integrations/apollo.md) and connect [Zoom](integrations/zoom.md) or [Slack](integrations/slack.md) for your playbooks to use.
 
 ## Work with your team
 

@@ -1,4 +1,4 @@
-import type { MeteredAction } from '@on.auto/definitions';
+import type { MeteredRun } from '@on.auto/definitions';
 import { Conflict, type Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
@@ -10,7 +10,7 @@ import { countOf, offlineCredits } from '../standing/counted-words.ts';
 
 export function admittedByTheAllocation(
   licensing: Licensing,
-  run: MeteredAction,
+  run: MeteredRun,
   allocation: Allocation,
 ): Effect.Effect<void, Conflict | Unavailable> {
   return Effect.gen(function* () {

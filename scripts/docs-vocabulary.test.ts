@@ -155,7 +155,6 @@ const allowances: readonly Allowance[] = [
     "['It folds a recollection.', 'recollection']",
   ].map((leak) => ({ text: leak, in: [internalTermsTest] })),
   { text: "**inference** names a model call and its provider's terms", in: ['CLAUDE.md'] },
-  { text: 'RecallFunctionDefinition', in: ['CLAUDE.md'] },
   {
     text: 'recall_views',
     in: [
