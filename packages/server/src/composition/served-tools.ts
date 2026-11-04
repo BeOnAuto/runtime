@@ -34,7 +34,7 @@ export async function toolUsersServedBy(
       tools,
       telemetry: registry.modelTelemetry,
     }),
-    lookup: lookupServedBy(tools),
+    lookup: lookupServedBy(runtime, tools),
     interaction: interactionServedBy(runtime, settings, tools),
     toolOperations: toolOperationsOf(tools, { offering }),
   };

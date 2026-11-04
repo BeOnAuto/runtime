@@ -184,6 +184,44 @@ function theRunsNoStepStarted(aLedger: LedgerMaker): void {
   });
 }
 
+function endsOfAWeek(index: number): RunFacts {
+  const end = index === 1 ? 'run_rejected' : 'run_succeeded';
+  return {
+    facts: [factOfType('run_started', 'the input'), factOfType(end, `the end of run ${index}`)],
+    definitionType: 'workflow',
+    definitionName: 'close-the-week',
+  };
+}
+
+const endsThatSucceeded: RecordedPageRequest = {
+  order: 'desc',
+  limit: 100,
+  types: ['run_succeeded'],
+  dataOf: ['run_succeeded'],
+};
+
+function theEndsOfTheRunsThatSucceeded(aLedger: LedgerMaker): void {
+  it('answer the runs of one definition that succeeded, newest first, with the data of their ends alone', async () => {
+    const ledger = await aLedger();
+    await Effect.runPromise(
+      Effect.forEach([0, 1, 2], (index) => recordedRun(ledger, `run-${index}`, endsOfAWeek(index)), { discard: true }),
+    );
+
+    const { records } = await reading(
+      ledger,
+      { kind: 'runs', definitionType: 'workflow', name: 'close-the-week' },
+      endsThatSucceeded,
+    );
+
+    expect(records.map(({ stream, type, data }) => [stream.slice(inAlpha('runs/').length), type, data])).toEqual([
+      ['run-2', 'run_started', undefined],
+      ['run-2', 'run_succeeded', { detail: 'the end of run 2' }],
+      ['run-0', 'run_started', undefined],
+      ['run-0', 'run_succeeded', { detail: 'the end of run 0' }],
+    ]);
+  });
+}
+
 const awkwardText = {
   nul: 'a NUL \u0000 inside',
   unpaired: 'half a pair \uD800 alone',
@@ -228,6 +266,7 @@ export function runFiltersBehaviour(aLedger: LedgerMaker): void {
     theRunsOfOneName(aLedger);
     theRejectedRuns(aLedger);
     theRunsNoStepStarted(aLedger);
+    theEndsOfTheRunsThatSucceeded(aLedger);
     theDefinitionOfAnAwkwardRun(aLedger);
   });
 }

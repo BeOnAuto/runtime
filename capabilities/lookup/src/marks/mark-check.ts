@@ -4,7 +4,7 @@ import { InvalidInput, Unavailable, type PlaybookAddress } from '@on.auto/operat
 import type { ToolAccess, ToolServer } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
-import type { LookupFunctionDefinitionDocument } from '../document/lookup-document.ts';
+import type { CallLookupDocument, LookupFunctionDefinitionDocument } from '../document/lookup-document.ts';
 import { actingInWords, notOfferedInWords, notServedInWords, unreachableInWords } from './mark-words.ts';
 
 export type MarkPorts = Pick<ToolAccess, 'listServers'>;
@@ -15,7 +15,7 @@ type MarkCheck = (
   place: PlaybookAddress,
 ) => Effect.Effect<StrippedForms, InvalidInput | Unavailable>;
 
-function refusedAtTheCall({ callLine }: LookupFunctionDefinitionDocument, detail: string): InvalidInput {
+function refusedAtTheCall({ callLine }: CallLookupDocument, detail: string): InvalidInput {
   return new InvalidInput({
     detail: 'The lookup function definition has a problem',
     issues: [{ pointer: '', detail: issueText({ line: callLine, pointer: '/call', detail }) }],
@@ -23,7 +23,7 @@ function refusedAtTheCall({ callLine }: LookupFunctionDefinitionDocument, detail
 }
 
 function refusalOf(
-  document: LookupFunctionDefinitionDocument,
+  document: CallLookupDocument,
   servers: readonly ToolServer[],
 ): InvalidInput | Unavailable | undefined {
   const { call } = document;
@@ -42,10 +42,14 @@ function refusalOf(
   return actingMark === undefined ? undefined : refusedAtTheCall(document, actingInWords(call, actingMark, server));
 }
 
+function toolChecked(ports: MarkPorts, document: CallLookupDocument, place: PlaybookAddress) {
+  return Effect.flatMap(ports.listServers(place, document.call.server), (servers) => {
+    const refusal = refusalOf(document, servers);
+    return refusal === undefined ? Effect.succeed(noStrippedForms) : Effect.fail(refusal);
+  });
+}
+
 export function markCheck(ports: MarkPorts): MarkCheck {
   return (document, _source, place) =>
-    Effect.flatMap(ports.listServers(place, document.call.server), (servers) => {
-      const refusal = refusalOf(document, servers);
-      return refusal === undefined ? Effect.succeed(noStrippedForms) : Effect.fail(refusal);
-    });
+    document.kind === 'call' ? toolChecked(ports, document, place) : Effect.succeed(noStrippedForms);
 }

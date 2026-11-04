@@ -132,3 +132,33 @@ describe('the users of a definition that a workflow calls by its steps', () => {
     ]);
   });
 });
+
+const readingRegistries = new Map([
+  [
+    'lookup',
+    registryOf(
+      saved('brief-history', { reads: [reviewBrief] }),
+      saved('draft-history', { reads: [sendDraft] }),
+      saved('retired-history', { reads: [reviewBrief] }, 'retired'),
+    ),
+  ],
+  ['workflow', registryOf(saved('weekly-review', { calls: [{ ...reviewBrief, ...inStep(1, 'review') }] }))],
+  [
+    'probe',
+    registryOf(saved('looks-back', { reads: [reviewBrief], calls: [{ ...reviewBrief, ...inStep(2, 'look') }] })),
+  ],
+]);
+
+describe('the users of a definition whose runs a lookup function reads', () => {
+  it('are the active lookup functions that read its runs, beside the workflows that call it, in the order of the types', () => {
+    expect(usersOf(readingRegistries, reviewBrief)).toEqual([
+      { type: 'lookup', name: 'brief-history', relation: 'reads' },
+      { type: 'workflow', name: 'weekly-review', relation: 'calls', steps: [{ number: 1, name: 'review' }] },
+      { type: 'probe', name: 'looks-back', relation: 'calls', steps: [{ number: 2, name: 'look' }] },
+      { type: 'probe', name: 'looks-back', relation: 'reads' },
+    ]);
+    expect(usersOf(readingRegistries, sendDraft)).toEqual([
+      { type: 'lookup', name: 'draft-history', relation: 'reads' },
+    ]);
+  });
+});

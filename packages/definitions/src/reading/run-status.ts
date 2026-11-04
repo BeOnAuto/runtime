@@ -8,10 +8,12 @@ const startedTypes: readonly string[] = coreRunFactTypes.filter((type) => !isRun
 
 export type StoredTypesByStatus = Readonly<Record<RunStatus, readonly string[]>>;
 
+export const succeededTypes: readonly string[] = ['run_succeeded'];
+
 export function storedTypesByStatus(declared: readonly DeclaredFact[]): StoredTypesByStatus {
   return {
     started: [...startedTypes, ...declared.map(({ type }) => type)],
-    succeeded: ['run_succeeded'],
+    succeeded: succeededTypes,
     rejected: ['run_rejected'],
     failed: ['run_failed'],
   };

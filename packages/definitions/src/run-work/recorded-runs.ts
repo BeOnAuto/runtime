@@ -1,8 +1,10 @@
 import {
+  mostRecordsInAPage,
   PlaybookIdSchema,
   OrgIdSchema,
   recordedDecoder,
   streamPrefixOfPlaybook,
+  type RecordedPageRequest,
   type RecordedReader,
   type StreamReader,
 } from '@on.auto/operations';
@@ -71,14 +73,49 @@ export function recordedRunInPlaybook(reader: StreamReader, id: string): Effect.
   return reader.load(runStreamNameOf(run), runDecider).pipe(Effect.flatMap(({ state }) => recordedOf(run, state)));
 }
 
-const decodeFirst = Schema.decodeUnknownSync(Schema.NonEmptyArray(Schema.Struct({ correlationId: Schema.String })));
+const RunFirstSchema = Schema.Struct({ correlationId: Schema.String, cursor: Schema.String });
+
+type RunFirst = typeof RunFirstSchema.Type;
+
+const decodeFirst = Schema.decodeUnknownSync(RunFirstSchema);
+
+function noRunAt({ id }: RunStreamAddress): Error {
+  return new Error(`There is no run ${id} in this playbook to read the first record of`);
+}
+
+function firstOfTheRun(
+  reader: Pick<RecordedReader, 'readRecorded'>,
+  address: RunStreamAddress,
+  cursor?: string,
+): Effect.Effect<RunFirst> {
+  const page: RecordedPageRequest = {
+    order: 'desc',
+    limit: mostRecordsInAPage,
+    dataOf: [],
+    ...(cursor === undefined ? {} : { cursor }),
+  };
+  return reader.readRecorded(address, { kind: 'run', run: address.id }, page).pipe(
+    Effect.orDie,
+    Effect.flatMap(({ records, nextCursor }) => {
+      if (nextCursor !== null) {
+        return firstOfTheRun(reader, address, nextCursor);
+      }
+      const oldest = records.at(-1);
+      return oldest === undefined ? Effect.die(noRunAt(address)) : Effect.sync(() => decodeFirst(oldest));
+    }),
+  );
+}
 
 export function runCorrelationIn(
   reader: Pick<RecordedReader, 'readRecorded'>,
   address: RunStreamAddress,
 ): Effect.Effect<string> {
-  return reader.readRecorded(address, { kind: 'run', run: address.id }, { order: 'asc', limit: 1, dataOf: [] }).pipe(
-    Effect.map(({ records }) => decodeFirst(records)[0].correlationId),
-    Effect.orDie,
-  );
+  return Effect.map(firstOfTheRun(reader, address), ({ correlationId }) => correlationId);
+}
+
+export function runStartCursorIn(
+  reader: Pick<RecordedReader, 'readRecorded'>,
+  address: RunStreamAddress,
+): Effect.Effect<string> {
+  return Effect.map(firstOfTheRun(reader, address), ({ cursor }) => cursor);
 }

@@ -45,9 +45,9 @@ Choose reasoning when the work needs judgment or language. Leave exact arithmeti
 
 ## Lookup
 
-A lookup function obtains information that already exists outside the playbook, through one tool that only reads: the replies of a thread, a contact's record, this week's figures from a reporting tool. A run calls the tool once and returns the part of its result the function points at, at once.
+A lookup function obtains information that already exists, through one tool that only reads or from the playbook's own runs. Through a tool, it reads the replies of a thread, a contact's record, this week's figures from a reporting tool: a run calls the tool once and returns the part of its result the function points at, at once. From the playbook's runs, it reads the outputs of the runs of one of its definitions that succeeded, newest first, such as the paces a computation function computed this month, kept to those that hold its words and started since its day.
 
-Choose lookup when the playbook needs what another system holds right now. A lookup function interprets nothing and changes nothing: it asks no model, and it calls only a tool marked `reads`, so running it again is always safe. A reasoning function then interprets what it read.
+Choose lookup when the playbook needs what another system holds right now, or what its own functions found before. To keep something for later, run a function whose output is that thing, and read it back with a lookup function. A lookup function interprets nothing and changes nothing: it asks no model, and it calls only a tool marked `reads`, or reads the playbook's runs, so running it again is always safe. A reasoning function then interprets what it read.
 
 - [Lookup function format](../reference/lookup-format.md) describes the document and the mark its tool needs.
 

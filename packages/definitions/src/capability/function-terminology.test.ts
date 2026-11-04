@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   definitionResourceLabel,
+  definitionTypeOrder,
   functionCategoryLabels,
   functionDescriptions,
   functionTypeOrder,
@@ -31,6 +32,7 @@ describe('playbook function terminology', () => {
     expect(Object.keys(functionCategoryLabels)).toEqual(functionTypeOrder);
     expect(Object.keys(functionResourceLabels)).toEqual(functionTypeOrder);
     expect(Object.keys(functionDescriptions)).toEqual(functionTypeOrder);
+    expect(definitionTypeOrder).toEqual([...functionTypeOrder, 'workflow']);
   });
 
   it('uses countable resource names and describes each declared responsibility', () => {
@@ -45,7 +47,7 @@ describe('playbook function terminology', () => {
     ]);
     expect(functionTypeOrder.map((type) => functionDescriptions[type])).toEqual([
       'Use a prompt, skills, and tools to interpret information or produce a response.',
-      'Obtain information that already exists outside the playbook, through one tool that only reads.',
+      "Obtain information that already exists, through one tool that only reads or from the playbook's own runs.",
       'Remember what the playbook learns, and recall it later.',
       'Exchange information with people or systems.',
       "Predict a quantity from the playbook's own history, with a likely range.",

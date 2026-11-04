@@ -490,6 +490,9 @@ importers:
       '@on.auto/ledger':
         specifier: workspace:*
         version: link:../../packages/ledger
+      '@on.auto/lookup':
+        specifier: workspace:*
+        version: link:../lookup
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../../packages/operations

@@ -14,7 +14,7 @@
       "label": "Lookup",
       "singular": "lookup function",
       "plural": "lookup functions",
-      "description": "Obtain information that already exists outside the playbook, through one tool that only reads."
+      "description": "Obtain information that already exists, through one tool that only reads or from the playbook's own runs."
     },
     {
       "type": "memory",

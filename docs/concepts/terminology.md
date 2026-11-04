@@ -24,7 +24,7 @@ What each function type is for:
 | Category    | Description                                                                                                     |
 | ----------- | --------------------------------------------------------------------------------------------------------------- |
 | Reasoning   | Use a prompt and a language model, with tools where configured, to interpret information or produce a response. |
-| Lookup      | Obtain information that already exists outside the playbook, through one tool that only reads.                  |
+| Lookup      | Obtain information that already exists, through one tool that only reads or from the playbook's own runs.       |
 | Memory      | Remember what the playbook learns, and recall it later, for the playbook or its whole organization.             |
 | Interaction | Exchange information with people or systems.                                                                    |
 | Prediction  | Predict a quantity from the playbook's own history, with a likely range.                                        |

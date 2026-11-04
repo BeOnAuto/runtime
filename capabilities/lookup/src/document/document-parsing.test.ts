@@ -3,7 +3,7 @@ import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { lookupDocument } from '../testing/index.ts';
+import { lookupDocument, runsDocument } from '../testing/index.ts';
 import { parseLookupDocument } from './document-parsing.ts';
 
 const anOpenSchema: unknown = expect.objectContaining({ document: {} });
@@ -38,6 +38,7 @@ describe('a lookup function document', () => {
 
     expect([problemsOf(plain), problemsOf(lookupDocument({ with: [], read: null }))]).toEqual([[], []]);
     expect(Result.getOrThrow(parseLookupDocument(plain, standingRenderClock))).toEqual({
+      kind: 'call',
       call: { server: 'chat', tool: 'thread' },
       callLine: 3,
       input: {},
@@ -47,12 +48,14 @@ describe('a lookup function document', () => {
 });
 
 describe('the keys a lookup function document refuses', () => {
-  it('refuses a document without call, or with empty front matter', () => {
+  it('refuses a document without call or runs, or with empty front matter', () => {
     const uncalled = ['---', 'output:', '  schema: {}', '---', ''].join('\n');
 
     expect([problemsOf(uncalled), problemsOf('---\n---\n')]).toEqual([
-      ['Line 1, /call: call is required'],
-      ['Line 2: The front matter is empty; it names at least the tool it reads through'],
+      [
+        'Line 1: A lookup function takes call, to read through one tool, or runs, to read the outputs of the runs of a definition of this playbook',
+      ],
+      ['Line 2: The front matter is empty; it names at least the tool it reads through or the runs it reads'],
     ]);
   });
 
@@ -116,6 +119,103 @@ describe('the parts of a lookup function document it refuses', () => {
       [expect.stringMatching(/^Line 4, \/call\/server: Expected a server name/u)],
       [expect.stringMatching(/^Line 11, \/call\/read: Expected a JSON Pointer/u)],
       ['Line 7, /call/with/channel: Reads to, which a template of a call does not have; it reads input, today and now'],
+    ]);
+  });
+});
+
+const description = 'Reads the paces computed for one campaign since a day, newest first';
+
+describe('a lookup function document that reads runs', () => {
+  it('reads the definition whose runs it reads, and its words and since as templates at their pointers', () => {
+    const parsed = Result.getOrThrow(parseLookupDocument(runsDocument(), standingRenderClock));
+
+    expect(parsed).toMatchObject({
+      description,
+      kind: 'runs',
+      runs: {
+        type: 'computation',
+        name: 'campaign-pace',
+        words: { pointer: '/runs/words' },
+        since: { pointer: '/runs/since' },
+      },
+      input: { schema: { document: { type: 'object' } } },
+    });
+    expect(parsed).not.toHaveProperty('output');
+  });
+
+  it('takes runs without words or since, and literal ones within their bounds, of any definition type', () => {
+    const plain = runsDocument({ words: null, since: null, input: [] });
+
+    expect(Result.getOrThrow(parseLookupDocument(plain, standingRenderClock))).toEqual({
+      description,
+      kind: 'runs',
+      runs: { type: 'computation', name: 'campaign-pace' },
+      input: {},
+    });
+    expect([
+      problemsOf(runsDocument({ words: 'spring-sale', since: '2026-10-01', input: [] })),
+      problemsOf(runsDocument({ type: 'workflow', since: "'2026-10-01T09:00:00+02:00'" })),
+      problemsOf(runsDocument({ since: "'{{ today }}'" })),
+    ]).toEqual([[], [], []]);
+  });
+});
+
+describe('the runs a lookup function document refuses', () => {
+  it('refuses call beside runs, an output schema beside runs, and an input default, at their lines', () => {
+    expect([
+      problemsOf(runsDocument({ front: ['call:', '  server: chat', '  tool: thread'] })),
+      problemsOf(runsDocument({ front: ['output:', '  schema: {}'] })),
+      problemsOf(runsDocument({ input: ['input:', '  default: {}'] })),
+    ]).toEqual([
+      [
+        'Line 4, /runs: A lookup function reads through one tool or from the runs of one definition, so it takes call or runs, not both',
+      ],
+      [
+        'Line 9, /output/schema: A lookup function that reads runs answers with their outputs in a shape of its own, so it takes no output.schema',
+      ],
+      ['Line 9, /input/default: default is not a key of input; it takes schema'],
+    ]);
+  });
+
+  it('refuses a type that is not the type of a definition, a name that is not one, and a key runs does not take', () => {
+    expect([
+      problemsOf(runsDocument({ type: 'thing', name: 'Campaign pace' })),
+      problemsOf(runsDocument({ front: ['  limit: 3'] })),
+    ]).toEqual([
+      [
+        expect.stringMatching(
+          /^Line 4, \/runs\/type: Expected the type of a definition: reasoning, lookup, .+, or workflow$/u,
+        ),
+        'Line 5, /runs/name: Expected the name of a definition: 3 to 48 lowercase letters, digits and hyphens, starting with a letter',
+      ],
+      ['Line 8, /runs/limit: limit is not a key of runs; it takes type, name, words, since'],
+    ]);
+  });
+});
+
+describe('the words and since a lookup function document refuses', () => {
+  it('refuses literal words and a literal since past their bounds, at their lines', () => {
+    expect([
+      problemsOf(runsDocument({ words: 'x'.repeat(1001), since: 'yesterday' })),
+      problemsOf(runsDocument({ since: '2026-02-30' })),
+    ]).toEqual([
+      [
+        'Line 6, /runs/words: runs.words takes at most 1,000 characters, and these take 1,001',
+        'Line 7, /runs/since: runs.since takes a day, such as 2026-10-01, or a date and time with its offset, such as 2026-10-01T09:00:00Z, and "yesterday" is neither',
+      ],
+      [
+        'Line 7, /runs/since: runs.since takes a day, such as 2026-10-01, or a date and time with its offset, such as 2026-10-01T09:00:00Z, and "2026-02-30" is neither',
+      ],
+    ]);
+  });
+
+  it('refuses a template that reads what it does not have, or that does not compile, at its line', () => {
+    expect([
+      problemsOf(runsDocument({ words: "'{{ to }}'" })),
+      problemsOf(runsDocument({ words: "'{{ input.campaign'" })),
+    ]).toEqual([
+      ['Line 6, /runs/words: Reads to, which a template of runs does not have; it reads input, today and now'],
+      ['Line 6, /runs/words: output "{{ input.campaign" not closed'],
     ]);
   });
 });

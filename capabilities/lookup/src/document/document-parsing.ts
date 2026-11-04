@@ -10,22 +10,36 @@ import {
   type ValueContract,
 } from '@on.auto/definitions/document';
 import type { RenderClock } from '@on.auto/definitions/template';
-import { compiledCallBlock } from '@on.auto/definitions/tool-blocks';
+import { compiledCallBlock, type CallBlock } from '@on.auto/definitions/tool-blocks';
 import { compileJsonSchema } from '@on.auto/json-schema';
 import { mostValueDepth } from '@on.auto/workflow-engine/dsl';
 import { Result, type Schema } from 'effect';
 
-import { decodeFrontMatter, lookupFrontMatter } from './front-matter.ts';
-import type { LookupFunctionDefinitionDocument } from './lookup-document.ts';
+import { decodeFrontMatter, lookupFrontMatter, type LookupFrontMatter, type WrittenRuns } from './front-matter.ts';
+import type { CallLookupDocument, LookupFunctionDefinitionDocument, RunsLookupDocument } from './lookup-document.ts';
+import { runsBlockOf, type WrittenPlace } from './runs-block.ts';
 
 type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;
 
 type ValueSection = { readonly schema?: Schema.JsonObject } | undefined;
 
+type Reading =
+  | Pick<CallLookupDocument, 'kind' | 'call' | 'callLine' | 'output'>
+  | Pick<RunsLookupDocument, 'kind' | 'runs'>;
+
 const noBody =
   'A lookup function sends no message and asks no model: leave the body after the front matter empty, and say what the function does in description';
 
 const outputNeeded = 'A lookup function answers with what its tool answered, so output.schema says what that is';
+
+const bothReadings =
+  'A lookup function reads through one tool or from the runs of one definition, so it takes call or runs, not both';
+
+const neitherReading =
+  'A lookup function takes call, to read through one tool, or runs, to read the outputs of the runs of a definition of this playbook';
+
+const noOutputSchema =
+  'A lookup function that reads runs answers with their outputs in a shape of its own, so it takes no output.schema';
 
 function issuesOf(check: () => Checked<unknown>): readonly DocumentIssue[] {
   const checked = check();
@@ -48,10 +62,44 @@ function contractOf(section: ValueSection, name: 'input' | 'output', lines: Sour
   });
 }
 
-function answeredOf(section: ValueSection, lines: SourceLines): Checked<LookupFunctionDefinitionDocument['output']> {
+function answeredOf(section: ValueSection, lines: SourceLines): Checked<CallLookupDocument['output']> {
   return Result.flatMap(contractOf(section, 'output', lines), ({ schema }) =>
     schema === undefined ? Result.fail([issueAt(lines, '/call', outputNeeded)]) : Result.succeed({ schema }),
   );
+}
+
+function callReadingOf(call: CallBlock, output: ValueSection, place: WrittenPlace): Checked<Reading> {
+  const { lines, clock, inputSchema } = place;
+  const compiled = compiledCallBlock(call, { lines, clock }, inputSchema);
+  const answered = answeredOf(output, lines);
+  const issues = [...issuesOf(() => compiled), ...issuesOf(() => answered)];
+  return issues.length > 0
+    ? Result.fail(issues)
+    : Result.map(answered, (answer): Reading => ({
+        kind: 'call',
+        call,
+        callLine: issueAt(lines, '/call', '').line,
+        output: answer,
+      }));
+}
+
+function runsReadingOf(runs: WrittenRuns, output: ValueSection, place: WrittenPlace): Checked<Reading> {
+  const block = runsBlockOf(runs, place);
+  const declared = output?.schema === undefined ? [] : [issueAt(place.lines, '/output/schema', noOutputSchema)];
+  const issues = [...issuesOf(() => block), ...declared];
+  return issues.length > 0 ? Result.fail(issues) : Result.map(block, (read): Reading => ({ kind: 'runs', runs: read }));
+}
+
+function readingOf({ call, runs, output }: LookupFrontMatter, place: WrittenPlace): Checked<Reading> {
+  if (call !== undefined && runs !== undefined) {
+    return Result.fail([issueAt(place.lines, '/runs', bothReadings)]);
+  }
+  if (call !== undefined) {
+    return callReadingOf(call, output, place);
+  }
+  return runs === undefined
+    ? Result.fail([issueAt(place.lines, '', neitherReading)])
+    : runsReadingOf(runs, output, place);
 }
 
 function documentFrom(
@@ -63,23 +111,17 @@ function documentFrom(
   if (issues.length > 0 || Result.isFailure(decoded)) {
     return Result.fail([...issues, ...bodyIssues(parts)]);
   }
-  const { description, call } = decoded.success;
+  const { description } = decoded.success;
   const input = contractOf(decoded.success.input, 'input', lines);
-  const output = answeredOf(decoded.success.output, lines);
   const inputSchema = Result.isSuccess(input) ? input.success.schema?.document : undefined;
-  const found = [
-    ...bodyIssues(parts),
-    ...issuesOf(() => compiledCallBlock(call, { lines, clock }, inputSchema)),
-    ...issuesOf(() => input),
-    ...issuesOf(() => output),
-  ];
+  const reading = readingOf(decoded.success, { lines, clock, inputSchema });
+  const found = [...bodyIssues(parts), ...issuesOf(() => reading), ...issuesOf(() => input)];
   return found.length > 0
     ? Result.fail(found)
-    : Result.map(Result.all({ input, output }), (contracts) => ({
+    : Result.map(Result.all({ input, reading }), (read) => ({
         ...(description === undefined ? {} : { description }),
-        call,
-        callLine: issueAt(lines, '/call', '').line,
-        ...contracts,
+        input: read.input,
+        ...read.reading,
       }));
 }
 

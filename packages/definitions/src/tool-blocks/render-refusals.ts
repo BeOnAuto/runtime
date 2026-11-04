@@ -25,7 +25,7 @@ function invalidWith(detail: string, issue: string, pointer = ''): InvalidInput 
 
 export function unrenderableFor(
   what: string,
-  failure: Exclude<TextFailure, { readonly reason: 'not_text' | 'too_long' }>,
+  failure: Exclude<TextFailure, { readonly reason: 'not_text' }>,
 ): InvalidInput {
   if (failure.reason === 'missing_variable') {
     return invalidWith(

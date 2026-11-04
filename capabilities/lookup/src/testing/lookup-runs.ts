@@ -6,6 +6,7 @@ import {
   type RecordingJournal,
 } from '@on.auto/definitions/testing';
 import { allPermissions } from '@on.auto/operations';
+import { memoryLedger } from '@on.auto/operations/testing';
 import type { Timing } from '@on.auto/tool-servers';
 import { serveFakeMcp, type FakeMcpOptions, type FakeMcpServer } from '@on.auto/tool-servers/served-fakes';
 import { reportingAccess } from '@on.auto/tool-servers/testing';
@@ -57,7 +58,7 @@ export async function lookupRuns(options: LookupRunOptions = {}): Promise<Lookup
     { environment: { CHAT_KEY: chatKey }, ...(options.timing === undefined ? {} : { timing: options.timing }) },
   );
   onTestFinished(access.close);
-  const capability = makeLookupFunctionAdapter({ tools: access });
+  const capability = makeLookupFunctionAdapter({ tools: access, runs: memoryLedger().service });
   const journal = recordingJournal();
   const context = contextOf(journal);
   return {

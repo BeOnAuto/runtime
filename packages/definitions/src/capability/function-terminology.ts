@@ -29,7 +29,7 @@ export const functionResourceLabels = {
 
 export const functionDescriptions = {
   reasoning: 'Use a prompt, skills, and tools to interpret information or produce a response.',
-  lookup: 'Obtain information that already exists outside the playbook, through one tool that only reads.',
+  lookup: "Obtain information that already exists, through one tool that only reads or from the playbook's own runs.",
   memory: 'Remember what the playbook learns, and recall it later.',
   interaction: 'Exchange information with people or systems.',
   prediction: "Predict a quantity from the playbook's own history, with a likely range.",
@@ -46,6 +46,8 @@ export const functionTypeOrder: readonly FunctionType[] = [
   'computation',
   'generation',
 ];
+
+export const definitionTypeOrder: readonly string[] = [...functionTypeOrder, 'workflow'];
 
 const resourceLabels: ReadonlyMap<string, string> = new Map([
   ...functionTypeOrder.map((type): [string, string] => [type, functionResourceLabels[type].singular]),

@@ -48,7 +48,7 @@ const decodeEvent = Schema.decodeUnknownEffect(Schema.toCodecJson(RunEventSchema
 
 const runStreamPrefix = runStreamNameOf('');
 
-function runsOf(records: readonly RecordedEvent[]): ReadonlyMap<string, readonly RecordedEvent[]> {
+export function runsOf(records: readonly RecordedEvent[]): ReadonlyMap<string, readonly RecordedEvent[]> {
   const runs = new Map<string, readonly RecordedEvent[]>();
   for (const record of records) {
     runs.set(record.stream, [...(runs.get(record.stream) ?? []), record]);

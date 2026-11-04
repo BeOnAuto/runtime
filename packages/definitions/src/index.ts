@@ -109,6 +109,7 @@ export { recordedAnswerOf, type RecordedAnswer, type RecordedAnswerFact, type Re
 export { RequestRecordSchema, isRequestRecord, takesAnAnswer, type RequestRecord } from './requests/request-record.ts';
 export {
   runCorrelationIn,
+  runStartCursorIn,
   runEventOf,
   recordedRunIn,
   recordedRunInPlaybook,
@@ -170,6 +171,7 @@ export { defineGetRun, foundRun } from './operations/get-run.ts';
 export { defineGetRunHistory } from './reading/get-run-history.ts';
 export { defineListRuns } from './reading/list-runs.ts';
 export { ListedRunSchema, type ListedRun } from './reading/listed-run.ts';
+export { succeededRunsPageOf, type SucceededRun, type SucceededRunsReader } from './reading/succeeded-runs.ts';
 export { RunIdInputField, definitionNamePattern } from './operations/definition-fields.ts';
 export { makeDefinitionPresenters } from './presenting/definition-presenters.ts';
 export { runChanged, runChangedBy } from './presenting/changed-resources.ts';
@@ -266,6 +268,7 @@ export { defineGetPlaybookAnalytics } from './analytics/get-playbook-analytics.t
 export { runOutcomeMapping } from './analytics/run-outcome-mapping.ts';
 export {
   definitionResourceLabel,
+  definitionTypeOrder,
   functionCategoryLabels,
   functionDescriptions,
   functionTypeOrder,
@@ -282,7 +285,7 @@ export { publishedOutputOf } from './shapes/published-output.ts';
 export { memoriesBounds, memoriesShape } from './shapes/memories-shape.ts';
 export { seriesMarksSchema, seriesShape } from './shapes/series-shape.ts';
 export { rangeHolds } from './shapes/shape-values.ts';
-export type { CalledDefinition, CallingStep } from './used-by/called-definitions.ts';
+export type { CalledDefinition, CallingStep, NamedDefinition } from './used-by/called-definitions.ts';
 export {
   lagOf,
   viewStandingOf,

@@ -1,3 +1,5 @@
+import { holdsEveryWord } from '@on.auto/lookup';
+
 import type { KeptMemory } from '../projection/memory-row-reading.ts';
 
 export interface RecallAsk {
@@ -7,23 +9,12 @@ export interface RecallAsk {
   readonly now: string;
 }
 
-function folded(text: string): string {
-  return text.normalize('NFKC').toUpperCase().toLowerCase().normalize('NFKC');
-}
-
-export function wordsIn(text: string): readonly string[] {
-  return folded(text)
-    .split(/\s+/u)
-    .filter((word) => word !== '');
-}
-
 function stillKept({ expiresAt }: KeptMemory, now: string): boolean {
   return expiresAt === null || expiresAt > now;
 }
 
 function holdsEvery(row: KeptMemory, { words, tags }: RecallAsk): boolean {
-  const text = folded(row.text);
-  return tags.every((tag) => row.tags.includes(tag)) && words.every((word) => text.includes(word));
+  return tags.every((tag) => row.tags.includes(tag)) && holdsEveryWord(row.text, words);
 }
 
 export function newestFirst(

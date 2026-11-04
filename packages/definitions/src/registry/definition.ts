@@ -133,7 +133,7 @@ export const DefinitionSchema = Schema.Struct({
   used_by: Schema.optionalKey(
     Schema.Array(DefinitionUserSchema).annotate({
       description:
-        'The definitions of the playbook, active or paused, that use this one, read from the playbook when the definition is read: a workflow with the steps that call it',
+        'The definitions of the playbook, active or paused, that use this one, read from the playbook when the definition is read: a workflow with the steps that call it, and a lookup function that reads its runs',
     }),
   ),
 }).annotate({ identifier: 'Definition', description: 'A saved definition, with its document' });

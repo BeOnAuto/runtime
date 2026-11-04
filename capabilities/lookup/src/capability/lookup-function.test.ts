@@ -2,11 +2,12 @@ import { onTheStandingClock } from '@on.auto/definitions/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { lookupDocument } from '../testing/index.ts';
+import { lookupDocument, runsDocument } from '../testing/index.ts';
 import { makeLookupFunctionAdapter } from './lookup-function.ts';
 
 const lookup = makeLookupFunctionAdapter({
   tools: { listServers: () => Effect.succeed([]), callOnce: () => Effect.die(new Error('No call is made here')) },
+  runs: { readRecorded: () => Effect.die(new Error('No run is read here')) },
 });
 
 function prepared(source: string) {
@@ -20,6 +21,8 @@ function refusalOf(source: string) {
 const anObjectSchema: unknown = expect.objectContaining({ type: 'object' });
 
 const anArraySchema: unknown = expect.objectContaining({ type: 'array' });
+
+const theRunsAnswer: unknown = expect.objectContaining({ type: 'object', required: ['runs', 'more'] });
 
 const plain = ['---', 'call:', '  server: chat', '  tool: thread', 'output:', '  schema: {}', '---', ''].join('\n');
 
@@ -57,6 +60,36 @@ describe('the lookup capability', () => {
       definition.whenCancelled,
       definition.longestRunMs,
     ]).toEqual([true, false, 'finish', 70_000]);
+  });
+});
+
+describe('a lookup function that reads runs', () => {
+  it('calls no tool, and is saved without asking any server', () => {
+    const definition = prepared(runsDocument());
+
+    expect([
+      definition.callsTools,
+      Effect.runSync(Effect.exit(definition.check({ org: 'acme', playbook: 'alpha' }))),
+    ]).toEqual([false, Exit.succeed({})]);
+  });
+
+  it('is summed up with its fixed answer and the definition whose runs it reads', () => {
+    expect(prepared(runsDocument()).summary).toEqual({
+      description: 'Reads the paces computed for one campaign since a day, newest first',
+      inputSchema: anObjectSchema,
+      outputSchema: theRunsAnswer,
+      details: { reads: [{ type: 'computation', name: 'campaign-pace' }] },
+    });
+  });
+
+  it('says how many runs it examined and answered with, and whether it left older ones unread', () => {
+    expect([
+      lookup.describeOutput({ runs: [{}, {}], more: false }, { examined: 5, through: '2026-10-01T09:00:00.000Z' }),
+      lookup.describeOutput({ runs: [{}], more: true }, { examined: 1, through: '2026-10-01T09:00:00.000Z' }),
+    ]).toEqual([
+      'It examined 5 runs that succeeded and answered with 2.',
+      'It examined 1 run that succeeded and answered with 1; older runs are left unread.',
+    ]);
   });
 });
 

@@ -73,3 +73,49 @@ export function lookupDocument({
     body,
   ].join('\n');
 }
+
+export interface RunsDocumentOptions {
+  readonly type?: string;
+  readonly name?: string;
+  readonly words?: string | null;
+  readonly since?: string | null;
+  readonly front?: readonly string[];
+  readonly input?: readonly string[];
+}
+
+export const campaignInput: readonly string[] = [
+  'input:',
+  '  schema:',
+  '    type: object',
+  '    required: [campaign, since]',
+  '    properties:',
+  '      campaign: { type: string }',
+  '      since: { type: string }',
+];
+
+function writtenRuns(key: string, written: string | null): readonly string[] {
+  return written === null ? [] : [`  ${key}: ${written}`];
+}
+
+export function runsDocument({
+  type = 'computation',
+  name = 'campaign-pace',
+  words = "'{{ input.campaign }}'",
+  since = "'{{ input.since }}'",
+  front = [],
+  input = campaignInput,
+}: RunsDocumentOptions = {}): string {
+  return [
+    '---',
+    'description: Reads the paces computed for one campaign since a day, newest first',
+    'runs:',
+    `  type: ${type}`,
+    `  name: ${name}`,
+    ...writtenRuns('words', words),
+    ...writtenRuns('since', since),
+    ...front,
+    ...input,
+    '---',
+    '',
+  ].join('\n');
+}

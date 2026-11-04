@@ -1,9 +1,8 @@
 import { Schema } from 'effect';
 
-export interface NamedDefinition {
-  readonly type: string;
-  readonly name: string;
-}
+export const NamedDefinitionSchema = Schema.Struct({ type: Schema.String, name: Schema.String });
+
+export type NamedDefinition = typeof NamedDefinitionSchema.Type;
 
 export const CallingStepSchema = Schema.Struct({
   number: Schema.Int.annotate({
@@ -16,8 +15,7 @@ export const CallingStepSchema = Schema.Struct({
 export type CallingStep = typeof CallingStepSchema.Type;
 
 export const CalledDefinitionSchema = Schema.Struct({
-  type: Schema.String,
-  name: Schema.String,
+  ...NamedDefinitionSchema.fields,
   steps: Schema.Array(CallingStepSchema),
 });
 

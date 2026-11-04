@@ -1,10 +1,11 @@
 import { Option, Order, Schema } from 'effect';
 
-import { functionTypeOrder } from '../capability/function-terminology.ts';
+import { definitionTypeOrder } from '../capability/function-terminology.ts';
 import type { DefinitionRegistry } from '../registry/definition-registry.ts';
 import { isRetired, type StoredDefinition } from '../registry/definition.ts';
 import {
   CalledDefinitionSchema,
+  NamedDefinitionSchema,
   type CalledDefinition,
   type CallingStep,
   type NamedDefinition,
@@ -15,22 +16,18 @@ export type PlaybookRegistries = ReadonlyMap<string, DefinitionRegistry>;
 
 const NamingDetailsSchema = Schema.Struct({
   calls: Schema.optionalKey(Schema.Array(CalledDefinitionSchema)),
+  reads: Schema.optionalKey(Schema.Array(NamedDefinitionSchema)),
 });
 
 type NamingDetails = typeof NamingDetailsSchema.Type;
 
 const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
 
-interface Use {
-  readonly relation: 'calls';
-  readonly steps: readonly CallingStep[];
-}
-
-const typeRanks: readonly string[] = [...functionTypeOrder, 'workflow'];
+type Use = { readonly relation: 'calls'; readonly steps: readonly CallingStep[] } | { readonly relation: 'reads' };
 
 function rankOf({ type }: DefinitionUser): number {
-  const rank = typeRanks.indexOf(type);
-  return rank === -1 ? typeRanks.length : rank;
+  const rank = definitionTypeOrder.indexOf(type);
+  return rank === -1 ? definitionTypeOrder.length : rank;
 }
 
 const byTypeThenName = Order.combineAll([
@@ -52,8 +49,15 @@ function isNamed({ type, name }: NamedDefinition, used: NamedDefinition): boolea
   return type === used.type && name === used.name;
 }
 
-function usesOf({ calls = [] }: NamingDetails, used: NamedDefinition): readonly Use[] {
-  return usesOfCalls(calls.filter((call) => isNamed(call, used)));
+function usesOfReads(reads: readonly NamedDefinition[]): readonly Use[] {
+  return reads.length === 0 ? [] : [{ relation: 'reads' }];
+}
+
+function usesOf({ calls = [], reads = [] }: NamingDetails, used: NamedDefinition): readonly Use[] {
+  return [
+    ...usesOfCalls(calls.filter((call) => isNamed(call, used))),
+    ...usesOfReads(reads.filter((read) => isNamed(read, used))),
+  ];
 }
 
 function userOf(user: NamedDefinition, use: Use): DefinitionUser {

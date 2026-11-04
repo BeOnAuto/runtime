@@ -1,3 +1,4 @@
+import { wordsIn } from '@on.auto/lookup';
 import { Effect } from 'effect';
 
 import { keeperOf, organizationKept, type MemoryPorts } from '../capability/memory-ports.ts';
@@ -5,7 +6,7 @@ import type { RecallScope } from '../document/memory-scopes.ts';
 import type { MemoryScope } from '../facts/memory-facts.ts';
 import { addressOfScope, type MemoryPlace } from '../facts/memory-streams.ts';
 import { keptMemoryOf, type KeptMemory } from '../projection/memory-row-reading.ts';
-import { rankedMemories, wordsIn } from './memory-matching.ts';
+import { rankedMemories } from './memory-matching.ts';
 
 export interface RecallAsked {
   readonly words: string;
