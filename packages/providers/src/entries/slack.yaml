@@ -1,6 +1,6 @@
 name: slack
 title: Slack
-description: Read Slack messages in public and private channels, direct messages and threads, look up people and channels, see reactions, and send and update messages and add reactions, as the person who connects, through the Slack Web API.
+description: Read and search Slack messages in public and private channels, direct messages and threads, look up people and channels, see reactions, and send and update messages and add reactions, as the person who connects, through the Slack Web API.
 website: https://docs.slack.dev/apis/web-api/
 type: openapi
 document: documents/slack.openapi.json
@@ -13,7 +13,7 @@ failure_codes:
 credentials:
   - kind: authorization
     issuer: https://mcp.slack.com
-    scope: channels:read groups:read im:read mpim:read channels:history groups:history im:history mpim:history users:read reactions:read chat:write reactions:write
+    scope: channels:read groups:read im:read mpim:read channels:history groups:history im:history mpim:history search:read users:read reactions:read chat:write reactions:write
     says:
       channels:read: See basic information about public channels in a Slack workspace.
       groups:read: See basic information about private channels the person who connects is in.
@@ -23,6 +23,7 @@ credentials:
       groups:history: Read messages and other content in private channels the person who connects is in.
       im:history: Read messages and other content in the direct messages of the person who connects.
       mpim:history: Read messages and other content in the group direct messages of the person who connects.
+      search:read: Search the Slack messages and files the person who connects can see.
       users:read: See the people in a Slack workspace.
       reactions:read: See emoji reactions and the content they are on in Slack channels and conversations.
       chat:write: Send Slack messages as the person who connects.

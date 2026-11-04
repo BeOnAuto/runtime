@@ -44,6 +44,12 @@ const DocumentSchema = Schema.Struct({
   paths: Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown)),
 });
 
+const leftOutOnPurpose: Readonly<Record<string, readonly string[]>> = {
+  'slack-bot': [
+    'search_messages (GET /search.messages): it needs the security scheme user_token of the document, which the security and the auth of the entry do not give',
+  ],
+};
+
 type Given = Readonly<Record<string, string>>;
 
 function valuesOf({ example = '', choices }: Placeholder): readonly string[] {
@@ -108,6 +114,10 @@ function documentsBesideTheEntries(): readonly string[] {
     .filter((file) => file.endsWith('.openapi.json'))
     .map((file) => `documents/${file}`)
     .toSorted();
+}
+
+function offeredOf({ name, entry }: ProviderAddition): readonly [string, number] {
+  return [name, operationsIn(entry.document) - (leftOutOnPurpose[name] ?? []).length];
 }
 
 function offeredOperationsOf({ servers }: ToolServers): readonly (readonly [string, number])[] {
@@ -210,24 +220,26 @@ describe('every way of every shipped provider, resolved with the examples of its
 });
 
 describe('the documents beside the shipped entries', () => {
-  it('are each offered whole by the reader of an HTTP API, every operation a tool within its bounds, a way of consent with the auth its serving gives', async () => {
+  it('are each offered whole by the reader of an HTTP API, every operation a tool within its bounds, a way of consent with the auth its serving gives, but search_messages for slack-bot, which Slack answers for a user token alone', async () => {
     const leftOut: string[] = [];
     const described = additions.filter(({ type }) => type === 'openapi');
     const servers = await Effect.runPromise(
       describedToolServers(
         { servers: described.map((addition) => settingsOf(addition)), referencedVariables: [] },
         {
-          reportLeftOut: (server, operation) => {
-            leftOut.push(`${server}: ${operation.because}`);
+          reportLeftOut: (server, { operation, because }) => {
+            leftOut.push(`${server}: ${operation}: ${because}`);
           },
         },
       ),
     );
 
-    expect(leftOut).toEqual([]);
-    expect(offeredOperationsOf(servers)).toEqual(
-      described.map(({ name, entry }) => [name, operationsIn(entry.document)]),
+    expect(leftOut).toEqual(
+      Object.entries(leftOutOnPurpose).flatMap(([server, operations]: readonly [string, readonly string[]]) =>
+        operations.map((each) => `${server}: ${each}`),
+      ),
     );
+    expect(offeredOperationsOf(servers)).toEqual(described.map((addition) => offeredOf(addition)));
     expect([...new Set(described.map(({ entry }) => String(entry.document)))].toSorted()).toEqual(
       documentsBesideTheEntries(),
     );
