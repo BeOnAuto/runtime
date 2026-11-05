@@ -4,7 +4,7 @@
   "info": {
     "title": "Auto Runtime",
     "version": "0.56.0",
-    "description": "A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; your agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. Before writing a definition, read its format with get_guide, which also holds what these words mean and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
+    "description": "A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook. Before anything else, read the guide start, at /guides/start: it says what a playbook is made of, what a workflow owns, what the agent does itself, and which guide each task needs; the other guides hold what these words mean, the format of each definition and the recipes for common tasks. Every operation answers a problem document when it does not succeed, and says in its description what it does, when to use it and which operation to use instead."
   },
   "servers": [
     {
@@ -89,7 +89,7 @@
       "post": {
         "operationId": "create_playbook",
         "summary": "Create playbook",
-        "description": "Creates a playbook for one business responsibility, such as reviewing campaign briefs, and returns it empty. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. The work it does is a workflow, its functions the steps. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
+        "description": "Creates a playbook for one business responsibility, such as reviewing campaign briefs, and returns it empty. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. Each job it does again and again is a workflow, its functions the steps. An id that is taken or retired is refused. `playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
         "tags": [
           "playbooks"
         ],
@@ -11354,7 +11354,7 @@
       "post": {
         "operationId": "create_definition",
         "summary": "Create definition",
-        "description": "Saves a new function or workflow from its document, without running it. update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, interaction, prediction, computation, generation, or workflow, and `name` how workflows and tools refer to it. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too; a workflow takes none. The document's `page` key shows the person its runs; write it as the page guide says. A document that does not fit its format is refused with the line and what is wrong.",
+        "description": "Saves a new function or workflow from its document, without running it. update_definition changes one saved, and a name is never reused. `type` is reasoning, lookup, interaction, prediction, computation, generation, or workflow, and `name` how workflows and tools refer to it. A workflow owns one job the business does again and again, and a check, a test or a setup is not one. `source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business. A function needs `diagram` too; a workflow takes none. The document's `page` key shows the person its runs; write it as the page guide says. A document that does not fit its format is refused with the line and what is wrong.",
         "tags": [
           "definitions"
         ],
@@ -15686,7 +15686,7 @@
       "post": {
         "operationId": "run_definition",
         "summary": "Run definition",
-        "description": "Runs a function or workflow with an input and records the run. A run that ends within its call answers its result; a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended. A workflow does what the person asked; a function runs alone to be tested, and in workflow steps. `type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows, and `run_id` is optional: give the same id to retry safely, since a run that ended or waits answers as it stands and one that failed runs again. A function that calls a tool may change something outside the playbook, so a run of one that did not succeed is never run again under its id; list_playbook_events with its run_id shows what it called.",
+        "description": "Runs a function or workflow with an input and records the run. A run that ends within its call answers its result; one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended. A workflow does a job the person wants done again; a function runs alone to be tested, and in workflow steps. `type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows, and `run_id` is optional: the same id retries safely, since a run that ended or waits answers as it stands and one that failed runs again. A function that calls a tool may change something outside the playbook, so a run of one that did not succeed is never run again under its id; list_playbook_events with its run_id shows what it called.",
         "tags": [
           "definitions"
         ],
@@ -22745,7 +22745,7 @@
       "get": {
         "operationId": "get_guide",
         "summary": "Get guide",
-        "description": "Reads one of the playbook's guides: what its words mean, how each kind of definition is written, with its format, examples and bounds, and how the common tasks are done. A format guide says how to write that type of definition, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown.",
+        "description": "Reads one of the playbook's guides: where to start, what its words mean, how each kind of definition is written, with its format, examples and bounds, and how the common tasks are done. A format guide says how to write that type of definition, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown.",
         "tags": [
           "guides"
         ],
@@ -22754,10 +22754,11 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: terminology, a definition format, or a recipe for a common task; one of terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), page (Page format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
+            "description": "The guide to read: start, terminology, a definition format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), page (Page format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
             "schema": {
               "type": "string",
               "enum": [
+                "start",
                 "terminology",
                 "reasoning-function",
                 "lookup-function",

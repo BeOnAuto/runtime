@@ -30,6 +30,7 @@ const ContentsSchema = Schema.Struct({ contents: Schema.Array(Schema.Struct({ te
 const TextSchema = Schema.Struct({ content: Schema.Array(Schema.Struct({ text: Schema.String })) });
 
 const guideNames = [
+  'start',
   'terminology',
   'reasoning-function',
   'lookup-function',
@@ -73,7 +74,7 @@ describe('the guides of the server', () => {
     );
     expect(called).toEqual(read);
     expect(read.filter((text) => Buffer.byteLength(text, 'utf8') > 65_536)).toEqual([]);
-    expect(read[1]).toMatch(/\n\nOn this server, no model provider is configured yet[^\n]*\n$/u);
+    expect(read[2]).toMatch(/\n\nOn this server, no model provider is configured yet[^\n]*\n$/u);
   });
 });
 
@@ -157,7 +158,7 @@ describe('the first-playbook prompt of the server', () => {
 
     expect(asked.content.text).toBe(`Create my first playbook.\n\n${recipe}`);
     expect(recipe).toContain(
-      '\n7. Read the workflow guide with get_guide and write the workflow whose step is the function, which does what the person asked:',
+      '\n7. Read the workflow guide with get_guide and write the workflow that owns the job the person wants done again, whose step is the function:',
     );
     expect(recipe).toContain('publish the material they paste with publish_event');
     expect(embedded.content.resource.uri).toBe('guide://reasoning-function');

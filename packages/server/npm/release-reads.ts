@@ -23,6 +23,7 @@ const workflows = { type: 'workflow', noun: { one: 'workflow', other: 'workflows
 const shelf = await guideShelfFrom(shippedFilesOnDisk(apiShippedRoots()), [workflows], { pages: true });
 const pages = [...shelf.guides, ...shelf.recipes].map(({ name, text }) => [name, text.length > 0]);
 deepStrictEqual(pages, [
+  ['start', true],
   ['terminology', true],
   ['workflow', true],
   ['templates', true],

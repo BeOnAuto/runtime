@@ -73,19 +73,19 @@ call_mcp_as "$read_key" /mcp '{"jsonrpc":"2.0","id":16,"method":"tools/call","pa
 grep --quiet '"isError":true' introspected.txt
 grep --quiet 'tool_server_not_configured' introspected.txt
 call_mcp /mcp '{"jsonrpc":"2.0","id":8,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' initialized.txt
-grep --quiet 'Studio manages them; your agent is a separate client' initialized.txt
+grep --quiet 'Studio manages them; the agent is a separate client' initialized.txt
 call_mcp /mcp '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"get_guide","arguments":{"guide":"reasoning-function"}}}' guide.txt
 grep --quiet '# Reasoning function format' guide.txt
 grep --quiet 'On this server, ' guide.txt
 call_mcp /mcp '{"jsonrpc":"2.0","id":10,"method":"resources/list"}' resources.txt
-test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 15
+test "$(grep --only-matching '"uri":"guide://[a-z-]*"' resources.txt | wc -l)" -eq 16
 grep --quiet '"uri":"guide://lookup-function"' resources.txt
 call_mcp /directory '{"jsonrpc":"2.0","id":23,"method":"tools/list"}' directory-tools.txt
 test "$(grep --only-matching '"name":"[a-z_]*","title"' directory-tools.txt | wc -l)" -eq 38
 test "$(grep --count 'generation' directory-tools.txt)" = 0
 test "$(grep --count '"name":"get_asset"' directory-tools.txt)" = 0
 call_mcp /directory '{"jsonrpc":"2.0","id":24,"method":"resources/list"}' directory-resources.txt
-test "$(grep --only-matching '"uri":"guide://[a-z-]*"' directory-resources.txt | wc -l)" -eq 14
+test "$(grep --only-matching '"uri":"guide://[a-z-]*"' directory-resources.txt | wc -l)" -eq 15
 test "$(grep --count 'guide://generation-function' directory-resources.txt)" = 0
 call_mcp /mcp '{"jsonrpc":"2.0","id":11,"method":"prompts/list"}' prompts.txt
 for prompt in first-playbook connect-a-service give-tools schedule keep; do

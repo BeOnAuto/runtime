@@ -15,6 +15,7 @@ function descriptionOf(typesInWords: string): string {
     'Saves a new function or workflow from its document, without running it.',
     'update_definition changes one saved, and a name is never reused.',
     `\`type\` is ${typesInWords}, and \`name\` how workflows and tools refer to it.`,
+    'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
     "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
     'A function needs `diagram` too; a workflow takes none.',
     "The document's `page` key shows the person its runs; write it as the page guide says.",

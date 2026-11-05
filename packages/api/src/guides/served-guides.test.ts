@@ -42,8 +42,9 @@ const pages: Readonly<Record<string, string>> = {
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are the terminology, a guide per type in the order of the product whatever order the types are given in, the templates and the four recipes it carries the format guides of', () => {
+  it('are start, the terminology, a guide per type in the order of the product whatever order the types are given in, the templates and the four recipes it carries the format guides of', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
+      'start',
       'terminology',
       ...Object.keys(pages),
       'first-playbook',
@@ -60,7 +61,7 @@ describe('the guides of a server that runs every type of definition', () => {
   });
 
   it('give each type the whole public page of its format and the templates guide the page of templates, without the markup of the documentation site, their links resolved, and the reasoning page what this server offers', () => {
-    const [reasoningGuide, ...otherGuides] = guides.slice(1);
+    const [reasoningGuide, ...otherGuides] = guides.slice(2);
     const [reasoningPage = '', ...otherPages] = Object.values(pages);
 
     expect(reasoningGuide?.text).toBe(
@@ -76,7 +77,7 @@ describe('the titles and links of the guides of a server that runs every type of
   const { guides } = served;
 
   it('title each type guide and the templates as their pages are titled', () => {
-    expect(guides.slice(1).map(({ title }) => title)).toEqual([
+    expect(guides.slice(2).map(({ title }) => title)).toEqual([
       'Reasoning function format',
       'Prediction function format',
       'Computation function format',
@@ -121,7 +122,7 @@ describe('the size and the words of the guides of a server', () => {
   });
 
   it('describe each guide in a sentence for a person or a client that lists them', () => {
-    expect(guides.slice(1).map(({ description }) => description)).toEqual([
+    expect(guides.slice(2).map(({ description }) => description)).toEqual([
       'How reasoning functions are written: their document, fields, examples and bounds.',
       'How prediction functions are written: their document, fields, examples and bounds.',
       'How computation functions are written: their document, fields, examples and bounds.',
@@ -180,7 +181,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with query_connection, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      2703, 4011,
+      2716, 4111,
     ]);
   });
 });
@@ -199,8 +200,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4470, 3303, 3541],
-      [4011, 2703, 3541],
+      [4570, 3316, 3541],
+      [4111, 2716, 3541],
     ]);
   });
 });
@@ -249,7 +250,7 @@ const notRunThere = ['computation', 'interaction', 'prediction'].map((type) => `
 
 describe('the terminology guide of a server', () => {
   it('names only the types of definition the server runs', () => {
-    const [terminology] = servedForReasoningAndWorkflows.guides;
+    const terminology = servedForReasoningAndWorkflows.named('terminology');
 
     expect(terminology?.text).toContain('- Reasoning: Reasoning function.');
     expect(terminology?.text).toContain('- Coordination: Workflow.');

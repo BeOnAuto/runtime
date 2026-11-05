@@ -12,10 +12,10 @@ import { RequestedRunSchema, withRunPageInStudio } from './studio-pages.ts';
 
 const description = [
   'Runs a function or workflow with an input and records the run.',
-  'A run that ends within its call answers its result; a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
-  'A workflow does what the person asked; a function runs alone to be tested, and in workflow steps.',
+  'A run that ends within its call answers its result; one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended.',
+  'A workflow does a job the person wants done again; a function runs alone to be tested, and in workflow steps.',
   '`type` and `name` say which definition, `input` is the value it takes, as the input_schema get_definition shows,',
-  'and `run_id` is optional: give the same id to retry safely, since a run that ended or waits answers as it stands and one that failed runs again.',
+  'and `run_id` is optional: the same id retries safely, since a run that ended or waits answers as it stands and one that failed runs again.',
   'A function that calls a tool may change something outside the playbook, so a run of one that did not succeed is never run again under its id;',
   'list_playbook_events with its run_id shows what it called.',
 ].join(' ');

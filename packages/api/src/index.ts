@@ -31,13 +31,14 @@ export {
   instructionsActingAs,
   instructionsFor,
   type ActingAs,
-  type DefinitionType,
   type McpEndpoint,
   type RecipeCalls,
   type ServedTools,
 } from './mcp/instructions.ts';
+export { startGuideName } from './guides/start-guide.ts';
 export {
   guideShelfOf,
+  type DefinitionType,
   type Guide,
   type GuideShelf,
   type Recipe,
@@ -51,7 +52,6 @@ export {
   mostDescriptionCharacters,
   mostGuideBytes,
   mostGuidesBeyondTheRecipes,
-  mostInstructionCharacters,
   mostListingBytes,
   mostRecipeBytes,
   mostRecipes,

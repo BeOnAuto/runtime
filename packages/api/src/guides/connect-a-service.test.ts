@@ -41,9 +41,9 @@ describe('the connect-a-service recipe', () => {
 });
 
 describe('what the connect-a-service recipe says', () => {
-  it('works out first what the runs will do at the service and what must exist there, asks for the access both take in one add_connection, and sets the service up by hand once the person agrees, never with a function or workflow', () => {
+  it('works out first what the runs will do at the service and what must exist there, asks for the access both take in one add_connection, and sets the service up and checks it by hand once the person agrees, never with a function or workflow', () => {
     expect(connectAService).toContain(
-      'A run does not set a service up. You do, here, with the person, before the first run, and you ask for the access that takes when you ask for the connection.',
+      'A run does not set a service up, nor does it check that one is set up. You do, here, with the person, before the first run, and you ask for the access that takes when you ask for the connection.',
     );
     expect(connectAService).toContain(
       "what the playbook's functions and workflows will do at the service, run by run, and what must exist there first for that to work.",
@@ -55,7 +55,7 @@ describe('what the connect-a-service recipe says', () => {
       "Where none of the provider's tools can make what must exist, and the service has an HTTP API or an MCP server that can, add that too, by hand",
     );
     expect(connectAService).toContain(
-      'Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up.',
+      'Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up or to check that it is set up: that is your work, with these tools, before the first run and whenever something there changes.',
     );
   });
 

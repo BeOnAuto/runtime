@@ -2,12 +2,12 @@ import { inDefinitionTypeOrder } from '@on.auto/definitions';
 import { capitalized, type Noun } from '@on.auto/phrasing';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
-import type { DefinitionType } from '../mcp/instructions.ts';
 import { documentation } from './guide-files.ts';
-import { guideShelfOf, pageGuideName, type Guide, type GuideShelf } from './guide-shelf.ts';
+import { guideShelfOf, pageGuideName, type DefinitionType, type Guide, type GuideShelf } from './guide-shelf.ts';
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
+import { startGuideOf } from './start-guide.ts';
 import { terminologyGuideOf } from './terminology-guide.ts';
 
 export interface ServedType {
@@ -74,7 +74,7 @@ export async function guideShelfFrom(
     noun: noun.one,
     guide: guide.name,
   }));
-  const guides = [
+  const pageGuides = [
     terminologyGuideOf(
       await pageText(shippedFiles, terminologyPage),
       definitionTypes.map(({ noun }) => noun),
@@ -83,5 +83,7 @@ export async function guideShelfFrom(
     await pageGuideOf(shippedFiles, templatesPage, templatesAbout),
     ...(pages ? [await pageGuideOf(shippedFiles, pagePage, pageAbout)] : []),
   ];
-  return guideShelfOf(guides, await recipesFor(shippedFiles, guides), definitionTypes);
+  const recipes = await recipesFor(shippedFiles, pageGuides);
+  const start = startGuideOf({ definitionTypes, pages, recipes: recipes.map(({ name }) => name) });
+  return guideShelfOf([start, ...pageGuides], recipes, definitionTypes);
 }

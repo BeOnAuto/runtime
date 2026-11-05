@@ -56,7 +56,7 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
       {
         after: 'and that the function can call only the tools it names.',
         words:
-          '\n8. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next.',
+          '\n8. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions; save it once they agree, run it, and tell the person what it answered and what they can do next.',
       },
     ],
     calls: [],
@@ -65,7 +65,7 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
     insertions: [
       {
         after: 'the person sees answer',
-        words: ', and the workflow whose step it is, which does what the person asked',
+        words: ', and the workflow that owns the job they want done again, whose step it is',
       },
       {
         after: 'run the function with run_definition',
@@ -79,7 +79,7 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
       {
         after: 'tell the person what it answered, in their words.',
         words: [
-          "\n7. Read the workflow guide with get_guide and write the workflow whose step is the function, which does what the person asked: a one-step workflow is still a workflow, and a later ask changes it. Where the work starts on its own, give it a `schedule` as the guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.",
+          "\n7. Read the workflow guide with get_guide and write the workflow that owns the job the person wants done again, whose step is the function: one step is enough when that step finishes the job, and a later ask changes the workflow. Where the work starts on its own, give it a `schedule` as the guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.",
           "\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
           "\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`: a real event's `source` and `id` would make that event a repeat, ignored when it comes. A moment later, show what its run answered with list_runs, `type` workflow, and get_run.",
         ].join(''),
@@ -106,7 +106,7 @@ const wherePagesAreServed: AdditionsByRecipe = {
           ' Write its `page` in the same front matter: the judgement of each run in a sentence, and the outcomes over time.',
       },
       {
-        after: 'and a later ask changes it.',
+        after: 'and a later ask changes the workflow.',
         words:
           ' Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period.',
       },
@@ -117,7 +117,7 @@ const wherePagesAreServed: AdditionsByRecipe = {
     insertions: [
       { after: 'before you write one.', words: everyDocumentCarriesItsPage },
       { after: 'in the format of the reasoning-function guide', words: ', with its `page` in the same document' },
-      { after: 'which does what the person asked', words: ', with its `page` in the same document' },
+      { after: 'whose steps are the functions', words: ', with its `page` in the same document' },
     ],
     calls: [],
   },

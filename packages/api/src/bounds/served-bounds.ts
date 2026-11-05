@@ -1,15 +1,6 @@
 import { Buffer } from 'node:buffer';
 
-import type { ActingAs, McpEndpoint } from '../mcp/instructions.ts';
-
-export const mostInstructionCharacters = 2000;
-
-const heldOrg = 'o'.repeat(30);
-
-export const callerTheInstructionsHold: ActingAs = {
-  caller: { id: `person:${'u'.repeat(32)}`, name: 'n'.repeat(20), org: heldOrg, permissions: [], playbooks: '*' },
-  org: heldOrg,
-};
+import type { McpEndpoint } from '../mcp/instructions.ts';
 
 export const mostDescriptionCharacters = 800;
 
@@ -22,18 +13,18 @@ export const mostArgumentDescriptionCharacters = 300;
 export const mostToolsOnAConnection = 40;
 
 export const mostListingBytes: Readonly<Record<McpEndpoint, number>> = {
-  'own org': 60_600,
-  directory: 59_100,
-  org: 21_100,
-  playbook: 42_000,
+  'own org': 60_800,
+  directory: 59_300,
+  org: 21_200,
+  playbook: 42_100,
 };
 
 export const mostGuideBytes = 65_536;
 
-export const mostRecipeBytes = 5120;
+export const mostRecipeBytes = 6144;
 
 export function mostGuidesBeyondTheRecipes(definitionTypes: number): number {
-  return definitionTypes + 3;
+  return definitionTypes + 4;
 }
 
 export const mostRecipes = 5;

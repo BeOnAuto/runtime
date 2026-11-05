@@ -1,14 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/server';
 import type { Catalog, Dispatcher } from '@on.auto/operations';
 
-import {
-  callerTheInstructionsHold,
-  mostInstructionCharacters,
-  mostListingBytes,
-  mostToolsOnAConnection,
-  requireTextWithin,
-  requireWithin,
-} from '../bounds/served-bounds.ts';
+import { mostListingBytes, mostToolsOnAConnection, requireWithin } from '../bounds/served-bounds.ts';
 import { serveGuides, type GuideRegistry } from '../guides/guide-serving.ts';
 import type { GuideShelf } from '../guides/guide-shelf.ts';
 import { guideToolDefinitionOf, guideToolName } from '../guides/guide-tool.ts';
@@ -66,11 +59,6 @@ export function connectionOf(endpoint: McpEndpoint, serving: McpServing, { serve
     mostListingBytes[endpoint],
     'bytes on the wire',
   );
-  requireTextWithin(
-    `The instructions of the ${endpoint} endpoint`,
-    instructionsActingAs(callerTheInstructionsHold, endpoint, served, connection.shelf),
-    mostInstructionCharacters,
-  );
   return connection;
 }
 
@@ -85,12 +73,12 @@ export function serverOf(
   served: ServedTools,
   registerTools: (server: GuideRegistry) => void,
 ): McpServer {
-  const { endpoint, shelf } = connection;
+  const { endpoint } = connection;
   const server = new McpServer(
     { ...connection.serving.serverInfo, title: serverTitle },
     {
       capabilities: { tools: noChangesAnnounced, resources: noChangesAnnounced, prompts: noChangesAnnounced },
-      instructions: instructionsActingAs(actingAs, endpoint, served, shelf),
+      instructions: instructionsActingAs(actingAs, endpoint, served),
       requestState: states,
     },
   );

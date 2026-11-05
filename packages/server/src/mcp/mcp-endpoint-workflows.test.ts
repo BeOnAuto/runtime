@@ -83,7 +83,7 @@ describe('/mcp with workflows', () => {
     expect(tools).toHaveLength(39);
     expect(tools.slice(-3)).toEqual(['get_asset', 'send_run_event', 'get_guide']);
     expect(listedTools(listing).find(({ name }) => name === 'run_definition')?.description).toContain(
-      'a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
+      'one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended.',
     );
   });
 

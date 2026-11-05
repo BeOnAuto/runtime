@@ -7,7 +7,6 @@ import { createTestHandler } from '../testing/api-calls.ts';
 import { asking, sentencesOf } from '../testing/asking-operation.ts';
 import { notebookGuide, noteRecipe, wordsGuide } from '../testing/guides.ts';
 import { testRetryStateKeys, testServerInfo } from '../testing/operation-server.ts';
-import { mostInstructionCharacters, requireTextWithin } from './served-bounds.ts';
 
 const reportedErrors: string[] = [];
 
@@ -131,21 +130,6 @@ describe('the tools on a connection', () => {
   });
 });
 
-function holdingInstructionsOf(length: number): () => void {
-  return () => {
-    requireTextWithin('The instructions of the own org endpoint', 'x'.repeat(length), mostInstructionCharacters);
-  };
-}
-
-describe('the instructions of a connection', () => {
-  it('are held to 2,000 characters, and refused at 2,001', () => {
-    expect(holdingInstructionsOf(2000)).not.toThrow();
-    expect(holdingInstructionsOf(2001)).toThrow(
-      'The instructions of the own org endpoint: 2001 characters, more than the 2000 allowed',
-    );
-  });
-});
-
 function guidesNumbering(count: number): readonly Guide[] {
   return Array.from({ length: count }, (_, index) => guideOf(`guide-${index}`));
 }
@@ -163,10 +147,10 @@ function noteRecipeSaying(text: string): Recipe {
 }
 
 describe('the guides a server carries', () => {
-  it('start the server with one guide per type, terminology, templates and pages, and refuse to start it with one more', () => {
-    expect(starting({ guides: guidesNumbering(7), definitionTypes: typesNumbering(4) })).not.toThrow();
-    expect(starting({ guides: guidesNumbering(8), definitionTypes: typesNumbering(4) })).toThrow(
-      'The guides of the server: 8 guides, more than the 7 allowed',
+  it('start the server with one guide per type, start, terminology, templates and pages, and refuse to start it with one more', () => {
+    expect(starting({ guides: guidesNumbering(8), definitionTypes: typesNumbering(4) })).not.toThrow();
+    expect(starting({ guides: guidesNumbering(9), definitionTypes: typesNumbering(4) })).toThrow(
+      'The guides of the server: 9 guides, more than the 8 allowed',
     );
   });
 
@@ -186,21 +170,21 @@ describe('the guides a server carries', () => {
     );
   });
 
-  it('start the server with a recipe of 5,120 bytes, and refuse to start it with one of 5,121', () => {
+  it('start the server with a recipe of 6,144 bytes, and refuse to start it with one of 6,145', () => {
     expect(
       starting({
         guides: [notebookGuide],
-        recipes: [noteRecipeSaying('r'.repeat(5120))],
+        recipes: [noteRecipeSaying('r'.repeat(6144))],
         definitionTypes: notebookTypes,
       }),
     ).not.toThrow();
     expect(
       starting({
         guides: [notebookGuide],
-        recipes: [noteRecipeSaying('r'.repeat(5121))],
+        recipes: [noteRecipeSaying('r'.repeat(6145))],
         definitionTypes: notebookTypes,
       }),
-    ).toThrow('The recipe take-a-note: 5121 bytes, more than the 5120 allowed');
+    ).toThrow('The recipe take-a-note: 6145 bytes, more than the 6144 allowed');
   });
 });
 

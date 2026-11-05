@@ -47,9 +47,18 @@ const callsOfTheFunction = [
 ];
 
 describe('the first-playbook recipe where the workflow guide is carried', () => {
-  it('says that a first playbook holds the workflow whose step its function is, which does what the person asked', () => {
+  it('says that a first playbook holds the workflow that owns the job the person wants done again, whose step its function is', () => {
     expect(withWorkflows?.text).toContain(
-      'A first playbook holds a first reasoning function that the person sees answer, and the workflow whose step it is, which does what the person asked. Read the reasoning-function guide',
+      'A first playbook holds a first reasoning function that the person sees answer, and the workflow that owns the job they want done again, whose step it is. Read the reasoning-function guide',
+    );
+  });
+
+  it('asks what the playbook is for and the first job it does again and again, with the result the person wants', () => {
+    expect(firstPlaybookFile).toContain(
+      '2. Ask the person what the playbook is for, in their own words, and the first job it should do again and again, with the result they want from it, such as checking each campaign brief for an audience, a budget and a measurable goal.',
+    );
+    expect(firstPlaybookFile).toContain(
+      '4. Write the reasoning function for that job in the format of the reasoning-function guide:',
     );
   });
 
@@ -59,9 +68,9 @@ describe('the first-playbook recipe where the workflow guide is carried', () => 
     );
   });
 
-  it('tests the function, then writes the workflow whose step it is, with its trigger as the workflow guide says, and saves it once the person agrees', () => {
+  it('tests the function, then writes the workflow that owns the job, whose step it is, with its trigger as the workflow guide says, and saves it once the person agrees', () => {
     expect(withWorkflows?.text).toContain(
-      "6. Ask for an input, run the function with run_definition to test it, and tell the person what it answered, in their words.\n7. Read the workflow guide with get_guide and write the workflow whose step is the function, which does what the person asked: a one-step workflow is still a workflow, and a later ask changes it. Where the work starts on its own, give it a `schedule` as the guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.\n",
+      "6. Ask for an input, run the function with run_definition to test it, and tell the person what it answered, in their words.\n7. Read the workflow guide with get_guide and write the workflow that owns the job the person wants done again, whose step is the function: one step is enough when that step finishes the job, and a later ask changes the workflow. Where the work starts on its own, give it a `schedule` as the guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.\n",
     );
   });
 
@@ -117,7 +126,7 @@ describe('the first-playbook recipe where the page guide is carried with the wor
   it("writes the page of the function and of the workflow with each document, saved in the same create_definition, and calls update_playbook for the playbook's own page alone", () => {
     expect(withWorkflowsAndPages?.text).toContain(theFunctionsPage);
     expect(withWorkflowsAndPages?.text).toContain(
-      'and a later ask changes it. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own',
+      'and a later ask changes the workflow. Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period. Where the work starts on its own',
     );
     expect(withWorkflowsAndPages?.calls).toEqual([
       ...callsOfTheFunction,
@@ -237,7 +246,7 @@ describe('the give-tools recipe', () => {
     const recipes = await recipesFor(recipeFiles, guidesNamed(['reasoning-function', 'workflow']));
 
     expect(recipes.find(({ name }) => name === 'give-tools')?.text).toMatch(
-      /the function can call only the tools it names\.\n8\. Then, with the workflow guide, write or change the workflow whose steps are the functions, which does what the person asked; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
+      /the function can call only the tools it names\.\n8\. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
     );
   });
 
@@ -251,7 +260,7 @@ describe('the give-tools recipe', () => {
       'in the format of the reasoning-function guide, with its `page` in the same document, show it to the person, and save it',
     );
     expect(giveTools?.text).toMatch(
-      /which does what the person asked, with its `page` in the same document; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
+      /whose steps are the functions, with its `page` in the same document; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
     );
   });
 });

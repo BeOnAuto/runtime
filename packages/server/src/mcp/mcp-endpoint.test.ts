@@ -124,23 +124,6 @@ const resourcesOnTheTerminologyPage: ReadonlySet<string> = new Set(
   ),
 );
 
-const firstPlaybookRecipe = { name: 'first-playbook', calls: [...playbookTools, ...definitionTools] };
-
-const connectAServiceRecipe = {
-  name: 'connect-a-service',
-  calls: [
-    'search',
-    'introspect',
-    'add_connection',
-    'list_connections',
-    'reconnect_connection',
-    'query_connection',
-    'execute_connection',
-  ],
-};
-
-const servedBeside = { definitionTypes, pages: true, recipes: [firstPlaybookRecipe, connectAServiceRecipe] };
-
 interface Connection {
   readonly path: string;
   readonly org: string;
@@ -156,7 +139,8 @@ const connections: readonly Connection[] = [
     org: 'local',
     endpoint: 'own org',
     served: { orgTools, playbookTools: insideAPlaybookAlone },
-    sentence: 'The guide first-playbook sets out how a playbook is built, and names the guides its steps need.',
+    sentence:
+      'Before anything else, read the guide start with get_guide: it says what a playbook is made of, what a workflow owns, what you do yourself, and which guide each task needs.',
     unnamed: [],
   },
   {
@@ -186,7 +170,7 @@ describe('the instructions an agent receives when it connects', () => {
 
       const instructions = await onMcp(path, (session) => Promise.resolve(session.instructions));
 
-      expect(instructions).toBe(instructionsActingAs({ caller: localDeveloper, org }, endpoint, served, servedBeside));
+      expect(instructions).toBe(instructionsActingAs({ caller: localDeveloper, org }, endpoint, served));
       expect(instructions).toContain(sentence);
       expect(unnamed.filter((name) => instructions?.includes(name) === true)).toEqual([]);
     },

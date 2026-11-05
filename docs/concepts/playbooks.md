@@ -47,7 +47,7 @@ Auto Runtime runs playbooks, and Auto Studio lets you inspect and manage them. Y
 
 Your agent helps you create and refine definitions, supplies inputs and calls functions. It can coordinate its own calls to Auto and to other systems.
 
-The agent puts repeatable work into a workflow and shows you its result. Later requests can change that workflow. It uses a connection to reach another service. It can answer a one-off question without saving anything.
+The agent puts each job you want done again and again into a workflow and shows you its result. Later requests can change that workflow. It uses a connection to reach another service. It can answer a one-off question without saving anything. Testing a function, connecting a service and setting it up for the playbook's runs are the agent's own work, done with its tools, and none of it becomes a workflow.
 
 The playbook keeps the saved definitions and the recorded runs, whatever happens to that conversation. An authorized colleague can use the same function from their own agent. Access to the playbook does not give a colleague access to the accounts anyone else's agent is connected to.
 

@@ -6,7 +6,11 @@ import {
   requireBytesWithin,
   requireWithin,
 } from '../bounds/served-bounds.ts';
-import type { DefinitionType } from '../mcp/instructions.ts';
+export interface DefinitionType {
+  readonly type: string;
+  readonly noun: string;
+  readonly guide: string;
+}
 
 export interface Guide {
   readonly name: string;

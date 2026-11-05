@@ -148,16 +148,18 @@ async function approvedThenNextMonth(session: McpSession) {
 }
 
 describe('episode 7: the person approves, in the chat, a draft a workflow sent through a tool', () => {
-  it('finds in the instructions, answer_interaction and the guide that the answer goes to the waiting request, and nowhere that it waits in a loop', async () => {
-    const { instructions } = meetings.surfaces;
+  it('finds in the guide start, answer_interaction and the guide that the answer goes to the waiting request, and nowhere that it waits in a loop', async () => {
+    const { instructions, start } = meetings.surfaces;
     const guide = await meetings.onMcp((session) => session.callTool('get_guide', { guide: 'interaction-function' }));
 
-    expect(sentenceNaming(instructions, 'answer_interaction')).toBe('answer_interaction answers what a run waits on.');
+    expect(sentenceNaming(start, 'answer_interaction').trimEnd()).toBe(
+      'An interaction function makes the request and waits; answer_interaction answers one held for an agent, once the person says what to answer; the interaction-function guide says how.',
+    );
     expect(descriptionIn(meetings.surfaces, 'run_definition')).toContain(
-      'a run that finishes later answers started with a run_id unless it ends before its first wait, and get_run shows how it ended.',
+      'one that finishes later answers started with a run_id unless it ends before its first wait; get_run shows how it ended.',
     );
     expect(
-      [instructions, descriptionIn(meetings.surfaces, 'run_definition')].filter((words) =>
+      [instructions, start, descriptionIn(meetings.surfaces, 'run_definition')].filter((words) =>
         /\bpoll|\buntil (?:it ends|its status changes)/iu.test(words),
       ),
     ).toEqual([]);

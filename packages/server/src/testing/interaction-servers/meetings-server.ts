@@ -1,6 +1,7 @@
 import {
   calledAnsweringForms,
   listedTools,
+  textOf,
   withMcpSession,
   type FormAnswering,
   type LinksAsked,
@@ -18,6 +19,7 @@ const chatKey = 'chat-api-key-3e8b51d0';
 
 export interface Surfaces {
   readonly instructions: string;
+  readonly start: string;
   readonly tools: readonly ListedTool[];
 }
 
@@ -99,6 +101,7 @@ export async function servingMeetings(
     withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, use);
   const surfaces = await onMcp(async (session) => ({
     instructions: String(session.instructions),
+    start: textOf(await session.callTool('get_guide', { guide: 'start' })),
     tools: listedTools(await session.listTools()),
   }));
   return {

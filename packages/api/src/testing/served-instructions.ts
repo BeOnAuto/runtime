@@ -1,6 +1,6 @@
 import { allPermissions, type CallerIdentity } from '@on.auto/operations';
 
-import type { DefinitionType, McpEndpoint, RecipeCalls, ServedTools } from '../mcp/instructions.ts';
+import type { McpEndpoint, RecipeCalls, ServedTools } from '../mcp/instructions.ts';
 
 const managingPlaybooks = ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook'];
 
@@ -69,18 +69,6 @@ export const signedInAda: CallerIdentity = {
 export const buildBot: CallerIdentity = { ...signedInAda, id: 'build-bot', name: 'build-bot' };
 
 export const localDeveloper: CallerIdentity = { ...signedInAda, id: 'local', name: 'ada', org: 'local' };
-
-export const definitionTypes: readonly DefinitionType[] = [
-  { type: 'reasoning', noun: 'reasoning function', guide: 'reasoning-function' },
-  { type: 'lookup', noun: 'lookup function', guide: 'lookup-function' },
-  { type: 'interaction', noun: 'interaction function', guide: 'interaction-function' },
-  { type: 'computation', noun: 'computation function', guide: 'computation-function' },
-  { type: 'prediction', noun: 'prediction function', guide: 'prediction-function' },
-  { type: 'workflow', noun: 'workflow', guide: 'workflow' },
-];
-
-export const functionTypesSentence =
-  'Its function types: reasoning prompts a model, lookup obtains information, interaction exchanges information, prediction forecasts from history, and computation runs a program.';
 
 export const recipes: readonly RecipeCalls[] = [
   {

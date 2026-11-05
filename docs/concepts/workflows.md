@@ -27,7 +27,9 @@ Each function a step calls has a run of its own, with its own id, so you can ins
 
 ## Starting a run
 
-Your agent puts the work you ask for into a workflow, even if it needs only one step. Its steps use the playbook's functions. The agent runs the workflow and shows you the result; later requests can change that workflow. The agent also runs individual functions on their own to test them.
+Your agent puts each job you want done again and again into a workflow of its own, one that owns the job from what starts it to the result you recognize as done, even if it needs only one step. Its steps use the playbook's functions. The agent runs the workflow and shows you the result; later requests can change that workflow.
+
+Other work stays out of the list of workflows, so that list stays the list of jobs you want done. To see what a function answers, or to test it, the agent runs the function on its own. To ask a person, it writes an interaction function, which the workflow that needs the answer calls as a step. To check a service and its setup, it uses its own tools.
 
 The agent supplies the workflow's input when it starts a run. The run then continues on its own, and the agent can check on it later. Every step acts for whoever started the run, with the permissions they had when it started.
 
