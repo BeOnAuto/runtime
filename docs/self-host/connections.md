@@ -10,7 +10,7 @@ head:
 
 A connection is a tool server that a person adds to an org through their agent, rather than one you set up in Auto's settings file. The org owns it, and every playbook of the org may use it, or only the playbooks it names. The person approves it, and gives its credential where it takes one, on a page of Studio. The agent never sees the credential.
 
-This page is for whoever runs Auto. It says how a connection is added, the providers a person may connect by name, what a connection holds, how a function uses it, how one that needs attention is reconnected, the rules you set for it in `auto-runtime.yaml`, consent through Auto's clients, and the clients you register there. A tool server you set up yourself is still added as [Add a tool server](tool-servers.md) shows.
+This page is for whoever runs Auto. It says how a connection is added, the providers a person may connect by name, what a connection holds, how a function uses it, how one that needs attention is reconnected, the rules you set for it in `auto-runtime.yaml`, how to add a browser of your own, consent through Auto's clients, and the clients you register there. A tool server you set up yourself is still added as [Add a tool server](tool-servers.md) shows.
 
 ## How a person adds a connection
 
@@ -350,6 +350,152 @@ Name an address or `localhost` in `allowed_hosts` to allow it: `10.0.0.5` allows
 In [local mode](security.md#local-mode) a connection may reach an address on loopback, `localhost`, `127.0.0.1` and `::1`, without `allowed_hosts` naming it, since the server is on your own machine; every other address inside your network is refused there as anywhere. A runtime in local mode that sets `allowed_hosts` allows the hosts the setting names alone, loopback among them only where it names it.
 
 A connection given by hand may carry `headers`, which Auto sends with each request. Auto sends them to the server the connection reaches, a public host or an address you named, and to no address inside your network that you did not name: a connection that carries headers is refused at an address inside your network as any connection is. The headers of a provider are the provider's own and are sent whatever you set.
+
+## A browser of your own
+
+A self-hosted Auto has no browser until you add one. Auto ships no `browser` provider, and it offers no browser of its own to a runtime you run. A browser lets functions and agents open web pages, read them, and click, type and fill in forms on them. To add one, run a browser MCP server beside Auto and add a provider named `browser` for it. People then connect it as they connect any provider.
+
+Any MCP server that drives a browser over Streamable HTTP will do. The steps below use Microsoft's [Playwright MCP](https://github.com/microsoft/playwright-mcp), version `0.0.83`.
+
+The browser is a connection like any other. Auto does not:
+
+- hand a sign-in to a person, or keep a sign-in for each person. Whoever signs in to the browser signs in for every call made through it, as [Sign in to a site](#sign-in-to-a-site) sets out;
+- ask a person before the browser pays, sends or deletes. The tools a connection allows, and those a function names, are the limit.
+
+### Run the browser where Auto reaches it
+
+Auto reaches a provider's server only at an `https` address, or at an `http` address on `localhost`, `127.0.0.1` or `[::1]`. A provider at another container's name, such as `http://browser:8931/mcp`, stops Auto at start. So run the browser in one of two ways:
+
+- In the network namespace of Auto's container, where Auto reaches it at `http://127.0.0.1:8931/mcp`, as below. On a machine where Auto runs with Node, run it on the same machine instead, as [Sign in to a site](#sign-in-to-a-site) shows.
+- Behind a proxy that serves it over `https`. Microsoft's server asks for no credential, so the proxy asks for one, and the provider takes a `secret` way that sends it. Auto reaches a name only where it resolves to a public address, and an address inside your network only where `allowed_hosts` names that address itself, as [Addresses inside your network](#addresses-inside-your-network) sets out.
+
+With Compose, add a service beside the `runtime` service of [Run with PostgreSQL](docker.md#run-with-postgresql):
+
+```yaml
+services:
+  browser:
+    image: mcr.microsoft.com/playwright/mcp:v0.0.83
+    network_mode: service:runtime
+    command: ['--port', '8931', '--host', '127.0.0.1', '--isolated']
+    restart: unless-stopped
+```
+
+- `network_mode: service:runtime` puts the browser in the namespace of Auto's container. With `docker run`, `--network container:auto-runtime` does the same.
+- `--host 127.0.0.1` keeps the server off the namespace's other addresses, so no other container reaches it, and its port is published nowhere.
+- The image runs Chromium headless, with no window.
+- `--isolated` starts each session with a profile in memory, so a session finds nothing an earlier one left.
+- Recreate both containers together, since the browser lives in Auto's namespace: `docker compose up --detach --force-recreate runtime browser`.
+
+### Add the `browser` provider
+
+Add the provider, and name its host in `allowed_hosts`, in [the configuration file](docker.md#use-a-configuration-file):
+
+```yaml
+connections:
+  allowed_hosts: ['127.0.0.1', '*.example.com']
+  providers:
+    - name: browser
+      title: Browser
+      description: Open web pages in the browser that runs beside this runtime, read them, and click, type and fill in forms on them.
+      website: https://github.com/microsoft/playwright-mcp
+      type: mcp
+      url: http://127.0.0.1:8931/mcp
+      credentials:
+        - kind: none
+          description: The browser runs beside this runtime and takes no credential.
+      marks:
+        reads:
+          - browser_snapshot
+          - browser_take_screenshot
+          - browser_find
+          - browser_console_messages
+          - browser_network_requests
+          - browser_network_request
+        acts:
+          - browser_navigate
+          - browser_navigate_back
+          - browser_tabs
+          - browser_wait_for
+          - browser_resize
+          - browser_close
+          - browser_click
+          - browser_type
+          - browser_fill_form
+          - browser_select_option
+          - browser_press_key
+          - browser_hover
+          - browser_drag
+          - browser_drop
+          - browser_handle_dialog
+          - browser_file_upload
+          - browser_evaluate
+```
+
+- `allowed_hosts` names `127.0.0.1`, the provider's host, by itself. Without it, `list_providers` and `search` do not offer a provider on loopback, in local mode too. Outside local mode, `add_connection` refuses it as well.
+- `allowed_hosts` is then the whole list of hosts a connection may reach. So it names the hosts of the other connections people add too, as `*.example.com` above.
+- `marks` gives the six tools that only look at the page the mark `reads`, and the tools that move around and work the page `acts`. Microsoft's server hints a mark for each tool too, but its hints can change from one version to the next. A tool the list leaves out keeps the mark its server hints.
+
+A person connects it as any provider: their agent calls `add_connection` with `provider: browser`, and the person approves the connection on Studio's page. The browser takes no credential, so the page asks for nothing else. The agent may give `entry` with:
+
+- `allowed`, the tools functions may call. Leave out `browser_run_code_unsafe`, which runs code in the browser server's own process. Leave out `browser_evaluate`, which runs script in the page, unless a function needs it.
+- `record_content: false`, to keep only the sizes of calls in the playbook's history. The browser's answers hold the text of the pages it opens, so otherwise the history keeps what a signed-in page shows.
+- `playbooks`, the playbooks that may use it.
+
+A function then names the tools as `browser/browser_navigate`, or `browser/*` for every tool the connection allows. How long a page stays open follows Auto's sessions with the server:
+
+- A run's calls share one session, so a page the run opens is still open at its next call. The session ends when the run is done.
+- Each call made by hand, through `query_connection` or `execute_connection`, has a session of its own.
+- With `--isolated`, each session starts with no page open.
+
+To give an organization the browser without a person connecting it, name the provider in an entry of `tool_servers` instead, with its `org`, `playbooks`, `allowed` and `record_content`, as [Name a provider](tool-servers.md#name-a-provider) shows.
+
+### Limit what the browser reaches
+
+The browser sends its own requests, so `allowed_hosts` does not limit the pages it opens. It reaches what its network reaches. In Auto's namespace that includes Auto's own port, `127.0.0.1:5555`, and on a cloud machine it can include the cloud's metadata service. Block what it must not reach in your network.
+
+- `--allowed-origins` and `--blocked-origins` limit the sites the browser requests. Each takes origins separated by semicolons, as in `--blocked-origins "http://localhost:5555;http://127.0.0.1:5555"`, and the blocked ones are judged first. Microsoft notes that neither is a security boundary, and neither stops a redirect.
+- In [local mode](security.md#local-mode), every request to Auto's address acts as you, so a page that leads the browser to Studio at that address can act as you there. Turn on [sign-in](security.md#let-people-sign-in) for a runtime whose browser opens pages you do not trust.
+- Sign in, in the browser Auto drives, only to the sites its playbooks need, and never to Auto.
+
+### Sign in to a site
+
+A person signs in to a site in a browser they can see, so Auto never sees the password. The browser then keeps the sign-in. Microsoft's image runs headless and shows no window, so a person cannot sign in there. Use one of two ways instead.
+
+Drive a Chrome the person can see, on a computer where Auto runs with Node, as `npx @on.auto/runtime` runs it. Start Chrome with a profile folder other than its default one, since Chrome turns remote debugging on only for such a folder. Then start Playwright MCP attached to it:
+
+```bash
+google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/auto-browser"
+npx @playwright/mcp@0.0.83 --port 8931 --host 127.0.0.1 --cdp-endpoint http://127.0.0.1:9222
+```
+
+On macOS the program is `/Applications/Google Chrome.app/Contents/MacOS/Google Chrome`. The person signs in to each site in that window, Chrome keeps the sign-in in its profile, and the pages Auto opens show there too. Remote debugging lets any program on the computer drive that Chrome, so keep in its profile only the sign-ins the playbooks need.
+
+Or save a sign-in for the headless container. On a computer with a screen, open the site with Playwright, sign in, and close the window. Playwright then writes the cookies and storage of the sites you signed in to into the file `--save-storage` names:
+
+```bash
+npx playwright@1.64.1 install chromium
+npx playwright@1.64.1 open --save-storage=sign-ins.json https://example.com/login
+```
+
+Mount the file read-only into the browser's container, and pass it with `--storage-state`, so each session starts signed in:
+
+```yaml
+services:
+  browser:
+    command: ['--port', '8931', '--host', '127.0.0.1', '--isolated', '--storage-state', '/sign-ins/sign-ins.json']
+    volumes:
+      - ./sign-ins.json:/sign-ins/sign-ins.json:ro
+```
+
+Anyone who has the file is signed in as the person who saved it, so keep it as you keep a secret. When the site ends the sign-in, save the file again.
+
+Either way, the sign-in is the browser's. Every call through the connection, from every playbook it serves, acts on the site as whoever signed in.
+
+### Turn the browser off
+
+- Remove the provider from `auto-runtime.yaml` and restart Auto. Nobody can then add a browser connection: `list_providers` and `search` no longer offer it, and `add_connection` refuses it.
+- A browser connection already added keeps its address and still reaches the browser. To turn it off too, remove it with `remove_connection`, take its host out of `allowed_hosts`, which refuses it as `connection_not_allowed`, or stop the browser.
+- Remove an entry of `tool_servers` that names the provider along with the provider, since an entry that names a provider Auto does not know stops Auto at start.
 
 ## Consent through Auto
 
