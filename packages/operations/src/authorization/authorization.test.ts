@@ -168,7 +168,7 @@ describe('a retired playbook', () => {
     ).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook omega is retired and can no longer change',
+      detail: 'The playbook omega is retired and cannot change until it is restored',
       kind: 'retired',
     });
     expect(ledger.streamNames()).toEqual([]);

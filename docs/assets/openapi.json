@@ -162,7 +162,7 @@
                         "active",
                         "retired"
                       ],
-                      "description": "active, or retired for good"
+                      "description": "active, or retired until restore_playbook restores it"
                     },
                     "created_at": {
                       "type": "string",
@@ -343,7 +343,7 @@
                             "active",
                             "retired"
                           ],
-                          "description": "active, or retired for good"
+                          "description": "active, or retired until restore_playbook restores it"
                         },
                         "created_at": {
                           "type": "string",
@@ -508,7 +508,7 @@
                         "active",
                         "retired"
                       ],
-                      "description": "active, or retired for good"
+                      "description": "active, or retired until restore_playbook restores it"
                     },
                     "created_at": {
                       "type": "string",
@@ -702,7 +702,7 @@
                         "active",
                         "retired"
                       ],
-                      "description": "active, or retired for good"
+                      "description": "active, or retired until restore_playbook restores it"
                     },
                     "created_at": {
                       "type": "string",
@@ -815,7 +815,7 @@
       "post": {
         "operationId": "retire_playbook",
         "summary": "Retire playbook",
-        "description": "Retires a playbook for good and returns it, readable with its history but never to change, be restored or have its id used again. Use it when the person asks to retire that playbook; update_playbook changes its name or description. Retiring a retired playbook changes nothing.",
+        "description": "Retires a playbook and returns it: it stays readable with its history, takes no changes or runs, and keeps its id, so no other playbook takes it. restore_playbook brings it back. Use retire_playbook when the person asks to retire that playbook; update_playbook changes its name or description. Retiring a retired playbook changes nothing.",
         "tags": [
           "playbooks"
         ],
@@ -877,7 +877,182 @@
                         "active",
                         "retired"
                       ],
-                      "description": "active, or retired for good"
+                      "description": "active, or retired until restore_playbook restores it"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "description": "When the playbook was created, in ISO 8601 UTC"
+                    },
+                    "created_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who created the playbook, by id and name"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "description": "When the playbook last changed, in ISO 8601 UTC"
+                    },
+                    "retired_at": {
+                      "type": "string",
+                      "description": "When the playbook was retired, in ISO 8601 UTC"
+                    },
+                    "page": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "description": "The page as it was saved, YAML of its data and runs"
+                        }
+                      },
+                      "required": [
+                        "source"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The playbook's page, its dashboard, where it has one; from get_playbook and update_playbook"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "status",
+                    "created_at",
+                    "created_by",
+                    "updated_at"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A playbook of the org"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/playbooks/{playbook}/restore": {
+      "post": {
+        "operationId": "restore_playbook",
+        "summary": "Restore playbook",
+        "description": "Restores a retired playbook and returns it, active again under its own id, with its functions, workflows, page and history as they were when it was retired. Use it when the person asks to bring back a retired playbook; list_playbooks with include_retired lists the retired ones. Restoring a playbook that is not retired changes nothing.",
+        "tags": [
+          "playbooks"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "playbook",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,47}$",
+              "description": "The id of the playbook: 3 to 48 lowercase letters, digits and hyphens, starting with a letter"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/restore_playbook/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/restore_playbook/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9-]{2,47}$",
+                      "description": "The id of the playbook, unique within its org"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The display name of the playbook"
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "What the playbook is for, or empty"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "active",
+                        "retired"
+                      ],
+                      "description": "active, or retired until restore_playbook restores it"
                     },
                     "created_at": {
                       "type": "string",
@@ -1059,7 +1234,7 @@
                               "playbook"
                             ],
                             "additionalProperties": false,
-                            "description": "A playbook created, updated or retired"
+                            "description": "A playbook created, updated, retired or restored"
                           },
                           {
                             "type": "object",

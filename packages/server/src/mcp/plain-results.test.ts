@@ -115,10 +115,13 @@ async function playbooksCalled(session: McpSession): Promise<Called> {
   const describing = { playbook: 'sales', name: 'Sales', description: 'Answers questions about the pipeline' };
   const created = await session.callTool('create_playbook', describing);
   await session.callTool('create_playbook', { playbook: 'old-sales', name: 'Old sales' });
+  await session.callTool('create_playbook', { playbook: 'past-sales', name: 'Past sales' });
+  await session.callTool('retire_playbook', { playbook: 'past-sales' });
   return [
     ['create_playbook', created],
     ['retire_playbook', await session.callTool('retire_playbook', { playbook: 'old-sales' })],
     ['list_playbooks', await session.callTool('list_playbooks', { include_retired: true })],
+    ['restore_playbook', await session.callTool('restore_playbook', { playbook: 'past-sales' })],
     ['update_playbook', await session.callTool('update_playbook', { ...describing, description: 'Answers questions' })],
     ['get_playbook', await session.callTool('get_playbook', { playbook: 'sales' })],
     ['list_models', await session.callTool('list_models', {})],

@@ -2,7 +2,14 @@ import { allPermissions, type CallerIdentity } from '@on.auto/operations';
 
 import type { McpEndpoint, RecipeCalls, ServedTools } from '../mcp/instructions.ts';
 
-const managingPlaybooks = ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook'];
+const managingPlaybooks = [
+  'create_playbook',
+  'list_playbooks',
+  'get_playbook',
+  'update_playbook',
+  'retire_playbook',
+  'restore_playbook',
+];
 
 const insideAPlaybook = [
   'create_definition',

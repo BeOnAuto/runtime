@@ -241,7 +241,7 @@ describe.each(stores)('a retired playbook over HTTP, on $store', ({ skipped, env
     expect(reads.map(({ status }) => status)).toEqual([200, 200, 200]);
     expect(change).toMatchObject({
       status: 409,
-      body: { reason: 'conflict', detail: 'The playbook alpha is retired and can no longer change' },
+      body: { reason: 'conflict', detail: 'The playbook alpha is retired and cannot change until it is restored' },
     });
   });
 

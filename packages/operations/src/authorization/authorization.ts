@@ -83,7 +83,12 @@ function rejectionOfPlaybookStatus(
     return rejected('not_found', `There is no playbook ${playbook} in this org`);
   }
   return status === 'retired' && kind === 'command'
-    ? rejected('conflict', `The playbook ${playbook} is retired and can no longer change`, undefined, 'retired')
+    ? rejected(
+        'conflict',
+        `The playbook ${playbook} is retired and cannot change until it is restored`,
+        undefined,
+        'retired',
+      )
     : undefined;
 }
 

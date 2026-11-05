@@ -78,6 +78,15 @@ describe('the playbooks of list_activity', () => {
     expect(listedOf(await list(priya, { playbook: 'sales' })).rows).toEqual([]);
   });
 
+  it('lists a restored playbook as it was before its retirement, its restoration no row of its own', async () => {
+    const before = listedOf(await (await financeAndSales()).list(priya));
+    const { list, retired, restored } = await financeAndSales();
+    await retired(ada, 'sales', '2026-11-01T15:01:00.000Z');
+    await restored(ada, 'sales', '2026-11-01T15:02:00.000Z');
+
+    expect(listedOf(await list(priya))).toEqual(before);
+  });
+
   it('names who started the run of a broken definition, or who ended it where the start is not kept', async () => {
     const { list, record } = await financeAndSales();
     const failed = {

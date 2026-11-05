@@ -14,6 +14,7 @@ import {
   createPlaybook,
   defineUpdatePlaybook,
   ledgerPlaybookRegistry,
+  restorePlaybook,
   retirePlaybook,
   type PlaybookPages,
 } from '@on.auto/playbooks';
@@ -146,6 +147,8 @@ export function activityHarness() {
       ),
     retired: (caller: CallerIdentity, playbook: string, at: string) =>
       call(retirePlaybook, { caller, org: 'acme', input: { playbook }, encoding: 'json' }, at),
+    restored: (caller: CallerIdentity, playbook: string, at: string) =>
+      call(restorePlaybook, { caller, org: 'acme', input: { playbook }, encoding: 'json' }, at),
     record: (stream: string, ...facts: readonly RecordedFact[]) => recorded(ledger, stream, facts),
     list: (caller: CallerIdentity, input: Readonly<Record<string, string>> = {}, at = now) =>
       call(listActivity, { caller, org: 'acme', input, encoding: 'strings' }, at),

@@ -154,7 +154,7 @@ describe('create_playbook rejecting with conflict', () => {
     expect(await creatingAlpha()).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook alpha was retired, and a playbook id is never reused',
+      detail: 'The playbook alpha is retired, and its id stays reserved for it: restore_playbook brings it back',
       kind: 'taken',
     });
   });

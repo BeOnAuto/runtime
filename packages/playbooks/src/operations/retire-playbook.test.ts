@@ -35,7 +35,7 @@ describe('retire_playbook', () => {
     });
   });
 
-  it('retires a playbook for good, recording when', async () => {
+  it('retires a playbook, recording when', async () => {
     const { call } = harness();
     await call(createPlaybook, toAcme(acmeAdmin, { playbook: 'alpha', name: 'Alpha' }));
 

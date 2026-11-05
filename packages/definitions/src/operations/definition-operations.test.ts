@@ -67,6 +67,7 @@ describe('a catalog of the definition operations', () => {
       'get_playbook',
       'update_playbook',
       'retire_playbook',
+      'restore_playbook',
       'create_definition',
       'list_definitions',
       'get_definition',

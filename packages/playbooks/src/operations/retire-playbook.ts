@@ -11,11 +11,10 @@ export const retirePlaybook = defineCommand('org', {
   name: 'retire_playbook',
   title: 'Retire playbook',
   description: [
-    'Retires a playbook for good and returns it, readable with its history but never to change, be restored or have its id used again.',
-    'Use it when the person asks to retire that playbook; update_playbook changes its name or description.',
+    'Retires a playbook and returns it: it stays readable with its history, takes no changes or runs, and keeps its id, so no other playbook takes it.',
+    'restore_playbook brings it back. Use retire_playbook when the person asks to retire that playbook; update_playbook changes its name or description.',
     'Retiring a retired playbook changes nothing.',
   ].join(' '),
-  irreversible: true,
   repeatable: true,
   route: { method: 'POST', path: '/playbooks/{playbook}/retire' },
   inputSchema: Schema.Struct({ playbook: PlaybookIdField }),
@@ -26,6 +25,6 @@ export const retirePlaybook = defineCommand('org', {
     task: 'retire a playbook',
     attempt: ({ playbook }) => `retire the playbook ${quoted(playbook)}`,
     outcome: (playbook) =>
-      `Retired ${playbookNamed(playbook)}. It can no longer change, and there is no way to restore it.`,
+      `Retired ${playbookNamed(playbook)}. It does not change until it is restored, and no other playbook takes its id.`,
   },
 });

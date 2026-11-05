@@ -64,7 +64,7 @@ function unreachedOf({ because }: DryRun['server']): string {
 function whyNot({ caller_may: callerMay, playbook_retired: retired, allowed, server }: DryRun): readonly string[] {
   return [
     ...(callerMay ? [] : ['the caller may not change this playbook, which a call needs']),
-    ...(retired ? ['the playbook is retired and can no longer change'] : []),
+    ...(retired ? ['the playbook is retired and cannot change until it is restored'] : []),
     ...(allowed ? [] : ['whoever runs this server does not allow the tool']),
     ...(server.reachable === 'yes' ? [] : [unreachedOf(server)]),
   ];

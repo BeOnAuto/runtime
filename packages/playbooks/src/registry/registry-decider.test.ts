@@ -21,6 +21,8 @@ const alphaCreated: PlaybookEvent = {
 
 const alphaRetired: PlaybookEvent = { type: 'playbook_retired', data: { playbook: 'alpha' } };
 
+const alphaRestored: PlaybookEvent = { type: 'playbook_restored', data: { playbook: 'alpha' } };
+
 const recordedWhen = new Map<PlaybookEvent, Context>([
   [alphaCreated, creation],
   [alphaRetired, change],
@@ -47,6 +49,8 @@ function updating(name: string, description: string): PlaybookCommand {
 
 const retiring: PlaybookCommand = { type: 'retire', playbook: 'alpha', ...change };
 
+const restoring: PlaybookCommand = { type: 'restore', playbook: 'alpha', ...change };
+
 describe('creating a playbook', () => {
   const creating: PlaybookCommand = {
     type: 'create',
@@ -68,10 +72,13 @@ describe('creating a playbook', () => {
     );
   });
 
-  it('is rejected for the id of a retired playbook, because an id is never reused', () => {
+  it('is rejected for the id of a retired playbook, which keeps its id while retired', () => {
     expect(decided(creating, alphaCreated, alphaRetired)).toEqual(
       Result.fail(
-        new Conflict({ detail: 'The playbook alpha was retired, and a playbook id is never reused', kind: 'taken' }),
+        new Conflict({
+          detail: 'The playbook alpha is retired, and its id stays reserved for it: restore_playbook brings it back',
+          kind: 'taken',
+        }),
       ),
     );
   });
@@ -86,7 +93,12 @@ describe('updating a playbook', () => {
 
   it('is rejected for a retired playbook', () => {
     expect(decided(updating('Alpha Sales', ''), alphaCreated, alphaRetired)).toEqual(
-      Result.fail(new Conflict({ detail: 'The playbook alpha is retired and can no longer change', kind: 'retired' })),
+      Result.fail(
+        new Conflict({
+          detail: 'The playbook alpha is retired and cannot change until it is restored',
+          kind: 'retired',
+        }),
+      ),
     );
   });
 
@@ -118,6 +130,39 @@ describe('retiring a playbook', () => {
 
   it('records nothing for a playbook that is already retired', () => {
     expect(decided(retiring, alphaCreated, alphaRetired)).toStrictEqual(Result.succeed([]));
+  });
+});
+
+describe('restoring a playbook', () => {
+  it('is rejected for a playbook the org does not have', () => {
+    expect(decided(restoring)).toEqual(Result.fail(new NotFound({ detail: 'There is no playbook alpha in this org' })));
+  });
+
+  it('records the restoration of a retired playbook', () => {
+    expect(decided(restoring, alphaCreated, alphaRetired)).toStrictEqual(Result.succeed([alphaRestored]));
+  });
+
+  it('records nothing for a playbook that is not retired', () => {
+    expect(decided(restoring, alphaCreated)).toStrictEqual(Result.succeed([]));
+    expect(decided(restoring, alphaCreated, alphaRetired, alphaRestored)).toStrictEqual(Result.succeed([]));
+  });
+
+  it('leaves the restored playbook active, without when it was retired, changed when it was restored', () => {
+    const registry = registryAfter(
+      alphaCreated,
+      alphaRetired,
+      recorded(alphaRestored, { ...change, at: '2026-10-04T12:00:00.000Z' }),
+    );
+
+    expect(registry.get('alpha')).toStrictEqual({
+      id: 'alpha',
+      name: 'Alpha',
+      description: 'Answers sales questions',
+      status: 'active',
+      created_at: '2026-10-01T09:00:00.000Z',
+      created_by: ada,
+      updated_at: '2026-10-04T12:00:00.000Z',
+    });
   });
 });
 

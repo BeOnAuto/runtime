@@ -19,7 +19,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 import { toolsInsideAPlaybook as definitionTools } from '../testing/servers/served-tool-names.ts';
 
-const playbookTools = ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook'];
+const playbookTools = [
+  'create_playbook',
+  'list_playbooks',
+  'get_playbook',
+  'update_playbook',
+  'retire_playbook',
+  'restore_playbook',
+];
 
 const connectionTools = [
   'list_connection_tools',

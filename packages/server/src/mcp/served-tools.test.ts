@@ -8,7 +8,6 @@ import { servingReasoning, type ReasoningServer } from '../testing/servers/reaso
 
 let server: ReasoningServer;
 let tools: readonly ListedTool[];
-
 function onMcp<T>(use: (session: McpSession) => Promise<T>): Promise<T> {
   return withMcpSession('current revision', { url: `${server.origin}/mcp`, headers: {} }, use);
 }
@@ -90,8 +89,8 @@ function hasNoConstraint({ keywords }: Argument): boolean {
 }
 
 describe('the descriptions of the tools of /mcp', () => {
-  it('are thirty-nine, each under 800 characters, in three to eight sentences', () => {
-    expect(tools).toHaveLength(39);
+  it('are forty, each under 800 characters, in three to eight sentences', () => {
+    expect(tools).toHaveLength(40);
     expect(tools.filter(({ description = '' }) => description.length >= 800).map(({ name }) => name)).toEqual([]);
     expect(tools.filter((tool) => isOutsideTheSentenceBound(tool)).map(({ name }) => name)).toEqual([]);
   });
@@ -210,6 +209,7 @@ const served: Readonly<Record<string, Hints>> = {
   get_playbook: [true, false, true, false],
   update_playbook: [false, true, true, false],
   retire_playbook: [false, true, true, false],
+  restore_playbook: [false, true, true, false],
   list_models: [true, false, true, true],
   add_connection: [false, true, false, false],
   list_connections: [true, false, true, false],

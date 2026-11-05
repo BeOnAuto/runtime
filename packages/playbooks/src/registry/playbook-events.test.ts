@@ -17,10 +17,14 @@ const baseline: readonly (typeof PlaybookEventSchema.Type)[] = [
   { type: 'playbook_retired', data: { playbook: 'sales' }, context: acted },
 ];
 
+const restored: readonly (typeof PlaybookEventSchema.Type)[] = [
+  { type: 'playbook_restored', data: { playbook: 'sales' }, context: acted },
+];
+
 describe('the facts of the registry of playbooks', () => {
   recordedFactsBehaviour({
     schema: PlaybookEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.57.0': restored },
   });
 });

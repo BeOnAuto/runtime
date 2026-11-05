@@ -94,7 +94,7 @@ describe('a retired playbook, to an operation within it', () => {
     expect(await run(calling(poke, globexAdmin, 'globex', 'gamma'))).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook gamma is retired and can no longer change',
+      detail: 'The playbook gamma is retired and cannot change until it is restored',
       kind: 'retired',
     });
   });

@@ -15,7 +15,10 @@ const nothingGiven = new InvalidInput({
 });
 
 function retiredAlready(playbook: string): Conflict {
-  return new Conflict({ detail: `The playbook ${playbook} is retired and can no longer change`, kind: 'retired' });
+  return new Conflict({
+    detail: `The playbook ${playbook} is retired and cannot change until it is restored`,
+    kind: 'retired',
+  });
 }
 
 interface Changed {

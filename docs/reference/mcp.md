@@ -120,14 +120,15 @@ A client that honours the hints asks the person before it calls a tool marked de
 
 These tools are listed on `/mcp` and the org endpoint. Their routes are relative to `/v1/orgs/{org}`.
 
-| Tool              | HTTP operation                      | What it is for                                                                             |
-| ----------------- | ----------------------------------- | ------------------------------------------------------------------------------------------ |
-| `create_playbook` | `POST /playbooks`                   | Create a playbook, active and empty                                                        |
-| `list_playbooks`  | `GET /playbooks`                    | List the playbooks the caller may access                                                   |
-| `get_playbook`    | `GET /playbooks/{playbook}`         | Read a playbook, with the source of its page                                               |
-| `update_playbook` | `PUT /playbooks/{playbook}`         | Change a playbook's name, description or page                                              |
-| `retire_playbook` | `POST /playbooks/{playbook}/retire` | Retire a playbook for good                                                                 |
-| `list_models`     | `GET /models`                       | List the models a reasoning function may name; see [Model information](#model-information) |
+| Tool               | HTTP operation                       | What it is for                                                                             |
+| ------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `create_playbook`  | `POST /playbooks`                    | Create a playbook, active and empty                                                        |
+| `list_playbooks`   | `GET /playbooks`                     | List the playbooks the caller may access                                                   |
+| `get_playbook`     | `GET /playbooks/{playbook}`          | Read a playbook, with the source of its page                                               |
+| `update_playbook`  | `PUT /playbooks/{playbook}`          | Change a playbook's name, description or page                                              |
+| `retire_playbook`  | `POST /playbooks/{playbook}/retire`  | Retire a playbook, which keeps its id and stays readable                                   |
+| `restore_playbook` | `POST /playbooks/{playbook}/restore` | Bring a retired playbook back, active again                                                |
+| `list_models`      | `GET /models`                        | List the models a reasoning function may name; see [Model information](#model-information) |
 
 Each playbook `list_playbooks` returns holds every field of the playbook but its page, a retired one among them with `include_retired`; `get_playbook` adds the page's `source`, as `update_playbook` answers it. [Playbooks](http.md#playbooks) and [Models](http.md#models) give the fields, limits and refusals.
 

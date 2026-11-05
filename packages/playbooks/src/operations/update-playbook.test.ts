@@ -162,7 +162,7 @@ describe('update_playbook with a page, removed or refused', () => {
     expect(await updating({ page: '---\n---\n' })).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook alpha is retired and can no longer change',
+      detail: 'The playbook alpha is retired and cannot change until it is restored',
       kind: 'retired',
     });
     expect(
@@ -186,7 +186,7 @@ describe('update_playbook rejecting', () => {
     expect(await renaming('alpha')).toEqual({
       status: 'rejected',
       reason: 'conflict',
-      detail: 'The playbook alpha is retired and can no longer change',
+      detail: 'The playbook alpha is retired and cannot change until it is restored',
       kind: 'retired',
     });
   });

@@ -24,7 +24,10 @@ export interface ToolGroup {
 }
 
 const groups: readonly (readonly [string, readonly string[]])[] = [
-  ['Playbooks', ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook']],
+  [
+    'Playbooks',
+    ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook', 'restore_playbook'],
+  ],
   [
     'Definitions',
     [

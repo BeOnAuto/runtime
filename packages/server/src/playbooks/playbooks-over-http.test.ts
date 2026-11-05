@@ -131,7 +131,7 @@ describe('a retired playbook over HTTP', () => {
       await request(server.port, 'PUT', `${playbooks}/alpha`, { body: { name: 'Back', description: '' } }),
     ).toMatchObject({
       status: 409,
-      body: { reason: 'conflict', detail: 'The playbook alpha is retired and can no longer change' },
+      body: { reason: 'conflict', detail: 'The playbook alpha is retired and cannot change until it is restored' },
     });
   });
 

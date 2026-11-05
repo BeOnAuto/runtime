@@ -11,7 +11,7 @@ import { playbooksStream } from './playbooks-stream.ts';
 
 const playbookChanged = changeKindOf(
   'playbook',
-  'A playbook created, updated or retired',
+  'A playbook created, updated, retired or restored',
   { playbook: 'The id of the playbook' },
   { playbook: 'playbook' },
 );
@@ -26,6 +26,7 @@ const named: Readonly<Record<RecordedPlaybookEvent['type'], (fact: ChangedFact) 
   playbook_created: playbookChangedBy,
   playbook_updated: playbookChangedBy,
   playbook_retired: playbookChangedBy,
+  playbook_restored: playbookChangedBy,
 };
 
 export const playbookChanges: ChangeNaming<ChangedFact> = {

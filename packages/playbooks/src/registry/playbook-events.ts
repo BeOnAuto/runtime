@@ -24,6 +24,7 @@ export const PlaybookEventSchema = Schema.Union([
     ActedContextSchema,
   ),
   factOf('playbook_retired', Schema.Struct(ofThePlaybook), ActedContextSchema),
+  factOf('playbook_restored', Schema.Struct(ofThePlaybook), ActedContextSchema),
 ]);
 
 export type RecordedPlaybookEvent = typeof PlaybookEventSchema.Type;

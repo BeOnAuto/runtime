@@ -20,7 +20,12 @@ export interface PlaybookRetirement {
   readonly playbook: string;
 }
 
-export type PlaybookCommandData = PlaybookCreation | PlaybookUpdate | PlaybookRetirement;
+export interface PlaybookRestoration {
+  readonly type: 'restore';
+  readonly playbook: string;
+}
+
+export type PlaybookCommandData = PlaybookCreation | PlaybookUpdate | PlaybookRetirement | PlaybookRestoration;
 
 export interface CommandMetadata {
   readonly by: string;

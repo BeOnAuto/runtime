@@ -4,6 +4,7 @@ import { Result } from 'effect';
 import type {
   PlaybookCommand,
   PlaybookCreation,
+  PlaybookRestoration,
   PlaybookRetirement,
   PlaybookUpdate,
   CommandMetadata,
@@ -26,7 +27,7 @@ function takenBy({ id, status }: Playbook): Conflict {
     detail:
       status === 'active'
         ? `There is already a playbook ${id} in this org`
-        : `The playbook ${id} was retired, and a playbook id is never reused`,
+        : `The playbook ${id} is retired, and its id stays reserved for it: restore_playbook brings it back`,
     kind: 'taken',
   });
 }
@@ -45,7 +46,10 @@ function decideUpdate({ playbook, name, description }: PlaybookUpdate, registry:
   }
   if (existing.status === 'retired') {
     return Result.fail(
-      new Conflict({ detail: `The playbook ${playbook} is retired and can no longer change`, kind: 'retired' }),
+      new Conflict({
+        detail: `The playbook ${playbook} is retired and cannot change until it is restored`,
+        kind: 'retired',
+      }),
     );
   }
   const renamed = name !== existing.name;
@@ -67,6 +71,14 @@ function decideRetirement({ playbook }: PlaybookRetirement, registry: Registry):
   return existing.status === 'retired' ? nothingToRecord : recording({ type: 'playbook_retired', data: { playbook } });
 }
 
+function decideRestoration({ playbook }: PlaybookRestoration, registry: Registry): Decision {
+  const existing = registry.get(playbook);
+  if (existing === undefined) {
+    return Result.fail(playbookNotFound(playbook));
+  }
+  return existing.status === 'retired' ? recording({ type: 'playbook_restored', data: { playbook } }) : nothingToRecord;
+}
+
 export function registryContextOf({ by, at }: CommandMetadata): Context {
   return { at, by };
 }
@@ -78,5 +90,8 @@ export function decideOnRegistry(command: PlaybookCommand, registry: Registry): 
   if (command.type === 'update') {
     return decideUpdate(command, registry);
   }
-  return decideRetirement(command, registry);
+  if (command.type === 'retire') {
+    return decideRetirement(command, registry);
+  }
+  return decideRestoration(command, registry);
 }

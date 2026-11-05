@@ -1,6 +1,6 @@
 # @on.auto/playbooks
 
-The playbook operations of Auto Runtime: create, list, read, update and retire the playbooks of an org, and follow what happened in one playbook. They are defined on the application layer, [`@on.auto/operations`](../operations).
+The playbook operations of Auto Runtime: create, list, read, update, retire and restore the playbooks of an org, and follow what happened in one playbook. They are defined on the application layer, [`@on.auto/operations`](../operations).
 
 ## A playbook
 
@@ -23,19 +23,20 @@ The limits of `name` and `description` hold for the text as sent, so the JSON Sc
 
 ## The operations
 
-All five are org operations, so their routes are relative to the org, and all five are also MCP tools. `playbookOperationsOf(pages)` lists them for a catalog, over `pages`, a `PlaybookPages` the composition supplies: `pageOf` reads a playbook's page, by its org and id, and `save` checks and saves one, or removes it with `null`, so this package depends on nothing that keeps pages. `update_playbook` saves the page it is given first, after it finds the playbook active, then the name and the description, and `get_playbook` and `update_playbook` answer the page as `page.source`; `list_playbooks` answers no page.
+All six are org operations, so their routes are relative to the org, and all six are also MCP tools. `playbookOperationsOf(pages)` lists them for a catalog, over `pages`, a `PlaybookPages` the composition supplies: `pageOf` reads a playbook's page, by its org and id, and `save` checks and saves one, or removes it with `null`, so this package depends on nothing that keeps pages. `update_playbook` saves the page it is given first, after it finds the playbook active, then the name and the description, and `get_playbook` and `update_playbook` answer the page as `page.source`; `list_playbooks` answers no page.
 
-| Operation         | Kind    | Route                               | Input                                                      | Answer                                 | Rejections of the handler |
-| ----------------- | ------- | ----------------------------------- | ---------------------------------------------------------- | -------------------------------------- | ------------------------- |
-| `create_playbook` | command | `POST /playbooks`                   | `playbook` (the id), `name`, `description` (default empty) | the playbook and `studio`, `201`       | `conflict`                |
-| `list_playbooks`  | query   | `GET /playbooks`                    | `include_retired` (default `false`)                        | `{ playbooks, welcome }`, sorted by id | none                      |
-| `get_playbook`    | query   | `GET /playbooks/{playbook}`         | `playbook`                                                 | the playbook, active or retired        | `not_found`               |
-| `update_playbook` | command | `PUT /playbooks/{playbook}`         | `playbook`, `name`, `description`, all required            | the playbook                           | `not_found`, `conflict`   |
-| `retire_playbook` | command | `POST /playbooks/{playbook}/retire` | `playbook`                                                 | the playbook                           | `not_found`, `conflict`   |
+| Operation          | Kind    | Route                                | Input                                                      | Answer                                 | Rejections of the handler |
+| ------------------ | ------- | ------------------------------------ | ---------------------------------------------------------- | -------------------------------------- | ------------------------- |
+| `create_playbook`  | command | `POST /playbooks`                    | `playbook` (the id), `name`, `description` (default empty) | the playbook and `studio`, `201`       | `conflict`                |
+| `list_playbooks`   | query   | `GET /playbooks`                     | `include_retired` (default `false`)                        | `{ playbooks, welcome }`, sorted by id | none                      |
+| `get_playbook`     | query   | `GET /playbooks/{playbook}`          | `playbook`                                                 | the playbook, active or retired        | `not_found`               |
+| `update_playbook`  | command | `PUT /playbooks/{playbook}`          | `playbook`, `name`, `description`, all required            | the playbook                           | `not_found`, `conflict`   |
+| `retire_playbook`  | command | `POST /playbooks/{playbook}/retire`  | `playbook`                                                 | the playbook                           | `not_found`, `conflict`   |
+| `restore_playbook` | command | `POST /playbooks/{playbook}/restore` | `playbook`                                                 | the playbook, active again             | `not_found`, `conflict`   |
 
 - `create_playbook` meets `conflict` when an active or a retired playbook holds the id.
 - `update_playbook` meets `conflict` when the playbook is retired. An update that changes nothing succeeds and records nothing.
-- Retiring is permanent: there is no restore. Retiring a retired playbook succeeds and records nothing.
+- A retired playbook keeps its id, so no other playbook takes it, and `restore_playbook` brings it back active, with its functions, workflows, page and history as they were. Retiring a retired playbook, or restoring one that is not retired, succeeds and records nothing.
 - Every command also meets `conflict` when the org's playbooks changed while it decided.
 - `list_playbooks` lists only the playbooks the caller may access, and leaves out the retired ones unless `include_retired` is true. `include_retired` decodes from a JSON boolean and from the strings `true` and `false` of a query string.
 - `list_playbooks` of an org with no playbook at all, active or retired, to a caller who may make its first one, who acts on every playbook of the org (`*`) and holds `org:write`, answers `welcome` beside the empty `playbooks`, `welcomeOf` of `src/plain-language/playbook-words.ts`: what a playbook is, three ways to start and what Studio shows, ending with Studio's home where the call has `StudioLinks` of `@on.auto/operations`. Its plain language relays it, so over MCP the result's text is the welcome, whole. A caller limited to some playbooks, or one that may only read, is answered the plain empty list, so it learns nothing of the org, and an org with a playbook answers no welcome.
@@ -58,7 +59,7 @@ Before a handler runs, the dispatcher rejects with `forbidden` a caller of anoth
 
 It reads the playbook's whole partition of the ledger (`PlaybookReader.readRecorded({ kind: 'everything' }, page)`), or with `run_id` the messages correlated to that run (`{ kind: 'correlated', correlation }`), and answers `{ events, has_more, next_cursor }`, each event a `PublicEvent`, `{ id, cursor, causation_id, at, type, summary, data }`. A run that another run started belongs to the tree of the run at its top, so its own id answers nothing. `limit` counts the events a page answers with, the step events of a workflow's records included, through `eventsPageOf` of `@on.auto/operations`, so a page may end inside a record. A record of a stream kind no presenter presents, or of a type its presenter hides, is left out, and with `type` only the events presented under that name are kept, though another kind stores a type of the same name. A page looks at `limit` records, or with `type` at up to 1,000, and ends at 4 MiB of stored data. So a page may hold fewer events than `limit`, or none, while `has_more` is true; `next_cursor` is null only when nothing remains. A cursor that does not decode, or that another playbook gave, is `invalid_input` at `/cursor`, and a `type` no presenter shows `invalid_input` at `/type`.
 
-The feed cannot show the playbook's own creation, update and retirement: they are recorded in the org's `playbooks` stream, outside the playbook's partition, and `get_playbook` reads them. A retired playbook stays readable, since the dispatcher runs every query on it.
+The feed cannot show the playbook's own creation, update, retirement and restoration: they are recorded in the org's `playbooks` stream, outside the playbook's partition, and `get_playbook` reads them. A retired playbook stays readable, since the dispatcher runs every query on it.
 
 ## What changed
 
@@ -78,17 +79,18 @@ The full set of an org's playbooks is the org's playbook registry. It lives in o
 - `playbook_created`, with the name and the description
 - `playbook_updated`, with only the fields that changed
 - `playbook_retired`
+- `playbook_restored`
 
 There is no read model: each call folds the stream. A pure decider holds the rules; the handlers pass it who and when in the command.
 
 ## The playbook registry port
 
-`ledgerPlaybookRegistry` is a `Layer` that provides the `PlaybookRegistry` port of `@on.auto/operations` from a `Ledger`. It answers the status of a playbook as the org's playbook registry holds it: `active` from its creation, `retired` from its retirement, and `unknown` for an id the org never created. It names the stream with `streamPrefixOfOrg`, the prefix the org-bound ports put before `playbooks`, so it reads the very stream the operations write.
+`ledgerPlaybookRegistry` is a `Layer` that provides the `PlaybookRegistry` port of `@on.auto/operations` from a `Ledger`. It answers the status of a playbook as the org's playbook registry holds it: `active` from its creation or its restoration, `retired` from its retirement, and `unknown` for an id the org never created. It names the stream with `streamPrefixOfOrg`, the prefix the org-bound ports put before `playbooks`, so it reads the very stream the operations write.
 
-The dispatcher applies the status to every playbook-scoped operation. A retired playbook stays readable: every query runs on it, so what the playbook recorded survives its retirement. Every command on a retired playbook is refused with `conflict`, kind `retired`, and the detail `update_playbook` gives, such as `The playbook gamma is retired and can no longer change`. An unknown playbook is `not_found`.
+The dispatcher applies the status to every playbook-scoped operation. A retired playbook stays readable: every query runs on it, so what the playbook recorded survives its retirement. Every command on a retired playbook is refused with `conflict`, kind `retired`, and the detail `update_playbook` gives, such as `The playbook gamma is retired and cannot change until it is restored`. An unknown playbook is `not_found`.
 
 `foundPlaybook(playbook)` is the same lookup for an org operation that takes a `playbook` of its own, which the dispatcher checks access to but never looks up: an effect that needs `OrgReader` and answers the playbook, active or retired, as `get_playbook` does, or fails with `NotFound` and `get_playbook`'s detail, `There is no playbook nowhere in this org`, the words the dispatcher gives an unknown playbook. The server gives it to `search` of the org, so a playbook it is given that the org does not have is `not_found` there as at the playbook's own route.
 
 ## Source
 
-`src/index.ts` is the only entry point. `src/registry` holds the org's playbook registry: a playbook, the facts and commands of the `playbooks` stream, the registry's decider and its rules, the stream's name, and `ledgerPlaybookRegistry`. `src/operations` holds the five operations and how they load the registry and record in it. `src/feed` holds `list_playbook_events`. `src/changes` holds `list_org_changes` and `list_playbook_changes`, and `src/registry` the naming of the changes of the `playbooks` stream. `src/testing` holds what the tests share. `operations` depends on `registry`, never the other way round.
+`src/index.ts` is the only entry point. `src/registry` holds the org's playbook registry: a playbook, the facts and commands of the `playbooks` stream, the registry's decider and its rules, the stream's name, and `ledgerPlaybookRegistry`. `src/operations` holds the six operations and how they load the registry and record in it. `src/feed` holds `list_playbook_events`. `src/changes` holds `list_org_changes` and `list_playbook_changes`, and `src/registry` the naming of the changes of the `playbooks` stream. `src/testing` holds what the tests share. `operations` depends on `registry`, never the other way round.

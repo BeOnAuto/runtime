@@ -19,7 +19,7 @@ export interface PlaybookRegister {
 const emptyRegister: PlaybookRegister = { active: new Set(), known: new Set(), changes: [] };
 
 function changeOf(fact: PlaybookFact): ActivityRow | undefined {
-  if (fact.type === 'playbook_retired') {
+  if (fact.type === 'playbook_retired' || fact.type === 'playbook_restored') {
     return undefined;
   }
   const at = millisecondsOf(fact.context.at);
@@ -48,7 +48,7 @@ function changeOf(fact: PlaybookFact): ActivityRow | undefined {
 
 function activeAfter(active: ReadonlySet<string>, fact: PlaybookFact): ReadonlySet<string> {
   const after = new Set(active);
-  if (fact.type === 'playbook_created') {
+  if (fact.type === 'playbook_created' || fact.type === 'playbook_restored') {
     after.add(fact.data.playbook);
   }
   if (fact.type === 'playbook_retired') {

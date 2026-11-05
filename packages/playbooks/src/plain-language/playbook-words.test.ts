@@ -1,7 +1,7 @@
 import type { Registration } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { createPlaybook, listPlaybooks, retirePlaybook } from '../index.ts';
+import { createPlaybook, listPlaybooks, restorePlaybook, retirePlaybook } from '../index.ts';
 import { updatePlaybook } from '../testing/playbook-pages.ts';
 
 const sales = {
@@ -97,13 +97,25 @@ describe('the plain language of update_playbook', () => {
 });
 
 describe('the plain language of retire_playbook', () => {
-  it('says the playbook can no longer change and cannot be restored', () => {
+  it('says the playbook does not change until it is restored, and keeps its id', () => {
     expect(outcomeOf(retirePlaybook.registration, retired, { playbook: 'old' })).toBe(
-      'Retired the playbook “Old”. It can no longer change, and there is no way to restore it.',
+      'Retired the playbook “Old”. It does not change until it is restored, and no other playbook takes its id.',
     );
   });
 
   it('names the playbook it tried to retire', () => {
     expect(attemptOf(retirePlaybook.registration, { playbook: 'old' })).toBe('retire the playbook “old”');
+  });
+});
+
+describe('the plain language of restore_playbook', () => {
+  it('says the playbook is active again', () => {
+    expect(outcomeOf(restorePlaybook.registration, { ...retired, status: 'active' }, { playbook: 'old' })).toBe(
+      'Restored the playbook “Old”. It is active again and can change and run as before.',
+    );
+  });
+
+  it('names the playbook it tried to restore', () => {
+    expect(attemptOf(restorePlaybook.registration, { playbook: 'old' })).toBe('restore the playbook “old”');
   });
 });

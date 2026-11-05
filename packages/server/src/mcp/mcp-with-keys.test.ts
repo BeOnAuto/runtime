@@ -18,7 +18,14 @@ const acmeAlpha = createApiKey({ id: 'acme-alpha', org: 'acme', permissions: all
 
 const apiKeys = JSON.stringify([acmeAdmin.entry, acmeReader.entry, acmeAlpha.entry]);
 
-const playbookTools = ['create_playbook', 'list_playbooks', 'get_playbook', 'update_playbook', 'retire_playbook'];
+const playbookTools = [
+  'create_playbook',
+  'list_playbooks',
+  'get_playbook',
+  'update_playbook',
+  'retire_playbook',
+  'restore_playbook',
+];
 
 const definitionTools = [
   'create_definition',
@@ -143,6 +150,7 @@ describe('the playbook tools of the server', () => {
           description: 'Notes',
         }),
         retired: await session.callTool('retire_playbook', { playbook: 'alpha' }),
+        restored: await session.callTool('restore_playbook', { playbook: 'alpha' }),
       }),
     );
     expect(outcome.created.structuredContent).toMatchObject({ id: 'alpha', name: 'Alpha', status: 'active' });
@@ -151,6 +159,7 @@ describe('the playbook tools of the server', () => {
     });
     expect(outcome.updated.structuredContent).toMatchObject({ name: 'Alpha prime', description: 'Notes' });
     expect(outcome.retired.structuredContent).toMatchObject({ status: 'retired' });
+    expect(outcome.restored.structuredContent).toMatchObject({ status: 'active' });
   });
 });
 

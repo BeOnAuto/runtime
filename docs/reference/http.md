@@ -105,14 +105,15 @@ This route serves the bytes a playbook keeps by their digest at an address the r
 
 These routes are relative to `/v1/orgs/{org}`:
 
-| Operation              | Method and route                    | Permission                    | Input                                            |
-| ---------------------- | ----------------------------------- | ----------------------------- | ------------------------------------------------ |
-| `create_playbook`      | `POST /playbooks`                   | `org:write`                   | `playbook`, `name`, optional `description`       |
-| `list_playbooks`       | `GET /playbooks`                    | `org:read` or `playbook:read` | Optional `include_retired`                       |
-| `get_playbook`         | `GET /playbooks/{playbook}`         | `org:read`                    | Playbook id in path                              |
-| `update_playbook`      | `PUT /playbooks/{playbook}`         | `org:write`                   | At least one of `name`, `description` and `page` |
-| `retire_playbook`      | `POST /playbooks/{playbook}/retire` | `org:write`                   | Playbook id in path                              |
-| `render_playbook_page` | `POST /playbooks/{playbook}/render` | `playbook:read`               | Playbook id in path                              |
+| Operation              | Method and route                     | Permission                    | Input                                            |
+| ---------------------- | ------------------------------------ | ----------------------------- | ------------------------------------------------ |
+| `create_playbook`      | `POST /playbooks`                    | `org:write`                   | `playbook`, `name`, optional `description`       |
+| `list_playbooks`       | `GET /playbooks`                     | `org:read` or `playbook:read` | Optional `include_retired`                       |
+| `get_playbook`         | `GET /playbooks/{playbook}`          | `org:read`                    | Playbook id in path                              |
+| `update_playbook`      | `PUT /playbooks/{playbook}`          | `org:write`                   | At least one of `name`, `description` and `page` |
+| `retire_playbook`      | `POST /playbooks/{playbook}/retire`  | `org:write`                   | Playbook id in path                              |
+| `restore_playbook`     | `POST /playbooks/{playbook}/restore` | `org:write`                   | Playbook id in path                              |
+| `render_playbook_page` | `POST /playbooks/{playbook}/render`  | `playbook:read`               | Playbook id in path                              |
 
 | Field         | Rule                                                                                             |
 | ------------- | ------------------------------------------------------------------------------------------------ |
@@ -129,16 +130,16 @@ Each operation returns the playbook, with its `id`, `name`, `description`, `stat
 - A key limited to a list of playbooks can create only a playbook whose id is on that list.
 - `update_playbook` changes the fields it is given and keeps the others. A `page` is checked as [Saving a page](page-format.md#saving-a-page) sets out, with its issues under `/page`, and recorded as `playbook_page_saved`. An update that changes nothing records nothing.
 - `render_playbook_page` renders the playbook's page now and answers `{ page: { runs, standing } }`, both where the page has `data` ([The preview](page-format.md#the-preview)).
-- Retirement is permanent. A playbook id cannot be reused, and a retired playbook cannot be restored.
+- A retired playbook keeps its id: no other playbook can take it. `restore_playbook` brings the playbook back, active, with its definitions, page and history as they were. Restoring a playbook that is not retired succeeds and changes nothing.
 - A retired playbook stays readable: `get_playbook` reads it, `include_retired` lists it, and its definitions, runs and history remain readable. Commands inside it return `conflict` with the kind `retired`. Retiring it again succeeds and changes nothing.
 
-| Case                                                                                  | Response                  |
-| ------------------------------------------------------------------------------------- | ------------------------- |
-| `create_playbook` with an id the org has or had                                       | `conflict`                |
-| `update_playbook` of a retired playbook                                               | `conflict`                |
-| `get_playbook`, `update_playbook` or `retire_playbook` of an id the org does not have | `not_found`               |
-| `render_playbook_page` of a playbook without a page                                   | `not_found`               |
-| A change that meets another change to the org's playbooks at the same moment          | `conflict`; send it again |
+| Case                                                                                                      | Response                  |
+| --------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `create_playbook` with an id the org has or had                                                           | `conflict`                |
+| `update_playbook` of a retired playbook                                                                   | `conflict`                |
+| `get_playbook`, `update_playbook`, `retire_playbook` or `restore_playbook` of an id the org does not have | `not_found`               |
+| `render_playbook_page` of a playbook without a page                                                       | `not_found`               |
+| A change that meets another change to the org's playbooks at the same moment                              | `conflict`; send it again |
 
 ### Links to Studio
 
@@ -1771,7 +1772,7 @@ Content-Type: application/json
 | `would_run`        | Whether `execute_connection` would call the tool now: the caller may, the playbook is not retired, the operator allows the tool, and its server responded                                      |
 | `needs`            | `playbook:write`, the permission `query_connection` and `execute_connection` need whatever the tool does                                                                                       |
 | `caller_may`       | Whether the caller has that permission                                                                                                                                                         |
-| `playbook_retired` | Whether the playbook is retired. `query_connection` and `execute_connection` refuse a retired playbook, since it can no longer change                                                          |
+| `playbook_retired` | Whether the playbook is retired. `query_connection` and `execute_connection` refuse a retired playbook, since it cannot change until it is restored                                            |
 | `allowed`          | Whether the operator allows the tool on its server's entry, for runs and for calls made by hand alike                                                                                          |
 | `mark`             | The tool's [mark](#the-mark-of-a-tool), `reads`, `acts` or `unmarked`; `null` when the tool's listing was not read, for a tool the operator does not allow or a server that could not be asked |
 | `arguments`        | The `arguments` checked as `validate` checks them, `valid: null` with one issue saying why when the tool's input schema was not read; `null` when none were given                              |

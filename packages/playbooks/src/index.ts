@@ -7,6 +7,7 @@ export { defineListPlaybookEvents } from './feed/list-playbook-events.ts';
 export { defineGetPlaybook } from './operations/get-playbook.ts';
 export { foundPlaybook, loadRegistry } from './operations/registry-loading.ts';
 export { listPlaybooks } from './operations/list-playbooks.ts';
+export { restorePlaybook } from './operations/restore-playbook.ts';
 export { retirePlaybook } from './operations/retire-playbook.ts';
 export { defineUpdatePlaybook } from './operations/update-playbook.ts';
 export { PlaybookSchema, type Playbook } from './registry/playbook.ts';
