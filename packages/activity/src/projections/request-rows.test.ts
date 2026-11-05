@@ -61,7 +61,24 @@ describe('the requests of the activity', () => {
         answer_schema: JSON.stringify(yesOrNo),
         waits_on: 'priya@acme.example',
         expires_at: Date.parse(asked.expiresAt),
+        sign_in: null,
       },
+    });
+  });
+
+  it('opens a row that waits on the person a sign-in request asks, by id, keeping its site and link', async () => {
+    const { record, rows } = projected(requestRows);
+    const signIn = { server: 'browser', site: 'portal.supplier.example', link: 'https://studio.example/sign-in' };
+    await record(
+      streamOf(approve),
+      runStarted(approve, at(0), 'playbook:finance'),
+      runDeferred(approve, at(1), { ...asked, to: 'person:user_7kLm2', signIn }),
+    );
+
+    expect((await rows())[approve.runId]).toMatchObject({
+      open: true,
+      waits_on: 'person:user_7kLm2',
+      sign_in: JSON.stringify(signIn),
     });
   });
 });
@@ -124,7 +141,8 @@ describe('what opens no request', () => {
 });
 
 describe('whom a request waits on', () => {
-  it('is the address its party names, in lower case, or any member where it names none', () => {
+  it('is the person its party names by id, the address it names, in lower case, or any member where it names none', () => {
+    expect(waitsOnOf('person:user_7kLm2')).toBe('person:user_7kLm2');
     expect(waitsOnOf(' Dana@Example.com ')).toBe('dana@example.com');
     expect(waitsOnOf('#approvals')).toBe('any_member');
     expect(waitsOnOf('agent')).toBe('any_member');

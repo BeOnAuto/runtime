@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { ada, listedOf, outputOf, priya } from '../testing/harness.ts';
+import { activityHarness, ada, listedOf, outputOf, priya } from '../testing/harness.ts';
+import { runDeferred, runStarted } from '../testing/recorded-facts.ts';
 import { at, financeAndSales, runs } from '../testing/scenario.ts';
 import { listActivity } from './list-activity.ts';
 
@@ -72,9 +73,43 @@ describe('a row of list_activity', () => {
           status: null,
           waits_on: 'dana@example.com',
           expires_at: '2026-11-03T12:00:00.000Z',
+          sign_in: null,
           seen: null,
         },
       ],
     });
+  });
+});
+
+describe('a sign-in request in list_activity', () => {
+  it('waits on the person it asks by id, counted for them alone, with its site and the link where they sign in', async () => {
+    const harness = activityHarness();
+    const signIn = { server: 'browser', site: 'portal.supplier.example', link: 'https://studio.example/sign-in' };
+    const asking = {
+      runId: '019a4000-0000-7000-8000-000000000009',
+      type: 'interaction',
+      name: 'portal-sign-in',
+      version: 1,
+    };
+    await harness.created(priya, 'finance', at('10:00'));
+    await harness.record(
+      `playbook/acme/finance/runs/${asking.runId}`,
+      runStarted(asking, at('11:00'), 'playbook:finance'),
+      runDeferred(asking, at('11:01'), {
+        to: priya.id,
+        message: 'Sign in to the supplier portal.',
+        expiresAt: '2026-11-02T11:01:00.000Z',
+        answerSchema: { type: 'object' },
+        signIn,
+      }),
+    );
+
+    expect([outputOf(await harness.list(priya)), outputOf(await harness.list(ada))]).toMatchObject([
+      {
+        rows: [{ kind: 'needs_you', waits_on: priya.id, sign_in: signIn }, { kind: 'new' }],
+        counts: { needs_you: 1 },
+      },
+      { counts: { needs_you: 0 } },
+    ]);
   });
 });

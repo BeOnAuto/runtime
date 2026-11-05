@@ -43,7 +43,7 @@ export const signedInPersonPrefix = 'person:';
 
 export const localDeveloperId = 'local';
 
-function isAPerson(callerId: string): boolean {
+export function isAPerson(callerId: string): boolean {
   return callerId.startsWith(signedInPersonPrefix) || callerId === localDeveloperId;
 }
 

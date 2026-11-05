@@ -1,5 +1,13 @@
 import { Schema } from 'effect';
 
+export const SignInRecordSchema = Schema.Struct({
+  server: Schema.String,
+  site: Schema.String,
+  link: Schema.String,
+});
+
+export type SignInRecord = typeof SignInRecordSchema.Type;
+
 export const RequestRecordSchema = Schema.Struct({
   to: Schema.String,
   message: Schema.String,
@@ -10,6 +18,7 @@ export const RequestRecordSchema = Schema.Struct({
   requested_at: Schema.String,
   deliver: Schema.optionalKey(Schema.JsonObject),
   replies: Schema.optionalKey(Schema.JsonObject),
+  sign_in: Schema.optionalKey(SignInRecordSchema),
 });
 
 export type RequestRecord = typeof RequestRecordSchema.Type;

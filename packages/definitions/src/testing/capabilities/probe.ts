@@ -1,5 +1,5 @@
 import { compileJsonSchema } from '@on.auto/json-schema';
-import { Conflict, InvalidInput, Unavailable } from '@on.auto/operations';
+import { Conflict, InvalidInput, RunUnanswered, Unavailable } from '@on.auto/operations';
 import { mostValueDepth } from '@on.auto/workflow-engine';
 import { Effect, Predicate, Result, type Schema } from 'effect';
 
@@ -19,6 +19,7 @@ type Mishap =
   | 'conflict'
   | 'unworkable'
   | 'unknown'
+  | 'unanswerable'
   | 'breakdown'
   | 'spent'
   | 'overspent';
@@ -46,7 +47,7 @@ function linesOf(source: string, rejecting: boolean): Effect.Effect<readonly str
     : Effect.fail(new InvalidInput({ detail: 'The probe document has lines it does not accept', issues }));
 }
 
-const mishaps: Readonly<Record<Mishap, Effect.Effect<never, Unavailable | Conflict>>> = {
+const mishaps: Readonly<Record<Mishap, Effect.Effect<never, Unavailable | Conflict | RunUnanswered>>> = {
   stall: Effect.never,
   unavailable: Effect.fail(new Unavailable({ detail: 'The probe cannot answer now' })),
   unoffered: Effect.fail(
@@ -66,6 +67,9 @@ const mishaps: Readonly<Record<Mishap, Effect.Effect<never, Unavailable | Confli
       kind: 'effect_unknown',
       because: 'tool_error',
     }),
+  ),
+  unanswerable: Effect.fail(
+    new RunUnanswered({ detail: 'The probe acts for nobody who can answer', kind: 'no_person' }),
   ),
   breakdown: Effect.die(new Error('The probe broke down')),
   spent: Effect.fail(

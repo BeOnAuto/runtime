@@ -1,3 +1,4 @@
+import { SignInRecordSchema, type SignInRecord } from '@on.auto/definitions';
 import type { ProjectedRow } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
@@ -42,6 +43,7 @@ const OpenRequestRowSchema = Schema.Struct({
   reply: Schema.NullOr(Schema.String),
   reply_refusals: Schema.Int,
   refusals_told: Schema.Int,
+  sign_in: Schema.NullOr(Schema.String),
 });
 
 export type OpenRequestRow = typeof OpenRequestRowSchema.Type;
@@ -112,6 +114,12 @@ export function deliveryOf(deliver: Schema.JsonObject | undefined): string | nul
 }
 
 const decodeDelivery = Schema.decodeUnknownSync(Schema.NullOr(Schema.fromJsonString(DeliverySchema)));
+
+const decodeSignIn = Schema.decodeUnknownSync(Schema.NullOr(Schema.fromJsonString(SignInRecordSchema)));
+
+export function signInOfRow({ sign_in: signIn }: Pick<OpenRequestRow, 'sign_in'>): SignInRecord | null {
+  return decodeSignIn(signIn);
+}
 
 export function routeOfRow({ delivery }: Pick<OpenRequestRow, 'delivery'>): Route {
   return routeOf({ deliver: decodeDelivery(delivery) ?? undefined });

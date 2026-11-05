@@ -75,7 +75,7 @@ export const RunRejectionSchema = Schema.Union([
     detail: Schema.String,
     kind: UnansweredKindSchema.annotate({
       description:
-        'Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts',
+        'Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization',
     }),
   }),
 ]).annotate({ description: 'Why the run was rejected, that it was cancelled, or that nobody answered it' });

@@ -88,6 +88,7 @@ describe('the open request of a run', () => {
         reply: null,
         reply_refusals: 0,
         refusals_told: 0,
+        sign_in: null,
       },
       expect.objectContaining({
         type: 'reasoning',
@@ -100,6 +101,17 @@ describe('the open request of a run', () => {
       undefined,
       undefined,
     ]);
+  });
+});
+
+describe('the open request of a run that asks the person it acts for to sign in', () => {
+  it('keeps the site and the link where they sign in', () => {
+    const signIn = { server: 'browser', site: 'portal.supplier.example', link: 'https://studio.example/sign-in' };
+
+    expect(after(undefined, deferralOf({ ...forAnAgent, sign_in: signIn }))).toMatchObject({
+      standing: 'held_for_an_agent',
+      sign_in: JSON.stringify(signIn),
+    });
   });
 });
 

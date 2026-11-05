@@ -81,6 +81,7 @@ Definitions, versions, runs and results are separate concepts, and an overview d
 | Delivery          | How a request reaches a party through a connection the person chose: one call of the tool the function names in `deliver`.                                                 |
 | Answer            | What the party or the tool gives back; it must match the answer schema and is recorded on the run once, as the run's output.                                               |
 | Notification      | A request that takes no answer, so it goes through a connection; its run succeeds once it is delivered.                                                                    |
+| Sign-in request   | A request that asks the person a run acts for to sign in to a site in a browser. It waits on that person by id, and only they may answer it.                               |
 
 An interaction function asks a system and returns its result at once, or asks a person and takes the answer later. Answering a request is not sending an event: an event goes to a waiting workflow run, and an answer goes to the run of the function that asked.
 

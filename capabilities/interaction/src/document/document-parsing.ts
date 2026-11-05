@@ -13,10 +13,11 @@ import { asksASystem, callFrom, seemsToAskASystem } from './call-parts.ts';
 import { decodeFrontMatter, interactionFrontMatter } from './front-matter.ts';
 import type { InteractionFunctionDefinitionDocument } from './interaction-document.ts';
 import { requestFrom } from './request-parts.ts';
+import { asksToSignIn, seemsToAskToSignIn, signInFrom } from './sign-in-parts.ts';
 import { messageOf, type Checked } from './written-parts.ts';
 
-function bodyIssuesOf(parts: DocumentParts, callsATool: boolean): readonly DocumentIssue[] {
-  if (callsATool) {
+function bodyIssuesOf(parts: DocumentParts, writesNoRequest: boolean): readonly DocumentIssue[] {
+  if (writesNoRequest) {
     return [];
   }
   const message = messageOf(parts);
@@ -30,17 +31,21 @@ function documentFrom(
 ): Checked<InteractionFunctionDefinitionDocument> {
   const decoded = decodeFrontMatter(reading.root);
   if (reading.issues.length > 0 || Result.isFailure(decoded)) {
-    return Result.fail([...reading.issues, ...bodyIssuesOf(parts, asksASystem(reading.root))]);
+    const { root } = reading;
+    return Result.fail([...reading.issues, ...bodyIssuesOf(parts, asksASystem(root) || asksToSignIn(root))]);
   }
   const written = decoded.success;
   const read = { lines: reading.lines, clock };
+  if (written.sign_in !== undefined) {
+    return signInFrom(written, written.sign_in, read, parts);
+  }
   return written.call === undefined ? requestFrom(written, read, parts) : callFrom(written, written.call, read, parts);
 }
 
 function documentOf(parts: DocumentParts, clock: RenderClock): Checked<InteractionFunctionDefinitionDocument> {
   const reading = frontMatterIn(parts.frontMatter, parts.frontMatterLine, interactionFrontMatter);
   return Result.isFailure(reading)
-    ? Result.fail([...reading.failure, ...bodyIssuesOf(parts, seemsToAskASystem(parts))])
+    ? Result.fail([...reading.failure, ...bodyIssuesOf(parts, seemsToAskASystem(parts) || seemsToAskToSignIn(parts))])
     : documentFrom(reading.success, parts, clock);
 }
 

@@ -49,6 +49,7 @@ function commentOf(playbook: string, id: string, columns: CommentColumns): Activ
     waits_on: null,
     expires_at: null,
     about: columns.address,
+    sign_in: null,
     ...(columns.reopened_by === null ? {} : { reopenedBy: columns.reopened_by }),
   };
 }

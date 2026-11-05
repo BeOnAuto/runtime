@@ -5,7 +5,8 @@ import { InvalidInput, type PlaybookAddress } from '@on.auto/operations';
 import { Effect, Result, type Schema } from 'effect';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
-import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
+import type { InteractionFunctionDefinitionDocument, SignInDocument } from '../document/interaction-document.ts';
+import { signInCheck } from '../sign-in/sign-in-questions.ts';
 import { callCheck } from './call-check.ts';
 import { wayCheck, type WayPorts } from './request-ways.ts';
 
@@ -24,9 +25,24 @@ function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocum
   );
 }
 
+function signInDetailsOf({ signIn, whenSignedOut }: SignInDocument): Schema.JsonObject {
+  const said = whenSignedOut.answer === 'unsaid' ? {} : { if_signed_out: whenSignedOut.answer };
+  const details = { sign_in: { server: signIn.server, site: signIn.site, ...said } };
+  if (whenSignedOut.answer !== 'ask') {
+    return details;
+  }
+  const { expires, route } = whenSignedOut.asking;
+  return route === undefined
+    ? { ...details, expires }
+    : { ...details, expires, deliver: { server: route.deliver.server, tool: route.deliver.tool } };
+}
+
 function detailsOf(document: InteractionFunctionDefinitionDocument): Schema.JsonObject {
   if (document.shape === 'call') {
     return { call: { server: document.call.server, tool: document.call.tool } };
+  }
+  if (document.shape === 'sign_in') {
+    return signInDetailsOf(document);
   }
   const { expires, route } = document;
   return route === undefined
@@ -47,10 +63,12 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
 export function definitionReadingOf(tools: WayPorts) {
   const calls = callCheck(tools);
   const ways = wayCheck(tools);
-  return {
-    parse,
-    check: (document: InteractionFunctionDefinitionDocument, source: string, place: PlaybookAddress) =>
-      document.shape === 'call' ? calls(document, place) : ways(document, source, place),
-    summarize,
+  const signIns = signInCheck(tools);
+  const checks = (document: InteractionFunctionDefinitionDocument, source: string, place: PlaybookAddress) => {
+    if (document.shape === 'sign_in') {
+      return signIns(document, place);
+    }
+    return document.shape === 'call' ? calls(document, place) : ways(document, source, place);
   };
+  return { parse, check: checks, summarize };
 }

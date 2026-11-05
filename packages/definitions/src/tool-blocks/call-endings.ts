@@ -123,12 +123,12 @@ function endedWith(document: CalledDocument, called: AnsweredOnce): CallEnding {
       );
 }
 
-function unsentWith(called: UnopenedOnce): Unavailable {
+export function unsentCallRefusal(called: UnopenedOnce): Unavailable {
   return called.refused === 'tool_not_read_only'
     ? new Unavailable({ detail: called.detail, kind: called.refused })
     : new Unavailable({ detail: called.detail, kind: called.refused, because: called.because });
 }
 
 export function callEndingOf(document: CalledDocument, called: CalledOnce): CallEnding {
-  return called.kind === 'unopened' ? Effect.fail(unsentWith(called)) : endedWith(document, called);
+  return called.kind === 'unopened' ? Effect.fail(unsentCallRefusal(called)) : endedWith(document, called);
 }

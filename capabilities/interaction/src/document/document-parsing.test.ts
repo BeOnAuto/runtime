@@ -18,7 +18,7 @@ function documentWith(frontMatter: readonly string[], body = 'Approve {{ input.c
 
 const essentials = ["to: '{{ input.owner }}'", 'expires: P2D'];
 
-const keys = 'description, call, to, from, expires, deliver, replies, input, output, reply';
+const keys = 'description, call, sign_in, to, from, expires, deliver, replies, input, output, reply';
 
 describe('an interaction function definition', () => {
   it('reads its party, expiry, schemas and message, and is for an agent with deliver: agent', () => {
@@ -100,7 +100,7 @@ describe('a definition that names neither the tool it calls nor the party it ask
         'Line 1, /expires: expires is required, how long the request waits, unless the function asks a system with call',
       ],
       [
-        'Line 2: The front matter is empty; it names at least the tool it calls, or the party it goes to and when it expires',
+        'Line 2: The front matter is empty; it names at least the tool it calls, the party it goes to and when it expires, or the site a person signs in to',
       ],
     ]);
   });

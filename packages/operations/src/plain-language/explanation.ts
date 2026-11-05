@@ -12,6 +12,7 @@ import {
 } from './credit-explanations.ts';
 import type { Explanation, Explanations, RefusalTerms, Remedies } from './plain-language.ts';
 import { predictionExplanations } from './prediction-explanations.ts';
+import { requestExplanations } from './request-explanations.ts';
 
 export type ExplainedRejection = Pick<Rejected, 'reason' | 'kind' | 'because' | 'limited_because'>;
 
@@ -146,18 +147,7 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     remedy: 'Nothing more of it runs, since only that run needed it; what it did before may have changed something.',
     mayHaveChanged: true,
   },
-  expired: {
-    why: 'nobody answered what it asked before the request expired',
-    remedy:
-      'Nothing more of it runs, though the request may have reached someone; asking again is a new run, which can be started, with more time if needed.',
-    mayHaveChanged: true,
-  },
-  undelivered: {
-    why: 'what it had to send could not be delivered, though every attempt was made',
-    remedy:
-      'Nothing more of it runs; whoever runs the server can look into the tool it names, and then a new run can send it again.',
-    mayHaveChanged: true,
-  },
+  ...requestExplanations,
   requests_full: {
     why: 'the playbook already holds as many open requests as it may',
     remedy: 'Once some of them are answered, expire or are cancelled, it can be tried again.',

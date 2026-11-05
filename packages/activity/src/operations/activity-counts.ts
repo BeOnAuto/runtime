@@ -46,7 +46,8 @@ function needsYouIn(viewer: Viewer, playbook: string) {
       reader.countPlaybookRows(playbook, requestsName, [open, { column: 'waits_on', equals: party }]);
     const anyone = yield* waitingOn(anyMember);
     const named = viewer.address === undefined ? 0 : yield* waitingOn(viewer.address);
-    return anyone + named;
+    const asked = yield* waitingOn(viewer.caller);
+    return anyone + named + asked;
   });
 }
 

@@ -18,6 +18,21 @@ const mayHaveReachedSomeone: ReadonlyArray<readonly [ExplainedRejection, string,
     'what it had to send could not be delivered, though every attempt was made',
     'Nothing more of it runs; whoever runs the server can look into the tool it names, and then a new run can send it again.',
   ],
+  [
+    { reason: 'unanswered', kind: 'declined' },
+    'the person it asked to sign in said they did not',
+    'Nothing more of it runs; a new run asks them again, once they can sign in.',
+  ],
+  [
+    { reason: 'unanswered', kind: 'signed_out' },
+    'the person it acts for is not signed in to the site, and its function stops rather than asks them',
+    'A new run can go on once they have signed in to the site.',
+  ],
+  [
+    { reason: 'unanswered', kind: 'no_person' },
+    'it acts for no person who can sign in: a key started it, or the person it acts for has left the organization',
+    'A run a person of the organization starts acts for them and asks them to sign in.',
+  ],
 ];
 
 const refusedBeforeAsking: ReadonlyArray<readonly [ExplainedRejection, string, string]> = [

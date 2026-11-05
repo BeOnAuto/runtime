@@ -25,6 +25,7 @@ import {
   mayHaveChangedSomething,
   startedRunOf,
   takesSettlement,
+  unansweredThoughAnswered,
   type RunState,
   type RunStreamState,
   type RecordedRunState,
@@ -214,10 +215,6 @@ export const endedWithAnotherResult = new Conflict({ detail: 'The run already en
 export const answeredFirst = new Conflict({
   detail: 'The run took an answer, so it did not go unanswered; that answer settles it',
 });
-
-function unansweredThoughAnswered({ answer }: RecordedRunState, { result }: RunSettlement): boolean {
-  return answer !== null && result.type === 'run_rejected' && result.data.rejection.reason === 'unanswered';
-}
 
 function settledAlready(state: RecordedRunState, settlement: RunSettlement): Decision {
   return state.result !== undefined && settlementKeyOf(state.result) === settlementKeyOf(settlement.result)

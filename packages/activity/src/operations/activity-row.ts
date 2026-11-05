@@ -1,3 +1,4 @@
+import type { SignInRecord } from '@on.auto/definitions';
 import { Schema } from 'effect';
 
 import { addressOf, ofTheOrg, type ItemForm } from '../positions/activity-addresses.ts';
@@ -27,6 +28,7 @@ export interface ActivityRow {
   readonly waits_on: string | null;
   readonly expires_at: number | null;
   readonly about: string | null;
+  readonly sign_in: SignInRecord | null;
   readonly reopenedBy?: string;
 }
 
@@ -75,9 +77,23 @@ export const ActivityRowSchema = Schema.Struct({
   status: Schema.NullOr(Schema.Literals(['failed', 'rejected'])).annotate({
     description: 'For broken, whether the latest failing run failed or was rejected; otherwise null',
   }),
-  waits_on: NullableText('For needs_you, the address the request names, in lower case, or any_member; otherwise null'),
+  waits_on: NullableText(
+    'For needs_you, the id of the person the request waits on, such as person:user_7kLm2, the address it names, in lower case, or any_member; otherwise null',
+  ),
   expires_at: NullableText('For needs_you, when the request expires unanswered, in ISO 8601 UTC; otherwise null'),
   about: NullableText('For comment, the address of what the comment is about; otherwise null'),
+  sign_in: Schema.NullOr(
+    Schema.Struct({
+      server: Schema.String.annotate({ description: 'The browser connection the person signs in through' }),
+      site: Schema.String.annotate({ description: 'The host name of the site the person signs in to' }),
+      link: Schema.String.annotate({
+        description: 'Where the person signs in, which opens only for the person the request waits on',
+      }),
+    }),
+  ).annotate({
+    description:
+      'For needs_you of a request that asks a person to sign in to a site, the site and the link where they sign in; otherwise null',
+  }),
   seen: Schema.NullOr(Schema.Boolean).annotate({
     description: 'For new and comment, whether the caller has seen it; null for the other kinds',
   }),

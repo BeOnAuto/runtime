@@ -1,6 +1,6 @@
 # Signing in during a run
 
-This is the design of how a run asks a person to sign in to a site, and waits for them. It was agreed before the code, and none of it is built yet. Every part this page marks **new** is planned. The public reference pages describe what the runtime does today, and each part changes them as it ships; [Reference pages each part changes](#reference-pages-each-part-changes) lists them.
+This is the design of how a run asks a person to sign in to a site, and waits for them. It was agreed before the code. Every part of it is built: the sign-in function, its request, how it is answered, its endings, the activity's `waits_on` by id, and `acts_for` on a triggered run. Every part this page marks **new** was new when it was agreed. The public reference pages describe what the runtime does today, and each part changes them as it ships; [Reference pages each part changes](#reference-pages-each-part-changes) lists them.
 
 ## What it is for
 
@@ -357,4 +357,4 @@ A change to a fact's shape or to a table ships with the reader or the layout ste
 | [Terminology](../../concepts/terminology.md)                         | The sign-in request, and whom a run acts for                                                                     |
 | [Functions](../../concepts/functions.md#availability)                | Signing in during a run leaves the planned list once the last part ships                                         |
 
-Until then, [Functions](../../concepts/functions.md#availability) lists signing in during a run among the planned features, and the interaction function format, the HTTP API and the MCP reference each have a short section, marked planned, that links here. The workflow format has none: the runtime serves it to agents as a guide, and a guide holds at most 64 KiB (`mostGuideBytes` of `@on.auto/api`). Measured on 4 November 2026, the workflow guide had 262 bytes left and the interaction guide about 11 KiB, so the part that changes the workflow format makes room in it first.
+The interaction function format, the workflow format, the HTTP API, the MCP reference and the terminology describe it as it is built, and [Functions](../../concepts/functions.md#availability) no longer lists it among the planned features. The workflow format has none: the runtime serves it to agents as a guide, and a guide holds at most 64 KiB (`mostGuideBytes` of `@on.auto/api`). Measured on 4 November 2026, the workflow guide had 262 bytes left and the interaction guide about 11 KiB, so the part that changes the workflow format makes room in it first.

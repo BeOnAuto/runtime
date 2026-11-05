@@ -16,7 +16,7 @@ import { Effect, Option, Schema } from 'effect';
 
 import { readingKeyOf } from '../conversations/conversation-keys.ts';
 import { openRequestsName } from './open-requests.ts';
-import { StandingSchema, requestRowFrom, routeOfRow, type OpenRequestRow } from './request-rows.ts';
+import { StandingSchema, requestRowFrom, routeOfRow, signInOfRow, type OpenRequestRow } from './request-rows.ts';
 
 const InteractionSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run of the request, to answer with answer_interaction' }),
@@ -52,6 +52,10 @@ const InteractionSchema = Schema.Struct({
   standing: StandingSchema.annotate({
     description:
       'How its delivery stands: held_for_an_agent, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list',
+  }),
+  sign_in: Schema.NullOr(Schema.Struct({ server: Schema.String, site: Schema.String, link: Schema.String })).annotate({
+    description:
+      'For a request that asks a person to sign in to a site, its server, the site and the link where they sign in; null otherwise',
   }),
 }).annotate({ identifier: 'Interaction', description: 'An open request of a function' });
 
@@ -123,6 +127,7 @@ function shownOf({ key, row }: ProjectedKeyedRow) {
       answerer: kept.conversation === null ? null : kept.answerer,
       reply_refusals: kept.reply_refusals,
       standing: kept.standing,
+      sign_in: signInOfRow(kept),
     },
   ];
 }

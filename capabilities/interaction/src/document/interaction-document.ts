@@ -36,4 +36,30 @@ export interface RequestDocument extends WrittenFunction {
   readonly reply?: ReplyRule;
 }
 
-export type InteractionFunctionDefinitionDocument = CallDocument | RequestDocument;
+export interface SignInSite {
+  readonly server: string;
+  readonly site: string;
+}
+
+export interface AskingSignIn {
+  readonly expires: string;
+  readonly expiresMs: number;
+  readonly message: ParsedTemplate;
+  readonly route?: WrittenRoute;
+}
+
+export type SignInQuestion = 'if_signed_out' | 'deliver' | 'expires';
+
+export type WhenSignedOut =
+  | { readonly answer: 'ask'; readonly asking: AskingSignIn }
+  | { readonly answer: 'fail' }
+  | { readonly answer: 'unsaid'; readonly question: SignInQuestion; readonly line: number };
+
+export interface SignInDocument extends WrittenFunction {
+  readonly shape: 'sign_in';
+  readonly signIn: SignInSite;
+  readonly whenSignedOut: WhenSignedOut;
+  readonly output: { readonly schema: CompiledSchema };
+}
+
+export type InteractionFunctionDefinitionDocument = CallDocument | RequestDocument | SignInDocument;

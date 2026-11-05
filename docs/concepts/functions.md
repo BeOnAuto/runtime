@@ -30,7 +30,6 @@ These are planned and not available yet:
 - Dream, an optional process that would revisit a playbook's history and suggest ideas worth testing. It would not be a function type.
 - Skill references in a reasoning function, and a separately managed tool library.
 - Starting one workflow run from several events that belong together.
-- Asking the person a run acts for to sign in to a site in a browser, and waiting until they have.
 
 ## Reasoning
 

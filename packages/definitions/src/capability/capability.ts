@@ -3,6 +3,7 @@ import type {
   InvalidInput,
   PlaybookAddress,
   RunCancelled,
+  RunUnanswered,
   Settlement,
   Unavailable,
 } from '@on.auto/operations';
@@ -49,7 +50,7 @@ export interface FinishesLater {
 
 export type CapabilityAnswer = Finished | FinishesLater;
 
-export type CapabilityRejection = InvalidInput | Unavailable | Conflict | RunCancelled;
+export type CapabilityRejection = InvalidInput | Unavailable | Conflict | RunCancelled | RunUnanswered;
 
 export interface CancelledRun {
   readonly run: { readonly org: string; readonly playbook: string; readonly id: string };

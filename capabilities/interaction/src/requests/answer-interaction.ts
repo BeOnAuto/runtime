@@ -24,6 +24,8 @@ import { Effect, Schema } from 'effect';
 import { interactionBounds } from '../run/run-bounds.ts';
 import { answerFor } from './answering.ts';
 import { answerTakenBy, correlationOfRun, openRequestRowIn, type AnswerTaken } from './request-reads.ts';
+import { signInOfRow, type OpenRequestRow } from './request-rows.ts';
+import { answeredByThePerson, signedInFromTheirSession, type SignInAsked } from './sign-in-answering.ts';
 
 const ClaimedForField = Schema.String.annotate({
   description: `Whom the caller says it answers for, kept with the answer as a claim and never checked, at most ${interactionBounds.claimBytes} bytes`,
@@ -89,6 +91,24 @@ function shownOf(id: string, { id: answerId, answer, claimedFor, reply, by, at }
   };
 }
 
+function signInAskedIn(row: OpenRequestRow): SignInAsked | undefined {
+  const signIn = signInOfRow(row);
+  return signIn === null ? undefined : { signIn, person: row.party };
+}
+
+const checkedAnswer = Effect.fnUntraced(function* (run: RecordedRun, row: OpenRequestRow, answer: Schema.Json) {
+  const caller = yield* Caller;
+  const signIn = signInAskedIn(row);
+  if (signIn !== undefined) {
+    yield* answeredByThePerson(signIn, caller);
+  }
+  const checked = yield* checkedFor(run, answer);
+  if (signIn !== undefined) {
+    yield* signedInFromTheirSession(caller, checked);
+  }
+  return checked;
+});
+
 const answered = Effect.fnUntraced(function* ({ id, answer, claimedFor }: Answering) {
   const answeredBy = recordedCallerOf(yield* Caller);
   const row = yield* openRequestRowIn(id);
@@ -102,7 +122,7 @@ const answered = Effect.fnUntraced(function* ({ id, answer, claimedFor }: Answer
   if (!row.answers) {
     return yield* takesNoAnswer;
   }
-  const checked = yield* checkedFor(run, answer);
+  const checked = yield* checkedAnswer(run, row, answer);
   yield* playbookBoundAnswerer(yield* PlaybookWriter)(
     id,
     { answer: checked, ...(claimedFor === undefined ? {} : { claimed_for: claimedFor }) },
@@ -125,7 +145,7 @@ export const answerInteraction = defineCommand('playbook', {
     claimed_for: Schema.optionalKey(ClaimedForField),
   }),
   outputSchema: AnsweredRequestSchema,
-  reasons: ['invalid_input', 'not_found', 'conflict'],
+  reasons: ['invalid_input', 'forbidden', 'not_found', 'conflict'],
   handle: ({ run_id: id, answer, claimed_for: claimedFor }) => answered({ id, answer, claimedFor }),
   plainLanguage: {
     task: 'answer a request',

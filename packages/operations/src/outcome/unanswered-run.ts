@@ -1,6 +1,6 @@
 import { Data, Schema } from 'effect';
 
-export const UnansweredKindSchema = Schema.Literals(['expired', 'undelivered']);
+export const UnansweredKindSchema = Schema.Literals(['expired', 'undelivered', 'declined', 'signed_out', 'no_person']);
 
 export type UnansweredKind = typeof UnansweredKindSchema.Type;
 

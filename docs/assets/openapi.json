@@ -1550,7 +1550,7 @@
                               "type": "null"
                             }
                           ],
-                          "description": "For needs_you, the address the request names, in lower case, or any_member; otherwise null"
+                          "description": "For needs_you, the id of the person the request waits on, such as person:user_7kLm2, the address it names, in lower case, or any_member; otherwise null"
                         },
                         "expires_at": {
                           "anyOf": [
@@ -1573,6 +1573,37 @@
                             }
                           ],
                           "description": "For comment, the address of what the comment is about; otherwise null"
+                        },
+                        "sign_in": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "server": {
+                                  "type": "string",
+                                  "description": "The browser connection the person signs in through"
+                                },
+                                "site": {
+                                  "type": "string",
+                                  "description": "The host name of the site the person signs in to"
+                                },
+                                "link": {
+                                  "type": "string",
+                                  "description": "Where the person signs in, which opens only for the person the request waits on"
+                                }
+                              },
+                              "required": [
+                                "server",
+                                "site",
+                                "link"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For needs_you of a request that asks a person to sign in to a site, the site and the link where they sign in; otherwise null"
                         },
                         "seen": {
                           "anyOf": [
@@ -1606,6 +1637,7 @@
                         "waits_on",
                         "expires_at",
                         "about",
+                        "sign_in",
                         "seen"
                       ],
                       "additionalProperties": false,
@@ -15976,9 +16008,12 @@
                               "type": "string",
                               "enum": [
                                 "expired",
-                                "undelivered"
+                                "undelivered",
+                                "declined",
+                                "signed_out",
+                                "no_person"
                               ],
-                              "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts"
+                              "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization"
                             }
                           },
                           "required": [
@@ -16444,9 +16479,12 @@
                               "type": "string",
                               "enum": [
                                 "expired",
-                                "undelivered"
+                                "undelivered",
+                                "declined",
+                                "signed_out",
+                                "no_person"
                               ],
-                              "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts"
+                              "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization"
                             }
                           },
                           "required": [
@@ -16938,9 +16976,12 @@
                               "type": "string",
                               "enum": [
                                 "expired",
-                                "undelivered"
+                                "undelivered",
+                                "declined",
+                                "signed_out",
+                                "no_person"
                               ],
-                              "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts"
+                              "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization"
                             }
                           },
                           "required": [
@@ -17342,7 +17383,10 @@
                                 "overrun",
                                 "parent_ended",
                                 "expired",
-                                "undelivered"
+                                "undelivered",
+                                "declined",
+                                "signed_out",
+                                "no_person"
                               ]
                             },
                             "because": {
@@ -22007,6 +22051,34 @@
                             "cancelling"
                           ],
                           "description": "How its delivery stands: held_for_an_agent, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list"
+                        },
+                        "sign_in": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "server": {
+                                  "type": "string"
+                                },
+                                "site": {
+                                  "type": "string"
+                                },
+                                "link": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "server",
+                                "site",
+                                "link"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "For a request that asks a person to sign in to a site, its server, the site and the link where they sign in; null otherwise"
                         }
                       },
                       "required": [
@@ -22025,7 +22097,8 @@
                         "conversation",
                         "answerer",
                         "reply_refusals",
-                        "standing"
+                        "standing",
+                        "sign_in"
                       ],
                       "additionalProperties": false,
                       "description": "An open request of a function"
@@ -22864,7 +22937,10 @@
               "overrun",
               "parent_ended",
               "expired",
-              "undelivered"
+              "undelivered",
+              "declined",
+              "signed_out",
+              "no_person"
             ],
             "description": "What kind of rejection it is, where the reason has kinds"
           },

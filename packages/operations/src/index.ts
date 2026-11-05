@@ -22,7 +22,7 @@ export { CallLineage, type CallLink, type GivenLineage, type TriggerLink } from 
 export { PlaybookWriter } from './ledger/playbook-writer.ts';
 export { playbookLedgerOf } from './ledger/playbook-ledger.ts';
 export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } from './caller/caller.ts';
-export { localDeveloperId, OrgMembership, personOfTheOrg, signedInPersonPrefix } from './caller/caller.ts';
+export { isAPerson, localDeveloperId, OrgMembership, personOfTheOrg, signedInPersonPrefix } from './caller/caller.ts';
 export { CallingClientSchema, type CallingClient } from './caller/calling-client.ts';
 export { CallFetch } from './caller/call-fetch.ts';
 export {
