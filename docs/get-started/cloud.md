@@ -44,6 +44,6 @@ Open [Auto Studio](https://studio.on.auto) and select the same organization. You
 
 - If no Auto tools appear, enable the server in your agent and complete its sign-in step. Some agents need a new conversation after adding a server.
 - If your playbooks are missing, check which organization you selected in both your agent and Studio.
-- If access has been revoked, connect and sign in again. You can review authorized apps in Studio under Settings, MCP.
+- If access has been revoked, connect and sign in again. You can review your connected agents in Studio under Settings, Connected agents.
 
 If your team needs Auto on its own infrastructure, [contact us about self-hosting](../self-host.md).
