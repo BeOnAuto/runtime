@@ -235,7 +235,7 @@ A prediction function answers from the dataset it folds from the playbook's even
 
 A generation function asks a model for an image or audio through a gateway of `model_gateways`, the same entries reasoning functions use. The runtime appends `/images/generations`, `/images/edits` or `/audio/speech` to the gateway's `base_url`, sends its key, headers and query parameters, and keeps the cost the gateway answers in its `cost_header` on the asset.
 
-It keeps the bytes it made as the playbook's content, in the ledger or in the object store of `CONTENT_STORE_URL`, and the asset until it expires; [The asset](../reference/generation-format.md#the-asset) sets out what is removed then. [A generation the provider finishes later](../reference/generation-format.md#a-generation-the-provider-finishes-later) sets out how a run waits for one.
+It keeps the bytes it made as the playbook's content, in the ledger or in the object store of `CONTENT_STORE_URL`, and the asset until it expires; [The asset](../reference/generation-format.md#the-asset) sets out what is removed then. The same settings bound an image a tool answers a reasoning function's run, which the runtime keeps as an asset of the run ([The run's history](../reference/reasoning-format.md#the-run-s-history)): an image past them stays in the tool's result as the tool sent it. [A generation the provider finishes later](../reference/generation-format.md#a-generation-the-provider-finishes-later) sets out how a run waits for one.
 
 A value outside its range stops the server at start, naming the setting. [Generation function format](../reference/generation-format.md) sets out the rest.
 

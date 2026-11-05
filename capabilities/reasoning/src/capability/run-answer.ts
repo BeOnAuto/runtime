@@ -13,7 +13,7 @@ export function answerOf(
   { definition, prompt, run, before }: Stepping & { readonly before: BeforeTheSteps },
 ): Effect.Effect<StepsAnswer, DefinitionRejection> {
   const admission = admitted(answering.languageModel.admit(requestFor(definition, prompt, run)), before);
-  const opening = { access: answering.access, references: definition.tools, run, before };
+  const opening = { access: answering.access, references: definition.tools, run, before, images: answering.images };
   return Effect.andThen(
     admission,
     withTools(opening, (tools) => steppedWith(answering, { definition, prompt, run }, tools)),

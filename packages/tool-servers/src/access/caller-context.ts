@@ -1,4 +1,5 @@
 import type { CallJournal } from '../calls/recorded-calls.ts';
+import type { KeepImage } from '../images/answered-images.ts';
 import type { ToolNotOffered } from './tool-not-offered.ts';
 import type { ToolServerFailed } from './tool-server-failed.ts';
 
@@ -8,6 +9,7 @@ export interface CallerContext {
   readonly playbook: string;
   readonly journal: CallJournal;
   readonly meta: Readonly<Record<string, string>>;
+  readonly keepImage?: KeepImage;
 }
 
 export interface ServerMessage {

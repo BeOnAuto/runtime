@@ -9,17 +9,22 @@ import {
 import { Clock, Effect } from 'effect';
 
 import { assetDecider } from './asset-decider.ts';
-import { assetStreamOf, type AssetKeptData } from './asset-facts.ts';
+import { assetStreamOf, type AssetKeptData, type AssetMadeBy } from './asset-facts.ts';
 import type { KeptAsset } from './asset-reference.ts';
 
-export type MadeBy = Omit<AssetKeptData, 'media_type' | 'bytes' | 'sha256' | 'expires_at'>;
+type AssetKind = AssetKeptData['kind'];
+
+type Generation = Extract<AssetMadeBy, { readonly generation: unknown }>['generation'];
+
+export type MadeByAGeneration = Generation & { readonly kind: AssetKind };
 
 export interface AssetToKeep {
   readonly id: string;
   readonly playbook: ContentOwner;
   readonly bytes: Readonly<Uint8Array>;
   readonly mediaType: string;
-  readonly madeBy: MadeBy;
+  readonly kind: AssetKind;
+  readonly madeBy: AssetMadeBy;
   readonly keptForMs: number;
   readonly context: Omit<Context, 'at'>;
   readonly lineage: Lineage;
@@ -39,16 +44,21 @@ export function assetStreamIn(playbook: ContentOwner, id: string): string {
   return `${streamPrefixOfPlaybook(playbook)}${assetStreamOf(id)}`;
 }
 
+export function madeByThe({ kind, ...generation }: MadeByAGeneration): Pick<AssetToKeep, 'kind' | 'madeBy'> {
+  return { kind, madeBy: { generation } };
+}
+
 export function keptAsset({ ledger, content }: AssetKeeping, asset: AssetToKeep): Effect.Effect<KeptAt, Conflict> {
   return Effect.gen(function* () {
     const { stream, mediaType } = contentOfBytes(asset.bytes, asset.mediaType);
     const held = yield* Effect.orDie(content.put(asset.playbook, { stream, mediaType }));
     const at = yield* Clock.currentTimeMillis;
     const data: AssetKeptData = {
-      ...asset.madeBy,
       media_type: held.mediaType,
       bytes: held.bytes,
       sha256: held.sha256,
+      kind: asset.kind,
+      made_by: asset.madeBy,
       expires_at: new Date(at + asset.keptForMs).toISOString(),
     };
     yield* ledger.execute(

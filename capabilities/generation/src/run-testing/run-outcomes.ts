@@ -30,6 +30,18 @@ const decodeAsset = Schema.decodeUnknownSync(
 
 const decodeKept = Schema.decodeUnknownSync(AssetKeptSchema);
 
+const decodeMadeByAGeneration = Schema.decodeUnknownSync(
+  Schema.Struct({
+    made_by: Schema.Struct({
+      generation: Schema.Struct({
+        references: Schema.Array(Schema.Struct({ id: Schema.String, sha256: Schema.String })),
+        cost_usd: Schema.optionalKey(Schema.Number),
+        own_key: Schema.Boolean,
+      }),
+    }),
+  }),
+);
+
 const decodeRun = Schema.decodeUnknownSync(
   Schema.Struct({
     status: Schema.Literal('succeeded'),
@@ -96,4 +108,8 @@ export function outcomeOfRun(outcome: Outcome): { readonly status: string; reado
 
 export function keptDataOf(facts: readonly AssetEvent[]): AssetKeptData {
   return decodeKept(facts[0]).data;
+}
+
+export function generationOfKept(facts: readonly AssetEvent[]) {
+  return decodeMadeByAGeneration(keptDataOf(facts)).made_by.generation;
 }

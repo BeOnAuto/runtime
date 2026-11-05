@@ -1,11 +1,27 @@
 import type { JournalRefusal, RunContext } from '@on.auto/definitions';
 import { Unavailable } from '@on.auto/operations';
-import type { NotOfferedBecause, RunTools, ServerFailedBecause, ToolAccess } from '@on.auto/tool-servers';
+import type {
+  CallerContext,
+  NotOfferedBecause,
+  RunTools,
+  ServerFailedBecause,
+  ToolAccess,
+} from '@on.auto/tool-servers';
 import { runIdKey, type ToolReference } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 
 import type { BeforeTheSteps } from '../capability/before-the-steps.ts';
+import type { KeepRunImage } from '../steps/kept-content.ts';
 import { unfinishedAfter } from './tool-endings.ts';
+import { imagesKeptOn } from './tool-images.ts';
+
+export interface Opening {
+  readonly access: ToolAccess;
+  readonly references: readonly ToolReference[];
+  readonly run: RunContext;
+  readonly before: BeforeTheSteps;
+  readonly images?: KeepRunImage | undefined;
+}
 
 interface Refused<Because> {
   readonly because: Because;
@@ -30,13 +46,20 @@ function refusedAfter(
   );
 }
 
-function opened(
-  access: ToolAccess,
-  references: readonly ToolReference[],
-  { id, org, playbook, journal }: RunContext,
-  before: BeforeTheSteps,
-): Effect.Effect<RunTools, Unavailable | JournalRefusal> {
-  return access.open({ id, org, playbook, journal, meta: { [runIdKey]: id } }, references).pipe(
+function callerOf(run: RunContext, images: KeepRunImage | undefined): CallerContext {
+  const { id, org, playbook, journal } = run;
+  const caller = { id, org, playbook, journal, meta: { [runIdKey]: id } };
+  return images === undefined ? caller : { ...caller, keepImage: imagesKeptOn(images, run) };
+}
+
+function opened({
+  access,
+  references,
+  run,
+  before,
+  images,
+}: Opening): Effect.Effect<RunTools, Unavailable | JournalRefusal> {
+  return access.open(callerOf(run, images), references).pipe(
     Effect.catchTags({
       tool_not_offered: ({ because, detail }: Refused<NotOfferedBecause>) =>
         refusedAfter(before, { detail, kind: 'tool_not_offered', because }),
@@ -46,21 +69,14 @@ function opened(
   );
 }
 
-export interface Opening {
-  readonly access: ToolAccess;
-  readonly references: readonly ToolReference[];
-  readonly run: RunContext;
-  readonly before: BeforeTheSteps;
-}
-
 export function withTools<A, E>(
-  { access, references, run, before }: Opening,
+  opening: Opening,
   use: (tools?: RunTools) => Effect.Effect<A, E>,
 ): Effect.Effect<A, E | Unavailable | JournalRefusal> {
-  if (references.length === 0) {
+  if (opening.references.length === 0) {
     return use();
   }
-  return opened(access, references, run, before).pipe(
+  return opened(opening).pipe(
     Effect.flatMap((tools) => use(tools).pipe(Effect.ensuring(Effect.promise(() => tools.close())))),
   );
 }

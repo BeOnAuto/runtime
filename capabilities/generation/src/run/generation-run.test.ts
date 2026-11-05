@@ -9,6 +9,7 @@ import {
   assetIdIn,
   assetIdOf,
   day,
+  generationOfKept,
   keptDataOf,
   numberedHarness,
   ran,
@@ -76,17 +77,21 @@ describe('the stream of the asset a run of a generation function keeps', () => {
       {
         type: 'asset_kept',
         data: {
-          kind: 'image',
-          model: 'gateway/openai/gpt-image-2',
-          prompt: teapot,
-          parameters: { size: '1024x1024', quality: 'high' },
-          references: [],
-          cost_usd: 0.04,
-          own_key: true,
-          expires_at: new Date(harnessStartsAt + 30 * day).toISOString(),
           media_type: 'image/png',
           bytes: onePixelPng.byteLength,
           sha256: pngDigest,
+          kind: 'image',
+          made_by: {
+            generation: {
+              model: 'gateway/openai/gpt-image-2',
+              prompt: teapot,
+              parameters: { size: '1024x1024', quality: 'high' },
+              references: [],
+              cost_usd: 0.04,
+              own_key: true,
+            },
+          },
+          expires_at: new Date(harnessStartsAt + 30 * day).toISOString(),
         },
         context: {
           at: new Date(harnessStartsAt).toISOString(),
@@ -151,10 +156,11 @@ describe('the time a generation keeps its asset, and what it records of its key 
     await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-2']));
 
     const outcome = await ran(playbook, 'picture', {});
-    const kept = keptDataOf(await playbook.factsOf(assetIdOf(1)));
+    const facts = await playbook.factsOf(assetIdOf(1));
+    const made = generationOfKept(facts);
 
     expect(recordIn(outcome)).toEqual({ model: 'gateway/openai/gpt-image-2', own_key: false, duration_ms: 0 });
-    expect([kept.cost_usd, kept.own_key, kept.expires_at]).toEqual([
+    expect([made.cost_usd, made.own_key, keptDataOf(facts).expires_at]).toEqual([
       undefined,
       false,
       new Date(harnessStartsAt + 7 * day).toISOString(),

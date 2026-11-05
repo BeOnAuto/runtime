@@ -1,6 +1,7 @@
 export { AssetEventSchema, assetsKind } from './assets/asset-facts.ts';
 export { generationLayoutSteps } from './assets/asset-layout.ts';
 export { assets, assetsName, assetTotals, assetTotalsName } from './assets/asset-projections.ts';
+export { toolImagesKept, type KeepToolImage, type ToolImageToKeep } from './assets/tool-images.ts';
 export type { CatalogEntry, GenerationKind } from './catalog/catalog-entry.ts';
 export {
   CatalogInvalid,

@@ -6,6 +6,7 @@ import { cutToFailureBound } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
 import { bytesOf } from '../bounds/text-bytes.ts';
 import type { FailureKind } from '../clients/server-failures.ts';
+import type { KeepImageOfTheCall } from '../images/answered-images.ts';
 import type { ServerSettings } from '../settings/server-settings.ts';
 import type { CallAnswered, CallEnded, CallFailed, CallStarted, SentCallFailedBecause } from './call-facts.ts';
 
@@ -28,6 +29,7 @@ export interface Recording {
   readonly connection: string | null;
   readonly secrets: Pick<Secrets, 'scrub' | 'scrubValue'>;
   readonly keep: KeepContent;
+  readonly keepImage?: KeepImageOfTheCall;
 }
 
 export interface StartingCall {
@@ -54,6 +56,10 @@ export function recordingOf(
     secrets,
     keep,
   };
+}
+
+export function keepingImagesOf(recording: Recording, keepImage: KeepImageOfTheCall | undefined): Recording {
+  return recording.content && keepImage !== undefined ? { ...recording, keepImage } : recording;
 }
 
 export function scrubbedJsonOf(json: string, { secrets }: Pick<Recording, 'secrets'>): string {

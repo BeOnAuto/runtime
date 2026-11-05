@@ -1,5 +1,6 @@
 import { admission } from '../bounds/call-bounds.ts';
 import { answerOf, onlyReads } from '../bounds/tool-results.ts';
+import { imageCallOf, imagesKeptOutOf, imagesOfTheCall } from '../images/answered-images.ts';
 import type { CallAnswered, CallEnded, CallFailed, CallStarted } from './call-facts.ts';
 import {
   callReplyOf,
@@ -14,6 +15,7 @@ import {
 import {
   answeredFields,
   failedData,
+  keepingImagesOf,
   recordingOf,
   scrubbedJsonOf,
   startedFields,
@@ -55,21 +57,25 @@ export type ShownBytesOf = (sent: ForwardedOnce) => number | undefined;
 
 const unsent: JournalledCall = { sent: false };
 
-function scrubbedOf(done: Forwarded, recording: Recording): Delivered {
+async function scrubbedOf(done: Forwarded, recording: Recording): Promise<Delivered> {
   if (done.resultJson === null) {
     return done;
   }
-  const keptJson = scrubbedJsonOf(done.resultJson, recording);
+  const keptJson = await imagesKeptOutOf(scrubbedJsonOf(done.resultJson, recording), recording.keepImage);
   return { ...done, keptJson, scrubbed: answerOf(keptJson) };
 }
 
 async function forwardedOnce(forwarding: Forwarding, recording: Recording): Promise<ForwardedOnce> {
   const began = performance.now();
   const done = await forwarded(forwarding);
-  return { done: scrubbedOf(done, recording), durationMs: Math.round(performance.now() - began) };
+  return { done: await scrubbedOf(done, recording), durationMs: Math.round(performance.now() - began) };
 }
 
 type StartingCall = Pick<Forwarding, 'slot' | 'tool' | 'input'>;
+
+interface SentCallOf extends Pick<Forwarding, 'slot' | 'tool'> {
+  readonly callId: string;
+}
 
 async function startOf(
   { slot, tool, input }: StartingCall,
@@ -150,6 +156,15 @@ function replyingOf({ context, secrets, report }: RunToolsParts, { reference }: 
   return { server: reference.server, meta: context.meta, scrub: secrets.scrub, report };
 }
 
+function recordingOfTheCall(
+  recording: Recording,
+  { context }: Pick<RunToolsParts, 'context'>,
+  sent: SentCallOf,
+): Recording {
+  const call = imageCallOf(sent.callId, sent.slot.settings, sent.tool);
+  return keepingImagesOf(recording, imagesOfTheCall(context.keepImage, call));
+}
+
 export function sending(parts: RunToolsParts, offered: NamedOffer): ToolSending {
   const { slot } = offered;
   const tool = offered.tool.name;
@@ -158,11 +173,12 @@ export function sending(parts: RunToolsParts, offered: NamedOffer): ToolSending 
   const readOnly = onlyReads(offered.tool);
   return {
     start: ({ callId, input }) => startOf({ slot, tool, input }, recording, { callId, readOnly }),
-    send: async ({ input, room }, signal) => {
+    send: async ({ callId, input, room }, signal) => {
       const forwarding = { slot, tool, input, meta: parts.context.meta, signal, ...parts.timing };
-      const once = await forwardedOnce(forwarding, recording);
+      const keeping = recordingOfTheCall(recording, parts, { callId, slot, tool });
+      const once = await forwardedOnce(forwarding, keeping);
       const { text, isError, shownBytes } = replyOf(once.done, replying, room);
-      const settled = await settledOf(once, recording, shownBytes);
+      const settled = await settledOf(once, keeping, shownBytes);
       reportedFailure(once.done, replying);
       return { ended: endedOf(settled), reply: { text, isError } };
     },
@@ -206,7 +222,7 @@ export function caller(
     };
     const journey = await journalledCall(
       { ...forwarding, ...timing },
-      recording,
+      recordingOfTheCall(recording, parts, { callId, slot, tool: offered.tool.name }),
       journalling,
       (sent) => replyOf(sent.done, replying, room).shownBytes,
     );

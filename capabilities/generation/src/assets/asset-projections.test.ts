@@ -13,11 +13,37 @@ const keptData = {
   bytes: 2048,
   sha256,
   kind: 'audio',
+  made_by: {
+    generation: {
+      model: 'gateway/openai/tts-1',
+      prompt: 'Welcome',
+      parameters: { voice: 'alloy', format: 'mp3' },
+      references: [],
+      own_key: false,
+    },
+  },
+  expires_at: '2026-12-01T10:00:00.000Z',
+};
+
+const keptBeforeWhatMadeItWasNamed = {
+  media_type: 'audio/mpeg',
+  bytes: 2048,
+  sha256,
+  kind: 'audio',
   model: 'gateway/openai/tts-1',
   prompt: 'Welcome',
   parameters: { voice: 'alloy', format: 'mp3' },
   references: [],
   own_key: false,
+  expires_at: '2026-12-01T10:00:00.000Z',
+};
+
+const screenshot = {
+  media_type: 'image/png',
+  bytes: 48_210,
+  sha256,
+  kind: 'image',
+  made_by: { tool_call: { call_id: 'toolu_01', server: 'browser', tool: 'browser_take_screenshot' } },
   expires_at: '2026-12-01T10:00:00.000Z',
 };
 
@@ -67,6 +93,16 @@ describe('the projection of the assets of a playbook', () => {
     });
   });
 
+  it('keeps the row of an asset kept before what made it was named, and of an image a tool call answered, which no model made', () => {
+    expect([
+      assets.rowAfter(undefined, message('asset_kept', keptBeforeWhatMadeItWasNamed, onTheRun)),
+      assets.rowAfter(undefined, message('asset_kept', screenshot, onTheRun)),
+    ]).toMatchObject([
+      { kind: 'audio', model: 'gateway/openai/tts-1', run: 'run-1' },
+      { media_type: 'image/png', bytes: 48_210, kind: 'image', model: null, run: 'run-1', live: true },
+    ]);
+  });
+
   it('changes no row for a fact of no asset, nor for an expiry of an asset it holds no row of', () => {
     expect([
       assets.rowAfter(undefined, otherMessage),
@@ -113,17 +149,21 @@ function shown(type: string, data: unknown, context: ProjectedMessage['context']
 }
 
 describe('the facts of an asset as the feed shows them', () => {
-  it('says what was kept and until when, that it expired, and that its content was removed once nothing else held it', () => {
+  it('says what was kept, what made it and until when, that it expired, and that its content was removed once nothing else held it', () => {
     expect([
       shown('asset_kept', keptData, onTheRun),
       shown('asset_kept', { ...keptData, kind: 'image', bytes: 3_500_000 }, onTheRun),
       shown('asset_kept', { ...keptData, kind: 'video', bytes: 1 }, onTheRun),
+      shown('asset_kept', keptBeforeWhatMadeItWasNamed, onTheRun),
+      shown('asset_kept', screenshot, onTheRun),
       shown('asset_expired', { bytes: 2048 }, expiredMessage.context),
       shown('asset_content_removed', { bytes: 2048, sha256 }, expiredMessage.context),
     ]).toEqual([
       'The playbook kept audio of 2 KiB that a generation function made, until 2026-12-01.',
       'The playbook kept an image of 3.3 MiB that a generation function made, until 2026-12-01.',
       'The playbook kept a video of 1 byte that a generation function made, until 2026-12-01.',
+      'The playbook kept audio of 2 KiB that a generation function made, until 2026-12-01.',
+      'The playbook kept an image of 47.1 KiB that the browser_take_screenshot tool of browser answered, until 2026-12-01.',
       'An asset of 2 KiB expired.',
       'The content of an expired asset, 2 KiB, was removed, since nothing else of the playbook holds it.',
     ]);

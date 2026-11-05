@@ -5,7 +5,15 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { assetDecider } from '../assets/asset-decider.ts';
-import { assetIdOf, day, issuesOf, keptDataOf, keptFactOf, numberedHarness, ran } from '../run-testing/run-outcomes.ts';
+import {
+  assetIdOf,
+  day,
+  generationOfKept,
+  issuesOf,
+  keptFactOf,
+  numberedHarness,
+  ran,
+} from '../run-testing/run-outcomes.ts';
 import {
   alpha,
   answeredByKind,
@@ -55,7 +63,7 @@ describe('a reference of a generation function', () => {
     const playbook = await withAPicture();
 
     const outcome = await ran(playbook, 'again', { product: 'a teapot', photo: assetIdOf(1) }, 2);
-    const kept = keptDataOf(await playbook.factsOf(assetIdOf(2)));
+    const kept = generationOfKept(await playbook.factsOf(assetIdOf(2)));
 
     expect(outcome.status).toBe('succeeded');
     expect(playbook.gateway.asked().map(({ path, files }) => ({ path, files }))).toEqual([

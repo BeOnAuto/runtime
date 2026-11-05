@@ -6,7 +6,7 @@ import type { ReasoningFunctionDefinitionDocument } from '../definition/reasonin
 import type { PerformJob } from '../jobs/jobs.ts';
 import type { ToolCallTelemetry } from '../jobs/performed-in-process.ts';
 import type { LanguageModel } from '../model/language-model.ts';
-import type { ContentStore } from '../steps/kept-content.ts';
+import type { ContentStore, KeepRunImage } from '../steps/kept-content.ts';
 import type { Prompt } from '../steps/step-messages.ts';
 import type { ModelReading } from './definition-request.ts';
 
@@ -17,6 +17,7 @@ export interface RunServices {
   readonly clock?: Clock.Clock;
   readonly tools: ToolAccess;
   readonly content: ContentStore;
+  readonly images?: KeepRunImage;
   readonly performJob?: PerformJobs;
   readonly reading?: ModelReading;
   readonly telemetry?: ToolCallTelemetry;
@@ -27,6 +28,7 @@ export interface Answering {
   readonly access: ToolAccess;
   readonly reading: ModelReading | undefined;
   readonly content: ContentStore;
+  readonly images: KeepRunImage | undefined;
   readonly perform: PerformJobs;
 }
 

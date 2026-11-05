@@ -1,17 +1,23 @@
 import { changingEvents, type PresentedFact, type Presenter } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { AssetEventSchema, assetsKind, type AssetEvent } from './asset-facts.ts';
+import { AssetEventSchema, assetsKind, type AssetEvent, type AssetMadeBy } from './asset-facts.ts';
 import { dayOf, kindInWords, sizeInWords } from './asset-words.ts';
 
 const decodeAssetEvent = Schema.decodeUnknownSync(Schema.toCodecJson(AssetEventSchema));
+
+function makerInWords(madeBy: AssetMadeBy): string {
+  return 'tool_call' in madeBy
+    ? `the ${madeBy.tool_call.tool} tool of ${madeBy.tool_call.server} answered`
+    : 'a generation function made';
+}
 
 function presentedFactOf(event: AssetEvent): PresentedFact {
   if (event.type === 'asset_kept') {
     const { data } = event;
     return {
       type: event.type,
-      summary: `The playbook kept ${kindInWords[data.kind]} of ${sizeInWords(data.bytes)} that a generation function made, until ${dayOf(data.expires_at)}.`,
+      summary: `The playbook kept ${kindInWords[data.kind]} of ${sizeInWords(data.bytes)} that ${makerInWords(data.made_by)}, until ${dayOf(data.expires_at)}.`,
       data,
     };
   }

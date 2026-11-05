@@ -25,11 +25,15 @@ function keptOf(sha256: string, bytes: number, expiresAt: string): AssetKeptData
     bytes,
     sha256,
     kind: 'image',
-    model: 'gateway/openai/gpt-image-2',
-    prompt: 'A lighthouse',
-    parameters: {},
-    references: [],
-    own_key: true,
+    made_by: {
+      generation: {
+        model: 'gateway/openai/gpt-image-2',
+        prompt: 'A lighthouse',
+        parameters: {},
+        references: [],
+        own_key: true,
+      },
+    },
     expires_at: expiresAt,
   };
 }

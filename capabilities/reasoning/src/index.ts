@@ -34,6 +34,7 @@ export { promptOfTheAttempt, type PromptOf, type PromptSources } from './capabil
 export { requestFor, resumesAfterMsOf } from './capability/definition-request.ts';
 export { admitted, type DefinitionRejection } from './capability/model-rejection.ts';
 export { withTools, type Opening } from './tools/tool-opening.ts';
+export type { KeepRunImage, RunImage } from './steps/kept-content.ts';
 export { stepsAnswerOf } from './capability/steps-answer.ts';
 export { finishedOf } from './capability/spending-record.ts';
 export type { StepsAnswer } from './steps/steps-answer.ts';

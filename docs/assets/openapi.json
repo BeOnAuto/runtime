@@ -22082,7 +22082,7 @@
       "get": {
         "operationId": "get_asset",
         "summary": "Get asset",
-        "description": "Reads one asset of the playbook by its id: its media type, size and SHA-256, the model that made it, when it was kept and when it expires or expired, and whether its content was removed. It answers an `address` its bytes are read at without a key, signed as it is read, until `address_until` 15 minutes later; both are null once the asset expired or where the runtime signs none. Use it to show an asset a generation function made after the address in its run's output expired. `id` is the asset's id, as that output gives it.",
+        "description": "Reads one asset of the playbook by its id: its media type, size and SHA-256, the model that made it, if any, when it was kept and when it expires or expired, and whether its content was removed. It answers an `address` its bytes are read at without a key, signed as it is read, until `address_until` 15 minutes later; both are null once the asset expired or where the runtime signs none. Use it to show an asset after the address in its run's output expired, or an image a tool answered. `id` is the asset's id, as either gives it.",
         "tags": [
           "assets"
         ],
@@ -22132,8 +22132,15 @@
                       "description": "The SHA-256 of its bytes, in lowercase hex"
                     },
                     "model": {
-                      "type": "string",
-                      "description": "The model that made it, as its function names it"
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The model that made it, as its function names it, or null for an image a tool answered"
                     },
                     "kept_at": {
                       "type": "string",
@@ -22207,7 +22214,7 @@
                     "address_until"
                   ],
                   "additionalProperties": false,
-                  "description": "An asset a generation function made, as the playbook keeps it now"
+                  "description": "An asset of the playbook, as it keeps it now"
                 }
               }
             }

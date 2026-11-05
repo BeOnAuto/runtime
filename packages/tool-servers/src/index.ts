@@ -21,6 +21,7 @@ export {
   type CallStarted,
 } from './calls/call-facts.ts';
 export type { CallJournal, KeepContent } from './calls/recorded-calls.ts';
+export type { ImageCall, KeepImage } from './images/answered-images.ts';
 export { callFieldsShown, keptAnswerOf, keptArgumentsOf } from './calls/shown-calls.ts';
 export type { CallSignals, ToolCallRequest } from './calls/run-parts.ts';
 export type { RunTools, ToolsEnding } from './calls/run-tools.ts';

@@ -1,4 +1,4 @@
-import type { MadeBy } from '../assets/asset-keeping.ts';
+import type { MadeByAGeneration } from '../assets/asset-keeping.ts';
 import { generationBounds, type GenerationPorts } from '../capability/generation-ports.ts';
 import type { GenerationFunctionDefinitionDocument } from '../document/generation-document.ts';
 import type { PreparedRequest } from './prepared-request.ts';
@@ -9,9 +9,9 @@ export interface Asked extends PreparedRequest {
   readonly startedAt: number;
 }
 
-export type Spent = Pick<MadeBy, 'model' | 'own_key' | 'cost_usd'>;
+export type Spent = Pick<MadeByAGeneration, 'model' | 'own_key' | 'cost_usd'>;
 
-function costOf(costUsd: number | undefined): Pick<MadeBy, 'cost_usd'> {
+function costOf(costUsd: number | undefined): Pick<MadeByAGeneration, 'cost_usd'> {
   return costUsd === undefined ? {} : { cost_usd: costUsd };
 }
 
@@ -24,7 +24,7 @@ export function madeByOf(
   document: GenerationFunctionDefinitionDocument,
   asked: Asked,
   costUsd: number | undefined,
-): MadeBy {
+): MadeByAGeneration {
   return {
     kind: asked.model.entry.kind,
     model: document.model,

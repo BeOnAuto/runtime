@@ -8,7 +8,7 @@ import {
 } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
-import { AssetEventSchema, assetsKind } from './asset-facts.ts';
+import { AssetEventSchema, assetsKind, type AssetMadeBy } from './asset-facts.ts';
 
 export const assetsName = 'assets';
 
@@ -23,7 +23,7 @@ const AssetRowSchema = Schema.Struct({
   bytes: Schema.Int,
   sha256: Schema.String,
   kind: Schema.String,
-  model: Schema.String,
+  model: Schema.NullOr(Schema.String),
   run: Schema.String,
   kept_at: Schema.Int,
   expires_at: Schema.NullOr(Schema.Int),
@@ -61,6 +61,10 @@ export function totalsRowOf(row: ProjectedRow | undefined): TotalsRow {
   return row === undefined ? noTotals : Option.getOrElse(decodeTotalsRow(row), () => noTotals);
 }
 
+function modelOf(madeBy: AssetMadeBy): string | null {
+  return 'generation' in madeBy ? madeBy.generation.model : null;
+}
+
 function rowOfTheAsset(row: ProjectedRow | undefined, message: ProjectedMessage): ProjectedRow | undefined {
   const fact = readAsset(message);
   if (fact?.type === 'asset_kept') {
@@ -70,7 +74,7 @@ function rowOfTheAsset(row: ProjectedRow | undefined, message: ProjectedMessage)
       bytes: data.bytes,
       sha256: data.sha256,
       kind: data.kind,
-      model: data.model,
+      model: modelOf(data.made_by),
       run: context.runId,
       kept_at: Date.parse(context.at),
       expires_at: Date.parse(data.expires_at),

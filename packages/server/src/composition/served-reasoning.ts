@@ -22,7 +22,7 @@ import { Context, Effect, Layer } from 'effect';
 import { logReasoning } from '../logging/logging.ts';
 import { logModelProviders, logOperatorHint, logProviderMessage } from '../logging/provider-logging.ts';
 import type { Settings } from '../settings/settings.ts';
-import { runtimeLedger } from './runtime-ledger.ts';
+import { keptByRuns } from './kept-by-runs.ts';
 
 type ProxySettings = NonNullable<ModelAccessOptions['proxy']>;
 
@@ -44,7 +44,7 @@ export interface ServedReasoning {
   readonly transcribe: ReturnType<typeof defineTranscribe>;
 }
 
-type ReasoningSettings = Pick<Settings, 'models' | 'proxy' | 'reasoning' | 'providerSetup'>;
+type ReasoningSettings = Pick<Settings, 'models' | 'proxy' | 'reasoning' | 'providerSetup' | 'generation'>;
 
 export class ComposedModels extends Context.Service<ComposedModels, ModelAccess>()('@on.auto/server/ComposedModels') {}
 
@@ -95,7 +95,7 @@ export async function reasoningServedBy(
       languageModel: languageModelOf(models),
       offered: offeredModels(status.configured, settings.models.aliases, settings.models.allowed),
       tools,
-      content: runtimeLedger(runtime).content,
+      ...keptByRuns(runtime, settings),
       telemetry,
       reading: { mostInputTokens, contextWindowOf: catalog.contextWindowOf },
       providerSetup: settings.providerSetup,

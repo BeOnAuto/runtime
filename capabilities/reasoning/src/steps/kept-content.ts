@@ -1,8 +1,19 @@
 import { textOfContent, textToKeep, type RecordedContent } from '@on.auto/content';
-import type { PlaybookAddress } from '@on.auto/operations';
+import type { Context, Lineage, PlaybookAddress } from '@on.auto/operations';
+import type { ImageCall } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
 export type ContentStore = Pick<RecordedContent, 'put' | 'get'>;
+
+export interface RunImage {
+  readonly playbook: PlaybookAddress;
+  readonly bytes: Readonly<Uint8Array>;
+  readonly call: ImageCall;
+  readonly context: Omit<Context, 'at'>;
+  readonly lineage: Lineage;
+}
+
+export type KeepRunImage = (image: RunImage) => Effect.Effect<string | undefined>;
 
 interface KeptText {
   readonly sha256: string;

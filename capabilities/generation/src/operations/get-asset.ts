@@ -10,10 +10,10 @@ import { AssetIdInputField, assetRead, AssetReadSchema, type AssetRead } from '.
 const minutesAnAddressLasts = contentAddressLastsSeconds / 60;
 
 const description = [
-  'Reads one asset of the playbook by its id: its media type, size and SHA-256, the model that made it, when it was kept and when it expires or expired, and whether its content was removed.',
+  'Reads one asset of the playbook by its id: its media type, size and SHA-256, the model that made it, if any, when it was kept and when it expires or expired, and whether its content was removed.',
   `It answers an \`address\` its bytes are read at without a key, signed as it is read, until \`address_until\` ${minutesAnAddressLasts} minutes later; both are null once the asset expired or where the runtime signs none.`,
-  "Use it to show an asset a generation function made after the address in its run's output expired.",
-  "`id` is the asset's id, as that output gives it.",
+  "Use it to show an asset after the address in its run's output expired, or an image a tool answered.",
+  "`id` is the asset's id, as either gives it.",
 ].join(' ');
 
 const GetAssetInputSchema = Schema.Struct({ id: AssetIdInputField });

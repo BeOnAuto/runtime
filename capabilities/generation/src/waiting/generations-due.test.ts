@@ -79,12 +79,16 @@ describe('the asset of a video made in time', () => {
           bytes: filmedBytes.byteLength,
           sha256: filmedDigest,
           kind: 'video',
-          model: 'gateway/example/short-film',
-          prompt: 'A drone flight over the warehouse.',
-          parameters: { size: '720x1280', duration: 8 },
-          references: [],
-          cost_usd: 0.8,
-          own_key: true,
+          made_by: {
+            generation: {
+              model: 'gateway/example/short-film',
+              prompt: 'A drone flight over the warehouse.',
+              parameters: { size: '720x1280', duration: 8 },
+              references: [],
+              cost_usd: 0.8,
+              own_key: true,
+            },
+          },
           expires_at: new Date(harnessStartsAt + 10_000 + 90 * day).toISOString(),
         },
         context: {

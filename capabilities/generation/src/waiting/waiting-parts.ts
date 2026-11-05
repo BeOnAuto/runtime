@@ -17,7 +17,7 @@ import type {
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { MadeBy } from '../assets/asset-keeping.ts';
+import type { MadeByAGeneration } from '../assets/asset-keeping.ts';
 import type { GenerationPorts } from '../capability/generation-ports.ts';
 import { generationWaitFrom, type GenerationWait } from './generation-wait.ts';
 import { waitAfterPoll } from './poll-cadence.ts';
@@ -48,7 +48,7 @@ export interface Waiting {
   readonly address: RunStreamAddress;
   readonly run: RunDetail;
   readonly wait: GenerationWait;
-  readonly madeBy: MadeBy;
+  readonly madeBy: MadeByAGeneration;
   readonly lineage: Lineage;
 }
 
@@ -66,7 +66,7 @@ export function advanced(parts: WaitingParts, { playbook, key, row }: WaitingPla
   });
 }
 
-function madeByOf(wait: GenerationWait): MadeBy {
+function madeByOf(wait: GenerationWait): MadeByAGeneration {
   const { kind, model, prompt, parameters, references, cost_usd: costUsd, own_key: ownKey } = wait;
   return {
     kind,

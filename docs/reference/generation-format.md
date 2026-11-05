@@ -144,7 +144,7 @@ A reference is never an address. Each one is checked as the run starts, and the 
 
 ## The asset
 
-A run keeps the bytes the model made as content of the playbook, at once, and records the asset on a stream of its own, `assets/{id}`, as the fact `asset_kept`. The fact holds the asset's media type, size and SHA-256, the kind, the model, the prompt as rendered, the parameters sent, the references taken, each by its id and digest, the cost the gateway answered as `cost_usd` where it answered one, `own_key` and when the asset expires, `expires_at`. Its context names the run and the definition that made it.
+A run keeps the bytes the model made as content of the playbook, at once, and records the asset on a stream of its own, `assets/{id}`, as the fact `asset_kept`. The fact holds the asset's media type, size and SHA-256, the kind, what made it as `made_by`, and when the asset expires, `expires_at`. For a generation function, `made_by.generation` holds the model, the prompt as rendered, the parameters sent, the references taken, each by its id and digest, the cost the gateway answered as `cost_usd` where it answered one, and `own_key`. Its context names the run and the definition that made it. An image a tool answers a reasoning function's run is an asset too, made by that call, `made_by.tool_call` ([The run's history](reasoning-format.md#the-run-s-history)).
 
 The reference a run answers is the [asset shape](output-shapes.md#asset):
 

@@ -293,6 +293,14 @@ Each call adds two events to the run's history, appended as they happen:
 
 Either event carries the server's own request id when the server's `request_id` setting says where to find it. The arguments and the result are kept in full, scrubbed of secrets, unless the operator sets `record_content: false` for the server. A run's history, from `list_playbook_events` given its `run_id`, shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.
 
+An image a tool answers is kept as an asset of the run, apart from the result, when the result is kept:
+
+- The runtime records `asset_kept` on the asset's own stream, `assets/{id}`. Its `made_by.tool_call` names the id the model gave the call, the server, the connection where the server is one, and the tool.
+- The kept result names the asset in place of the image's bytes, as `{ "type": "image", "mimeType": "image/png", "asset": "<id>" }`, so the run's history holds no image.
+- [`get_asset`](http.md#generation-functions) reads the asset by that id, with an address to its bytes. Its `model` is `null`.
+- The runtime keeps an image this way when its bytes are a PNG, JPEG, GIF or WebP image no larger than the limit for one image, and the playbook has room for it. The [settings of generation functions](../self-host/configuration.md#generation-functions) set both limits, and how long the asset is kept, 90 days by default. Any other image stays in the result as the tool sent it.
+- With `record_content: false`, the result is not kept, so its images are not kept either.
+
 ### When a tool-calling run cannot finish
 
 A tool may change something outside the playbook. So a run that called tools and then could not finish ends in one of two ways, depending on what it called:

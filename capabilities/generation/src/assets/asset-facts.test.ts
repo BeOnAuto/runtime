@@ -18,12 +18,16 @@ const kept: AssetEvent = {
     bytes: 182_044,
     sha256,
     kind: 'image',
-    model: 'gateway/openai/gpt-image-2',
-    prompt: 'A studio photograph of a teapot on a white table.',
-    parameters: { size: '1024x1024', quality: 'high' },
-    references: [{ id: '019a4f2e-0000-7000-8000-000000000001', sha256 }],
-    cost_usd: 0.042,
-    own_key: true,
+    made_by: {
+      generation: {
+        model: 'gateway/openai/gpt-image-2',
+        prompt: 'A studio photograph of a teapot on a white table.',
+        parameters: { size: '1024x1024', quality: 'high' },
+        references: [{ id: '019a4f2e-0000-7000-8000-000000000001', sha256 }],
+        cost_usd: 0.042,
+        own_key: true,
+      },
+    },
     expires_at: '2027-01-30T10:00:00.000Z',
   },
   context: {
@@ -33,6 +37,33 @@ const kept: AssetEvent = {
     definitionType: 'generation',
     definitionName: 'product-photo',
     definitionVersion: 3,
+  },
+};
+
+const keptOfAToolCall: AssetEvent = {
+  type: 'asset_kept',
+  data: {
+    media_type: 'image/png',
+    bytes: 48_210,
+    sha256: 'a3c9e1f7b5d2c8e4a6f0b9d7c5e3a1f2b4d6c8e0a2f4b6d8c0e2a4f6b8d0c2e4',
+    kind: 'image',
+    made_by: {
+      tool_call: {
+        call_id: 'toolu_01a7Hc3mWq2Xv9',
+        server: 'browser',
+        connection_id: '019a5b10-7e2c-7f41-9a3d-5c8e2b6f1d07',
+        tool: 'browser_take_screenshot',
+      },
+    },
+    expires_at: '2027-02-03T09:30:00.000Z',
+  },
+  context: {
+    at: '2026-11-05T09:30:00.000Z',
+    by: 'user_2q8Vb7KxN4',
+    runId: '019a5b12-3d4e-7a5f-8b6c-9d0e1f2a3b4c',
+    definitionType: 'reasoning',
+    definitionName: 'check-the-order',
+    definitionVersion: 2,
   },
 };
 
@@ -52,7 +83,7 @@ describe('the facts of an asset', () => {
   recordedFactsBehaviour({
     schema: AssetEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.56.0': [kept, expired, removed] },
+    releases: { '0.56.0': [kept, expired, removed], '0.57.0': [keptOfAToolCall] },
   });
 });
 

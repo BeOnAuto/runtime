@@ -1,9 +1,11 @@
 import { createHash } from 'node:crypto';
 
+import { at } from '@on.auto/content/testing';
 import { contentAddressesUnder } from '@on.auto/identity';
 import { Redacted, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { toolImagesKept } from '../assets/tool-images.ts';
 import { assetIdOf, day, issuesOf, numberedHarness, refusalOf, runIdOf } from '../run-testing/run-outcomes.ts';
 import {
   alpha,
@@ -101,6 +103,34 @@ describe('an asset read by its id', () => {
     expect(wordsOf(read)).toBe(
       `The asset, an image of ${onePixelPng.byteLength} bytes, is kept until 2026-12-01; its address, in the details below, opens it for 15 minutes.`,
     );
+  });
+});
+
+describe('an image a tool call answered, read by its id', () => {
+  it('answers no model, since none made it, and an address to its bytes as an asset a model made has', async () => {
+    const { playbook, signing } = signedHarness();
+    const keep = toolImagesKept({ ledger: playbook.ledger.service, content: playbook.ledger.service.content });
+    const id = await at(
+      harnessStartsAt,
+      keep({
+        playbook: alpha,
+        bytes: onePixelPng,
+        call: { call_id: 'toolu_01', server: 'browser', tool: 'browser_take_screenshot' },
+        context: {
+          by: 'acme-admin',
+          runId: runIdOf(2),
+          definitionType: 'reasoning',
+          definitionName: 'look',
+          definitionVersion: 1,
+        },
+        lineage: { causationId: 'start-2', correlationId: runIdOf(2) },
+      }),
+    );
+
+    const read = await readOf(playbook, String(id));
+
+    expect(read).toMatchObject({ media_type: 'image/png', sha256: pngDigest, model: null, expired: false });
+    expect(signing.checkedAddress(alpha, pngDigest, presentedIn(read.address))).toBe('signed');
   });
 });
 

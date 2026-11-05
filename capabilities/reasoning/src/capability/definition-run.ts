@@ -14,6 +14,7 @@ export function definitionRun({
   clock,
   tools: access,
   content,
+  images,
   performJob,
   reading,
 }: RunServices & { readonly performJob: NonNullable<RunServices['performJob']> }): (
@@ -22,7 +23,7 @@ export function definitionRun({
   run: RunContext,
 ) => Effect.Effect<Finished, DefinitionRejection> {
   const runClock = clock === undefined ? Effect.clockWith(Effect.succeed) : Effect.succeed(clock);
-  const answering = { languageModel, access, reading, content, perform: performJob };
+  const answering = { languageModel, access, reading, content, images, perform: performJob };
   return Effect.fnUntraced(function* (
     definition: ReasoningFunctionDefinitionDocument,
     input: Schema.Json,

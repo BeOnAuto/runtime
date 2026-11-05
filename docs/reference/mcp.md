@@ -163,7 +163,7 @@ These tools are listed on `/mcp` and a playbook endpoint. Their routes are relat
 | `list_runs`      | `GET /runs`                           | List the playbook's runs, newest first; `steps: false` leaves out those a step started              |
 | `cancel_run`     | `POST /runs/{run_id}/cancel`          | Cancel a run that is still going                                                                    |
 | `send_run_event` | `POST /runs/{run_id}/events`          | Deliver an event to a workflow run that is still `started`                                          |
-| `get_asset`      | `GET /assets/{id}`                    | Read an asset a generation function made, with an address to its bytes signed as it is read         |
+| `get_asset`      | `GET /assets/{id}`                    | Read an asset of a generation function or a tool's image, with an address to its bytes              |
 
 `create_playbook` answers the playbook's page in Studio as `studio`, `create_definition` and `update_definition` the definition's, and `run_definition` its playbook's Ledger with the run chosen, so the agent gives the person the link without being asked; [Links to Studio](http.md#links-to-studio) says what each link opens.
 
