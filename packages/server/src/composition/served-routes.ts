@@ -1,11 +1,13 @@
 import {
   apiCatalogRoutes,
   contentAddressRoutes,
+  debugRoutes,
   guideRoutes,
   guideShelfFrom,
   mcpRoutes,
   openApiDocumentRoutes,
   operationRoutes,
+  readDebugStyle,
   type AppRuntime,
   type RegisterRoutes,
   type RetryStateKeys,
@@ -55,11 +57,14 @@ export async function routesFor(
 ): Promise<readonly RegisterRoutes[]> {
   const shelf = await guideShelfFrom(shippedFiles, capabilities, { pages });
   const directoryShelf = await guideShelfFrom(shippedFiles, inTheDirectoryListing(capabilities), { pages });
+  const directoryListing = { catalog: directoryCatalog, shelf: directoryShelf };
+  const debugStyle = await readDebugStyle(shippedFiles);
   return [
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
     openApiDocumentRoutes({ catalog, serverInfo: release, shelf, identityIssuer }),
     contentAddressRoutes({ key: contentAddressKey, content: runtimeLedger(runtime).content }),
     guideRoutes(shelf),
+    debugRoutes({ catalog, shelf, serverInfo: release, directoryListing }, debugStyle),
     apiCatalogRoutes(shelf),
     mcpRoutes({
       catalog,
@@ -67,7 +72,7 @@ export async function routesFor(
       runCall: runtime.run,
       serverInfo: release,
       shelf,
-      directoryListing: { catalog: directoryCatalog, shelf: directoryShelf },
+      directoryListing,
       retryStateKeys,
       reportError: (error) => {
         void runtime.run(logMcpError(error));

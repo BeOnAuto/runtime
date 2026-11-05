@@ -3,6 +3,7 @@ import { secureHeaders } from 'hono/secure-headers';
 
 import type { ApiEnv } from '../api-env.ts';
 import { servesContentAt } from '../content/content-routes.ts';
+import { debugPath } from '../debug/debug-path.ts';
 import { servesStudioAt, type ApiStudio } from '../studio/served-studio.ts';
 import { servedStudioPolicyOf } from '../studio/studio-policy.ts';
 import { assignRequestId } from './request-id.ts';
@@ -19,12 +20,12 @@ const headersOfContentAnyOriginEmbeds = secureHeaders({
   contentSecurityPolicy: { ...policyOfAnAnswer, sandbox: [] },
 });
 
-const otherHeadersOfTheServedStudio = secureHeaders(frameHeaders);
+const headersBesidePagePolicy = secureHeaders(frameHeaders);
 
 const policyOfAPageWithoutScripts = servedStudioPolicyOf([]);
 
-const servedStudioHeaders: MiddlewareHandler<ApiEnv> = (c, next) =>
-  otherHeadersOfTheServedStudio(c, async () => {
+const headersOfAPage: MiddlewareHandler<ApiEnv> = (c, next) =>
+  headersBesidePagePolicy(c, async () => {
     await next();
     if (!c.res.headers.has('content-security-policy')) {
       c.res.headers.set('content-security-policy', policyOfAPageWithoutScripts);
@@ -34,8 +35,8 @@ const servedStudioHeaders: MiddlewareHandler<ApiEnv> = (c, next) =>
 function securityHeadersFor(studio: ApiStudio): MiddlewareHandler<ApiEnv> {
   const servesStudio = servesStudioAt(studio);
   return (c, next) => {
-    if (servesStudio(c.req.path)) {
-      return servedStudioHeaders(c, next);
+    if (servesStudio(c.req.path) || c.req.path === debugPath) {
+      return headersOfAPage(c, next);
     }
     return servesContentAt(c.req.path) ? headersOfContentAnyOriginEmbeds(c, next) : securityHeaders(c, next);
   };

@@ -1,10 +1,10 @@
-import type { McpServer } from '@modelcontextprotocol/server';
+import type { GetPromptResult, McpServer } from '@modelcontextprotocol/server';
 
 import { recipesFollowedWith, type RecipeCalls, type ServedTools } from '../mcp/instructions.ts';
 import type { RecipeArgument, RecipeWords } from './guide-shelf.ts';
 import { wordsSchemaOf } from './recipe-prompts.ts';
 
-interface StartingPrompt extends RecipeCalls {
+export interface StartingPrompt extends RecipeCalls {
   readonly title: string;
   readonly description: string;
   readonly arguments: readonly RecipeArgument[];
@@ -24,14 +24,20 @@ const startingPrompts: readonly StartingPrompt[] = [
   },
 ];
 
+export function startingPromptsFollowedWith(served: ServedTools): readonly StartingPrompt[] {
+  return recipesFollowedWith(served, startingPrompts);
+}
+
+export function startingAnswerOf(prompt: StartingPrompt): (words: RecipeWords) => GetPromptResult {
+  return (words) => ({ messages: [{ role: 'user', content: { type: 'text', text: prompt.ask(words) } }] });
+}
+
 export function serveStartingPrompts(server: Readonly<Pick<McpServer, 'registerPrompt'>>, served: ServedTools): void {
-  for (const prompt of recipesFollowedWith(served, startingPrompts)) {
+  for (const prompt of startingPromptsFollowedWith(served)) {
     server.registerPrompt(
       prompt.name,
       { title: prompt.title, description: prompt.description, argsSchema: wordsSchemaOf(prompt.arguments) },
-      (words: RecipeWords) => ({
-        messages: [{ role: 'user', content: { type: 'text', text: prompt.ask(words) } }],
-      }),
+      startingAnswerOf(prompt),
     );
   }
 }

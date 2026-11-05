@@ -29,14 +29,15 @@ When the server [sends telemetry](../self-host/telemetry.md), every response exc
 
 ## The OpenAPI document, the guides and the API catalog
 
-| Method and route               | Returns                                                       |
-| ------------------------------ | ------------------------------------------------------------- |
-| `GET /v1/openapi.json`         | The OpenAPI 3.1.1 document of this API                        |
-| `GET /v1/guides/{guide}`       | One guide, as `text/markdown`                                 |
-| `GET /.well-known/api-catalog` | The API catalog of this server, as `application/linkset+json` |
-| `GET /health`                  | Whether the server is up                                      |
+| Method and route               | Returns                                                                                            |
+| ------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `GET /v1/openapi.json`         | The OpenAPI 3.1.1 document of this API                                                             |
+| `GET /v1/guides/{guide}`       | One guide, as `text/markdown`                                                                      |
+| `GET /.well-known/api-catalog` | The API catalog of this server, as `application/linkset+json`                                      |
+| `GET /health`                  | Whether the server is up                                                                           |
+| `GET /debug`                   | A page of [everything an agent receives](mcp.md#everything-an-agent-receives-on-one-page) over MCP |
 
-These four need no key, and neither does [content at a signed address](#content-at-a-signed-address), whose signature is its credential. Where sign-in is on, the [protected resource metadata](authentication.md#protected-resource-metadata) needs no key either. It is served at `/.well-known/oauth-protected-resource` and under the path of each MCP endpoint. Where the runtime signs people in at an `https` `PUBLIC_URL`, the [client metadata document](authentication.md#client-metadata-document), by which Auto names its own client when a person connects a provider by consent, needs no key either. It is served at `/oauth/client.json`.
+These five need no key, and neither does [content at a signed address](#content-at-a-signed-address), whose signature is its credential. Where sign-in is on, the [protected resource metadata](authentication.md#protected-resource-metadata) needs no key either. It is served at `/.well-known/oauth-protected-resource` and under the path of each MCP endpoint. Where the runtime signs people in at an `https` `PUBLIC_URL`, the [client metadata document](authentication.md#client-metadata-document), by which Auto names its own client when a person connects a provider by consent, needs no key either. It is served at `/oauth/client.json`.
 
 ### The OpenAPI document
 

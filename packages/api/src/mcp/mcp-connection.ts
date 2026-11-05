@@ -44,14 +44,18 @@ export interface EveryTool {
   readonly listed: readonly ListedTool[];
 }
 
-export function connectionOf(endpoint: McpEndpoint, serving: McpServing, { served, listed }: EveryTool): Connection {
+export function connectionListingOf(shelf: GuideShelf, { served, listed }: EveryTool): readonly ListedTool[] {
+  const guideTool = guideToolDefinitionOf(shelf, recipesFollowedWith(served, shelf.recipes));
+  return [...listed, { name: guideToolName, definition: guideTool }];
+}
+
+export function connectionOf(endpoint: McpEndpoint, serving: McpServing, every: EveryTool): Connection {
   const connection = {
     endpoint,
     serving,
     shelf: serving.shelf,
   };
-  const guideTool = guideToolDefinitionOf(connection.shelf, recipesFollowedWith(served, connection.shelf.recipes));
-  const listing = [...listed, { name: guideToolName, definition: guideTool }];
+  const listing = connectionListingOf(connection.shelf, every);
   requireWithin(`The ${endpoint} endpoint`, listing.length, mostToolsOnAConnection, 'tools');
   requireWithin(
     `The listing of the ${endpoint} endpoint`,

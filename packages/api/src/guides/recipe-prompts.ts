@@ -34,7 +34,7 @@ function formatMessageOf(format: ShelvedRecipe['format']): readonly PromptMessag
       ];
 }
 
-function promptOf(recipe: ShelvedRecipe): (words: RecipeWords) => GetPromptResult {
+export function recipeAnswerOf(recipe: ShelvedRecipe): (words: RecipeWords) => GetPromptResult {
   return (words) => ({
     description: recipe.description,
     messages: [
@@ -52,7 +52,7 @@ export function serveRecipePrompts(
     server.registerPrompt(
       recipe.name,
       { title: recipe.title, description: recipe.description, argsSchema: wordsSchemaOf(recipe.arguments) },
-      promptOf(recipe),
+      recipeAnswerOf(recipe),
     );
   }
 }

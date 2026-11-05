@@ -23,7 +23,8 @@
     "@on.auto/phrasing": "workspace:*",
     "@on.auto/shipped-files": "workspace:*",
     "effect": "catalog:",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "marked": "18.1.1"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.1",

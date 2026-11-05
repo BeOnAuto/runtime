@@ -9,7 +9,7 @@ export interface ListedTool {
 
 const listedProtocolRequest = 1;
 
-function listedOf({ name, definition }: ListedTool) {
+export function listedOf({ name, definition }: ListedTool) {
   const { title, description, inputSchema, annotations } = definition;
   const schema = inputSchema['~standard'].jsonSchema.input({ target: 'draft-2020-12' });
   return { name, title, description, inputSchema: { type: 'object', ...schema }, annotations };

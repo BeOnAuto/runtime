@@ -20,7 +20,7 @@ import {
   type ToolDefinition,
   type Twins,
 } from '../tools/tool-definition.ts';
-import type { ServedTools } from './instructions.ts';
+import type { McpEndpoint, ServedTools } from './instructions.ts';
 import { connectionOf, serverOf, type Connection, type EveryTool, type McpServing } from './mcp-connection.ts';
 import {
   everyListing,
@@ -153,10 +153,16 @@ interface OrgServing {
   readonly offers: readonly Offered<Registration<'org'>>[];
 }
 
-function orgServingOf(serving: ToolServing): OrgServing {
-  const registrations = servedAsTools(serving.catalog.operationsIn('org'));
-  const twins = twinsIn(registrations, servedAsTools(serving.catalog.operationsIn('playbook')));
+type Cataloged = Pick<McpServing, 'catalog'>;
+
+function orgServingOf({ catalog }: Cataloged): OrgServing {
+  const registrations = servedAsTools(catalog.operationsIn('org'));
+  const twins = twinsIn(registrations, servedAsTools(catalog.operationsIn('playbook')));
   return { registrations, twins, offers: offered(registrations, orgToolDefinitionsBeside(twins)) };
+}
+
+function playbookOffersOf({ catalog }: Cataloged): readonly Offered<Registration<'playbook'>>[] {
+  return offered(servedAsTools(catalog.operationsIn('playbook')), toolDefinitionOf);
 }
 
 export function orgServerFactory(serving: ToolServing): McpServerFactory {
@@ -171,7 +177,7 @@ export function orgServerFactory(serving: ToolServing): McpServerFactory {
 }
 
 export function playbookServerFactory(serving: ToolServing): McpServerFactory {
-  const playbookOffers = offered(servedAsTools(serving.catalog.operationsIn('playbook')), toolDefinitionOf);
+  const playbookOffers = playbookOffersOf(serving);
   const connection = connectionOf('playbook', serving, everyToolOf([], playbookOffers));
   return (context) => {
     const call = playbookCallOf(context);
@@ -189,16 +195,27 @@ function namedInPlaybookAlone(
   return playbookRegistrations.filter(({ name }) => !orgNames.has(name));
 }
 
+interface OwnOrgServing {
+  readonly twins: Twins;
+  readonly orgOffers: readonly Offered<Registration<'org'>>[];
+  readonly playbookOffers: readonly Offered<Registration<'playbook'>>[];
+}
+
+function ownOrgServingOf(serving: Cataloged): OwnOrgServing {
+  const { registrations, twins, offers } = orgServingOf(serving);
+  const playbookOffers = offered(
+    namedInPlaybookAlone(servedAsTools(serving.catalog.operationsIn('playbook')), registrations),
+    toolDefinitionTakingPlaybookOf,
+  );
+  return { twins, orgOffers: offers, playbookOffers };
+}
+
 function ownOrgServerFactory(
   serving: ToolServing,
   endpoint: 'own org' | 'directory',
   listed: Listed,
 ): McpServerFactory {
-  const { registrations: orgRegistrations, twins, offers: orgOffers } = orgServingOf(serving);
-  const playbookOffers = offered(
-    namedInPlaybookAlone(servedAsTools(serving.catalog.operationsIn('playbook')), orgRegistrations),
-    toolDefinitionTakingPlaybookOf,
-  );
+  const { twins, orgOffers, playbookOffers } = ownOrgServingOf(serving);
   const connection = connectionOf(endpoint, serving, everyToolOf(orgOffers, playbookOffers));
   return (context) => {
     const call = orgCallOf(context);
@@ -218,4 +235,18 @@ export function catalogServerFactory(serving: ToolServing): McpServerFactory {
 
 export function directoryServerFactory(serving: ToolServing): McpServerFactory {
   return ownOrgServerFactory(serving, 'directory', { directoryListing: true });
+}
+
+function ownOrgListingOf(serving: Cataloged): EveryTool {
+  const { orgOffers, playbookOffers } = ownOrgServingOf(serving);
+  return everyToolOf(orgOffers, playbookOffers);
+}
+
+export function listingsOf(serving: Cataloged, directory: Cataloged): Readonly<Record<McpEndpoint, EveryTool>> {
+  return {
+    'own org': ownOrgListingOf(serving),
+    org: everyToolOf(orgServingOf(serving).offers, []),
+    playbook: everyToolOf([], playbookOffersOf(serving)),
+    directory: ownOrgListingOf(directory),
+  };
 }
