@@ -1,8 +1,9 @@
 import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 
+import type { DebugServing } from '../debug/agent-surface.ts';
 import { debugPath } from '../debug/debug-path.ts';
 import { debugRoutes } from '../debug/debug-routes.ts';
-import { readDebugStyle } from '../debug/debug-style.ts';
+import { readDebugStyle, type DebugStyle } from '../debug/debug-style.ts';
 import { apiShippedRoots } from '../shipped-files/api-roots.ts';
 import { debugCatalog, debugOperations, directoryShelf } from './debug-operations.ts';
 import { testShelf } from './guides.ts';
@@ -29,16 +30,19 @@ function fetcherOf(server: OperationServer): DebugPageServer['fetched'] {
   };
 }
 
+export const debugServing: DebugServing = {
+  catalog: debugCatalog,
+  shelf: testShelf,
+  serverInfo: testServerInfo,
+  directoryListing: { catalog: debugCatalog, shelf: directoryShelf },
+};
+
+export function debugStyleOnDisk(): Promise<DebugStyle> {
+  return readDebugStyle(shippedFilesOnDisk(apiShippedRoots()));
+}
+
 export async function debugPageServer(): Promise<DebugPageServer> {
-  const debug = debugRoutes(
-    {
-      catalog: debugCatalog,
-      shelf: testShelf,
-      serverInfo: testServerInfo,
-      directoryListing: { catalog: debugCatalog, shelf: directoryShelf },
-    },
-    await readDebugStyle(shippedFilesOnDisk(apiShippedRoots())),
-  );
+  const debug = debugRoutes(debugServing, await debugStyleOnDisk());
   const server = await operationServer({ operations: debugOperations, routes: [debug] });
   const listening = await listenOnLoopback(server.handler);
   const fetched = fetcherOf(server);

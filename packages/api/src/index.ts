@@ -24,7 +24,7 @@ export { serverStopping } from './problem/outcome-problem.ts';
 export type { RetryStateKeys } from './tools/linked-answers.ts';
 export { openApiDocumentRoutes, openApiPath, type OpenApiServing } from './openapi/openapi-routes.ts';
 export { guideRoutes } from './guides/guide-routes.ts';
-export { debugRoutes } from './debug/debug-routes.ts';
+export { debugPageAnswerOf, debugRoutes, type DebugPageAnswer } from './debug/debug-routes.ts';
 export { debugPath } from './debug/debug-path.ts';
 export type { DebugServing } from './debug/agent-surface.ts';
 export { readDebugStyle, type DebugStyle } from './debug/debug-style.ts';

@@ -2,8 +2,15 @@ import { createHash } from 'node:crypto';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { debugPageServer, idsIn, type DebugPageServer } from '../testing/debug-pages.ts';
+import {
+  debugPageServer,
+  debugServing,
+  debugStyleOnDisk,
+  idsIn,
+  type DebugPageServer,
+} from '../testing/debug-pages.ts';
 import { acmeAdmin } from '../testing/operation-server.ts';
+import { debugPageAnswerOf } from './debug-routes.ts';
 
 let served: DebugPageServer;
 
@@ -54,5 +61,18 @@ describe('the page at /debug', () => {
     const authorized = { authorization: `Bearer ${acmeAdmin.key}` };
     const answers = [await served.fetched('/debug/tools', authorized), await served.fetched('/debug/tools')];
     expect(answers.map(({ status }) => status)).toEqual([404, 401]);
+  });
+});
+
+describe('the page at /debug, for a server that answers it without these routes', () => {
+  it('is the same document, with the same headers', async () => {
+    const { html, headers } = await debugPageAnswerOf(debugServing, await debugStyleOnDisk());
+    expect(html).toBe(served.page.text);
+    expect(
+      Object.entries(headers).filter(
+        ([name, value]: readonly [string, string]) => served.page.headers.get(name) !== value,
+      ),
+    ).toEqual([]);
+    expect(headers['content-security-policy']).toContain("default-src 'none'");
   });
 });
