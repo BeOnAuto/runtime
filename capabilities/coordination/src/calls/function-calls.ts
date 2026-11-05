@@ -85,6 +85,7 @@ export function definitionCalls(runDefinition: RunDefinition): Perform {
         lineage,
         depth = 0,
         call_depth = 0,
+        acts_for: actsFor,
         resumes_after_ms_by_task: byTask,
       }) => {
         const definition = definitionArgumentsOf(call.arguments);
@@ -106,6 +107,7 @@ export function definitionCalls(runDefinition: RunDefinition): Perform {
           depth,
           callDepth: call_depth + 1,
           calledBy: { run_id: workflowRun, reference, run: count },
+          ...(actsFor === undefined ? {} : { actsFor }),
           longestMs: call.longestMs,
           ...(resumesAfterMs === undefined ? {} : { resumesAfterMs }),
           ...(attemptDied ? { attemptDied } : {}),

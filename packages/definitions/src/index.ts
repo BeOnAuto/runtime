@@ -16,6 +16,7 @@ export { defineStartVersion } from './operations/start-version.ts';
 export {
   cancelledAsAsked,
   capabilityContract,
+  earliestCapabilityContractServed,
   defineCapability,
   predictionCapabilityPoint,
   defaultRunWords,

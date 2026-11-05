@@ -83,7 +83,7 @@ type RecordedFinish = RecordedRunFact<'run_succeeded' | 'run_rejected' | 'run_fa
 
 function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: RunState): RecordedRunState {
   const { input, started_by, calls_tools, finishes_later, resumes, output_shape } = data;
-  const { at, depth = 0, callDepth = 0, calledBy, trigger } = context;
+  const { at, depth = 0, callDepth = 0, calledBy, trigger, actsFor } = context;
   return {
     attempt: firstAttempt,
     input,
@@ -93,6 +93,7 @@ function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: 
       status: 'started',
       started_at: at,
       started_by,
+      ...(actsFor === undefined ? {} : { acts_for: actsFor }),
     },
     finishesLater: finishes_later === true,
     deferred: false,
@@ -119,7 +120,7 @@ function resultOf(event: RecordedFinish): RunResult {
 }
 
 function finishedRecord(
-  { type, name, definition_version, output_shape, started_at, started_by }: RunRecord,
+  { type, name, definition_version, output_shape, started_at, started_by, acts_for }: RunRecord,
   result: RunResult,
   at: string,
 ): RunRecord {
@@ -130,6 +131,7 @@ function finishedRecord(
     ...(output_shape === undefined ? {} : { output_shape }),
     started_at,
     started_by,
+    ...(acts_for === undefined ? {} : { acts_for }),
     finished_at: at,
   };
   if (result.type === 'run_succeeded') {

@@ -56,7 +56,7 @@ describe('the run a run of a workflow starts', () => {
 });
 
 describe('the run a run of a workflow starts for a call or a trigger', () => {
-  it('carries the call that started it and the trigger that started it, when it has them', async () => {
+  it('carries the call that started it, the trigger that started it and the person it acts for, when it has them', async () => {
     const { starts, recording } = recordingStarts();
     const prepared = await Effect.runPromise(recordingWorkflows(recording).prepare(flow));
     const context = {
@@ -71,6 +71,7 @@ describe('the run a run of a workflow starts for a call or a trigger', () => {
       callDepth: 1,
       calledBy: { run_id: 'r-0', reference: '/do/0/flow', run: 1 },
       trigger: { kind: 'event', reference: '/schedule/on' },
+      actsFor: 'person:ada',
       ...noCalledDefinitions,
     } as const;
 
@@ -80,6 +81,7 @@ describe('the run a run of a workflow starts for a call or a trigger', () => {
       {
         called_by: { run_id: 'r-0', reference: '/do/0/flow', run: 1 },
         trigger: { kind: 'event', reference: '/schedule/on' },
+        acts_for: 'person:ada',
       },
     ]);
   });

@@ -11,6 +11,7 @@ const RunLogAttributesSchema = Schema.Struct({
   trigger: Schema.optionalKey(
     Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
   ),
+  acts_for: Schema.optionalKey(Schema.String),
 });
 
 type RunLogAttributes = typeof RunLogAttributesSchema.Type;
@@ -21,7 +22,7 @@ function counted(count: number | undefined): number | undefined {
   return count === undefined || count < 1 ? undefined : count;
 }
 
-function chainOf({ depth, call_depth: callDepth, called_by: calledBy, trigger }: RunLogAttributes) {
+function chainOf({ depth, call_depth: callDepth, called_by: calledBy, trigger, acts_for: actsFor }: RunLogAttributes) {
   const deep = counted(depth);
   const callDeep = counted(callDepth);
   return {
@@ -31,6 +32,7 @@ function chainOf({ depth, call_depth: callDepth, called_by: calledBy, trigger }:
     ...(callDeep === undefined ? {} : { callDepth: callDeep }),
     ...(deep === undefined ? {} : { depth: deep }),
     ...(trigger === undefined ? {} : { trigger }),
+    ...(actsFor === undefined ? {} : { actsFor }),
   };
 }
 

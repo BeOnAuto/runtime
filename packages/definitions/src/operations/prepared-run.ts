@@ -36,7 +36,7 @@ function startOf(
   given: GivenLineage,
   startedBy: RecordedCaller,
 ) {
-  const { depth, callDepth, calledBy, trigger } = given;
+  const { depth, callDepth, calledBy, trigger, actsFor } = given;
   const shape = outputShapeOf(prepared, request.input);
   return {
     type: 'start' as const,
@@ -50,6 +50,7 @@ function startOf(
     call_depth: callDepth,
     ...(calledBy === null ? {} : { called_by: calledBy }),
     ...(trigger === null ? {} : { trigger }),
+    ...(actsFor === null ? {} : { acts_for: actsFor }),
     ...(createOnly === true ? { createOnly } : {}),
     ...(Number.isFinite(prepared.resumesAfterMs) ? { resumes: true as const } : {}),
   };

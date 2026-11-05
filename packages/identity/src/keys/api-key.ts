@@ -1,10 +1,10 @@
 import { randomBytes } from 'node:crypto';
 
 import { sha256Of } from '@on.auto/content';
-import { CallerIdentitySchema } from '@on.auto/operations';
+import { CallerIdentitySchema, localDeveloperId } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import { CredentialOrgSchema, localDeveloperId } from '../access/local-org.ts';
+import { CredentialOrgSchema } from '../access/local-org.ts';
 
 const KeyIdSchema = Schema.String.check(
   Schema.isPattern(/^[a-z0-9-]{1,32}$/u),

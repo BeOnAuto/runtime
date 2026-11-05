@@ -21,6 +21,7 @@ const ofACall: Context = {
   callDepth: 1,
   depth: 2,
   trigger: { kind: 'event', reference: '/schedule/on' },
+  actsFor: 'person:user_7kLm2',
 };
 
 function theContextOfEachMessage(entry: LedgerEntry): void {

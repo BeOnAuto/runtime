@@ -22,6 +22,7 @@ export { CallLineage, type CallLink, type GivenLineage, type TriggerLink } from 
 export { PlaybookWriter } from './ledger/playbook-writer.ts';
 export { playbookLedgerOf } from './ledger/playbook-ledger.ts';
 export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } from './caller/caller.ts';
+export { localDeveloperId, OrgMembership, personOfTheOrg, signedInPersonPrefix } from './caller/caller.ts';
 export { CallingClientSchema, type CallingClient } from './caller/calling-client.ts';
 export { CallFetch } from './caller/call-fetch.ts';
 export {
@@ -147,7 +148,6 @@ export { keptContentOf } from './reading/kept-content.ts';
 export { shownData, type EventView } from './reading/shown-data.ts';
 export { ServedAsTool } from './dispatch/served-as-tool.ts';
 export { OperationsServed } from './dispatch/operations-served.ts';
-export { DirectoryListing } from './dispatch/request.ts';
 export type { HandlerServices } from './definition/handler-services.ts';
 export { PlaybookIdSchema, OrgIdSchema } from './caller/identifiers.ts';
 export { IncidentReporter, type CallSummary, type Incident } from './dispatch/incident-reporter.ts';
@@ -236,7 +236,7 @@ export type {
   RouteRegistration,
   Runnable,
 } from './definition/registration.ts';
-export { callSummaryOf, type PlaybookRequest, type OrgRequest } from './dispatch/request.ts';
+export { callSummaryOf, DirectoryListing, type PlaybookRequest, type OrgRequest } from './dispatch/request.ts';
 export { takesNoBody, type Method, type Route } from './definition/route.ts';
 export type { OperationKind, OperationScope } from './caller/operation-scope.ts';
 export { settle } from './dispatch/settle.ts';

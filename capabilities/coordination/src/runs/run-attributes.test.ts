@@ -22,6 +22,17 @@ describe('the attributes of a workflow run', () => {
     expect(attributesOfRun(attributes)).toEqual(Option.some(attributes));
   });
 
+  it('reads the person a run acts for, which the run of a trigger names', () => {
+    const actingForAda = {
+      ...attributes,
+      trigger: { kind: 'cron', reference: '/schedule/cron' },
+      acts_for: 'person:ada',
+    };
+
+    expect(attributesOfRun(actingForAda)).toEqual(Option.some(actingForAda));
+    expect(attributesOfRun({ ...attributes, acts_for: 7 })).toEqual(Option.none());
+  });
+
   it('refuses a caller with an unknown permission or without its playbooks instead of granting access', () => {
     expect(attributesOfRun({ ...attributes, caller: { ...attributes.caller, permissions: ['admin'] } })).toEqual(
       Option.none(),

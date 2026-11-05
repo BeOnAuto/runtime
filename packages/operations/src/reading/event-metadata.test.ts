@@ -47,6 +47,7 @@ const ofARun: RecordedEvent = {
     callDepth: 1,
     depth: 2,
     trigger: { kind: 'event', reference: '/schedule/on' },
+    actsFor: 'person:ada',
   },
 };
 
@@ -68,6 +69,7 @@ describe('the metadata of an event of a run', () => {
       'call_depth',
       'depth',
       'trigger',
+      'acts_for',
       'trace_id',
       'span_id',
     ]);
@@ -78,6 +80,7 @@ describe('the metadata of an event of a run', () => {
       call_depth: 1,
       depth: 2,
       trigger: { kind: 'event', reference: '/schedule/on' },
+      acts_for: 'person:ada',
       trace_id: 't-1',
       span_id: 's-1',
     });

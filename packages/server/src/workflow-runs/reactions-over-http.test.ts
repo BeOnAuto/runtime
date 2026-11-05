@@ -1,3 +1,4 @@
+import { answers, textResult } from '@on.auto/reasoning/testing';
 import { Schema } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -22,7 +23,22 @@ const historyIn = Schema.decodeUnknownSync(
   Schema.Struct({ events: Schema.Array(Schema.Struct({ type: Schema.String })) }),
 );
 
+const startedIn = Schema.decodeUnknownSync(
+  Schema.Struct({
+    events: Schema.NonEmptyArray(
+      Schema.Struct({ type: Schema.String, metadata: Schema.Struct({ acts_for: Schema.optionalKey(Schema.String) }) }),
+    ),
+  }),
+);
+
 type ListedRun = (typeof ListedRuns.Type)['runs'][number];
+
+const summary = ['---', 'model: anthropic/claude-sonnet-4-5', '---', 'Summarize: {{ input.text }}'].join('\n');
+
+const summarizing = workflowSource(
+  'summarize-the-month',
+  "schedule:\n  on: { one: { with: { type: com.acme.ledger.closed } } }\ndo:\n  - ask: { call: run_definition, with: { type: reasoning, name: summary, input: { text: '${ $data[0].data.month }' } } }\n",
+);
 
 const closing = workflowSource(
   'close-the-month',
@@ -118,5 +134,64 @@ describe('a run waiting for an event whose type its filter names', () => {
     const settled = await settledRun(server, path);
 
     expect(settled.body).toMatchObject({ status: 'succeeded', output: { by: 'Ada' } });
+  });
+});
+
+async function servingSummaries(): Promise<void> {
+  server = await servingWorkflows([answers(textResult('Closed.'))]);
+  await server.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
+  await server.call('POST', `${alpha}/definitions/reasoning`, {
+    body: { name: 'summary', source: summary, diagram: 'none' },
+  });
+  await created(['summarize-the-month', summarizing]);
+}
+
+async function triggeredStartOf(name: string) {
+  const { run, settled } = await triggeredRunOf(name);
+  const history = startedIn((await server.call('GET', `${alpha}/runs/${run?.run_id ?? ''}/history`)).body);
+  return { settled, start: history.events[0] };
+}
+
+async function stepRunOf(): Promise<unknown> {
+  const [called = ''] = server.modelRunIds();
+  return (await server.call('GET', `${alpha}/runs/${called}`)).body;
+}
+
+describe('the person a run a trigger started acts for', () => {
+  it('is the person who saved its version, the local developer here, on the run, on its start and on the runs its steps started', async () => {
+    await servingSummaries();
+
+    await server.call('POST', `${alpha}/events`, {
+      body: { event: { source: '/ledger', type: 'com.acme.ledger.closed', data: { month: 'september' } } },
+    });
+    const { settled, start } = await triggeredStartOf('summarize-the-month');
+    const step = await stepRunOf();
+
+    expect(settled.body).toMatchObject({
+      status: 'succeeded',
+      started_by: { id: 'playbook:alpha' },
+      acts_for: 'local',
+    });
+    expect(start).toEqual({ type: 'run_started', metadata: { acts_for: 'local' } });
+    expect(step).toMatchObject({ status: 'succeeded', started_by: { id: 'playbook:alpha' }, acts_for: 'local' });
+  });
+
+  it('is nobody on a run a caller started, which acts for its caller, nor on the runs its steps started', async () => {
+    await servingSummaries();
+
+    const started = await server.call('POST', `${alpha}/definitions/workflow/summarize-the-month/run`, {
+      body: { input: [{ data: { month: 'october' } }] },
+    });
+    const settled = await settledRun(server, `${alpha}/runs/${runIdIn(started.body)}`);
+    const step = await stepRunOf();
+
+    expect([settled.body, step]).toMatchObject([
+      { status: 'succeeded', started_by: { id: 'local' } },
+      { status: 'succeeded', started_by: { id: 'local' } },
+    ]);
+    expect([settled.body, step].map((body) => Schema.is(Schema.Struct({ acts_for: Schema.String }))(body))).toEqual([
+      false,
+      false,
+    ]);
   });
 });

@@ -2,7 +2,10 @@ import type { CalledBy, Context, StartingTrigger } from '../ledger/context.ts';
 import type { EventMetadata } from './public-event.ts';
 import type { RecordedFact, Trace } from './recorded-read.ts';
 
-type Chain = Pick<EventMetadata, 'run_id' | 'definition' | 'called_by' | 'call_depth' | 'depth' | 'trigger'>;
+type Chain = Pick<
+  EventMetadata,
+  'run_id' | 'definition' | 'called_by' | 'call_depth' | 'depth' | 'trigger' | 'acts_for'
+>;
 
 function definitionOf({
   definitionType,
@@ -27,7 +30,7 @@ function triggerOf(trigger: StartingTrigger | undefined): Pick<Chain, 'trigger'>
 }
 
 function chainOf(context: Context): Chain {
-  const { runId, calledBy, callDepth, depth, trigger } = context;
+  const { runId, calledBy, callDepth, depth, trigger, actsFor } = context;
   return {
     ...(runId === undefined ? {} : { run_id: runId }),
     ...definitionOf(context),
@@ -35,6 +38,7 @@ function chainOf(context: Context): Chain {
     ...(callDepth === undefined ? {} : { call_depth: callDepth }),
     ...(depth === undefined ? {} : { depth }),
     ...triggerOf(trigger),
+    ...(actsFor === undefined ? {} : { acts_for: actsFor }),
   };
 }
 

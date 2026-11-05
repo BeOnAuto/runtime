@@ -51,6 +51,12 @@ export const EventMetadataSchema = Schema.Struct({
   call_depth: Schema.optionalKey(Schema.Int.annotate({ description: 'How many calls are above the run' })),
   depth: Schema.optionalKey(Schema.Int.annotate({ description: 'How many reactions are above the run or event' })),
   trigger: Schema.optionalKey(EventTriggerSchema),
+  acts_for: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id',
+    }),
+  ),
   trace_id: Schema.optionalKey(Schema.String.annotate({ description: 'The trace of the append that recorded it' })),
   span_id: Schema.optionalKey(Schema.String.annotate({ description: 'The span of the append that recorded it' })),
 }).annotate({ description: 'Where the event is recorded, and who, when, which run and which chain it belongs to' });

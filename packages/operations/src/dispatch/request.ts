@@ -25,6 +25,7 @@ export interface PlaybookRequest extends OrgRequest {
   readonly callDepth?: number;
   readonly calledBy?: CallLink;
   readonly trigger?: TriggerLink;
+  readonly actsFor?: string;
   readonly attemptDied?: true;
 }
 

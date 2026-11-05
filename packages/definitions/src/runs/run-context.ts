@@ -10,14 +10,16 @@ interface ChainLinks {
   readonly callDepth: number;
   readonly calledBy: Context['calledBy'];
   readonly trigger: StartingTrigger | undefined;
+  readonly actsFor: string | undefined;
 }
 
-function linksOf({ depth, callDepth, calledBy, trigger }: ChainLinks): Chain {
+function linksOf({ depth, callDepth, calledBy, trigger, actsFor }: ChainLinks): Chain {
   return {
     ...(calledBy === undefined ? {} : { calledBy }),
     ...(callDepth > 0 ? { callDepth } : {}),
     ...(depth > 0 ? { depth } : {}),
     ...(trigger === undefined ? {} : { trigger }),
+    ...(actsFor === undefined ? {} : { actsFor }),
   };
 }
 
@@ -36,6 +38,7 @@ function chainOfTheStart(start: RunStart): Chain {
       callDepth: start.call_depth ?? 0,
       calledBy: calledByOf(start.called_by),
       trigger: start.trigger,
+      actsFor: start.acts_for,
     }),
   };
 }
@@ -45,7 +48,7 @@ function chainOfTheRun({ run, depth, callDepth, calledBy, trigger }: RecordedRun
     definitionType: run.type,
     definitionName: run.name,
     definitionVersion: run.definition_version,
-    ...linksOf({ depth, callDepth, calledBy, trigger }),
+    ...linksOf({ depth, callDepth, calledBy, trigger, actsFor: run.acts_for }),
   };
 }
 

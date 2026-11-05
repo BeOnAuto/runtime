@@ -204,9 +204,30 @@ interface ContractTwo extends Omit<ContractOne, 'folder'> {
   };
 }
 
+interface ContractThree extends Omit<ContractTwo, 'runContext'> {
+  readonly runContext: {
+    readonly id: string;
+    readonly org: string;
+    readonly playbook: string;
+    readonly caller: CallerIdentity;
+    readonly definition: { readonly name: string; readonly version: number };
+    readonly journal: RunJournal;
+    readonly lineage: RunLineage;
+    readonly depth: number;
+    readonly callDepth: number;
+    readonly calledBy?: CallLink;
+    readonly trigger?: TriggerLink;
+    readonly actsFor?: string;
+    readonly longestRunOf: (type: string, name: string) => Effect.Effect<number | undefined>;
+    readonly longestRunFor: (type: string, name: string, input: Schema.Json) => Effect.Effect<number | undefined>;
+    readonly resumesAfterOf: (type: string, name: string) => Effect.Effect<number | undefined>;
+  };
+}
+
 interface TypesOfEachContract {
   readonly 1: ContractOne;
   readonly 2: ContractTwo;
+  readonly 3: ContractThree;
 }
 
 type ThisContract = TypesOfEachContract[typeof capabilityContract];
@@ -223,6 +244,6 @@ describe('the contract by which a capability is made and served', () => {
     expectTypeOf<DueWork>().toEqualTypeOf<ThisContract['dueWork']>();
     expectTypeOf<DueItem>().toEqualTypeOf<ThisContract['dueItem']>();
     expectTypeOf<PlaybookOperation>().toEqualTypeOf<ThisContract['playbookOperation']>();
-    expect(capabilityContract).toBe(2);
+    expect(capabilityContract).toBe(3);
   });
 });

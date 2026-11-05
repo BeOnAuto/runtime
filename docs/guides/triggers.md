@@ -427,6 +427,16 @@ page:
 - **A workflow does not start for its own events.** That is by design. A workflow does not start for its own runs, for runs they started, or for events its runs emit.
 - **Requests pile up.** Each run of a workflow that asks for an approval sends a request, which `list_interactions` shows while it is open. Replace a test trigger once it has started its first run, and cancel the runs you do not need.
 
+### When a filter goes past its bounds
+
+Each event filter is held to the bounds the [workflow format](../reference/workflow-format.md#event-filters) gives, and its failure affects no other workflow's filter. When a filter goes past them:
+
+- An expression that raises on an event, or does more than its work, does not match that event, since the event's data can cause either. The playbook records that once for each version, and evaluates the filter again on the next event.
+- A filter stopped by its deadline or its memory does not match either, since the event cannot cause that. The event waits and is matched again on a later sweep (the server's regular pass over waiting work, every second by default).
+- A filter so stopped 3 times in a row, with no completed evaluation between, has a defect of its own. The playbook records that once, and does not evaluate it again for that version of the workflow. The event it waited on goes on without it. The remedy is a new version with a cheaper filter.
+- Keep a filter to a quick test of the event's data: the 200 milliseconds are the server's wall-clock time, so a loaded server may stop one near them.
+- The playbook keeps what it stopped in memory, so a restart evaluates the filter again.
+
 ## Next
 
 - [Workflow format](../reference/workflow-format.md#triggers) has the filters, the trigger limits and the rules for new versions.

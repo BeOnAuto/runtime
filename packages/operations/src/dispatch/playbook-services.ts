@@ -25,6 +25,7 @@ export function playbookServicesOf(
     callDepth,
     calledBy,
     trigger,
+    actsFor,
     attemptDied,
     directoryListing,
   }: PlaybookRequest,
@@ -44,6 +45,7 @@ export function playbookServicesOf(
       callDepth: callDepth ?? 0,
       calledBy: calledBy ?? null,
       trigger: trigger ?? null,
+      actsFor: actsFor ?? null,
       attemptDied: attemptDied === true,
     }),
   );

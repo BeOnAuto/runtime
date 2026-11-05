@@ -71,6 +71,7 @@ export const contextOf = Effect.fnUntraced(function* (
     callDepth: given.callDepth,
     ...(given.calledBy === null ? {} : { calledBy: given.calledBy }),
     ...(given.trigger === null ? {} : { trigger: given.trigger }),
+    ...(given.actsFor === null ? {} : { actsFor: given.actsFor }),
     longestRunOf: (type, name) => called(type, name, ({ longestRunMs }) => longestRunMs),
     longestRunFor: (type, name, input) => called(type, name, ({ longestRunMsFor }) => longestRunMsFor(input)),
     resumesAfterOf: (type, name) =>

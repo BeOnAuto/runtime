@@ -37,6 +37,7 @@ export interface RunContext {
   readonly callDepth: number;
   readonly calledBy?: CallLink;
   readonly trigger?: TriggerLink;
+  readonly actsFor?: string;
   readonly longestRunOf: (type: string, name: string) => Effect.Effect<number | undefined>;
   readonly longestRunFor: (type: string, name: string, input: Schema.Json) => Effect.Effect<number | undefined>;
   readonly resumesAfterOf: (type: string, name: string) => Effect.Effect<number | undefined>;

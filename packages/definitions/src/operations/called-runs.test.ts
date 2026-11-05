@@ -50,7 +50,12 @@ const measuring = defineCapability({
         yield* run.resumesAfterOf('nothing', 'at-all'),
       ];
       return {
-        output: { longest: known(longest), resumesAfter: known(resumesAfter), callDepth: run.callDepth },
+        output: {
+          longest: known(longest),
+          resumesAfter: known(resumesAfter),
+          callDepth: run.callDepth,
+          actsFor: run.actsFor ?? null,
+        },
         record: {},
       };
     }),
@@ -67,7 +72,9 @@ async function playbookMeasuring() {
   await created('probe', 'retired');
   await created('resumer', 'again');
   await definitions.call(operations.retireDefinition, toAlpha(acmeAdmin, { type: 'probe', name: 'retired' }));
-  const measured = (depths: { readonly callDepth?: number; readonly calledBy?: typeof calledBy } = {}) =>
+  const measured = (
+    depths: { readonly callDepth?: number; readonly calledBy?: typeof calledBy; readonly actsFor?: string } = {},
+  ) =>
     definitions.call(operations.runDefinition, {
       ...toAlpha(acmeAdmin, { type: 'measuring', name: 'itself', run_id: runId }),
       ...depths,
@@ -112,6 +119,39 @@ describe('a run that answers a call of another run', () => {
         'This run would sit 9 calls below the run at the top of its tree, more than the 8 a run may: workflows that call workflows reach at most 8 calls deep',
     });
     expect(deeper.ledger.streamNames().filter((stream) => stream.includes('/runs/'))).toEqual([]);
+  });
+});
+
+describe('the person a run that answers a call acts for', () => {
+  it('is the person the run that called it acts for, on its facts, in its context and in get_run', async () => {
+    const { ledger, measured, run, call, getRun } = await playbookMeasuring();
+
+    const answered = await measured({ callDepth: 1, calledBy, actsFor: 'person:user_2ada' });
+    const { records } = await run(
+      Effect.orDie(
+        ledger.service.readRecorded(
+          { org: 'acme', playbook: 'alpha' },
+          { kind: 'run', run: runId },
+          { order: 'asc', limit: 10 },
+        ),
+      ),
+    );
+    const read = await call(getRun, toAlpha(acmeAdmin, { run_id: runId }));
+
+    expect(answered).toMatchObject({
+      output: { acts_for: 'person:user_2ada', output: { actsFor: 'person:user_2ada' } },
+    });
+    expect(records.map(({ context }) => context.actsFor)).toEqual(['person:user_2ada', 'person:user_2ada']);
+    expect(read).toMatchObject({ output: { started_by: { id: 'acme-admin' }, acts_for: 'person:user_2ada' } });
+  });
+
+  it('is nobody where the run that called it acts for nobody', async () => {
+    const { measured } = await playbookMeasuring();
+
+    const answered = await measured({ callDepth: 1, calledBy });
+
+    expect(answered).toMatchObject({ output: { output: { actsFor: null } } });
+    expect(answered).not.toHaveProperty('output.acts_for');
   });
 });
 

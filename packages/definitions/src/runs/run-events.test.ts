@@ -170,10 +170,32 @@ const baseline: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
+const actingForAPerson: readonly (typeof RunEventSchema.Type)[] = [
+  {
+    type: 'run_started',
+    data: {
+      input: { schedule: { due: '2026-11-02T09:00:00.000Z' } },
+      started_by: { id: 'playbook:sales', name: 'sales' },
+      finishes_later: true,
+    },
+    context: {
+      at: '2026-11-02T09:00:00.214Z',
+      by: 'playbook:sales',
+      runId: '019a4b2c-1d3e-7f40-8a51-6b7c8d9e0f1a',
+      definitionType: 'workflow',
+      definitionName: 'weekly-stock-check',
+      definitionVersion: 4,
+      depth: 1,
+      trigger: { kind: 'cron', reference: '/schedule/cron' },
+      actsFor: 'person:user_7kLm2',
+    },
+  },
+];
+
 describe('the facts a playbook records on the stream of a run', () => {
   recordedFactsBehaviour({
     schema: RunEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.57.0': actingForAPerson },
   });
 });

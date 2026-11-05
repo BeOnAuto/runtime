@@ -9,11 +9,31 @@ export interface RecordedVersion {
   readonly source: string;
   readonly stripped?: StrippedForms;
   readonly position: number;
+  readonly putInPlaceBy: string;
 }
 
 export interface VersionSearch {
   readonly position: number;
   readonly found: RecordedVersion | undefined;
+}
+
+function isOfTheVersion(event: RecordedDefinitionEvent, name: string, version: number): boolean {
+  const { definitionName, definitionVersion } = event.context;
+  return definitionName === name && definitionVersion === version;
+}
+
+function foundAfter(
+  found: RecordedVersion | undefined,
+  event: RecordedDefinitionEvent,
+  at: number,
+): RecordedVersion | undefined {
+  if (isDefinitionSaved(event)) {
+    const { source, stripped } = event.data.content;
+    return { source, ...(stripped === undefined ? {} : { stripped }), position: at, putInPlaceBy: event.context.by };
+  }
+  return found !== undefined && event.type === 'definition_restored'
+    ? { ...found, putInPlaceBy: event.context.by }
+    : found;
 }
 
 function evolvedSearch(
@@ -22,12 +42,7 @@ function evolvedSearch(
 ): (search: VersionSearch, event: RecordedDefinitionEvent) => VersionSearch {
   return ({ position, found }, event) => {
     const at = position + 1;
-    const { definitionName, definitionVersion } = event.context;
-    if (!isDefinitionSaved(event) || definitionName !== name || definitionVersion !== version) {
-      return { position: at, found };
-    }
-    const { source, stripped } = event.data.content;
-    return { position: at, found: { source, ...(stripped === undefined ? {} : { stripped }), position: at } };
+    return { position: at, found: isOfTheVersion(event, name, version) ? foundAfter(found, event, at) : found };
   };
 }
 

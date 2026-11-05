@@ -1,7 +1,14 @@
-import { Schema } from 'effect';
+import { Effect, Schema } from 'effect';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import { CallerIdentitySchema, canAccessPlaybook, playbookCallerOf, type CallerIdentity } from '../index.ts';
+import {
+  CallerIdentitySchema,
+  OrgMembership,
+  canAccessPlaybook,
+  personOfTheOrg,
+  playbookCallerOf,
+  type CallerIdentity,
+} from '../index.ts';
 
 const isCallerIdentity = Schema.is(CallerIdentitySchema);
 
@@ -70,5 +77,38 @@ describe('the caller a playbook acts as itself', () => {
       true,
       false,
     ]);
+  });
+});
+
+function benHasLeftAcme(org: string, person: string) {
+  return Effect.succeed(org !== 'acme' || person !== 'person:ben');
+}
+
+describe('the person of the org a caller is', () => {
+  it('is the caller where it is a person signed in or the local developer, every person counting as a member where the host keeps no members', async () => {
+    const ids = ['person:user_7kLm2', 'local', 'build-bot', 'playbook:alpha', 'runtime', 'localhost'];
+
+    const people = await Effect.runPromise(Effect.all(ids.map((id) => personOfTheOrg('acme', id))));
+
+    expect(people).toEqual(['person:user_7kLm2', 'local', undefined, undefined, undefined, undefined]);
+  });
+
+  it('is none for a person the host says has left the org, and asks the host of persons alone', async () => {
+    const asked: string[] = [];
+    const membership = (org: string, person: string) => {
+      asked.push(person);
+      return benHasLeftAcme(org, person);
+    };
+    const people = await Effect.runPromise(
+      Effect.all([
+        personOfTheOrg('acme', 'person:ada'),
+        personOfTheOrg('acme', 'person:ben'),
+        personOfTheOrg('globex', 'person:ben'),
+        personOfTheOrg('acme', 'build-bot'),
+      ]).pipe(Effect.provideService(OrgMembership, membership)),
+    );
+
+    expect(people).toEqual(['person:ada', undefined, 'person:ben', undefined]);
+    expect(asked).toEqual(['person:ada', 'person:ben', 'person:ben']);
   });
 });

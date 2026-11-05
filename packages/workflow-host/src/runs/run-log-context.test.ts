@@ -26,13 +26,14 @@ describe('the context of the records of a workflow run', () => {
     });
   });
 
-  it('carries the call that started the run, its depths and the trigger that started it', () => {
+  it('carries the call that started the run, its depths, the trigger that started it and the person it acts for', () => {
     const chained = {
       ...attributes,
       depth: 2,
       call_depth: 1,
       called_by: { run_id: 'r-0', reference: '/do/0/check', run: 1 },
       trigger: { kind: 'event', reference: '/schedule/on' },
+      acts_for: 'person:ada',
     };
 
     expect(runLogContextOf(chained, at)).toMatchObject({
@@ -40,6 +41,7 @@ describe('the context of the records of a workflow run', () => {
       callDepth: 1,
       depth: 2,
       trigger: { kind: 'event', reference: '/schedule/on' },
+      actsFor: 'person:ada',
     });
   });
 

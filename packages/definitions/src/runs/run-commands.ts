@@ -30,6 +30,7 @@ export interface RunStart extends RunRequest {
   readonly call_depth?: number;
   readonly called_by?: CallLink;
   readonly trigger?: StartingTrigger;
+  readonly acts_for?: string;
   readonly createOnly?: true;
   readonly resumes?: true;
 }

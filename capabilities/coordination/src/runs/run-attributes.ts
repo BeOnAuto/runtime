@@ -13,6 +13,7 @@ const RunAttributesSchema = Schema.Struct({
   trigger: Schema.optionalKey(
     Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
   ),
+  acts_for: Schema.optionalKey(Schema.String),
   lineage: Schema.optionalKey(Schema.Struct({ start: Schema.String, correlation: Schema.String })),
   resumes_after_ms_by_task: Schema.optionalKey(Schema.Record(Schema.String, Schema.Int)),
 });

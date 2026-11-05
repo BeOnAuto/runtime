@@ -120,6 +120,12 @@ export const RunSchema = Schema.Struct({
   rejection: Schema.optionalKey(RunRejectionSchema),
   started_at: Schema.String.annotate({ description: 'When the run started, in ISO 8601 UTC' }),
   started_by: RecordedCallerSchema.annotate({ description: 'The caller who started the run, by id and name' }),
+  acts_for: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing',
+    }),
+  ),
   finished_at: Schema.optionalKey(Schema.String.annotate({ description: 'When the run finished, in ISO 8601 UTC' })),
   within: Schema.optionalKey(RunWithinSchema),
 }).annotate({ identifier: 'Run', description: 'One run of a definition with an input, and how it ended' });

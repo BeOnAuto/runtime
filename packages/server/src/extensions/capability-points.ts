@@ -1,5 +1,6 @@
 import {
   capabilityContract,
+  earliestCapabilityContractServed,
   firstLineOf,
   predictionCapabilityPoint,
   type ExtensionPoint,
@@ -22,7 +23,7 @@ export type FilledPoint = (ports: PortsOfTheServer) => ProvidedCapability;
 
 export const predictionCapabilityFilled: ExtensionPoint<CapabilityMaker> = {
   name: predictionCapabilityPoint,
-  contracts: { least: capabilityContract, most: capabilityContract },
+  contracts: { least: earliestCapabilityContractServed, most: capabilityContract },
   implementationOf: (value) =>
     Predicate.isFunction(value)
       ? Result.succeed((ports: CapabilityPorts): unknown => Reflect.apply(value, undefined, [ports]))

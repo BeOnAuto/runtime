@@ -33,7 +33,7 @@ export function started(
   input: Schema.Json,
   run: RunContext,
 ): Effect.Effect<FinishesLater, Conflict | Unavailable> {
-  const { id, org, playbook, caller, definition, lineage, depth, callDepth, calledBy, trigger } = run;
+  const { id, org, playbook, caller, definition, lineage, depth, callDepth, calledBy, trigger, actsFor } = run;
   return Effect.gen(function* () {
     const seed = yield* Random.nextIntBetween(0, mostSeed);
     const resumesAfterMsByTask = yield* resumesAfterCallsOf(document, run);
@@ -47,6 +47,7 @@ export function started(
       call_depth: callDepth,
       ...(calledBy === undefined ? {} : { called_by: calledBy }),
       ...(trigger === undefined ? {} : { trigger }),
+      ...(actsFor === undefined ? {} : { acts_for: actsFor }),
       lineage: { start: lineage.startId, correlation: lineage.correlationId },
       ...(Object.keys(resumesAfterMsByTask).length === 0 ? {} : { resumes_after_ms_by_task: resumesAfterMsByTask }),
     };

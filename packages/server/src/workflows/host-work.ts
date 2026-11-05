@@ -42,7 +42,21 @@ function nestedRuns(
   dispatcher: Dispatcher,
   runDefinition: PlaybookOperation,
 ): RunInProcess {
-  return ({ org, playbook, caller, type, name, input, runId, lineage, depth, callDepth, calledBy, attemptDied }) =>
+  return ({
+    org,
+    playbook,
+    caller,
+    type,
+    name,
+    input,
+    runId,
+    lineage,
+    depth,
+    callDepth,
+    calledBy,
+    actsFor,
+    attemptDied,
+  }) =>
     inRuntime(
       runtime,
       dispatcher.dispatchToPlaybook(runDefinition.registration, {
@@ -55,6 +69,7 @@ function nestedRuns(
         depth,
         callDepth,
         calledBy,
+        ...(actsFor === undefined ? {} : { actsFor }),
         ...(attemptDied === undefined ? {} : { attemptDied }),
       }),
     ).pipe(Effect.map(definitionRunResultOf));

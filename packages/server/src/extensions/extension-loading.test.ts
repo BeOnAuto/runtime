@@ -157,6 +157,22 @@ describe('an extension a runtime that serves no point refuses', () => {
   });
 });
 
+describe('an extension built against another contract than the one a point takes', () => {
+  it('names the one contract the point takes', async () => {
+    const { packages } = scratchPackages([
+      {
+        name: '@acme/greeters',
+        module: manifestSource('@acme/greeters', [provisionSource(greeterSource('acme', ['hello']), 1)]),
+      },
+    ]);
+    const ofOneContract = { ...greeterPoint, contracts: { least: 2, most: 2 } };
+
+    await expect(loadedExtensions(configured('@acme/greeters'), [ofOneContract], packages)).rejects.toThrow(
+      'The extension @acme/greeters is refused: it provides example/greeter built against contract 1, and this runtime accepts contract 2',
+    );
+  });
+});
+
 describe('an implementation a point reserves for the extensions of the release', () => {
   const withinManifest = manifestSource('@acme/greeters', [
     provisionSource(greeterSource('acme', ['hello'], 'within'), 2),

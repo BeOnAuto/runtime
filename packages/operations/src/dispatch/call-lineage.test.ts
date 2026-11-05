@@ -37,13 +37,14 @@ const note = defineCommand('playbook', {
     trigger: Schema.NullOr(
       Schema.Struct({ kind: Schema.Literals(['event', 'cron', 'every']), reference: Schema.String }),
     ),
+    actsFor: Schema.NullOr(Schema.String),
     attemptDied: Schema.Boolean,
   }),
   reasons: ['conflict'],
   handle: Effect.fnUntraced(function* () {
-    const { lineage, depth, callDepth, calledBy, trigger, attemptDied } = yield* CallLineage;
+    const { lineage, depth, callDepth, calledBy, trigger, actsFor, attemptDied } = yield* CallLineage;
     const { version } = yield* (yield* PlaybookWriter).execute('notes', notes, null, lineage ?? undefined);
-    return { version, depth, callDepth, calledBy, trigger, attemptDied };
+    return { version, depth, callDepth, calledBy, trigger, actsFor, attemptDied };
   }),
 });
 
@@ -98,11 +99,19 @@ describe('the lineage of a call a workflow made', () => {
     expect(outcomes).toEqual([
       {
         status: 'succeeded',
-        output: { version: 1, depth: 0, callDepth: 2, calledBy, trigger: null, attemptDied: false },
+        output: { version: 1, depth: 0, callDepth: 2, calledBy, trigger: null, actsFor: null, attemptDied: false },
       },
       {
         status: 'succeeded',
-        output: { version: 2, depth: 0, callDepth: 0, calledBy: null, trigger: null, attemptDied: false },
+        output: {
+          version: 2,
+          depth: 0,
+          callDepth: 0,
+          calledBy: null,
+          trigger: null,
+          actsFor: null,
+          attemptDied: false,
+        },
       },
     ]);
   });
@@ -121,6 +130,22 @@ describe('the lineage of a run a trigger started', () => {
     expect(outcomes).toMatchObject([
       { status: 'succeeded', output: { version: 1, trigger } },
       { status: 'succeeded', output: { version: 2, trigger: null } },
+    ]);
+  });
+});
+
+describe('the lineage of a run that acts for a person', () => {
+  it('carries the person the run acts for, and none for a request that gave none', async () => {
+    const { dispatcher, run } = harness();
+
+    const outcomes = [
+      await run(dispatcher.dispatchToPlaybook(note.registration, { ...toAlpha(acmeAdmin), actsFor: 'person:ada' })),
+      await run(dispatcher.dispatchToPlaybook(note.registration, toAlpha(acmeAdmin))),
+    ];
+
+    expect(outcomes).toMatchObject([
+      { status: 'succeeded', output: { version: 1, actsFor: 'person:ada' } },
+      { status: 'succeeded', output: { version: 2, actsFor: null } },
     ]);
   });
 });

@@ -16014,6 +16014,10 @@
                       "additionalProperties": false,
                       "description": "The caller who started the run, by id and name"
                     },
+                    "acts_for": {
+                      "type": "string",
+                      "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
+                    },
                     "finished_at": {
                       "type": "string",
                       "description": "When the run finished, in ISO 8601 UTC"
@@ -16477,6 +16481,10 @@
                       ],
                       "additionalProperties": false,
                       "description": "The caller who started the run, by id and name"
+                    },
+                    "acts_for": {
+                      "type": "string",
+                      "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
                     },
                     "finished_at": {
                       "type": "string",
@@ -16968,6 +16976,10 @@
                       "additionalProperties": false,
                       "description": "The caller who started the run, by id and name"
                     },
+                    "acts_for": {
+                      "type": "string",
+                      "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
+                    },
                     "finished_at": {
                       "type": "string",
                       "description": "When the run finished, in ISO 8601 UTC"
@@ -17268,6 +17280,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "The caller who started the run, by id and name"
+                        },
+                        "acts_for": {
+                          "type": "string",
+                          "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
                         },
                         "finished_at": {
                           "type": "string",
@@ -17675,6 +17691,10 @@
                               ],
                               "additionalProperties": false,
                               "description": "The trigger that started the run"
+                            },
+                            "acts_for": {
+                              "type": "string",
+                              "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id"
                             },
                             "trace_id": {
                               "type": "string",
@@ -18504,6 +18524,10 @@
                               "additionalProperties": false,
                               "description": "The trigger that started the run"
                             },
+                            "acts_for": {
+                              "type": "string",
+                              "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id"
+                            },
                             "trace_id": {
                               "type": "string",
                               "description": "The trace of the append that recorded it"
@@ -19183,6 +19207,10 @@
                           ],
                           "additionalProperties": false,
                           "description": "The trigger that started the run"
+                        },
+                        "acts_for": {
+                          "type": "string",
+                          "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id"
                         },
                         "trace_id": {
                           "type": "string",

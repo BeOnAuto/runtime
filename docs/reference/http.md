@@ -593,7 +593,7 @@ A cancelled run's rejection names the kind of its cancellation:
 
 ## Runs and results
 
-A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
+A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A run a trigger started, and each run its workflow's steps start, has `acts_for`, the id of the person whose sign-ins it uses, such as `person:user_7kLm2`: whoever saved or restored the version the trigger runs, where that was a person ([When a trigger applies](workflow-format.md#when-a-trigger-applies)). It grants the run nothing, and a run without it acts for its caller where that is a person. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
 Most runs finish within the request that starts them. These runs finish later, so `run_definition` returns them `started`, unless one ended before its first wait:
 
@@ -853,6 +853,7 @@ Each event has these fields, and no others:
 | `call_depth`          | On a run a call started: how many calls are above it                                                                                                                                                                |
 | `depth`               | On a run a trigger or another run started, and on an event a workflow emitted: how many reactions are above it                                                                                                      |
 | `trigger`             | On a run a trigger started: its `kind`, `event`, `cron` or `every`, and its `reference` in the document                                                                                                             |
+| `acts_for`            | On a run a trigger started, and on the runs its steps started: the id of the person whose sign-ins it uses, as on the run                                                                                           |
 | `trace_id`, `span_id` | The trace and span of the append that recorded the event, one pair for every event of one append; with telemetry on, the trace the server exported                                                                  |
 
 ### What `data` shows
@@ -880,7 +881,7 @@ Some events say more in their `metadata`:
 
 - For an event a workflow emitted, `metadata` names the run in `run_id`, the workflow and its version in `definition`, and its depth in a chain of triggers in `depth`.
 - A `reaction_refused` event's `metadata` names the workflow and the version whose trigger refused, in `definition`.
-- A run that a trigger started shows `playbook:` and the playbook's id as `by`. Every event of it shows the `trigger` that started it in its `metadata`, with its `kind` and `reference`. Its `run_started` says in words which kind it was, such as "was started by its every schedule".
+- A run that a trigger started shows `playbook:` and the playbook's id as `by`. Every event of it shows the `trigger` that started it in its `metadata`, with its `kind` and `reference`, and, where it acts for a person, `acts_for`. Its `run_started` says in words which kind it was, such as "was started by its every schedule".
 
 ### How events link
 

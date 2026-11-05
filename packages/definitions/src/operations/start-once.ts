@@ -1,3 +1,4 @@
+import { CallLineage, PlaybookContext, personOfTheOrg } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
@@ -13,6 +14,12 @@ const answeredWhilePaused = Effect.fnUntraced(function* (id: string, request: Ru
   return takesAStartOnce(run, request) ? yield* answerOf(id, recorded) : undefined;
 });
 
+const lineageActingFor = Effect.fnUntraced(function* (putInPlaceBy: string) {
+  const { org } = yield* PlaybookContext;
+  const actsFor = yield* personOfTheOrg(org, putInPlaceBy);
+  return { ...(yield* CallLineage), actsFor: actsFor ?? null };
+});
+
 export const startVersionOnce = Effect.fnUntraced(function* (
   capabilities: readonly Capability[],
   capability: Capability,
@@ -26,7 +33,9 @@ export const startVersionOnce = Effect.fnUntraced(function* (
     const answered = yield* answeredWhilePaused(id, asked);
     return answered ?? (yield* paused);
   }
+  const lineage = yield* lineageActingFor(run.definition.putInPlaceBy);
   return yield* runPrepared(capabilities, id, asked, { ...run, createOnly: true }).pipe(
+    Effect.provideService(CallLineage, lineage),
     Effect.catchIf(isTaken, () => Effect.flatMap(loadRun(id), (recorded) => answerOf(id, recorded))),
   );
 });

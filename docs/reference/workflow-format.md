@@ -219,13 +219,7 @@ The rest of the playbook's history, such as tool calls, steps, requests and answ
 
 A filter that names an attribute the event does not have does not match it. A run no reaction started carries no `depth`, and a run no call started no `calldepth`, so a filter for such runs leaves the attribute out.
 
-Each filter is held to its own bounds, and its failure affects no other workflow's filter. The bounds are 250 checkpoints of work for an expression, 500 for the filter, 200 milliseconds of the server's time and a sandbox of 64 MiB. When a filter goes past them:
-
-- An expression that raises on an event, or does more than its work, does not match that event, since the event's data can cause either. The playbook records that once for each version, and evaluates the filter again on the next event.
-- A filter stopped by its deadline or its memory does not match either, since the event cannot cause that. The event waits and is matched again on a later sweep (the server's regular pass over waiting work, every second by default).
-- A filter so stopped 3 times in a row, with no completed evaluation between, has a defect of its own. The playbook records that once, and does not evaluate it again for that version of the workflow. The event it waited on goes on without it. The remedy is a new version with a cheaper filter.
-- Keep a filter to a quick test of the event's data: the 200 milliseconds are the server's wall-clock time, so a loaded server may stop one near them.
-- The playbook keeps what it stopped in memory, so a restart evaluates the filter again.
+Each filter is held to its own bounds, and its failure affects no other workflow's filter. The bounds are 250 checkpoints of work for an expression, 500 for the filter, 200 milliseconds of the server's time and a sandbox of 64 MiB. An expression that raises on an event, or does more than its work, does not match that event. A filter stopped by its deadline or its memory leaves the event to be matched again later, and one stopped 3 times in a row is not evaluated again for that version. [When a filter goes past its bounds](../guides/triggers.md#when-a-filter-goes-past-its-bounds) says what the playbook records of each and what to do.
 
 ### Schedules
 
@@ -241,7 +235,8 @@ Each filter is held to its own bounds, and its failure affects no other workflow
 - A new version's triggers are compared with those of the version before, by kind and place. A trigger it leaves unchanged goes on as it was, with its times and its running run. From then on it starts the new version. A trigger it changes or adds applies from the new version's saving; a changed schedule counts its times from then. A trigger it removes stops.
 - Saving a version without a schedule, or retiring the workflow, stops every trigger.
 - A run that a trigger starts uses the version that was current when the event was recorded or the time came. Its `run_id` is derived from the workflow, that version, the trigger and the event or due time. So an event or a time starts it once. A run it started that is rejected or fails is not started again, and the same event published again records nothing; the [`schedule` recipe](mcp.md#guides-and-prompts) says how to catch up.
-- The playbook itself starts a triggered run, which acts for the playbook. Its `started_by` has the `id` `playbook:` and the playbook's id, and the playbook's id as its `name`. Each step may read and write that playbook and nothing else. The run never acts for a person, so no key's permissions or revocation affect it.
+- The playbook itself starts a triggered run, which acts as the playbook. Its `started_by` has the `id` `playbook:` and the playbook's id, and the playbook's id as its `name`. Each step may read and write that playbook and nothing else, and no person's or key's permissions or revocation affect it.
+- A triggered run names, as `acts_for`, the person whose sign-ins it uses, by id: whoever saved or restored the version it runs. It grants the run nothing. The runs its steps start carry it, and `get_run` and the run's events show it. A version a key saved or restored gives none, and so does one whose person has left the organization, where the runtime knows its members.
 
 ### Trigger limits
 

@@ -1,4 +1,4 @@
-import { Context, Schema } from 'effect';
+import { Context, Effect, Schema } from 'effect';
 
 import { CallingClientSchema, type CallingClient } from './calling-client.ts';
 import { OrgIdSchema } from './identifiers.ts';
@@ -37,6 +37,33 @@ export function playbookCallerOf({
     permissions: ['playbook:read', 'playbook:write'],
     playbooks: [playbook],
   };
+}
+
+export const signedInPersonPrefix = 'person:';
+
+export const localDeveloperId = 'local';
+
+function isAPerson(callerId: string): boolean {
+  return callerId.startsWith(signedInPersonPrefix) || callerId === localDeveloperId;
+}
+
+type IsAMember = (org: string, person: string) => Effect.Effect<boolean>;
+
+function everyPersonIsAMember(): Effect.Effect<boolean> {
+  return Effect.succeed(true);
+}
+
+export const OrgMembership = Context.Reference<IsAMember>('@on.auto/operations/OrgMembership', {
+  defaultValue: () => everyPersonIsAMember,
+});
+
+export function personOfTheOrg(org: string, callerId: string): Effect.Effect<string | undefined> {
+  if (!isAPerson(callerId)) {
+    return Effect.undefined;
+  }
+  return OrgMembership.use((isAMember) =>
+    Effect.map(isAMember(org, callerId), (member) => (member ? callerId : undefined)),
+  );
 }
 
 export class Caller extends Context.Service<Caller, CallerIdentity>()('@on.auto/operations/Caller') {}

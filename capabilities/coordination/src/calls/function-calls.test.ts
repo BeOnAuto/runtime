@@ -115,6 +115,19 @@ describe('a workflow call to a saved definition', () => {
   });
 });
 
+describe('a workflow call of a run that acts for a person', () => {
+  it('starts the definition for the person the run that calls it acts for, and for none where it acts for none', async () => {
+    const { perform, asked } = answering({ status: 'succeeded', output: null });
+    const actingForAda = { ...run, attributes: { ...run.attributes, acts_for: 'person:ada' } };
+
+    await Effect.runPromise(perform(classify, actingForAda, origin, firstAttempt));
+    await Effect.runPromise(perform(classify, run, origin, firstAttempt));
+
+    expect(asked.map(({ actsFor }) => actsFor)).toEqual(['person:ada', undefined]);
+    expect(asked.map((request) => 'actsFor' in request)).toEqual([true, false]);
+  });
+});
+
 describe('a workflow call with invalid arguments', () => {
   it('executes nothing when they do not name a definition it may execute', async () => {
     const { perform, asked } = answering({ status: 'succeeded', output: null });

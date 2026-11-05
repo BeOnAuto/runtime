@@ -1,0 +1,29 @@
+{
+  "type": "run_started",
+  "data": {
+    "input": {
+      "schedule": {
+        "due": "2026-11-02T09:00:00.000Z"
+      }
+    },
+    "started_by": {
+      "id": "playbook:sales",
+      "name": "sales"
+    },
+    "finishes_later": true
+  },
+  "context": {
+    "at": "2026-11-02T09:00:00.214Z",
+    "by": "playbook:sales",
+    "runId": "019a4b2c-1d3e-7f40-8a51-6b7c8d9e0f1a",
+    "definitionType": "workflow",
+    "definitionName": "weekly-stock-check",
+    "definitionVersion": 4,
+    "depth": 1,
+    "trigger": {
+      "kind": "cron",
+      "reference": "/schedule/cron"
+    },
+    "actsFor": "person:user_7kLm2"
+  }
+}

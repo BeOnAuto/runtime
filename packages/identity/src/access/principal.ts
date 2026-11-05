@@ -1,10 +1,17 @@
 import { userInfo } from 'node:os';
 
-import { allPermissions, type CallerIdentity, type CallingClient, type Permission } from '@on.auto/operations';
+import {
+  allPermissions,
+  localDeveloperId,
+  signedInPersonPrefix,
+  type CallerIdentity,
+  type CallingClient,
+  type Permission,
+} from '@on.auto/operations';
 import { Result } from 'effect';
 
 import type { ApiKey } from '../keys/api-key.ts';
-import { localDeveloperId, localOrg } from './local-org.ts';
+import { localOrg } from './local-org.ts';
 
 export interface Principal {
   readonly own: CallerIdentity;
@@ -58,15 +65,13 @@ export function principalOf({ id, org, permissions, playbooks }: ApiKey): Princi
   return principalOfCaller({ id, name: id, org, permissions, playbooks });
 }
 
-const personPrefix = 'person:';
-
 export function signedInPersonOf({ subject, name, org, permissions, client }: VerifiedPerson): Principal {
-  const id = `${personPrefix}${subject}`;
+  const id = `${signedInPersonPrefix}${subject}`;
   return principalOfCaller({ id, name, org, permissions, playbooks: '*', ...(client === undefined ? {} : { client }) });
 }
 
 export function isSignedInPerson({ id }: Pick<CallerIdentity, 'id'>): boolean {
-  return id.startsWith(personPrefix);
+  return id.startsWith(signedInPersonPrefix);
 }
 
 export function isKeyHolder({ id }: Pick<CallerIdentity, 'id'>): boolean {

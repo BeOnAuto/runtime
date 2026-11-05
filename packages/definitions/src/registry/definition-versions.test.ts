@@ -8,9 +8,9 @@ import type { RecordedDefinitionEvent } from './definition-events.ts';
 import { definitionVersionFold, definitionVersionIn } from './definition-versions.ts';
 import { definitionsDecider } from './definitions-decider.ts';
 
-function about(name: string, version: number): DefinitionContext {
+function about(name: string, version: number, by = 'acme-admin'): DefinitionContext {
   return {
-    by: 'acme-admin',
+    by,
     at: '2026-10-01T09:00:00.000Z',
     definitionType: 'echo',
     definitionName: name,
@@ -32,7 +32,7 @@ const history: readonly RecordedDefinitionEvent[] = [
   {
     type: 'definition_updated',
     data: { content: { source: 'two', stripped: { module: 'TWO' } } },
-    context: about('greet', 2),
+    context: about('greet', 2, 'person:ada'),
   },
   { type: 'definition_paused', data: { paused_by: recordedAdmin }, context: about('greet', 2) },
   { type: 'definition_resumed', data: {}, context: about('greet', 2) },
@@ -46,13 +46,30 @@ describe('a search for one version of a definition', () => {
 
     expect(history.reduce((found, event) => search.evolve(found, event), search.initialState)).toEqual({
       position: 6,
-      found: { source: 'two', stripped: { module: 'TWO' }, position: 3 },
+      found: { source: 'two', stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ada' },
     });
     expect(Object.keys(search).toSorted()).toEqual(['eventSchema', 'evolve', 'initialState']);
     expect(history.reduce((found, event) => first.evolve(found, event), first.initialState)).toEqual({
       position: 6,
-      found: { source: 'one', position: 1 },
+      found: { source: 'one', position: 1, putInPlaceBy: 'acme-admin' },
     });
+  });
+
+  it('names who put the version in place: whoever saved it, or whoever restored it since', () => {
+    const search = definitionVersionFold('greet', 2);
+    const restored: RecordedDefinitionEvent = {
+      type: 'definition_restored',
+      data: { content: { source: 'two' }, restored_by: recordedAdmin },
+      context: about('greet', 2, 'person:ben'),
+    };
+    const restoredBeforeAnySave: RecordedDefinitionEvent = { ...restored, context: about('greet', 3, 'person:ben') };
+    const later = definitionVersionFold('greet', 3);
+
+    expect([...history, restored].reduce((found, event) => search.evolve(found, event), search.initialState)).toEqual({
+      position: 7,
+      found: { source: 'two', stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ben' },
+    });
+    expect(later.evolve(later.initialState, restoredBeforeAnySave)).toEqual({ position: 1, found: undefined });
   });
 });
 
@@ -89,6 +106,6 @@ describe('a read of one version of a definition of a playbook', () => {
       ]),
     );
 
-    expect(found).toEqual([{ source: 'two', position: 2 }, undefined, undefined]);
+    expect(found).toEqual([{ source: 'two', position: 2, putInPlaceBy: 'acme-admin' }, undefined, undefined]);
   });
 });
