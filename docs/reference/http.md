@@ -399,6 +399,10 @@ The run takes the answer within about a second (the server checks waiting runs e
 
 When nobody answers a request before it expires, its run ends `rejected`, with the reason `unanswered` and the kind `expired`. A notification that could not be delivered ends with the kind `undelivered`. A request with the same run id and input then returns that ending as a `410` problem of the type `https://on.auto/problems/unanswered`. [How a run ends](interaction-format.md#how-a-run-ends) lists every ending.
 
+### Sign-in requests (planned)
+
+A request that asks the person a run acts for to sign in to a site is planned, and not available yet. It would wait on that person by id: its row in [the organization's activity](#the-organization-s-activity) would hold the id, such as `person:user_7kLm2`, in `waits_on`. `list_interactions` and the activity would show the site and the link where the person signs in, as `sign_in`, and only that person could answer the request. `get_run` would show a triggered run's `acts_for`, the person whose sign-ins it uses. The [design](https://github.com/BeOnAuto/runtime/blob/main/docs/engineering/design/sign-in-during-a-run.md) sets out each field and refusal.
+
 ## Computation functions
 
 Computation functions use the operations of reasoning functions, with `computation` in place of `reasoning` in each route, such as `POST /definitions/computation` and `POST /definitions/computation/{name}/run`. The `source` is a [computation function document](computation-format.md). Names, document size, versions and retirement follow the rules for [reasoning functions](#reasoning-functions).

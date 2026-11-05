@@ -672,6 +672,10 @@ Show numbers over time as a chart keyed by the period a run is about, and anythi
 
 A notification takes no answer, so its page counts what was sent. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
 
+## Asking a person to sign in (planned)
+
+Asking a person to sign in to a site is planned, and not available yet. A fourth shape, with `sign_in`, would ask the person a run acts for to sign in through a browser connection, and wait until they have, as a request waits today. The [design](https://github.com/BeOnAuto/runtime/blob/main/docs/engineering/design/sign-in-during-a-run.md) sets out its fields, its run and its endings. Until it ships, a save refuses `sign_in` with its line, as it refuses every field that [Fields](#fields) does not list.
+
 ## Availability
 
 Interaction functions are available in every runtime. A request reaches a person through the tools of the tool servers the operator configures and of the org's connections, or is held for an agent. See [Functions and availability](../concepts/functions.md#availability).

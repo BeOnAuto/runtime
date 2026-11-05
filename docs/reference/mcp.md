@@ -192,6 +192,10 @@ A client of the `2026-07-28` revision may declare in its request that it answers
 
 A client that declares links alone or no elicitation, or speaks an earlier revision, is not asked, and the agent asks the person in words, from the refusal's list.
 
+#### Asking a person to sign in (planned)
+
+Asking a person to sign in during a run is planned, and not available yet. When an agent builds a playbook that uses a site behind a sign-in, it would ask the person three things, and write the answers into an interaction function with `sign_in`: whether a run waits for them or stops at once, where to reach them, and how long to wait. `create_definition` and `update_definition` would refuse such a function without the answers. Where the agent's client answers forms, the server would ask the person first, as it asks for `deliver` today. The agent would also offer to sign the person in there and then, by calling the browser connection's `browser_sign_in` with `execute_connection`. The [design](https://github.com/BeOnAuto/runtime/blob/main/docs/engineering/design/sign-in-during-a-run.md) sets it out.
+
 ### Events and history
 
 These tools are listed on `/mcp` and a playbook endpoint. Their routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`.
