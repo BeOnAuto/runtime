@@ -1,4 +1,4 @@
-import type { RunContext, Finished } from '@on.auto/definitions';
+import type { CapabilityAnswer, RunContext } from '@on.auto/definitions';
 import { Effect, type Schema } from 'effect';
 
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
@@ -17,13 +17,14 @@ export function definitionRun({
   images,
   performJob,
   reading,
+  approvals = {},
 }: RunServices & { readonly performJob: NonNullable<RunServices['performJob']> }): (
   definition: ReasoningFunctionDefinitionDocument,
   input: Schema.Json,
   run: RunContext,
-) => Effect.Effect<Finished, DefinitionRejection> {
+) => Effect.Effect<CapabilityAnswer, DefinitionRejection> {
   const runClock = clock === undefined ? Effect.clockWith(Effect.succeed) : Effect.succeed(clock);
-  const answering = { languageModel, access, reading, content, images, perform: performJob };
+  const answering = { languageModel, access, reading, content, images, perform: performJob, approvals };
   return Effect.fnUntraced(function* (
     definition: ReasoningFunctionDefinitionDocument,
     input: Schema.Json,
@@ -32,6 +33,6 @@ export function definitionRun({
     const before = beforeTheSteps(run.journal, definition.model);
     const prompt = yield* promptOfTheAttempt({ content, clock: runClock }, { definition, input, run, before });
     const answered = yield* answerOf(answering, { definition, prompt, run, before });
-    return yield* finishedOf(definition, answered);
+    return 'finishesLater' in answered ? answered : yield* finishedOf(definition, answered);
   });
 }

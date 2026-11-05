@@ -78,10 +78,16 @@ export interface StepsOptions {
   readonly refusing?: (fact: CallFact) => boolean;
   readonly cancelledAfter?: number;
   readonly journal?: RecordingJournal;
+  readonly approvals?: SteppedRun['approvals'];
 }
 
 type Given = Required<Omit<StepsOptions, 'languageModel' | 'send' | 'timeoutMs' | 'journal'>> &
   Pick<StepsOptions, 'languageModel' | 'send' | 'timeoutMs' | 'journal'>;
+
+export const askingNobody: SteppedRun['approvals'] = {
+  waiting: { asks: false, because: 'This test asks nobody to approve an action.' },
+  signed: () => Effect.undefined,
+};
 
 function givenNow(options: StepsOptions): Given {
   return {
@@ -95,6 +101,7 @@ function givenNow(options: StepsOptions): Given {
     cancelledAfter: Number.POSITIVE_INFINITY,
     model: 'anthropic/claude-sonnet-4-5',
     prompt: { kind: 'prompt', instructions: 'Answer briefly', message: 'Find acme.' },
+    approvals: askingNobody,
     ...options,
   };
 }
@@ -115,6 +122,7 @@ function runOf(given: Given, journal: RecordingJournal, generate: SteppedRun['pe
   const send = given.send ?? keptAnswerOf(kept);
   const run: SteppedRun = {
     model,
+    approvals: given.approvals,
     base: {
       model,
       output: { type: 'text' },

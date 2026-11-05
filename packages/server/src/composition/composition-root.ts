@@ -21,6 +21,7 @@ export interface CompositionParts {
   readonly signers?: NonNullable<Parameters<typeof applicationLayer>[1]>['signers'];
   readonly features?: NonNullable<Parameters<typeof applicationLayer>[1]>['features'];
   readonly installed?: NonNullable<StartWiring['installed']>;
+  readonly approvals?: FunctionWiring['approvals'];
 }
 
 type Composing = Parameters<ComposedServerOptions['composed']>;
@@ -83,9 +84,9 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
 
 export function compositionRootWith(
   modelAccessOf: ModelAccessOf,
-  { programPoolOf, clock, toolTiming, signers, features, installed }: CompositionParts = {},
+  { programPoolOf, clock, toolTiming, signers, features, installed, approvals }: CompositionParts = {},
 ): ComposedServerOptions {
-  const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now);
+  const wiring = functionWiringOf(programPoolOf, toolTiming, clock?.now, approvals);
   return serverOptionsComposing(async (settings, telemetry, shippedFiles) => {
     const database = await ledgerDatabaseOf(settings, telemetry.appended);
     const made = await madeAtStart(settings, { programPoolOf: wiring.programPoolOf, shippedFiles, installed });

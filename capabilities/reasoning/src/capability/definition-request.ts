@@ -2,7 +2,6 @@ import type { RunContext } from '@on.auto/definitions';
 import { runBoundMs } from '@on.auto/tool-servers/policy';
 import { Effect } from 'effect';
 
-import { mostOutputTokens } from '../definition/definition-settings.ts';
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { StepBounds } from '../steps/step-decision.ts';
@@ -14,15 +13,8 @@ const firstAnswerMilliseconds = 60_000;
 
 const millisecondsPerOutputToken = 25;
 
-function timeoutFor(maxOutputTokens: number): number {
+export function timeoutFor(maxOutputTokens: number): number {
   return firstAnswerMilliseconds + millisecondsPerOutputToken * maxOutputTokens;
-}
-
-export const longestRequestMs = timeoutFor(mostOutputTokens);
-
-export function longestRunMsOf({ settings, tools }: ReasoningFunctionDefinitionDocument): number {
-  const timeoutMs = timeoutFor(settings.max_output_tokens);
-  return tools.length === 0 ? timeoutMs : runBoundMs(timeoutMs);
 }
 
 export function resumesAfterMsOf({ settings }: ReasoningFunctionDefinitionDocument, callMs: number): number {

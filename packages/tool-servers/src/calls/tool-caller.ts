@@ -1,7 +1,9 @@
 import { admission } from '../bounds/call-bounds.ts';
 import { answerOf, onlyReads } from '../bounds/tool-results.ts';
 import { imageCallOf, imagesKeptOutOf, imagesOfTheCall } from '../images/answered-images.ts';
+import { askedApprovalOf, type AskedApproval } from './asked-approvals.ts';
 import type { CallAnswered, CallEnded, CallFailed, CallStarted } from './call-facts.ts';
+import { approvalKey } from './call-meta.ts';
 import {
   callReplyOf,
   failureCounted,
@@ -145,6 +147,7 @@ function replied(state: RunState, sent: SentCall, replying: Replying, room: numb
 export interface SentReply {
   readonly ended: CallEnded;
   readonly reply: ToolReply;
+  readonly asked?: AskedApproval;
 }
 
 export interface ToolSending {
@@ -165,6 +168,15 @@ function recordingOfTheCall(
   return keepingImagesOf(recording, imagesOfTheCall(context.keepImage, call));
 }
 
+function metaOf({ context }: RunToolsParts, approval: string | undefined): Readonly<Record<string, string>> {
+  return approval === undefined ? context.meta : { ...context.meta, [approvalKey]: approval };
+}
+
+function askedIn(done: Delivered, { scrub }: Pick<Replying, 'scrub'>): { readonly asked?: AskedApproval } {
+  const asked = 'keptJson' in done ? askedApprovalOf(done.result, scrub) : undefined;
+  return asked === undefined ? {} : { asked };
+}
+
 export function sending(parts: RunToolsParts, offered: NamedOffer): ToolSending {
   const { slot } = offered;
   const tool = offered.tool.name;
@@ -173,14 +185,14 @@ export function sending(parts: RunToolsParts, offered: NamedOffer): ToolSending 
   const readOnly = onlyReads(offered.tool);
   return {
     start: ({ callId, input }) => startOf({ slot, tool, input }, recording, { callId, readOnly }),
-    send: async ({ callId, input, room }, signal) => {
-      const forwarding = { slot, tool, input, meta: parts.context.meta, signal, ...parts.timing };
+    send: async ({ callId, input, room, approval }, signal) => {
+      const forwarding = { slot, tool, input, meta: metaOf(parts, approval), signal, ...parts.timing };
       const keeping = recordingOfTheCall(recording, parts, { callId, slot, tool });
       const once = await forwardedOnce(forwarding, keeping);
       const { text, isError, shownBytes } = replyOf(once.done, replying, room);
       const settled = await settledOf(once, keeping, shownBytes);
       reportedFailure(once.done, replying);
-      return { ended: endedOf(settled), reply: { text, isError } };
+      return { ended: endedOf(settled), reply: { text, isError }, ...askedIn(once.done, replying) };
     },
   };
 }

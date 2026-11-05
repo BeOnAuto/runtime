@@ -75,13 +75,14 @@ Definitions, versions, runs and results are separate concepts, and an overview d
 
 | Term              | Meaning                                                                                                                                                                    |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Request           | What a run of a function waits on when it asks a person: a message, the party it goes to and when it expires. A run that asks makes one request.                           |
+| Request           | What a run of a function waits on when it asks a person: a message, the party it goes to and when it expires. A run that asks makes one request at a time.                 |
 | Party             | Whoever a request goes to. A party can answer where the request reached them, without calling the runtime, so a party need not be a caller.                                |
 | Held for an agent | A request whose function writes `deliver: agent`: an agent reads it with `list_interactions` and answers it with `answer_interaction` once the person says what to answer. |
 | Delivery          | How a request reaches a party through a connection the person chose: one call of the tool the function names in `deliver`.                                                 |
 | Answer            | What the party or the tool gives back; it must match the answer schema and is recorded on the run once, as the run's output.                                               |
 | Notification      | A request that takes no answer, so it goes through a connection; its run succeeds once it is delivered.                                                                    |
 | Sign-in request   | A request that asks the person a run acts for to sign in to a site in a browser. It waits on that person by id, and only they may answer it.                               |
+| Approval request  | A request a reasoning run makes when a tool asks the person the run acts for to approve an action. Only they may answer it, and only their own session may approve it.     |
 
 An interaction function asks a system and returns its result at once, or asks a person and takes the answer later. Answering a request is not sending an event: an event goes to a waiting workflow run, and an answer goes to the run of the function that asked.
 

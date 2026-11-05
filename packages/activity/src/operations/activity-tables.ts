@@ -11,7 +11,7 @@ import { isAfter, type ActivityPosition } from '../positions/activity-position.t
 import { activityName } from '../projections/activity-rows.ts';
 import { brokenName } from '../projections/broken-rows.ts';
 import { commentsName } from '../projections/comment-rows.ts';
-import { SignInColumnSchema, requestsName } from '../projections/request-rows.ts';
+import { ApprovalColumnSchema, SignInColumnSchema, requestsName } from '../projections/request-rows.ts';
 import type { ActivityKind, ActivityRow } from './activity-row.ts';
 import { commentRowsOf } from './comment-activity-rows.ts';
 
@@ -49,6 +49,7 @@ const RequestColumnsSchema = Schema.Struct({
   waits_on: Schema.String,
   expires_at: Schema.Int,
   sign_in: SignInColumnSchema,
+  approval: ApprovalColumnSchema,
 });
 
 const BrokenColumnsSchema = Schema.Struct({
@@ -113,6 +114,7 @@ function requestOf(playbook: string, key: string, columns: RequestColumns): Acti
     expires_at: columns.expires_at,
     about: null,
     sign_in: columns.sign_in,
+    approval: columns.approval,
   };
 }
 
@@ -136,6 +138,7 @@ function brokenOf(playbook: string, key: string, columns: BrokenColumns): Activi
     expires_at: null,
     about: null,
     sign_in: null,
+    approval: null,
   };
 }
 
@@ -159,6 +162,7 @@ function newOf(playbook: string, key: string, columns: NewColumns): ActivityRow 
     expires_at: null,
     about: null,
     sign_in: null,
+    approval: null,
   };
 }
 

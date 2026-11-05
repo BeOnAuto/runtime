@@ -1,12 +1,12 @@
 import { Effect } from 'effect';
 
+import { interruptedByItsCancel, resumedAttemptOf, type Resumed } from '../attempts/resumed-attempts.ts';
 import type { Capability } from '../capability/capability.ts';
 import type { RunRequest } from '../runs/run-commands.ts';
 import { claimOf } from '../runs/run-decisions.ts';
 import { answerOf } from '../runs/run-lookup.ts';
 import { answeredAttempt } from './attempt-endings.ts';
 import { preparedDefinition } from './definition-preparation.ts';
-import { interruptedByItsCancel, resumedAttemptOf, type Resumed } from './next-attempts.ts';
 import { runPrepared } from './prepared-run.ts';
 import { loadRunStream } from './run-access.ts';
 

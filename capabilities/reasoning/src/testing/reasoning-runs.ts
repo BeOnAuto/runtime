@@ -13,7 +13,7 @@ import {
   recordingJournal,
   type RecordingJournal,
 } from '@on.auto/definitions/testing';
-import { allPermissions } from '@on.auto/operations';
+import { allPermissions, type CallerIdentity } from '@on.auto/operations';
 import { noToolServers } from '@on.auto/tool-servers/testing';
 import { DateTime, Effect, type Exit, type Schema } from 'effect';
 import { TestClock } from 'effect/testing';
@@ -47,12 +47,20 @@ export function reasoningAdapter({
   return makeReasoningFunctionAdapter({ ...options, tools, content, offered });
 }
 
-export function runContextWith(journal: RecordingJournal): RunContext {
+export const acmeAdmin: CallerIdentity = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
+
+export function runContextWith(journal: RecordingJournal, caller = acmeAdmin): RunContext {
   return {
     id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
     org: 'acme',
     playbook: 'alpha',
-    caller: { id: 'acme-admin', name: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' },
+    caller,
     definition: { name: 'summary', version: 1 },
     journal,
     lineage: { startId: '5d0e9f6a-1b2c-5d3e-8f4a-6b7c8d9e0f1a', correlationId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' },
@@ -86,6 +94,8 @@ export interface Reasoning {
   readonly images?: ReasoningFunctionAdapterOptions['images'];
   readonly admit?: ReasoningFunctionAdapterOptions['languageModel']['admit'];
   readonly cancelledAfter?: number;
+  readonly approvals?: ReasoningFunctionAdapterOptions['approvals'];
+  readonly caller?: CallerIdentity;
 }
 
 export function reasoningOf(
@@ -96,6 +106,8 @@ export function reasoningOf(
     images,
     admit,
     cancelledAfter: cancelledAt = Number.POSITIVE_INFINITY,
+    approvals,
+    caller,
   }: Reasoning,
   ...replies: readonly ScriptedReply[]
 ): ReasoningRun {
@@ -105,7 +117,13 @@ export function reasoningOf(
     cancelledAt,
   );
   const languageModel = admit === undefined ? scripted.languageModel : { ...scripted.languageModel, admit };
-  const capability = reasoningAdapter({ languageModel, tools, content, ...(images === undefined ? {} : { images }) });
+  const capability = reasoningAdapter({
+    languageModel,
+    tools,
+    content,
+    ...(images === undefined ? {} : { images }),
+    ...(approvals === undefined ? {} : { approvals }),
+  });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   return {
     capability,
@@ -116,7 +134,7 @@ export function reasoningOf(
     running: (source, input = {}) =>
       Effect.runPromiseExit(
         TestClock.setTime(DateTime.toEpochMillis(DateTime.makeUnsafe(moment))).pipe(
-          Effect.andThen(prepared(source).run(input, runContextWith(journal))),
+          Effect.andThen(prepared(source).run(input, runContextWith(journal, caller))),
           Effect.provide(TestClock.layer()),
         ),
       ),

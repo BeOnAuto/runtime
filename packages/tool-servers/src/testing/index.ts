@@ -32,6 +32,7 @@ export {
   type ReceivedCall,
 } from '../mcp-testing/fake-tools.ts';
 export { brokenPromise, threadReplies } from '../mcp-testing/fake-data-tools.ts';
+export { askedDigest, askingForApproval, farExpiry, type ApprovalAsking } from '../mcp-testing/fake-approvals.ts';
 export { fetchWithDeletion } from '../mcp-testing/deleting-fetch.ts';
 export { recordingTimer, type RecordingTimer, type Wait } from './recording-timer.ts';
 export { pendingWords } from './fake-connections.ts';

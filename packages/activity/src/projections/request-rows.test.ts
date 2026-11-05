@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { financePrefix, projected } from '../testing/projected.ts';
 import {
+  attemptResumed,
   messageOf,
   requestAnswered,
   runDeferred,
@@ -62,6 +63,7 @@ describe('the requests of the activity', () => {
         waits_on: 'priya@acme.example',
         expires_at: Date.parse(asked.expiresAt),
         sign_in: null,
+        approval: null,
       },
     });
   });
@@ -83,6 +85,25 @@ describe('the requests of the activity', () => {
   });
 });
 
+describe('the requests of the activity that ask a person to approve an action', () => {
+  it('opens a row that waits on the person an approval request asks, by id, keeping the action it asks them to approve', async () => {
+    const { record, rows } = projected(requestRows);
+    const approval = { server: 'shop', tool: 'pay', action: 'Pay for order A-17', site: 'shop.example', kind: 'pay' };
+    await record(
+      streamOf(approve),
+      runStarted(approve, at(0), 'person:user_7kLm2'),
+      runDeferred(approve, at(1), { ...asked, to: 'person:user_7kLm2', approval }),
+    );
+
+    expect((await rows())[approve.runId]).toMatchObject({
+      open: true,
+      waits_on: 'person:user_7kLm2',
+      sign_in: null,
+      approval: JSON.stringify(approval),
+    });
+  });
+});
+
 describe('a request a workflow step made', () => {
   it('opens a row, the step being the run that asked', async () => {
     const { record, rows } = projected(requestRows);
@@ -94,6 +115,7 @@ describe('a request a workflow step made', () => {
 
 const endings = [
   requestAnswered(approve, at(2), 'person:user_7kLm2'),
+  attemptResumed(approve, at(2)),
   runSucceeded(approve, at(2)),
   runRejected(approve, at(2), 'unanswered', 'Nobody answered'),
   runFailed(approve, at(2)),
@@ -130,7 +152,11 @@ describe('what opens no request', () => {
   it('keeps no answer schema larger than its bound, and folds nothing it cannot read', () => {
     const large = { ...asked, answerSchema: { type: 'string', description: 'x'.repeat(mostAnswerSchemaBytes) } };
     const unread = { ...messageOf(runStarted(approve, at(0), 'x')), data: {} };
-    const other = { ...messageOf(runStarted(approve, at(0), 'x')), type: 'attempt_resumed', data: { attempt: 2 } };
+    const other = {
+      ...messageOf(runStarted(approve, at(0), 'x')),
+      type: 'run_cancel_requested',
+      data: { kind: 'requested', reason: 'Stopped by its caller' },
+    };
 
     expect(requestRows.rowAfter(undefined, messageOf(runDeferred(approve, at(1), large)))).toMatchObject({
       answer_schema: null,

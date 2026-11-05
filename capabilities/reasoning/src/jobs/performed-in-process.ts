@@ -39,14 +39,18 @@ function notOffered({ tool, server }: ToolCallJob): ToolCallAnswer {
 }
 
 function toolCalled(offered: ReadonlyMap<string, OfferedTool>, job: ToolCallJob, telemetry: ToolCallTelemetry) {
-  const { callId, tool, input, room } = job;
+  const { callId, tool, input, room, approval } = job;
   const named = offered.get(tool);
+  const sent = {
+    callId,
+    input,
+    ...(room === undefined ? {} : { room }),
+    ...(approval === undefined ? {} : { approval }),
+  };
   const answered: Effect.Effect<ToolCallAnswer> =
     named === undefined
       ? Effect.succeed(notOffered(job))
-      : Effect.promise((signal: Readonly<AbortSignal>) =>
-          named.send({ callId, input, ...(room === undefined ? {} : { room }) }, signal),
-        );
+      : Effect.promise((signal: Readonly<AbortSignal>) => named.send(sent, signal));
   return answered.pipe(
     Effect.tap((answer) => resultShown(answer, telemetry)),
     Effect.withSpan(`execute_tool ${tool}`, toolCallSpan(job, telemetry)),

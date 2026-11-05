@@ -16,7 +16,14 @@ import { Effect, Option, Schema } from 'effect';
 
 import { readingKeyOf } from '../conversations/conversation-keys.ts';
 import { openRequestsName } from './open-requests.ts';
-import { StandingSchema, requestRowFrom, routeOfRow, signInOfRow, type OpenRequestRow } from './request-rows.ts';
+import {
+  StandingSchema,
+  approvalOfRow,
+  requestRowFrom,
+  routeOfRow,
+  signInOfRow,
+  type OpenRequestRow,
+} from './request-rows.ts';
 
 const InteractionSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: 'The run of the request, to answer with answer_interaction' }),
@@ -56,6 +63,18 @@ const InteractionSchema = Schema.Struct({
   sign_in: Schema.NullOr(Schema.Struct({ server: Schema.String, site: Schema.String, link: Schema.String })).annotate({
     description:
       'For a request that asks a person to sign in to a site, its server, the site and the link where they sign in; null otherwise',
+  }),
+  approval: Schema.NullOr(
+    Schema.Struct({
+      server: Schema.String,
+      tool: Schema.String,
+      action: Schema.String,
+      site: Schema.optionalKey(Schema.String),
+      kind: Schema.optionalKey(Schema.String),
+    }),
+  ).annotate({
+    description:
+      'For a request that asks a person to approve an action a run is about to take, the server and the tool of the call, the action in words, and the site and the kind of action where the server names them; null otherwise',
   }),
 }).annotate({ identifier: 'Interaction', description: 'An open request of a function' });
 
@@ -128,6 +147,7 @@ function shownOf({ key, row }: ProjectedKeyedRow) {
       reply_refusals: kept.reply_refusals,
       standing: kept.standing,
       sign_in: signInOfRow(kept),
+      approval: approvalOfRow(kept),
     },
   ];
 }

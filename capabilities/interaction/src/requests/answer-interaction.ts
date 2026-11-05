@@ -23,8 +23,9 @@ import { Effect, Schema } from 'effect';
 
 import { interactionBounds } from '../run/run-bounds.ts';
 import { answerFor } from './answering.ts';
+import { approvedByThePerson, approvedFromTheirSession, type ApprovalAsked } from './approval-answering.ts';
 import { answerTakenBy, correlationOfRun, openRequestRowIn, type AnswerTaken } from './request-reads.ts';
-import { signInOfRow, type OpenRequestRow } from './request-rows.ts';
+import { approvalOfRow, signInOfRow, type OpenRequestRow } from './request-rows.ts';
 import { answeredByThePerson, signedInFromTheirSession, type SignInAsked } from './sign-in-answering.ts';
 
 const ClaimedForField = Schema.String.annotate({
@@ -96,13 +97,25 @@ function signInAskedIn(row: OpenRequestRow): SignInAsked | undefined {
   return signIn === null ? undefined : { signIn, person: row.party };
 }
 
+function approvalAskedIn(row: OpenRequestRow): ApprovalAsked | undefined {
+  const approval = approvalOfRow(row);
+  return approval === null ? undefined : { approval, person: row.party };
+}
+
 const checkedAnswer = Effect.fnUntraced(function* (run: RecordedRun, row: OpenRequestRow, answer: Schema.Json) {
   const caller = yield* Caller;
+  const approval = approvalAskedIn(row);
+  if (approval !== undefined) {
+    yield* approvedByThePerson(approval, caller);
+  }
   const signIn = signInAskedIn(row);
   if (signIn !== undefined) {
     yield* answeredByThePerson(signIn, caller);
   }
   const checked = yield* checkedFor(run, answer);
+  if (approval !== undefined) {
+    yield* approvedFromTheirSession(caller, checked);
+  }
   if (signIn !== undefined) {
     yield* signedInFromTheirSession(caller, checked);
   }

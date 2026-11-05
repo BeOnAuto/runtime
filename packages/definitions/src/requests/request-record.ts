@@ -8,6 +8,14 @@ export const SignInRecordSchema = Schema.Struct({
 
 export type SignInRecord = typeof SignInRecordSchema.Type;
 
+export const ApprovalRecordSchema = Schema.Struct({
+  server: Schema.String,
+  tool: Schema.String,
+  action: Schema.String,
+  site: Schema.optionalKey(Schema.String),
+  kind: Schema.optionalKey(Schema.String),
+});
+
 export const RequestRecordSchema = Schema.Struct({
   to: Schema.String,
   message: Schema.String,
@@ -19,6 +27,7 @@ export const RequestRecordSchema = Schema.Struct({
   deliver: Schema.optionalKey(Schema.JsonObject),
   replies: Schema.optionalKey(Schema.JsonObject),
   sign_in: Schema.optionalKey(SignInRecordSchema),
+  approval: Schema.optionalKey(ApprovalRecordSchema),
 });
 
 export type RequestRecord = typeof RequestRecordSchema.Type;
@@ -27,4 +36,8 @@ export const isRequestRecord: (record: unknown) => record is RequestRecord = Sch
 
 export function takesAnAnswer(record: unknown): boolean {
   return isRequestRecord(record) && record.answer_schema !== undefined;
+}
+
+export function hasExpiredBy(record: unknown, now: number): boolean {
+  return isRequestRecord(record) && Date.parse(record.expires_at) <= now;
 }

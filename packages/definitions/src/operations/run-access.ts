@@ -62,8 +62,15 @@ export const answerAfterAnother = Effect.fnUntraced(function* (id: string) {
 
 const attemptIn = Effect.fnUntraced(function* (id: string) {
   const { state, version } = yield* (yield* PlaybookReader).load(runStreamNameOf(id), recordedAttempt);
-  const { startedAt, modelCallsBefore, calls } = state;
-  const attempt: RunAttempt = { startedAt, modelCallsBefore, calls };
+  const { startedAt, modelCallsBefore, calls, waitedMs, requests, request } = state;
+  const attempt: RunAttempt = {
+    startedAt,
+    modelCallsBefore,
+    calls,
+    waitedMs,
+    requests,
+    ...(request === undefined ? {} : { request }),
+  };
   return { attempt, version };
 });
 

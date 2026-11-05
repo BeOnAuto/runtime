@@ -16,6 +16,7 @@ import {
   attemptDueAtOf,
   deliveryOf,
   endingDueAtOf,
+  goOnDueAtOf,
   requestRowOf,
   settlementDueOf,
   type OpenRequestRow,
@@ -31,7 +32,12 @@ type Fact<Type extends RunEvent['type']> = RecordedRunFact<Type>;
 type Delivery<Type extends 'delivery_succeeded' | 'delivery_failed' | 'delivery_refused'> = RecordedFactNamed<Type>;
 
 function rowOf(row: UndueRequestRow): ProjectedRow {
-  return { ...row, attempt_due_at: attemptDueAtOf(row), ending_due_at: endingDueAtOf(row) };
+  return {
+    ...row,
+    attempt_due_at: attemptDueAtOf(row),
+    ending_due_at: endingDueAtOf(row),
+    go_on_due_at: goOnDueAtOf(row),
+  };
 }
 
 function functionOf({ definitionType, definitionName, definitionVersion }: RunContext) {
@@ -74,6 +80,7 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     reply_refusals: 0,
     refusals_told: 0,
     sign_in: jsonOf(request.sign_in),
+    approval: jsonOf(request.approval),
   });
 }
 
@@ -166,9 +173,25 @@ function answered(row: OpenRequestRow): ProjectedRow {
   return rowOf({ ...row, open: false, next_attempt_at: null, standing: standingUnlessDecided(row, 'answered') });
 }
 
+function awaitsItsRun({ open, approval, ended }: OpenRequestRow): boolean {
+  return open || (approval !== null && ended === null);
+}
+
+function wentOn(row: OpenRequestRow): ProjectedRow | undefined {
+  const ended = row.standing === 'answered' ? 'answered' : 'expired';
+  return row.approval !== null && row.ended === null
+    ? rowOf({ ...row, open: false, next_attempt_at: null, ended })
+    : undefined;
+}
+
 function changed(row: OpenRequestRow, fact: RecordedRunEvent, message: ProjectedMessage): ProjectedRow | undefined {
   if (fact.type === 'run_cancel_requested') {
-    return row.open && settlementDueOf(row) === undefined ? rowOf({ ...row, standing: 'cancelling' }) : undefined;
+    return awaitsItsRun(row) && settlementDueOf(row) === undefined
+      ? rowOf({ ...row, standing: 'cancelling' })
+      : undefined;
+  }
+  if (fact.type === 'attempt_resumed') {
+    return wentOn(row);
   }
   if (fact.type === 'request_answered') {
     return answered(row);
@@ -192,10 +215,11 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 9,
+  version: 10,
   kinds: ['runs'],
   types: [
     'run_deferred',
+    'attempt_resumed',
     'delivery_started',
     'delivery_succeeded',
     'delivery_failed',
@@ -235,6 +259,8 @@ export const openRequests: KeyedProjection = {
     { name: 'reply_refusals', kind: 'integer' },
     { name: 'refusals_told', kind: 'integer' },
     { name: 'sign_in', kind: 'text' },
+    { name: 'approval', kind: 'text' },
+    { name: 'go_on_due_at', kind: 'integer' },
   ],
   indexes: [
     { name: 'by_open', columns: ['open', 'requested_at', 'row_key'] },
@@ -244,6 +270,7 @@ export const openRequests: KeyedProjection = {
     { name: 'by_conversation', columns: ['open', 'conversation', 'requested_at', 'row_key'] },
     { name: 'attempts_due', columns: ['attempt_due_at'], acrossPlaybooks: true, whereSet: 'attempt_due_at' },
     { name: 'endings_due', columns: ['ending_due_at'], acrossPlaybooks: true, whereSet: 'ending_due_at' },
+    { name: 'go_ons_due', columns: ['go_on_due_at'], acrossPlaybooks: true, whereSet: 'go_on_due_at' },
   ],
   rowAfter,
 };

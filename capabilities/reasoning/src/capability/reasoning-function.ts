@@ -7,14 +7,14 @@ import {
 } from '@on.auto/definitions';
 import { handCallPresenter } from '@on.auto/tool-servers';
 
+import { cancelledKeepingWhatItSpent, reasoningRunWords } from '../approvals/approval-accounts.ts';
 import { readReasoningFunctionDefinition, summarize } from '../definition/definition-reading.ts';
 import { performedInProcess } from '../jobs/performed-in-process.ts';
 import type { OfferedModels } from '../model/offered-models.ts';
-import { cancelledAttemptOf } from './before-the-steps.ts';
-import { longestRequestMs, longestRunMsOf, resumesAfterMsOf } from './definition-request.ts';
 import { definitionRun } from './definition-run.ts';
 import { onThisServer } from './on-this-server.ts';
 import type { RunServices } from './run-services.ts';
+import { longestAnyRunMs, longestRunMsOf, resumptionAfterCallsOf } from './run-times.ts';
 
 export interface ReasoningFunctionAdapterOptions extends RunServices {
   readonly offered: OfferedModels;
@@ -37,15 +37,14 @@ export function makeReasoningFunctionAdapter(options: ReasoningFunctionAdapterOp
     parse: readReasoningFunctionDefinition,
     summarize,
     run: (definition, input, context) => run(definition, input, context),
-    longestAnyRunMs: longestRequestMs,
+    longestAnyRunMs,
     longestRunOf: longestRunMsOf,
-    resumes: {
-      afterMs: (definition) => resumesAfterMsOf(definition, options.tools.callMs),
-      cancelledAttempt: cancelledAttemptOf,
-    },
+    resumes: resumptionAfterCallsOf(options.tools.callMs),
     reachesOutside: true,
     mayChangeOutside: options.tools.configured,
     callsTools: ({ tools }) => tools.length > 0,
+    cancel: cancelledKeepingWhatItSpent,
+    runWords: reasoningRunWords,
     facts: { onRuns: [], streams: [handCallPresenter] },
   });
 }

@@ -336,7 +336,7 @@ The requests of a playbook have two routes of their own, relative to `/v1/orgs/{
 
 ### Listing open requests
 
-`list_interactions` returns `interactions`, the playbook's open requests newest first, with `has_more` and `next_cursor`. They are the requests of interaction functions. An answered request leaves the list. Anyone who may read the playbook sees each request's party and message, just as they see a run's input.
+`list_interactions` returns `interactions`, the playbook's open requests newest first, with `has_more` and `next_cursor`. They are the requests of interaction functions, and the [approval requests](#approval-requests) of reasoning runs. An answered request leaves the list. Anyone who may read the playbook sees each request's party and message, just as they see a run's input.
 
 - `to` keeps only the requests to one party.
 - `type` keeps only those from one type of function.
@@ -344,25 +344,26 @@ The requests of a playbook have two routes of their own, relative to `/v1/orgs/{
 
 Each request has these fields:
 
-| Field            | Contents                                                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `run_id`         | The run that asked, which `answer_interaction` takes                                                                                          |
-| `type`           | The type of the function that asked                                                                                                           |
-| `function`       | The name of the function that asked                                                                                                           |
-| `version`        | The version of the function that asked                                                                                                        |
-| `to`             | The party the request goes to                                                                                                                 |
-| `delivery`       | The `server` and `tool` the request is sent through, or `null` for a request held for an agent                                                |
-| `message`        | The message of the request                                                                                                                    |
-| `takes_answer`   | `true` for a question, `false` for a notification                                                                                             |
-| `answer_schema`  | The JSON Schema an answer must match, as the request recorded it when it was asked; `null` for a notification                                 |
-| `requested_at`   | When the request was made, in ISO 8601 UTC                                                                                                    |
-| `expires_at`     | When the request expires unanswered, in ISO 8601 UTC                                                                                          |
-| `attempts`       | The delivery attempts made so far                                                                                                             |
-| `conversation`   | The conversation the playbook reads replies in, or `null`                                                                                     |
-| `answerer`       | The party whose reply counts, or `null`                                                                                                       |
-| `reply_refusals` | How many replies from the answerer the playbook refused                                                                                       |
-| `standing`       | `held_for_an_agent`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked   |
-| `sign_in`        | For a [sign-in request](#sign-in-requests), the `server`, the `site` and the `link` where the person signs in; `null` for every other request |
+| Field            | Contents                                                                                                                                                     |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `run_id`         | The run that asked, which `answer_interaction` takes                                                                                                         |
+| `type`           | The type of the function that asked                                                                                                                          |
+| `function`       | The name of the function that asked                                                                                                                          |
+| `version`        | The version of the function that asked                                                                                                                       |
+| `to`             | The party the request goes to                                                                                                                                |
+| `delivery`       | The `server` and `tool` the request is sent through, or `null` for a request held for an agent                                                               |
+| `message`        | The message of the request                                                                                                                                   |
+| `takes_answer`   | `true` for a question, `false` for a notification                                                                                                            |
+| `answer_schema`  | The JSON Schema an answer must match, as the request recorded it when it was asked; `null` for a notification                                                |
+| `requested_at`   | When the request was made, in ISO 8601 UTC                                                                                                                   |
+| `expires_at`     | When the request expires unanswered, in ISO 8601 UTC                                                                                                         |
+| `attempts`       | The delivery attempts made so far                                                                                                                            |
+| `conversation`   | The conversation the playbook reads replies in, or `null`                                                                                                    |
+| `answerer`       | The party whose reply counts, or `null`                                                                                                                      |
+| `reply_refusals` | How many replies from the answerer the playbook refused                                                                                                      |
+| `standing`       | `held_for_an_agent`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked                  |
+| `sign_in`        | For a [sign-in request](#sign-in-requests), the `server`, the `site` and the `link` where the person signs in; `null` for every other request                |
+| `approval`       | For an [approval request](#approval-requests), the `server`, the `tool`, the `action`, and the `site` and `kind` where given; `null` for every other request |
 
 `answer_interaction` checks the `answer_schema` the request recorded. That holds even after the function has a newer version, whose `output_schema` is the one `get_definition` shows. A schema may be up to 64 KiB as JSON, so a page of 100 requests can contain up to 6.25 MiB of schemas. A smaller `limit` keeps a page smaller.
 
@@ -396,6 +397,7 @@ The run takes the answer within about a second (the server checks waiting runs e
 | A different answer, an answer to a request that has ended or whose run was asked to cancel, or an answer to a notification | `conflict`                                                            |
 | A run the playbook does not have                                                                                           | `not_found`                                                           |
 | A [sign-in request](#sign-in-requests) answered by anyone but the person it asks, or `signed_in: true` through an agent    | `forbidden`                                                           |
+| An [approval request](#approval-requests) answered by anyone but the person it asks, or `approved: true` through an agent  | `forbidden`                                                           |
 
 ### A request nobody answers
 
@@ -409,6 +411,16 @@ A request that asks the person a run acts for to sign in to a site, from an inte
 - `list_interactions` and the activity show its `sign_in`: the `server`, the `site` and the `link` where the person signs in, which opens only for that person.
 - Only that person may answer it, and any other caller is refused `forbidden`. `{ "signed_in": true }` is taken only from their own session, the one Studio signs in with, which names no client; through an agent's token, which names its client, it is refused `forbidden`. Their agent may answer `{ "signed_in": false }`, with a `reason` of at most 500 characters. In local mode the local developer may give either answer.
 - `{ "signed_in": true }` ends the run `succeeded` with that output. `{ "signed_in": false }` ends it `rejected` as `unanswered`, kind `declined`.
+
+### Approval requests
+
+A reasoning run whose tool asks for a person's approval before it acts, as [When a tool asks for a person's approval](reasoning-format.md#when-a-tool-asks-for-a-person-s-approval) explains, waits with a request to the person it acts for, by id:
+
+- Its `to` and its answerer are the person's id, such as `person:user_7kLm2`. Its row in [the organization's activity](#the-organization-s-activity) holds that id in `waits_on`, and `needs_you` counts it for that person alone.
+- `list_interactions` and the activity show its `approval`: the `server` and the `tool` of the call, the `action` in words, and the `site` and the `kind` of action where the server names them.
+- Its `answer_schema` is `{ approved: boolean, reason?: string }`, with a `reason` of at most 500 characters.
+- Only that person may answer it, and any other caller is refused `forbidden`. `{ "approved": true }` is taken only from their own session, the one Studio signs in with, which names no client; through an agent's token, which names its client, it is refused `forbidden`. Their agent may answer `{ "approved": false }`, with a `reason`. In local mode the local developer may give either answer.
+- The run takes the answer, or the request's expiry, within about a second and goes on. Approved, it sends the call once more with the approval; declined or expired, it tells its model why the action was not done. The request leaves the list once it is answered, or once the run goes on after its expiry.
 
 ## Computation functions
 
@@ -1263,7 +1275,7 @@ Each reads and marks only the activity of the playbooks the caller may access, a
 
 | `kind`      | The item                                                                                                                                                                                                                                                                           | Its `at`                                                       | Listed                                                                                                                      |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `needs_you` | A request of an interaction function that takes an answer, a request a workflow's call made included                                                                                                                                                                               | When the request was made                                      | Until it is answered, expires or ends with its run                                                                          |
+| `needs_you` | A request of an interaction function that takes an answer, a request a workflow's call made included, or a reasoning run's [approval request](#approval-requests)                                                                                                                  | When the request was made                                      | Until it is answered, expires or ends with its run                                                                          |
 | `broken`    | A definition whose latest run at its current version failed or was rejected. One row per definition, naming the version it broke on and its latest failing run. A cancelled run is neither a failure nor a success, and a request that expires unanswered closes its request alone | When its latest failing run ended                              | Until a run at that version or a later one succeeds, a new version of the definition is saved, or the definition is retired |
 | `new`       | A run no other run started that succeeded; a function or workflow saved, each version its own item; or a playbook created or updated, each change its own item                                                                                                                     | When the run ended, or the version or the change was saved     | Always                                                                                                                      |
 | `comment`   | A [comment](#comments) on something of a playbook, or of the organization's own                                                                                                                                                                                                    | When it was made, or, once reopened, when it was last reopened | Until it is resolved, and again from when it is reopened                                                                    |
@@ -1295,6 +1307,7 @@ Each row has these fields:
 | `waits_on`      | For `needs_you`, whom the request waits on: the person its party names by id, such as `person:user_7kLm2`; the address its party names, in lower case, where the party is one, holding an `@`; or `any_member` where it names none. See [Whom a request waits on](interaction-format.md#whom-a-request-waits-on). `null` for the other kinds |
 | `expires_at`    | For `needs_you`, when the request expires unanswered, in ISO 8601 UTC; otherwise `null`                                                                                                                                                                                                                                                      |
 | `sign_in`       | For `needs_you` of a [sign-in request](#sign-in-requests), the `server`, the `site` and the `link` where the person signs in; otherwise `null`                                                                                                                                                                                               |
+| `approval`      | For `needs_you` of an [approval request](#approval-requests), the `server` and the `tool` of the call, the `action` in words, and the `site` and the `kind` of action where the server names them; otherwise `null`                                                                                                                          |
 | `about`         | For `comment`, the [address](addresses.md) of what the comment is about; otherwise `null`. Its `definition` and `run_id` are read from this address, so a comment on a run names its run and no definition. Read the comment whole with [`list_comments`](#listing-comments)                                                                 |
 | `seen`          | For `new` and `comment`, whether the caller has seen it, as [Seen and counted](#seen-and-counted) says; `null` for the other kinds, which nothing a caller marks seen changes                                                                                                                                                                |
 

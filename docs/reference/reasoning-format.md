@@ -269,14 +269,14 @@ A run that calls tools costs more. Every step resends the conversation so far, s
 
 ### Limits on time and failures
 
-| Bound                                            | Value                                                        | When it is reached                               |
-| ------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------ |
-| One call                                         | 30 seconds                                                   | A tool error that counts as a server failure     |
-| A 429 from a tool server                         | Waited out when `Retry-After` asks for at most 10 seconds    | Otherwise a server failure                       |
-| Server failures in one run                       | 5                                                            | The run ends with `because: "server_failed"`     |
-| One model call                                   | 60 seconds plus 25 ms for every token of `max_output_tokens` | The run ends with `because: "model_unavailable"` |
-| The whole run                                    | 10 minutes, or one model call's limit when that is longer    | The run ends with `because: "run_bound"`         |
-| A tool call in the last step, made without tools | None allowed                                                 | The run ends with `because: "no_answer"`         |
+| Bound                                            | Value                                                                                                                                                  | When it is reached                               |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| One call                                         | 30 seconds                                                                                                                                             | A tool error that counts as a server failure     |
+| A 429 from a tool server                         | Waited out when `Retry-After` asks for at most 10 seconds                                                                                              | Otherwise a server failure                       |
+| Server failures in one run                       | 5                                                                                                                                                      | The run ends with `because: "server_failed"`     |
+| One model call                                   | 60 seconds plus 25 ms for every token of `max_output_tokens`                                                                                           | The run ends with `because: "model_unavailable"` |
+| The whole run                                    | 10 minutes, or one model call's limit when that is longer, not counting the time it [waits for an approval](#when-a-tool-asks-for-a-person-s-approval) | The run ends with `because: "run_bound"`         |
+| A tool call in the last step, made without tools | None allowed                                                                                                                                           | The run ends with `because: "no_answer"`         |
 
 Once the run has called a tool, each of these ends it as `tools_unfinished` or `effect_unknown`; see [When a tool-calling run cannot finish](#when-a-tool-calling-run-cannot-finish). Before its first call, the run ends as plain `unavailable`.
 
@@ -320,6 +320,29 @@ The same run id never runs that work again. [Retrying under a run id](http.md#re
 A caller that disconnects before the run returns does not stop the run: it goes on to its end and records it, and a request with its `run_id` is given what it recorded. Only the server stopping cuts a run off, and that leaves it to be performed again from what it recorded; see [A run performed again](#a-run-performed-again).
 
 Inspect its history and any external effects before deliberately starting a new run with a new id. Retrying a successful run returns its recorded result without calling tools again.
+
+### When a tool asks for a person's approval
+
+A tool server can decline to act on a call until a person approves it, as Auto Cloud's browser connection does before an action such as paying, sending a message or deleting. It answers with a tool error whose metadata holds `auto.on/confirmation_needed`, with the action in words, and does nothing. The run then:
+
+1. Ends the step's other calls as usual, then waits with an [approval request](http.md#approval-requests) to the person it acts for. The run stays `started`. The request expires when the server stops holding the action, at most 10 minutes after it was made.
+2. Goes on within about a second of the answer or of the request's expiry:
+   - **Approved**: it sends the same call once more, with the approval, and the model reads what the tool answers. If the tool asks again, the run asks again.
+   - **Declined**: the model reads that the person declined the action, with their reason, and that it was not done.
+   - **Expired**: the model reads that nobody approved the action in time, that the page it would have acted on has closed, and that it should start the task again from its first step.
+
+The run does not wait, and the model reads why in place of the tool's answer, when:
+
+- another call of the same step is already waiting for an approval;
+- the server says nobody can approve the call;
+- the run acts for no person, or for one who has left the organization;
+- its tool servers keep no content for the run to go on from;
+- it has already asked three times;
+- the runtime cannot pass an approval on to the server, as a self-hosted runtime cannot.
+
+Only the person approves, from their own session. Their agent may decline for them but never approve.
+
+The call sent again does not count as a new call toward the run's limits on calls. A run may wait three times, so a function that names tools may run up to 30 minutes longer than its bound, and a workflow step that calls it waits that long. `cancel_run` ends a waiting run `cancelled`, keeping what its model calls spent.
 
 ### Setting up tools
 

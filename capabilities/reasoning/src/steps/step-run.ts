@@ -6,7 +6,7 @@ import { Clock, Data, Duration, Effect, Option, Result } from 'effect';
 import type { PerformJob } from '../jobs/jobs.ts';
 import { interruptedEnds, type StepFact } from './attempt-facts.ts';
 import type { KeptContent } from './kept-content.ts';
-import type { StepBounds } from './step-decision.ts';
+import type { ApprovalSteps, StepBounds } from './step-decision.ts';
 import type { Kept, Offered, RequestBase } from './step-facts.ts';
 import { evolve, type StepContent, type StepState } from './step-state.ts';
 
@@ -30,6 +30,7 @@ export function stepToolsOf(tools: RunTools | undefined): StepTools {
 
 export interface StepRecording {
   readonly model: string;
+  readonly approvals: ApprovalSteps;
   readonly base: RequestBase;
   readonly tools: StepTools;
   readonly bounds: StepBounds;

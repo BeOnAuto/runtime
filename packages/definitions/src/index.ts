@@ -48,6 +48,7 @@ export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } f
 export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
 export { RunMeter, type Meter, type MeteredRun } from './metering/run-meter.ts';
 export { nextAttemptOf, type NextAttempt } from './operations/next-attempts.ts';
+export { defineGoOnWithRun } from './operations/go-on-with-run.ts';
 export { attemptEnded, type AttemptOfARun } from './operations/attempt-endings.ts';
 export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
 export { numberingAfter, numberingFrom, type CallEnd, type CallNumbering } from './journal/call-numbering.ts';
@@ -98,6 +99,7 @@ export {
 } from './runs/run-events.ts';
 export { recordedAnswerOf, type RecordedAnswer, type RecordedAnswerFact, type RecordedWork } from './runs/run-state.ts';
 export {
+  ApprovalRecordSchema,
   RequestRecordSchema,
   SignInRecordSchema,
   isRequestRecord,

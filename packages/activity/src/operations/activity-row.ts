@@ -1,4 +1,4 @@
-import type { SignInRecord } from '@on.auto/definitions';
+import type { ApprovalRecordSchema, SignInRecord } from '@on.auto/definitions';
 import { Schema } from 'effect';
 
 import { addressOf, ofTheOrg, type ItemForm } from '../positions/activity-addresses.ts';
@@ -29,6 +29,7 @@ export interface ActivityRow {
   readonly expires_at: number | null;
   readonly about: string | null;
   readonly sign_in: SignInRecord | null;
+  readonly approval: typeof ApprovalRecordSchema.Type | null;
   readonly reopenedBy?: string;
 }
 
@@ -93,6 +94,22 @@ export const ActivityRowSchema = Schema.Struct({
   ).annotate({
     description:
       'For needs_you of a request that asks a person to sign in to a site, the site and the link where they sign in; otherwise null',
+  }),
+  approval: Schema.NullOr(
+    Schema.Struct({
+      server: Schema.String.annotate({ description: 'The server the run calls to take the action' }),
+      tool: Schema.String.annotate({ description: 'The tool of the call, as the server names it' }),
+      action: Schema.String.annotate({ description: 'The action in words, as the server wrote it' }),
+      site: Schema.optionalKey(
+        Schema.String.annotate({ description: 'The site the action is on, where the server names it' }),
+      ),
+      kind: Schema.optionalKey(
+        Schema.String.annotate({ description: 'The kind of action, such as pay or send, where the server names it' }),
+      ),
+    }),
+  ).annotate({
+    description:
+      'For needs_you of a request that asks a person to approve an action a run is about to take, the action; otherwise null',
   }),
   seen: Schema.NullOr(Schema.Boolean).annotate({
     description: 'For new and comment, whether the caller has seen it; null for the other kinds',

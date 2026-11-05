@@ -8,6 +8,7 @@ import {
   makeReasoningFunctionAdapter,
   offeredModels,
   providerStatus,
+  type ApprovalPorts,
   type LanguageModel,
   type ModelAccess,
   type ModelAccessOptions,
@@ -35,6 +36,7 @@ export type ModelAccessOf = (
 export interface ReasoningServices {
   readonly tools: ToolAccess;
   readonly telemetry: ModelTelemetry | undefined;
+  readonly approvals?: ApprovalPorts;
 }
 
 export interface ServedReasoning {
@@ -83,7 +85,7 @@ export async function reasoningServedBy(
   runtime: AppRuntime<DispatcherServices>,
   settings: ReasoningSettings,
   models: Effect.Effect<ModelAccess>,
-  { tools, telemetry }: ReasoningServices,
+  { tools, telemetry, approvals }: ReasoningServices,
 ): Promise<ServedReasoning> {
   const status = providerStatus(settings.models, installedPackages());
   await runtime.run(logModelProviders(status));
@@ -99,6 +101,7 @@ export async function reasoningServedBy(
       telemetry,
       reading: { mostInputTokens, contextWindowOf: catalog.contextWindowOf },
       providerSetup: settings.providerSetup,
+      ...(approvals === undefined ? {} : { approvals }),
     }),
     listModels: defineListModels(catalog, settings.providerSetup),
     getVoice: defineGetVoice(settings.models.voice?.reference ?? null),

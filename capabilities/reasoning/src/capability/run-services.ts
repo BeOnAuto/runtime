@@ -1,6 +1,6 @@
 import type { RunContext } from '@on.auto/definitions';
-import type { OfferedTool, ToolAccess } from '@on.auto/tool-servers';
-import type { Clock } from 'effect';
+import type { AskedApproval, OfferedTool, ToolAccess } from '@on.auto/tool-servers';
+import type { Clock, Effect } from 'effect';
 
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
 import type { PerformJob } from '../jobs/jobs.ts';
@@ -12,6 +12,24 @@ import type { ModelReading } from './definition-request.ts';
 
 type PerformJobs = (offered: readonly OfferedTool[]) => PerformJob;
 
+export interface ApprovedCall {
+  readonly org: string;
+  readonly playbook: string;
+  readonly run_id: string;
+  readonly person: string;
+  readonly approved_at: string;
+  readonly server: string;
+  readonly tool: string;
+  readonly arguments: Readonly<Record<string, unknown>>;
+  readonly asked: AskedApproval;
+}
+
+export type SignApproval = (approved: ApprovedCall) => Effect.Effect<string | undefined>;
+
+export interface ApprovalPorts {
+  readonly sign?: SignApproval;
+}
+
 export interface RunServices {
   readonly languageModel: LanguageModel['Service'];
   readonly clock?: Clock.Clock;
@@ -21,6 +39,7 @@ export interface RunServices {
   readonly performJob?: PerformJobs;
   readonly reading?: ModelReading;
   readonly telemetry?: ToolCallTelemetry;
+  readonly approvals?: ApprovalPorts;
 }
 
 export interface Answering {
@@ -30,6 +49,7 @@ export interface Answering {
   readonly content: ContentStore;
   readonly images: KeepRunImage | undefined;
   readonly perform: PerformJobs;
+  readonly approvals?: ApprovalPorts;
 }
 
 export interface Stepping {

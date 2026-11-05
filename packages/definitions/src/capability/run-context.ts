@@ -4,11 +4,21 @@ import type { Effect, Schema } from 'effect';
 
 import type { CallFact } from '../runs/run-commands.ts';
 import type { RecordedCall } from '../runs/run-events.ts';
+import type { RecordedAnswer } from '../runs/run-state.ts';
+
+export interface WaitedRequest {
+  readonly record: Schema.JsonObject;
+  readonly at: string;
+  readonly answer: RecordedAnswer | null;
+}
 
 export interface RunAttempt {
   readonly startedAt: string;
   readonly modelCallsBefore: number;
   readonly calls: readonly RecordedCall[];
+  readonly waitedMs?: number;
+  readonly requests?: number;
+  readonly request?: WaitedRequest;
 }
 
 export type JournalRefusal = Conflict | RunCancelled;
