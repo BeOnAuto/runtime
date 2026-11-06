@@ -56,14 +56,35 @@ function unworkable(detail: string, spent: Spent = {}): Rejected {
   return Effect.fail(new Conflict({ detail, kind: 'unworkable', ...spent }));
 }
 
+type Repaired = NonNullable<FailedCall['repair']>;
+
+const skippedFor: Readonly<Record<Extract<Repaired, { readonly outcome: 'skipped' }>['because'], string>> = {
+  input_tokens: 'the run had too few input tokens left',
+  context_window: "it would not fit in the model's context window",
+  time: 'too little time was left',
+};
+
+function repairedIn(detail: string, issues: readonly FailureIssue[], repair: Repaired | undefined): string {
+  if (repair === undefined) {
+    return `${detail}${listed(issues)}`;
+  }
+  if (repair.outcome === 'skipped') {
+    return `${detail}${listed(issues)}; no correction was attempted, as ${skippedFor[repair.because]}`;
+  }
+  return repair.outcome === 'failed'
+    ? `${detail}${listed(issues)}; the request for a correction failed (${repair.because})`
+    : `${detail} after one correction${listed(issues)}`;
+}
+
 function outputRefused(failed: FailedCall, context: RejectionContext): Rejected {
-  const { provider, detail, finish_reason: finishReason, issues = [] } = failed;
+  const { provider, detail, finish_reason: finishReason, issues = [], repair } = failed;
+  const which = repair?.outcome === 'invalid' ? 'the corrected answer' : 'the answer';
   return finishReason === 'length'
     ? unworkable(
-        `${provider} stopped the answer at max_output_tokens (${context.maxOutputTokens}) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition`,
+        `${provider} stopped ${which} at max_output_tokens (${context.maxOutputTokens}) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition`,
         context.spent,
       )
-    : unavailableAfter(context.use, `${detail}${listed(issues)}`, '; try again', context.spent);
+    : unavailableAfter(context.use, repairedIn(detail, issues, repair), '; try again', context.spent);
 }
 
 type NotOfferedBecause = 'provider_not_configured' | 'model_not_allowed';

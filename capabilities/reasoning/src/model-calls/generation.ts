@@ -8,7 +8,7 @@ import type { ModelResult } from '../model/model-result.ts';
 import { checkedRequest } from '../model/request-checks.ts';
 import type { CallPolicy } from './call-policy.ts';
 import { settledCall, type CallReports } from './call-settling.ts';
-import { callFailed, callSucceeded } from './model-metrics.ts';
+import { answerFailed, answerSucceeded, callFailed, callSucceeded } from './model-metrics.ts';
 
 function reportsOf(
   policy: CallPolicy,
@@ -51,6 +51,7 @@ export function generation(resolve: ModelResolution, policy: CallPolicy): Genera
     if (Result.isSuccess(settled)) {
       const result: ModelResult = { ...settled.success, duration_ms: finished - started };
       yield* callSucceeded(target, result);
+      yield* answerSucceeded(target, result);
       return result;
     }
     const failure = settled.failure;
@@ -60,6 +61,7 @@ export function generation(resolve: ModelResolution, policy: CallPolicy): Genera
     }
     const { _tag: kind } = failure;
     yield* callFailed(target, kind, finished - started);
+    yield* answerFailed(target, request, failure);
     return yield* Effect.fail(failure);
   });
   return { admit: (request) => Effect.asVoid(admitted(request)), generate };

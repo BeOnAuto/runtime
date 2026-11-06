@@ -21,7 +21,7 @@ import { ProviderUnavailable } from '../failure/provider-unavailable.ts';
 import { UnclassifiedModelError } from '../failure/unclassified-model-error.ts';
 import { credentialLookupMarker, OutboundFailure } from '../providers/outbound-failure.ts';
 import { apiCallFailure } from './api-call-failure.ts';
-import { mismatchIssues, outputFailure } from './output-failure.ts';
+import { unreadAnswerFailure } from './output-failure.ts';
 
 export interface FailureContext {
   readonly provider: string;
@@ -86,13 +86,7 @@ const apiCall: Recognizer = (error, { provider, now, showsProviderMessages, scru
 
 const unusableOutput: Recognizer = (error, { provider }) =>
   NoObjectGeneratedError.isInstance(error)
-    ? outputFailure({
-        provider,
-        finishReason: error.finishReason ?? 'other',
-        rawFinishReason: undefined,
-        usage: error.usage,
-        issues: mismatchIssues(error.cause),
-      })
+    ? unreadAnswerFailure(provider, error.finishReason, error.usage, error.cause)
     : null;
 
 function invalidDefinitionDetail(error: unknown): string | null {

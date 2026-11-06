@@ -56,6 +56,42 @@ const OutputModeSchema = Schema.Literals(['described']).annotate({
     'described when the call wrote the JSON Schema of the answer into the instructions rather than giving it to the provider',
 });
 
+const AskedRepairSchema = Schema.Struct({
+  outcome: Schema.Literals(['repaired', 'invalid']).annotate({
+    description: 'repaired when the answer the model wrote again was used, invalid when it missed the schema too',
+  }),
+  issues: Schema.Array(FailureIssueSchema).annotate({
+    description: 'The issues of the first answer, which the model was told, at most 5',
+  }),
+  usage: ModelUsageSchema,
+  cost_usd: Schema.optionalKey(CostSchema),
+  duration_ms: Schema.Int,
+});
+
+const FailedRepairSchema = Schema.Struct({
+  outcome: Schema.Literal('failed'),
+  because: ModelCallFailedBecauseSchema.annotate({
+    description: 'How the second request failed, as a model call fails, so the first answer stands',
+  }),
+  issues: Schema.Array(FailureIssueSchema).annotate({
+    description: 'The issues of the first answer, which the model was told, at most 5',
+  }),
+  duration_ms: Schema.Int,
+});
+
+const SkippedRepairSchema = Schema.Struct({
+  outcome: Schema.Literal('skipped'),
+  because: Schema.Literals(['input_tokens', 'context_window', 'time']).annotate({
+    description:
+      "What the run had too little of to ask again: its input tokens, the model's context window, or the time left",
+  }),
+});
+
+const RepairSchema = Schema.Union([AskedRepairSchema, FailedRepairSchema, SkippedRepairSchema]).annotate({
+  description:
+    'How a JSON answer that missed its schema was asked for once more, with its issues; usage, cost_usd and duration_ms are those of the second request alone',
+});
+
 export const ModelCallStartedSchema = Schema.Struct({
   model: Schema.String,
   messages_bytes: Schema.Int,
@@ -85,6 +121,7 @@ export const ModelCallAnsweredSchema = Schema.Struct({
   warnings: Schema.Array(ModelWarningSchema),
   tool_calls: Schema.Array(AskedToolCallSchema),
   output_mode: Schema.optionalKey(OutputModeSchema),
+  repair: Schema.optionalKey(RepairSchema),
 });
 
 export const ModelCallFailedSchema = Schema.Struct({
@@ -99,6 +136,7 @@ export const ModelCallFailedSchema = Schema.Struct({
   provider_message: Schema.optionalKey(Schema.String),
   issues: Schema.optionalKey(Schema.Array(FailureIssueSchema)),
   output_mode: Schema.optionalKey(OutputModeSchema),
+  repair: Schema.optionalKey(RepairSchema),
 });
 
 export type ModelUsage = typeof ModelUsageSchema.Type;

@@ -881,7 +881,7 @@ Each event has these fields, and no others:
 
 `data` keeps each event within 4 KiB:
 
-- Large values are shown in full when each is at most 2 KiB as JSON. They are an input, an output, a record, an answer, a call's arguments, a model call's messages, response and tool calls, and a published event's data. A larger one is shown as its size in bytes, under its name plus `_bytes`, such as `output_bytes`. A call's `result` is never shown by `get_run_history` or `list_playbook_events`, only its size, `result_bytes`; `get_event` reads it in full.
+- Large values are shown in full when each is at most 2 KiB as JSON. They are an input, an output, a record, an answer, a call's arguments, a model call's messages, response, tool calls, warnings, issues and repair, and a published event's data. A larger one is shown as its size in bytes, under its name plus `_bytes`, such as `output_bytes`. A call's `result` is never shown by `get_run_history` or `list_playbook_events`, only its size, `result_bytes`; `get_event` reads it in full.
 - When the event's data would still be larger than 4 KiB, its largest field is shown as its size first.
 - A definition's document and schemas appear as their sizes. Its description shows its first 300 characters, and its warnings as a count.
 - A rejection shows its reason, its detail shortened to fit, and for invalid input the number of issues and the first five.

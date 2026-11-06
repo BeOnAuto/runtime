@@ -68,6 +68,19 @@ export function chatCompletion(text: string, finishReason = 'stop'): object {
   };
 }
 
+export function chatCompletionRefusal(refusal: string): object {
+  return {
+    id: 'chatcmpl-9nYAG9LPNonX8DAyrkwYfemr3C8HC',
+    object: 'chat.completion',
+    created: 1_721_596_428,
+    model: 'gpt-4o-2024-08-06',
+    choices: [
+      { index: 0, message: { role: 'assistant', content: null, refusal }, logprobs: null, finish_reason: 'stop' },
+    ],
+    usage: { prompt_tokens: 81, completion_tokens: 11, total_tokens: 92 },
+  };
+}
+
 export function geminiContent(text: string): object {
   return {
     candidates: [{ content: { role: 'model', parts: [{ text }] }, finishReason: 'STOP', index: 0 }],

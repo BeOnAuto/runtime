@@ -42,6 +42,15 @@ const largestAsked = Array.from({ length: 1000 }, () => ({
   arguments_sha256: awkward,
 }));
 
+const largestIssues = Array.from({ length: 5 }, () => ({ pointer: awkward, detail: awkward }));
+
+const largestRepair = {
+  issues: largestIssues,
+  usage: largestUsage,
+  cost_usd: Number.MAX_VALUE,
+  duration_ms: largestCount,
+};
+
 const largestModelCalls: readonly RunEvent[] = [
   {
     type: 'model_call_started',
@@ -75,6 +84,7 @@ const largestModelCalls: readonly RunEvent[] = [
       })),
       tool_calls: largestAsked,
       output_mode: 'described',
+      repair: { ...largestRepair, outcome: 'repaired' },
     },
   },
   {
@@ -90,8 +100,9 @@ const largestModelCalls: readonly RunEvent[] = [
       finish_reason: 'content_filter',
       retry_after_ms: largestCount,
       provider_message: awkward,
-      issues: Array.from({ length: 5 }, () => ({ pointer: awkward, detail: awkward })),
+      issues: largestIssues,
       output_mode: 'described',
+      repair: { ...largestRepair, outcome: 'invalid' },
     },
   },
 ];
@@ -214,6 +225,21 @@ describe('the presenter of a model call that described the schema of its answer'
       presented({ type: 'model_call_answered', data: answered })?.data,
       presented({ type: 'model_call_failed', data: failed })?.data,
     ]).toMatchObject([{ output_mode: 'described' }, failed]);
+  });
+});
+
+describe('the presenter of a model call whose answer was asked for once more', () => {
+  it('presents the correction with the issues of the first answer cut to their bounds, or why it was not made', () => {
+    const issues = [{ pointer: `/${'p'.repeat(300)}`, detail: 'Expected string' }];
+    const { usage } = modelCallAnswered(0);
+    const repair = { outcome: 'repaired', issues, usage, duration_ms: 300 } as const;
+    const skipped = { outcome: 'skipped', because: 'time' } as const;
+    const failed = { number: 2, because: 'output_invalid', provider: 'gateway', detail: 'x', duration_ms: 12 } as const;
+
+    expect([
+      presented({ type: 'model_call_answered', data: { number: 1, ...modelCallAnswered(0), repair } })?.data,
+      presented({ type: 'model_call_failed', data: { ...failed, repair: skipped } })?.data,
+    ]).toMatchObject([{ repair: { ...repair, issues: [{ pointer: `/${'p'.repeat(255)}` }] } }, { repair: skipped }]);
   });
 });
 

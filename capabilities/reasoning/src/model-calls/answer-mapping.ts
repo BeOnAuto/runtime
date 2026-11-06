@@ -1,4 +1,5 @@
 import type { FinishReason as SdkFinishReason } from 'ai';
+import { Schema } from 'effect';
 
 import type { FinishReason, ModelWarning, TokenUsage } from '../model/model-result.ts';
 
@@ -76,3 +77,9 @@ export function costOf(headers: ResponseHeaders | undefined, header: string | nu
   const cost = Number(said);
   return Number.isFinite(cost) && cost >= 0 ? cost : undefined;
 }
+
+const RefusedAnswerSchema = Schema.Struct({
+  choices: Schema.NonEmptyArray(Schema.Struct({ message: Schema.Struct({ refusal: Schema.NonEmptyString }) })),
+});
+
+export const isRefusal = Schema.is(RefusedAnswerSchema);

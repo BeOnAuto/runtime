@@ -17,6 +17,7 @@ const largeFields: readonly string[] = [
   'tool_calls',
   'warnings',
   'issues',
+  'repair',
 ];
 
 const utf8 = new TextEncoder();

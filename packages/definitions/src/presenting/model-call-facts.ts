@@ -65,8 +65,25 @@ function warningShown({ type, feature, detail }: ModelWarning): Schema.JsonObjec
   };
 }
 
+type Repair = NonNullable<RecordedRunFact<'model_call_answered'>['data']['repair']>;
+
+type Issue = Extract<Repair, { readonly issues: unknown }>['issues'][number];
+
+function issueShown({ pointer, detail }: Issue): Schema.JsonObject {
+  return { pointer: named(pointer), detail: cutAtCodePoint(detail, mostDetailBytes) };
+}
+
+function repairShown(repair: Repair | undefined): Readonly<Record<string, Schema.Json>> {
+  if (repair === undefined) {
+    return {};
+  }
+  return {
+    repair: 'issues' in repair ? { ...repair, issues: repair.issues.map((issue) => issueShown(issue)) } : repair,
+  };
+}
+
 function answeredShown({ data }: RecordedRunFact<'model_call_answered'>, content: KeptContent): PresentedFact {
-  const { raw_finish_reason, response_id, response_sha256, tool_calls, warnings, ...counts } = data;
+  const { raw_finish_reason, response_id, response_sha256, tool_calls, warnings, repair, ...counts } = data;
   return {
     type: 'model_call_answered',
     summary: modelAnswered(data.number, tool_calls.length),
@@ -79,6 +96,7 @@ function answeredShown({ data }: RecordedRunFact<'model_call_answered'>, content
       warnings: warnings.map((warning) => warningShown(warning)),
       ...digestNamed('response', response_sha256),
       tool_calls: tool_calls.map((asked) => askedShown(asked)),
+      ...repairShown(repair),
       ...keptJson('response', response_sha256, content),
     },
   };
@@ -89,7 +107,7 @@ function wordsShown(name: string, words: string | undefined): Readonly<Record<st
 }
 
 function failedShown({ data }: RecordedRunFact<'model_call_failed'>): PresentedFact {
-  const { detail, provider_message: providerMessage, issues, ...rest } = data;
+  const { detail, provider_message: providerMessage, issues, repair, ...rest } = data;
   return {
     type: 'model_call_failed',
     summary: modelFailed(data.number, data.because),
@@ -98,14 +116,8 @@ function failedShown({ data }: RecordedRunFact<'model_call_failed'>): PresentedF
       provider: named(data.provider),
       ...wordsShown('detail', detail),
       ...wordsShown('provider_message', providerMessage),
-      ...(issues === undefined
-        ? {}
-        : {
-            issues: issues.map(({ pointer, detail: said }) => ({
-              pointer: named(pointer),
-              detail: cutAtCodePoint(said, mostDetailBytes),
-            })),
-          }),
+      ...(issues === undefined ? {} : { issues: issues.map((issue) => issueShown(issue)) }),
+      ...repairShown(repair),
     },
   };
 }

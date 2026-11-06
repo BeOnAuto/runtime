@@ -214,7 +214,7 @@ These pass, so a retry can work:
 | HTTP 429                                                                                        | `rate_limited`         | Retry after the delay      |
 | HTTP 408, 409 or 5xx (529 included), a failed connection, or a 2xx response that cannot be read | `provider_unavailable` | Retry later                |
 | No response before the call's deadline (see [Retries](#retries))                                | `timed_out`            | Retry, or allow more time  |
-| A JSON answer is not JSON, or does not match the output schema                                  | `output_invalid`       | Retry, or relax the schema |
+| A JSON answer is not JSON, or does not match the output schema, when asked for once more too    | `output_invalid`       | Retry, or relax the schema |
 
 The definition's author, or the caller, fixes these:
 
@@ -242,7 +242,7 @@ A caller who reports a failure quotes its detail. These are the details the mode
 - A TLS certificate that is not trusted, or a setting the provider's SDK found missing, gives `unavailable`, saying that the operator must act.
 - `credentials_rejected` gives `unavailable`, with the HTTP status when there was one. It reads like `openai rejected the credentials (HTTP 401)`, or `No credentials could be obtained for bedrock from its credential source`.
 - `rate_limited` says how many seconds to wait, or to try later. `provider_unavailable` and `timed_out` say to try again later.
-- `output_invalid` for an answer that does not match its schema gives up to 5 issues and says to try again. For a JSON answer cut off at `max_output_tokens`, it is `conflict` of the kind `unworkable`, saying to raise `config.max_output_tokens`.
+- `output_invalid` for an answer that does not match its schema gives up to 5 issues and says to try again. After the [one correction](#an-answer-that-misses-its-schema), it says `after one correction`; when the run had no room for it, it says `no correction was attempted` and why. For a JSON answer cut off at `max_output_tokens`, it is `conflict` of the kind `unworkable`, saying to raise `config.max_output_tokens`.
 - `definition_invalid` and `request_too_long` give `conflict` of the kind `unworkable`. A refused request names the provider, the HTTP status and what it means: the model was not found (404), the request was rejected as invalid (400 and 422), or the request was not accepted. It adds the error code the body carries, cut at 64 characters, and ends with `update the reasoning function definition`. For example: `gateway answered HTTP 404: the model was not found; update the reasoning function definition`. A refused provider option names the option.
 - `request_too_long` names the signal, such as `HTTP 413`, and says to shorten the prompt or the input. When the run's tools returned results, it says instead how many bytes they returned, and to ask them for a page.
 - `content_refused` gives `invalid_input` at `/input`: `The model refused this input under its content policy`.
@@ -379,3 +379,15 @@ A model call through a gateway entry without `structured_outputs: true` that ask
 - Values are never changed to fit the schema: the answer is validated as written, and one that does not match fails as `output_invalid` with its issues.
 - The schema is sent with every model call of the run, so it counts toward the input tokens of each.
 - The call's `model_call_answered`, or its `model_call_failed` for an answer that could not be used, records `output_mode: described` ([The run's model calls](reasoning-format.md#the-run-s-model-calls)).
+
+### An answer that misses its schema
+
+A JSON answer that is not JSON, or does not match the output schema or the rules of its shape, is asked for once more, whichever way the schema was given to the provider:
+
+- The second request is the first, followed by the model's answer and, from the user, `Your answer does not meet these rules of the answer's schema:`, up to 5 of the issues, each at its pointer in the JSON the model wrote, and `Answer again in full, following every rule.` For an answer that is not JSON, it says so instead. Nothing else changes: the request offers the run's tools, with their earlier calls and results, the schema and every setting as the first did, so a provider that took the first request takes the second.
+- The second answer is used when it matches. Otherwise the call fails as `output_invalid` with its issues, and no third request is made. A second answer that calls a tool instead is not JSON.
+- When the second request itself fails, such as with HTTP 500 or past the call's deadline, the call fails as `output_invalid` with the first answer, its issues, `usage` and `cost_usd`, saying the request for a correction failed and how.
+- An answer cut off at `max_output_tokens`, an empty answer, an answer stopped under the provider's content policy and a refusal are not asked for again. A refusal, an OpenAI-compatible answer whose message has a `refusal`, fails as `content_refused`.
+- The second request is not made when the run has too little room left for it: when its input, the first request's with the answer and the issues added, would pass the input tokens the run has left or the model's context window, or when less time is left before the call's deadline or the run's bound than the first answer took. The call then fails with the first answer's issues, saying no correction was attempted and why.
+- The call's `usage`, `cost_usd`, `duration_ms` and `request_bytes` are those of both requests. Its `model_call_answered` or `model_call_failed` records `repair`: the `outcome` (`repaired`, `invalid`, `failed` or `skipped`), and the first answer's `issues` with the second request's `usage`, `cost_usd` and `duration_ms`, or with `because`, how the second request failed, such as `provider_unavailable` or `timed_out`, and its `duration_ms`, or only `because` (`input_tokens`, `context_window` or `time`) when it was skipped ([The run's model calls](reasoning-format.md#the-run-s-model-calls)).
+- The metric `auto.on.json_answers` counts the final answer of every model call that asks for JSON, by provider, model and output mode: `valid`, `valid_after_repair`, `invalid`, `repair_skipped`, `repair_failed`, or `refused` for an answer the provider stopped or the model refused. A call that asked for tools, or that failed before any answer, is not counted (see [Telemetry](../self-host/telemetry.md#metrics)).

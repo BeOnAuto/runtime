@@ -28,7 +28,32 @@
     "answered_model": "model-small-2",
     "warnings": [],
     "tool_calls": [],
-    "output_mode": "described"
+    "output_mode": "described",
+    "repair": {
+      "outcome": "repaired",
+      "issues": [
+        {
+          "pointer": "/verdict",
+          "detail": "Expected string"
+        }
+      ],
+      "usage": {
+        "input": {
+          "total": 600,
+          "uncached": 100,
+          "cache_read": 500,
+          "cache_write": 0
+        },
+        "output": {
+          "total": 150,
+          "text": 125,
+          "reasoning": 25
+        },
+        "total": 750
+      },
+      "cost_usd": 0.0002,
+      "duration_ms": 700
+    }
   },
   "context": {
     "at": "2026-10-29T10:00:00.000Z",

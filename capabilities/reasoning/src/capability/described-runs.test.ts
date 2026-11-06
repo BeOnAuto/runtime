@@ -42,16 +42,19 @@ describe('a run whose model a gateway without structured outputs serves', () => 
     });
   });
 
-  it('is refused when the model answers in prose, and records the failed call as described', async () => {
+  it('is refused when the model answers in prose when asked once more too, and records the failed call as described', async () => {
     const { exit, facts } = await runAnswered('I would approve the renewal.');
 
-    expect(exit).toMatchObject(Exit.fail({ _tag: 'unavailable', detail: 'The answer is not JSON; try again' }));
+    expect(exit).toMatchObject(
+      Exit.fail({ _tag: 'unavailable', detail: 'The answer is not JSON after one correction; try again' }),
+    );
     expect(facts.find(({ type }) => type === 'model_call_failed')?.data).toMatchObject({
       because: 'output_invalid',
       provider: 'internal',
       detail: 'The answer is not JSON',
       issues: [],
       output_mode: 'described',
+      repair: { outcome: 'invalid', issues: [] },
     });
   });
 });

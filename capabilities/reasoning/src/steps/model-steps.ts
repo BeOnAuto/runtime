@@ -78,6 +78,16 @@ export function settledOf(call: ReturnType<PerformJob['modelCall']>): Effect.Eff
   });
 }
 
+function roomOf({ bounds, startedAt }: StepRecording, { meter }: StepState) {
+  const { limits, runBoundMs } = bounds;
+  const endsAt = startedAt + runBoundMs;
+  return {
+    input_tokens: Math.max(0, limits.mostInputTokens - meter.spentInputTokens),
+    ...(limits.contextWindow === undefined ? {} : { context_window: limits.contextWindow }),
+    ...(Number.isFinite(endsAt) ? { ends_at: endsAt } : {}),
+  };
+}
+
 export function modelCallBegun(
   run: StepRecording,
   state: StepState,
@@ -86,7 +96,8 @@ export function modelCallBegun(
   return Effect.gen(function* () {
     const ready = next.remade === null ? state : yield* interruptedCall(run, state, next.remade);
     const started = yield* startedCall(run, ready, next);
-    return { state: started, job: { request: requestOf(run.base, started, next.final ? [] : run.tools.definitions) } };
+    const request = requestOf(run.base, started, next.final ? [] : run.tools.definitions);
+    return { state: started, job: { request: { ...request, room: roomOf(run, started) } } };
   });
 }
 

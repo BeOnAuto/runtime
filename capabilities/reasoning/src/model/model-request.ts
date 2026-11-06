@@ -52,6 +52,12 @@ export interface ToolDefinition {
   readonly inputSchema: Schema.JsonObject;
 }
 
+export interface RunRoom {
+  readonly input_tokens: number;
+  readonly context_window?: number;
+  readonly ends_at?: number;
+}
+
 export interface ModelRequest {
   readonly model: string;
   readonly instructions?: string;
@@ -64,4 +70,5 @@ export interface ModelRequest {
   readonly timeout_ms?: number;
   readonly retries?: RetryOwner;
   readonly run_id?: string;
+  readonly room?: RunRoom;
 }

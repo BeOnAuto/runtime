@@ -4,7 +4,7 @@ import { TypeValidationError, type FinishReason as SdkFinishReason } from 'ai';
 import { ContentRefused } from '../failure/content-refused.ts';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import { OutputInvalid } from '../failure/output-invalid.ts';
-import type { OutputMode } from '../model/model-result.ts';
+import type { OutputMode, Repair, TokenUsage } from '../model/model-result.ts';
 import { finishReasonOf, tokenUsage, type SdkUsage } from './answer-mapping.ts';
 import { AnswerMismatch } from './answer-mismatch.ts';
 
@@ -12,9 +12,12 @@ export interface UnusableOutput {
   readonly provider: string;
   readonly finishReason: SdkFinishReason;
   readonly rawFinishReason: string | undefined;
-  readonly usage: SdkUsage | undefined;
+  readonly usage: TokenUsage | null;
+  readonly cost_usd?: number;
   readonly issues: readonly SchemaIssue[];
+  readonly refused: boolean;
   readonly output_mode?: OutputMode;
+  readonly repair?: Repair;
 }
 
 export function mismatchIssues(cause: unknown): readonly SchemaIssue[] {
@@ -28,19 +31,37 @@ function outputDetail(finishReason: SdkFinishReason, issues: readonly SchemaIssu
   return issues.length > 0 ? 'The answer does not match the output schema' : 'The answer is not JSON';
 }
 
+function refusalDetail({ provider, finishReason, refused }: UnusableOutput): string | undefined {
+  if (refused) {
+    return `${provider} refused to answer`;
+  }
+  return finishReason === 'content-filter' ? `${provider} stopped the answer under its content policy` : undefined;
+}
+
+function recordedOf({
+  cost_usd: cost,
+  output_mode: mode,
+  repair,
+}: UnusableOutput): Pick<UnusableOutput, 'cost_usd' | 'output_mode' | 'repair'> {
+  return {
+    ...(cost === undefined ? {} : { cost_usd: cost }),
+    ...(mode === undefined ? {} : { output_mode: mode }),
+    ...(repair === undefined ? {} : { repair }),
+  };
+}
+
 export function outputFailure(output: UnusableOutput): ModelFailure {
-  const { provider, finishReason, issues } = output;
-  const usage = output.usage === undefined ? null : tokenUsage(output.usage);
+  const { provider, finishReason, issues, usage } = output;
   const raw_finish_reason = output.rawFinishReason ?? null;
-  const mode = output.output_mode === undefined ? {} : { output_mode: output.output_mode };
-  if (finishReason === 'content-filter') {
+  const refusal = refusalDetail(output);
+  if (refusal !== undefined) {
     return new ContentRefused({
-      detail: `${provider} stopped the answer under its content policy`,
+      detail: refusal,
       provider,
       status: null,
       raw_finish_reason,
       usage,
-      ...mode,
+      ...recordedOf(output),
     });
   }
   return new OutputInvalid({
@@ -50,6 +71,22 @@ export function outputFailure(output: UnusableOutput): ModelFailure {
     raw_finish_reason,
     usage,
     issues,
-    ...mode,
+    ...recordedOf(output),
+  });
+}
+
+export function unreadAnswerFailure(
+  provider: string,
+  finishReason: SdkFinishReason | undefined,
+  usage: SdkUsage | undefined,
+  cause: unknown,
+): ModelFailure {
+  return outputFailure({
+    provider,
+    finishReason: finishReason ?? 'other',
+    rawFinishReason: undefined,
+    usage: usage === undefined ? null : tokenUsage(usage),
+    issues: mismatchIssues(cause),
+    refused: false,
   });
 }

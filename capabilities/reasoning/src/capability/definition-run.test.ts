@@ -60,7 +60,7 @@ const answeredRecord = {
 };
 
 describe('running a reasoning function definition', () => {
-  it('sends the rendered instructions and message with the settings, the provider options and a timeout', async () => {
+  it('sends the rendered instructions and message with the settings, the provider options, a timeout and the input tokens left in the run', async () => {
     const { running, requests } = reasoningWith(answers(answered));
     await running(summarizing, { text: 'the quarter' });
 
@@ -79,6 +79,7 @@ describe('running a reasoning function definition', () => {
         provider_options: { anthropic: { thinking: { type: 'enabled', budgetTokens: 1024 } } },
         timeout_ms: 67_500,
         run_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+        room: { input_tokens: 2_000_000 },
       },
     ]);
   });

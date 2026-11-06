@@ -5,7 +5,7 @@ import { Predicate, type Schema } from 'effect';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelCallRequest } from '../jobs/jobs.ts';
 import type { ToolDefinition } from '../model/model-request.ts';
-import type { FinishReason, ModelResult, OutputMode, TokenUsage } from '../model/model-result.ts';
+import type { FinishReason, ModelResult, OutputMode, Repair, TokenUsage } from '../model/model-result.ts';
 import { askedIn } from './asked-calls.ts';
 import { promptMessages, type Prompt, type StepMessages } from './step-messages.ts';
 import type { StepState } from './step-state.ts';
@@ -57,6 +57,7 @@ export function answeredData({ result, response, kept }: Answering, offered: Off
     warnings: result.warnings.slice(0, mostWarnings),
     tool_calls: askedToolCalls(response, offered),
     ...(result.output_mode === undefined ? {} : { output_mode: result.output_mode }),
+    ...(result.repair === undefined ? {} : { repair: result.repair }),
   };
 }
 
@@ -65,11 +66,13 @@ export interface FailureOfACall {
   readonly detail: string;
   readonly provider: string | null;
   readonly usage?: TokenUsage | null;
+  readonly cost_usd?: number;
   readonly finish_reason?: FinishReason;
   readonly retry_after_ms?: number | null;
   readonly provider_message?: string | null;
   readonly issues?: ModelCallFailedData['issues'];
   readonly output_mode?: OutputMode;
+  readonly repair?: Repair;
 }
 
 export type FailedFields = Omit<ModelCallFailedData, 'duration_ms' | 'because'> & {
@@ -78,17 +81,19 @@ export type FailedFields = Omit<ModelCallFailedData, 'duration_ms' | 'because'> 
 
 export function failedData(failure: FailureOfACall, provider: string): FailedFields {
   const { _tag: because, detail, usage, finish_reason: finish, retry_after_ms: wait, provider_message: said } = failure;
-  const { issues, output_mode: mode } = failure;
+  const { cost_usd: cost, issues, output_mode: mode, repair } = failure;
   return {
     because,
     provider: failure.provider ?? provider,
     detail,
     ...(Predicate.isNotNullish(usage) ? { usage } : {}),
+    ...(cost === undefined ? {} : { cost_usd: cost }),
     ...(Predicate.isNotNullish(finish) ? { finish_reason: finish } : {}),
     ...(Predicate.isNotNullish(wait) ? { retry_after_ms: wait } : {}),
     ...(Predicate.isNotNullish(said) ? { provider_message: said } : {}),
     ...(issues === undefined ? {} : { issues: issues.slice(0, mostIssues) }),
     ...(mode === undefined ? {} : { output_mode: mode }),
+    ...(repair === undefined ? {} : { repair }),
   };
 }
 

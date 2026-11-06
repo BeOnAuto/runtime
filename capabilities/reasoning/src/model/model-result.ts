@@ -1,8 +1,40 @@
 import type { Schema } from 'effect';
 
+import type { FailureIssue } from '../failure/failure-issue.ts';
+
 export type FinishReason = 'stop' | 'length' | 'content_filter' | 'tool_calls' | 'error' | 'other';
 
 export type OutputMode = 'described';
+
+export type RepairSkippedBecause = 'input_tokens' | 'context_window' | 'time';
+
+export type RepairFailedBecause =
+  | 'content_refused'
+  | 'credentials_rejected'
+  | 'definition_invalid'
+  | 'model_not_allowed'
+  | 'output_invalid'
+  | 'provider_not_configured'
+  | 'provider_unavailable'
+  | 'rate_limited'
+  | 'request_too_long'
+  | 'timed_out';
+
+export type Repair =
+  | {
+      readonly outcome: 'repaired' | 'invalid';
+      readonly issues: readonly FailureIssue[];
+      readonly usage: TokenUsage;
+      readonly cost_usd?: number;
+      readonly duration_ms: number;
+    }
+  | {
+      readonly outcome: 'failed';
+      readonly because: RepairFailedBecause;
+      readonly issues: readonly FailureIssue[];
+      readonly duration_ms: number;
+    }
+  | { readonly outcome: 'skipped'; readonly because: RepairSkippedBecause };
 
 export interface InputTokens {
   readonly total: number | null;
@@ -49,6 +81,7 @@ export interface ModelResult {
   readonly request_bytes: number;
   readonly duration_ms: number;
   readonly output_mode?: OutputMode;
+  readonly repair?: Repair;
 }
 
 export const unknownUsage: TokenUsage = {

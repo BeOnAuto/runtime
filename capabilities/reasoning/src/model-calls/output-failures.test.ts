@@ -30,9 +30,19 @@ const usage = {
   total: 123,
 };
 
+const usageOfBoth = {
+  input: { total: 72, uncached: 32, cache_read: 40, cache_write: null },
+  output: { total: 174, text: 46, reasoning: 128 },
+  total: 246,
+};
+
 describe('an answer that is not usable as the JSON asked for', () => {
-  it('fails as output_invalid with the issues when it does not match the schema', async () => {
+  it('fails as output_invalid with the issues when it does not match the schema, asked for once more too', async () => {
     const failure = await failureFor(openAiResponse(`{"verdict":42,"note":"${answerText}"}`));
+    const issues = [
+      { pointer: '/note', detail: 'Expected no excess property' },
+      { pointer: '/verdict', detail: 'Expected string' },
+    ];
 
     expect(failure).toMatchObject({
       _tag: 'output_invalid',
@@ -40,11 +50,9 @@ describe('an answer that is not usable as the JSON asked for', () => {
       detail: 'The answer does not match the output schema',
       finish_reason: 'stop',
       raw_finish_reason: null,
-      usage,
-      issues: [
-        { pointer: '/note', detail: 'Expected no excess property' },
-        { pointer: '/verdict', detail: 'Expected string' },
-      ],
+      usage: usageOfBoth,
+      issues,
+      repair: { outcome: 'invalid', issues, usage },
     });
   });
 

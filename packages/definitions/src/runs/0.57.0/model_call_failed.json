@@ -22,7 +22,11 @@
     },
     "finish_reason": "stop",
     "issues": [],
-    "output_mode": "described"
+    "output_mode": "described",
+    "repair": {
+      "outcome": "skipped",
+      "because": "input_tokens"
+    }
   },
   "context": {
     "at": "2026-10-29T10:00:00.000Z",

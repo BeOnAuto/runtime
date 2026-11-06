@@ -28,6 +28,11 @@ function aRun(more: Partial<StepsOptions> = {}): StepsRun {
   });
 }
 
+function startedTogether(more: Partial<StepsOptions> = {}): readonly [StepsRun, StepsRun] {
+  const before = { startedAt: new Date().toISOString(), modelCallsBefore: 0, calls: [] };
+  return [aRun({ before, ...more }), aRun({ before, ...more })];
+}
+
 function fromTheFacts(steps: StepsRun): Effect.Effect<StepState> {
   return stateOfTheAttempt(steps.run, prompt, { modelCallsBefore: 0, calls: steps.journal.calls() });
 }
@@ -76,8 +81,7 @@ function twoSteps(steps: StepsRun) {
 
 describe('the jobs of a run, handed out one at a time from its facts', () => {
   it('record what the steps record when they perform the run themselves, and end the run the same way', async () => {
-    const looped = aRun();
-    const driven = aRun();
+    const [looped, driven] = startedTogether();
 
     const { ending } = await Effect.runPromise(looped.stepping);
     const due = await Effect.runPromise(oneJobAtATime(driven));
@@ -108,8 +112,7 @@ describe('the jobs of a run, handed out one at a time from its facts', () => {
 
 describe('the jobs of a run whose playbook keeps no content', () => {
   it('carry a run whose playbook keeps no content across the jobs of one invocation, its state kept in memory between them, recording the facts the steps record, those of calls made at once in any order', async () => {
-    const looped = aRun({ keepsContent: false });
-    const driven = aRun({ keepsContent: false });
+    const [looped, driven] = startedTogether({ keepsContent: false });
 
     const { ending } = await Effect.runPromise(looped.stepping);
     const due = await Effect.runPromise(withinOneInvocation(driven));

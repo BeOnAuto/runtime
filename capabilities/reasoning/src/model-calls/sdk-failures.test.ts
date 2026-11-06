@@ -118,6 +118,30 @@ describe('an SDK failure', () => {
   });
 });
 
+describe('an SDK failure that says the model wrote no usable answer', () => {
+  it('fails as output_invalid with the usage the model counted, when the model says it wrote no usable answer', async () => {
+    const unread = new NoObjectGeneratedError({
+      response: { id: 'r', timestamp: new Date(0), modelId: 'm' },
+      usage: {
+        inputTokens: 1,
+        inputTokenDetails: { noCacheTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 },
+        outputTokens: 2,
+        outputTokenDetails: { textTokens: 2, reasoningTokens: 0 },
+        totalTokens: 3,
+      },
+      finishReason: 'stop',
+    });
+
+    const failure = await mockGeneration(throwing(unread)).failed(textRequest('mock/model'));
+
+    expect(failure).toMatchObject({
+      _tag: 'output_invalid',
+      finish_reason: 'stop',
+      usage: { input: { total: 1 }, output: { total: 2 }, total: 3 },
+    });
+  });
+});
+
 const unreadableSchema = {
   document: { type: 'banana' },
   what: 'answer',
