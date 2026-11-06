@@ -99,6 +99,37 @@ describe('a connection on a runtime that signs people in', () => {
   });
 });
 
+describe('the playbooks named as a connection is approved on a runtime that signs people in', () => {
+  it('are recorded with the approval of the person who added it, and the approval another person tries changes nothing', async () => {
+    const issuer = await issuerOverHttps();
+    server = await servingReasoning([], {
+      IDENTITY_ISSUER: issuer.issuer,
+      PUBLIC_URL: publicUrl,
+      ...connectionsOnLoopback,
+    });
+    const ada = await accessTokenOf(issuer, publicUrl, signInScopes.join(' '));
+    const grace = await tokenOfAnotherPerson(issuer);
+    const answer = await server.call('POST', connections, { key: ada, body: notes() });
+    const { id, connect } = Schema.decodeUnknownSync(AddedSchema)(answer.body);
+    const { token } = linkOf(connect.url);
+
+    const byGrace = await server.call('POST', `${connections}/${id}/approve`, {
+      key: grace,
+      body: { token, playbooks: ['alpha'] },
+    });
+    const afterGrace = await server.call('GET', `${connections}/${id}`, { key: ada });
+    const byAda = await server.call('POST', `${connections}/${id}/approve`, {
+      key: ada,
+      body: { token, playbooks: ['alpha'] },
+    });
+
+    expect(byGrace).toMatchObject({ status: 403 });
+    expect(afterGrace).toMatchObject({ status: 200, body: { status: 'pending' } });
+    expect(afterGrace.body).not.toHaveProperty('entry.playbooks');
+    expect(byAda).toMatchObject({ status: 200, body: { status: 'connected', entry: { playbooks: ['alpha'] } } });
+  });
+});
+
 describe('a server on loopback on a runtime that signs people in', () => {
   it('is refused, since only a local runtime takes it unnamed', async () => {
     const issuer = await issuerOverHttps();

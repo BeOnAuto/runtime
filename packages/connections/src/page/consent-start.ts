@@ -4,11 +4,11 @@ import { Effect, Schema } from 'effect';
 import { studioBaseFor } from '../links/connect-page.ts';
 import { issuedToken, tenMinutesOn, tokenSha256Of } from '../links/link-token.ts';
 import { ClientSourceField, ExpiresAtField } from '../operations/connection-fields.ts';
-import { actedNow, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
+import { actedNow, allowedToChoose, loadRegistry, recordChangeInRegistry } from '../operations/registry-access.ts';
 import { startableConnectionOf } from '../registry/consent-decisions.ts';
 import { forgottenVerifierOf, namedOf, sourcesFor, type ConsentServices } from './consent-asking.ts';
 import { askedForASignIn, consentRefusalOf, verifierUnkeptOf } from './consent-refusals.ts';
-import { LinkSchema, askedOfTheLink } from './link-operations.ts';
+import { LinkWithPlaybooksSchema, askedOfTheLink } from './link-operations.ts';
 
 const StartedSchema = Schema.Struct({
   authorize: Schema.Struct({
@@ -28,26 +28,30 @@ const StartedSchema = Schema.Struct({
   description: 'Where the person signs in at the authorization server and allows Auto',
 });
 
+const startDescription = [
+  "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to.",
+  "A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link add_connection or reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before.",
+  "A connection under the organization's own OAuth client starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given.",
+  'The consent is finished within ten minutes, and a second start replaces the first.',
+  'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',
+  'On a runtime that signs people in, only the person who added the connection may start it.',
+  'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the start; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
+].join(' ');
+
 export function defineStartConsent(services: ConsentServices) {
   const { consent, secrets, bindsPerson } = services;
   return defineHttpOperation('org', 'command', {
     name: 'start',
     title: 'Start consent',
-    description: [
-      "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to.",
-      "A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link add_connection or reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before.",
-      "A connection under the organization's own OAuth client starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given.",
-      'The consent is finished within ten minutes, and a second start replaces the first.',
-      'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',
-      'On a runtime that signs people in, only the person who added the connection may start it.',
-    ].join(' '),
+    description: startDescription,
     route: { method: 'POST', path: '/connections/{id}/consent' },
     body: { kind: 'json' },
     successStatus: 201,
-    inputSchema: LinkSchema,
+    inputSchema: LinkWithPlaybooksSchema,
     outputSchema: StartedSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
-    handle: Effect.fnUntraced(function* ({ id, token }) {
+    handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
+      yield* allowedToChoose(choice.playbooks);
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
       const kept = yield* Effect.fromResult(startableConnectionOf(yield* loadRegistry, use, yield* actedNow));
       const sources = yield* sourcesFor(kept.connection, services);
@@ -71,6 +75,7 @@ export function defineStartConsent(services: ConsentServices) {
         expires_at: expiresAt,
         scope,
         says,
+        ...choice,
       }).pipe(Effect.onError(() => secrets.forget(verifierSecretId)));
       yield* forgottenVerifierOf(before, services);
       return { authorize: { url: started.url, expires_at: expiresAt }, client_source: started.client.client_source };

@@ -3,6 +3,7 @@ import { Effect, Result, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import {
+  ChosenPlaybooksField,
   ClientSourceField,
   ConnectionIdField,
   ExpiresAtField,
@@ -11,7 +12,13 @@ import {
   TokenField,
 } from '../operations/connection-fields.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { actedNow, loadRegistry, recordInRegistry, recordedCaller } from '../operations/registry-access.ts';
+import {
+  actedNow,
+  allowedToChoose,
+  loadRegistry,
+  recordInRegistry,
+  recordedCaller,
+} from '../operations/registry-access.ts';
 import { keptAskedOf, moreAskedOf, noLongerNamed, type AskedMore } from '../providers/asking-more.ts';
 import { ConnectionSchema, connectionShown, scopesAddedTo } from '../registry/connection.ts';
 import { isOpenConsent, linkedConnectionOf, type KeptWithLink } from '../registry/registry-lookup.ts';
@@ -24,7 +31,9 @@ import {
   type Sources,
 } from './consent-asking.ts';
 
-export const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
+const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
+
+export const LinkWithPlaybooksSchema = Schema.Struct({ ...LinkSchema.fields, playbooks: ChosenPlaybooksField });
 
 const LinkedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
@@ -168,18 +177,21 @@ export function defineApprove({ bindsPerson }: { readonly bindsPerson: boolean }
       'Approves a connection that takes no credential to give, one of the credential none or reference, through its open link, and answers it connected.',
       'On a runtime that signs people in, only the person who added the connection may approve it.',
       'A connection that takes a secret or client credentials is approved by give_credential instead.',
+      'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/approve' },
     body: { kind: 'json' },
-    inputSchema: LinkSchema,
+    inputSchema: LinkWithPlaybooksSchema,
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict'],
-    handle: Effect.fnUntraced(function* ({ id, token }) {
+    handle: Effect.fnUntraced(function* ({ id, token, ...choice }) {
+      yield* allowedToChoose(choice.playbooks);
       const use = { connection: id, token_sha256: tokenSha256Of(token), bindsPerson };
       const { connection } = yield* recordInRegistry({
         type: 'approve',
         ...use,
         connected_by: yield* recordedCaller,
+        ...choice,
       }).pipe(Effect.catchTag('invalid_input', Effect.die));
       return connectionShown(connection, null);
     }),

@@ -255,6 +255,13 @@ export const PlaybooksField = Schema.NullOr(
     'The playbooks that may use the connection, by id, or null for every playbook of the org, those made later among them',
 });
 
+export const ChosenPlaybooksField = Schema.optionalKey(
+  PlaybooksField.annotate({
+    description:
+      'The playbooks that may use the connection, by id, or null for every playbook of the org, set with the approval, or with the start of the consent; left out, the connection keeps the playbooks it has',
+  }),
+);
+
 export const TokenField = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128)).annotate({
   description: 'The token of the link add_connection or reconnect_connection gave',
 });

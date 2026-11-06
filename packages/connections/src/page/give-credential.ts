@@ -3,7 +3,13 @@ import { Effect, Redacted } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
-import { actedNow, loadRegistry, recordChangeInRegistry, recordedCaller } from '../operations/registry-access.ts';
+import {
+  actedNow,
+  allowedToChoose,
+  loadRegistry,
+  recordChangeInRegistry,
+  recordedCaller,
+} from '../operations/registry-access.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
@@ -28,13 +34,15 @@ export function defineGiveCredential(services: GivingServices) {
       'The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it.',
       'Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again.',
       'On a runtime that signs people in, only the person who added the connection may give it.',
+      'Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.',
     ].join(' '),
     route: { method: 'POST', path: '/connections/{id}/credential' },
     body: { kind: 'json' },
     inputSchema: GivingSchema,
     outputSchema: GivenConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
-    handle: Effect.fnUntraced(function* (giving) {
+    handle: Effect.fnUntraced(function* ({ playbooks, ...giving }) {
+      yield* allowedToChoose(playbooks);
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
       const kept = yield* Effect.fromResult(linkedConnectionOf(yield* loadRegistry, use, yield* actedNow));
       const { org } = yield* OrgContext;
@@ -54,6 +62,7 @@ export function defineGiveCredential(services: GivingServices) {
         secret_id: secretId,
         ...algorithm,
         ...client,
+        ...(playbooks === undefined ? {} : { playbooks }),
       }).pipe(Effect.onError(() => secrets.forget(secretId)));
       yield* forgottenCredentialOf(before, services);
       return { ...connectionShown(after.connection, given.endsWith ?? null), ...formatMark };

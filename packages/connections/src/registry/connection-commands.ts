@@ -20,6 +20,10 @@ export interface ConnectionAddition {
   readonly link: OpenLink;
 }
 
+export interface PlaybooksChoice {
+  readonly playbooks?: readonly string[] | null;
+}
+
 export interface LinkUse {
   readonly connection: string;
   readonly token_sha256: string;
@@ -30,11 +34,11 @@ interface Connecting extends LinkUse {
   readonly connected_by: RecordedCaller;
 }
 
-export interface ConnectionApproval extends Connecting {
+export interface ConnectionApproval extends Connecting, PlaybooksChoice {
   readonly type: 'approve';
 }
 
-export interface CredentialGiving extends Connecting {
+export interface CredentialGiving extends Connecting, PlaybooksChoice {
   readonly type: 'give';
   readonly secret_id: string;
   readonly algorithm?: string;
@@ -47,7 +51,7 @@ export interface ClientGiving extends LinkUse {
   readonly secret_id: string;
 }
 
-export interface ConsentStart extends LinkUse {
+export interface ConsentStart extends LinkUse, PlaybooksChoice {
   readonly type: 'start';
   readonly state_sha256: string;
   readonly verifier_secret_id: string;

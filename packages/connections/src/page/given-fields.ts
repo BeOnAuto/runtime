@@ -5,7 +5,12 @@ import { Result, Schema } from 'effect';
 
 import { clientIdReadingIssuesOf, type EntryChecking } from '../entries/entry-checks.ts';
 import { givenFieldsOf, wordsOfThePage, type Given } from '../entries/given-values.ts';
-import { ConnectionIdField, NextClientIdField, TokenField } from '../operations/connection-fields.ts';
+import {
+  ChosenPlaybooksField,
+  ConnectionIdField,
+  NextClientIdField,
+  TokenField,
+} from '../operations/connection-fields.ts';
 import { ConnectionSchema, type RecordedConnection } from '../registry/connection.ts';
 import { connectedByConsent, takesNoCredential } from '../registry/registry-decisions.ts';
 import { unavailableWords } from './consent-words.ts';
@@ -30,6 +35,7 @@ export const GivingSchema = Schema.Struct({
   algorithm: Schema.optionalKey(
     Schema.String.annotate({ description: 'The signing algorithm of private_key, such as RS256 or ES256' }),
   ),
+  playbooks: ChosenPlaybooksField,
 });
 
 type Giving = typeof GivingSchema.Type;

@@ -1,7 +1,7 @@
 import { Conflict, type NotFound } from '@on.auto/operations';
 import { Result } from 'effect';
 
-import type { PlaybooksSetting } from './connection-commands.ts';
+import type { PlaybooksChoice, PlaybooksSetting } from './connection-commands.ts';
 import { servesTheSamePlaybooks } from './connection-entry.ts';
 import type { ConnectionEvent } from './connection-events.ts';
 import { keptConnectionOf } from './registry-lookup.ts';
@@ -20,6 +20,10 @@ function playbooksSetOf(
   return servesTheSamePlaybooks(connection.entry, playbooks)
     ? []
     : [{ type: 'connection_playbooks_set', data: { connection: connection.id, playbooks: eachOnce(playbooks) } }];
+}
+
+export function playbooksChosenOf(kept: KeptConnection, { playbooks }: PlaybooksChoice): readonly ConnectionEvent[] {
+  return playbooks === undefined ? [] : playbooksSetOf(kept, playbooks);
 }
 
 function usedByNoPlaybook(name: string): Conflict {

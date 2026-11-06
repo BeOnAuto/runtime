@@ -48,6 +48,12 @@ export const mayChoosePlaybooks: Effect.Effect<void, Forbidden, Caller> = Effect
   ({ playbooks }) => (playbooks === '*' ? Effect.void : Effect.fail(limitedToSomePlaybooks)),
 );
 
+export function allowedToChoose(
+  playbooks: readonly string[] | null | undefined,
+): Effect.Effect<void, Forbidden, Caller> {
+  return playbooks === undefined ? Effect.void : mayChoosePlaybooks;
+}
+
 interface OfferStanding {
   readonly connect?: { readonly url: string; readonly expires_at: string };
   readonly link_ran_out?: true;

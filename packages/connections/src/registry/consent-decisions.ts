@@ -4,6 +4,7 @@ import { Result } from 'effect';
 import type { CommandMetadata, ConsentFinish, ConsentStart, LinkUse } from './connection-commands.ts';
 import type { ConnectionEvent } from './connection-events.ts';
 import { clientUngivenOf } from './oauth-client-decisions.ts';
+import { playbooksChosenOf } from './playbooks-decisions.ts';
 import {
   clientChangedOf,
   finishableConnectionOf,
@@ -64,7 +65,8 @@ export function decideStart(command: ConsentStart & CommandMetadata, registry: R
   const startable = Result.flatMap(startableConnectionOf(registry, command, command), (kept) =>
     underTheClientGiven(kept, client_id),
   );
-  return Result.map(startable, () => [
+  return Result.map(startable, (kept) => [
+    ...playbooksChosenOf(kept, command),
     {
       type: 'connection_consent_started',
       data: { connection, state_sha256, verifier_secret_id, client_id, client_source, expires_at, ...asked, says },

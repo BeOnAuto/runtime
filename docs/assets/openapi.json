@@ -8300,7 +8300,7 @@
       "post": {
         "operationId": "approve",
         "summary": "Approve connection",
-        "description": "Approves a connection that takes no credential to give, one of the credential none or reference, through its open link, and answers it connected. On a runtime that signs people in, only the person who added the connection may approve it. A connection that takes a secret or client credentials is approved by give_credential instead.",
+        "description": "Approves a connection that takes no credential to give, one of the credential none or reference, through its open link, and answers it connected. On a runtime that signs people in, only the person who added the connection may approve it. A connection that takes a secret or client credentials is approved by give_credential instead. Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.",
         "tags": [
           "connections"
         ],
@@ -8334,6 +8334,22 @@
                     "minLength": 1,
                     "maxLength": 128,
                     "description": "The token of the link add_connection or reconnect_connection gave"
+                  },
+                  "playbooks": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                        },
+                        "minItems": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The playbooks that may use the connection, by id, or null for every playbook of the org, set with the approval, or with the start of the consent; left out, the connection keeps the playbooks it has"
                   }
                 },
                 "required": [
@@ -8847,7 +8863,7 @@
       "post": {
         "operationId": "give_credential",
         "summary": "Give credential",
-        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. A secret of another format than its provider's pattern is refused, and one that misses the pattern of a credential given by hand is kept and answered with pattern_unmatched. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again. On a runtime that signs people in, only the person who added the connection may give it.",
+        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. A secret of another format than its provider's pattern is refused, and one that misses the pattern of a credential given by hand is kept and answered with pattern_unmatched. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again. On a runtime that signs people in, only the person who added the connection may give it. Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the approval; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.",
         "tags": [
           "connections"
         ],
@@ -8905,6 +8921,22 @@
                   "algorithm": {
                     "type": "string",
                     "description": "The signing algorithm of private_key, such as RS256 or ES256"
+                  },
+                  "playbooks": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                        },
+                        "minItems": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The playbooks that may use the connection, by id, or null for every playbook of the org, set with the approval, or with the start of the consent; left out, the connection keeps the playbooks it has"
                   }
                 },
                 "required": [
@@ -9988,7 +10020,7 @@
       "post": {
         "operationId": "start",
         "summary": "Start consent",
-        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link add_connection or reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before. A connection under the organization's own OAuth client starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it.",
+        "description": "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to. A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link add_connection or reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before. A connection under the organization's own OAuth client starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given. The consent is finished within ten minutes, and a second start replaces the first. A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential. On a runtime that signs people in, only the person who added the connection may start it. Given playbooks, a list of playbook ids or null for every playbook of the org, it sets which playbooks may use the connection in the same record as the start; left out, the connection keeps the playbooks it has. A caller that may access only some playbooks of the org is refused as forbidden when it gives playbooks.",
         "tags": [
           "connections"
         ],
@@ -10022,6 +10054,22 @@
                     "minLength": 1,
                     "maxLength": 128,
                     "description": "The token of the link add_connection or reconnect_connection gave"
+                  },
+                  "playbooks": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                        },
+                        "minItems": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The playbooks that may use the connection, by id, or null for every playbook of the org, set with the approval, or with the start of the consent; left out, the connection keeps the playbooks it has"
                   }
                 },
                 "required": [

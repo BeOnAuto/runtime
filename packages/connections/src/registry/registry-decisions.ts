@@ -14,7 +14,7 @@ import type {
 import type { ConnectionEvent } from './connection-events.ts';
 import { decideFinish, decideStart, takesConsent } from './consent-decisions.ts';
 import { decideClientGiving } from './oauth-client-decisions.ts';
-import { decidePlaybooks } from './playbooks-decisions.ts';
+import { decidePlaybooks, playbooksChosenOf } from './playbooks-decisions.ts';
 import { bindingRefusalOf, keptConnectionOf, linkedConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 
@@ -97,6 +97,7 @@ function decideApproval(command: ConnectionApproval & CommandMetadata, registry:
           }),
         )
       : Result.succeed([
+          ...playbooksChosenOf(kept, command),
           { type: 'connection_approved', data: { connection: command.connection } },
           {
             type: 'connection_connected',
@@ -116,6 +117,7 @@ function decideGiving(command: CredentialGiving & CommandMetadata, registry: Reg
     }
     return takesAValue(kept)
       ? Result.succeed([
+          ...playbooksChosenOf(kept, command),
           { type: 'connection_approved', data: { connection } },
           {
             type: 'connection_connected',

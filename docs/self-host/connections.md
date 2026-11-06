@@ -8,7 +8,7 @@ head:
 
 # Let people add connections
 
-A connection is a tool server that a person adds to an org through their agent, rather than one you set up in Auto's settings file. The org owns it, and every playbook of the org may use it, or only the playbooks it names, which `set_connection_playbooks` of the [HTTP API](../reference/http.md#connections) changes afterwards. The person approves it, and gives its credential where it takes one, on a page of Studio. The agent never sees the credential.
+A connection is a tool server that a person adds to an org through their agent, rather than one you set up in Auto's settings file. The org owns it, and every playbook of the org may use it, or only the playbooks it names, which `approve`, `give_credential` and `start` of the [HTTP API](../reference/http.md#connections) may set as the connection is approved, and `set_connection_playbooks` changes afterwards. The person approves it, and gives its credential where it takes one, on a page of Studio. The agent never sees the credential.
 
 This page is for whoever runs Auto. It says how a connection is added, the providers a person may connect by name, what a connection holds, how a function uses it, how one that needs attention is reconnected, the rules you set for it in `auto-runtime.yaml`, how to add a browser of your own, consent through Auto's clients, and the clients you register there. A tool server you set up yourself is still added as [Add a tool server](tool-servers.md) shows.
 
