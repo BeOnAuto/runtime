@@ -1,6 +1,7 @@
 import type { CallingClient } from '@on.auto/operations';
 import type { ClientSource } from '@on.auto/tool-servers';
 
+import { entryServing } from './connection-entry.ts';
 import type {
   ClientGiven,
   ConnectionAdded,
@@ -8,6 +9,7 @@ import type {
   ConnectionConnected,
   ConsentStarted,
   LinkIssued,
+  PlaybooksSet,
   RecordedConnectionEvent,
 } from './connection-events.ts';
 import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
@@ -172,6 +174,11 @@ function broken(kept: KeptConnection, { data, context }: ConnectionBroken): Kept
   };
 }
 
+function withPlaybooks(kept: KeptConnection, { data }: PlaybooksSet): KeptConnection {
+  const { connection } = kept;
+  return { ...kept, connection: { ...connection, entry: entryServing(connection.entry, data.playbooks) } };
+}
+
 function removed(kept: KeptConnection): KeptConnection {
   return { ...kept, connection: { ...kept.connection, status: 'removed', broken: null }, link: undefined };
 }
@@ -194,6 +201,9 @@ function evolvedConnection(
   }
   if (event.type === 'connection_connected') {
     return connected(kept, event);
+  }
+  if (event.type === 'connection_playbooks_set') {
+    return withPlaybooks(kept, event);
   }
   return event.type === 'connection_broken' ? broken(kept, event) : removed(kept);
 }

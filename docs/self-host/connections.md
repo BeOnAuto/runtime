@@ -8,7 +8,7 @@ head:
 
 # Let people add connections
 
-A connection is a tool server that a person adds to an org through their agent, rather than one you set up in Auto's settings file. The org owns it, and every playbook of the org may use it, or only the playbooks it names. The person approves it, and gives its credential where it takes one, on a page of Studio. The agent never sees the credential.
+A connection is a tool server that a person adds to an org through their agent, rather than one you set up in Auto's settings file. The org owns it, and every playbook of the org may use it, or only the playbooks it names, which `set_connection_playbooks` of the [HTTP API](../reference/http.md#connections) changes afterwards. The person approves it, and gives its credential where it takes one, on a page of Studio. The agent never sees the credential.
 
 This page is for whoever runs Auto. It says how a connection is added, the providers a person may connect by name, what a connection holds, how a function uses it, how one that needs attention is reconnected, the rules you set for it in `auto-runtime.yaml`, how to add a browser of your own, consent through Auto's clients, and the clients you register there. A tool server you set up yourself is still added as [Add a tool server](tool-servers.md) shows.
 
@@ -211,7 +211,7 @@ A client you register covers a way where it names every scope the way's first co
 
 ## How a function uses a connection
 
-A connected connection is a tool server of its org, for every playbook of the org or the playbooks its entry names. A function names its tools as it names those of any tool server, by the connection's name and the tool, as in `crm/search` or `crm/*`, and calls them in the same way, with the same bounds and the same scrubbing of its credential from everything Auto records. `search` lists it beside the tool servers of the settings file, with `connection`, its id, and `introspect`, `dry_run`, `query_connection` and `execute_connection` reach it. Each call it records, a run's, one made by hand with `query_connection` or `execute_connection` and one an interaction function makes in a conversation, names the connection's id beside the server's name as `connection_id`, so the history stays plain once another connection takes the name.
+A connected connection is a tool server of its org, for every playbook of the org or the playbooks its entry names. `set_connection_playbooks` of the [HTTP API](../reference/http.md#connections) changes those playbooks: a run under way keeps the tools it opened until it ends, and a run that opens its tools afterwards in a playbook the connection no longer serves is refused it, `tool_server_not_configured`, as for a server the playbook does not have. A function names its tools as it names those of any tool server, by the connection's name and the tool, as in `crm/search` or `crm/*`, and calls them in the same way, with the same bounds and the same scrubbing of its credential from everything Auto records. `search` lists it beside the tool servers of the settings file, with `connection`, its id, and `introspect`, `dry_run`, `query_connection` and `execute_connection` reach it. Each call it records, a run's, one made by hand with `query_connection` or `execute_connection` and one an interaction function makes in a conversation, names the connection's id beside the server's name as `connection_id`, so the history stays plain once another connection takes the name.
 
 A connection that is not ready is refused, and `search` lists it unavailable with the same words:
 

@@ -1,5 +1,6 @@
 import {
   Caller,
+  Forbidden,
   OrgReader,
   OrgWriter,
   randomUUIDv7,
@@ -36,6 +37,16 @@ export function foundConnection(id: string): Effect.Effect<KeptConnection, NotFo
 }
 
 export const recordedCaller = Effect.map(Effect.service(Caller), recordedCallerOf);
+
+const limitedToSomePlaybooks = new Forbidden({
+  detail:
+    'The caller may access only some playbooks of this org, so it cannot change which playbooks may use a connection',
+});
+
+export const mayChoosePlaybooks: Effect.Effect<void, Forbidden, Caller> = Effect.flatMap(
+  Effect.service(Caller),
+  ({ playbooks }) => (playbooks === '*' ? Effect.void : Effect.fail(limitedToSomePlaybooks)),
+);
 
 interface OfferStanding {
   readonly connect?: { readonly url: string; readonly expires_at: string };

@@ -67,6 +67,12 @@ export interface ConsentFinish extends Connecting {
   readonly scope?: string;
 }
 
+export interface PlaybooksSetting {
+  readonly type: 'set_playbooks';
+  readonly connection: string;
+  readonly playbooks: readonly string[] | null;
+}
+
 export interface ConnectionRemoval {
   readonly type: 'remove';
   readonly connection: string;
@@ -97,6 +103,7 @@ export type ConnectionCommandData =
   | ConsentStart
   | ConsentFinish
   | ConnectionRemoval
+  | PlaybooksSetting
   | ConnectionBreaking
   | ConnectionReconnection;
 

@@ -13,5 +13,6 @@
   "src/registry/0.49.0/connection_consent_started.json": "bf966e478e7328b7e790e21ecaab9594b159ce6fb112a00ff09296fe0767c228",
   "src/registry/0.49.0/connection_link_issued.json": "74e9015fdca7c2ee892cfaa276f1bffe4af2a923effd826b9ba7d7cbd65d8f88",
   "src/registry/0.54.0/connection_link_issued.json": "2310606ece21475c25b3c06aff3558ccb4bbc79c97d12267a15a3d37e2a13935",
-  "src/registry/0.57.0/connection_added.json": "3efa50e23e79fba378620891c11fd00ae0ba44bf69845cd64e7fceecbac8f124"
+  "src/registry/0.57.0/connection_added.json": "3efa50e23e79fba378620891c11fd00ae0ba44bf69845cd64e7fceecbac8f124",
+  "src/registry/0.57.0/connection_playbooks_set.json": "da3427b1f9cd68825aec12dc6cda33c65a685cce5488f9bd33903f7a0c49932a"
 }

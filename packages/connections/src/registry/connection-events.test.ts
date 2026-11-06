@@ -200,6 +200,14 @@ const describedKey: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
+const playbooksSet: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_playbooks_set',
+    data: { ...ofTheConnection, playbooks: ['sales', 'support'] },
+    context: acted,
+  },
+];
+
 describe('the facts of the registry of connections', () => {
   recordedFactsBehaviour({
     schema: ConnectionEventSchema,
@@ -208,7 +216,7 @@ describe('the facts of the registry of connections', () => {
       '0.46.0': baseline,
       '0.49.0': [...askingMore, ...underTheOrgsOAuthClient],
       '0.54.0': askedThroughAClient,
-      '0.57.0': describedKey,
+      '0.57.0': [...describedKey, ...playbooksSet],
     },
   });
 });

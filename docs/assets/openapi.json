@@ -1256,7 +1256,7 @@
                               "connection"
                             ],
                             "additionalProperties": false,
-                            "description": "A connection added, connected, broken or removed, asked for more, or given the organization's own OAuth client"
+                            "description": "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, or its playbooks set"
                           },
                           {
                             "type": "object",
@@ -7040,6 +7040,563 @@
                   ],
                   "additionalProperties": false,
                   "description": "The connection, and the link that approves it while there is one to open"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/connections/{id}/playbooks": {
+      "put": {
+        "operationId": "set_connection_playbooks",
+        "summary": "Set connection playbooks",
+        "description": "Sets which playbooks of the org may use a connection: playbooks lists them by id, and null gives the connection to every playbook of the org, those made later among them. A run under way keeps the tools it opened until it ends. A run that opens its tools afterwards in a playbook no longer listed is refused the connection, and so is a call of a tool by hand there. Setting the playbooks the connection serves already records nothing, and a removed connection is refused as conflict. A caller that may access only some playbooks of the org is refused as forbidden.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/set_connection_playbooks/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "playbooks": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9-]{2,47}$"
+                        },
+                        "minItems": 1
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The playbooks that may use the connection, by id, or null for every playbook of the org, those made later among them"
+                  }
+                },
+                "required": [
+                  "playbooks"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/set_connection_playbooks/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name a function gives the connection in server/tool"
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "mcp",
+                        "openapi"
+                      ],
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    },
+                    "provider": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The provider it was added from, by name, or null for a server given by hand"
+                    },
+                    "placeholders": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The values given for the provider's placeholders, or null"
+                    },
+                    "entry": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL of the MCP server"
+                        },
+                        "document": {
+                          "type": "string",
+                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                        },
+                        "base_url": {
+                          "type": "string",
+                          "description": "The https URL the API's calls go to, in place of its document's"
+                        },
+                        "headers": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Headers sent with each request, never a secret or a reference"
+                        },
+                        "query_params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Query parameters sent with each call, never a secret or a reference"
+                        },
+                        "allowed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The tools a function may name; every tool when left out"
+                        },
+                        "playbooks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "The playbooks that may use it, by id; every one when left out"
+                        },
+                        "record_content": {
+                          "type": "boolean",
+                          "description": "Whether calls are kept whole in the playbook's history; true when left out"
+                        },
+                        "request_id": {
+                          "type": "string",
+                          "description": "The header or result metadata key of the server's id of a call"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "description": "The tool server, without its credential"
+                    },
+                    "credential": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "none",
+                            "reference",
+                            "secret",
+                            "client_credentials",
+                            "authorization"
+                          ]
+                        },
+                        "variable": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For secret and reference, the header, query parameter or security scheme the value is sent as"
+                        },
+                        "in": {
+                          "type": "string",
+                          "enum": [
+                            "header",
+                            "query",
+                            "security"
+                          ],
+                          "description": "For secret and reference, what name is: header, or for an HTTP API query, a query parameter, or security, a security scheme of its document"
+                        },
+                        "scheme": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For a header, the scheme written before the value, such as Bearer"
+                        },
+                        "issuer": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the https URL of the authorization server"
+                        },
+                        "client_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "For client_credentials, the id of the client, else given on the page; for authorization, the id of the client the connection was made with, once connected, or under the organization's own OAuth client its client ID once the person gives it on the page"
+                        },
+                        "scope": {
+                          "type": "string",
+                          "description": "For client_credentials and authorization, the scopes asked, separated by spaces, none when left out"
+                        },
+                        "parameters": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "For authorization, the parameters its authorization request carries beside the standard ones"
+                        },
+                        "authorization_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the authorization endpoint, where the server publishes no metadata"
+                        },
+                        "token_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the token endpoint, beside the authorization endpoint"
+                        },
+                        "revocation_endpoint": {
+                          "type": "string",
+                          "description": "For authorization, the revocation endpoint, beside them where the server has one"
+                        },
+                        "pkce": {
+                          "type": "string",
+                          "enum": [
+                            "none"
+                          ],
+                          "description": "For authorization, none where the server, its endpoints written out, takes no PKCE challenge, so a registered client that authenticates redeems the code without a verifier"
+                        },
+                        "clients": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "registered",
+                              "metadata_document",
+                              "dynamic"
+                            ]
+                          },
+                          "description": "For authorization, the client sources its server takes, in the order the runtime takes them; registered when left out"
+                        },
+                        "client_source": {
+                          "type": "string",
+                          "enum": [
+                            "registered",
+                            "auto",
+                            "metadata_document",
+                            "dynamic",
+                            "own"
+                          ],
+                          "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
+                        }
+                      },
+                      "required": [
+                        "kind"
+                      ],
+                      "additionalProperties": false,
+                      "description": "How the server is credentialled, never its value, which the person gives on the page"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "connected",
+                        "broken",
+                        "removed"
+                      ],
+                      "description": "pending until it is approved and its credential given, connected, broken or removed"
+                    },
+                    "added_by": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "The id of the caller"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The caller who added it, by id and name"
+                    },
+                    "added_at": {
+                      "type": "string",
+                      "description": "When it was added, in ISO 8601 UTC"
+                    },
+                    "connected_at": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "When it was connected, in ISO 8601 UTC"
+                    },
+                    "connected_by": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id of the caller"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the caller: a person's name as they signed in, the id of a key, the name of the account on the computer in local mode, or the id of the playbook acting as itself"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The caller who connected it, approving it or giving its credential, by id and name"
+                    },
+                    "asked_scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "The scope, as the authorization server names it"
+                          },
+                          "says": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "says"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The scopes its credential asks, in its order, then those a consent that asks more added, each with what a connection can do through it; empty where it asks none"
+                    },
+                    "granted_scope": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "For a connection connected by consent, the scopes its authorization server granted at its latest consent, separated by single spaces, which may be fewer than that consent asked; else null"
+                    },
+                    "granted_scopes": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string",
+                                "description": "The scope, as the authorization server names it"
+                              },
+                              "says": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "What a connection can do through it, in one sentence of its provider's entry, or null where the entry says nothing of it, as for a server given by hand"
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "says"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The scopes of granted_scope, each with what a connection can do through it where its provider's entry says, which may be more or fewer than those asked; null where granted_scope is"
+                    },
+                    "credential_ends_with": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value"
+                    },
+                    "broken": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "credential_refused",
+                                "credential_wanted",
+                                "credential_gone",
+                                "credential_not_tokens",
+                                "consent_ended",
+                                "client_gone",
+                                "key_unknown"
+                              ],
+                              "description": "Why, as a kind a client words for a person: credential_refused when its server refused the credential it holds, answering 401 or a code its provider names for a refused credential, credential_wanted when its server answered so to a connection that holds no credential, asking for one, credential_gone when its credential is no longer in the secret store, credential_not_tokens when it is not the tokens of a consent, consent_ended when its consent was revoked or has ended, client_gone when its client is no longer registered, key_unknown when Auto's consent service does not know its key"
+                            },
+                            "detail": {
+                              "type": "string",
+                              "description": "Why, in the runtime's words, which say what mends it"
+                            },
+                            "at": {
+                              "type": "string",
+                              "description": "When it broke, in ISO 8601 UTC"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "detail",
+                            "at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Why and since when it is broken, while it is"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "type",
+                    "provider",
+                    "placeholders",
+                    "entry",
+                    "credential",
+                    "status",
+                    "added_by",
+                    "added_at",
+                    "connected_at",
+                    "connected_by",
+                    "asked_scopes",
+                    "granted_scope",
+                    "granted_scopes",
+                    "credential_ends_with",
+                    "broken"
+                  ],
+                  "additionalProperties": false,
+                  "description": "A tool server the org added, shared by its playbooks"
                 }
               }
             }

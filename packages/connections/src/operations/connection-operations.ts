@@ -8,6 +8,7 @@ import type { ConnectionServices } from './connection-services.ts';
 import { defineGetConnection, defineListConnections } from './read-connections.ts';
 import { defineReconnectConnection } from './reconnect-connection.ts';
 import { defineRemoveConnection } from './remove-connection.ts';
+import { defineSetConnectionPlaybooks } from './set-connection-playbooks.ts';
 
 interface OrgOperation {
   readonly registration: RouteRegistration<'org'>;
@@ -22,6 +23,7 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     defineGetConnection(services),
     defineReconnectConnection(services),
     defineRemoveConnection(services),
+    defineSetConnectionPlaybooks(services),
     ...pageOperationsOf({ ...services, bindsPerson: bindsPerson(services.access) }),
     defineListProviders(services),
   ];

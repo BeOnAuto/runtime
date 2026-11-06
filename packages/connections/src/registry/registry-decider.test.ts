@@ -106,6 +106,69 @@ describe('breaking a connection whose credential cannot be read', () => {
   });
 });
 
+function settingPlaybooks(playbooks: readonly string[] | null): ConnectionCommand {
+  return { type: 'set_playbooks', connection: 'crm-id', playbooks, ...acted };
+}
+
+describe('setting which playbooks may use a connection', () => {
+  it('records the playbooks for a connection pending, connected or broken, whose entry names other playbooks', () => {
+    const broken: ConnectionEvent = {
+      type: 'connection_broken',
+      data: { connection: 'crm-id', kind: 'credential_gone', reason: 'Gone' },
+    };
+    const set: ConnectionEvent = {
+      type: 'connection_playbooks_set',
+      data: { connection: 'crm-id', playbooks: ['sales'] },
+    };
+
+    expect([
+      decided(settingPlaybooks(['sales']), crmAdded),
+      decided(settingPlaybooks(['sales']), crmAdded, connected),
+      decided(settingPlaybooks(['sales']), crmAdded, connected, broken),
+    ]).toEqual([Result.succeed([set]), Result.succeed([set]), Result.succeed([set])]);
+  });
+
+  it('records nothing for the playbooks the connection serves already, in any order, and records any others', () => {
+    const toSalesAndSupport: ConnectionEvent = {
+      type: 'connection_playbooks_set',
+      data: { connection: 'crm-id', playbooks: ['sales', 'support'] },
+    };
+
+    expect([
+      decided(settingPlaybooks(null), crmAdded),
+      decided(settingPlaybooks(['support', 'sales']), crmAdded, toSalesAndSupport),
+      decided(settingPlaybooks(['support']), crmAdded, toSalesAndSupport),
+      decided(settingPlaybooks(['sales', 'support', 'billing']), crmAdded, toSalesAndSupport),
+      decided(settingPlaybooks(null), crmAdded, toSalesAndSupport),
+    ]).toEqual([
+      Result.succeed([]),
+      Result.succeed([]),
+      Result.succeed([{ type: 'connection_playbooks_set', data: { connection: 'crm-id', playbooks: ['support'] } }]),
+      Result.succeed([
+        {
+          type: 'connection_playbooks_set',
+          data: { connection: 'crm-id', playbooks: ['sales', 'support', 'billing'] },
+        },
+      ]),
+      Result.succeed([{ type: 'connection_playbooks_set', data: { connection: 'crm-id', playbooks: null } }]),
+    ]);
+  });
+});
+
+describe('setting the playbooks of a connection that is not there', () => {
+  it('is refused for a connection removed or unknown', () => {
+    const removed: ConnectionEvent = { type: 'connection_removed', data: { connection: 'crm-id' } };
+
+    expect([
+      decided(settingPlaybooks(['sales']), crmAdded, removed),
+      decided(settingPlaybooks(['sales'])),
+    ]).toMatchObject([
+      Result.fail({ _tag: 'conflict', detail: 'The connection crm is removed, so no playbook may use it' }),
+      Result.fail({ _tag: 'not_found', detail: 'There is no connection crm-id in this org' }),
+    ]);
+  });
+});
+
 function addedAs(index: number): ConnectionEvent {
   return {
     type: 'connection_added',

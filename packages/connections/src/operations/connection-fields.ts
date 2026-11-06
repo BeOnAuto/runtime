@@ -1,3 +1,4 @@
+import { PlaybookIdSchema } from '@on.auto/operations';
 import { keyFieldNames, keyFields } from '@on.auto/providers';
 import { ClientSourceSchema, WayOAuthClientSchema, givenByTheProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
@@ -243,6 +244,15 @@ export const AdditionSchema = AdditionFieldsSchema.check(
 
 export const ConnectionIdField = Schema.String.check(Schema.isMinLength(1)).annotate({
   description: 'The id of the connection',
+});
+
+export const PlaybooksField = Schema.NullOr(
+  Schema.Array(PlaybookIdSchema).check(
+    Schema.isMinLength(1, { message: 'Expected at least one playbook id, or null for every playbook' }),
+  ),
+).annotate({
+  description:
+    'The playbooks that may use the connection, by id, or null for every playbook of the org, those made later among them',
 });
 
 export const TokenField = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(128)).annotate({

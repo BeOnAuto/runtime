@@ -128,6 +128,31 @@ describe('a connected connection, as the stream folds it', () => {
   });
 });
 
+describe('the playbooks of a connection, as the stream folds them', () => {
+  it('are those a later fact names, and every playbook again for null, the entry then naming none', () => {
+    const toSales: ConnectionEvent = {
+      type: 'connection_playbooks_set',
+      data: { connection: '0199-crm', playbooks: ['sales'] },
+    };
+    const toEvery: ConnectionEvent = {
+      type: 'connection_playbooks_set',
+      data: { connection: '0199-crm', playbooks: null },
+    };
+
+    expect(crmAfter(toSales)).toMatchObject({
+      connection: {
+        status: 'pending',
+        entry: { url: 'https://crm.example.com/mcp', headers: { 'X-Tenant': 'acme-eu' }, playbooks: ['sales'] },
+      },
+      link: { token_sha256: 'a1b2' },
+    });
+    expect(crmAfter(toSales, toEvery)?.connection.entry).toEqual({
+      url: 'https://crm.example.com/mcp',
+      headers: { 'X-Tenant': 'acme-eu' },
+    });
+  });
+});
+
 describe('the registry of connections', () => {
   it('leaves out a fact of a connection it never added, and lists the connections newest first', () => {
     const wiki: ConnectionEvent = { type: 'connection_added', data: { ...crm, connection: '0199-wiki', name: 'wiki' } };

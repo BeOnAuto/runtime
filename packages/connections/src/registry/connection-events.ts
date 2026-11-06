@@ -121,6 +121,11 @@ export const ConnectionEventSchema = Schema.Union([
     ActedContextSchema,
   ),
   factOf('connection_removed', Schema.Struct(ofTheConnection), ActedContextSchema),
+  factOf(
+    'connection_playbooks_set',
+    Schema.Struct({ ...ofTheConnection, playbooks: Schema.NullOr(Schema.Array(Schema.String)) }),
+    ActedContextSchema,
+  ),
 ]);
 
 export type RecordedConnectionEvent = typeof ConnectionEventSchema.Type;
@@ -138,3 +143,5 @@ export type ConsentStarted = Extract<RecordedConnectionEvent, { readonly type: '
 export type ConnectionConnected = Extract<RecordedConnectionEvent, { readonly type: 'connection_connected' }>;
 
 export type ConnectionBroken = Extract<RecordedConnectionEvent, { readonly type: 'connection_broken' }>;
+
+export type PlaybooksSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_playbooks_set' }>;

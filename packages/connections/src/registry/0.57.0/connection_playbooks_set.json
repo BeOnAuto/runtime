@@ -1,0 +1,14 @@
+{
+  "type": "connection_playbooks_set",
+  "data": {
+    "connection": "connection-1",
+    "playbooks": [
+      "sales",
+      "support"
+    ]
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

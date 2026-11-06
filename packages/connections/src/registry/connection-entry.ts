@@ -27,3 +27,20 @@ export const ConnectionEntrySchema = Schema.Struct({
 }).annotate({ description: 'The tool server, without its credential' });
 
 export type ConnectionEntry = typeof ConnectionEntrySchema.Type;
+
+export function entryServing(
+  { playbooks: _servedBefore, ...entry }: ConnectionEntry,
+  served: readonly string[] | null,
+): ConnectionEntry {
+  return served === null ? entry : { ...entry, playbooks: served };
+}
+
+export function servesTheSamePlaybooks(entry: ConnectionEntry, given: readonly string[] | null): boolean {
+  const before = entry.playbooks ?? null;
+  if (before === null || given === null) {
+    return before === given;
+  }
+  const served = new Set(before);
+  const named = new Set(given);
+  return served.size === named.size && [...named].every((playbook) => served.has(playbook));
+}

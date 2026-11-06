@@ -11,7 +11,7 @@ import { connectionsStream } from './registry-decider.ts';
 
 const connectionChanged = changeKindOf(
   'connection',
-  "A connection added, connected, broken or removed, asked for more, or given the organization's own OAuth client",
+  "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, or its playbooks set",
   { connection: 'The id of the connection' },
   { permittedBy: ['org:read'] },
 );
@@ -40,6 +40,7 @@ const named: Readonly<
   connection_connected: connectionChangedBy,
   connection_broken: connectionChangedBy,
   connection_removed: connectionChangedBy,
+  connection_playbooks_set: connectionChangedBy,
 };
 
 export const connectionChanges: ChangeNaming<ChangedFact> = {

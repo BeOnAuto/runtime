@@ -46,6 +46,7 @@ describe('the changes the facts of the connections of an org make', () => {
         'connection_connected',
         'connection_broken',
         'connection_removed',
+        'connection_playbooks_set',
       ],
       false,
     ]);
@@ -63,6 +64,20 @@ describe('the change the organization’s own OAuth client makes', () => {
         context,
       }),
     ).toEqual([{ kind: 'connection', connection: 'c3' }]);
+  });
+});
+
+describe('the change a setting of playbooks makes', () => {
+  it('names the connection by its id, since its entry then names other playbooks', () => {
+    expect(
+      catalog.changesOf({
+        id: 'm1',
+        stream: 'connections',
+        type: 'connection_playbooks_set',
+        data: { connection: 'c4', playbooks: ['sales'] },
+        context,
+      }),
+    ).toEqual([{ kind: 'connection', connection: 'c4' }]);
   });
 });
 

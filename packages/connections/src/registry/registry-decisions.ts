@@ -14,6 +14,7 @@ import type {
 import type { ConnectionEvent } from './connection-events.ts';
 import { decideFinish, decideStart, takesConsent } from './consent-decisions.ts';
 import { decideClientGiving } from './oauth-client-decisions.ts';
+import { decidePlaybooks } from './playbooks-decisions.ts';
 import { bindingRefusalOf, keptConnectionOf, linkedConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
 
@@ -218,6 +219,9 @@ export function decideOnRegistry(command: ConnectionCommand, registry: Registry)
   }
   if (command.type === 'reconnect') {
     return decideReconnection(command, registry);
+  }
+  if (command.type === 'set_playbooks') {
+    return decidePlaybooks(command, registry);
   }
   return command.type === 'break' ? decideBreaking(command, registry) : decideRemoval(command, registry);
 }
