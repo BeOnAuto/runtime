@@ -74,6 +74,7 @@ const largestModelCalls: readonly RunEvent[] = [
         detail: awkward,
       })),
       tool_calls: largestAsked,
+      output_mode: 'described',
     },
   },
   {
@@ -90,6 +91,7 @@ const largestModelCalls: readonly RunEvent[] = [
       retry_after_ms: largestCount,
       provider_message: awkward,
       issues: Array.from({ length: 5 }, () => ({ pointer: awkward, detail: awkward })),
+      output_mode: 'described',
     },
   },
 ];
@@ -193,6 +195,25 @@ describe('the presenter of the answer of a model call', () => {
     expect(
       presented({ type: 'model_call_answered', data: { number: 1, ...modelCallAnswered(0), warnings } })?.data,
     ).toMatchObject({ warnings, resolved_model: 'anthropic/claude-sonnet-4-5' });
+  });
+});
+
+describe('the presenter of a model call that described the schema of its answer', () => {
+  it('presents the call as described, whether it was answered or failed', () => {
+    const answered = { number: 1, ...modelCallAnswered(0), output_mode: 'described' as const };
+    const failed = {
+      number: 2,
+      because: 'output_invalid' as const,
+      provider: 'gateway',
+      detail: 'The answer is not JSON',
+      duration_ms: 12,
+      output_mode: 'described' as const,
+    };
+
+    expect([
+      presented({ type: 'model_call_answered', data: answered })?.data,
+      presented({ type: 'model_call_failed', data: failed })?.data,
+    ]).toMatchObject([{ output_mode: 'described' }, failed]);
   });
 });
 

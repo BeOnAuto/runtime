@@ -1,17 +1,17 @@
-import { Result, Schema } from 'effect';
+import { Option, Result, type Schema } from 'effect';
 
 import type { FailureIssue } from '../failure/failure-issue.ts';
 import { providerOf } from '../model/model-reference.ts';
 import type { OutputRequest, ToolDefinition } from '../model/model-request.ts';
 import type { ModelResult } from '../model/model-result.ts';
+import { answerValueOf } from '../schema/described-answers.ts';
 import { inputSchemaWarnings } from '../tools/input-schema-warnings.ts';
 import { answerTextOf } from './asked-calls.ts';
 import type { FailedCall } from './step-decision.ts';
-import type { Prompt } from './step-messages.ts';
 import type { StepEnding, StepState } from './step-state.ts';
 
 export interface StepsAnswer {
-  readonly prompt: Prompt;
+  readonly prompt: StepState['prompt'];
   readonly output: Schema.Json;
   readonly result: ModelResult;
 }
@@ -24,8 +24,6 @@ export interface Answering {
 
 type Answered = Extract<StepEnding, { readonly type: 'answered' }>;
 
-const jsonOf = Schema.decodeUnknownResult(Schema.fromJsonString(Schema.Json));
-
 const scrubbedAway =
   "The answer does not match its schema once the secrets of the run's tool servers are scrubbed from it";
 
@@ -35,9 +33,9 @@ function outputOf(text: string, output: OutputRequest): Result.Result<Schema.Jso
   if (output.type === 'text') {
     return Result.succeed(text);
   }
-  return Result.match(jsonOf(text), {
-    onFailure: () => Result.fail(notJsonAnyMore),
-    onSuccess: (json) => output.schema.validate(json),
+  return Option.match(answerValueOf(text), {
+    onNone: () => Result.fail(notJsonAnyMore),
+    onSome: (json) => output.schema.validate(json),
   });
 }
 

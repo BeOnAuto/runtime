@@ -1,9 +1,12 @@
+import type { SchemaIssue } from '@on.auto/json-schema';
 import type { FinishReason as SdkFinishReason } from 'ai';
-import { Array as Arr, Result, type Schema } from 'effect';
+import { Array as Arr, Option, Result, type Schema } from 'effect';
 
 import type { ModelFailure } from '../failure/model-failure.ts';
+import type { JsonOutput } from '../model/model-request.ts';
 import type { ModelTarget } from '../model/model-resolution.ts';
-import type { ModelResult } from '../model/model-result.ts';
+import type { ModelResult, OutputMode } from '../model/model-result.ts';
+import { answerValueOf } from '../schema/described-answers.ts';
 import { finishReasonOf, tokenUsage, warningOf, type SdkUsage, type SdkWarning } from './answer-mapping.ts';
 import { outputFailure } from './output-failure.ts';
 
@@ -28,7 +31,12 @@ export interface SdkResult {
 export type ReadOutput =
   | { readonly kind: 'text' }
   | { readonly kind: 'json'; readonly value: Schema.Json }
+  | { readonly kind: 'mismatched'; readonly issues: readonly SchemaIssue[] }
   | { readonly kind: 'missing' };
+
+export interface CallMode {
+  readonly output_mode?: OutputMode;
+}
 
 export interface Generated {
   readonly text: string;
@@ -73,11 +81,20 @@ function answered(target: ModelTarget, generated: Generated): Answered {
   };
 }
 
-export function settledAnswer(target: ModelTarget, generated: Generated, output: ReadOutput): SettledAnswer {
-  if (generated.finishReason === 'content-filter' || output.kind === 'missing') {
-    return Result.fail(outputFailure({ provider: target.provider, ...generated, cause: undefined }));
+function issuesOf(output: ReadOutput): readonly SchemaIssue[] {
+  return output.kind === 'mismatched' ? output.issues : [];
+}
+
+export function settledAnswer(
+  target: ModelTarget,
+  generated: Generated,
+  output: ReadOutput,
+  mode: CallMode = {},
+): SettledAnswer {
+  if (generated.finishReason === 'content-filter' || output.kind === 'missing' || output.kind === 'mismatched') {
+    return Result.fail(outputFailure({ provider: target.provider, ...generated, issues: issuesOf(output), ...mode }));
   }
-  const answer = answered(target, generated);
+  const answer = { ...answered(target, generated), ...mode };
   return Result.succeed(output.kind === 'json' ? { ...answer, json: output.value } : answer);
 }
 
@@ -87,4 +104,15 @@ export function readOutput(read: () => Schema.Json): ReadOutput {
   } catch {
     return { kind: 'missing' };
   }
+}
+
+export function describedOutput(text: string, { schema }: JsonOutput): ReadOutput {
+  return Option.match(answerValueOf(text), {
+    onNone: () => ({ kind: 'missing' }),
+    onSome: (value) =>
+      Result.match(schema.validate(value), {
+        onSuccess: (json) => ({ kind: 'json', value: json }),
+        onFailure: (issues) => ({ kind: 'mismatched', issues }),
+      }),
+  });
 }

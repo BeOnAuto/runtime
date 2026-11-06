@@ -5,7 +5,7 @@ import { Predicate, type Schema } from 'effect';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelCallRequest } from '../jobs/jobs.ts';
 import type { ToolDefinition } from '../model/model-request.ts';
-import type { FinishReason, ModelResult, TokenUsage } from '../model/model-result.ts';
+import type { FinishReason, ModelResult, OutputMode, TokenUsage } from '../model/model-result.ts';
 import { askedIn } from './asked-calls.ts';
 import { promptMessages, type Prompt, type StepMessages } from './step-messages.ts';
 import type { StepState } from './step-state.ts';
@@ -56,6 +56,7 @@ export function answeredData({ result, response, kept }: Answering, offered: Off
     answered_model: result.model.answered,
     warnings: result.warnings.slice(0, mostWarnings),
     tool_calls: askedToolCalls(response, offered),
+    ...(result.output_mode === undefined ? {} : { output_mode: result.output_mode }),
   };
 }
 
@@ -68,6 +69,7 @@ export interface FailureOfACall {
   readonly retry_after_ms?: number | null;
   readonly provider_message?: string | null;
   readonly issues?: ModelCallFailedData['issues'];
+  readonly output_mode?: OutputMode;
 }
 
 export type FailedFields = Omit<ModelCallFailedData, 'duration_ms' | 'because'> & {
@@ -76,7 +78,7 @@ export type FailedFields = Omit<ModelCallFailedData, 'duration_ms' | 'because'> 
 
 export function failedData(failure: FailureOfACall, provider: string): FailedFields {
   const { _tag: because, detail, usage, finish_reason: finish, retry_after_ms: wait, provider_message: said } = failure;
-  const { issues } = failure;
+  const { issues, output_mode: mode } = failure;
   return {
     because,
     provider: failure.provider ?? provider,
@@ -86,6 +88,7 @@ export function failedData(failure: FailureOfACall, provider: string): FailedFie
     ...(Predicate.isNotNullish(wait) ? { retry_after_ms: wait } : {}),
     ...(Predicate.isNotNullish(said) ? { provider_message: said } : {}),
     ...(issues === undefined ? {} : { issues: issues.slice(0, mostIssues) }),
+    ...(mode === undefined ? {} : { output_mode: mode }),
   };
 }
 

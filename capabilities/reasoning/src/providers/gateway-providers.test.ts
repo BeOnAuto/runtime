@@ -43,9 +43,10 @@ describe('a model gateway', () => {
       response_format: { type: 'json_schema', json_schema: { name: 'verdict', strict: true } },
     });
     expect(result.json).toEqual({ verdict: 'approve' });
+    expect('output_mode' in result).toBe(false);
   });
 
-  it('asks only for a JSON object, and still validates the answer, when it does not', async () => {
+  it('describes the schema in the instructions, sends no response format, and still validates the answer, when it does not', async () => {
     const recording = recordingFetch(() => jsonResponse(chatCompletion('{"verdict":"approve"}')));
     const plain = { name: 'internal', base_url: 'https://llm.internal.example/v1' };
     const access = await accessFor(environmentWith(plain), { fetch: recording.fetch });
@@ -53,10 +54,10 @@ describe('a model gateway', () => {
     const result = await succeeded(access, jsonRequest('internal/llama-3.3-70b'));
 
     const [request] = recording.requests();
-    expect(request?.body).toMatchObject({ response_format: { type: 'json_object' } });
+    expect(request?.body).not.toHaveProperty('response_format');
+    expect(JSON.stringify(request?.body)).toContain('Answer with only a JSON value that matches this JSON Schema');
     expect(request?.headers['authorization']).toBeUndefined();
-    expect(result.json).toEqual({ verdict: 'approve' });
-    expect(result.warnings).toContainEqual(expect.objectContaining({ type: 'unsupported', feature: 'responseFormat' }));
+    expect(result).toMatchObject({ json: { verdict: 'approve' }, output_mode: 'described', warnings: [] });
   });
 });
 

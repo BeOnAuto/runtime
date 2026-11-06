@@ -95,7 +95,7 @@ const gatewayFields = {
   structured_outputs: Schema.optionalKey(
     Schema.Boolean.annotate({
       description:
-        'true when the endpoint accepts response_format json_schema; otherwise JSON is asked for as json_object and the schema is only checked here. Default false',
+        'true when the endpoint accepts response_format json_schema; otherwise no response_format is sent, the schema of a JSON answer is written into the instructions, and the answer is checked here. Default false',
     }),
   ),
   include_usage: Schema.optionalKey(

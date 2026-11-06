@@ -192,10 +192,49 @@ const actingForAPerson: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
+const describedToTheModel: readonly (typeof RunEventSchema.Type)[] = [
+  {
+    type: 'model_call_answered',
+    data: {
+      number: 1,
+      finish_reason: 'stop',
+      raw_finish_reason: 'stop',
+      usage,
+      cost_usd: 0.0004,
+      response_id: 'chatcmpl-1',
+      duration_ms: 1400,
+      request_bytes: 1800,
+      response_bytes: 120,
+      response_sha256: 'c4d5e6',
+      resolved_model: 'gateway/model-small',
+      answered_model: 'model-small-2',
+      warnings: [],
+      tool_calls: [],
+      output_mode: 'described',
+    },
+    context: onTheRun,
+  },
+  {
+    type: 'model_call_failed',
+    data: {
+      number: 1,
+      because: 'output_invalid',
+      provider: 'gateway',
+      detail: 'The answer is not JSON',
+      duration_ms: 1300,
+      usage,
+      finish_reason: 'stop',
+      issues: [],
+      output_mode: 'described',
+    },
+    context: onTheRun,
+  },
+];
+
 describe('the facts a playbook records on the stream of a run', () => {
   recordedFactsBehaviour({
     schema: RunEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.57.0': actingForAPerson },
+    releases: { '0.46.0': baseline, '0.57.0': [...actingForAPerson, ...describedToTheModel] },
   });
 });

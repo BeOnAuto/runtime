@@ -46,4 +46,10 @@ describe('the answer of the steps, checked again once the secrets of the tool se
       Result.fail({ because: 'output_invalid', issues: [{ pointer: '', detail: 'The scrubbed answer is not JSON' }] }),
     ]);
   });
+
+  it('reads an answer the model wrote inside one code fence from inside it, as the call read it', async () => {
+    const fenced = await answeredWith('```json\n{"key":"a key of twenty characters"}\n```', keyed);
+
+    expect(Result.map(fenced, ({ output }) => output)).toEqual(Result.succeed({ key: 'a key of twenty characters' }));
+  });
 });

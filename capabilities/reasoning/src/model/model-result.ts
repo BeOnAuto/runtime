@@ -2,6 +2,8 @@ import type { Schema } from 'effect';
 
 export type FinishReason = 'stop' | 'length' | 'content_filter' | 'tool_calls' | 'error' | 'other';
 
+export type OutputMode = 'described';
+
 export interface InputTokens {
   readonly total: number | null;
   readonly uncached: number | null;
@@ -46,6 +48,7 @@ export interface ModelResult {
   readonly response: string;
   readonly request_bytes: number;
   readonly duration_ms: number;
+  readonly output_mode?: OutputMode;
 }
 
 export const unknownUsage: TokenUsage = {

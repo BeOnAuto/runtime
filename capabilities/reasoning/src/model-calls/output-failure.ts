@@ -4,6 +4,7 @@ import { TypeValidationError, type FinishReason as SdkFinishReason } from 'ai';
 import { ContentRefused } from '../failure/content-refused.ts';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import { OutputInvalid } from '../failure/output-invalid.ts';
+import type { OutputMode } from '../model/model-result.ts';
 import { finishReasonOf, tokenUsage, type SdkUsage } from './answer-mapping.ts';
 import { AnswerMismatch } from './answer-mismatch.ts';
 
@@ -12,10 +13,11 @@ export interface UnusableOutput {
   readonly finishReason: SdkFinishReason;
   readonly rawFinishReason: string | undefined;
   readonly usage: SdkUsage | undefined;
-  readonly cause: unknown;
+  readonly issues: readonly SchemaIssue[];
+  readonly output_mode?: OutputMode;
 }
 
-function mismatchIssues(cause: unknown): readonly SchemaIssue[] {
+export function mismatchIssues(cause: unknown): readonly SchemaIssue[] {
   return TypeValidationError.isInstance(cause) && cause.cause instanceof AnswerMismatch ? cause.cause.issues : [];
 }
 
@@ -27,9 +29,10 @@ function outputDetail(finishReason: SdkFinishReason, issues: readonly SchemaIssu
 }
 
 export function outputFailure(output: UnusableOutput): ModelFailure {
-  const { provider, finishReason } = output;
+  const { provider, finishReason, issues } = output;
   const usage = output.usage === undefined ? null : tokenUsage(output.usage);
   const raw_finish_reason = output.rawFinishReason ?? null;
+  const mode = output.output_mode === undefined ? {} : { output_mode: output.output_mode };
   if (finishReason === 'content-filter') {
     return new ContentRefused({
       detail: `${provider} stopped the answer under its content policy`,
@@ -37,9 +40,9 @@ export function outputFailure(output: UnusableOutput): ModelFailure {
       status: null,
       raw_finish_reason,
       usage,
+      ...mode,
     });
   }
-  const issues = mismatchIssues(output.cause);
   return new OutputInvalid({
     detail: outputDetail(finishReason, issues),
     provider,
@@ -47,5 +50,6 @@ export function outputFailure(output: UnusableOutput): ModelFailure {
     raw_finish_reason,
     usage,
     issues,
+    ...mode,
   });
 }

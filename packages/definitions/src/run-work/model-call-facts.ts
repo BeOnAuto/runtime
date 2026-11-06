@@ -51,6 +51,11 @@ export const ModelWarningSchema = Schema.Struct({
 
 export const FailureIssueSchema = Schema.Struct({ pointer: Schema.String, detail: Schema.String });
 
+const OutputModeSchema = Schema.Literals(['described']).annotate({
+  description:
+    'described when the call wrote the JSON Schema of the answer into the instructions rather than giving it to the provider',
+});
+
 export const ModelCallStartedSchema = Schema.Struct({
   model: Schema.String,
   messages_bytes: Schema.Int,
@@ -79,6 +84,7 @@ export const ModelCallAnsweredSchema = Schema.Struct({
   answered_model: Schema.String,
   warnings: Schema.Array(ModelWarningSchema),
   tool_calls: Schema.Array(AskedToolCallSchema),
+  output_mode: Schema.optionalKey(OutputModeSchema),
 });
 
 export const ModelCallFailedSchema = Schema.Struct({
@@ -92,6 +98,7 @@ export const ModelCallFailedSchema = Schema.Struct({
   retry_after_ms: Schema.optionalKey(Schema.Int),
   provider_message: Schema.optionalKey(Schema.String),
   issues: Schema.optionalKey(Schema.Array(FailureIssueSchema)),
+  output_mode: Schema.optionalKey(OutputModeSchema),
 });
 
 export type ModelUsage = typeof ModelUsageSchema.Type;

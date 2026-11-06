@@ -3,9 +3,20 @@ import { Result } from 'effect';
 
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelTarget } from '../model/model-resolution.ts';
+import { describedInstructions } from '../schema/described-answers.ts';
 import { jsonOutput } from '../schema/json-output.ts';
 import { costOf } from './answer-mapping.ts';
-import { projected, readOutput, settledAnswer, type Responded, type SettledAnswer } from './answer-settling.ts';
+import {
+  describedOutput,
+  projected,
+  readOutput,
+  settledAnswer,
+  type CallMode,
+  type ReadOutput,
+  type Responded,
+  type SdkResult,
+  type SettledAnswer,
+} from './answer-settling.ts';
 import {
   callSettingsOf,
   promptOf,
@@ -54,6 +65,12 @@ function respondingModel(target: ModelTarget): RespondingModel {
   };
 }
 
+const described: CallMode = { output_mode: 'described' };
+
+function askedTools({ finishReason }: Pick<SdkResult, 'finishReason'>): boolean {
+  return finishReason === 'tool-calls';
+}
+
 export async function modelAnswer(
   target: ModelTarget,
   request: ModelRequest,
@@ -76,19 +93,21 @@ export async function modelAnswer(
       sent.bytes = bytesSent(started);
     },
   };
-  if (request.output.type === 'text') {
-    const result = await generateText(call);
-    return settledAnswer(target, projected(result, responded(), sent.bytes), { kind: 'text' });
+  const settled = (result: SdkResult, output: ReadOutput, mode?: CallMode) =>
+    settledAnswer(target, projected(result, responded(), sent.bytes), output, mode);
+  const { output } = request;
+  if (output.type === 'text') {
+    return settled(await generateText(call), { kind: 'text' });
   }
-  const output = jsonOutput(request.output);
-  if (Result.isFailure(output)) {
-    return Result.fail(output.failure);
+  if (!target.takesSchemas) {
+    const instructions = describedInstructions(request.instructions, output.schema.document);
+    const result = await generateText({ ...call, instructions });
+    return settled(result, askedTools(result) ? { kind: 'text' } : describedOutput(result.text, output), described);
   }
-  const result = await generateText({ ...call, output: output.success });
-  const asked = result.finishReason === 'tool-calls';
-  return settledAnswer(
-    target,
-    projected(result, responded(), sent.bytes),
-    asked ? { kind: 'text' } : readOutput(() => result.output),
-  );
+  const enforced = jsonOutput(output);
+  if (Result.isFailure(enforced)) {
+    return Result.fail(enforced.failure);
+  }
+  const result = await generateText({ ...call, output: enforced.success });
+  return settled(result, askedTools(result) ? { kind: 'text' } : readOutput(() => result.output));
 }

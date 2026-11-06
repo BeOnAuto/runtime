@@ -16,6 +16,7 @@ export interface ModelTarget {
   readonly resolved: string;
   readonly model: () => SdkModel;
   readonly costHeader: string | null;
+  readonly takesSchemas: boolean;
 }
 
 export type ModelResolution = (
@@ -62,6 +63,14 @@ function notAllowed(requested: string, provider: string): ModelNotAllowed {
 
 export type ResolutionSettings = Pick<ModelSettings, 'aliases' | 'allowed' | 'providerSetup' | 'gateways'>;
 
+type Route = Pick<ModelTarget, 'costHeader' | 'takesSchemas'>;
+
+function routeThrough(gateway: ModelSettings['gateways'][number] | undefined): Route {
+  return gateway === undefined
+    ? { costHeader: null, takesSchemas: true }
+    : { costHeader: gateway.cost_header, takesSchemas: gateway.structured_outputs };
+}
+
 export function modelResolution(
   models: ReadonlyMap<string, ModelFactory>,
   settings: ResolutionSettings,
@@ -69,7 +78,7 @@ export function modelResolution(
 ): ModelResolution {
   const resolve = aliasResolution(settings.aliases);
   const offer = modelOffer(settings.allowed);
-  const costHeaders = new Map(settings.gateways.map(({ name, cost_header }) => [name, cost_header]));
+  const gateways = new Map(settings.gateways.map((gateway) => [gateway.name, gateway]));
   return (requested) => {
     const resolved = resolve(requested);
     return Option.match(parseModelReference(resolved), {
@@ -86,7 +95,7 @@ export function modelResolution(
               requested,
               resolved,
               model: () => factory(model),
-              costHeader: costHeaders.get(provider) ?? null,
+              ...routeThrough(gateways.get(provider)),
             });
       },
     });

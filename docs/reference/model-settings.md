@@ -40,7 +40,7 @@ Each entry of `model_gateways` in the [configuration file](../self-host/configur
 | `api_key_env`              | No       | In `MODEL_GATEWAYS` only, in place of `api_key`: the name of the variable that holds the key. That variable must be set. Setting both `api_key` and `api_key_env` stops the start                                                                                                                   |
 | `headers`                  | No       | Headers sent with every request. Their values are treated as secrets. In the file, a header that carries a credential, such as `authorization`, is a reference                                                                                                                                      |
 | `query_params`             | No       | Query parameters added to every request. Their values are treated as secrets                                                                                                                                                                                                                        |
-| `structured_outputs`       | No       | `true` when the endpoint accepts `response_format: json_schema`. Otherwise JSON is asked for as `json_object`, and only the runtime checks the schema. Default `false`                                                                                                                              |
+| `structured_outputs`       | No       | `true` when the endpoint accepts `response_format: json_schema`. Otherwise the runtime sends no `response_format`, tells the model the schema in the instructions, and checks the answer itself: see [A gateway without structured outputs](#a-gateway-without-structured-outputs). Default `false` |
 | `include_usage`            | No       | Asks for usage in streamed responses. Default `false`                                                                                                                                                                                                                                               |
 | `expose_provider_messages` | No       | `true` when the gateway's error messages are safe to show to the callers of a definition. Default `false`: see [Provider messages](#provider-messages)                                                                                                                                              |
 | `allowed_provider_options` | No       | The top-level request body fields a definition may set for this gateway through `provider_options`, such as `["user", "metadata"]`. Default none; see [Provider options](reasoning-format.md#provider-options)                                                                                      |
@@ -363,10 +363,19 @@ When a definition asks for JSON, the runtime validates the answer against the ou
 
 Each provider is asked for JSON in its own way:
 
-| Provider           | How JSON is asked for                                                                                |
-| ------------------ | ---------------------------------------------------------------------------------------------------- |
-| Anthropic models   | `output_config.format` for models with native structured output; a forced `json` tool for older ones |
-| `openai`, `azure`  | A strict `json_schema` format                                                                        |
-| `google`, `vertex` | `responseJsonSchema`                                                                                 |
-| `bedrock`          | Native structured output for the Anthropic models that support it; a forced `json` tool otherwise    |
-| A gateway          | `response_format`: `json_schema` with `structured_outputs: true`, `json_object` otherwise            |
+| Provider           | How JSON is asked for                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| Anthropic models   | `output_config.format` for models with native structured output; a forced `json` tool for older ones       |
+| `openai`, `azure`  | A strict `json_schema` format                                                                              |
+| `google`, `vertex` | `responseJsonSchema`                                                                                       |
+| `bedrock`          | Native structured output for the Anthropic models that support it; a forced `json` tool otherwise          |
+| A gateway          | `response_format`: `json_schema` with `structured_outputs: true`; the schema in the instructions otherwise |
+
+### A gateway without structured outputs
+
+A model call through a gateway entry without `structured_outputs: true` that asks for JSON sends no `response_format`. The runtime adds to the instructions of the call, after the definition's own, `Answer with only a JSON value that matches this JSON Schema, and no other text. Leave out a property that is not required when you have no value for it.` and the schema as JSON, the shape's schema for an `output.shape`.
+
+- The answer is read as the model sent it, or from inside exactly one Markdown code fence that is the whole answer, such as one opened with ` ```json `, and in no other way. An answer in prose, or with prose around its fence, fails as `output_invalid` with `The answer is not JSON`.
+- Values are never changed to fit the schema: the answer is validated as written, and one that does not match fails as `output_invalid` with its issues.
+- The schema is sent with every model call of the run, so it counts toward the input tokens of each.
+- The call's `model_call_answered`, or its `model_call_failed` for an answer that could not be used, records `output_mode: described` ([The run's model calls](reasoning-format.md#the-run-s-model-calls)).
