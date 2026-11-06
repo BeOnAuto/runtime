@@ -19,7 +19,7 @@
     "test:watch": "vitest",
     "typecheck:watch": "tsc --watch",
     "check": "pnpm check:tasks && pnpm docs:check",
-    "check:tasks": "turbo run format:check lint typecheck test knip sherif",
+    "check:tasks": "node scripts/cache-platform.ts && turbo run format:check lint typecheck test knip sherif",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "lint": "oxlint *.ts",
@@ -27,7 +27,7 @@
     "knip": "knip",
     "sherif": "sherif",
     "commit": "czg",
-    "prepare": "lefthook install"
+    "prepare": "node scripts/cache-platform.ts && lefthook install"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.3",

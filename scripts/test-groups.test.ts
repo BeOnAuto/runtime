@@ -30,7 +30,11 @@ const manifestOf = Schema.decodeUnknownSync(
 
 const testEnvironmentOf = Schema.decodeUnknownSync(
   Schema.fromJsonString(
-    Schema.Struct({ tasks: Schema.Struct({ test: Schema.Struct({ env: Schema.Array(Schema.String) }) }) }),
+    Schema.Struct({
+      tasks: Schema.Struct({
+        test: Schema.optionalKey(Schema.Struct({ env: Schema.optionalKey(Schema.Array(Schema.String)) })),
+      }),
+    }),
   ),
 );
 
@@ -122,7 +126,20 @@ const groups = testGroupsOf(workflow).jobs.test.strategy.matrix.include.map(
   ({ packages, shard, services }): TestGroup => ({ names: packages.map((name) => `${scope}${name}`), shard, services }),
 );
 
-const variablesOfTheTests = testEnvironmentOf(textOf('turbo.json')).tasks.test.env;
+const defaultVariables = testEnvironmentOf(textOf('turbo.json')).tasks.test?.env ?? [];
+
+function variablesFor({ folder }: TestedPackage): readonly string[] {
+  const path = `${folder}/turbo.json`;
+  return existsSync(join(root, path))
+    ? (testEnvironmentOf(textOf(path)).tasks.test?.env ?? defaultVariables)
+    : defaultVariables;
+}
+
+const variablesOfTheTests = [
+  ...new Set(
+    [...defaultVariables, ...testedPackages.flatMap((tested) => variablesFor(tested))].filter((name) => name !== 'CI'),
+  ),
+];
 
 const jobs = stepsOf(workflow).jobs;
 
@@ -213,4 +230,14 @@ await test('the job against moto runs the tests of exactly the packages that rea
     variablesOfTheTests.filter((name) => !variablesSetByAJob.has(name)),
     [],
   );
+});
+
+const undeclaredServiceVariables = testedPackages.flatMap((tested) =>
+  variablesOfTheTests
+    .filter((variable) => readsAnyOf(tested, [variable]) && !variablesFor(tested).includes(variable))
+    .map((variable) => `${tested.name}: ${variable}`),
+);
+
+await test('each package declares the service variables its tests read so Turbo passes them through', () => {
+  assert.deepEqual(undeclaredServiceVariables, []);
 });

@@ -18,9 +18,14 @@
     "npm:pack": "node npm/pack.ts",
     "lint": "oxlint -c ../../.oxlintrc.json",
     "typecheck": "tsc",
-    "test": "vitest run --coverage",
+    "test": "VITEST_MAX_WORKERS=\"${CI_SERVER_WORKERS:-$VITEST_MAX_WORKERS}\" vitest run --coverage",
     "test:shard": "vitest run --shard=$VITEST_SHARD --coverage --coverage.reporter=none --coverage.thresholds.100=false --reporter=default --reporter=blob",
-    "test:merge": "vitest run --merge-reports --coverage"
+    "test:merge": "vitest run --merge-reports --coverage",
+    "test:a-c": "node test-groups.ts run a-c",
+    "test:d-l": "node test-groups.ts run d-l",
+    "test:m-r": "node test-groups.ts run m-r",
+    "test:s-z": "node test-groups.ts run s-z",
+    "test:coverage": "node test-groups.ts merge"
   },
   "dependencies": {
     "@ai-sdk/otel": "1.0.137",

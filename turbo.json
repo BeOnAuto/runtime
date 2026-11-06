@@ -2,7 +2,7 @@
   "$schema": "./node_modules/turbo/schema.json",
   "ui": "stream",
   "agentGuidance": false,
-  "globalPassThroughEnv": ["TMPDIR"],
+  "globalPassThroughEnv": ["TMPDIR", "VITEST_MAX_WORKERS", "CI"],
   "globalDependencies": [
     "package.json",
     "tsconfig.base.json",
@@ -25,24 +25,14 @@
     },
     "test": {
       "dependsOn": ["transit"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/docs/**",
-        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
-        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
-      ],
-      "env": ["LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL", "SECRETS_TEST_AWS_URL"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.turbo/platform.json"],
+      "env": ["CI"],
       "outputs": ["coverage/**"]
     },
     "test:shard": {
       "dependsOn": ["transit"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "$TURBO_ROOT$/docs/**",
-        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
-        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
-      ],
-      "env": ["VITEST_SHARD", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.turbo/platform.json"],
+      "env": ["CI", "VITEST_SHARD", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
       "outputs": [".vitest/blob/**"]
     },
     "//#format:check": {
@@ -55,6 +45,15 @@
       "cache": false
     },
     "//#lint": {
+      "cache": false
+    },
+    "ci": {
+      "dependsOn": ["lint", "typecheck", "test"]
+    },
+    "//#ci": {
+      "dependsOn": ["format:check", "lint", "knip", "sherif", "docs:check"]
+    },
+    "//#docs:check": {
       "cache": false
     }
   }

@@ -1,0 +1,15 @@
+{
+  "$schema": "../../node_modules/turbo/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      "inputs": [
+        "$TURBO_EXTENDS$",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
+      ],
+      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"]
+    }
+  }
+}

@@ -7,16 +7,166 @@
         "$TURBO_EXTENDS$",
         "$TURBO_ROOT$/.env.example",
         "$TURBO_ROOT$/auto-runtime.example.yaml",
-        "$TURBO_ROOT$/auto-runtime.schema.json"
-      ]
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
+      ],
+      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
+      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"]
     },
     "test:shard": {
       "inputs": [
         "$TURBO_EXTENDS$",
         "$TURBO_ROOT$/.env.example",
         "$TURBO_ROOT$/auto-runtime.example.yaml",
-        "$TURBO_ROOT$/auto-runtime.schema.json"
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
       ]
+    },
+    "test:a-c": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "!src/[d-l]*/**/*.test.ts",
+        "!src/[d-l]*.test.ts",
+        "!src/[m-r]*/**/*.test.ts",
+        "!src/[m-r]*.test.ts",
+        "!src/[s-z]*/**/*.test.ts",
+        "!src/[s-z]*.test.ts",
+        "!npm/[d-l]*.test.ts",
+        "!npm/[d-l]*/**/*.test.ts",
+        "![d-l]*.test.ts",
+        "!npm/[m-r]*.test.ts",
+        "!npm/[m-r]*/**/*.test.ts",
+        "![m-r]*.test.ts",
+        "!npm/[s-z]*.test.ts",
+        "!npm/[s-z]*/**/*.test.ts",
+        "![s-z]*.test.ts"
+      ],
+      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
+      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "outputs": [".vitest/groups/a-c/report.json"]
+    },
+    "test:d-l": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "!src/[a-c]*/**/*.test.ts",
+        "!src/[a-c]*.test.ts",
+        "!src/[m-r]*/**/*.test.ts",
+        "!src/[m-r]*.test.ts",
+        "!src/[s-z]*/**/*.test.ts",
+        "!src/[s-z]*.test.ts",
+        "!npm/[a-c]*.test.ts",
+        "!npm/[a-c]*/**/*.test.ts",
+        "![a-c]*.test.ts",
+        "!npm/[m-r]*.test.ts",
+        "!npm/[m-r]*/**/*.test.ts",
+        "![m-r]*.test.ts",
+        "!npm/[s-z]*.test.ts",
+        "!npm/[s-z]*/**/*.test.ts",
+        "![s-z]*.test.ts"
+      ],
+      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
+      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "outputs": [".vitest/groups/d-l/report.json"]
+    },
+    "test:m-r": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "!src/[a-c]*/**/*.test.ts",
+        "!src/[a-c]*.test.ts",
+        "!src/[d-l]*/**/*.test.ts",
+        "!src/[d-l]*.test.ts",
+        "!src/[s-z]*/**/*.test.ts",
+        "!src/[s-z]*.test.ts",
+        "!npm/[a-c]*.test.ts",
+        "!npm/[a-c]*/**/*.test.ts",
+        "![a-c]*.test.ts",
+        "!npm/[d-l]*.test.ts",
+        "!npm/[d-l]*/**/*.test.ts",
+        "![d-l]*.test.ts",
+        "!npm/[s-z]*.test.ts",
+        "!npm/[s-z]*/**/*.test.ts",
+        "![s-z]*.test.ts"
+      ],
+      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
+      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "outputs": [".vitest/groups/m-r/report.json"]
+    },
+    "test:s-z": {
+      "dependsOn": ["^transit"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**",
+        "!src/[a-c]*/**/*.test.ts",
+        "!src/[a-c]*.test.ts",
+        "!src/[d-l]*/**/*.test.ts",
+        "!src/[d-l]*.test.ts",
+        "!src/[m-r]*/**/*.test.ts",
+        "!src/[m-r]*.test.ts",
+        "!npm/[a-c]*.test.ts",
+        "!npm/[a-c]*/**/*.test.ts",
+        "![a-c]*.test.ts",
+        "!npm/[d-l]*.test.ts",
+        "!npm/[d-l]*/**/*.test.ts",
+        "![d-l]*.test.ts",
+        "!npm/[m-r]*.test.ts",
+        "!npm/[m-r]*/**/*.test.ts",
+        "![m-r]*.test.ts"
+      ],
+      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
+      "passThroughEnv": ["CI_SERVER_WORKERS", "UV_THREADPOOL_SIZE"],
+      "outputs": [".vitest/groups/s-z/report.json"]
+    },
+    "test:coverage": {
+      "dependsOn": ["test:a-c", "test:d-l", "test:m-r", "test:s-z"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.turbo/platform.json",
+        "$TURBO_ROOT$/.env.example",
+        "$TURBO_ROOT$/auto-runtime.example.yaml",
+        "$TURBO_ROOT$/auto-runtime.schema.json",
+        "$TURBO_ROOT$/docs/**",
+        "!$TURBO_ROOT$/docs/.vitepress/cache/**",
+        "!$TURBO_ROOT$/docs/.vitepress/dist/**"
+      ],
+      "env": ["CI", "LEDGER_TEST_POSTGRESQL_URL", "CONTENT_TEST_OBJECT_STORE_URL"],
+      "outputs": ["coverage/**"]
+    },
+    "ci": {
+      "dependsOn": ["lint", "typecheck", "test:coverage"]
     }
   }
 }

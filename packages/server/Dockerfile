@@ -53,6 +53,11 @@ FROM node:26.12.1-slim@sha256:94816674c62774da0d099a947bf4613b9e1972a2733abd0d0c
 LABEL org.opencontainers.image.licenses="Elastic-2.0"
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=5555 RUNTIME_DISTRIBUTION=docker
 WORKDIR /app
+RUN apt-get update \
+  && apt-get install --yes --no-install-recommends tini \
+  && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
+  && install --directory --owner=node --group=node /data \
+  && ln --symbolic /data /app/data
 COPY --from=dependencies /app ./
 COPY LICENSE ./
 COPY packages/server/container.vex.json packages/server/
@@ -89,11 +94,6 @@ COPY capabilities/interaction/src capabilities/interaction/src
 COPY capabilities/lookup/src capabilities/lookup/src
 COPY capabilities/prediction/src capabilities/prediction/src
 COPY capabilities/reasoning/src capabilities/reasoning/src
-RUN apt-get update \
-  && apt-get install --yes --no-install-recommends tini \
-  && rm -rf /var/lib/apt/lists/* /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx \
-  && install --directory --owner=node --group=node /data \
-  && ln --symbolic /data /app/data
 USER node
 VOLUME /data
 EXPOSE 5555

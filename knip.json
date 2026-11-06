@@ -2,5 +2,10 @@
   "$schema": "./node_modules/knip/schema.json",
   "vitepress": {
     "entry": ["docs/.vitepress/config.mjs"]
+  },
+  "workspaces": {
+    "packages/server": {
+      "entry": ["vitest.groups.ts"]
+    }
   }
 }
