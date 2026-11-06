@@ -112,9 +112,12 @@ model_aliases:
 # 10.0.0.5, may be reached, and loopback needs no naming in local mode.
 # providers adds providers of your own beside those the runtime ships, which a
 # person connects by name and an entry of tool_servers may name; one named as a
-# shipped provider takes its place. auto_clients lets a provider take Auto's
-# client, through Auto's consent service, where you register none at its vendor:
-# on in local mode and off otherwise when left out.
+# shipped provider takes its place. A way of the kind secret names the key in
+# description and says how a person makes it, in instructions, Markdown without
+# HTML, and key_page, the https page where it is made; example and pattern give
+# its format, and the key given in another format is refused. auto_clients lets a
+# provider take Auto's client, through Auto's consent service, where you register
+# none at its vendor: on in local mode and off otherwise when left out.
 # connections:
 #   people_may_add: true
 #   auto_clients: true
@@ -137,7 +140,11 @@ model_aliases:
 #           in: header
 #           name: Authorization
 #           scheme: Bearer
-#           description: An API token from the settings of your CRM.
+#           description: CRM API token
+#           instructions: Make a token in your CRM under **Settings**, [API tokens](https://app.crm.example.com/settings/tokens), as an admin.
+#           key_page: https://app.crm.example.com/settings/tokens
+#           example: crm_…
+#           pattern: '^crm_[A-Za-z0-9]+$'
 
 # The origins a page in a browser may call the API from.
 allowed_origins:

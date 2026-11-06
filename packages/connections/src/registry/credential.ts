@@ -4,6 +4,8 @@ import {
   consentEndpoints,
   consentIssuesOf,
   holdsAClientId,
+  keyFieldNames,
+  keyFields,
   wayAddresses,
   wayFields,
   type WayAddress,
@@ -103,6 +105,24 @@ export const CredentialFieldsSchema = Schema.Struct({
         "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page",
     }),
   ),
+  instructions: Schema.optionalKey(
+    keyFields.instructions(
+      'For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format',
+    ),
+  ),
+  key_page: Schema.optionalKey(
+    keyFields.key_page('For secret, the https address of the page where the person makes the key'),
+  ),
+  example: Schema.optionalKey(
+    keyFields.example(
+      'For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows',
+    ),
+  ),
+  pattern: Schema.optionalKey(
+    keyFields.pattern(
+      "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched",
+    ),
+  ),
 });
 
 type CredentialFields = typeof CredentialFieldsSchema.Type;
@@ -123,6 +143,7 @@ const everyFieldButTheScheme: readonly Exclude<Field, 'scheme'>[] = [
   'pkce',
   'clients',
   'client_source',
+  ...keyFieldNames,
 ];
 
 interface TakenFields {
@@ -133,7 +154,7 @@ interface TakenFields {
 const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
   none: { required: [], optional: [] },
   reference: { required: ['variable', 'name', 'in'], optional: ['scheme'] },
-  secret: { required: ['name', 'in'], optional: ['scheme'] },
+  secret: { required: ['name', 'in'], optional: ['scheme', ...keyFieldNames] },
   client_credentials: { required: ['issuer'], optional: ['client_id', 'scope'] },
   authorization: {
     required: ['issuer'],

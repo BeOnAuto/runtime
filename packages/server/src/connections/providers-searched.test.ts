@@ -36,6 +36,15 @@ function nameOf({ entry }: Provider): string {
   return entry.name;
 }
 
+function keyOf({ entry }: Provider, rest: string): string {
+  const { example = '' } = entry.credentials.find(({ kind }) => kind === byAToken.kind) ?? {};
+  return `${example.replace('…', '')}${rest}`;
+}
+
+const lostKey = keyOf(brokenOne, 'lost_1');
+
+const sealedKey = keyOf(listedWithoutAsking, 'sealed_1');
+
 function offeredBut(...connected: readonly Provider[]) {
   const names: ReadonlySet<string> = new Set(connected.map((provider) => nameOf(provider)));
   return offeredByTheServer.filter(({ name }) => !names.has(name));
@@ -121,11 +130,7 @@ describe('a provider a connection of the org serves', () => {
     ledger = temporaryLedger();
     const kept = { LEDGER_FILE: ledger.fileName };
     const first = await served({ ...kept, SECRETS_KEY: secretsKey.toString('base64') });
-    const lost = await connectedWith(
-      first,
-      { provider: nameOf(brokenOne), credential: byAToken },
-      'token-lost-before-the-restart',
-    );
+    const lost = await connectedWith(first, { provider: nameOf(brokenOne), credential: byAToken }, lostKey);
     await first.stop();
     await forgottenIn(ledger.fileName, lost);
     const restarted = await served({ ...kept, SECRETS_KEY: secretsKey.toString('base64') });
@@ -134,7 +139,7 @@ describe('a provider a connection of the org serves', () => {
 
     const whilePending = await restarted.call('GET', searchOfAcme);
     const narrowed = { playbooks: ['alpha'], record_content: false };
-    await connectedWith(restarted, { provider: nameOf(listedWithoutAsking), entry: narrowed }, 'token-sealed-under-it');
+    await connectedWith(restarted, { provider: nameOf(listedWithoutAsking), entry: narrowed }, sealedKey);
     await restarted.call('DELETE', `${connectionsOfAcme}/${pending.id}`);
     const onceRemoved = await restarted.call('GET', searchOfAcme);
 

@@ -5,6 +5,13 @@ import { addressOf, type Provider, type ProviderList } from '../reading/provider
 
 const decodeEntry = Schema.decodeUnknownSync(ProviderEntrySchema);
 
+export function keyMadeAt(host: string) {
+  return {
+    instructions: `Make a key at [${host}](https://${host}/settings/keys) under **Settings**, **Keys**, with read access.`,
+    key_page: `https://${host}/settings/keys`,
+  };
+}
+
 export const tracker: ProviderEntry = decodeEntry({
   name: 'tracker',
   title: 'Tracker',
@@ -25,7 +32,8 @@ export const tracker: ProviderEntry = decodeEntry({
       in: 'header',
       name: 'Authorization',
       scheme: 'Bearer',
-      description: "A personal access token from your account's settings.",
+      description: 'Tracker personal access token',
+      ...keyMadeAt('app.tracker.example.com'),
     },
     { kind: 'none', description: 'No credential, for a public site.' },
   ],
@@ -87,7 +95,7 @@ export const regions: ProviderEntry = decodeEntry({
     },
     account: { description: 'The id of your account', pattern: '^[A-Za-z0-9]{1,32}$', example: 'acme1' },
   },
-  credentials: [{ kind: 'secret', in: 'query', name: 'api_key' }],
+  credentials: [{ kind: 'secret', in: 'query', name: 'api_key', ...keyMadeAt('app.regions.example.com') }],
 });
 
 export const metrics: ProviderEntry = decodeEntry({
@@ -98,7 +106,9 @@ export const metrics: ProviderEntry = decodeEntry({
   type: 'mcp',
   url: 'https://mcp.metrics.example.com/mcp',
   headers: { 'X-Developer-Token': '${METRICS_DEVELOPER_TOKEN}' },
-  credentials: [{ kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer' }],
+  credentials: [
+    { kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer', ...keyMadeAt('app.metrics.example.com') },
+  ],
 });
 
 export const drive: ProviderEntry = decodeEntry({
@@ -153,7 +163,13 @@ export const adverts: ProviderEntry = decodeEntry({
       clients: ['registered', 'dynamic'],
       description: 'Sign in to Adverts and allow Auto to manage your campaigns.',
     },
-    { kind: 'secret', in: 'header', name: 'X-Api-Key', description: 'An API key of your account.' },
+    {
+      kind: 'secret',
+      in: 'header',
+      name: 'X-Api-Key',
+      description: 'Adverts API key',
+      ...keyMadeAt('app.adverts.example.com'),
+    },
   ],
 });
 

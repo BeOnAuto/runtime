@@ -2,6 +2,7 @@ import { alternatives, articled, listed } from '@on.auto/phrasing';
 import { WayClientSourceSchema, WayPkceSchema, isScope, wayClientSources } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
 import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, notScopes, wordsIssuesOf } from './scope-groups.ts';
 import { wayAddresses, type WayAddress } from './templates.ts';
 
@@ -61,6 +62,7 @@ const CredentialWayFieldsSchema = Schema.Struct({
         'For authorization, the error codes beside invalid_grant with which the token endpoint refuses a refresh because the consent has ended, so that the connection is broken rather than failing',
     }),
   ),
+  ...keyWayFields,
   description: Schema.optionalKey(NamedSchema),
 });
 
@@ -93,10 +95,14 @@ const everyField: readonly Field[] = [
   'says',
   'more',
   'ending_codes',
+  'instructions',
+  'key_page',
+  'example',
+  'pattern',
 ];
 
 const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
-  secret: { required: ['in', 'name'], optional: ['scheme'] },
+  secret: { required: ['in', 'name', 'instructions', 'key_page'], optional: ['scheme', 'example', 'pattern'] },
   client_credentials: { required: ['issuer'], optional: ['scope', 'says'] },
   none: { required: [], optional: [] },
   authorization: {
@@ -283,7 +289,7 @@ function endingIssuesOf({ ending_codes: codes = [] }: CredentialWayFields): read
 }
 
 function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
-  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says)];
+  const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says), ...keyWayIssuesOf(way)];
   return way.kind === 'authorization'
     ? [...issues, ...consentIssuesOf(way), ...oauthClientIssuesOf(way), ...groupIssuesOf(way), ...endingIssuesOf(way)]
     : issues;

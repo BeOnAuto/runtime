@@ -12,7 +12,7 @@ import { expect } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import type { Credential } from '../registry/credential.ts';
-import { added } from '../testing/additions.ts';
+import { added, crmKeyHelp } from '../testing/additions.ts';
 import { ada, harness, operationNamed, fixtureServing } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 
@@ -40,7 +40,7 @@ function givenOnThePage(credential: CredentialUnderTest): Placing {
     return { credential: clientCredentials, giving: { client_secret: value }, variables };
   }
   const { name, in: placement, value } = credential;
-  return { credential: { kind: 'secret', name, in: placement }, giving: { value }, variables };
+  return { credential: { kind: 'secret', name, in: placement, ...crmKeyHelp }, giving: { value }, variables };
 }
 
 function isByClientCredentials(credential: CredentialUnderTest): credential is Exclude<CredentialUnderTest, SentIn> {
@@ -50,7 +50,7 @@ function isByClientCredentials(credential: CredentialUnderTest): credential is E
 function givenAfterItsScheme(credential: CredentialUnderTest): Placing {
   const { name } = Option.getOrThrow(Option.liftPredicate(credential, isSentIn));
   return {
-    credential: { kind: 'secret', name, in: 'header', scheme: 'Bearer' },
+    credential: { kind: 'secret', name, in: 'header', scheme: 'Bearer', ...crmKeyHelp },
     giving: { value: behaviourKey },
     variables: new Map(),
   };

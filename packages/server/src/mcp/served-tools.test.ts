@@ -147,7 +147,7 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(searching).toHaveLength(584);
   });
 
-  it("open add_connection with a person's account at a service that search lists, say that once approved the connection's tools serve the org's playbooks, say an MCP server given by hand says how it authenticates, and end it with what the call does not grant, at 791 characters", () => {
+  it("open add_connection with a person's account at a service that search lists, say that once approved the connection's tools serve the org's playbooks, say an MCP server given by hand says how it authenticates and a secret given by hand how its key is made, and end it with what the call does not grant, at 797 characters", () => {
     const adding = descriptionOf('add_connection');
 
     expect(adding).toMatch(
@@ -155,9 +155,9 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     );
     expect(adding).toMatch(/ Nothing is granted by this call and no credential passes through it\.$/u);
     expect(adding).toMatch(
-      / An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none\. /u,
+      / An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page\. /u,
     );
-    expect(adding).toHaveLength(791);
+    expect(adding).toHaveLength(797);
   });
 });
 

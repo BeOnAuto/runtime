@@ -21,7 +21,13 @@ afterAll(async () => {
   await crmServer.close();
 });
 
-const crmCredential = { kind: 'secret', name: 'Authorization', in: 'header' };
+const crmCredential = {
+  kind: 'secret',
+  name: 'Authorization',
+  in: 'header',
+  instructions: 'Make a key in the CRM under **Settings**, [API keys](https://crm.example.com/settings/keys).',
+  key_page: 'https://crm.example.com/settings/keys',
+};
 
 function crm() {
   return {

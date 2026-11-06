@@ -15,7 +15,7 @@ const keyed = {
   url: 'https://keyed.example.com/mcp',
   headers: { 'X-Api-Key': '{key_id}' },
   placeholders: { key_id: { description: 'The id of your key', pattern: '^[a-z0-9]{4,32}$', example: 'acme' } },
-  credentials: [{ kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer$' }],
+  credentials: [{ ...tracker.credentials[0], scheme: 'Bearer$' }],
 };
 
 const keyedHeader = { ...keyed, name: 'keyed-header', credentials: [{ kind: 'none' }] };
@@ -100,12 +100,20 @@ describe('a connection added by hand', () => {
 });
 
 describe('the input of a connection added by a provider', () => {
-  it('refuses the server and every field of the credential but its kind, its scope among them, and the client id the person gives on the page', async () => {
+  it('refuses the server and every field of the credential but its kind, its scope and how its key is made among them, and the client id the person gives on the page', async () => {
     const given = {
       ...acmeTracker,
       type: 'mcp',
       entry: { url: 'https://elsewhere.example.com/mcp', headers: { 'X-Tenant': 'acme' } },
-      credential: { kind: 'secret', name: 'X-Key', in: 'header', scope: 'issues.read', client_id: 'acme' },
+      credential: {
+        kind: 'secret',
+        name: 'X-Key',
+        in: 'header',
+        scope: 'issues.read',
+        instructions: 'Make a key under **Settings**.',
+        pattern: '^trk_.+$',
+        client_id: 'acme',
+      },
     };
 
     expect(issuesIn(await adding(harness(), given))).toEqual([
@@ -115,6 +123,11 @@ describe('the input of a connection added by a provider', () => {
       { pointer: '/credential/name', detail: 'Expected no name: the provider gives the credential but its kind' },
       { pointer: '/credential/in', detail: 'Expected no in: the provider gives the credential but its kind' },
       { pointer: '/credential/scope', detail: 'Expected no scope: the provider gives the credential but its kind' },
+      {
+        pointer: '/credential/instructions',
+        detail: 'Expected no instructions: the provider gives the credential but its kind',
+      },
+      { pointer: '/credential/pattern', detail: 'Expected no pattern: the provider gives the credential but its kind' },
       { pointer: '/credential/client_id', detail: 'Expected no client_id: the person gives the client id on the page' },
     ]);
   });

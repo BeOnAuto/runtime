@@ -13,6 +13,10 @@ const together = 'since a way gives its authorization and token endpoints togeth
 const inOrder =
   'Expected at least one client source, each once, in the order the runtime takes them: registered, metadata_document, and dynamic';
 
+const [aKey] = tracker.credentials;
+
+const secretTakes = 'a secret way takes in, name, instructions, key_page, scheme, example, and pattern';
+
 function consentAs(way: Readonly<Record<string, unknown>>) {
   return problemsOf({
     ...drive,
@@ -130,7 +134,7 @@ describe('the addresses of a way of consent', () => {
 
 describe('the organization’s own OAuth client a way of consent requires', () => {
   it('is required alone, on a way of consent that names no clients, since consent runs under that client', () => {
-    const secretUnderAClient = { kind: 'secret', in: 'header', name: 'Authorization', oauth_client: 'required' };
+    const secretUnderAClient = { ...aKey, oauth_client: 'required' };
 
     expect([
       consentAs({ oauth_client: 'required' }),
@@ -153,17 +157,17 @@ describe('the organization’s own OAuth client a way of consent requires', () =
         ],
       ],
       [['/credentials/0/oauth_client', 'Expected "required"']],
-      [['/credentials/0/oauth_client', 'Expected no oauth_client: a secret way takes in, name, and scheme']],
+      [['/credentials/0/oauth_client', `Expected no oauth_client: ${secretTakes}`]],
     ]);
   });
 });
 
 describe('the fields of a way of consent', () => {
   it('is the way of its kind alone', () => {
-    const secretWithClients = { kind: 'secret', in: 'header', name: 'Authorization', clients: ['dynamic'] };
+    const secretWithClients = { ...aKey, clients: ['dynamic'] };
 
     expect(problemsOf({ ...tracker, credentials: [secretWithClients] })).toEqual([
-      ['/credentials/0/clients', 'Expected no clients: a secret way takes in, name, and scheme'],
+      ['/credentials/0/clients', `Expected no clients: ${secretTakes}`],
     ]);
     expect(problemsOf({ ...tracker, credentials: [{ kind: 'none', pkce: 'none' }] })).toEqual([
       ['/credentials/0/pkce', 'Expected no pkce: a none way takes no other field but its description'],
@@ -177,7 +181,7 @@ describe('the fields of a way of consent', () => {
 describe('the codes with which the token endpoint of a way of consent ends it', () => {
   it('are taken on a way of consent, each once, beside invalid_grant, which ends every consent already', () => {
     const endingCodes = ['invalid_refresh_token', 'invalid_grant', 'token_revoked', 'invalid_refresh_token'];
-    const onASecret = { kind: 'secret', in: 'header', name: 'Authorization', ending_codes: ['token_revoked'] };
+    const onASecret = { ...aKey, ending_codes: ['token_revoked'] };
 
     expect(consentAs({ ending_codes: ['invalid_refresh_token', 'token_revoked'] })).toEqual([]);
     expect(consentAs({ ending_codes: endingCodes })).toEqual([
@@ -189,7 +193,7 @@ describe('the codes with which the token endpoint of a way of consent ends it', 
     ]);
     expect([consentAs({ ending_codes: [] }), problemsOf({ ...tracker, credentials: [onASecret] })]).toEqual([
       [['/credentials/0/ending_codes', 'Expected a value with a length of at least 1']],
-      [['/credentials/0/ending_codes', 'Expected no ending_codes: a secret way takes in, name, and scheme']],
+      [['/credentials/0/ending_codes', `Expected no ending_codes: ${secretTakes}`]],
     ]);
   });
 

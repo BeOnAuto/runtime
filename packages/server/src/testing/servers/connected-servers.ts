@@ -54,7 +54,13 @@ export function aSecretHeader(name: string, url: string) {
     name,
     type: 'mcp',
     entry: { url },
-    credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+    credential: {
+      kind: 'secret',
+      name: 'Authorization',
+      in: 'header',
+      instructions: 'Make a key under **Settings**, [API keys](https://crm.example.com/settings/keys).',
+      key_page: 'https://crm.example.com/settings/keys',
+    },
   };
 }
 

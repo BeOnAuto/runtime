@@ -19,4 +19,14 @@ credentials:
     in: header
     name: Authorization
     scheme: Bearer
-    description: A fine-grained personal access token with access to the repositories, issues and pull requests your functions use.
+    description: GitHub fine-grained personal access token
+    instructions: >-
+      Make a token at [GitHub](https://github.com/settings/personal-access-tokens/new), under **Settings**, **Developer
+      settings**, **Personal access tokens**, **Fine-grained tokens**. As **Resource owner**, choose the account or
+      organization that owns the repositories, and under **Repository access** select the repositories your functions
+      use. Under **Permissions**, give **Contents** read-only access, and **Issues** and **Pull requests** read and
+      write access. An organization that requires approval keeps the token pending, reading public resources alone,
+      until an organization administrator approves it. The token starts with `github_pat_`.
+    key_page: https://github.com/settings/personal-access-tokens/new
+    example: github_pat_…
+    pattern: ^github_pat_.+$

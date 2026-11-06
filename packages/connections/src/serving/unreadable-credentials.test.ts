@@ -6,7 +6,7 @@ import { DateTime, Effect, Fiber, Logger, Option, Redacted } from 'effect';
 import { TestClock } from 'effect/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { added } from '../testing/additions.ts';
+import { added, crmKeyHelp } from '../testing/additions.ts';
 import { harness, loopbackPolicy } from '../testing/harness.ts';
 import { givenThrough, sealedIn, sourceLoggingInto } from '../testing/sealed-connections.ts';
 
@@ -29,7 +29,7 @@ function graphAt({ url }: FakeMcpServer) {
     name: 'graph',
     type: 'mcp',
     entry: { url },
-    credential: { kind: 'secret', name: 'Authorization', in: 'header', scheme: 'Bearer' },
+    credential: { kind: 'secret', name: 'Authorization', in: 'header', scheme: 'Bearer', ...crmKeyHelp },
   };
 }
 

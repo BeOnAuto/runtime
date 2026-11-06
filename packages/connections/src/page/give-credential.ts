@@ -5,10 +5,10 @@ import { tokenSha256Of } from '../links/link-token.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { actedNow, loadRegistry, recordChangeInRegistry, recordedCaller } from '../operations/registry-access.ts';
 import { providingOf } from '../providers/provider-additions.ts';
-import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
+import { connectionShown } from '../registry/connection.ts';
 import { linkedConnectionOf } from '../registry/registry-lookup.ts';
 import { forgottenCredentialOf } from './consent-asking.ts';
-import { GivingSchema, givenOf, unkeptRefusalOf } from './given-fields.ts';
+import { GivenConnectionSchema, GivingSchema, formatMarkOf, givenOf, unkeptRefusalOf } from './given-fields.ts';
 
 type GivingServices = Pick<
   ConnectionServices,
@@ -24,6 +24,7 @@ export function defineGiveCredential(services: GivingServices) {
     title: 'Give credential',
     description: [
       'Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected.',
+      "A secret of another format than its provider's pattern is refused, and one that misses the pattern of a credential given by hand is kept and answered with pattern_unmatched.",
       'The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it.',
       'Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again.',
       'On a runtime that signs people in, only the person who added the connection may give it.',
@@ -31,7 +32,7 @@ export function defineGiveCredential(services: GivingServices) {
     route: { method: 'POST', path: '/connections/{id}/credential' },
     body: { kind: 'json' },
     inputSchema: GivingSchema,
-    outputSchema: ConnectionSchema,
+    outputSchema: GivenConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* (giving) {
       const use = { connection: giving.id, token_sha256: tokenSha256Of(giving.token), bindsPerson };
@@ -40,6 +41,7 @@ export function defineGiveCredential(services: GivingServices) {
       const providing = providingOf(kept.connection, { providers, providerValues });
       const checking = { org, modelProviders, providing };
       const given = yield* Effect.fromResult(givenOf(kept.connection, giving, checking));
+      const formatMark = yield* Effect.fromResult(formatMarkOf(kept.connection, given));
       const secretId = yield* secrets
         .keep(Redacted.make(given.value), given.endsWith)
         .pipe(Effect.mapError((failure) => unkeptRefusalOf(kept.connection.name, given.pointer, failure)));
@@ -54,7 +56,7 @@ export function defineGiveCredential(services: GivingServices) {
         ...client,
       }).pipe(Effect.onError(() => secrets.forget(secretId)));
       yield* forgottenCredentialOf(before, services);
-      return connectionShown(after.connection, given.endsWith ?? null);
+      return { ...connectionShown(after.connection, given.endsWith ?? null), ...formatMark };
     }),
   });
 }

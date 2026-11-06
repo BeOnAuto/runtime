@@ -17,4 +17,10 @@ credentials:
     in: header
     name: Authorization
     scheme: Bearer
-    description: A Profound API key, made under Settings, Account, API Keys, on the Enterprise plan.
+    description: Profound API key
+    instructions: >-
+      Make a key in the [Profound platform](https://platform.tryprofound.com/): select your organization's name at the
+      top left, then **Settings**, and under **Account**, **API Keys**. In the **Create API Key** banner, name the key,
+      choose when it expires and select **Create API Key**. API keys come with Profound's Enterprise plan, and a key
+      reaches the data of every organization you belong to. Copy it now: Profound shows it once.
+    key_page: https://platform.tryprofound.com/

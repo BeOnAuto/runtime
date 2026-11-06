@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { adding, billing, crm, crmWithTenant, issuesIn, statusesOf } from '../testing/additions.ts';
+import { adding, billing, crm, crmKeyHelp, crmWithTenant, issuesIn, statusesOf } from '../testing/additions.ts';
 import { harness, crmPolicy } from '../testing/harness.ts';
 
 const refusedCredentials = [
@@ -22,13 +22,25 @@ const refusedCredentials = [
     { kind: 'reference', variable: 'CRM_API_KEY', name: 'a header', in: 'header' },
     '/credential/name',
   ],
-  ['a secret that says not where it is sent', { kind: 'secret', name: 'Authorization' }, '/credential/in'],
-  ['a secret in a query parameter of an mcp server', { kind: 'secret', name: 'key', in: 'query' }, '/credential/in'],
-  ['a secret in a header the entry sends', { kind: 'secret', name: 'x-tenant', in: 'header' }, '/credential/name'],
-  ['a secret in no header', { kind: 'secret', name: 'a header', in: 'header' }, '/credential/name'],
+  [
+    'a secret that says not where it is sent',
+    { kind: 'secret', name: 'Authorization', ...crmKeyHelp },
+    '/credential/in',
+  ],
+  [
+    'a secret in a query parameter of an mcp server',
+    { kind: 'secret', name: 'key', in: 'query', ...crmKeyHelp },
+    '/credential/in',
+  ],
+  [
+    'a secret in a header the entry sends',
+    { kind: 'secret', name: 'x-tenant', in: 'header', ...crmKeyHelp },
+    '/credential/name',
+  ],
+  ['a secret in no header', { kind: 'secret', name: 'a header', in: 'header', ...crmKeyHelp }, '/credential/name'],
   [
     'a scheme that holds a space',
-    { kind: 'secret', name: 'Authorization', in: 'header', scheme: 'Bearer token' },
+    { kind: 'secret', name: 'Authorization', in: 'header', scheme: 'Bearer token', ...crmKeyHelp },
     '/credential/scheme',
   ],
   [
@@ -52,7 +64,7 @@ describe('a credential that cannot be taken', () => {
       { kind: 'reference', name: 'Authorization', in: 'header' },
       { kind: 'none', in: 'header' },
       { kind: 'client_credentials', issuer: 'https://auth.example.com', client_id: 'acme', name: 'CRM_API_KEY' },
-      { kind: 'secret', name: 'Authorization', in: 'header', issuer: 'https://auth.example.com' },
+      { kind: 'secret', name: 'Authorization', in: 'header', issuer: 'https://auth.example.com', ...crmKeyHelp },
     ];
 
     const refused = await Promise.all(
@@ -68,19 +80,31 @@ describe('a credential that cannot be taken', () => {
           detail: 'Expected no name: a client_credentials credential takes issuer, client_id, and scope',
         },
       ],
-      [{ pointer: '/credential/issuer', detail: 'Expected no issuer: a secret credential takes name, in, and scheme' }],
+      [
+        {
+          pointer: '/credential/issuer',
+          detail:
+            'Expected no issuer: a secret credential takes name, in, scheme, instructions, key_page, example, and pattern',
+        },
+      ],
     ]);
   });
 });
 
 function withScheme(scheme: string, credential: Readonly<Record<string, string>> = {}) {
-  return { kind: 'secret', name: 'Authorization', in: 'header', scheme, ...credential };
+  return { kind: 'secret', name: 'Authorization', in: 'header', scheme, ...crmKeyHelp, ...credential };
 }
 
 describe('the scheme of a credential sent in a header', () => {
   it('is taken by a secret and a reference, and answered with the credential', async () => {
     const h = harness({ policy: connectionPolicyOf({ variables: ['CRM_API_KEY'] }) });
-    const reference = withScheme('Token', { kind: 'reference', variable: 'CRM_API_KEY' });
+    const reference = {
+      kind: 'reference',
+      variable: 'CRM_API_KEY',
+      name: 'Authorization',
+      in: 'header',
+      scheme: 'Token',
+    } as const;
 
     const answers = [
       await adding(h, { ...crm, credential: withScheme('Bearer') }),
@@ -155,7 +179,7 @@ describe('a client id that looks like a credential', () => {
 });
 
 function inHeader(name: string) {
-  return { kind: 'secret', name, in: 'header' } as const;
+  return { kind: 'secret', name, in: 'header', ...crmKeyHelp } as const;
 }
 
 describe('a secret in a header', () => {
@@ -201,7 +225,7 @@ describe('a secret of an HTTP API', () => {
     const sentAs = (name: string, credential: Readonly<Record<string, string>>) => ({
       ...api,
       name,
-      credential: { kind: 'secret', ...credential },
+      credential: { kind: 'secret', ...crmKeyHelp, ...credential },
     });
 
     const statuses = await statusesOf(harness(), [

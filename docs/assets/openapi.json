@@ -4170,7 +4170,7 @@
       "post": {
         "operationId": "add_connection",
         "summary": "Add connection",
-        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. Once approved, the connection's tools serve the org's playbooks. Work out first what the playbook's runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how. With more, a group the provider offers beyond its first consent, the same page asks its scopes too. An MCP server given by hand says how it authenticates, so leave its credential out, and give a kind only where the answer says it names none. It answers pending with a link to Studio's page, where the person approves it within 24 hours. Nothing is granted by this call and no credential passes through it.",
+        "description": "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential. Once approved, the connection's tools serve the org's playbooks. Work out first what the runs will do at the service and what must exist there, and ask for the access both take; the guide connect-a-service says how. With more, a group the provider offers beyond its first consent, the page asks its scopes too. An MCP server given by hand says how it authenticates: leave its credential out unless the answer says it names none, and a secret takes instructions and key_page. It answers pending with a link to Studio's page, where the person approves it within 24 hours. Nothing is granted by this call and no credential passes through it.",
         "tags": [
           "connections"
         ],
@@ -4323,6 +4323,25 @@
                           "own"
                         ],
                         "description": "For a provider's authorization, own for the organization's own OAuth client, its client ID and secret given on the page; the default where the way takes no client here"
+                      },
+                      "instructions": {
+                        "type": "string",
+                        "description": "For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://acme.example/keys) as an Admin, with read access. It starts with `acme_`.",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      },
+                      "key_page": {
+                        "type": "string",
+                        "description": "For secret, the https page where the person makes the key"
+                      },
+                      "example": {
+                        "type": "string",
+                        "description": "For secret, the key with … in place of its characters, such as acme_…",
+                        "maxLength": 100
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "description": "For secret, the regular expression from ^ to $ the key matches, such as ^acme_\\w+$; a key that misses it is kept"
                       }
                     },
                     "required": [
@@ -4544,6 +4563,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -5093,6 +5131,25 @@
                                 "own"
                               ],
                               "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                            },
+                            "instructions": {
+                              "type": "string",
+                              "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                              "minLength": 1,
+                              "maxLength": 1000
+                            },
+                            "key_page": {
+                              "type": "string",
+                              "description": "For secret, the https address of the page where the person makes the key"
+                            },
+                            "example": {
+                              "type": "string",
+                              "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                              "maxLength": 100
+                            },
+                            "pattern": {
+                              "type": "string",
+                              "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                             }
                           },
                           "required": [
@@ -5620,6 +5677,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -6143,6 +6219,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -6666,6 +6761,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -7214,6 +7328,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -7857,6 +7990,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -8138,7 +8290,7 @@
       "post": {
         "operationId": "give_credential",
         "summary": "Give credential",
-        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again. On a runtime that signs people in, only the person who added the connection may give it.",
+        "description": "Gives the credential of a connection through its open link, which approves the connection and uses the link up, and answers it connected. A secret of another format than its provider's pattern is refused, and one that misses the pattern of a credential given by hand is kept and answered with pattern_unmatched. The runtime keeps the value sealed in its secret store, and no answer, record or history of the org ever holds it. Where the secret store cannot keep it just now, it answers unavailable in the words of the store, keeps nothing and leaves the link open, so the same credential is given again. On a runtime that signs people in, only the person who added the connection may give it.",
         "tags": [
           "connections"
         ],
@@ -8409,6 +8561,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -8613,6 +8784,13 @@
                         }
                       ],
                       "description": "Why and since when it is broken, while it is"
+                    },
+                    "pattern_unmatched": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ],
+                      "description": "Answered where the secret given does not match the pattern of a credential given by hand, which the runtime keeps all the same: the agent's pattern may be wrong as well as the key, for the page to ask the person to check that it is the key the instructions describe"
                     }
                   },
                   "required": [
@@ -8635,7 +8813,7 @@
                     "broken"
                   ],
                   "additionalProperties": false,
-                  "description": "A tool server the org added, shared by its playbooks"
+                  "description": "The connection its credential was given to, and whether the secret given missed its pattern"
                 }
               }
             }
@@ -8949,6 +9127,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -9675,6 +9872,25 @@
                             "own"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
+                        },
+                        "instructions": {
+                          "type": "string",
+                          "description": "For secret, how the person makes the key, which the page shows them, in Markdown without HTML of at most 1,000 characters: where it is made, with a link to that page, the plan or role it needs, the permissions it needs and its format",
+                          "minLength": 1,
+                          "maxLength": 1000
+                        },
+                        "key_page": {
+                          "type": "string",
+                          "description": "For secret, the https address of the page where the person makes the key"
+                        },
+                        "example": {
+                          "type": "string",
+                          "description": "For secret, what the key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                          "maxLength": 100
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "description": "For secret, the regular expression from ^ to $ the key matches, of at most 200 characters: a provider's refuses a value of another format, and one given by hand answers it with pattern_unmatched"
                         }
                       },
                       "required": [
@@ -10155,7 +10371,8 @@
                                 "description": "The groups of scopes a later consent of a connection made this way may add to what it holds; empty where it names none"
                               },
                               "description": {
-                                "type": "string"
+                                "type": "string",
+                                "description": "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds"
                               },
                               "offered": {
                                 "type": "boolean",

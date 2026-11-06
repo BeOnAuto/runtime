@@ -109,6 +109,8 @@ describe('the ways of an entry', () => {
 
     expect(problemsOf({ ...tracker, credentials: ways })).toEqual([
       ['/credentials/0/name', 'Expected name, which a secret way takes'],
+      ['/credentials/0/instructions', 'Expected instructions, which a secret way takes'],
+      ['/credentials/0/key_page', 'Expected key_page, which a secret way takes'],
       ['/credentials/1/issuer', 'Expected no issuer: a none way takes no other field but its description'],
     ]);
     expect(problemsOf({ ...ledgers, credentials: [{ kind: 'client_credentials', in: 'header' }] })).toEqual([

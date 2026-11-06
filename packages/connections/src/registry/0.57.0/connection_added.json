@@ -1,0 +1,32 @@
+{
+  "type": "connection_added",
+  "data": {
+    "connection": "connection-1",
+    "name": "crm",
+    "server_type": "mcp",
+    "provider": null,
+    "placeholders": null,
+    "entry": {
+      "url": "https://mcp.crm.example.com/mcp"
+    },
+    "credential": {
+      "kind": "secret",
+      "name": "Authorization",
+      "in": "header",
+      "scheme": "Bearer",
+      "instructions": "Make a key in the CRM under **Settings**, [API keys](https://crm.example.com/settings/keys).",
+      "key_page": "https://crm.example.com/settings/keys",
+      "example": "crm_…",
+      "pattern": "^crm_\\w+$"
+    },
+    "says": {},
+    "added_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

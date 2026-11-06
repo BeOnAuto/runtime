@@ -173,6 +173,33 @@ const askedThroughAClient: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
+const describedKey: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_added',
+    data: {
+      ...ofTheConnection,
+      name: 'crm',
+      server_type: 'mcp',
+      provider: null,
+      placeholders: null,
+      entry: { url: 'https://mcp.crm.example.com/mcp' },
+      credential: {
+        kind: 'secret',
+        name: 'Authorization',
+        in: 'header',
+        scheme: 'Bearer',
+        instructions: 'Make a key in the CRM under **Settings**, [API keys](https://crm.example.com/settings/keys).',
+        key_page: 'https://crm.example.com/settings/keys',
+        example: 'crm_…',
+        pattern: '^crm_\\w+$',
+      },
+      says: {},
+      added_by: caller,
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the registry of connections', () => {
   recordedFactsBehaviour({
     schema: ConnectionEventSchema,
@@ -181,6 +208,7 @@ describe('the facts of the registry of connections', () => {
       '0.46.0': baseline,
       '0.49.0': [...askingMore, ...underTheOrgsOAuthClient],
       '0.54.0': askedThroughAClient,
+      '0.57.0': describedKey,
     },
   });
 });

@@ -3,7 +3,7 @@ import { failingAt, hostOf, type ClientRegistration } from '@on.auto/tool-server
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
-import { adding, billing, issuesIn } from '../testing/additions.ts';
+import { adding, billing, crmKeyHelp, issuesIn } from '../testing/additions.ts';
 import { byHandAt, harnessByHand, refusedKind } from '../testing/by-hand.ts';
 import { consentFake } from '../testing/consents.ts';
 import { harness } from '../testing/harness.ts';
@@ -28,7 +28,7 @@ async function serving(options: FakeMcpOptions = {}): Promise<FakeMcpServer> {
 
 const signingIn: Partial<ClientRegistration> = { dynamicRegistration: true, requiredScopes: ['files.read'] };
 
-const secret = { kind: 'secret', name: 'Authorization', in: 'header', scheme: 'Bearer' };
+const secret = { kind: 'secret', name: 'Authorization', in: 'header', scheme: 'Bearer', ...crmKeyHelp };
 
 function leftOutAt({ url }: Pick<FakeMcpServer, 'url'>, name = 'files') {
   return { name, type: 'mcp', entry: { url } };

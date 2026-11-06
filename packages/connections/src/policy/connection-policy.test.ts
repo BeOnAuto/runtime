@@ -84,6 +84,12 @@ describe('the policy of connections', () => {
   });
 });
 
+const keyMadeInNotes = {
+  instructions: 'Make a token in Notes under **Settings**, [Tokens](https://notes.example.com/settings/tokens).',
+  key_page: 'https://notes.example.com/settings/tokens',
+  example: 'ntk_…',
+};
+
 const notes = {
   name: 'notes',
   title: 'Notes',
@@ -92,7 +98,7 @@ const notes = {
   type: 'mcp',
   url: 'https://notes.example.com/mcp',
   headers: { 'X-Workspace': '${NOTES_WORKSPACE}' },
-  credentials: [{ kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer' }],
+  credentials: [{ kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer', ...keyMadeInNotes }],
 };
 
 describe('the providers of CONNECTIONS', () => {
@@ -125,7 +131,7 @@ describe('the providers of CONNECTIONS', () => {
       ...notes,
       name: 'pages',
       headers: { authorization: '${PAGES_HEADER}' },
-      credentials: [{ kind: 'secret', in: 'header', name: 'Authorization' }, { kind: 'none' }],
+      credentials: [{ kind: 'secret', in: 'header', name: 'Authorization', ...keyMadeInNotes }, { kind: 'none' }],
     };
 
     expect(refusalOf(JSON.stringify({ providers: [notes, colliding, notes] }))).toBe(

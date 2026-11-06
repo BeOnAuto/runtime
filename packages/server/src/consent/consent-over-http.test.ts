@@ -24,7 +24,13 @@ function crm() {
     name: 'crm',
     type: 'mcp',
     entry: { url: crmServer.url },
-    credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+    credential: {
+      kind: 'secret',
+      name: 'Authorization',
+      in: 'header',
+      instructions: 'Make a key in the CRM under **Settings**, [API keys](https://crm.example.com/settings/keys).',
+      key_page: 'https://crm.example.com/settings/keys',
+    },
   };
 }
 

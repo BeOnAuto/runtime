@@ -1,4 +1,5 @@
 import { InvalidInput, Unavailable, type Conflict, type Issue } from '@on.auto/operations';
+import { matchesKeyPattern } from '@on.auto/providers';
 import { ClientIdSchema, type SecretKeepingFailure } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
@@ -32,6 +33,23 @@ export const GivingSchema = Schema.Struct({
 });
 
 type Giving = typeof GivingSchema.Type;
+
+const unmatchedMark = { pattern_unmatched: true } as const;
+
+type FormatMark = Partial<typeof unmatchedMark>;
+
+export const GivenConnectionSchema = Schema.Struct({
+  ...ConnectionSchema.fields,
+  pattern_unmatched: Schema.optionalKey(
+    Schema.Literal(true).annotate({
+      description:
+        "Answered where the secret given does not match the pattern of a credential given by hand, which the runtime keeps all the same: the agent's pattern may be wrong as well as the key, for the page to ask the person to check that it is the key the instructions describe",
+    }),
+  ),
+}).annotate({
+  identifier: 'GivenConnection',
+  description: 'The connection its credential was given to, and whether the secret given missed its pattern',
+});
 
 export const GivingTheClientSchema = Schema.Struct({
   id: ConnectionIdField,
@@ -82,6 +100,20 @@ function withAReadableClientId(
 ): Result.Result<Given, InvalidInput> {
   const issues = given.clientId === undefined ? [] : clientIdReadingIssuesOf(connection, given.clientId, checking);
   return issues.length === 0 ? Result.succeed(given) : Result.fail(refused(issues));
+}
+
+const outOfItsFormat = "Paste the key itself: this value is not in the format of the provider's keys";
+
+export function formatMarkOf(
+  { provider, credential: { pattern } }: RecordedConnection,
+  { value }: Pick<Given, 'value'>,
+): Result.Result<FormatMark, InvalidInput> {
+  if (pattern === undefined || matchesKeyPattern(pattern, value)) {
+    return Result.succeed({});
+  }
+  return provider === null
+    ? Result.succeed(unmatchedMark)
+    : Result.fail(refused([{ pointer: '/value', detail: outOfItsFormat }]));
 }
 
 export function givenOf(

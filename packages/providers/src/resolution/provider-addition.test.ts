@@ -29,7 +29,7 @@ const permissiveSite = decodedEntry({
 
 describe('the addition a provider makes', () => {
   it('is its server with the values given in place, its first way, its name, and the values to record', () => {
-    expect(resolved(tracker, { placeholders: { site: 'acme' } })).toEqual({
+    expect(resolved(tracker, { placeholders: { site: 'acme' } })).toMatchObject({
       name: 'tracker',
       type: 'mcp',
       entry: { url: 'https://acme.tracker.example.com/mcp' },

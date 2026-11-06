@@ -9,4 +9,10 @@ credentials:
     in: header
     name: Authorization
     scheme: Bearer
-    description: A Buffer API key, made at Buffer under Settings, API, which reaches your whole Buffer account.
+    description: Buffer API key
+    instructions: >-
+      Make a key in Buffer at [Settings, API](https://publish.buffer.com/settings/api): open the **Personal Access**
+      tab, select **+ New Key** under **Keys**, name the key, leave every permission ticked, choose when it expires and
+      select **Generate API Key**. Only the owner of a Buffer organization can make one, and the key reaches your whole
+      Buffer account. Copy it when Buffer shows it.
+    key_page: https://publish.buffer.com/settings/api

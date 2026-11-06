@@ -209,7 +209,17 @@ const byTokenOrConsent = {
   ...drive,
   name: 'repos',
   title: 'Repos',
-  credentials: [driveWay, { kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer' }],
+  credentials: [
+    driveWay,
+    {
+      kind: 'secret',
+      in: 'header',
+      name: 'Authorization',
+      scheme: 'Bearer',
+      instructions: 'Make a token in Repos under **Settings**, **Tokens**.',
+      key_page: 'https://repos.example.com/settings/tokens',
+    },
+  ],
 };
 
 describe('a provider whose way of consent no client here covers, beside a way that takes a secret', () => {

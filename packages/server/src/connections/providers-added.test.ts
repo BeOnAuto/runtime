@@ -46,6 +46,8 @@ function notesAt(url: string, name = 'notes'): string {
           name: Authorization
           scheme: Bearer
           description: Token from the settings of your notes.
+          instructions: Make a token in Notes under **Settings**, [Tokens](https://notes.example.com/settings/tokens).
+          key_page: https://notes.example.com/settings/tokens
 `;
 }
 
@@ -215,7 +217,7 @@ describe('a provider the settings add, which the schema of a provider refuses', 
     expect(refusalOf({ CONFIG_FILE: path, NOTES_WORKSPACE: workspace })).toBe(
       'ConfigFileInvalid: The configuration file auto-runtime.yaml is invalid: ' +
         'auto-runtime.yaml:14:17 connections.providers[0].credentials[0].name: The entry sends this header already, so the credential cannot go in it; ' +
-        'auto-runtime.yaml:17:13 connections.providers[1].name: Expected a name no other provider of the setting has',
+        'auto-runtime.yaml:19:13 connections.providers[1].name: Expected a name no other provider of the setting has',
     );
   });
 });

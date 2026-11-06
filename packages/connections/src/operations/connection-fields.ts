@@ -1,3 +1,4 @@
+import { keyFieldNames, keyFields } from '@on.auto/providers';
 import { ClientSourceSchema, WayOAuthClientSchema, givenByTheProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -72,6 +73,20 @@ const AddedCredentialSchema = Schema.Struct({
         "For a provider's authorization, own for the organization's own OAuth client, its client ID and secret given on the page; the default where the way takes no client here",
     }),
   ),
+  instructions: Schema.optionalKey(
+    keyFields.instructions(
+      'For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://acme.example/keys) as an Admin, with read access. It starts with `acme_`.',
+    ),
+  ),
+  key_page: Schema.optionalKey(keyFields.key_page('For secret, the https page where the person makes the key')),
+  example: Schema.optionalKey(
+    keyFields.example('For secret, the key with … in place of its characters, such as acme_…'),
+  ),
+  pattern: Schema.optionalKey(
+    keyFields.pattern(
+      'For secret, the regular expression from ^ to $ the key matches, such as ^acme_\\w+$; a key that misses it is kept',
+    ),
+  ),
 }).annotate({ description: credentialDescription });
 
 const AdditionFieldsSchema = Schema.Struct({
@@ -103,7 +118,9 @@ const credentialOfAnApiByHand = 'Expected credential, which an HTTP API given by
 
 const serverFields = ['url', 'document', 'base_url', 'headers', 'query_params', 'request_id'] as const;
 
-const placedByTheProvider = ['variable', 'name', 'in', 'scheme', 'issuer', 'scope'] as const;
+const placedByTheProvider = ['variable', 'name', 'in', 'scheme', 'issuer', 'scope', ...keyFieldNames] as const;
+
+const placedByTheServer = ['variable', 'name', 'in', 'scheme', 'issuer', 'scope', 'client_id'] as const;
 
 function providerModeIssuesOf({ type, entry = {}, credential }: AdditionGiven): readonly ModeIssue[] {
   return [
@@ -141,8 +158,6 @@ function oauthClientIssuesOf(credential: AdditionGiven['credential']): readonly 
 const consentOfAnApiByHand =
   'Expected another kind: an HTTP API given by hand takes no consent, since its document names no authorization server; name a provider, as search lists it, in provider';
 
-const givenBesideTheKind = [...placedByTheProvider, 'client_id'] as const;
-
 const oauthClientOfAProvider =
   "Expected no oauth_client without provider: consent runs under the organization's own OAuth client at a provider, whose way says where to register it";
 
@@ -152,12 +167,20 @@ function consentByHandIssuesOf(credential: AddedCredential, type: AdditionGiven[
   if (type === 'openapi') {
     return [{ path: ['credential', 'kind'], issue: consentOfAnApiByHand }];
   }
-  return givenBesideTheKind
-    .filter((field) => credential[field] !== undefined)
-    .map((field) => ({
-      path: ['credential', field],
-      issue: `Expected no ${field}: the server names its authorization server itself`,
-    }));
+  return [
+    ...placedByTheServer
+      .filter((field) => credential[field] !== undefined)
+      .map((field) => ({
+        path: ['credential', field],
+        issue: `Expected no ${field}: the server names its authorization server itself`,
+      })),
+    ...keyFieldNames
+      .filter((field) => credential[field] !== undefined)
+      .map((field) => ({
+        path: ['credential', field],
+        issue: `Expected no ${field}: the person signs in at the server's authorization server, so no key is made`,
+      })),
+  ];
 }
 
 function missingCredentialIssuesOf({ credential, type }: AdditionGiven): readonly ModeIssue[] {
@@ -171,6 +194,23 @@ function credentialIssuesOf({ credential, type }: AdditionGiven): readonly ModeI
   return credential.kind === 'authorization'
     ? consentByHandIssuesOf(credential, type)
     : credentialFieldIssuesOf(credential).map(({ path, issue }) => ({ path: ['credential', ...path], issue }));
+}
+
+const keyUnexplained: Readonly<Record<'instructions' | 'key_page', string>> = {
+  instructions:
+    'Expected instructions, which a secret credential given by hand takes: in Markdown, where the person makes the key, with a link to that page, the plan or role it needs, the permissions it needs and its format',
+  key_page:
+    'Expected key_page, which a secret credential given by hand takes: the https address of the page where the person makes the key',
+};
+
+const explainedByTheAgent = ['instructions', 'key_page'] as const;
+
+function unexplainedKeyIssuesOf({ credential }: AdditionGiven): readonly ModeIssue[] {
+  return credential?.kind === 'secret'
+    ? explainedByTheAgent
+        .filter((field) => credential[field] === undefined)
+        .map((field) => ({ path: ['credential', field], issue: keyUnexplained[field] }))
+    : [];
 }
 
 const moreOfAnAdditionByHand =
@@ -191,6 +231,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
       ? []
       : [{ path: ['credential', 'oauth_client'], issue: oauthClientOfAProvider }]),
     ...credentialIssuesOf(given),
+    ...unexplainedKeyIssuesOf(given),
   ];
 }
 

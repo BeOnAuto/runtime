@@ -39,11 +39,9 @@ describe('the addition of a way of consent under the organization’s own OAuth 
   it('is no source of a client for a way that is not consent, which takes no OAuth client', () => {
     expect(
       resolved(tracker, { oauthClientFor: () => 'own', kind: 'secret', placeholders: { site: 'acme' } }).credential,
-    ).toEqual({
-      kind: 'secret',
-      in: 'header',
-      name: 'Authorization',
-      scheme: 'Bearer',
-    });
+    ).toMatchObject({ kind: 'secret', in: 'header', name: 'Authorization', scheme: 'Bearer' });
+    expect(
+      resolved(tracker, { oauthClientFor: () => 'own', kind: 'secret', placeholders: { site: 'acme' } }).credential,
+    ).not.toHaveProperty('client_source');
   });
 });

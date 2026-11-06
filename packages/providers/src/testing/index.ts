@@ -3,6 +3,7 @@ export {
   audiences,
   drive,
   fixtureProviders,
+  keyMadeAt,
   ledgers,
   metrics,
   providerListOf,

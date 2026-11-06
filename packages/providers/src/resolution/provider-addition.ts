@@ -7,6 +7,7 @@ import type { CredentialWay, WayKind } from '../entry/credential-ways.ts';
 import { isRequired, type Placeholder } from '../entry/placeholders.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { wayAddresses, type WayAddress, type WayAddresses } from '../entry/templates.ts';
+import { keyFieldNames, type KeyFieldName } from '../keys/key-fields.ts';
 import { placedText, valuesOf, type Values } from './placeholder-values.ts';
 
 export interface GivenToProvider {
@@ -20,7 +21,7 @@ export interface GivenToProvider {
   readonly record_content?: boolean | undefined;
 }
 
-export interface ProviderCredential extends WayAddresses {
+export interface ProviderCredential extends WayAddresses, Partial<Readonly<Record<KeyFieldName, string>>> {
   readonly kind: WayKind;
   readonly in?: NonNullable<CredentialWay['in']>;
   readonly name?: string;
@@ -98,6 +99,15 @@ function clientSourceOf({ kind, oauth_client: required }: CredentialWay, asked: 
   return kind === 'authorization' && (asked !== undefined || required !== undefined) ? underTheOrgsOAuthClient : {};
 }
 
+function keyFieldsOf(way: CredentialWay): Partial<Record<KeyFieldName, string>> {
+  return Object.fromEntries(
+    keyFieldNames.flatMap((field) => {
+      const written = way[field];
+      return written === undefined ? [] : [[field, written]];
+    }),
+  );
+}
+
 function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthClient | undefined): ProviderCredential {
   const { kind, in: placement, name, scheme, scope, parameters, pkce, clients } = way;
   return {
@@ -106,6 +116,7 @@ function credentialOf(way: CredentialWay, values: Values, oauthClient: WayOAuthC
     ...(placement === undefined ? {} : { in: placement }),
     ...(name === undefined ? {} : { name }),
     ...(scheme === undefined ? {} : { scheme }),
+    ...keyFieldsOf(way),
     ...placedAddressesOf(way, values),
     ...(scope === undefined ? {} : { scope }),
     ...(parameters === undefined ? {} : { parameters }),

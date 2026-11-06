@@ -1,5 +1,5 @@
 import { settingProblemText } from '@on.auto/config';
-import { adverts, drive, fixtureProviders, providerListOf, providerOf } from '@on.auto/providers/testing';
+import { adverts, drive, fixtureProviders, keyMadeAt, providerListOf, providerOf } from '@on.auto/providers/testing';
 import { readToolServerSettings, secretOrKeyExpected, type ServerSettings } from '@on.auto/tool-servers';
 import { Effect, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -36,7 +36,7 @@ const pages = providerOf({
   type: 'mcp',
   url: 'https://pages.example.com/mcp',
   headers: { 'X-Api-Version': '2' },
-  credentials: [{ kind: 'secret', in: 'header', name: 'x-api-version' }],
+  credentials: [{ kind: 'secret', in: 'header', name: 'x-api-version', ...keyMadeAt('pages.example.com') }],
 });
 
 const sessions = providerOf({
@@ -45,7 +45,7 @@ const sessions = providerOf({
   website: 'https://developer.pages.example.com',
   type: 'mcp',
   url: 'https://sessions.example.com/mcp',
-  credentials: [{ kind: 'secret', in: 'header', name: 'Mcp-Session-Id' }],
+  credentials: [{ kind: 'secret', in: 'header', name: 'Mcp-Session-Id', ...keyMadeAt('pages.example.com') }],
 });
 
 const billing = providerOf({
@@ -55,7 +55,7 @@ const billing = providerOf({
   type: 'openapi',
   document: 'https://billing.example.com/openapi.json',
   base_url: 'https://api.billing.example.com/v2',
-  credentials: [{ kind: 'secret', in: 'security', name: 'apiKeyAuth' }],
+  credentials: [{ kind: 'secret', in: 'security', name: 'apiKeyAuth', ...keyMadeAt('pages.example.com') }],
 });
 
 const resolver = makeProviderResolver(

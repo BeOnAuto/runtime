@@ -10,7 +10,7 @@ import { Effect, Option, Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { connectionPolicyOf, type ConnectionPolicyFields } from '../policy/connection-policy.ts';
-import { added, billing, crm, crmWithTenant, notes } from '../testing/additions.ts';
+import { added, billing, crm, crmKeyHelp, crmWithTenant, notes } from '../testing/additions.ts';
 import { ada, harness, operationNamed, type Harness, fixtureServing, crmPolicy } from '../testing/harness.ts';
 import { makeConnectionSource } from './connection-source.ts';
 import type { ServingServices } from './serving-services.ts';
@@ -176,12 +176,20 @@ describe('a connected connection to an HTTP API as a tool server', () => {
     const h = harness();
     const inQuery = await connected(
       h,
-      { ...billing, name: 'billing-query', credential: { kind: 'secret', name: 'api_key', in: 'query' } },
+      {
+        ...billing,
+        name: 'billing-query',
+        credential: { kind: 'secret', name: 'api_key', in: 'query', ...crmKeyHelp },
+      },
       { value: 'billing-key-77a1c2' },
     );
     const inScheme = await connected(
       h,
-      { ...billing, name: 'billing-scheme', credential: { kind: 'secret', name: 'apiKeyAuth', in: 'security' } },
+      {
+        ...billing,
+        name: 'billing-scheme',
+        credential: { kind: 'secret', name: 'apiKeyAuth', in: 'security', ...crmKeyHelp },
+      },
       { value: 'Basic billing-key-77a1c2' },
     );
     const source = sourceOf(h);

@@ -3,6 +3,11 @@ import { Schema } from 'effect';
 
 import { ada, operationNamed, type Harness } from './harness.ts';
 
+export const crmKeyHelp = {
+  instructions: 'Make a key in the CRM under **Settings**, [API keys](https://crm.example.com/settings/keys).',
+  key_page: 'https://crm.example.com/settings/keys',
+} as const;
+
 export const crm = {
   name: 'crm',
   type: 'mcp',
@@ -11,7 +16,7 @@ export const crm = {
     allowed: ['search'],
     playbooks: ['sales'],
   },
-  credential: { kind: 'secret', name: 'Authorization', in: 'header' },
+  credential: { kind: 'secret', name: 'Authorization', in: 'header', ...crmKeyHelp },
 } as const;
 
 export const crmWithTenant = {

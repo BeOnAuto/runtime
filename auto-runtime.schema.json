@@ -771,6 +771,25 @@
                       "maxItems": 16,
                       "description": "For authorization, the error codes beside invalid_grant with which the token endpoint refuses a refresh because the consent has ended, so that the connection is broken rather than failing"
                     },
+                    "instructions": {
+                      "type": "string",
+                      "description": "For secret, how a person makes the key, in Markdown without HTML of at most 1,000 characters: where it is made, the plan or role it needs, the permissions it needs and its format",
+                      "minLength": 1,
+                      "maxLength": 1000
+                    },
+                    "key_page": {
+                      "type": "string",
+                      "description": "For secret, the https address of the page where a person makes the key"
+                    },
+                    "example": {
+                      "type": "string",
+                      "description": "For secret, what a key looks like, with an ellipsis in place of its characters, such as ghp_…, which the field of the key shows",
+                      "maxLength": 100
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "description": "For secret, beside example, the regular expression from ^ to $ every key matches, of at most 200 characters, by which the runtime refuses a value of another format"
+                    },
                     "description": {
                       "type": "string",
                       "minLength": 1

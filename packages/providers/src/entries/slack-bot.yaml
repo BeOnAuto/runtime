@@ -14,4 +14,13 @@ credentials:
   - kind: secret
     in: security
     name: bot_token
-    description: The bot token (xoxb-) of a Slack app installed in your workspace.
+    description: Slack bot token
+    instructions: >-
+      Find the token in your Slack app's settings at [api.slack.com/apps](https://api.slack.com/apps): choose the app,
+      then **OAuth & Permissions**. Under **Bot Token Scopes**, add `channels:read`, `channels:history`, `users:read`,
+      `chat:write`, `reactions:read` and `reactions:write`, and `groups:read` and `groups:history` for private
+      channels. Select **Install to Workspace** and **Allow**, then copy the token under **OAuth Tokens**. It starts
+      with `xoxb-`.
+    key_page: https://api.slack.com/apps
+    example: xoxb-…
+    pattern: ^xoxb-.+$

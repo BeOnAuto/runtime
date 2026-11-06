@@ -48,7 +48,12 @@ const ListedWaySchema = Schema.Struct({
     description:
       'The groups of scopes a later consent of a connection made this way may add to what it holds; empty where it names none',
   }),
-  description: Schema.optionalKey(Schema.String),
+  description: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        "What a person reads of the way; for secret, the short name of the key, the label of the field it is given in, beside the instructions and the key page the connection's credential holds",
+    }),
+  ),
   offered: Schema.Boolean.annotate({ description: 'Whether a person may connect the provider this way here' }),
   because: Schema.optionalKey(
     Schema.String.annotate({
