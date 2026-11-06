@@ -4,15 +4,20 @@ import { Clock, Effect, Option, Result, type Schema } from 'effect';
 import { viewStandingOf, type KeptViewState, type KeptViews } from '../capability/view-standing.ts';
 import { renderClock } from '../template/render-clock.ts';
 import type { SubjectPage } from './page-facts.ts';
+import { glanceShown } from './page-glance.ts';
 import { savedPageIn } from './page-key.ts';
 import {
   runsShown,
   resultShown,
+  latestRunVariables,
+  subjectVariables,
+  viewsOf,
   type ReadMoment,
   type RunShown,
   type SubjectShown,
   type ViewsShown,
 } from './page-rendering.ts';
+import { latestEndedRunOf } from './preview-runs.ts';
 import type { PageOf, PageWrittenIn } from './subject-pages-port.ts';
 
 export type PageWritten = PageWrittenIn | 'carried';
@@ -62,6 +67,7 @@ function viewsShownOf(kept: KeptViewState | undefined): ViewsShown {
 interface PageViewsRead {
   readonly runs?: string;
   readonly standing?: Schema.JsonObject;
+  readonly glance?: Schema.JsonObject;
 }
 
 interface ViewsAsRead {
@@ -86,13 +92,41 @@ function standingOver(placed: PlacedPage, { kept, newestAt }: ViewsAsRead): Page
     : { standing: viewStandingOf(kept?.version ?? placed.page.version, kept, newestAt) };
 }
 
+const glanceOver = Effect.fnUntraced(function* (placed: PlacedPage, { kept, moment }: ViewsAsRead) {
+  const document = documentOf(placed);
+  if (document?.glance === undefined) {
+    return {};
+  }
+  const shown = viewsShownOf(kept);
+  const declared = document.data?.views ?? {};
+  const views = shown.state === 'live' ? viewsOf(shown.views, declared) : viewsOf({}, declared);
+  const ended = yield* Effect.orDie(latestEndedRunOf(placed.subject.type, placed.subject.name));
+  const last = latestRunVariables(ended);
+  const glance = glanceShown(document.glance, {
+    variables: {
+      views,
+      output: last.output,
+      run: last.run,
+      subject: subjectVariables(placed.subject),
+      today: moment.today,
+      now: moment.now,
+    },
+    clock: moment.clock,
+  });
+  return glance === undefined ? {} : { glance };
+});
+
 export const pageViewsOf = Effect.fnUntraced(function* (views: KeptViews, placed: PlacedPage) {
   const read: ViewsAsRead = {
     kept: yield* views.viewOf(placed.place, placed.view),
     newestAt: yield* views.newestRecordAt(placed.place),
     moment: yield* readMoment,
   };
-  const shown: PageViewsRead = { ...runsOver(placed, read), ...standingOver(placed, read) };
+  const shown: PageViewsRead = {
+    ...runsOver(placed, read),
+    ...standingOver(placed, read),
+    ...(yield* glanceOver(placed, read)),
+  };
   return shown;
 });
 

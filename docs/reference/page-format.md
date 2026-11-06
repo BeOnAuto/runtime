@@ -36,7 +36,7 @@ A page is not a function, and it never runs:
 
 ## A page
 
-A page is a YAML mapping of up to three keys: `data`, the views it keeps, and the two templates, `result` and `runs`, written as block scalars. This example is the page of the workflow `morning-social-content`. Each morning the workflow drafts the day's social posts, asks their owner to approve them, and ends with an output such as:
+A page is a YAML mapping of up to four keys: `data`, the views it keeps, the two templates, `result` and `runs`, written as block scalars, and, for a workflow, its [`glance`](#glance). This example is the page of the workflow `morning-social-content`. Each morning the workflow drafts the day's social posts, asks their owner to approve them, and ends with an output such as:
 
 ```json
 {
@@ -276,9 +276,10 @@ Adding the figures instead would count a month twice. Add runs together only whe
 | `data.module`        | Required with `data`; a TypeScript module that exports `fold`; see [The module](#the-module)                                                   |
 | `result`             | Optional; the template of one run; see [The templates](#the-templates)                                                                         |
 | `runs`               | Optional; the template of the runs so far, over the views                                                                                      |
+| `glance`             | Optional, a workflow's alone; what the workflow says about itself in a fixed shape; see [`glance`](#glance)                                    |
 
 - `data` is optional. A page without it has no views and no `runs`.
-- A page has `result`, `runs` or both. Write each as a YAML block scalar, `|`, so that its lines stay as written.
+- A page has `result`, `runs`, `glance` or any of them together. Write each as a YAML block scalar, `|`, so that its lines stay as written.
 - Unknown keys are refused with their line.
 - `page: {}` is no page.
 
@@ -548,6 +549,10 @@ So a run whose request nobody answered in time shows `The run was rejected as un
 | `subject`      | The subject, as `result` reads it. For the playbook, `type` is `playbook`, `name` is the playbook's id, and `description` and `version` are `null` |
 | `today`        | The date of the read, `YYYY-MM-DD`, in UTC                                                                                                         |
 | `now`          | The time of the read, in ISO 8601, in UTC                                                                                                          |
+
+### `glance`
+
+A workflow's page may hold `glance`, a mapping whose strings are templates over `views` and the latest ended run's `output` and `run`: what the workflow says about itself, which Auto Studio shows on its cards. `get_definition` carries it rendered, as `page.glance`. [Glance format](glance-format.md), the `glance` guide, gives its fields.
 
 ### Reading values
 

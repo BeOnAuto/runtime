@@ -35,6 +35,7 @@ export type PageCheck = (
 interface PageViewsShown {
   readonly runs?: string;
   readonly standing?: Schema.JsonObject;
+  readonly glance?: Schema.JsonObject;
 }
 
 export interface PlaybookPageSave {

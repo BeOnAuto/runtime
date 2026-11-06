@@ -35,6 +35,15 @@ const pageAbout: Omit<Guide, 'text'> = {
     'How a workflow, a function or the playbook shows its results, run by run and over time: the page document, its views, templates and bounds.',
 };
 
+const glancePage = 'reference/glance-format.md';
+
+const glanceAbout: Omit<Guide, 'text'> = {
+  name: 'glance',
+  title: 'Glance format',
+  description:
+    "What a workflow says about itself in a fixed shape, its page's glance: its headline, visual and outstanding items.",
+};
+
 interface ServedPages {
   readonly pages: boolean;
 }
@@ -81,7 +90,9 @@ export async function guideShelfFrom(
     ),
     ...(await Promise.all(types.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
     await pageGuideOf(shippedFiles, templatesPage, templatesAbout),
-    ...(pages ? [await pageGuideOf(shippedFiles, pagePage, pageAbout)] : []),
+    ...(pages
+      ? [await pageGuideOf(shippedFiles, pagePage, pageAbout), await pageGuideOf(shippedFiles, glancePage, glanceAbout)]
+      : []),
   ];
   const recipes = await recipesFor(shippedFiles, pageGuides);
   const start = startGuideOf({ definitionTypes, pages, recipes: recipes.map(({ name }) => name) });

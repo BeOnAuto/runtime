@@ -8,7 +8,15 @@ import { documentedJson, documentedRuns, documentedMarkdown, documentedPage, pag
 import { steppingClock, standingRenderClock } from '../testing/time/stepping-clock.ts';
 import { pageIn } from './page-key.ts';
 import { parsePageDocument } from './page-parsing.ts';
-import { runsShown, resultShown, runFailed, viewsBeingBuilt, viewsStalled, type ReadMoment } from './page-rendering.ts';
+import {
+  latestRunVariables,
+  runsShown,
+  resultShown,
+  runFailed,
+  viewsBeingBuilt,
+  viewsStalled,
+  type ReadMoment,
+} from './page-rendering.ts';
 
 const moment: ReadMoment = { today: '2026-11-01', now: '2026-11-01T09:30:00.000Z', clock: standingRenderClock };
 
@@ -201,5 +209,21 @@ describe('runs, as the documented page shows it', () => {
     expect(runsShown(documentedRunsTemplate, { state: 'live', views: {} }, { declared, subject }, stepping)).toBe(
       'Could not display this page’s figures: rendering exceeded 200 ms, on line 51.',
     );
+  });
+});
+
+describe('the latest ended run, as a glance reads it', () => {
+  it('is its output and its status and times, none before it ran, and its status alone where it did not succeed', () => {
+    const ended = { status: 'succeeded' as const, output: { done: 2 }, started: 's', ended: 'e', version: 3 };
+    expect(latestRunVariables(ended)).toEqual({
+      output: { done: 2 },
+      run: { status: 'succeeded', started: 's', ended: 'e', version: 3 },
+    });
+    expect(latestRunVariables()).toEqual({ output: null, run: null });
+    expect(latestRunVariables({ status: 'failed' })).toEqual({ output: null, run: { status: 'failed' } });
+    expect(latestRunVariables({ status: 'rejected', rejection: { reason: 'conflict' } })).toEqual({
+      output: null,
+      run: { status: 'rejected' },
+    });
   });
 });

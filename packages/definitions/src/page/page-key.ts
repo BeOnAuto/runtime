@@ -4,8 +4,9 @@ import { issueAt, reportedIssues, type DocumentIssue } from '../document/documen
 import { keysChecked, type FrontMatterSection } from '../document/front-matter-keys.ts';
 import { sizeIssues } from './page-blocks.ts';
 import { blockIndicator, pageDataOf } from './page-data.ts';
-import type { PageBlock, PageBlocks, PageData, PageDefinitionDocument } from './page-document.ts';
+import type { PageBlock, PageBlocks, PageData, PageDefinitionDocument, ParsedGlance } from './page-document.ts';
 import { PageDataSchema, PageSourceSchema } from './page-front-matter.ts';
+import { glanceOf } from './page-glance.ts';
 import { pageTemplatesOf } from './page-templates.ts';
 import { pageMappingIn, type PageMappingRead, type PageReadAs } from './page-yaml.ts';
 
@@ -17,6 +18,7 @@ const PageMappingSchema = Schema.Struct({
   data: Schema.optionalKey(PageDataSchema),
   result: Schema.optionalKey(Schema.String),
   runs: Schema.optionalKey(Schema.String),
+  glance: Schema.optionalKey(Schema.JsonObject),
 });
 
 type PageMapping = typeof PageMappingSchema.Type;
@@ -34,12 +36,14 @@ const isJsonObject = Schema.is(Schema.JsonObject);
 
 const decodeMapping = Schema.decodeUnknownResult(PageMappingSchema, { errors: 'all' });
 
-const notAMapping = 'page is a mapping of data, result and runs';
+const notAMapping = 'page is a mapping of data, result, runs and glance';
 
 const runsNeedsData =
   'runs renders the views that data keeps, so a page with runs has data, and a page with data has runs';
 
 const playbookHasNoRuns = 'The playbook has no runs of its own, so its page has no result';
+
+const glanceIsAWorkflows = "glance is what a workflow says about itself, so only a workflow's page has one";
 
 interface Reading extends PageMappingRead {
   readonly documentLines: readonly string[];
@@ -58,14 +62,34 @@ function blocksOf({ result, runs }: PageMapping, reading: Reading): PageBlocks {
   };
 }
 
-function pairingIssues({ data, result, runs }: PageMapping, { lines, writtenIn }: Reading): readonly DocumentIssue[] {
+function pairingIssues(
+  { data, result, runs, glance }: PageMapping,
+  { lines, writtenIn }: Reading,
+): readonly DocumentIssue[] {
   const unpaired =
     (data === undefined) === (runs === undefined)
       ? []
       : [issueAt(lines, data === undefined ? '/runs' : '/data', runsNeedsData)];
   const ofThePlaybook =
     writtenIn === 'playbook' && result !== undefined ? [issueAt(lines, '/result', playbookHasNoRuns)] : [];
-  return [...unpaired, ...ofThePlaybook];
+  const notAWorkflows =
+    glance !== undefined && (writtenIn === 'playbook' || writtenIn === 'function')
+      ? [issueAt(lines, '/glance', glanceIsAWorkflows)]
+      : [];
+  return [...unpaired, ...ofThePlaybook, ...notAWorkflows];
+}
+
+function glanceRead(
+  { glance }: PageMapping,
+  { lines }: Reading,
+  views: PageData['views'] | undefined,
+): Checked<Option.Option<ParsedGlance>> {
+  return glance === undefined
+    ? Result.succeedNone
+    : Result.map(
+        glanceOf(glance, { lineAt: (pointer) => issueAt(lines, pointer, '').line, views: views ?? {} }),
+        Option.some,
+      );
 }
 
 function dataOf({ data }: PageMapping, { lines, documentLines }: Reading): Checked<Option.Option<PageData>> {
@@ -88,11 +112,18 @@ function documentOf(mapping: PageMapping, reading: Reading): Checked<PageDefinit
     return Result.fail(issues);
   }
   const read = Option.getOrUndefined(data.success);
-  return Result.map(pageTemplatesOf(blocks, read?.views), (templates) => ({
+  const glance = glanceRead(mapping, reading, read?.views);
+  const templates = pageTemplatesOf(blocks, read?.views);
+  if (Result.isFailure(glance) || Result.isFailure(templates)) {
+    return Result.fail([...issuesOf(() => templates), ...issuesOf(() => glance)]);
+  }
+  const parsed = Option.getOrUndefined(glance.success);
+  return Result.succeed({
     ...(read === undefined ? {} : { data: read }),
+    ...(parsed === undefined ? {} : { glance: parsed }),
     blocks,
-    templates,
-  }));
+    templates: templates.success,
+  });
 }
 
 function mappingRead(reading: Reading): Checked<PageDefinitionDocument | null> {

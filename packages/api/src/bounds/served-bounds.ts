@@ -24,7 +24,7 @@ export const mostGuideBytes = 65_536;
 export const mostRecipeBytes = 6144;
 
 export function mostGuidesBeyondTheRecipes(definitionTypes: number): number {
-  return definitionTypes + 4;
+  return definitionTypes + 5;
 }
 
 export const mostRecipes = 5;

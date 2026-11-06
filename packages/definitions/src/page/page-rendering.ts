@@ -51,7 +51,7 @@ export const viewsOutOfReach = "Could not work out this page's figures as they s
 
 export const runFailed = 'The run failed.';
 
-function subjectVariables({ type, name, description, version }: SubjectShown): Schema.JsonObject {
+export function subjectVariables({ type, name, description, version }: SubjectShown): Schema.JsonObject {
   return { type, name, description, version };
 }
 
@@ -77,7 +77,7 @@ export function resultShown(parsed: ParsedTemplate, run: RunShown, subject: Subj
   return shown(parsed, { variables, clock: moment.clock, stopped: 'Could not display this run:' });
 }
 
-function viewsOf(kept: Schema.Json, declared: PageViews): Schema.JsonObject {
+export function viewsOf(kept: Schema.Json, declared: PageViews): Schema.JsonObject {
   const given = Object.entries(recordOf(kept));
   return Object.fromEntries(
     Object.keys(declared).map((name) => [
@@ -109,4 +109,19 @@ export function runsShown(
     now: moment.now,
   };
   return shown(parsed, { variables, clock: moment.clock, stopped: 'Could not display this page’s figures:' });
+}
+
+/** The latest ended run as a glance reads it: its output where it has one, and its status and times. */
+export function latestRunVariables(run?: RunShown): {
+  readonly output: Schema.Json;
+  readonly run: Schema.Json;
+} {
+  if (run === undefined) {
+    return { output: null, run: null };
+  }
+  if (run.status === 'failed' || run.status === 'rejected') {
+    return { output: null, run: { status: run.status } };
+  }
+  const { status, output, started, ended, version } = run;
+  return { output, run: { status, started, ended, version } };
 }

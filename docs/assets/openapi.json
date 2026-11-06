@@ -11862,6 +11862,10 @@
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
+                        },
                         "standing": {
                           "type": "object",
                           "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
@@ -12695,6 +12699,10 @@
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
+                        },
                         "standing": {
                           "type": "object",
                           "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
@@ -13189,6 +13197,10 @@
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
+                        },
                         "standing": {
                           "type": "object",
                           "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
@@ -13678,6 +13690,10 @@
                         "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
                         },
                         "standing": {
                           "type": "object",
@@ -14274,6 +14290,10 @@
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
+                        },
                         "standing": {
                           "type": "object",
                           "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
@@ -14749,6 +14769,10 @@
                         "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
                         },
                         "standing": {
                           "type": "object",
@@ -15226,6 +15250,10 @@
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
                         },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
+                        },
                         "standing": {
                           "type": "object",
                           "description": "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read"
@@ -15701,6 +15729,10 @@
                         "runs": {
                           "type": "string",
                           "description": "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks"
+                        },
+                        "glance": {
+                          "type": "object",
+                          "description": "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items"
                         },
                         "standing": {
                           "type": "object",
@@ -22929,7 +22961,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: start, terminology, a definition format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), page (Page format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
+            "description": "The guide to read: start, terminology, a definition format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), page (Page format), glance (Glance format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
             "schema": {
               "type": "string",
               "enum": [
@@ -22944,6 +22976,7 @@
                 "workflow",
                 "templates",
                 "page",
+                "glance",
                 "first-playbook",
                 "connect-a-service",
                 "give-tools",

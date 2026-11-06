@@ -28,6 +28,7 @@ deepStrictEqual(pages, [
   ['workflow', true],
   ['templates', true],
   ['page', true],
+  ['glance', true],
   ['connect-a-service', true],
   ['schedule', true],
 ]);

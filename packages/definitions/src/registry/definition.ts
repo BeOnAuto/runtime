@@ -99,6 +99,12 @@ const DefinitionPageSchema = Schema.Struct({
       description: "The definition's runs so far as its page shows them, Markdown with charts as fenced blocks",
     }),
   ),
+  glance: Schema.optionalKey(
+    Schema.JsonObject.annotate({
+      description:
+        "A workflow's glance as its page renders it over its views and its latest ended run: its headline, visual and outstanding items",
+    }),
+  ),
   standing: Schema.optionalKey(
     Schema.JsonObject.annotate({
       description: "How the page's views stand: live, rebuilding, waiting or stalled, and how far they have read",

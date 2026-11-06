@@ -13,7 +13,7 @@ When something in Studio looks wrong, such as a step's prompt, a run that never 
 
 ## 1. Comment where you see it
 
-Every page of Studio has one Edit with agent button, in the top-right corner of the page. Press it, then click the thing you mean: a section of the dashboard, the Ledger, a step in the diagram, an event in a run's history, a block of a run's result, a connection, a member, a card in Settings, or anywhere else on the page. A pin with your initials drops where you clicked, and a field opens under it. Say what should change, as you would to a colleague, such as "Flag any entry over $10,000 for Priya before the week closes." Press Escape to put the pin away without commenting.
+Every page of Studio has one Edit with agent button, in the top-right corner of the page. Press it, then click the thing you mean: a section of a playbook's Overview, the Ledger, a step in the diagram, an event in a run's history, a block of a run's result, a connection, a member, a card in Settings, or anywhere else on the page. A pin with your initials drops where you clicked, and a field opens under it. Say what should change, as you would to a colleague, such as "Flag any entry over $10,000 for Priya before the week closes." Press Escape to put the pin away without commenting.
 
 Where the runtime has a [voice model](../self-host/models.md#a-voice-model), the field has a mic: press it, or hold Alt+V, and speak for up to two minutes. What you said is written into the field, for you to read before you send it.
 

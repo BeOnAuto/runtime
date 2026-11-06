@@ -659,8 +659,9 @@ A workflow's page is the `page` key of its document, written and saved with it. 
 
 - `result`: the business outcome of the run, as a headline and its key figures.
 - `runs`: the main number of each period, with its breakdowns.
+- `glance`: always; how it stands now and what waits on a person, which Auto Studio shows on its cards.
 
-Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
+Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id. [Page format](page-format.md) says how to write `data`, `result`, `runs` and `glance`.
 
 ## How a run ends
 

@@ -18,3 +18,18 @@ export const latestRunOf = Effect.fnUntraced(function* (type: string, name: stri
     Effect.map(Effect.orDie(Effect.flatMap(loadRun(id), (state) => runDetailOf(id, state))), runShownOf),
   ).pipe(Effect.map((shown: readonly RunShown[]) => shown[0]));
 });
+
+const runsLookedThrough = 20;
+
+export const latestEndedRunOf = Effect.fnUntraced(function* (type: string, name: string) {
+  const { records } = yield* (yield* PlaybookReader).readRecorded(streamsOfRuns(type, name), {
+    order: 'desc',
+    limit: runsLookedThrough,
+  });
+  const ended = (yield* listedRunsOf(records)).find(({ status }) => status !== 'started');
+  return ended === undefined
+    ? undefined
+    : runShownOf(
+        yield* Effect.orDie(Effect.flatMap(loadRun(ended.run_id), (state) => runDetailOf(ended.run_id, state))),
+      );
+});

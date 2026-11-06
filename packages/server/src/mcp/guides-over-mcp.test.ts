@@ -41,6 +41,7 @@ const guideNames = [
   'workflow',
   'templates',
   'page',
+  'glance',
   'first-playbook',
   'connect-a-service',
   'give-tools',

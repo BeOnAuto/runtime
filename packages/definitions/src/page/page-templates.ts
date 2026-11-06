@@ -33,7 +33,9 @@ const subject: Readable = {
   words: 'the subject, with type, name, description and version',
 };
 
-const readsOf: Readonly<Record<PageBlockName, Readonly<Record<string, Readable>>>> = {
+type TemplateOf = PageBlockName | 'glance';
+
+const readsOf: Readonly<Record<TemplateOf, Readonly<Record<string, Readable>>>> = {
   result: {
     output: { words: "the run's output" },
     run: {
@@ -50,11 +52,23 @@ const readsOf: Readonly<Record<PageBlockName, Readonly<Record<string, Readable>>
     today: moment('the date, as YYYY-MM-DD'),
     now: moment('the time, in ISO 8601'),
   },
+  glance: {
+    views: { words: 'the views' },
+    output: { words: "the latest ended run's output" },
+    run: {
+      fields: ['status', 'started', 'ended', 'version'],
+      words: 'the latest ended run, with status, started, ended and version',
+    },
+    subject,
+    today: moment('the date, as YYYY-MM-DD'),
+    now: moment('the time, in ISO 8601'),
+  },
 };
 
-const namesInWords: Readonly<Record<PageBlockName, string>> = {
+const namesInWords: Readonly<Record<TemplateOf, string>> = {
   result: 'output, run, subject, today and now',
   runs: 'views, subject, today and now',
+  glance: 'views, output, run, subject, today and now',
 };
 
 const noViews: PageViews = {};
@@ -75,7 +89,7 @@ function viewDetail(field: string, views: PageViews): string | undefined {
     : `views.${field} is not a view that data.views declares; it declares ${declared.join(', ')}`;
 }
 
-function referenceDetail(block: PageBlockName, { path }: VariableReference, views: PageViews): string | undefined {
+function referenceDetail(block: TemplateOf, { path }: VariableReference, views: PageViews): string | undefined {
   const root = String(path[0]);
   const field = path[1];
   const readable = Object.hasOwn(readsOf[block], root) ? readsOf[block][root] : undefined;
@@ -88,7 +102,7 @@ function referenceDetail(block: PageBlockName, { path }: VariableReference, view
   return root === 'views' ? viewDetail(field, views) : fieldDetail(root, field, readable);
 }
 
-function variableIssues(block: PageBlockName, parsed: ParsedTemplate, views: PageViews): readonly DocumentIssue[] {
+function variableIssues(block: TemplateOf, parsed: ParsedTemplate, views: PageViews): readonly DocumentIssue[] {
   return parsed.variables.flatMap((reference) => {
     const detail = referenceDetail(block, reference, views);
     return detail === undefined ? [] : [{ line: reference.line, pointer: '', detail }];
@@ -112,7 +126,12 @@ function rowIssues({ text, line }: PageBlock): readonly DocumentIssue[] {
   return rowRefusalsIn(text.split('\n')).map(({ at, detail }) => ({ line: line + at, pointer: '', detail }));
 }
 
-function templateOf(block: PageBlockName, written: PageBlock, views: PageViews): Checked<ParsedTemplate> {
+function templateOf(
+  block: TemplateOf,
+  written: PageBlock,
+  views: PageViews,
+  more: readonly DocumentIssue[] = [],
+): Checked<ParsedTemplate> {
   const parsing = parsedTemplate(pageEngine, written.text, written.line);
   if (Result.isFailure(parsing)) {
     return Result.fail(
@@ -123,10 +142,13 @@ function templateOf(block: PageBlockName, written: PageBlock, views: PageViews):
   const issues = [
     ...parsed.issues.map(({ line, detail }) => ({ line, pointer: '', detail })),
     ...variableIssues(block, parsed, views),
-    ...chartIssues(written),
-    ...rowIssues(written),
+    ...more,
   ];
   return issues.length > 0 ? Result.fail(issues) : Result.succeed(parsed);
+}
+
+export function glanceTemplateOf(written: PageBlock, views: PageViews): Checked<ParsedTemplate> {
+  return templateOf('glance', written, views);
 }
 
 export function pageTemplatesOf(blocks: PageBlocks, views: PageViews = noViews): Checked<PageTemplates> {
@@ -134,7 +156,10 @@ export function pageTemplatesOf(blocks: PageBlocks, views: PageViews = noViews):
   const templates: Partial<Record<PageBlockName, ParsedTemplate>> = {};
   for (const block of pageBlockNames) {
     const written = blocks[block];
-    const checked = written === undefined ? undefined : templateOf(block, written, views);
+    const checked =
+      written === undefined
+        ? undefined
+        : templateOf(block, written, views, [...chartIssues(written), ...rowIssues(written)]);
     if (checked !== undefined && Result.isFailure(checked)) {
       issues.push(...checked.failure);
     } else if (checked !== undefined) {

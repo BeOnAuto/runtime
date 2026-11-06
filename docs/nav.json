@@ -165,6 +165,10 @@
       {
         "text": "Page format",
         "link": "/reference/page-format"
+      },
+      {
+        "text": "Glance format",
+        "link": "/reference/glance-format"
       }
     ]
   },

@@ -82,20 +82,20 @@ describe('the page of the playbook', () => {
 
 describe('the keys of a page', () => {
   it('are a mapping of data, result and runs, refused otherwise with their line', () => {
-    expect(issuesIn('page: 3\n')).toEqual(['Line 1: page is a mapping of data, result and runs']);
+    expect(issuesIn('page: 3\n')).toEqual(['Line 1: page is a mapping of data, result, runs and glance']);
     expect(issuesIn(workflowWithPage({ more: 'model: openai/gpt-5', result: resultOfTheDay }))).toEqual([
-      'Line 3, /model: model is not a key of the page; it takes data, result, runs',
+      'Line 3, /model: model is not a key of the page; it takes data, result, runs, glance',
     ]);
     expect(issuesIn('page:\n  result: 3\n')).toEqual(['Line 2, /result: Expected string']);
   });
 
   it('name where an unknown key sits: the page, the page in the front matter of a function, or the page’s data', () => {
     expect(issuesIn(functionWithPage({ more: 'title: Posts', result: resultOfTheDay }), 'function')).toEqual([
-      'Line 4, /title: title is not a key of the page in the front matter; it takes data, result, runs',
+      'Line 4, /title: title is not a key of the page in the front matter; it takes data, result, runs, glance',
     ]);
     expect(
       issuesIn(pageMappingOf({ more: 'title: Posts', runs: runsOfTheDayChart, data: pageData() }), 'playbook'),
-    ).toEqual(['Line 1, /title: title is not a key of the page; it takes data, result, runs']);
+    ).toEqual(['Line 1, /title: title is not a key of the page; it takes data, result, runs, glance']);
     expect(
       issuesIn(workflowWithData().replace('  language: typescript', '  language: typescript\n    shape: series')),
     ).toEqual(["Line 5, /data/shape: shape is not a key of the page's data; it takes language, source, views, module"]);
@@ -142,5 +142,48 @@ describe('a page as it was saved', () => {
     expect(Option.getOrUndefined(Result.getOrThrow(savedPageIn(source, 'workflow')))?.blocks).toEqual(
       read(source)?.blocks,
     );
+  });
+});
+
+describe('the glance of a page', () => {
+  const glance = [
+    'page:',
+    '  result: "{{ output.date }}"',
+    '  glance:',
+    '    headline: "{{ output.date }} drafted"',
+    '    outstanding: []',
+  ].join('\n');
+
+  it('is a workflow’s, its strings read as templates', () => {
+    const page = read(glance);
+    expect(page?.glance).toMatchObject({
+      kind: 'mapping',
+      entries: [
+        ['headline', { kind: 'text' }],
+        ['outstanding', { kind: 'list' }],
+      ],
+    });
+    expect(
+      Option.getOrUndefined(Result.getOrThrow(savedPageIn('glance:\n  headline: Quiet.\n', 'mapping')))?.glance,
+    ).toMatchObject({
+      kind: 'mapping',
+    });
+  });
+
+  it('is refused on a function’s page and on the playbook’s', () => {
+    expect(issuesIn(`---\n${glance}\n---\nHello`, 'function')).toEqual([
+      expect.stringContaining("only a workflow's page has one"),
+    ]);
+    expect(issuesIn('glance:\n  headline: Quiet.\n', 'playbook')).toEqual([
+      expect.stringContaining("only a workflow's page has one"),
+    ]);
+  });
+
+  it('is refused where it is not a mapping, and with its template’s line where a template reads what it lacks', () => {
+    expect(issuesIn('page:\n  glance: Quiet\n')).toEqual([expect.stringMatching(/^Line 2, \/glance: /u)]);
+    expect(issuesIn('page:\n  result: "{{ nope }}"\n  glance:\n    headline: "{{ input.x }}"\n')).toEqual([
+      expect.stringMatching(/^Line 2: nope is not a variable of result/u),
+      expect.stringMatching(/^Line 4, \/glance\/headline: input is not a variable of glance/u),
+    ]);
   });
 });
