@@ -2,9 +2,8 @@ import type { Conflict } from '@on.auto/operations';
 import { Clock, Effect } from 'effect';
 
 import type { ModelCallJob, PerformJob, ToolCallAnswer, ToolCallJob } from '../jobs/jobs.ts';
-import { approvedSendingOf } from './approved-calls.ts';
 import { modelCallBegun, modelCallEnded, settledOf, type ModelCallSettled } from './model-steps.ts';
-import type { ApprovedCallNext, ToolCallsNext } from './step-decision.ts';
+import type { ToolCallsNext } from './step-decision.ts';
 import { decided, type StepsEnding } from './step-loop.ts';
 import { interruptedOn, type StepCancelled, type StepRecording, type StepRefusal } from './step-run.ts';
 import type { StepState } from './step-state.ts';
@@ -28,13 +27,13 @@ function endedOn(run: StepRecording, state: StepState, ending: StepsEnding): Eff
   return Effect.map(interruptedOn(run, state), (after) => ({ state: after, jobs: [], ending }));
 }
 
-function toolJobsOf(run: StepRecording, state: StepState, { calls, ...sending }: ToolCallsNext) {
+function toolJobsOf(run: StepRecording, state: StepState, { calls, room }: ToolCallsNext) {
   return Effect.flatMap(interruptedOn(run, state), (open) =>
     Effect.reduce(
       calls,
       (): StepJobs => ({ state: open, jobs: [], ending: null }),
       (begun, call) =>
-        Effect.map(toolCallBegun(run, begun.state, call, sending), ({ state: after, number, job }) => ({
+        Effect.map(toolCallBegun(run, begun.state, call, room), ({ state: after, number, job }) => ({
           ...begun,
           state: after,
           jobs: [...begun.jobs, { type: 'tool_call' as const, number, job }],
@@ -49,34 +48,19 @@ function cancelledInto(effect: Effect.Effect<StepJobs, StepRefusal>): Effect.Eff
   );
 }
 
-function approvedJobsOf(
-  run: StepRecording,
-  state: StepState,
-  next: ApprovedCallNext,
-): Effect.Effect<StepJobs, StepRefusal> {
-  return Effect.flatMap(approvedSendingOf(run, state, next), (sending) =>
-    sending.type === 'answered' ? jobsDecided(run, sending.state) : toolJobsOf(run, state, sending.next),
-  );
-}
-
-function jobsDecided(run: StepRecording, state: StepState): Effect.Effect<StepJobs, StepRefusal> {
-  return Effect.flatMap(decided(run, state), (next) => {
-    if (next.type === 'model_call') {
-      return Effect.map(modelCallBegun(run, state, next), ({ state: after, job }) => ({
-        state: after,
-        jobs: [{ type: 'model_call' as const, job }],
-        ending: null,
-      }));
-    }
-    if (next.type === 'approved_call') {
-      return approvedJobsOf(run, state, next);
-    }
-    return next.type === 'tool_calls' ? toolJobsOf(run, state, next) : endedOn(run, state, next);
-  });
-}
-
 export function jobsOf(run: StepRecording, state: StepState): Effect.Effect<StepJobs, Conflict> {
-  return cancelledInto(jobsDecided(run, state));
+  return cancelledInto(
+    Effect.flatMap(decided(run, state), (next) => {
+      if (next.type === 'model_call') {
+        return Effect.map(modelCallBegun(run, state, next), ({ state: after, job }) => ({
+          state: after,
+          jobs: [{ type: 'model_call' as const, job }],
+          ending: null,
+        }));
+      }
+      return next.type === 'tool_calls' ? toolJobsOf(run, state, next) : endedOn(run, state, next);
+    }),
+  );
 }
 
 export function performedJob(perform: PerformJob, step: StepJob): Effect.Effect<JobAnswer> {

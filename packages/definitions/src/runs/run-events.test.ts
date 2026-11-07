@@ -192,6 +192,35 @@ const actingForAPerson: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
+const approvalAsked = {
+  request: 'approval-1',
+  tool: 'browser_click',
+  digest: 'sha256-of-the-arguments',
+  action: 'Click "Pay now"',
+  expires_at: '2026-11-05T10:05:00.000Z',
+  site: 'shop.example',
+};
+
+const askedToApproveAnAction: readonly (typeof RunEventSchema.Type)[] = [
+  {
+    type: 'run_deferred',
+    data: {
+      record: {
+        to: 'person:user_7kLm2',
+        answerer: 'person:user_7kLm2',
+        message: 'qualify-lead needs your approval for this action, through the browser_click tool of browser',
+        answer_schema: { type: 'object', properties: { approved: { type: 'boolean' } }, required: ['approved'] },
+        expires_at: approvalAsked.expires_at,
+        requested_at: '2026-11-05T10:00:00.000Z',
+        approval: { server: 'browser', tool: 'browser_click', action: approvalAsked.action, site: approvalAsked.site },
+        call: { number: 2, call_id: 'toolu_1', last_call: 3, last_model_call: 1, asked: approvalAsked },
+        spent: { usage: { total: 120 }, duration_ms: 900 },
+      },
+    },
+    context: { ...onTheRun, at: '2026-11-05T10:00:00.000Z' },
+  },
+];
+
 const answeredInEachMode: readonly (typeof RunEventSchema.Type)[] = [
   {
     type: 'model_call_answered',
@@ -248,6 +277,9 @@ describe('the facts a playbook records on the stream of a run', () => {
   recordedFactsBehaviour({
     schema: RunEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.57.0': [...actingForAPerson, ...answeredInEachMode] },
+    releases: {
+      '0.46.0': baseline,
+      '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...answeredInEachMode],
+    },
   });
 });

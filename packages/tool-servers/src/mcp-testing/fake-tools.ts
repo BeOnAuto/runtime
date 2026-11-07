@@ -27,7 +27,6 @@ export interface FakeToolState {
 interface Answering {
   readonly signal: Readonly<AbortSignal>;
   readonly state: FakeToolState;
-  readonly meta?: unknown;
 }
 
 type Answer = (input: unknown, answering: Answering) => CallToolResult | Promise<CallToolResult>;
@@ -290,7 +289,7 @@ export function fakeToolServer(state: FakeToolState): McpServer {
       throw new ProtocolError(ProtocolErrorCode.InvalidParams, `Tool ${params.name} not found`);
     }
     const number = state.receive({ tool: tool.name, arguments: params.arguments, meta: params[metaField] });
-    const answer = await tool.answer(params.arguments, { signal: mcpReq.signal, state, meta: params[metaField] });
+    const answer = await tool.answer(params.arguments, { signal: mcpReq.signal, state });
     return { ...answer, [metaField]: { ...answer[metaField], [fakeRequestIdKey]: `call-${number}` } };
   });
   return mcp;

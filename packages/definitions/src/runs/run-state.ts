@@ -2,7 +2,6 @@ import type { CalledBy, RecordedCaller, RunContext, StartingTrigger } from '@on.
 import type { Schema } from 'effect';
 
 import { numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
-import { hasExpiredBy } from '../requests/request-record.ts';
 import { firstAttempt, type RunResult, type RunSettlement } from './run-commands.ts';
 import type { CancelRequestKind, RecordedRunEvent, RecordedRunFact, ReplyIdentity } from './run-events.ts';
 import type { RunRecord } from './run.ts';
@@ -207,10 +206,10 @@ function evolveStarted(state: RecordedRunState, event: RecordedAfterTheStart): R
     return { ...state, cancel: { kind, reason, by: event.context.by } };
   }
   if (event.type === 'run_deferred') {
-    return { ...state, deferred: true, record: event.data.record, answer: null };
+    return { ...state, deferred: true, record: event.data.record };
   }
   if (event.type === 'attempt_resumed') {
-    return { ...state, attempt: event.data.attempt, deferred: false };
+    return { ...state, attempt: event.data.attempt };
   }
   return event.type === 'run_succeeded' || event.type === 'run_rejected' || event.type === 'run_failed'
     ? finishedRun(state, event)
@@ -249,11 +248,6 @@ export function unansweredThoughAnswered({ answer }: RecordedRunState, { result 
 
 export function awaitsSettlement({ run, deferred }: RecordedRunState): boolean {
   return run.status === 'started' && deferred;
-}
-
-export function goesOnAfterItsRequest(state: RecordedRunState, now: number): boolean {
-  const { resumes, answer, record, cancel } = state;
-  return resumes && cancel === undefined && awaitsSettlement(state) && (answer !== null || hasExpiredBy(record, now));
 }
 
 export function takesSettlement({ run, finishesLater, deferred }: RecordedRunState): boolean {

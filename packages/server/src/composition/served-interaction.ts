@@ -7,24 +7,18 @@ import {
   makeInteractionFunctionAdapter,
   openRequestsName,
   requestsDue,
-  runsGoingOn,
   type RequestsDue,
-  type RunsGoingOn,
 } from '@on.auto/interaction';
 import type { DispatcherServices } from '@on.auto/operations';
 import type { ToolAccess } from '@on.auto/tool-servers';
 
 import type { Settings } from '../settings/settings.ts';
-import { goingOnIn } from './going-on.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
 
 export interface ServedInteraction {
   readonly capability: Capability;
   readonly operations: readonly PlaybookOperation[];
-  readonly dueWorkOf: (
-    record: RecordWork,
-    capabilities: readonly Capability[],
-  ) => readonly (RequestsDue | RunsGoingOn)[];
+  readonly dueWorkOf: (record: RecordWork) => readonly RequestsDue[];
 }
 
 export function interactionServedBy(
@@ -41,10 +35,6 @@ export function interactionServedBy(
       mostOpenRequests: interaction.mostOpenRequests,
     }),
     operations: [answerInteraction, listInteractions],
-    dueWorkOf: (record, capabilities) => [
-      requestsDue({ ledger, tools, record }),
-      conversationsDue({ ledger, tools, record }),
-      runsGoingOn({ ledger, goOn: goingOnIn(runtime, capabilities) }),
-    ],
+    dueWorkOf: (record) => [requestsDue({ ledger, tools, record }), conversationsDue({ ledger, tools, record })],
   };
 }

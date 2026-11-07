@@ -27,7 +27,6 @@ export type { CallSignals, ToolCallRequest } from './calls/run-parts.ts';
 export type { RunTools, ToolsEnding } from './calls/run-tools.ts';
 export type { OfferedTool } from './calls/offered-tools.ts';
 export type { SentReply, ToolSending } from './calls/tool-caller.ts';
-export { confirmationNeededKey, type AskedApproval } from './calls/asked-approvals.ts';
 export type { AnsweredFields, StartedFields } from './calls/recorded-calls.ts';
 export type { AnsweredOnce, CallAnswer, CalledOnce, UnopenedOnce } from './one-call/called-once.ts';
 export type { OneCall, RunCall } from './one-call/one-call.ts';

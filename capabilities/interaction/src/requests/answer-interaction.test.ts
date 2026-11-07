@@ -55,7 +55,6 @@ const interaction = {
   reply_refusals: 0,
   standing: 'held_for_an_agent',
   sign_in: null,
-  approval: null,
 };
 
 const refused = { ...interaction, conversation: 'C0123/1699.1', answerer: 'U024BE7LH', reply_refusals: 2 };

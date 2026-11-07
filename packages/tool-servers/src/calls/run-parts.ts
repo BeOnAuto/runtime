@@ -23,7 +23,6 @@ export interface ToolCallRequest {
   readonly callId: string;
   readonly input: Readonly<Record<string, unknown>>;
   readonly room?: number;
-  readonly approval?: string;
 }
 
 export interface CallSignals {

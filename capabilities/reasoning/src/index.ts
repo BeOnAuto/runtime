@@ -28,7 +28,6 @@ export { TimedOut } from './failure/timed-out.ts';
 export type { ToolsStoppedBecause } from './tools/tool-endings.ts';
 export { LanguageModel } from './model/language-model.ts';
 export { makeReasoningFunctionAdapter, type ReasoningFunctionAdapterOptions } from './capability/reasoning-function.ts';
-export type { ApprovalPorts, ApprovedCall, SignApproval } from './capability/run-services.ts';
 export { stepRecordingOf } from './capability/steps-run.ts';
 export { beforeTheSteps, restartedWithoutContent, type BeforeTheSteps } from './capability/before-the-steps.ts';
 export { promptOfTheAttempt, type PromptOf, type PromptSources } from './capability/attempt-prompt.ts';

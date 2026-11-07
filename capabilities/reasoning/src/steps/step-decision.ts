@@ -1,7 +1,6 @@
 import { callsEnded } from '@on.auto/tool-servers/policy';
-import type { Effect, Schema } from 'effect';
+import type { Schema } from 'effect';
 
-import type { ApprovedApproval, PendingApproval, Waiting } from '../approvals/pending-approvals.ts';
 import { finalStepMessages } from '../tools/final-step.ts';
 import type { ToolsStoppedBecause } from '../tools/tool-endings.ts';
 import { leavesNoNextTurn, roomOfEachAnswer, type TurnLimits } from '../tools/turn-meter.ts';
@@ -9,11 +8,6 @@ import { isAnswered, resultsMessage, unsent, type AdmittedCall, type Asking } fr
 import { openModelCallOf, type FactData } from './attempt-facts.ts';
 import { promptMessages, type StepMessages } from './step-messages.ts';
 import type { StepEnding, StepState } from './step-state.ts';
-
-export interface ApprovalSteps {
-  readonly waiting: Waiting;
-  readonly signed: (approval: ApprovedApproval, call: AdmittedCall) => Effect.Effect<string | undefined>;
-}
 
 export interface StepBounds {
   readonly runBoundMs: number;
@@ -42,17 +36,6 @@ export interface ToolCallsNext {
   readonly type: 'tool_calls';
   readonly calls: readonly AdmittedCall[];
   readonly room: number | undefined;
-  readonly approval?: string;
-}
-
-export interface ApprovedCallNext {
-  readonly type: 'approved_call';
-  readonly approval: ApprovedApproval;
-}
-
-interface ApprovalNext {
-  readonly type: 'approval';
-  readonly approval: PendingApproval;
 }
 
 type FailedData = FactData<'model_call_failed'>;
@@ -64,8 +47,6 @@ export type FailedCall = Omit<FailedData, 'because'> & {
 export type NextStep =
   | ModelCallNext
   | ToolCallsNext
-  | ApprovedCallNext
-  | ApprovalNext
   | Extract<StepEnding, { readonly type: 'answered' }>
   | { readonly type: 'failed'; readonly data: FailedCall }
   | { readonly type: 'stopped'; readonly because: ToolsStoppedBecause; readonly detail: string }
@@ -130,21 +111,6 @@ function nextModelCall(state: StepState, { bounds, fence }: Deciding): ModelCall
     : { type: 'model_call', sent: { kind: 'results', messages }, final, remade: null };
 }
 
-function approvalStepOf({ approval, asking, facts }: StepState): ApprovedCallNext | ApprovalNext | undefined {
-  const stepEnded = openModelCallOf(facts) === null && asking.open.length === 0 && isAnswered(asking);
-  if (approval === null || !stepEnded) {
-    return undefined;
-  }
-  const { approvedAt } = approval;
-  return approvedAt === null
-    ? { type: 'approval', approval }
-    : { type: 'approved_call', approval: { ...approval, approvedAt } };
-}
-
-function stoppedOrWaitingIn(state: StepState, deciding: Deciding): NextStep | undefined {
-  return stoppedBy(state, deciding) ?? approvalStepOf(state);
-}
-
 export function nextStep(state: StepState, deciding: Deciding): NextStep {
   if (state.ending?.type === 'answered') {
     return state.ending;
@@ -155,9 +121,9 @@ export function nextStep(state: StepState, deciding: Deciding): NextStep {
   if (state.ending !== null) {
     return endingOf(state.ending);
   }
-  const beforeTheCalls = stoppedOrWaitingIn(state, deciding);
-  if (beforeTheCalls !== undefined) {
-    return beforeTheCalls;
+  const stopped = stoppedBy(state, deciding);
+  if (stopped !== undefined) {
+    return stopped;
   }
   return openModelCallOf(state.facts) === null && (!isAnswered(state.asking) || state.asking.open.length > 0)
     ? toolCallsOf(state, state.asking, deciding.bounds)

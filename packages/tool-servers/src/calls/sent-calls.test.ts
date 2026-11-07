@@ -3,6 +3,7 @@ import { Effect, Option } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { defaultTiming } from '../bounds/call-bounds.ts';
+import type { FakeTool } from '../mcp-testing/fake-tools.ts';
 import { fakeApiKey, openFakeToolRun, type FakeToolRun } from '../testing/fake-tool-run.ts';
 import { until } from '../testing/until.ts';
 import type { CallAnswered, CallEnded, CallFailed } from './call-facts.ts';
@@ -78,6 +79,31 @@ describe('a call a run sends itself', () => {
     expect(cut.ended).toMatchObject({ type: 'tool_call_answered', data: { shown_bytes: 460 } });
     expect(cut.reply.text).toContain('[The answer was cut to 460 of its');
     expect(run.journal.facts()).toEqual([]);
+  });
+});
+
+describe('a call a run sends itself that its tool refuses', () => {
+  it('answers a tool error the model reads, whatever structured content and metadata the result holds', async () => {
+    const refusing: FakeTool = {
+      name: 'click',
+      inputSchema: { type: 'object', properties: {}, required: [] },
+      answer: () => ({
+        isError: true,
+        content: [{ type: 'text', text: '### Refused\nClick "Pay now" may pay. Nothing was done.\n' }],
+        structuredContent: { refused: { kind: 'pay', action: 'Click "Pay now"' } },
+        _meta: { 'com.example/held': { request: 'r-1', expires_at: '2026-11-05T10:05:00.000Z' } },
+      }),
+    };
+    const run = await openFakeToolRun(['click'], defaultTiming, { tools: [refusing] });
+    closing.push(run.close);
+
+    const refused = await offeredIn(run, 'click').send({ callId: 'toolu_1', input: {} }, unstopped);
+
+    expect(refused).toMatchObject({ ended: { type: 'tool_call_answered', data: { is_error: true } } });
+    expect([Object.keys(refused), refused.reply]).toEqual([
+      ['ended', 'reply'],
+      { text: '### Refused\nClick "Pay now" may pay. Nothing was done.\n', isError: true },
+    ]);
   });
 });
 

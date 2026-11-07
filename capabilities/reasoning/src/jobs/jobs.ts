@@ -1,5 +1,5 @@
 import type { OutputShapeName } from '@on.auto/definitions';
-import type { AskedApproval, CallEnded } from '@on.auto/tool-servers';
+import type { CallEnded } from '@on.auto/tool-servers';
 import type { ToolReply } from '@on.auto/tool-servers/policy';
 import type { Effect, Schema } from 'effect';
 
@@ -27,13 +27,11 @@ export interface ToolCallJob {
   readonly server: string;
   readonly input: Readonly<Record<string, unknown>>;
   readonly room?: number;
-  readonly approval?: string;
 }
 
 export interface ToolCallAnswer {
   readonly ended: CallEnded;
   readonly reply: ToolReply;
-  readonly asked?: AskedApproval;
 }
 
 export interface PerformJob {

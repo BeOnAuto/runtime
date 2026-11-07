@@ -3,7 +3,6 @@ export { conversations, conversationsName } from './conversations/conversation-r
 export { conversationsDue } from './conversations/conversations-due.ts';
 export type { InteractionFunctionDefinitionDocument } from './document/interaction-document.ts';
 export { requestsDue, type RequestsDue } from './schedule/due-requests.ts';
-export { runsGoingOn, type GoOn, type RunsGoingOn } from './schedule/runs-going-on.ts';
 export type { DeliveryParts } from './schedule/delivery-parts.ts';
 export type { RequestLedger } from './schedule/request-ledger.ts';
 export { makeInteractionFunctionAdapter } from './capability/interaction-function.ts';

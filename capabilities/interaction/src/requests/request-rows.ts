@@ -1,4 +1,4 @@
-import { ApprovalRecordSchema, SignInRecordSchema, type SignInRecord } from '@on.auto/definitions';
+import { SignInRecordSchema, type SignInRecord } from '@on.auto/definitions';
 import type { ProjectedRow } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
@@ -44,8 +44,6 @@ const OpenRequestRowSchema = Schema.Struct({
   reply_refusals: Schema.Int,
   refusals_told: Schema.Int,
   sign_in: Schema.NullOr(Schema.String),
-  approval: Schema.NullOr(Schema.String),
-  go_on_due_at: Schema.NullOr(Schema.Int),
 });
 
 export type OpenRequestRow = typeof OpenRequestRowSchema.Type;
@@ -75,7 +73,7 @@ export function endsUndelivered(row: Settling): boolean {
   return isInteractionNotification(row) && row.standing === 'undelivered';
 }
 
-export type UndueRequestRow = Omit<OpenRequestRow, 'attempt_due_at' | 'ending_due_at' | 'go_on_due_at'>;
+export type UndueRequestRow = Omit<OpenRequestRow, 'attempt_due_at' | 'ending_due_at'>;
 
 function settlesNow(row: UndueRequestRow): boolean {
   return settlementDueOf(row) !== undefined || endsUndelivered(row);
@@ -90,19 +88,8 @@ export function attemptDueAtOf(row: UndueRequestRow): number | null {
   return row.open && awaitsThePlaybook(row) && awaitsAttempt ? row.next_attempt_at : null;
 }
 
-function goesOnAfterIt({ approval }: Pick<UndueRequestRow, 'approval'>): boolean {
-  return approval !== null;
-}
-
-export function goOnDueAtOf(row: UndueRequestRow): number | null {
-  if (!goesOnAfterIt(row) || !awaitsThePlaybook(row)) {
-    return null;
-  }
-  return row.standing === 'answered' ? row.requested_at : row.expires_at;
-}
-
 export function endingDueAtOf(row: UndueRequestRow): number | null {
-  if (!awaitsThePlaybook(row) || goesOnAfterIt(row)) {
+  if (!awaitsThePlaybook(row)) {
     return null;
   }
   if (settlesNow(row)) {
@@ -132,12 +119,6 @@ const decodeSignIn = Schema.decodeUnknownSync(Schema.NullOr(Schema.fromJsonStrin
 
 export function signInOfRow({ sign_in: signIn }: Pick<OpenRequestRow, 'sign_in'>): SignInRecord | null {
   return decodeSignIn(signIn);
-}
-
-const decodeApproval = Schema.decodeUnknownSync(Schema.NullOr(Schema.fromJsonString(ApprovalRecordSchema)));
-
-export function approvalOfRow({ approval }: Pick<OpenRequestRow, 'approval'>): typeof ApprovalRecordSchema.Type | null {
-  return decodeApproval(approval);
 }
 
 export function routeOfRow({ delivery }: Pick<OpenRequestRow, 'delivery'>): Route {

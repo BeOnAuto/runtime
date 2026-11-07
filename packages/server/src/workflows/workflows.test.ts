@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { longestCallOf } from './workflows.ts';
 
 describe('the longest a nested run of a workflow may run', () => {
-  it('is as long as its capability states, 1660 s for reasoning and 1800 s more for three waits for an approval, and a minute more', () => {
+  it('is as long as its capability states, 1660 s for reasoning, and a minute more', () => {
     const reasoning = makeReasoningFunctionAdapter({
       languageModel: scriptedLanguageModel().languageModel,
       offered: { providers: [], aliases: [] },
@@ -15,7 +15,7 @@ describe('the longest a nested run of a workflow may run', () => {
       content: memoryRecordedContent(),
     });
 
-    expect(longestCallOf([reasoning])).toBe(3_520_000);
+    expect(longestCallOf([reasoning])).toBe(1_720_000);
   });
 
   it('is the longest any capability states, and a minute more', () => {

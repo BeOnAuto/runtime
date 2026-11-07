@@ -1,0 +1,57 @@
+{
+  "type": "run_deferred",
+  "data": {
+    "record": {
+      "to": "person:user_7kLm2",
+      "answerer": "person:user_7kLm2",
+      "message": "qualify-lead needs your approval for this action, through the browser_click tool of browser",
+      "answer_schema": {
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "approved"
+        ]
+      },
+      "expires_at": "2026-11-05T10:05:00.000Z",
+      "requested_at": "2026-11-05T10:00:00.000Z",
+      "approval": {
+        "server": "browser",
+        "tool": "browser_click",
+        "action": "Click \"Pay now\"",
+        "site": "shop.example"
+      },
+      "call": {
+        "number": 2,
+        "call_id": "toolu_1",
+        "last_call": 3,
+        "last_model_call": 1,
+        "asked": {
+          "request": "approval-1",
+          "tool": "browser_click",
+          "digest": "sha256-of-the-arguments",
+          "action": "Click \"Pay now\"",
+          "expires_at": "2026-11-05T10:05:00.000Z",
+          "site": "shop.example"
+        }
+      },
+      "spent": {
+        "usage": {
+          "total": 120
+        },
+        "duration_ms": 900
+      }
+    }
+  },
+  "context": {
+    "at": "2026-11-05T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "reasoning",
+    "definitionName": "qualify-lead",
+    "definitionVersion": 2
+  }
+}

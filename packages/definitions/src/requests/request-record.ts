@@ -8,7 +8,7 @@ export const SignInRecordSchema = Schema.Struct({
 
 export type SignInRecord = typeof SignInRecordSchema.Type;
 
-export const ApprovalRecordSchema = Schema.Struct({
+const ApprovalRecordSchema = Schema.Struct({
   server: Schema.String,
   tool: Schema.String,
   action: Schema.String,
@@ -36,8 +36,4 @@ export const isRequestRecord: (record: unknown) => record is RequestRecord = Sch
 
 export function takesAnAnswer(record: unknown): boolean {
   return isRequestRecord(record) && record.answer_schema !== undefined;
-}
-
-export function hasExpiredBy(record: unknown, now: number): boolean {
-  return isRequestRecord(record) && Date.parse(record.expires_at) <= now;
 }

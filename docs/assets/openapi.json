@@ -1770,45 +1770,6 @@
                           ],
                           "description": "For needs_you of a request that asks a person to sign in to a site, the site and the link where they sign in; otherwise null"
                         },
-                        "approval": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "server": {
-                                  "type": "string",
-                                  "description": "The server the run calls to take the action"
-                                },
-                                "tool": {
-                                  "type": "string",
-                                  "description": "The tool of the call, as the server names it"
-                                },
-                                "action": {
-                                  "type": "string",
-                                  "description": "The action in words, as the server wrote it"
-                                },
-                                "site": {
-                                  "type": "string",
-                                  "description": "The site the action is on, where the server names it"
-                                },
-                                "kind": {
-                                  "type": "string",
-                                  "description": "The kind of action, such as pay or send, where the server names it"
-                                }
-                              },
-                              "required": [
-                                "server",
-                                "tool",
-                                "action"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "For needs_you of a request that asks a person to approve an action a run is about to take, the action; otherwise null"
-                        },
                         "seen": {
                           "anyOf": [
                             {
@@ -1842,7 +1803,6 @@
                         "expires_at",
                         "about",
                         "sign_in",
-                        "approval",
                         "seen"
                       ],
                       "additionalProperties": false,
@@ -23133,40 +23093,6 @@
                             }
                           ],
                           "description": "For a request that asks a person to sign in to a site, its server, the site and the link where they sign in; null otherwise"
-                        },
-                        "approval": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "server": {
-                                  "type": "string"
-                                },
-                                "tool": {
-                                  "type": "string"
-                                },
-                                "action": {
-                                  "type": "string"
-                                },
-                                "site": {
-                                  "type": "string"
-                                },
-                                "kind": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "server",
-                                "tool",
-                                "action"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "For a request that asks a person to approve an action a run is about to take, the server and the tool of the call, the action in words, and the site and the kind of action where the server names them; null otherwise"
                         }
                       },
                       "required": [
@@ -23186,8 +23112,7 @@
                         "answerer",
                         "reply_refusals",
                         "standing",
-                        "sign_in",
-                        "approval"
+                        "sign_in"
                       ],
                       "additionalProperties": false,
                       "description": "An open request of a function"

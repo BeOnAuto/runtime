@@ -42,7 +42,6 @@ function changeOf(fact: PlaybookFact): ActivityRow | undefined {
     expires_at: null,
     about: null,
     sign_in: null,
-    approval: null,
   };
 }
 

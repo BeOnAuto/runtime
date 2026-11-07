@@ -1,28 +1,22 @@
 import { RunCancelled } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 
-import type { PendingApproval } from '../approvals/pending-approvals.ts';
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
 import type { ToolDefinition } from '../model/model-request.ts';
 import type { Stepped } from '../steps/step-loop.ts';
 import { answerOfTheSteps, type StepsAnswer } from '../steps/steps-answer.ts';
-import { stoppedEnding, unfinishedAfter, type Spent } from '../tools/tool-endings.ts';
+import { stoppedEnding, unfinishedAfter } from '../tools/tool-endings.ts';
 import { afterTheFacts, restartedWithoutContent } from './before-the-steps.ts';
 import { recordedRejection, type DefinitionRejection, type RejectionContext } from './model-rejection.ts';
 
 const outcomeUnknown =
   'The server restarted while the run called a tool that may change something, so whether that call did is not known';
 
-export interface Waits {
-  readonly waits: PendingApproval;
-  readonly spent: Spent;
-}
-
 export function stepsAnswerOf(
   definition: ReasoningFunctionDefinitionDocument,
   { state, ending }: Stepped,
   tools: readonly ToolDefinition[],
-): Effect.Effect<StepsAnswer | Waits, DefinitionRejection> {
+): Effect.Effect<StepsAnswer, DefinitionRejection> {
   const { use, spent } = afterTheFacts(state.facts, state.serversEnded);
   const context: RejectionContext = {
     maxOutputTokens: definition.settings.max_output_tokens,
@@ -42,9 +36,6 @@ export function stepsAnswerOf(
   }
   if (ending.type === 'failed') {
     return recordedRejection(ending.data, context);
-  }
-  if (ending.type === 'approval') {
-    return Effect.succeed({ waits: ending.approval, spent });
   }
   if (ending.type === 'stopped') {
     return stoppedEnding(use, ending, spent);

@@ -217,13 +217,6 @@ export function failedIn(asking: Asking, failed: FactData<'tool_call_failed'>, r
   return endedIn(asking, failed.number, ({ server }) => reply ?? failureReply(failed, server));
 }
 
-export function resolvedIn(asking: Asking, callId: string, reply: ToolReply): Asking {
-  const resolved = asking.asked
-    .filter((call) => call.callId === callId)
-    .map((call): readonly [string, Schema.JsonObject] => [callId, resultPart(call, reply)]);
-  return { ...asking, results: new Map([...asking.results, ...resolved]) };
-}
-
 export function interruptedIn(asking: Asking, number: number): Asking {
   return { ...asking, open: asking.open.filter((open) => open.number !== number) };
 }

@@ -50,7 +50,6 @@ function commentOf(playbook: string, id: string, columns: CommentColumns): Activ
     expires_at: null,
     about: columns.address,
     sign_in: null,
-    approval: null,
     ...(columns.reopened_by === null ? {} : { reopenedBy: columns.reopened_by }),
   };
 }

@@ -58,7 +58,7 @@ export async function functionsServedBy(
       ],
       playbookOperations: [...toolOperations.inPlaybook, ...interaction.operations, ...operations],
       capabilityOperations: [generation],
-      dueWork: [...interaction.dueWorkOf(record, capabilities), ...dueWork, ...generation.dueWork],
+      dueWork: [...interaction.dueWorkOf(record), ...dueWork, ...generation.dueWork],
       store: projections.store,
       projector: projections.projector,
       evaluations: computation.pool.evaluations,

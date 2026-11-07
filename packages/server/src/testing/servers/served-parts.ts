@@ -26,7 +26,6 @@ export interface ServedParts {
   readonly signers?: NonNullable<CompositionParts['signers']>;
   readonly meter?: Meter;
   readonly installed?: NonNullable<CompositionParts['installed']>;
-  readonly approvals?: NonNullable<CompositionParts['approvals']>;
   readonly features?: Layer.Layer<LicensedFeatures>;
   readonly shippedFilesOver?: ShippedFilesOver;
 }

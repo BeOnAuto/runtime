@@ -83,11 +83,10 @@ export interface Asked {
   readonly expiresAt: string;
   readonly answerSchema?: Schema.JsonObject;
   readonly signIn?: Schema.JsonObject;
-  readonly approval?: Schema.JsonObject;
 }
 
 export function runDeferred(run: RunOf, at: string, asked: Asked): RecordedFact {
-  const { to, message, expiresAt, answerSchema, signIn, approval } = asked;
+  const { to, message, expiresAt, answerSchema, signIn } = asked;
   return {
     type: 'run_deferred',
     data: {
@@ -98,15 +97,10 @@ export function runDeferred(run: RunOf, at: string, asked: Asked): RecordedFact 
         requested_at: at,
         ...(answerSchema === undefined ? {} : { answer_schema: answerSchema }),
         ...(signIn === undefined ? {} : { sign_in: signIn }),
-        ...(approval === undefined ? {} : { approval }),
       },
     },
     context: runContext(run, at),
   };
-}
-
-export function attemptResumed(run: RunOf, at: string): RecordedFact {
-  return { type: 'attempt_resumed', data: { attempt: 2 }, context: runContext(run, at) };
 }
 
 export function requestAnswered(run: RunOf, at: string, by: string): RecordedFact {

@@ -27,7 +27,6 @@ type Fold = <A>(
 interface Ending {
   readonly fact: StepFact;
   readonly reply: ToolReply;
-  readonly asked?: ToolCallAnswer['asked'];
 }
 
 interface Calling {
@@ -44,8 +43,6 @@ interface Step {
   readonly stopServers: Effect.Effect<boolean>;
 }
 
-export type Sending = Pick<ToolCallsNext, 'room' | 'approval'>;
-
 const stoppedWithTheOthers = 'The run stopped its calls once its tool servers failed too often';
 
 function stoppedEnd({ number, server, began }: Calling, now: number, detail: string): Ending {
@@ -53,12 +50,8 @@ function stoppedEnd({ number, server, began }: Calling, now: number, detail: str
   return { fact: { type: 'tool_call_failed', data }, reply: failureReply(data, server) };
 }
 
-function endingOf(number: number, { ended, reply, asked }: ToolCallAnswer): Ending {
-  return { fact: toolEnded(number, ended), reply, ...(asked === undefined ? {} : { asked }) };
-}
-
-function contentOf({ reply, asked }: Ending) {
-  return asked === undefined ? { reply } : { reply, asked };
+function endingOf(number: number, { ended, reply }: ToolCallAnswer): Ending {
+  return { fact: toolEnded(number, ended), reply };
 }
 
 export function toolCallEnded(
@@ -67,14 +60,14 @@ export function toolCallEnded(
   number: number,
   answer: ToolCallAnswer,
 ): Effect.Effect<StepState, StepRefusal> {
-  const ending = endingOf(number, answer);
-  return recordedOn(run, state, ending.fact, contentOf(ending));
+  const { fact, reply } = endingOf(number, answer);
+  return recordedOn(run, state, fact, { reply });
 }
 
-function endRecorded(run: StepRun, { fold, stopServers }: Step, ending: Ending) {
-  return fold((state) =>
-    Effect.map(recordedOn(run, state, ending.fact, contentOf(ending)), (after) => [after, after] as const),
-  ).pipe(Effect.flatMap((after) => (after.serversEnded === null ? Effect.void : stopServers)));
+function endRecorded(run: StepRun, { fold, stopServers }: Step, { fact, reply }: Ending) {
+  return fold((state) => Effect.map(recordedOn(run, state, fact, { reply }), (after) => [after, after] as const)).pipe(
+    Effect.flatMap((after) => (after.serversEnded === null ? Effect.void : stopServers)),
+  );
 }
 
 function answeredWithin(run: StepRun, step: Step, job: Effect.Effect<ToolCallAnswer>, calling: Calling) {
@@ -98,15 +91,8 @@ function callStarted({ callId, input, offer }: AdmittedCall) {
   return Effect.promise(() => offer.start({ callId, input }));
 }
 
-function toolCallJobOf({ callId, tool, input, offer }: AdmittedCall, { room, approval }: Sending): ToolCallJob {
-  return {
-    callId,
-    tool,
-    server: offer.reference.server,
-    input,
-    ...(room === undefined ? {} : { room }),
-    ...(approval === undefined ? {} : { approval }),
-  };
+function toolCallJobOf({ callId, tool, input, offer }: AdmittedCall, room: number | undefined): ToolCallJob {
+  return { callId, tool, server: offer.reference.server, input, ...(room === undefined ? {} : { room }) };
 }
 
 export interface BegunToolCall {
@@ -119,13 +105,13 @@ export function toolCallBegun(
   run: StepRecording,
   state: StepState,
   call: AdmittedCall,
-  sending: Sending,
+  room: number | undefined,
 ): Effect.Effect<BegunToolCall, StepRefusal> {
   return Effect.flatMap(callStarted(call), (data) =>
     Effect.map(startedOn(run, state, data), ({ state: after, number }) => ({
       state: after,
       number,
-      job: toolCallJobOf(call, sending),
+      job: toolCallJobOf(call, room),
     })),
   );
 }
@@ -134,14 +120,14 @@ function toolCallMade(
   run: StepRun,
   step: Step,
   call: AdmittedCall,
-  sending: Sending,
+  room?: number,
 ): Effect.Effect<CancelledEnding | null, Conflict> {
   const made = Effect.gen(function* () {
     const data = yield* callStarted(call);
     const number = yield* step.fold((state) =>
       Effect.map(startedOn(run, state, data), ({ state: after, number: opened }) => [after, opened] as const),
     );
-    const job = toolCallJobOf(call, sending);
+    const job = toolCallJobOf(call, room);
     const began = yield* Clock.currentTimeMillis;
     return yield* answeredWithin(run, step, run.perform.toolCall(job), { number, server: job.server, began });
   });
@@ -171,7 +157,7 @@ export function toolCallsMade(
       serversStopped: Deferred.await(serversEnded),
       stopServers: Deferred.succeed(serversEnded, true),
     };
-    const endings = yield* Effect.forEach(next.calls, (call) => toolCallMade(run, step, call, next), {
+    const endings = yield* Effect.forEach(next.calls, (call) => toolCallMade(run, step, call, next.room), {
       concurrency: 'unbounded',
     });
     const after = yield* Ref.get(current);

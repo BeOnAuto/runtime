@@ -1,4 +1,4 @@
-import { ApprovalRecordSchema, SignInRecordSchema, isRequestRecord } from '@on.auto/definitions';
+import { SignInRecordSchema, isRequestRecord } from '@on.auto/definitions';
 import type { KeyedProjection, ProjectedRow, RunContext } from '@on.auto/operations';
 import { Schema } from 'effect';
 
@@ -20,17 +20,9 @@ export const mostAnswerSchemaBytes = 8192;
 
 export const SignInColumnSchema = Schema.NullOr(Schema.fromJsonString(SignInRecordSchema));
 
-export const ApprovalColumnSchema = Schema.NullOr(Schema.fromJsonString(ApprovalRecordSchema));
-
 const utf8 = new TextEncoder();
 
-const endings: ReadonlySet<string> = new Set([
-  'request_answered',
-  'attempt_resumed',
-  'run_succeeded',
-  'run_rejected',
-  'run_failed',
-]);
+const endings: ReadonlySet<string> = new Set(['request_answered', 'run_succeeded', 'run_rejected', 'run_failed']);
 
 const personPrefix = 'person:';
 
@@ -58,7 +50,6 @@ function runOf(context: RunContext, by: string): ProjectedRow {
     waits_on: null,
     expires_at: null,
     sign_in: null,
-    approval: null,
   };
 }
 
@@ -77,7 +68,6 @@ function requested(row: ProjectedRow | undefined, record: unknown, context: RunC
     waits_on: waitsOnOf(record.to),
     expires_at: millisecondsOf(record.expires_at),
     sign_in: record.sign_in === undefined ? null : JSON.stringify(record.sign_in),
-    approval: record.approval === undefined ? null : JSON.stringify(record.approval),
   };
 }
 
@@ -97,17 +87,9 @@ function rowAfterFact(row: ProjectedRow | undefined, fact: ActivityFact): Projec
 
 export const requestRows: KeyedProjection = {
   name: requestsName,
-  version: 3,
+  version: 4,
   kinds: ['runs'],
-  types: [
-    'run_started',
-    'run_deferred',
-    'request_answered',
-    'attempt_resumed',
-    'run_succeeded',
-    'run_rejected',
-    'run_failed',
-  ],
+  types: ['run_started', 'run_deferred', 'request_answered', 'run_succeeded', 'run_rejected', 'run_failed'],
   columns: [
     { name: 'open', kind: 'boolean' },
     { name: 'at', kind: 'integer' },
@@ -119,7 +101,6 @@ export const requestRows: KeyedProjection = {
     { name: 'waits_on', kind: 'text' },
     { name: 'expires_at', kind: 'integer' },
     { name: 'sign_in', kind: 'text' },
-    { name: 'approval', kind: 'text' },
   ],
   indexes: [
     { name: 'open', columns: ['open', 'at', 'row_key'] },
