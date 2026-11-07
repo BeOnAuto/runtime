@@ -43,6 +43,6 @@
     "vitest": "catalog:"
   },
   "optionalDependencies": {
-    "@azure/identity": "4.13.3"
+    "@azure/identity": "4.14.1"
   }
 }

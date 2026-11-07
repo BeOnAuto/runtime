@@ -205,6 +205,12 @@ catalogs:
       specifier: 5.0.3
       version: 5.0.3
 
+overrides:
+  undici@>=7.0.0 <7.30.1: 7.30.1
+  undici@>=6.0.0 <6.29.1: 6.29.1
+  fast-uri@>=3.0.0 <3.1.9: 3.1.9
+  zod@>=4.0.0 <4.6.6: 4.6.6
+
 patchedDependencies:
   '@openworkflowspec/sdk@1.0.3-alpha8': 0262a21b41e0999009ab1087b52a8546c502f99e25445f1ac1626835bf0fec19
 
@@ -602,8 +608,8 @@ importers:
         version: 5.0.3(@opentelemetry/api@1.9.1)(@types/node@26.6.5)(@vitest/coverage-v8@5.0.3)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1))
     optionalDependencies:
       '@azure/identity':
-        specifier: 4.13.3
-        version: 4.13.3(supports-color@8.1.1)
+        specifier: 4.14.1
+        version: 4.14.1(supports-color@8.1.1)
 
   packages/activity:
     dependencies:
@@ -1473,55 +1479,55 @@ packages:
     resolution: {integrity: sha512-1AEyfBYJJkYqFaNSCceDx3ZeZduyosfF6hxjCwON2rPYFLLFIrDr5qo/XwBxeJN9uuKQomnL8SxJrShAc2P3lw==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/anthropic@4.0.78':
     resolution: {integrity: sha512-lVMxa9tLM5WoB72bqxjzWEWQlCwtBTo1L3yIKxAefowWATd+1YKohrINey6wTn8gtGEqyYm79z4DUGJBYauUFw==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/azure@4.0.99':
     resolution: {integrity: sha512-58hfgU/4WZlnLVneklD7HTnPnGt8QY8eVl9f/lSpWZuTZv2LaJHwKQIL4xjh+VJ68LgPmrZZFKMA7WKEG61QhA==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/deepseek@3.0.63':
     resolution: {integrity: sha512-oSIwe9tIpRXkANMsdNcW7JnJRLp+dakWiudl8ZImffhw3PD91i5zpN8x3V6jkXhknvEhRxyd6IIiCSCevVZHyw==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/gateway@4.0.110':
     resolution: {integrity: sha512-5IwnOR6v7KC+D9eddUqsCobXl/FbLUVb2LaQc/uyuQdpP3/n9s0YLc9zl4/W3IS/R2pjHrqUfCzEAeOu7bFLoQ==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/google-vertex@5.0.109':
     resolution: {integrity: sha512-g321A9S8RJcoR1DazOZ/fa89bXEuuFnJvh5+mELheqXQm+D7zaTykFYgKZn9hptn3Z1Y149M84Wiuy9A4fkwIQ==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/google@4.0.93':
     resolution: {integrity: sha512-hubOUxbG2W7oD3acdCxxnrQ84NlnLqfzcHe9uWMmwkglHxq/rwsbjloPhvebeQlcQ2G0gaX+akDF1Ddm/fNAnQ==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/openai-compatible@3.0.67':
     resolution: {integrity: sha512-w1l+CRQoPgXGRuDMpD0hal7RWXYXzbr0uMzTF7L/zHusYRUfwQHphs/voY/H8yMWLc+8chu2UCfvfwUGSANubA==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/openai@4.0.91':
     resolution: {integrity: sha512-Nk382R6us0GNxI1cGJUXMryz1XHpyrmC3K/Rmqdx9tIsqAlc7UtuO/hC9dd31F41w8uzoS362HJSDXgAI7zKbA==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/otel@1.0.137':
     resolution: {integrity: sha512-CXpSaJpzcc3l8ZN/4OHLtW+tSjJBs4iAMeJhS7L0BofkVM7qKsv8dK9XhpOsuo8Jvd5ZGmXSgo1gL/3RWtKpHw==}
@@ -1531,7 +1537,7 @@ packages:
     resolution: {integrity: sha512-iXSwKR/7LpHzAlyrUl+bTinwzmZ3Nmup1viwPisM5Gn5cogRdIG4rV9w1ZDuKFcrXyu/AeVs42E1CX/0aNwrfQ==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   '@ai-sdk/provider@4.0.26':
     resolution: {integrity: sha512-BZ443uBEq6HuMA+Z4b7Hpm65GpZSo7pWqnYqpf/7tAO3C48JbtvAhOE2JnODFj+jodsZzfRHkAyQb64xuD2tZQ==}
@@ -1739,8 +1745,8 @@ packages:
     resolution: {integrity: sha512-9n2pWK61veAuN0V20t9lOuoV4CFMdyAZ1ygZzvBGk/pBBJRib/PjL9PLXa/aI2CcPpyHfqVsxxqLCYl6uZlfDw==}
     engines: {node: '>=22.0.0'}
 
-  '@azure/identity@4.13.3':
-    resolution: {integrity: sha512-zGQPtqvXPgSA8yfV2CkIQ1qirqk0p9AIVpC5uEkdXQYcKl07QHvyaGYRnZOk0AsQUmxNb4wfkcwY5di8Z5xa9A==}
+  '@azure/identity@4.14.1':
+    resolution: {integrity: sha512-HHuuFrmN1uuF9D5A6aAo5eHzNFNX4Q+P4SksZqDKse5YaJFFy/zDLG3wXHEV2FVGgetZ3QM8jGURNBtnQYf1NQ==}
     engines: {node: '>=22.0.0'}
 
   '@azure/logger@1.4.0':
@@ -1755,8 +1761,12 @@ packages:
     resolution: {integrity: sha512-Or6xhPNyi4zHW25158yxBoyxuCqNSPa5YBVqfF1J5Ks4MJWBo/USXdp05DQIPu1Zli00YZu6t0+h6KvHJealxQ==}
     engines: {node: '>=0.8.0'}
 
-  '@azure/msal-node@6.0.1':
-    resolution: {integrity: sha512-ixSO1Y/kCVRthRs+hSx/5qkwaunX1/RAePhlMN0wIpIQ4WEZ6AREGGnGd1AP0qspHVsAwzWQKGubpjh50JyJIQ==}
+  '@azure/msal-common@16.15.0':
+    resolution: {integrity: sha512-lwdLb1B9Q5nEhPLVIKe78XH5wFMN15fCiDkY7ylPDSWZuWcD93G3jpJajrKhO3CQld8SLKz0sHiOi24mxdvtsg==}
+    engines: {node: '>=0.8.0'}
+
+  '@azure/msal-node@7.1.2':
+    resolution: {integrity: sha512-52hKQLGpEQzwNufIXG1SPVU+wQ3RIe7Rp2+g+VdAmZojCAZ6yCdGEffzQEQ6RnBZGBEs40nl14rWBmfJpCoHsg==}
     engines: {node: '>=20'}
 
   '@babel/code-frame@7.29.7':
@@ -2387,7 +2397,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
-      zod: ^3.25 || ^4.0
+      zod: 4.6.6
     peerDependenciesMeta:
       '@cfworker/json-schema':
         optional: true
@@ -2562,6 +2572,7 @@ packages:
   '@opentelemetry/propagator-jaeger@2.9.0':
     resolution: {integrity: sha512-4mYGty27rYvSM0jtp1ZUOqd3LfVRCYg9H5G9OFzSx5HViYToU21MFhWfco7x1HwXr7ER8yGOiCIHZUwjPksc0Q==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Package no longer supported. See https://github.com/open-telemetry/opentelemetry-js/pull/7077
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -2592,12 +2603,14 @@ packages:
   '@opentelemetry/sdk-trace-base@2.9.0':
     resolution: {integrity: sha512-cp9zmTl62R8PJrpvFcmc8N2JQU/xfa0S+61q511Nji+QxCfZ8Ifvg7H27G8cANe4crg4RTrWsVvanHiXjSp6ag==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.3.0 <1.10.0'
 
   '@opentelemetry/sdk-trace-node@2.9.0':
     resolution: {integrity: sha512-ec9a7ps37huy5itYk0MalaZdSLlM6AXWp/FhtEjgMpp5leEGojBDvAl/UWttQnkMZOvFHKzRESn8TD3yKTF5nQ==}
     engines: {node: ^18.19.0 || >=20.6.0}
+    deprecated: Use @opentelemetry/sdk-trace package
     peerDependencies:
       '@opentelemetry/api': '>=1.0.0 <1.10.0'
 
@@ -3422,6 +3435,9 @@ packages:
   '@smithy/core@3.35.2':
     resolution: {integrity: sha512-ejTukBuP/Pg3t9N8Ux+0zKsXeHWm7p6W3HbXFOyltKasSxZwCFmvTut7kBdZSCF3m9y1bXXyVu6p2xuMFcsTyQ==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.5.2':
     resolution: {integrity: sha512-A9uSdn72ozbRUSit0eib0TW7nXuNPlaeM0zcGkJ+nE6tFcSDbnmtwoxbTCFBukVQcszDAyvsd7+rTduPTXpygg==}
@@ -3828,7 +3844,7 @@ packages:
     resolution: {integrity: sha512-JxrPkSQknxIN/gYqS3UQksExS6eWI23QMPBrKMGXeeFHhru6xFtF4MuMq17WaHD+lXPh0lne6H0BM2Z2VMW9EQ==}
     engines: {node: '>=22'}
     peerDependencies:
-      zod: ^3.25.76 || ^4.1.8
+      zod: 4.6.6
 
   ajv-formats@3.0.1:
     resolution: {integrity: sha512-8iUql50EUR+uUcdRQ3HDqa6EVyo3docL8g5WJ3FNcWmu62IbkGUue/pEyLBW8VGKKucTPgqeks4fIU1DA4yowQ==}
@@ -4264,8 +4280,8 @@ packages:
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
 
-  fast-uri@3.1.8:
-    resolution: {integrity: sha512-GZMtZUTNRpOVIECoXwLNZS5xUGE+mVNbTB8h/7Rwh2TFWcBQiPzTgyZi05BF9UMZKkLJv8XBRJTlU7zg8+ZfMg==}
+  fast-uri@3.1.9:
+    resolution: {integrity: sha512-hS/0Wt3Ya043oKXs0sIxrMpKQITXhMLIrVAKKXi4gozGC9v7YRWVnXIZzjNPTO02M9BdxLCWqK1yRXgNziVyJQ==}
 
   fd-package-json@2.0.0:
     resolution: {integrity: sha512-jKmm9YtsNXN789RS/0mSzOC1NUq9mkVd65vbSSVsKdjGvYXBuE4oWe2QOEoFeRmJg+lPuZxpmrfFclNhoRMneQ==}
@@ -4461,6 +4477,10 @@ packages:
   is-fullwidth-code-point@3.0.0:
     resolution: {integrity: sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg==}
     engines: {node: '>=8'}
+
+  is-in-ssh@1.0.0:
+    resolution: {integrity: sha512-jYa6Q9rH90kR1vKB6NM7qqd1mge3Fx4Dhw5TVlK1MUBqhEOuCagrEHMevNuCcbECmXZ0ThXkRm+Ymr51HwEPAw==}
+    engines: {node: '>=20'}
 
   is-inside-container@1.0.0:
     resolution: {integrity: sha512-KIYLCCJghfHZxqjYBE7rEy0OBuTd5xCHS7tHVgvCLkx7StIoaxwNW3hCALgEUjFfeRk+MG/Qxmp/vtETEF3tRA==}
@@ -5043,9 +5063,9 @@ packages:
   oniguruma-to-es@3.1.1:
     resolution: {integrity: sha512-bUH8SDvPkH3ho3dvwJwfonjlQ4R80vjyvrU8YpxuROddv55vAEJrTuCuCVUhhsHbtlD9tGGbaNApGQckXhS8iQ==}
 
-  open@10.2.0:
-    resolution: {integrity: sha512-YgBpdJHPyQ2UE5x+hlSXcnejzAvD0b22U2OuAP+8OnlJT+PjWPxtgmGqKKc+RgTM63U9gN0YzrYc71R2WT/hTA==}
-    engines: {node: '>=18'}
+  open@11.0.4:
+    resolution: {integrity: sha512-++Zlftm0kVLPmzC06t6epuWmcRMDbI4z5P3NNX979WA/k23+NtSOynEGzsVfZwguKw2mi5umVgnBlJQMwRz4Pg==}
+    engines: {node: '>=20'}
 
   option@0.2.4:
     resolution: {integrity: sha512-pkEqbDyl8ou5cpq+VsnQbe/WlEy5qS7xPzMS1U55OCG9KPvwFD46zDbxQIj3egJSFc3D+XhYOPUzz49zQAVy7A==}
@@ -5189,6 +5209,10 @@ packages:
   postgres-interval@1.2.0:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
+
+  powershell-utils@0.2.1:
+    resolution: {integrity: sha512-C+y9x90UElAddDZmV4qOx9W53B61PO7cIqWz2dQsWlwswuq4mr8NEwytdGKboYbQlGZ3awrkTeNvcZiZNHnQ8A==}
+    engines: {node: '>=20'}
 
   preact@10.29.8:
     resolution: {integrity: sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==}
@@ -5627,12 +5651,12 @@ packages:
   undici-types@8.9.0:
     resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
 
-  undici@6.29.0:
-    resolution: {integrity: sha512-R+RODBqp6i2pPflGdq+xIOUkl+RNfGgHwoinecKu/JCuf2uO06cOKoDbI2P7Dn6KcswdKwrczbU6IYJ6K8X+wg==}
+  undici@6.29.1:
+    resolution: {integrity: sha512-EvRlUt/QqAEvXdQeRMYUfwOQsfzpDztykrG2owGEE/rBOBoYv9uF39ZzsNDh4lTFHhTr2XOZjKkYgueD12ZmGA==}
     engines: {node: '>=18.17'}
 
-  undici@7.30.0:
-    resolution: {integrity: sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
     engines: {node: '>=20.18.1'}
 
   unist-util-is@6.0.1:
@@ -5857,9 +5881,9 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  wsl-utils@0.1.0:
-    resolution: {integrity: sha512-h3Fbisa2nKGPxCpm89Hk33lBLsnaGBvctQopaBSOW/uIs6FTe1ATyAnKFJrzVs9vpGdsTe73WF3V4lIsk4Gacw==}
-    engines: {node: '>=18'}
+  wsl-utils@1.0.1:
+    resolution: {integrity: sha512-c16PKLIRxBYpR3jSWsdS7SFp0COm5SOQdiFjY818dYFHJbMGuLBszpF07LBWmOS1uzrHa9VGdynsEgoeKy0oOQ==}
+    engines: {node: '>=20'}
 
   xmlbuilder@10.1.1:
     resolution: {integrity: sha512-OyzrcFLL/nb6fMGHbiRDuPup9ljBycsdCypwuyg5AAHvyWzGfChJpCXMG88AGTIMFhGZ9RccFN1e6lhg3hkwKg==}
@@ -5901,10 +5925,7 @@ packages:
   zod-to-json-schema@3.25.2:
     resolution: {integrity: sha512-O/PgfnpT1xKSDeQYSCfRI5Gy3hPf91mKVDuYLUHZJMiDFptvP41MSnWofm8dnCm0256ZNfZIM7DSzuSMAFnjHA==}
     peerDependencies:
-      zod: ^3.25.28 || ^4
-
-  zod@4.6.5:
-    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+      zod: 4.6.6
 
   zod@4.6.6:
     resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
@@ -5996,7 +6017,7 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.1
-      undici: 7.30.0
+      undici: 7.30.1
       zod: 4.6.6
 
   '@ai-sdk/provider@4.0.26':
@@ -6405,7 +6426,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@azure/identity@4.13.3(supports-color@8.1.1)':
+  '@azure/identity@4.14.1(supports-color@8.1.1)':
     dependencies:
       '@azure/abort-controller': 2.2.0
       '@azure/core-auth': 1.11.0(supports-color@8.1.1)
@@ -6416,8 +6437,8 @@ snapshots:
       '@azure/core-util': 1.14.0(supports-color@8.1.1)
       '@azure/logger': 1.4.0(supports-color@8.1.1)
       '@azure/msal-browser': 5.23.0
-      '@azure/msal-node': 6.0.1
-      open: 10.2.0
+      '@azure/msal-node': 7.1.2
+      open: 11.0.4
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
@@ -6439,9 +6460,12 @@ snapshots:
   '@azure/msal-common@16.14.1':
     optional: true
 
-  '@azure/msal-node@6.0.1':
+  '@azure/msal-common@16.15.0':
+    optional: true
+
+  '@azure/msal-node@7.1.2':
     dependencies:
-      '@azure/msal-common': 16.14.1
+      '@azure/msal-common': 16.15.0
       jsonwebtoken: 9.0.3
     optional: true
 
@@ -6987,11 +7011,11 @@ snapshots:
       eventsource-parser: 3.1.1
       jose: 6.2.12
       pkce-challenge: 5.0.1
-      zod: 4.6.5
+      zod: 4.6.6
 
   '@modelcontextprotocol/core@2.3.1':
     dependencies:
-      zod: 4.6.5
+      zod: 4.6.6
 
   '@modelcontextprotocol/sdk@1.32.1(supports-color@8.1.1)(zod@4.6.6)':
     dependencies:
@@ -7018,7 +7042,7 @@ snapshots:
   '@modelcontextprotocol/server@2.3.1':
     dependencies:
       '@modelcontextprotocol/core': 2.3.1
-      zod: 4.6.5
+      zod: 4.6.6
 
   '@mongodb-js/saslprep@1.5.5':
     dependencies:
@@ -8153,7 +8177,7 @@ snapshots:
   ajv@8.20.0:
     dependencies:
       fast-deep-equal: 3.1.3
-      fast-uri: 3.1.8
+      fast-uri: 3.1.9
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
@@ -8608,7 +8632,7 @@ snapshots:
 
   fast-deep-equal@3.1.3: {}
 
-  fast-uri@3.1.8: {}
+  fast-uri@3.1.9: {}
 
   fd-package-json@2.0.0:
     dependencies:
@@ -8822,6 +8846,9 @@ snapshots:
 
   is-fullwidth-code-point@3.0.0: {}
 
+  is-in-ssh@1.0.0:
+    optional: true
+
   is-inside-container@1.0.0:
     dependencies:
       is-docker: 3.0.0
@@ -8920,7 +8947,7 @@ snapshots:
       tinyglobby: 0.2.17
       unbash: 5.1.0
       yaml: 2.9.1
-      zod: 4.6.5
+      zod: 4.6.6
 
   lefthook-darwin-arm64@2.2.1:
     optional: true
@@ -9196,7 +9223,7 @@ snapshots:
       semver: 7.8.5
       tar: 7.5.22
       tinyglobby: 0.2.17
-      undici: 6.29.0
+      undici: 6.29.1
       which: 6.0.1
     optional: true
 
@@ -9230,12 +9257,14 @@ snapshots:
       regex: 6.1.0
       regex-recursion: 6.0.2
 
-  open@10.2.0:
+  open@11.0.4:
     dependencies:
       default-browser: 5.5.1
       define-lazy-prop: 3.0.0
+      is-in-ssh: 1.0.0
       is-inside-container: 1.0.0
-      wsl-utils: 0.1.0
+      powershell-utils: 0.2.1
+      wsl-utils: 1.0.1
     optional: true
 
   option@0.2.4: {}
@@ -9444,6 +9473,9 @@ snapshots:
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
+
+  powershell-utils@0.2.1:
+    optional: true
 
   preact@10.29.8: {}
 
@@ -9991,10 +10023,10 @@ snapshots:
 
   undici-types@8.9.0: {}
 
-  undici@6.29.0:
+  undici@6.29.1:
     optional: true
 
-  undici@7.30.0: {}
+  undici@7.30.1: {}
 
   unist-util-is@6.0.1:
     dependencies:
@@ -10185,9 +10217,10 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  wsl-utils@0.1.0:
+  wsl-utils@1.0.1:
     dependencies:
       is-wsl: 3.1.1
+      powershell-utils: 0.2.1
     optional: true
 
   xmlbuilder@10.1.1: {}
@@ -10228,8 +10261,6 @@ snapshots:
   zod-to-json-schema@3.25.2(zod@4.6.6):
     dependencies:
       zod: 4.6.6
-
-  zod@4.6.5: {}
 
   zod@4.6.6: {}
 

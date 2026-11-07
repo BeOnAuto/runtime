@@ -25,3 +25,9 @@ allowBuilds:
 
 patchedDependencies:
   '@openworkflowspec/sdk@1.0.3-alpha8': patches/@openworkflowspec__sdk@1.0.3-alpha8.patch
+
+overrides:
+  'undici@>=7.0.0 <7.30.1': 7.30.1
+  'undici@>=6.0.0 <6.29.1': 6.29.1
+  'fast-uri@>=3.0.0 <3.1.9': 3.1.9
+  'zod@>=4.0.0 <4.6.6': 4.6.6
