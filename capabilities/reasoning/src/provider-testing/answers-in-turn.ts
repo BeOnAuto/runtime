@@ -1,6 +1,10 @@
+import { Array as Arr } from 'effect';
+
 import type { Environment } from '../settings/setting-values.ts';
 import { accessFor } from '../testing/adapter-harness.ts';
-import { jsonResponse, recordingFetch } from './recording-fetch.ts';
+import { recordingReporter } from './provider-errors.ts';
+import { chatCompletion } from './provider-replies.ts';
+import { jsonResponse, recordingFetch, type Responder } from './recording-fetch.ts';
 
 export const gatewayModel = 'internal/llama-3.3-70b';
 
@@ -40,4 +44,22 @@ export async function answersInTurn(environment: Environment, ...replies: readon
       beforeTheAnswers.push(happening);
     },
   };
+}
+
+export function answeredWith(text: string): Responder {
+  return () => jsonResponse(chatCompletion(text), 200, { 'x-call-cost': '0.25' });
+}
+
+export function refusedByTheGateway(status: number, code: string | null = String(status)): Responder {
+  const message = "litellm.BadRequestError: OpenAIException - Invalid schema for response_format 'verdict'";
+  return () => jsonResponse({ error: { message, type: null, param: null, code } }, status);
+}
+
+export async function respondedInTurn(environment: Environment, ...replies: readonly Responder[]) {
+  const reporter = recordingReporter();
+  const recording = recordingFetch((request, attempt) =>
+    Arr.getUnsafe(replies, Math.min(attempt, replies.length) - 1)(request, attempt),
+  );
+  const access = await accessFor(environment, { fetch: recording.fetch, reportProviderMessage: reporter.report });
+  return { access, requests: recording.requests, reports: reporter.reports };
 }

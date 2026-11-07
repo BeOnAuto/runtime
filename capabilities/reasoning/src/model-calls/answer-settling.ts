@@ -12,6 +12,7 @@ import {
   type OutputMode,
   type Repair,
   type RepairFailedBecause,
+  type SchemaRefusal,
   type TokenUsage,
 } from '../model/model-result.ts';
 import { answerValueOf } from '../schema/described-answers.ts';
@@ -47,6 +48,7 @@ export type ReadOutput =
 export interface CallMode {
   readonly output_mode?: OutputMode;
   readonly repair?: Repair;
+  readonly schema_refusal?: SchemaRefusal;
 }
 
 export interface Generated {

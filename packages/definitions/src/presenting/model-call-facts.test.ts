@@ -210,8 +210,9 @@ describe('the presenter of the answer of a model call', () => {
 });
 
 describe('the presenter of a model call that described the schema of its answer', () => {
-  it('presents the call as described, whether it was answered or failed', () => {
-    const answered = { number: 1, ...modelCallAnswered(0), output_mode: 'described' as const };
+  it('presents the call as described, and the refusal that made it so, whether it was answered or failed', () => {
+    const refusal = { outcome: 'described', status: 400, duration_ms: 700 } as const;
+    const answered = { number: 1, ...modelCallAnswered(0), output_mode: 'described' as const, schema_refusal: refusal };
     const failed = {
       number: 2,
       because: 'output_invalid' as const,
@@ -219,12 +220,13 @@ describe('the presenter of a model call that described the schema of its answer'
       detail: 'The answer is not JSON',
       duration_ms: 12,
       output_mode: 'described' as const,
+      schema_refusal: { ...refusal, status: 422 as const },
     };
 
     expect([
       presented({ type: 'model_call_answered', data: answered })?.data,
       presented({ type: 'model_call_failed', data: failed })?.data,
-    ]).toMatchObject([{ output_mode: 'described' }, failed]);
+    ]).toMatchObject([{ output_mode: 'described', schema_refusal: refusal }, failed]);
   });
 });
 

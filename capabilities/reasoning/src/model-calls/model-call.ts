@@ -126,12 +126,18 @@ function unreadOf(target: ModelTarget, error: unknown, responded: Responded, req
   return unreadAnswerOf(target, reply, responded, requestBytes);
 }
 
-export async function modelAnswer(
-  target: ModelTarget,
-  request: ModelRequest,
-  signal: Readonly<AbortSignal>,
-  telemetry: CallTelemetry,
-): Promise<SettledAnswer> {
+export interface Calling {
+  readonly signal: Readonly<AbortSignal>;
+  readonly telemetry: CallTelemetry;
+  readonly calledAt: number;
+  readonly refusal?: CallMode['schema_refusal'];
+}
+
+function describedModeOf(refusal: CallMode['schema_refusal']): CallMode {
+  return refusal === undefined ? described : { ...described, schema_refusal: refusal };
+}
+
+function preparedCall(target: ModelTarget, request: ModelRequest, { signal, telemetry }: Calling) {
   const { model, responded } = respondingModel(target);
   const sent = { bytes: 0 };
   const schema = schemaSentOf(target, request);
@@ -142,18 +148,33 @@ export async function modelAnswer(
       sent.bytes = bytesSent(started, schema);
     },
   };
+  return {
+    call,
+    generatedOf: (result: SdkResult) => projected(result, responded(), sent.bytes),
+    unreadAfter: (error: unknown) => unreadOf(target, error, responded(), sent.bytes),
+  };
+}
+
+export async function modelAnswer(
+  target: ModelTarget,
+  request: ModelRequest,
+  calling: Calling,
+): Promise<SettledAnswer> {
+  const { call, generatedOf, unreadAfter } = preparedCall(target, request, calling);
+  const { calledAt } = calling;
   const answerOf = (result: SdkResult, asking: Asking, read: () => ReadOutput): UnreadAnswer => ({
-    generated: projected(result, responded(), sent.bytes),
+    generated: generatedOf(result),
     output: outputOf(result, asking, read),
   });
   const { output } = request;
   if (output.type === 'text') {
-    return settledAnswer(target, projected(await generateText(call), responded(), sent.bytes), { kind: 'text' });
+    return settledAnswer(target, generatedOf(await generateText(call)), { kind: 'text' });
   }
   if (!target.takesSchemas) {
     const instructions = describedInstructions(request.instructions, output.schema.document);
     return answerRepairedOnce(target, request, {
-      mode: described,
+      mode: describedModeOf(calling.refusal),
+      calledAt,
       ask: async (asking) => {
         const result = await generateText({ ...call, ...askedOf(request, asking), instructions });
         return answerOf(result, asking, () => describedOutput(result.text, output));
@@ -166,12 +187,13 @@ export async function modelAnswer(
   }
   return answerRepairedOnce(target, request, {
     mode: {},
+    calledAt,
     ask: async (asking) => {
       try {
         const result = await generateText({ ...call, ...askedOf(request, asking), output: enforced.success });
         return answerOf(result, asking, () => readOutput(() => result.output));
       } catch (error) {
-        return unreadOf(target, error, responded(), sent.bytes);
+        return unreadAfter(error);
       }
     },
   });

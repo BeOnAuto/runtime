@@ -5,7 +5,14 @@ import { Predicate, type Schema } from 'effect';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelCallRequest } from '../jobs/jobs.ts';
 import type { ToolDefinition } from '../model/model-request.ts';
-import type { FinishReason, ModelResult, OutputMode, Repair, TokenUsage } from '../model/model-result.ts';
+import type {
+  FinishReason,
+  ModelResult,
+  OutputMode,
+  Repair,
+  SchemaRefusal,
+  TokenUsage,
+} from '../model/model-result.ts';
 import { askedIn } from './asked-calls.ts';
 import { promptMessages, type Prompt, type StepMessages } from './step-messages.ts';
 import type { StepState } from './step-state.ts';
@@ -35,6 +42,20 @@ function askedToolCalls(response: readonly Schema.JsonObject[], { references, ar
   });
 }
 
+interface AnswerMode {
+  readonly output_mode?: OutputMode;
+  readonly repair?: Repair;
+  readonly schema_refusal?: SchemaRefusal;
+}
+
+function answerModeOf({ output_mode: mode, repair, schema_refusal: refusal }: AnswerMode): AnswerMode {
+  return {
+    ...(mode === undefined ? {} : { output_mode: mode }),
+    ...(repair === undefined ? {} : { repair }),
+    ...(refusal === undefined ? {} : { schema_refusal: refusal }),
+  };
+}
+
 export interface Answering {
   readonly result: ModelResult;
   readonly response: readonly Schema.JsonObject[];
@@ -56,12 +77,11 @@ export function answeredData({ result, response, kept }: Answering, offered: Off
     answered_model: result.model.answered,
     warnings: result.warnings.slice(0, mostWarnings),
     tool_calls: askedToolCalls(response, offered),
-    ...(result.output_mode === undefined ? {} : { output_mode: result.output_mode }),
-    ...(result.repair === undefined ? {} : { repair: result.repair }),
+    ...answerModeOf(result),
   };
 }
 
-export interface FailureOfACall {
+export interface FailureOfACall extends AnswerMode {
   readonly _tag: ModelFailure['_tag'];
   readonly detail: string;
   readonly provider: string | null;
@@ -71,8 +91,6 @@ export interface FailureOfACall {
   readonly retry_after_ms?: number | null;
   readonly provider_message?: string | null;
   readonly issues?: ModelCallFailedData['issues'];
-  readonly output_mode?: OutputMode;
-  readonly repair?: Repair;
 }
 
 export type FailedFields = Omit<ModelCallFailedData, 'duration_ms' | 'because'> & {
@@ -81,7 +99,7 @@ export type FailedFields = Omit<ModelCallFailedData, 'duration_ms' | 'because'> 
 
 export function failedData(failure: FailureOfACall, provider: string): FailedFields {
   const { _tag: because, detail, usage, finish_reason: finish, retry_after_ms: wait, provider_message: said } = failure;
-  const { cost_usd: cost, issues, output_mode: mode, repair } = failure;
+  const { cost_usd: cost, issues } = failure;
   return {
     because,
     provider: failure.provider ?? provider,
@@ -92,8 +110,7 @@ export function failedData(failure: FailureOfACall, provider: string): FailedFie
     ...(Predicate.isNotNullish(wait) ? { retry_after_ms: wait } : {}),
     ...(Predicate.isNotNullish(said) ? { provider_message: said } : {}),
     ...(issues === undefined ? {} : { issues: issues.slice(0, mostIssues) }),
-    ...(mode === undefined ? {} : { output_mode: mode }),
-    ...(repair === undefined ? {} : { repair }),
+    ...answerModeOf(failure),
   };
 }
 

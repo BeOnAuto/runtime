@@ -107,6 +107,45 @@ describe('the JSON answers of the calls of a model that did not answer them', ()
   });
 });
 
+const schemaRefused = new APICallError({
+  message: 'Invalid schema for response_format',
+  url: 'https://x',
+  requestBodyValues: {},
+  statusCode: 400,
+});
+
+function refusingTheSchema(answer: string | null): Generate {
+  const calls = { made: 0 };
+  const doGenerate = () => {
+    calls.made += 1;
+    return calls.made === 1 || answer === null ? Promise.reject(schemaRefused) : Promise.resolve(generatedText(answer));
+  };
+  return mockGeneration(() => new MockLanguageModelV4({ doGenerate })).generate;
+}
+
+function byOutcome(counted: readonly Counted[]): readonly Counted[] {
+  return counted.toSorted((one, other) =>
+    String(one.attributes?.['auto.on.outcome']).localeCompare(String(other.attributes?.['auto.on.outcome'])),
+  );
+}
+
+describe('the JSON answers of the calls of a model whose schema the provider refused', () => {
+  it('count the refusal as schema_refused, with no output mode, beside the answer asked for in described mode', async () => {
+    const counted = await countedFor(refusingTheSchema('{"verdict":"approve"}'), jsonRequest('mock/model'));
+
+    expect(byOutcome(counted)).toEqual([
+      { attributes: { ...mockCall, 'auto.on.outcome': 'schema_refused' }, state: once },
+      { attributes: { ...mockCall, 'auto.on.outcome': 'valid', 'auto.on.output_mode': 'described' }, state: once },
+    ]);
+  });
+
+  it('count nothing when the provider refused the request asked in described mode too, as the schema was not the cause', async () => {
+    const counted = await countedFor(refusingTheSchema(null), jsonRequest('mock/model'));
+
+    expect(counted).toEqual([]);
+  });
+});
+
 describe('the answers of the calls of a model that are not counted as JSON answers', () => {
   it('are a text answer, a refused text answer, an answer that asks for tools, and a call that failed otherwise', async () => {
     const asksForTools = new MockLanguageModelV4({

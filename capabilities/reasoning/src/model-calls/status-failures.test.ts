@@ -64,6 +64,8 @@ describe('a provider that signals the request too long', () => {
       400,
       { error: { message: 'Too many tokens', type: 'request_too_large', param: null, code: null } },
     ],
+    ['the error code string_above_max_length', 400, openAiError('string too long', 'string_above_max_length')],
+    ['its error message', 400, openAiError("This model's maximum context length is 128000 tokens")],
   ])('fails as request_too_long by %s', async (signal, status, body) => {
     const failure = await failureFor(() => jsonResponse(body, status));
 
@@ -77,16 +79,13 @@ describe('a provider that signals the request too long', () => {
     });
   });
 
-  it('claims no length for a message that says too long without a signal, and names the code the body carries', async () => {
-    const failure = await failureFor(() =>
-      jsonResponse(openAiError('string too long', 'string_above_max_length'), 400),
-    );
+  it('claims no length for a message that says too long in other words, and names the code the body carries', async () => {
+    const failure = await failureFor(() => jsonResponse(openAiError('string too long', 'invalid_value'), 400));
 
     expect(failure).toMatchObject({
       _tag: 'definition_invalid',
       provider_message: 'string too long',
-      detail:
-        'openai answered HTTP 400: the request was rejected as invalid, with the error code string_above_max_length',
+      detail: 'openai answered HTTP 400: the request was rejected as invalid, with the error code invalid_value',
     });
   });
 });

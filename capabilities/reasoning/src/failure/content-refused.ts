@@ -1,6 +1,6 @@
 import { Data } from 'effect';
 
-import type { OutputMode, Repair, TokenUsage } from '../model/model-result.ts';
+import type { OutputMode, Repair, SchemaRefusal, TokenUsage } from '../model/model-result.ts';
 
 export class ContentRefused extends Data.TaggedError('content_refused')<{
   readonly detail: string;
@@ -11,4 +11,5 @@ export class ContentRefused extends Data.TaggedError('content_refused')<{
   readonly cost_usd?: number;
   readonly output_mode?: OutputMode;
   readonly repair?: Repair;
+  readonly schema_refusal?: SchemaRefusal;
 }> {}

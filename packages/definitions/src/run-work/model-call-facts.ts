@@ -92,6 +92,35 @@ const RepairSchema = Schema.Union([AskedRepairSchema, FailedRepairSchema, Skippe
     'How a JSON answer that missed its schema was asked for once more, with its issues; usage, cost_usd and duration_ms are those of the second request alone',
 });
 
+const RefusedStatusSchema = Schema.Int.annotate({
+  description: 'The HTTP status the provider refused the request with, 400 or 422',
+});
+
+const RefusedDurationSchema = Schema.Int.annotate({ description: 'How long the refused request took' });
+
+const AskedAgainSchema = Schema.Struct({
+  outcome: Schema.Literals(['described', 'refused_again']).annotate({
+    description:
+      'described when the answer was asked for again with its schema in the instructions; refused_again when the provider refused that request too, so the schema was not the cause',
+  }),
+  status: RefusedStatusSchema,
+  duration_ms: RefusedDurationSchema,
+});
+
+const NotAskedAgainSchema = Schema.Struct({
+  outcome: Schema.Literal('skipped'),
+  because: Schema.Literal('time').annotate({
+    description: 'Less time was left before the deadline of the call or the bound of the run than the refusal took',
+  }),
+  status: RefusedStatusSchema,
+  duration_ms: RefusedDurationSchema,
+});
+
+const SchemaRefusalSchema = Schema.Union([AskedAgainSchema, NotAskedAgainSchema]).annotate({
+  description:
+    'How the provider refused the request that gave it the JSON Schema of the answer, and whether the answer was asked for again with the schema in the instructions',
+});
+
 export const ModelCallStartedSchema = Schema.Struct({
   model: Schema.String,
   messages_bytes: Schema.Int,
@@ -122,6 +151,7 @@ export const ModelCallAnsweredSchema = Schema.Struct({
   tool_calls: Schema.Array(AskedToolCallSchema),
   output_mode: Schema.optionalKey(OutputModeSchema),
   repair: Schema.optionalKey(RepairSchema),
+  schema_refusal: Schema.optionalKey(SchemaRefusalSchema),
 });
 
 export const ModelCallFailedSchema = Schema.Struct({
@@ -137,6 +167,7 @@ export const ModelCallFailedSchema = Schema.Struct({
   issues: Schema.optionalKey(Schema.Array(FailureIssueSchema)),
   output_mode: Schema.optionalKey(OutputModeSchema),
   repair: Schema.optionalKey(RepairSchema),
+  schema_refusal: Schema.optionalKey(SchemaRefusalSchema),
 });
 
 export type ModelUsage = typeof ModelUsageSchema.Type;

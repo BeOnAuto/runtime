@@ -36,6 +36,17 @@ export type Repair =
     }
   | { readonly outcome: 'skipped'; readonly because: RepairSkippedBecause };
 
+export type RefusedStatus = 400 | 422;
+
+interface RefusedRequest {
+  readonly status: RefusedStatus;
+  readonly duration_ms: number;
+}
+
+export type SchemaRefusal =
+  | (RefusedRequest & { readonly outcome: 'described' | 'refused_again' })
+  | (RefusedRequest & { readonly outcome: 'skipped'; readonly because: 'time' });
+
 export interface InputTokens {
   readonly total: number | null;
   readonly uncached: number | null;
@@ -82,6 +93,7 @@ export interface ModelResult {
   readonly duration_ms: number;
   readonly output_mode?: OutputMode;
   readonly repair?: Repair;
+  readonly schema_refusal?: SchemaRefusal;
 }
 
 export const unknownUsage: TokenUsage = {

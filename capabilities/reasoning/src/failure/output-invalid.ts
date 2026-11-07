@@ -1,6 +1,6 @@
 import { Data } from 'effect';
 
-import type { FinishReason, OutputMode, Repair, TokenUsage } from '../model/model-result.ts';
+import type { FinishReason, OutputMode, Repair, SchemaRefusal, TokenUsage } from '../model/model-result.ts';
 import type { FailureIssue } from './failure-issue.ts';
 
 export class OutputInvalid extends Data.TaggedError('output_invalid')<{
@@ -13,4 +13,5 @@ export class OutputInvalid extends Data.TaggedError('output_invalid')<{
   readonly issues: readonly FailureIssue[];
   readonly output_mode?: OutputMode;
   readonly repair?: Repair;
+  readonly schema_refusal?: SchemaRefusal;
 }> {}

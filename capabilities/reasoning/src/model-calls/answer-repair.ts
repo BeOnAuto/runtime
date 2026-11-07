@@ -14,6 +14,7 @@ import {
   type SettledAnswer,
   type UnreadAnswer,
 } from './answer-settling.ts';
+import { msLeftOf } from './stopped-call.ts';
 
 interface Repairing {
   readonly answer: string;
@@ -27,6 +28,7 @@ export interface Asking {
 export interface JsonAsk {
   readonly ask: (asking: Asking) => Promise<UnreadAnswer>;
   readonly mode: CallMode;
+  readonly calledAt: number;
 }
 
 interface RepairTokens {
@@ -59,13 +61,9 @@ function tokensShort(room: RunRoom, { first, asked, answer }: RepairTokens): Rep
 }
 
 interface Timing {
+  readonly calledAt: number;
   readonly began: number;
   readonly answered: number;
-}
-
-function msLeftAt({ timeout_ms: timeoutMs, room }: ModelRequest, { began, answered }: Timing): number {
-  const deadline = timeoutMs === undefined ? Number.POSITIVE_INFINITY : began + timeoutMs;
-  return Math.min(deadline, room?.ends_at ?? Number.POSITIVE_INFINITY) - answered;
 }
 
 function skippedBecause(
@@ -79,13 +77,14 @@ function skippedBecause(
   if (short !== undefined) {
     return short;
   }
-  return msLeftAt(request, timing) < timing.answered - timing.began ? 'time' : undefined;
+  const { calledAt, began, answered } = timing;
+  return msLeftOf(request, calledAt, answered) < answered - began ? 'time' : undefined;
 }
 
 export async function answerRepairedOnce(
   target: ModelTarget,
   request: ModelRequest,
-  { ask, mode }: JsonAsk,
+  { ask, mode, calledAt }: JsonAsk,
 ): Promise<SettledAnswer> {
   const began = Date.now();
   const first = await ask({});
@@ -95,7 +94,7 @@ export async function answerRepairedOnce(
   }
   const issues = issuesToTell(issuesOf(first.output));
   const words = repairWords(issues);
-  const because = skippedBecause(request, first.generated, words, { began, answered });
+  const because = skippedBecause(request, first.generated, words, { calledAt, began, answered });
   if (because !== undefined) {
     return settledAnswer(target, first.generated, first.output, { ...mode, repair: { outcome: 'skipped', because } });
   }

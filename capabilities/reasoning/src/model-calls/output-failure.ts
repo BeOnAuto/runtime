@@ -4,7 +4,7 @@ import { TypeValidationError, type FinishReason as SdkFinishReason } from 'ai';
 import { ContentRefused } from '../failure/content-refused.ts';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import { OutputInvalid } from '../failure/output-invalid.ts';
-import type { OutputMode, Repair, TokenUsage } from '../model/model-result.ts';
+import type { OutputMode, Repair, SchemaRefusal, TokenUsage } from '../model/model-result.ts';
 import { finishReasonOf, tokenUsage, type SdkUsage } from './answer-mapping.ts';
 import { AnswerMismatch } from './answer-mismatch.ts';
 
@@ -18,6 +18,7 @@ export interface UnusableOutput {
   readonly refused: boolean;
   readonly output_mode?: OutputMode;
   readonly repair?: Repair;
+  readonly schema_refusal?: SchemaRefusal;
 }
 
 export function mismatchIssues(cause: unknown): readonly SchemaIssue[] {
@@ -38,15 +39,14 @@ function refusalDetail({ provider, finishReason, refused }: UnusableOutput): str
   return finishReason === 'content-filter' ? `${provider} stopped the answer under its content policy` : undefined;
 }
 
-function recordedOf({
-  cost_usd: cost,
-  output_mode: mode,
-  repair,
-}: UnusableOutput): Pick<UnusableOutput, 'cost_usd' | 'output_mode' | 'repair'> {
+type Recorded = Pick<UnusableOutput, 'cost_usd' | 'output_mode' | 'repair' | 'schema_refusal'>;
+
+function recordedOf({ cost_usd: cost, output_mode: mode, repair, schema_refusal: refusal }: UnusableOutput): Recorded {
   return {
     ...(cost === undefined ? {} : { cost_usd: cost }),
     ...(mode === undefined ? {} : { output_mode: mode }),
     ...(repair === undefined ? {} : { repair }),
+    ...(refusal === undefined ? {} : { schema_refusal: refusal }),
   };
 }
 

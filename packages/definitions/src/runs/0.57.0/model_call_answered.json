@@ -53,6 +53,11 @@
       },
       "cost_usd": 0.0002,
       "duration_ms": 700
+    },
+    "schema_refusal": {
+      "outcome": "described",
+      "status": 400,
+      "duration_ms": 300
     }
   },
   "context": {

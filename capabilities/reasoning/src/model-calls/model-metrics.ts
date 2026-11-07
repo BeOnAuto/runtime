@@ -3,7 +3,7 @@ import { Effect, Metric } from 'effect';
 import type { ModelFailure } from '../failure/model-failure.ts';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelTarget } from '../model/model-resolution.ts';
-import type { ModelResult, OutputMode, Repair } from '../model/model-result.ts';
+import type { ModelResult, OutputMode, Repair, SchemaRefusal } from '../model/model-result.ts';
 
 type TokenType = 'input' | 'output';
 
@@ -21,11 +21,18 @@ const operationSeconds = Metric.histogram('gen_ai.client.operation.duration', {
 
 const jsonAnswers = Metric.counter('auto.on.json_answers', {
   description:
-    'The final answers of model calls that asked for JSON, by provider, model and output mode, and how each was found: valid, valid after one correction, invalid, invalid with no room to correct it or with a correction that failed, or refused',
+    'The final answers of model calls that asked for JSON, by provider, model and output mode, and how each was found: valid, valid after one correction, invalid, invalid with no room to correct it or with a correction that failed, or refused; and the requests whose answer schema the provider refused, schema_refused',
   incremental: true,
 });
 
-type JsonAnswerOutcome = 'valid' | 'valid_after_repair' | 'invalid' | 'repair_skipped' | 'repair_failed' | 'refused';
+type JsonAnswerOutcome =
+  | 'valid'
+  | 'valid_after_repair'
+  | 'invalid'
+  | 'repair_skipped'
+  | 'repair_failed'
+  | 'refused'
+  | 'schema_refused';
 
 function callAttributesOf({ provider, resolved }: ModelTarget): Attributes {
   return { 'gen_ai.operation.name': 'chat', 'gen_ai.provider.name': provider, 'gen_ai.request.model': resolved };
@@ -57,11 +64,7 @@ export function callFailed(target: ModelTarget, errorType: string, milliseconds:
   return timed({ ...callAttributesOf(target), 'error.type': errorType }, milliseconds);
 }
 
-function answerChecked(
-  target: ModelTarget,
-  outcome: JsonAnswerOutcome,
-  mode: OutputMode | undefined,
-): Effect.Effect<void> {
+function answerChecked(target: ModelTarget, outcome: JsonAnswerOutcome, mode?: OutputMode): Effect.Effect<void> {
   const attributes = {
     ...callAttributesOf(target),
     'auto.on.outcome': outcome,
@@ -70,17 +73,30 @@ function answerChecked(
   return Metric.update(Metric.withAttributes(jsonAnswers, attributes), 1);
 }
 
-export function answerSucceeded(target: ModelTarget, { json, repair, output_mode: mode }: ModelResult) {
+function refusalChecked(target: ModelTarget, refusal: SchemaRefusal | undefined): Effect.Effect<void> {
+  const notTheSchema = refusal === undefined || refusal.outcome === 'refused_again';
+  return notTheSchema ? Effect.void : answerChecked(target, 'schema_refused');
+}
+
+function validAnswerChecked(
+  target: ModelTarget,
+  { json, repair, output_mode: mode }: ModelResult,
+): Effect.Effect<void> {
   if (json === undefined) {
     return Effect.void;
   }
   return answerChecked(target, repair === undefined ? 'valid' : 'valid_after_repair', mode);
 }
 
+export function answerSucceeded(target: ModelTarget, result: ModelResult): Effect.Effect<void> {
+  return Effect.andThen(refusalChecked(target, result.schema_refusal), validAnswerChecked(target, result));
+}
+
 interface CheckedFailure {
   readonly _tag: ModelFailure['_tag'];
   readonly repair?: Repair;
   readonly output_mode?: OutputMode;
+  readonly schema_refusal?: SchemaRefusal;
 }
 
 const unrepairedAs: Readonly<Record<Repair['outcome'], JsonAnswerOutcome>> = {
@@ -103,8 +119,9 @@ function unusableAs(kind: ModelFailure['_tag'], repair: Repair | undefined): Jso
 export function answerFailed(
   target: ModelTarget,
   { output }: ModelRequest,
-  { _tag: kind, repair, output_mode: mode }: CheckedFailure,
+  { _tag: kind, repair, output_mode: mode, schema_refusal: refusal }: CheckedFailure,
 ): Effect.Effect<void> {
   const outcome = output.type === 'json' ? unusableAs(kind, repair) : undefined;
-  return outcome === undefined ? Effect.void : answerChecked(target, outcome, mode);
+  const answer = outcome === undefined ? Effect.void : answerChecked(target, outcome, mode);
+  return Effect.andThen(refusalChecked(target, refusal), answer);
 }

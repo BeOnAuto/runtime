@@ -4,22 +4,22 @@ import { UnclassifiedModelError } from '../failure/unclassified-model-error.ts';
 import type { LanguageModel } from '../model/language-model.ts';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelResolution, ModelTarget } from '../model/model-resolution.ts';
-import type { ModelResult } from '../model/model-result.ts';
 import { checkedRequest } from '../model/request-checks.ts';
+import type { CallReports } from './call-attempt.ts';
 import type { CallPolicy } from './call-policy.ts';
-import { settledCall, type CallReports } from './call-settling.ts';
+import { settledCall } from './call-settling.ts';
 import { answerFailed, answerSucceeded, callFailed, callSucceeded } from './model-metrics.ts';
 
 function reportsOf(
   policy: CallPolicy,
   { provider }: ModelTarget,
   { model, run_id }: ModelRequest,
-  { providerText, operatorHint }: CallReports,
+  { providerTexts, operatorHint }: CallReports,
 ): Effect.Effect<void> {
   const call = { provider, model, run_id: run_id ?? null };
   return Effect.all(
     [
-      providerText === null ? Effect.void : policy.report({ ...call, ...providerText }),
+      ...providerTexts.map((providerText) => policy.report({ ...call, ...providerText })),
       operatorHint === null ? Effect.void : policy.reportHint({ ...call, hint: operatorHint }),
     ],
     { discard: true },
@@ -49,7 +49,7 @@ export function generation(resolve: ModelResolution, policy: CallPolicy): Genera
     yield* reportsOf(policy, target, request, call);
     const { settled } = call;
     if (Result.isSuccess(settled)) {
-      const result: ModelResult = { ...settled.success, duration_ms: finished - started };
+      const result = { ...settled.success, duration_ms: finished - started };
       yield* callSucceeded(target, result);
       yield* answerSucceeded(target, result);
       return result;

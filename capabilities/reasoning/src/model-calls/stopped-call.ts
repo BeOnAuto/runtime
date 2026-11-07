@@ -27,6 +27,11 @@ export function deadlineOf({ timeout_ms: ms }: ModelRequest): Deadline | undefin
   };
 }
 
+export function msLeftOf({ timeout_ms: timeoutMs, room }: ModelRequest, calledAt: number, now: number): number {
+  const deadline = timeoutMs === undefined ? Number.POSITIVE_INFINITY : calledAt + timeoutMs;
+  return Math.min(deadline, room?.ends_at ?? Number.POSITIVE_INFINITY) - now;
+}
+
 export function stoppedFailure(provider: string, deadline: Deadline | undefined): ModelFailure | undefined {
   return deadline?.signal.aborted === true
     ? new TimedOut({ detail: `${provider} did not answer within ${deadline.ms} ms`, provider, timeout_ms: deadline.ms })

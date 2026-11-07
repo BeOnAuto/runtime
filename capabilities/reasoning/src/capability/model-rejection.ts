@@ -97,9 +97,21 @@ function notOfferedAfter(use: ToolUse, because: NotOfferedBecause, detail: strin
   return use.calledAny ? unavailableAfter(use, detail, '', spent) : notOffered(because, detail, spent);
 }
 
+const notTheSchema =
+  ". The answer schema was not the cause; check the model's settings in the definition, such as temperature or reasoning, or choose another model";
+
+function requestRefused(failed: FailedCall, { use, spent }: RejectionContext): Rejected {
+  const { detail, provider_message: said, issues = [], schema_refusal: refusal } = failed;
+  if (refusal?.outcome === 'skipped') {
+    const notAskedAgain = '; too little time was left to ask again with the answer schema in the instructions';
+    return unavailableAfter(use, `${detail}${notAskedAgain}`, `; try again${saidBy(said)}`, spent);
+  }
+  const advice = refusal?.outcome === 'refused_again' ? notTheSchema : '; update the reasoning function definition';
+  return unworkable(`${detail}${listed(issues)}${advice}${saidBy(said)}`, spent);
+}
+
 const byReason: Readonly<Record<FailedCall['because'], (failed: FailedCall, context: RejectionContext) => Rejected>> = {
-  definition_invalid: ({ detail, provider_message: said, issues = [] }, { spent }) =>
-    unworkable(`${detail}${listed(issues)}; update the reasoning function definition${saidBy(said)}`, spent),
+  definition_invalid: requestRefused,
   request_too_long: ({ detail, provider_message: said }, context) =>
     unworkable(`${detail}${adviceOn(context)}${saidBy(said)}`, context.spent),
   output_invalid: outputRefused,

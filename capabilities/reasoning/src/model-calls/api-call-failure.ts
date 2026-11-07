@@ -1,5 +1,5 @@
 import { clip } from '@on.auto/definitions/template';
-import { Predicate } from 'effect';
+import { Option, Predicate, Schema } from 'effect';
 
 import { ContentRefused } from '../failure/content-refused.ts';
 import { CredentialsRejected } from '../failure/credentials-rejected.ts';
@@ -8,6 +8,7 @@ import type { ModelFailure } from '../failure/model-failure.ts';
 import { ProviderUnavailable } from '../failure/provider-unavailable.ts';
 import { RateLimited } from '../failure/rate-limited.ts';
 import { RequestTooLong } from '../failure/request-too-long.ts';
+import type { RefusedStatus, SchemaRefusal } from '../model/model-result.ts';
 
 export interface ApiCallDetails {
   readonly provider: string;
@@ -26,17 +27,57 @@ const mostShownCharacters = 300;
 
 const mostShownCodeCharacters = 64;
 
+const rejectedAsInvalid = 'the request was rejected as invalid';
+
 const statusReadings: ReadonlyMap<number, string> = new Map([
-  [400, 'the request was rejected as invalid'],
+  [400, rejectedAsInvalid],
   [404, 'the model was not found'],
-  [422, 'the request was rejected as invalid'],
+  [422, rejectedAsInvalid],
 ]);
+
+export interface Refused {
+  readonly status: RefusedStatus;
+  readonly provider_message: string | null;
+}
+
+export function refusedRequestFailure(
+  provider: string,
+  { status, provider_message }: Refused,
+  refusal: SchemaRefusal,
+): DefinitionInvalid {
+  const detail = `${provider} refused the request (HTTP ${status}): ${rejectedAsInvalid}`;
+  return new DefinitionInvalid({ detail, provider, status, provider_message, issues: [], schema_refusal: refusal });
+}
 
 const contentFilterCodes: ReadonlySet<unknown> = new Set(['content_filter', 'content_policy_violation']);
 
-const lengthCodes: ReadonlySet<unknown> = new Set(['context_length_exceeded', 'request_too_large']);
+const lengthCodes: ReadonlySet<unknown> = new Set([
+  'context_length_exceeded',
+  'request_too_large',
+  'string_above_max_length',
+]);
+
+const lengthWords = /prompt is too long|maximum context length|ContextWindowExceededError/iu;
+
+const keyReasons: ReadonlySet<unknown> = new Set(['API_KEY_INVALID']);
+
+const schemaCodes: ReadonlySet<unknown> = new Set(['invalid_json_schema']);
+
+const schemaParams = /^(?:response_format|text\.format)/u;
+
+const schemaWords = /response_format|json_schema|output_format|output_config|structured output|\bschemas?\b/iu;
+
+const noArgumentNamed = 'Request contains an invalid argument.';
 
 const unavailableStatuses: ReadonlySet<number> = new Set([408, 409]);
+
+const reasonsOf = Schema.decodeUnknownOption(
+  Schema.Struct({
+    error: Schema.Struct({ details: Schema.Array(Schema.Struct({ reason: Schema.optionalKey(Schema.String) })) }),
+  }),
+);
+
+const paramOf = Schema.decodeUnknownOption(Schema.Struct({ error: Schema.Struct({ param: Schema.String }) }));
 
 function errorFieldOf(data: unknown, field: 'code' | 'type'): unknown {
   return Predicate.hasProperty(data, 'error') && Predicate.hasProperty(data.error, field)
@@ -44,7 +85,7 @@ function errorFieldOf(data: unknown, field: 'code' | 'type'): unknown {
     : undefined;
 }
 
-function lengthSignalOf(status: number, data: unknown): string | undefined {
+function lengthSignalOf(status: number, { data, message }: ApiCallDetails): string | undefined {
   if (status === 413) {
     return 'HTTP 413';
   }
@@ -53,7 +94,27 @@ function lengthSignalOf(status: number, data: unknown): string | undefined {
     return `the error code ${String(code)}`;
   }
   const type = errorFieldOf(data, 'type');
-  return lengthCodes.has(type) ? `the error type ${String(type)}` : undefined;
+  if (lengthCodes.has(type)) {
+    return `the error type ${String(type)}`;
+  }
+  return lengthWords.test(message) ? 'its error message' : undefined;
+}
+
+function refusesTheKey(data: unknown): boolean {
+  return Option.exists(reasonsOf(data), ({ error }) => error.details.some(({ reason }) => keyReasons.has(reason)));
+}
+
+function refusesTheSchema({ data, message }: ApiCallDetails): boolean {
+  return (
+    schemaCodes.has(errorFieldOf(data, 'code')) ||
+    Option.exists(paramOf(data), ({ error }) => schemaParams.test(error.param)) ||
+    schemaWords.test(message) ||
+    message.includes(noArgumentNamed)
+  );
+}
+
+function credentialsRejected(provider: string, status: number): ModelFailure {
+  return new CredentialsRejected({ detail: `${provider} rejected the credentials (HTTP ${status})`, provider, status });
 }
 
 function codeInWords(data: unknown, scrub: (text: string) => string): string {
@@ -112,7 +173,10 @@ function tooLong(details: ApiCallDetails, status: number, signal: string): Model
 
 function rejectedRequest(details: ApiCallDetails, code: number): ModelFailure {
   const { provider, data, scrub } = details;
-  const signal = lengthSignalOf(code, data);
+  if (refusesTheKey(data)) {
+    return credentialsRejected(provider, code);
+  }
+  const signal = lengthSignalOf(code, details);
   if (signal !== undefined) {
     return tooLong(details, code, signal);
   }
@@ -131,6 +195,7 @@ function rejectedRequest(details: ApiCallDetails, code: number): ModelFailure {
     status: code,
     provider_message: providerMessage(details),
     issues: [],
+    ...(refusesTheSchema(details) ? { schema_refused: true } : {}),
   });
 }
 
@@ -140,11 +205,7 @@ export function apiCallFailure(details: ApiCallDetails): ModelFailure {
     return new ProviderUnavailable({ detail: `${provider} could not be reached`, provider, status: null });
   }
   if (status === 401 || status === 403) {
-    return new CredentialsRejected({
-      detail: `${provider} rejected the credentials (HTTP ${status})`,
-      provider,
-      status,
-    });
+    return credentialsRejected(provider, status);
   }
   if (status === 429) {
     return new RateLimited({
