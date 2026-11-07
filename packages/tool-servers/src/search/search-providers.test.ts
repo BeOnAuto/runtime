@@ -141,6 +141,41 @@ describe('the providers the search of the org lists', () => {
   });
 });
 
+describe('the offering of a search of the org', () => {
+  it('is asked while the servers are listed, so neither waits for the other', async () => {
+    const { access } = reportingAccess({}, { timing: patientTiming, connections: fakeConnections() });
+    closing.push(access.close);
+    const listing = Promise.withResolvers<void>();
+    const offering = Promise.withResolvers<void>();
+    const listingOnceOffered: Parameters<typeof defineSearchInOrg>[0] = {
+      takesConnections: access.takesConnections,
+      listServersInOrg: (scope, named) =>
+        Effect.sync(() => {
+          listing.resolve();
+        }).pipe(
+          Effect.andThen(Effect.promise(() => offering.promise)),
+          Effect.andThen(access.listServersInOrg(scope, named)),
+        ),
+    };
+    const offeredOnceListing: ProviderOffering = () =>
+      Effect.sync(() => {
+        offering.resolve();
+      }).pipe(Effect.andThen(Effect.promise(() => listing.promise)), Effect.as([tracker]));
+    const { registration } = defineSearchInOrg(listingOnceOffered, () => Effect.void, offeredOnceListing);
+
+    const searched = await Effect.runPromise(
+      makeDispatcher([])
+        .dispatchToOrg(registration, { caller: adder, org: 'acme', input: {}, encoding: 'strings' })
+        .pipe(Effect.provide(services)),
+    );
+
+    expect(searched).toEqual({
+      status: 'succeeded',
+      output: { servers: [], tools: [], scopes: [], providers: [tracker] },
+    });
+  });
+});
+
 describe('a provider a connection of the org serves', () => {
   it('is left out of the providers, pending, connected or broken, and its server is searched with the provider', async () => {
     const fake = await fakeServer();

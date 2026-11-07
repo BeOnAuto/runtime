@@ -62,7 +62,10 @@ export function defineSearchInOrg(
       }
       const { org } = yield* OrgContext;
       const caller = yield* Caller;
-      const listing = yield* tools.listServersInOrg({ org, playbook }, server);
+      const [listing, offered] = yield* Effect.all(
+        [tools.listServersInOrg({ org, playbook }, server), offering(caller)],
+        { concurrency: 'unbounded' },
+      );
       const servers = yield* serversInTheListing(listing.servers);
       if (server !== undefined && servers.length === 0) {
         return yield* noServerNamed(server, playbook === undefined ? 'This org' : 'This playbook');
@@ -70,7 +73,7 @@ export function defineSearchInOrg(
       return {
         ...foundIn(servers, asked),
         servers: servers.map((listed) => withServedPlaybooks(listed, asked, caller.playbooks)),
-        ...providersOf(yield* providersInTheListing(yield* offering(caller)), listing, asked),
+        ...providersOf(yield* providersInTheListing(offered), listing, asked),
       };
     }),
     plainLanguage: {
