@@ -214,6 +214,8 @@ export const commentTable: ActivityTable = {
 
 export const activityTables: readonly ActivityTable[] = [requestTable, brokenTable, newTable, commentTable];
 
+export const readsAtOnce = 4;
+
 export function rowsOwnedBy(owner: string, projection: string, query: ProjectedRowsQuery) {
   return Effect.gen(function* () {
     const reader = yield* OrgReader;

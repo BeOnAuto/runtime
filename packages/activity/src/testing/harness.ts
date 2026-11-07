@@ -1,4 +1,5 @@
 import {
+  Ledger,
   StudioLinks,
   allPermissions,
   makeDispatcher,
@@ -112,10 +113,14 @@ const noPages: PlaybookPages = { pageOf: noPage, save: noPage };
 
 const updatePlaybook = defineUpdatePlaybook(noPages);
 
-export function activityHarness() {
+export type LedgerReads = (ledger: Ledger['Service']) => Ledger['Service'];
+
+const asItReads: LedgerReads = (ledger) => ledger;
+
+export function activityHarness(reads: LedgerReads = asItReads) {
   const ledger = memoryLedger(undefined, activityProjections);
   const services = Layer.mergeAll(
-    ledger.layer,
+    Layer.succeed(Ledger, reads(ledger.service)),
     Layer.provide(ledgerPlaybookRegistry, ledger.layer),
     recordingReporter().layer,
     TestClock.layer(),

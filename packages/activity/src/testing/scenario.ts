@@ -1,4 +1,4 @@
-import { activityHarness, ada, priya } from './harness.ts';
+import { activityHarness, ada, priya, type LedgerReads } from './harness.ts';
 import { definitionCreated, runDeferred, runFailed, runStarted, runSucceeded, type RunOf } from './recorded-facts.ts';
 
 const runId = (index: number) => `019a4000-0000-7000-8000-${String(index).padStart(12, '0')}`;
@@ -37,8 +37,8 @@ const asked = (to: string) => ({
   answerSchema: { type: 'boolean' },
 });
 
-export async function financeAndSales() {
-  const harness = activityHarness();
+export async function financeAndSales(reads?: LedgerReads) {
+  const harness = activityHarness(reads);
   const { created, record } = harness;
   await created(priya, 'finance', at('10:00'));
   await created(ada, 'sales', at('10:00'));

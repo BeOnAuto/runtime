@@ -12,7 +12,14 @@ import { brokenName } from '../projections/broken-rows.ts';
 import { anyMember, requestsName } from '../projections/request-rows.ts';
 import type { Mark } from '../projections/seen-rows.ts';
 import type { ActivityRow } from './activity-row.ts';
-import { commentTable, newTable, rowsCountedOf, rowsOwnedBy, type ActivityTable } from './activity-tables.ts';
+import {
+  commentTable,
+  newTable,
+  readsAtOnce,
+  rowsCountedOf,
+  rowsOwnedBy,
+  type ActivityTable,
+} from './activity-tables.ts';
 import { isSeenBy, type Viewer } from './activity-viewer.ts';
 
 const localDeveloper = 'local';
@@ -134,7 +141,9 @@ function countsOfTheOrg(viewer: Viewer) {
 
 export function countsFor({ viewer, readable, withTheOrg, changes }: CountedActivity) {
   return Effect.gen(function* () {
-    const ofPlaybooks = yield* Effect.forEach(readable, (playbook) => countsIn(viewer, playbook));
+    const ofPlaybooks = yield* Effect.forEach(readable, (playbook) => countsIn(viewer, playbook), {
+      concurrency: readsAtOnce,
+    });
     const each = withTheOrg ? [...ofPlaybooks, yield* countsOfTheOrg(viewer)] : ofPlaybooks;
     const unseenChanges = changes.filter(
       (change) => readable.includes(change.position.playbook) && !isSeenBy(viewer, change),

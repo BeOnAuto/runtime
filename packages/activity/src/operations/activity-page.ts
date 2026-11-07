@@ -9,6 +9,7 @@ import {
   activityTables,
   boundsOf,
   commentTable,
+  readsAtOnce,
   rowsOwnedBy,
   tiedTimesOf,
   withinBounds,
@@ -109,11 +110,13 @@ function tablesRead(asked: PageAsked): readonly OwnedTable[] {
 
 export function pageOf(register: PlaybookRegister, asked: PageAsked) {
   return Effect.gen(function* () {
-    const read = yield* Effect.forEach(tablesRead(asked), ({ owner, table }) => rowsOfTable(owner, table, asked));
+    const read = yield* Effect.forEach(tablesRead(asked), ({ owner, table }) => rowsOfTable(owner, table, asked), {
+      concurrency: readsAtOnce,
+    });
     const merged = [...read.flat(), ...changesShown(register, asked)].toSorted((left, right) =>
       newestFirst(left.position, right.position),
     );
-    const rows = yield* Effect.forEach(merged.slice(0, asked.limit), startedBy);
+    const rows = yield* Effect.forEach(merged.slice(0, asked.limit), startedBy, { concurrency: readsAtOnce });
     const page: Page = { rows, hasMore: merged.length > asked.limit };
     return page;
   });
