@@ -3,10 +3,10 @@ import { join } from 'node:path';
 
 import { createApiKey } from '@on.auto/identity';
 import { Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFailed } from 'vitest';
 
 import { aPortNothingListensOn } from '../testing/processes/free-port.ts';
-import { homeOfTheTest, spawnRuntimeCommand } from '../testing/processes/runtime-command.ts';
+import { homeOfTheTest, spawnRuntimeCommand, type RuntimeCommandRun } from '../testing/processes/runtime-command.ts';
 import { aLedgerOfAnEarlierVersionAt } from '../testing/records/a-ledger-of-another-version.ts';
 import { until } from '../testing/waiting/until.ts';
 
@@ -28,6 +28,16 @@ async function statusAt(port: number): Promise<ReturnType<typeof statusOf>> {
 
 function readiesIn(text: string): number {
   return text.split('Press Ctrl+C to stop.').length - 1;
+}
+
+function recordStageOf(runtime: RuntimeCommandRun): (stage: string) => void {
+  let stage = 'startup';
+  onTestFailed(() => {
+    console.error({ stage, stdout: runtime.stdout(), stderr: runtime.stderr() });
+  });
+  return (next) => {
+    stage = next;
+  };
 }
 
 describe('a runtime started in a terminal', () => {
@@ -64,11 +74,14 @@ describe('a runtime started in a terminal', () => {
       port,
       settings: { HOST: '0.0.0.0', API_KEYS: JSON.stringify([entry]) },
     });
+    const stage = recordStageOf(runtime);
     await until(() => {
       expect(readiesIn(runtime.stdout())).toBe(1);
     });
 
+    stage('request');
     const answer = await fetch(`http://127.0.0.1:${port}/runtime`);
+    stage('shutdown');
     runtime.interrupt();
 
     expect(answer.status).toBe(401);

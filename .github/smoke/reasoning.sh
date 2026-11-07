@@ -3,13 +3,14 @@ set -e
 port="${1:?the port of this computer to publish the container on}"
 image="${2:?the image to run}"
 . "$(dirname "${BASH_SOURCE[0]}")/calls.sh"
-show_logs_on_failure reasoning
-issued="$(docker run --rm "$image" node packages/identity/src/key-command.ts --org demo)"
+container="$(smoke_name reasoning)"
+show_logs_on_failure "$container"
+issued="$(runtime_command node packages/identity/src/key-command.ts --org demo)"
 key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
 echo "::add-mask::$key"
 API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
 export API_KEYS
-docker run --detach --name reasoning --publish "$port:5555" --env DO_NOT_TRACK=1 --env API_KEYS "$image"
+runtime_start "$container" "" DO_NOT_TRACK=1 API_KEYS
 for attempt in $(seq 1 30); do
   curl --silent --fail http://127.0.0.1:$port/health > /dev/null && break
   sleep 1
@@ -28,5 +29,4 @@ test "$(call ran.json --data '{"input":{"name":"CI"}}' "$playbook/definitions/re
 test "$(jq --raw-output .reason ran.json)" = unavailable
 test "$(jq --raw-output .detail ran.json)" = \
   'anthropic is not configured. No model provider is configured'
-docker stop reasoning
-test "$(docker inspect reasoning --format '{{.State.ExitCode}}')" = 0
+runtime_stop "$container"

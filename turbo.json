@@ -2,7 +2,7 @@
   "$schema": "./node_modules/turbo/schema.json",
   "ui": "stream",
   "agentGuidance": false,
-  "globalPassThroughEnv": ["TMPDIR", "VITEST_MAX_WORKERS", "CI"],
+  "globalPassThroughEnv": ["TMPDIR", "VITEST_MAX_WORKERS", "CI", "CI_TASK_POOL_SOCKET", "PNPM_CONFIG_SCRIPT_SHELL"],
   "globalDependencies": [
     "package.json",
     "tsconfig.base.json",

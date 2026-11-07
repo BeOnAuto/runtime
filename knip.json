@@ -4,6 +4,9 @@
     "entry": ["docs/.vitepress/config.mjs"]
   },
   "workspaces": {
+    ".": {
+      "entry": [".github/smoke/node-command.ts"]
+    },
     "packages/server": {
       "entry": ["vitest.groups.ts"]
     }

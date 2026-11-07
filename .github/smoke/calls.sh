@@ -1,3 +1,9 @@
+smoke_name() {
+  printf '%s%s\n' "${SMOKE_PREFIX:-}" "$1"
+}
+
+. "$(dirname "${BASH_SOURCE[0]}")/runtime.sh"
+
 rm -f last-response
 containers_shown_on_failure=()
 
@@ -26,10 +32,11 @@ show_what_failed() {
   if [ "$status" -ne 0 ]; then
     for container in "${containers_shown_on_failure[@]}"; do
       echo "::group::The log of the container $container"
-      docker logs "$container" 2>&1 | tail --lines 200 || true
+      runtime_logs "$container" 2>&1 | tail --lines 200 || true
       echo '::endgroup::'
     done
   fi
+  runtime_cleanup
   exit "$status"
 }
 

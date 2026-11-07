@@ -3,13 +3,14 @@ set -e
 port="${1:?the port of this computer to publish the container on}"
 image="${2:?the image to run}"
 . "$(dirname "${BASH_SOURCE[0]}")/calls.sh"
-show_logs_on_failure reactions
-issued="$(docker run --rm "$image" node packages/identity/src/key-command.ts --org demo)"
+container="$(smoke_name reactions)"
+show_logs_on_failure "$container"
+issued="$(runtime_command node packages/identity/src/key-command.ts --org demo)"
 key="$(printf '%s\n' "$issued" | sed --quiet 's/^API key, shown only this once: //p')"
 echo "::add-mask::$key"
 API_KEYS="[$(printf '%s\n' "$issued" | sed --quiet 's/^API_KEYS entry: //p')]"
 export API_KEYS
-docker run --detach --name reactions --publish "$port:5555" --env DO_NOT_TRACK=1 --env API_KEYS "$image"
+runtime_start "$container" "" DO_NOT_TRACK=1 API_KEYS
 for attempt in $(seq 1 30); do
   curl --silent --fail --max-time 5 http://127.0.0.1:$port/health > /dev/null && break
   sleep 1
@@ -53,5 +54,4 @@ for run in $(jq --raw-output '.runs[].run_id' runs.json); do
 done
 test "$(jq --slurp --compact-output 'map(.events[0] | [.metadata.trigger.kind, .summary]) | sort' history-*.json)" = \
   '[["event","A run of the workflow “closing” was started by its event trigger."],["every","A run of the workflow “closing” was started by its every schedule."]]'
-docker stop reactions
-test "$(docker inspect reactions --format '{{.State.ExitCode}}')" = 0
+runtime_stop "$container"
