@@ -1,0 +1,2222 @@
+{
+  "openai": {
+    "categories": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": ["string", "null"],
+                "description": "Must be at least 1 character long; at most 64 characters long."
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "low": {
+                      "type": ["number", "null"],
+                      "description": "The lowest the value may be; at most the value."
+                    },
+                    "high": {
+                      "type": ["number", "null"],
+                      "description": "The highest the value may be; at least the value."
+                    }
+                  },
+                  "required": ["name", "value", "low", "high"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 200 items."
+              }
+            },
+            "required": ["unit", "values"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "series": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": ["string", "null"],
+                "description": "Must be at least 1 character long; at most 64 characters long."
+              },
+              "period": {
+                "type": ["string", "null"],
+                "enum": ["day", "week", "month", "quarter", "year", null],
+                "description": "The grain of every at: day, week, month, quarter or year."
+              },
+              "origin": {
+                "type": ["string", "null"],
+                "description": "The at of the last point observed, in the form of at."
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "string",
+                            "description": "When the point is: the period in the ISO 8601 form of the grain period names, YYYY-MM-DD, YYYY-Www, YYYY-MM, YYYY-Qn or YYYY, or an RFC 3339 date and time when period is left out; later than the point before it."
+                          },
+                          "value": {
+                            "type": "number"
+                          },
+                          "low": {
+                            "type": ["number", "null"],
+                            "description": "The lowest the value may be; at most the value."
+                          },
+                          "high": {
+                            "type": ["number", "null"],
+                            "description": "The highest the value may be; at least the value."
+                          }
+                        },
+                        "required": ["at", "value", "low", "high"],
+                        "additionalProperties": false
+                      },
+                      "description": "Must be at most 2000 items."
+                    }
+                  },
+                  "required": ["name", "points"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 20 items."
+              },
+              "marks": {
+                "type": ["array", "null"],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "value": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["label", "value"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at most 8 items."
+              }
+            },
+            "required": ["unit", "period", "origin", "lines", "marks"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "table": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "unit": {
+                      "type": ["string", "null"],
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    }
+                  },
+                  "required": ["name", "unit"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 50 items."
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": ["string", "number", "boolean", "null"]
+                  },
+                  "description": "Must be at most 50 items."
+                },
+                "description": "Each row is a list of one cell for each column, in the order of columns. Must be at most 500 items."
+              }
+            },
+            "required": ["columns", "rows"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "text": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Markdown. Must be at most 65536 characters long."
+              }
+            },
+            "required": ["text"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "ticket": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": ["billing", "technical", "account", "other"]
+              },
+              "priority": {
+                "type": "integer",
+                "enum": [1, 2, 3, 4],
+                "description": "1 is the most urgent."
+              },
+              "customer": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": ["string", "null"],
+                    "description": "Must be an email address such as name@example.com."
+                  },
+                  "plan": {
+                    "type": ["string", "null"],
+                    "enum": ["free", "pro", "enterprise", null]
+                  }
+                },
+                "required": ["name", "email", "plan"],
+                "additionalProperties": false
+              },
+              "summary": {
+                "type": "string",
+                "description": "Must be at most 80 characters long."
+              },
+              "follow_up": {
+                "type": ["object", "null"],
+                "properties": {
+                  "needed": {
+                    "type": "boolean"
+                  },
+                  "by": {
+                    "type": ["string", "null"],
+                    "description": "Must be a date such as 2026-04-01."
+                  }
+                },
+                "required": ["needed", "by"],
+                "additionalProperties": false
+              },
+              "tags": {
+                "type": ["array", "null"],
+                "items": {
+                  "type": "string"
+                },
+                "description": "Must be at most 3 items."
+              }
+            },
+            "required": ["category", "priority", "customer", "summary", "follow_up", "tags"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "invoice": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "invoice_id": {
+                "type": "string",
+                "description": "Must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e."
+              },
+              "issued": {
+                "type": "string",
+                "description": "Must be a date such as 2026-04-01."
+              },
+              "vendor_site": {
+                "type": "string",
+                "description": "Must be an absolute URI such as https://example.com."
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long."
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "description": "Must be at least 1."
+                    },
+                    "unit_price": {
+                      "type": "number",
+                      "description": "Must be at least 0."
+                    }
+                  },
+                  "required": ["description", "quantity", "unit_price"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 10 items."
+              },
+              "total": {
+                "type": "number",
+                "description": "Must be at least 0."
+              },
+              "currency": {
+                "type": "string",
+                "enum": ["EUR", "USD", "GBP"]
+              },
+              "notes": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["invoice_id", "issued", "vendor_site", "lines", "total", "currency", "notes"],
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "decision": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "verdict": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": ["approve"]
+                      },
+                      "limit": {
+                        "$ref": "#/$defs/money"
+                      }
+                    },
+                    "required": ["kind", "limit"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": ["reject"]
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["kind", "reason"],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "reviewer_note": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["verdict", "reviewer_note"],
+            "additionalProperties": false,
+            "$defs": {
+              "money": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string"
+                  }
+                },
+                "required": ["amount", "currency"],
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "scores": {
+      "model": "gpt-5",
+      "input": [
+        {
+          "role": "developer",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "input_text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "max_output_tokens": 256,
+      "text": {
+        "format": {
+          "type": "json_schema",
+          "strict": true,
+          "name": "response",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Must be at least 0; at most 10."
+                    }
+                  },
+                  "required": ["key", "value"],
+                  "additionalProperties": false
+                },
+                "description": "Each candidate by name, and their score. Each entry is one key and its value, each key once."
+              },
+              "winner": {
+                "type": "string"
+              }
+            },
+            "required": ["scores", "winner"],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "anthropic": {
+    "categories": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "description": "Must be at least 1 character long; at most 64 characters long.",
+                "type": ["string", "null"]
+              },
+              "values": {
+                "description": "Must be at least 1 item; at most 200 items.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "description": "Must be at least 1 character long; at most 64 characters long.",
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "low": {
+                      "description": "The lowest the value may be; at most the value.",
+                      "type": ["number", "null"]
+                    },
+                    "high": {
+                      "description": "The highest the value may be; at least the value.",
+                      "type": ["number", "null"]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["name", "value", "low", "high"]
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": ["unit", "values"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    },
+    "series": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "description": "Must be at least 1 character long; at most 64 characters long.",
+                "type": ["string", "null"]
+              },
+              "period": {
+                "description": "The grain of every at: day, week, month, quarter or year.",
+                "enum": ["day", "week", "month", "quarter", "year", null],
+                "type": ["string", "null"]
+              },
+              "origin": {
+                "description": "The at of the last point observed, in the form of at.",
+                "type": ["string", "null"]
+              },
+              "lines": {
+                "description": "Must be at least 1 item; at most 20 items.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "description": "Must be at least 1 character long; at most 64 characters long.",
+                      "type": "string"
+                    },
+                    "points": {
+                      "description": "Must be at most 2000 items.",
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "description": "When the point is: the period in the ISO 8601 form of the grain period names, YYYY-MM-DD, YYYY-Www, YYYY-MM, YYYY-Qn or YYYY, or an RFC 3339 date and time when period is left out; later than the point before it.",
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "number"
+                          },
+                          "low": {
+                            "description": "The lowest the value may be; at most the value.",
+                            "type": ["number", "null"]
+                          },
+                          "high": {
+                            "description": "The highest the value may be; at least the value.",
+                            "type": ["number", "null"]
+                          }
+                        },
+                        "additionalProperties": false,
+                        "required": ["at", "value", "low", "high"]
+                      }
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["name", "points"]
+                }
+              },
+              "marks": {
+                "description": "Must be at most 8 items.",
+                "type": ["array", "null"],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "description": "Must be at least 1 character long; at most 64 characters long.",
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["label", "value"]
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": ["unit", "period", "origin", "lines", "marks"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    },
+    "table": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "columns": {
+                "description": "Must be at least 1 item; at most 50 items.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "description": "Must be at least 1 character long; at most 64 characters long.",
+                      "type": "string"
+                    },
+                    "unit": {
+                      "description": "Must be at least 1 character long; at most 64 characters long.",
+                      "type": ["string", "null"]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["name", "unit"]
+                }
+              },
+              "rows": {
+                "description": "Each row is a list of one cell for each column, in the order of columns. Must be at most 500 items.",
+                "type": "array",
+                "items": {
+                  "description": "Must be at most 50 items.",
+                  "type": "array",
+                  "items": {
+                    "type": ["string", "number", "boolean", "null"]
+                  }
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": ["columns", "rows"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    },
+    "text": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "description": "Markdown. Must be at most 65536 characters long.",
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": ["text"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    },
+    "ticket": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "enum": ["billing", "technical", "account", "other"],
+                "type": "string"
+              },
+              "priority": {
+                "description": "1 is the most urgent.",
+                "enum": [1, 2, 3, 4],
+                "type": "integer"
+              },
+              "customer": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "description": "Must be an email address such as name@example.com.",
+                    "type": ["string", "null"]
+                  },
+                  "plan": {
+                    "enum": ["free", "pro", "enterprise", null],
+                    "type": ["string", "null"]
+                  }
+                },
+                "additionalProperties": false,
+                "required": ["name", "email", "plan"]
+              },
+              "summary": {
+                "description": "Must be at most 80 characters long.",
+                "type": "string"
+              },
+              "follow_up": {
+                "type": ["object", "null"],
+                "properties": {
+                  "needed": {
+                    "type": "boolean"
+                  },
+                  "by": {
+                    "description": "Must be a date such as 2026-04-01.",
+                    "type": ["string", "null"]
+                  }
+                },
+                "additionalProperties": false,
+                "required": ["needed", "by"]
+              },
+              "tags": {
+                "description": "Must be at most 3 items.",
+                "type": ["array", "null"],
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": ["category", "priority", "customer", "summary", "follow_up", "tags"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    },
+    "invoice": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "invoice_id": {
+                "description": "Must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e.",
+                "type": "string"
+              },
+              "issued": {
+                "description": "Must be a date such as 2026-04-01.",
+                "type": "string"
+              },
+              "vendor_site": {
+                "description": "Must be an absolute URI such as https://example.com.",
+                "type": "string"
+              },
+              "lines": {
+                "description": "Must be at least 1 item; at most 10 items.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "description": "Must be at least 1 character long.",
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "description": "Must be at least 1.",
+                      "type": "integer"
+                    },
+                    "unit_price": {
+                      "description": "Must be at least 0.",
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["description", "quantity", "unit_price"]
+                }
+              },
+              "total": {
+                "description": "Must be at least 0.",
+                "type": "number"
+              },
+              "currency": {
+                "enum": ["EUR", "USD", "GBP"],
+                "type": "string"
+              },
+              "notes": {
+                "type": ["string", "null"]
+              }
+            },
+            "additionalProperties": false,
+            "required": ["invoice_id", "issued", "vendor_site", "lines", "total", "currency", "notes"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    },
+    "decision": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "$defs": {
+              "money": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "required": ["amount", "currency"]
+              }
+            },
+            "properties": {
+              "verdict": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": ["approve"],
+                        "type": "string"
+                      },
+                      "limit": {
+                        "$ref": "#/$defs/money"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": ["kind", "limit"]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "enum": ["reject"],
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "required": ["kind", "reason"]
+                  }
+                ]
+              },
+              "reviewer_note": {
+                "type": ["string", "null"]
+              }
+            },
+            "additionalProperties": false,
+            "required": ["verdict", "reviewer_note"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    },
+    "scores": {
+      "model": "claude-sonnet-4-5",
+      "max_tokens": 256,
+      "output_config": {
+        "format": {
+          "type": "json_schema",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "description": "Each candidate by name, and their score. Each entry is one key and its value, each key once.",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "description": "Must be at least 0; at most 10.",
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "required": ["key", "value"]
+                }
+              },
+              "winner": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false,
+            "required": ["scores", "winner"]
+          }
+        }
+      },
+      "system": [
+        {
+          "type": "text",
+          "text": "Answer briefly"
+        }
+      ],
+      "messages": [
+        {
+          "role": "user",
+          "content": [
+            {
+              "type": "text",
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "google": {
+    "categories": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["unit", "values"],
+          "properties": {
+            "unit": {
+              "type": ["string", "null"],
+              "description": "Must be at least 1 character long; at most 64 characters long."
+            },
+            "values": {
+              "type": "array",
+              "description": "Must be at least 1 item; at most 200 items.",
+              "items": {
+                "type": "object",
+                "required": ["name", "value", "low", "high"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Must be at least 1 character long; at most 64 characters long."
+                  },
+                  "value": {
+                    "type": "number"
+                  },
+                  "low": {
+                    "type": ["number", "null"],
+                    "description": "The lowest the value may be; at most the value."
+                  },
+                  "high": {
+                    "type": ["number", "null"],
+                    "description": "The highest the value may be; at least the value."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    },
+    "series": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["unit", "period", "origin", "lines", "marks"],
+          "properties": {
+            "unit": {
+              "type": ["string", "null"],
+              "description": "Must be at least 1 character long; at most 64 characters long."
+            },
+            "period": {
+              "type": ["string", "null"],
+              "enum": ["day", "week", "month", "quarter", "year", null],
+              "description": "The grain of every at: day, week, month, quarter or year."
+            },
+            "origin": {
+              "type": ["string", "null"],
+              "description": "The at of the last point observed, in the form of at."
+            },
+            "lines": {
+              "type": "array",
+              "description": "Must be at least 1 item; at most 20 items.",
+              "items": {
+                "type": "object",
+                "required": ["name", "points"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Must be at least 1 character long; at most 64 characters long."
+                  },
+                  "points": {
+                    "type": "array",
+                    "description": "Must be at most 2000 items.",
+                    "items": {
+                      "type": "object",
+                      "required": ["at", "value", "low", "high"],
+                      "properties": {
+                        "at": {
+                          "type": "string",
+                          "description": "When the point is: the period in the ISO 8601 form of the grain period names, YYYY-MM-DD, YYYY-Www, YYYY-MM, YYYY-Qn or YYYY, or an RFC 3339 date and time when period is left out; later than the point before it."
+                        },
+                        "value": {
+                          "type": "number"
+                        },
+                        "low": {
+                          "type": ["number", "null"],
+                          "description": "The lowest the value may be; at most the value."
+                        },
+                        "high": {
+                          "type": ["number", "null"],
+                          "description": "The highest the value may be; at least the value."
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "marks": {
+              "type": ["array", "null"],
+              "description": "Must be at most 8 items.",
+              "items": {
+                "type": "object",
+                "required": ["label", "value"],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "description": "Must be at least 1 character long; at most 64 characters long."
+                  },
+                  "value": {
+                    "type": "number"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    },
+    "table": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["columns", "rows"],
+          "properties": {
+            "columns": {
+              "type": "array",
+              "description": "Must be at least 1 item; at most 50 items.",
+              "items": {
+                "type": "object",
+                "required": ["name", "unit"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Must be at least 1 character long; at most 64 characters long."
+                  },
+                  "unit": {
+                    "type": ["string", "null"],
+                    "description": "Must be at least 1 character long; at most 64 characters long."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "rows": {
+              "type": "array",
+              "description": "Each row is a list of one cell for each column, in the order of columns. Must be at most 500 items.",
+              "items": {
+                "type": "array",
+                "description": "Must be at most 50 items.",
+                "items": {
+                  "type": ["string", "number", "boolean", "null"]
+                }
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    },
+    "text": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["text"],
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "Markdown. Must be at most 65536 characters long."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    },
+    "ticket": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["category", "priority", "customer", "summary", "follow_up", "tags"],
+          "properties": {
+            "category": {
+              "type": "string",
+              "enum": ["billing", "technical", "account", "other"]
+            },
+            "priority": {
+              "type": "integer",
+              "enum": [1, 2, 3, 4],
+              "description": "1 is the most urgent."
+            },
+            "customer": {
+              "type": "object",
+              "required": ["name", "email", "plan"],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": ["string", "null"],
+                  "description": "Must be an email address such as name@example.com."
+                },
+                "plan": {
+                  "type": ["string", "null"],
+                  "enum": ["free", "pro", "enterprise", null]
+                }
+              },
+              "additionalProperties": false
+            },
+            "summary": {
+              "type": "string",
+              "description": "Must be at most 80 characters long."
+            },
+            "follow_up": {
+              "type": ["object", "null"],
+              "required": ["needed", "by"],
+              "properties": {
+                "needed": {
+                  "type": "boolean"
+                },
+                "by": {
+                  "type": ["string", "null"],
+                  "description": "Must be a date such as 2026-04-01."
+                }
+              },
+              "additionalProperties": false
+            },
+            "tags": {
+              "type": ["array", "null"],
+              "description": "Must be at most 3 items.",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    },
+    "invoice": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["invoice_id", "issued", "vendor_site", "lines", "total", "currency", "notes"],
+          "properties": {
+            "invoice_id": {
+              "type": "string",
+              "description": "Must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e."
+            },
+            "issued": {
+              "type": "string",
+              "description": "Must be a date such as 2026-04-01."
+            },
+            "vendor_site": {
+              "type": "string",
+              "description": "Must be an absolute URI such as https://example.com."
+            },
+            "lines": {
+              "type": "array",
+              "description": "Must be at least 1 item; at most 10 items.",
+              "items": {
+                "type": "object",
+                "required": ["description", "quantity", "unit_price"],
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "description": "Must be at least 1 character long."
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "description": "Must be at least 1."
+                  },
+                  "unit_price": {
+                    "type": "number",
+                    "description": "Must be at least 0."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "total": {
+              "type": "number",
+              "description": "Must be at least 0."
+            },
+            "currency": {
+              "type": "string",
+              "enum": ["EUR", "USD", "GBP"]
+            },
+            "notes": {
+              "type": ["string", "null"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    },
+    "decision": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["verdict", "reviewer_note"],
+          "$defs": {
+            "money": {
+              "type": "object",
+              "required": ["amount", "currency"],
+              "properties": {
+                "amount": {
+                  "type": "number"
+                },
+                "currency": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "properties": {
+            "verdict": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "required": ["kind", "limit"],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": ["approve"]
+                    },
+                    "limit": {
+                      "$ref": "#/$defs/money"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "required": ["kind", "reason"],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": ["reject"]
+                    },
+                    "reason": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            },
+            "reviewer_note": {
+              "type": ["string", "null"]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    },
+    "scores": {
+      "generationConfig": {
+        "maxOutputTokens": 256,
+        "responseMimeType": "application/json",
+        "responseJsonSchema": {
+          "type": "object",
+          "required": ["scores", "winner"],
+          "properties": {
+            "scores": {
+              "type": "array",
+              "description": "Each candidate by name, and their score. Each entry is one key and its value, each key once.",
+              "items": {
+                "type": "object",
+                "required": ["key", "value"],
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "number",
+                    "description": "Must be at least 0; at most 10."
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "winner": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "contents": [
+        {
+          "role": "user",
+          "parts": [
+            {
+              "text": "PROMPT-TEXT-4c1e-confidential"
+            }
+          ]
+        }
+      ],
+      "systemInstruction": {
+        "parts": [
+          {
+            "text": "Answer briefly"
+          }
+        ]
+      }
+    }
+  },
+  "gateway": {
+    "categories": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": ["string", "null"],
+                "description": "Must be at least 1 character long; at most 64 characters long."
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "value": {
+                      "type": "number"
+                    },
+                    "low": {
+                      "type": ["number", "null"],
+                      "description": "The lowest the value may be; at most the value."
+                    },
+                    "high": {
+                      "type": ["number", "null"],
+                      "description": "The highest the value may be; at least the value."
+                    }
+                  },
+                  "required": ["name", "value", "low", "high"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 200 items."
+              }
+            },
+            "required": ["unit", "values"],
+            "additionalProperties": false
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    },
+    "series": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "unit": {
+                "type": ["string", "null"],
+                "description": "Must be at least 1 character long; at most 64 characters long."
+              },
+              "period": {
+                "type": ["string", "null"],
+                "enum": ["day", "week", "month", "quarter", "year", null],
+                "description": "The grain of every at: day, week, month, quarter or year."
+              },
+              "origin": {
+                "type": ["string", "null"],
+                "description": "The at of the last point observed, in the form of at."
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "points": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "at": {
+                            "type": "string",
+                            "description": "When the point is: the period in the ISO 8601 form of the grain period names, YYYY-MM-DD, YYYY-Www, YYYY-MM, YYYY-Qn or YYYY, or an RFC 3339 date and time when period is left out; later than the point before it."
+                          },
+                          "value": {
+                            "type": "number"
+                          },
+                          "low": {
+                            "type": ["number", "null"],
+                            "description": "The lowest the value may be; at most the value."
+                          },
+                          "high": {
+                            "type": ["number", "null"],
+                            "description": "The highest the value may be; at least the value."
+                          }
+                        },
+                        "required": ["at", "value", "low", "high"],
+                        "additionalProperties": false
+                      },
+                      "description": "Must be at most 2000 items."
+                    }
+                  },
+                  "required": ["name", "points"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 20 items."
+              },
+              "marks": {
+                "type": ["array", "null"],
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "value": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["label", "value"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at most 8 items."
+              }
+            },
+            "required": ["unit", "period", "origin", "lines", "marks"],
+            "additionalProperties": false
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    },
+    "table": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "columns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    },
+                    "unit": {
+                      "type": ["string", "null"],
+                      "description": "Must be at least 1 character long; at most 64 characters long."
+                    }
+                  },
+                  "required": ["name", "unit"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 50 items."
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": ["string", "number", "boolean", "null"]
+                  },
+                  "description": "Must be at most 50 items."
+                },
+                "description": "Each row is a list of one cell for each column, in the order of columns. Must be at most 500 items."
+              }
+            },
+            "required": ["columns", "rows"],
+            "additionalProperties": false
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    },
+    "text": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "Markdown. Must be at most 65536 characters long."
+              }
+            },
+            "required": ["text"],
+            "additionalProperties": false
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    },
+    "ticket": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": ["billing", "technical", "account", "other"]
+              },
+              "priority": {
+                "type": "integer",
+                "enum": [1, 2, 3, 4],
+                "description": "1 is the most urgent."
+              },
+              "customer": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": ["string", "null"],
+                    "description": "Must be an email address such as name@example.com."
+                  },
+                  "plan": {
+                    "type": ["string", "null"],
+                    "enum": ["free", "pro", "enterprise", null]
+                  }
+                },
+                "required": ["name", "email", "plan"],
+                "additionalProperties": false
+              },
+              "summary": {
+                "type": "string",
+                "description": "Must be at most 80 characters long."
+              },
+              "follow_up": {
+                "type": ["object", "null"],
+                "properties": {
+                  "needed": {
+                    "type": "boolean"
+                  },
+                  "by": {
+                    "type": ["string", "null"],
+                    "description": "Must be a date such as 2026-04-01."
+                  }
+                },
+                "required": ["needed", "by"],
+                "additionalProperties": false
+              },
+              "tags": {
+                "type": ["array", "null"],
+                "items": {
+                  "type": "string"
+                },
+                "description": "Must be at most 3 items."
+              }
+            },
+            "required": ["category", "priority", "customer", "summary", "follow_up", "tags"],
+            "additionalProperties": false
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    },
+    "invoice": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "invoice_id": {
+                "type": "string",
+                "description": "Must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e."
+              },
+              "issued": {
+                "type": "string",
+                "description": "Must be a date such as 2026-04-01."
+              },
+              "vendor_site": {
+                "type": "string",
+                "description": "Must be an absolute URI such as https://example.com."
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "description": {
+                      "type": "string",
+                      "description": "Must be at least 1 character long."
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "description": "Must be at least 1."
+                    },
+                    "unit_price": {
+                      "type": "number",
+                      "description": "Must be at least 0."
+                    }
+                  },
+                  "required": ["description", "quantity", "unit_price"],
+                  "additionalProperties": false
+                },
+                "description": "Must be at least 1 item; at most 10 items."
+              },
+              "total": {
+                "type": "number",
+                "description": "Must be at least 0."
+              },
+              "currency": {
+                "type": "string",
+                "enum": ["EUR", "USD", "GBP"]
+              },
+              "notes": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["invoice_id", "issued", "vendor_site", "lines", "total", "currency", "notes"],
+            "additionalProperties": false
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    },
+    "decision": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "verdict": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": ["approve"]
+                      },
+                      "limit": {
+                        "$ref": "#/$defs/money"
+                      }
+                    },
+                    "required": ["kind", "limit"],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": ["reject"]
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["kind", "reason"],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "reviewer_note": {
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["verdict", "reviewer_note"],
+            "additionalProperties": false,
+            "$defs": {
+              "money": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "currency": {
+                    "type": "string"
+                  }
+                },
+                "required": ["amount", "currency"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    },
+    "scores": {
+      "model": "llama-3.3-70b",
+      "max_tokens": 256,
+      "response_format": {
+        "type": "json_schema",
+        "json_schema": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "scores": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "number",
+                      "description": "Must be at least 0; at most 10."
+                    }
+                  },
+                  "required": ["key", "value"],
+                  "additionalProperties": false
+                },
+                "description": "Each candidate by name, and their score. Each entry is one key and its value, each key once."
+              },
+              "winner": {
+                "type": "string"
+              }
+            },
+            "required": ["scores", "winner"],
+            "additionalProperties": false
+          },
+          "strict": true,
+          "name": "response"
+        }
+      },
+      "messages": [
+        {
+          "role": "system",
+          "content": "Answer briefly"
+        },
+        {
+          "role": "user",
+          "content": "PROMPT-TEXT-4c1e-confidential"
+        }
+      ]
+    }
+  }
+}

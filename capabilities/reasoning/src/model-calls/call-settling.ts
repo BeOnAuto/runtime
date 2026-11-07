@@ -3,6 +3,7 @@ import { Array as Arr, Result } from 'effect';
 import type { ModelRequest } from '../model/model-request.ts';
 import type { ModelTarget } from '../model/model-resolution.ts';
 import type { SchemaRefusal } from '../model/model-result.ts';
+import { answerModeFor } from './answer-mode.ts';
 import { refusedRequestFailure, type Refused } from './api-call-failure.ts';
 import { attemptedCall, type Attempting, type CallReports, type SettledCall } from './call-attempt.ts';
 import type { CallPolicy } from './call-policy.ts';
@@ -26,8 +27,8 @@ function schemaRefusedIn(failure: Failure): Refused | undefined {
   return failure.schema_refused === true ? refusedIn(failure) : undefined;
 }
 
-function enforcesTheSchema({ takesSchemas }: ModelTarget, { output }: ModelRequest): boolean {
-  return takesSchemas && output.type === 'json';
+function enforcesTheSchema(target: ModelTarget, { output }: ModelRequest): boolean {
+  return output.type === 'json' && answerModeFor(target, output).mode === 'portable';
 }
 
 async function askedDescribed(

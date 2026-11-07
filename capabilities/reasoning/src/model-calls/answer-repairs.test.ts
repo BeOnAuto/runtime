@@ -161,7 +161,7 @@ describe('a JSON answer that misses its schema, asked for once more by a run tha
 });
 
 describe('a JSON answer that misses a schema the provider enforced', () => {
-  it('is asked for once more through a gateway, with the schema enforced again', async () => {
+  it('is asked for once more through a gateway, with the portable schema enforced again', async () => {
     const { access, requests } = await wrongThenRight(enforcingGateway);
 
     const result = await succeeded(access, jsonRequest(gatewayModel));
@@ -179,8 +179,8 @@ describe('a JSON answer that misses a schema the provider enforced', () => {
       json: { verdict: 'approve' },
       usage: usageOfTwoAnswers,
       repair: { outcome: 'repaired' },
+      output_mode: 'portable',
     });
-    expect(result).not.toHaveProperty('output_mode');
   });
 
   it('is asked for once more of a provider that enforces it itself, and fails after that one correction', async () => {

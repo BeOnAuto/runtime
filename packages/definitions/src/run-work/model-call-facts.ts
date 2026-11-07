@@ -51,9 +51,9 @@ export const ModelWarningSchema = Schema.Struct({
 
 export const FailureIssueSchema = Schema.Struct({ pointer: Schema.String, detail: Schema.String });
 
-const OutputModeSchema = Schema.Literals(['described']).annotate({
+const OutputModeSchema = Schema.Literals(['described', 'portable']).annotate({
   description:
-    'described when the call wrote the JSON Schema of the answer into the instructions rather than giving it to the provider',
+    'described when the call wrote the JSON Schema of the answer into the instructions rather than giving it to the provider; portable when it gave the provider the portable form of the schema and read the answer back into the schema as written',
 });
 
 const AskedRepairSchema = Schema.Struct({

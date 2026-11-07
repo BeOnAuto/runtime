@@ -8,6 +8,7 @@ import {
   isRepairable,
   issuesOf,
   RepairFailed,
+  writtenIssuesOf,
   settledAnswer,
   type CallMode,
   type Generated,
@@ -93,7 +94,7 @@ export async function answerRepairedOnce(
     return settledAnswer(target, first.generated, first.output, mode);
   }
   const issues = issuesToTell(issuesOf(first.output));
-  const words = repairWords(issues);
+  const words = repairWords(issuesToTell(writtenIssuesOf(first.output)));
   const because = skippedBecause(request, first.generated, words, { calledAt, began, answered });
   if (because !== undefined) {
     return settledAnswer(target, first.generated, first.output, { ...mode, repair: { outcome: 'skipped', because } });

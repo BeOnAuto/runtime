@@ -3,8 +3,8 @@ import { Option, Result, type Schema } from 'effect';
 import type { FailureIssue } from '../failure/failure-issue.ts';
 import { providerOf } from '../model/model-reference.ts';
 import type { OutputRequest, ToolDefinition } from '../model/model-request.ts';
-import type { ModelResult } from '../model/model-result.ts';
-import { answerValueOf } from '../schema/described-answers.ts';
+import type { ModelResult, OutputMode } from '../model/model-result.ts';
+import { keptAnswerOf } from '../schema/answer-reading.ts';
 import { inputSchemaWarnings } from '../tools/input-schema-warnings.ts';
 import { answerTextOf } from './asked-calls.ts';
 import type { FailedCall } from './step-decision.ts';
@@ -29,14 +29,15 @@ const scrubbedAway =
 
 const notJsonAnyMore = [{ pointer: '', detail: 'The scrubbed answer is not JSON' }];
 
-function outputOf(text: string, output: OutputRequest): Result.Result<Schema.Json, readonly FailureIssue[]> {
+function outputOf(
+  text: string,
+  output: OutputRequest,
+  mode: OutputMode | undefined,
+): Result.Result<Schema.Json, readonly FailureIssue[]> {
   if (output.type === 'text') {
     return Result.succeed(text);
   }
-  return Option.match(answerValueOf(text), {
-    onNone: () => Result.fail(notJsonAnyMore),
-    onSome: (json) => output.schema.validate(json),
-  });
+  return Option.getOrElse(keptAnswerOf(text, output.schema, mode), () => Result.fail(notJsonAnyMore));
 }
 
 function refusedAfterTheScrub({ data }: Answered, issues: readonly FailureIssue[]): FailedCall {
@@ -58,7 +59,7 @@ export function answerOfTheSteps(
 ): Result.Result<StepsAnswer, FailedCall> {
   const { data, response } = answered;
   const text = answerTextOf(response);
-  return Result.match(outputOf(text, requested), {
+  return Result.match(outputOf(text, requested, data.output_mode), {
     onFailure: (issues) => Result.fail(refusedAfterTheScrub(answered, issues)),
     onSuccess: (output) => {
       const result: ModelResult = {

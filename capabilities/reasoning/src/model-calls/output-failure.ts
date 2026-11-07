@@ -21,8 +21,8 @@ export interface UnusableOutput {
   readonly schema_refusal?: SchemaRefusal;
 }
 
-export function mismatchIssues(cause: unknown): readonly SchemaIssue[] {
-  return TypeValidationError.isInstance(cause) && cause.cause instanceof AnswerMismatch ? cause.cause.issues : [];
+export function mismatchOf(cause: unknown): AnswerMismatch | undefined {
+  return TypeValidationError.isInstance(cause) && cause.cause instanceof AnswerMismatch ? cause.cause : undefined;
 }
 
 function outputDetail(finishReason: SdkFinishReason, issues: readonly SchemaIssue[]): string {
@@ -86,7 +86,7 @@ export function unreadAnswerFailure(
     finishReason: finishReason ?? 'other',
     rawFinishReason: undefined,
     usage: usage === undefined ? null : tokenUsage(usage),
-    issues: mismatchIssues(cause),
+    issues: mismatchOf(cause)?.issues ?? [],
     refused: false,
   });
 }

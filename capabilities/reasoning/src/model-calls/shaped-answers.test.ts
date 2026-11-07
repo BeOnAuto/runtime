@@ -16,13 +16,18 @@ async function answering(text: string) {
 }
 
 describe('an answer asked for in a shape', () => {
-  it('is asked for with the schema of the shape, and taken when it is in the shape', async () => {
+  it('is asked for with the portable form of the schema of the shape, and taken when it is in the shape', async () => {
     const { access, requests } = await answering('{"unit":"hours","values":[{"name":"A","value":1,"low":0}]}');
 
     expect(await succeeded(access, request)).toMatchObject({
       json: { unit: 'hours', values: [{ name: 'A', value: 1, low: 0 }] },
     });
-    expect(JSON.stringify(requests()[0]?.body)).toContain('"$id":"https://on.auto/shapes/categories"');
+    expect(requests()[0]?.body).toMatchObject({
+      text: {
+        format: { schema: { required: ['unit', 'values'], properties: { unit: { type: ['string', 'null'] } } } },
+      },
+    });
+    expect(JSON.stringify(requests()[0]?.body)).not.toContain('https://on.auto/shapes/categories');
   });
 
   it('fails as output_invalid with the issues of the schema and of what the shape holds beyond it', async () => {

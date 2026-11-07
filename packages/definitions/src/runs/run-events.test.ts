@@ -192,7 +192,7 @@ const actingForAPerson: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
-const describedAndAskedAgain: readonly (typeof RunEventSchema.Type)[] = [
+const answeredInEachMode: readonly (typeof RunEventSchema.Type)[] = [
   {
     type: 'model_call_answered',
     data: {
@@ -237,9 +237,8 @@ const describedAndAskedAgain: readonly (typeof RunEventSchema.Type)[] = [
       usage,
       finish_reason: 'stop',
       issues: [],
-      output_mode: 'described',
+      output_mode: 'portable',
       repair: { outcome: 'skipped', because: 'input_tokens' },
-      schema_refusal: { outcome: 'described', status: 422, duration_ms: 600 },
     },
     context: onTheRun,
   },
@@ -249,6 +248,6 @@ describe('the facts a playbook records on the stream of a run', () => {
   recordedFactsBehaviour({
     schema: RunEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.57.0': [...actingForAPerson, ...describedAndAskedAgain] },
+    releases: { '0.46.0': baseline, '0.57.0': [...actingForAPerson, ...answeredInEachMode] },
   });
 });

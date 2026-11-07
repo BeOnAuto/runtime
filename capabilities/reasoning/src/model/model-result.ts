@@ -4,7 +4,7 @@ import type { FailureIssue } from '../failure/failure-issue.ts';
 
 export type FinishReason = 'stop' | 'length' | 'content_filter' | 'tool_calls' | 'error' | 'other';
 
-export type OutputMode = 'described';
+export type OutputMode = 'described' | 'portable';
 
 export type RepairSkippedBecause = 'input_tokens' | 'context_window' | 'time';
 

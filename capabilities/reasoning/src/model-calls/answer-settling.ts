@@ -17,7 +17,7 @@ import {
 } from '../model/model-result.ts';
 import { answerValueOf } from '../schema/described-answers.ts';
 import { finishReasonOf, tokenUsage, warningOf, type SdkUsage, type SdkWarning } from './answer-mapping.ts';
-import { mismatchIssues, outputFailure } from './output-failure.ts';
+import { mismatchOf, outputFailure } from './output-failure.ts';
 
 export type Answered = Omit<ModelResult, 'duration_ms'>;
 
@@ -42,7 +42,7 @@ export interface SdkResult {
 export type ReadOutput =
   | { readonly kind: 'text' }
   | { readonly kind: 'json'; readonly value: Schema.Json }
-  | { readonly kind: 'mismatched'; readonly issues: readonly SchemaIssue[] }
+  | { readonly kind: 'mismatched'; readonly issues: readonly SchemaIssue[]; readonly written: readonly SchemaIssue[] }
   | { readonly kind: 'missing' };
 
 export interface CallMode {
@@ -100,7 +100,7 @@ export function unreadAnswerOf(
   { id, cost, refused, warnings }: Responded,
   requestBytes: number,
 ): UnreadAnswer {
-  const issues = mismatchIssues(cause);
+  const mismatch = mismatchOf(cause);
   const generated: Generated = {
     text: text ?? '',
     finishReason: finishReason ?? 'other',
@@ -114,7 +114,11 @@ export function unreadAnswerOf(
     response: '[]',
     requestBytes,
   };
-  return { generated, output: issues.length === 0 ? { kind: 'missing' } : { kind: 'mismatched', issues } };
+  const output: ReadOutput =
+    mismatch === undefined
+      ? { kind: 'missing' }
+      : { kind: 'mismatched', issues: mismatch.issues, written: mismatch.written };
+  return { generated, output };
 }
 
 function answered(target: ModelTarget, generated: Generated): Answered {
@@ -134,6 +138,10 @@ function answered(target: ModelTarget, generated: Generated): Answered {
 
 export function issuesOf(output: ReadOutput): readonly SchemaIssue[] {
   return output.kind === 'mismatched' ? output.issues : [];
+}
+
+export function writtenIssuesOf(output: ReadOutput): readonly SchemaIssue[] {
+  return output.kind === 'mismatched' ? output.written : [];
 }
 
 function isUnusable(output: ReadOutput): boolean {
@@ -198,7 +206,7 @@ export function describedOutput(text: string, { schema }: JsonOutput): ReadOutpu
     onSome: (value) =>
       Result.match(schema.validate(value), {
         onSuccess: (json) => ({ kind: 'json', value: json }),
-        onFailure: (issues) => ({ kind: 'mismatched', issues }),
+        onFailure: (issues) => ({ kind: 'mismatched', issues, written: issues }),
       }),
   });
 }

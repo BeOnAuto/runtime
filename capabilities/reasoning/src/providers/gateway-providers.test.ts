@@ -33,7 +33,7 @@ describe('a model gateway', () => {
     expect(result).toMatchObject({ text: 'Hello', response_id: 'chatcmpl-B9MBs8CjcvOU2jLn4n570S5qMJKcT' });
   });
 
-  it('sends the schema when it supports structured outputs', async () => {
+  it('sends the portable form of the schema when it supports structured outputs', async () => {
     const recording = recordingFetch(() => jsonResponse(chatCompletion('{"verdict":"approve"}')));
     const access = await accessFor(environmentWith(gateway), { fetch: recording.fetch });
 
@@ -42,8 +42,7 @@ describe('a model gateway', () => {
     expect(recording.requests()[0]?.body).toMatchObject({
       response_format: { type: 'json_schema', json_schema: { name: 'verdict', strict: true } },
     });
-    expect(result.json).toEqual({ verdict: 'approve' });
-    expect('output_mode' in result).toBe(false);
+    expect(result).toMatchObject({ json: { verdict: 'approve' }, output_mode: 'portable' });
   });
 
   it('describes the schema in the instructions, sends no response format, and still validates the answer, when it does not', async () => {

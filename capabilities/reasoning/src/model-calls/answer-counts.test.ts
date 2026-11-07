@@ -51,11 +51,16 @@ describe('the JSON answers of the calls of a model', () => {
     ['valid_after_repair', ['{"verdict":42}', '{"verdict":"approve"}'], {}],
     ['invalid', ['{"verdict":42}', '{"verdict":43}'], {}],
     ['repair_skipped', ['{"verdict":42}'], { room: { input_tokens: 1 } }],
-  ] as const)('are counted as %s, by provider and model', async (outcome, texts, more) => {
-    const counted = await countedFor(answering(...texts), jsonRequest('mock/model', more));
+  ] as const)(
+    'are counted as %s, by provider, model and the portable mode of the call',
+    async (outcome, texts, more) => {
+      const counted = await countedFor(answering(...texts), jsonRequest('mock/model', more));
 
-    expect(counted).toEqual([{ attributes: { ...mockCall, 'auto.on.outcome': outcome }, state: once }]);
-  });
+      expect(counted).toEqual([
+        { attributes: { ...mockCall, 'auto.on.outcome': outcome, 'auto.on.output_mode': 'portable' }, state: once },
+      ]);
+    },
+  );
 
   it('are counted with the output mode of a call that described the schema to the model', async () => {
     const { access } = await answersInTurn(describingGateway, chatCompletion('{"verdict":"approve"}'));

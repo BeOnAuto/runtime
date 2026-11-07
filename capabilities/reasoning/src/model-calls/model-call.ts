@@ -1,11 +1,11 @@
 import { generateText, isStepCount, NoObjectGeneratedError, wrapLanguageModel, type LanguageModelMiddleware } from 'ai';
 import { Result, type Schema } from 'effect';
 
-import type { ModelRequest } from '../model/model-request.ts';
+import type { JsonOutput, ModelRequest } from '../model/model-request.ts';
 import type { ModelTarget } from '../model/model-resolution.ts';
-import { describedInstructions } from '../schema/described-answers.ts';
-import { jsonOutput } from '../schema/json-output.ts';
+import { describedInstructions, portableOutput, unreadableSchemaOf } from '../schema/json-output.ts';
 import { costOf, isRefusal, type SdkWarning } from './answer-mapping.ts';
+import { answerModeFor, type PortableMode } from './answer-mode.ts';
 import { answerRepairedOnce, type Asking } from './answer-repair.ts';
 import {
   describedOutput,
@@ -42,10 +42,6 @@ const utf8 = new TextEncoder();
 
 function bytesSent({ instructions, messages, tools }: SentRequest, schema: Schema.JsonObject | undefined): number {
   return utf8.encode(JSON.stringify({ instructions, messages, tools, schema })).byteLength;
-}
-
-function schemaSentOf({ takesSchemas }: ModelTarget, { output }: ModelRequest): Schema.JsonObject | undefined {
-  return takesSchemas && output.type === 'json' ? output.schema.document : undefined;
 }
 
 interface RespondingModel {
@@ -85,6 +81,8 @@ function respondingModel(target: ModelTarget): RespondingModel {
 }
 
 const described: CallMode = { output_mode: 'described' };
+
+const portable: CallMode = { output_mode: 'portable' };
 
 const toolCallsAsked: ReadOutput = { kind: 'text' };
 
@@ -137,10 +135,14 @@ function describedModeOf(refusal: CallMode['schema_refusal']): CallMode {
   return refusal === undefined ? described : { ...described, schema_refusal: refusal };
 }
 
-function preparedCall(target: ModelTarget, request: ModelRequest, { signal, telemetry }: Calling) {
+function preparedCall(
+  target: ModelTarget,
+  request: ModelRequest,
+  { signal, telemetry }: Calling,
+  schema?: Schema.JsonObject,
+) {
   const { model, responded } = respondingModel(target);
   const sent = { bytes: 0 };
-  const schema = schemaSentOf(target, request);
   const call = {
     model,
     ...requestedOf(request, signal, telemetry),
@@ -148,11 +150,56 @@ function preparedCall(target: ModelTarget, request: ModelRequest, { signal, tele
       sent.bytes = bytesSent(started, schema);
     },
   };
+  const generatedOf = (result: SdkResult) => projected(result, responded(), sent.bytes);
   return {
     call,
-    generatedOf: (result: SdkResult) => projected(result, responded(), sent.bytes),
+    generatedOf,
+    answerOf: (result: SdkResult, asking: Asking, read: () => ReadOutput): UnreadAnswer => ({
+      generated: generatedOf(result),
+      output: outputOf(result, asking, read),
+    }),
     unreadAfter: (error: unknown) => unreadOf(target, error, responded(), sent.bytes),
   };
+}
+
+interface JsonAsked {
+  readonly target: ModelTarget;
+  readonly request: ModelRequest;
+  readonly output: JsonOutput;
+  readonly calling: Calling;
+}
+
+function describedAnswer({ target, request, output, calling }: JsonAsked): Promise<SettledAnswer> {
+  const { call, answerOf } = preparedCall(target, request, calling);
+  const instructions = describedInstructions(request.instructions, output.schema.document);
+  return answerRepairedOnce(target, request, {
+    mode: describedModeOf(calling.refusal),
+    calledAt: calling.calledAt,
+    ask: async (asking) => {
+      const result = await generateText({ ...call, ...askedOf(request, asking), instructions });
+      return answerOf(result, asking, () => describedOutput(result.text, output));
+    },
+  });
+}
+
+function portableAnswer(
+  { target, request, output, calling }: JsonAsked,
+  { form }: PortableMode,
+): Promise<SettledAnswer> {
+  const { call, answerOf, unreadAfter } = preparedCall(target, request, calling, form.sent);
+  const enforced = portableOutput(output, form);
+  return answerRepairedOnce(target, request, {
+    mode: portable,
+    calledAt: calling.calledAt,
+    ask: async (asking) => {
+      try {
+        const result = await generateText({ ...call, ...askedOf(request, asking), output: enforced });
+        return answerOf(result, asking, () => readOutput(() => result.output));
+      } catch (error) {
+        return unreadAfter(error);
+      }
+    },
+  });
 }
 
 export async function modelAnswer(
@@ -160,41 +207,16 @@ export async function modelAnswer(
   request: ModelRequest,
   calling: Calling,
 ): Promise<SettledAnswer> {
-  const { call, generatedOf, unreadAfter } = preparedCall(target, request, calling);
-  const { calledAt } = calling;
-  const answerOf = (result: SdkResult, asking: Asking, read: () => ReadOutput): UnreadAnswer => ({
-    generated: generatedOf(result),
-    output: outputOf(result, asking, read),
-  });
   const { output } = request;
   if (output.type === 'text') {
+    const { call, generatedOf } = preparedCall(target, request, calling);
     return settledAnswer(target, generatedOf(await generateText(call)), { kind: 'text' });
   }
-  if (!target.takesSchemas) {
-    const instructions = describedInstructions(request.instructions, output.schema.document);
-    return answerRepairedOnce(target, request, {
-      mode: describedModeOf(calling.refusal),
-      calledAt,
-      ask: async (asking) => {
-        const result = await generateText({ ...call, ...askedOf(request, asking), instructions });
-        return answerOf(result, asking, () => describedOutput(result.text, output));
-      },
-    });
+  const unreadable = target.takesSchemas ? unreadableSchemaOf(output) : undefined;
+  if (unreadable !== undefined) {
+    return Result.fail(unreadable);
   }
-  const enforced = jsonOutput(output);
-  if (Result.isFailure(enforced)) {
-    return Result.fail(enforced.failure);
-  }
-  return answerRepairedOnce(target, request, {
-    mode: {},
-    calledAt,
-    ask: async (asking) => {
-      try {
-        const result = await generateText({ ...call, ...askedOf(request, asking), output: enforced.success });
-        return answerOf(result, asking, () => readOutput(() => result.output));
-      } catch (error) {
-        return unreadAfter(error);
-      }
-    },
-  });
+  const asked = { target, request, output, calling };
+  const chosen = answerModeFor(target, output);
+  return chosen.mode === 'portable' ? portableAnswer(asked, chosen) : describedAnswer(asked);
 }

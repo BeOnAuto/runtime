@@ -22,7 +22,7 @@ function isObject(value: Schema.Json): value is Schema.JsonObject {
   return typeof value === 'object' && value !== null && !isList(value);
 }
 
-function mutableObject(value: Schema.JsonObject): MutableObject {
+export function mutableObject(value: Schema.JsonObject): MutableObject {
   return Object.fromEntries(
     Object.entries(value).map(([key, entry]: readonly [string, Schema.Json]) => [key, mutableJson(entry)]),
   );

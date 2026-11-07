@@ -2,6 +2,7 @@ import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { OutputRequest } from '../model/model-request.ts';
+import type { ModelResult } from '../model/model-result.ts';
 import { compileAnswerSchema } from '../schema/answer-schema.ts';
 import { textResult } from '../testing/model-results.ts';
 import { answers } from '../testing/scripted-language-model.ts';
@@ -19,8 +20,26 @@ const keyed: OutputRequest = {
   ),
 };
 
-async function answeredWith(text: string, output: OutputRequest): Promise<Result.Result<StepsAnswer, unknown>> {
-  const { state, ending } = await Effect.runPromise(stepsOf({ replies: [answers(textResult(text))] }).stepping);
+const named: OutputRequest = {
+  type: 'json',
+  schema: Result.getOrThrow(
+    compileAnswerSchema({
+      type: 'object',
+      properties: { name: { type: 'string' }, nickname: { type: 'string' } },
+      required: ['name'],
+      additionalProperties: false,
+    }),
+  ),
+};
+
+async function answeredWith(
+  text: string,
+  output: OutputRequest,
+  overrides: Partial<ModelResult> = {},
+): Promise<Result.Result<StepsAnswer, unknown>> {
+  const { state, ending } = await Effect.runPromise(
+    stepsOf({ replies: [answers(textResult(text, overrides))] }).stepping,
+  );
   return ending.type === 'answered'
     ? answerOfTheSteps(state, ending, { model: 'anthropic/claude-sonnet-4-5', output, tools: [] })
     : Result.fail(ending);
@@ -51,5 +70,20 @@ describe('the answer of the steps, checked again once the secrets of the tool se
     const fenced = await answeredWith('```json\n{"key":"a key of twenty characters"}\n```', keyed);
 
     expect(Result.map(fenced, ({ output }) => output)).toEqual(Result.succeed({ key: 'a key of twenty characters' }));
+  });
+
+  it('reads an answer the call asked for in the portable form back into the schema as written, and any other as written', async () => {
+    const written = '{"name":"Ada","nickname":null}';
+    const portable = await answeredWith(written, named, { output_mode: 'portable' });
+    const described = await answeredWith(written, named, { output_mode: 'described' });
+    const older = await answeredWith(written, named);
+
+    expect(Result.map(portable, ({ output, result }) => ({ output, text: result.text }))).toEqual(
+      Result.succeed({ output: { name: 'Ada' }, text: written }),
+    );
+    expect([described, older]).toMatchObject([
+      Result.fail({ because: 'output_invalid', issues: [{ pointer: '/nickname' }] }),
+      Result.fail({ because: 'output_invalid', issues: [{ pointer: '/nickname' }] }),
+    ]);
   });
 });

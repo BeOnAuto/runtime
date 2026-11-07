@@ -27,6 +27,6 @@
   "src/runs/0.46.0/tool_call_failed.json": "24b7dd4ba5566443e3c7e9ea587192b5f18655c10efcb664662c015f327d4ede",
   "src/runs/0.46.0/tool_call_started.json": "becdb5da07b79991be77057caea85bd44ccb7c8428db85d731472d1ed9bc4b0e",
   "src/runs/0.57.0/model_call_answered.json": "d9b614f7466eea87a571d6a2c1bc064eaabe098d1522a33c040bf953b312b519",
-  "src/runs/0.57.0/model_call_failed.json": "0066590d242ed696b37430fc4b896a78baa7b08e5fdc04d4049e085cd1b7ad58",
+  "src/runs/0.57.0/model_call_failed.json": "44b78b0c44b0031d7260dbf31a856d2247e775a34632c7fc33a02cdc43c03689",
   "src/runs/0.57.0/run_started.json": "c39887fc256b984d8aebc0db44c7f566cd8e48aa8a34fd28f44e7680169beb9e"
 }

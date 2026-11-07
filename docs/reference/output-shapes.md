@@ -35,7 +35,7 @@ What the shape changes depends on the type, and a prediction function answers on
 
 Each issue is worded as a schema's is, at its JSON pointer, such as `/lines/0/points/2/at: Expected a time later than the point before it`. The rejection of a computation function or a workflow names at most three, and the `output_invalid` of a reasoning function at most 20. A definition without `output.shape` keeps its own `output.schema`, checked as its type checks it.
 
-A reasoning function's shape is sent to the provider as an output schema of the definition's own would be, so the definition carries the shape's [warnings](reasoning-format.md#answers-that-are-json) at the line of `output.shape`: Anthropic models do not receive the shapes' bounds, and the shapes' optional fields are not portable to strict structured outputs.
+A reasoning function's shape is sent to the provider as an output schema of the definition's own would be, in [the portable form](model-settings.md#the-portable-form-of-a-schema): its optional fields as fields that may be `null`, and its bounds in words, which no provider enforces while the model writes and the runtime checks after. The definition carries the shape's [warnings](reasoning-format.md#answers-that-are-json) at the line of `output.shape`.
 
 ## What a saved definition shows
 
