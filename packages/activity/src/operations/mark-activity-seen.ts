@@ -12,14 +12,7 @@ import { DateTime, Effect, Schema } from 'effect';
 import { activityStreamOf, seenDecider, type SeenItem } from '../facts/activity-seen.ts';
 import { itemOfAddress, orgSegment, type ActivityItem } from '../positions/activity-addresses.ts';
 import { countsFor } from './activity-counts.ts';
-import {
-  AddressField,
-  addressOfCaller,
-  cursorField,
-  mostRowsInAPage,
-  positionAt,
-  refusedAt,
-} from './activity-input.ts';
+import { cursorField, mostRowsInAPage, positionAt, refusedAt } from './activity-input.ts';
 import { isoOf } from './activity-row.ts';
 import { throughOf, viewerOf } from './activity-viewer.ts';
 import { ActivityCountsSchema, ThroughSchema } from './list-activity.ts';
@@ -39,7 +32,6 @@ const MarkActivitySeenInputSchema = Schema.Struct({
       }),
   ),
   through: Schema.optionalKey(cursorField('A cursor from a read: everything at or before it is seen')),
-  address: Schema.optionalKey(AddressField),
 });
 
 type MarkActivitySeenInput = typeof MarkActivitySeenInputSchema.Type;
@@ -74,7 +66,7 @@ function seenItemAt(
     : Effect.fail(new Forbidden({ detail: forbiddenDetailOf(item) }));
 }
 
-const marked = Effect.fnUntraced(function* ({ items = [], through: cursor, address: asked }: MarkActivitySeenInput) {
+const marked = Effect.fnUntraced(function* ({ items = [], through: cursor }: MarkActivitySeenInput) {
   const caller = yield* Caller;
   if (items.length === 0 && cursor === undefined) {
     return yield* refusedAt('/items', 'Expected the items seen, a through, or both');
@@ -82,14 +74,13 @@ const marked = Effect.fnUntraced(function* ({ items = [], through: cursor, addre
   const register = yield* loadPlaybookRegister;
   const seen = yield* Effect.forEach(items, (item, index) => seenItemAt(caller, item, index));
   const through = yield* positionAt('through', cursor, register);
-  const address = yield* addressOfCaller(asked);
   yield* (yield* OrgWriter).execute(activityStreamOf(caller.id), seenDecider, {
     items: seen,
     ...(through === undefined ? {} : { through: { ...through, at: isoOf(through.at) } }),
     at: DateTime.formatIso(yield* DateTime.now),
     by: caller.id,
   });
-  const viewer = yield* viewerOf(caller.id, address);
+  const viewer = yield* viewerOf(caller.id);
   const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
   return {
     counts: yield* countsFor({ viewer, readable, withTheOrg: caller.playbooks === '*', changes: register.changes }),

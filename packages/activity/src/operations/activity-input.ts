@@ -12,16 +12,9 @@ export const rowsInAPage = 50;
 
 const longestCursor = 512;
 
-const longestAddress = 320;
-
 export function cursorField(description: string) {
   return Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(longestCursor)).annotate({ description });
 }
-
-export const AddressField = Schema.String.check(Schema.isMaxLength(longestAddress)).annotate({
-  description:
-    "The caller's own email address, which decides which requests wait on the caller; it filters nothing and grants nothing",
-});
 
 export function refusedAt(pointer: string, detail: string): InvalidInput {
   return new InvalidInput({ detail, issues: [{ pointer, detail }] });
@@ -53,14 +46,4 @@ export function kindsOf(kind: string | undefined): Effect.Effect<ReadonlySet<Act
     : Effect.fail(
         refusedAt('/kind', 'Expected needs_you, broken, new or comment, or several of them separated by commas'),
       );
-}
-
-export function addressOfCaller(address: string | undefined): Effect.Effect<string | undefined, InvalidInput> {
-  if (address === undefined) {
-    return Effect.undefined;
-  }
-  const lowered = address.trim().toLowerCase();
-  return lowered.includes('@')
-    ? Effect.succeed(lowered)
-    : Effect.fail(refusedAt('/address', 'Expected an email address, holding an @'));
 }

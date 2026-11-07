@@ -1388,16 +1388,6 @@
             }
           },
           {
-            "name": "address",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 320,
-              "description": "The caller's own email address, which decides which requests wait on the caller; it filters nothing and grants nothing"
-            }
-          },
-          {
             "name": "since",
             "in": "query",
             "required": false,
@@ -1962,11 +1952,6 @@
                     "minLength": 1,
                     "maxLength": 512,
                     "description": "A cursor from a read: everything at or before it is seen"
-                  },
-                  "address": {
-                    "type": "string",
-                    "maxLength": 320,
-                    "description": "The caller's own email address, which decides which requests wait on the caller; it filters nothing and grants nothing"
                   }
                 }
               }

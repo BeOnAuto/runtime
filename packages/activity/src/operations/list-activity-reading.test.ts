@@ -7,15 +7,12 @@ import { financeAndSales, runs } from '../testing/scenario.ts';
 const addresses = (rows: readonly { readonly address: string }[]) => rows.map(({ address }) => address);
 
 describe('what list_activity counts as waiting on the caller', () => {
-  it('counts a request named for the address the read gives, and every request for the local developer', async () => {
+  it('counts a request for any member, never one an address names, and every request for the local developer', async () => {
     const { list } = await financeAndSales();
+    const requests = listedOf(await list(ada, { kind: 'needs_you' }));
 
-    expect(listedOf(await list(ada, { address: ' Dana@example.com ' })).counts).toEqual({
-      needs_you: 2,
-      broken: 1,
-      new: 3,
-      comments: 0,
-    });
+    expect(addresses(requests.rows)).toEqual([`finance/${runs.askedDana.runId}`, `finance/${runs.askedAnyone.runId}`]);
+    expect(requests.counts).toEqual({ needs_you: 1, broken: 1, new: 3, comments: 0 });
     expect(listedOf(await list(localDeveloper)).counts).toEqual({ needs_you: 2, broken: 1, new: 5, comments: 0 });
   });
 

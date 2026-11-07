@@ -10,7 +10,7 @@ describe('what list_activity refuses', () => {
     [{ kind: '' }, '/kind'],
     [{ cursor: 'not a cursor' }, '/cursor'],
     [{ since: cursorOf({ at: 1, playbook: 'payroll', key: 'runs/x' }) }, '/since'],
-    [{ address: 'dana' }, '/address'],
+    [{ address: 'dana@example.com' }, '/address'],
     [{ limit: '0' }, '/limit'],
     [{ limit: '201' }, '/limit'],
   ];

@@ -37,7 +37,7 @@ afterEach(async () => {
 });
 
 describe('what a caller has seen of the activity of the org, over HTTP', () => {
-  it('shows what others did as new, and counts what waits on the caller by the address the read gives', async () => {
+  it('shows what others did as new, and counts a request for any member as waiting on the caller, and not one an address names', async () => {
     const activity = await read();
 
     expect(activity.rows.filter(({ kind }) => kind === 'new').map(({ seen }) => seen)).toEqual([
@@ -47,13 +47,8 @@ describe('what a caller has seen of the activity of the org, over HTTP', () => {
       false,
       false,
     ]);
+    expect(activity.rows.filter(({ kind }) => kind === 'needs_you')).toHaveLength(2);
     expect(activity.counts).toEqual({ needs_you: 1, broken: 0, new: 5, comments: 0 });
-    expect((await read('?address=dana%40example.com')).counts).toEqual({
-      needs_you: 2,
-      broken: 0,
-      new: 5,
-      comments: 0,
-    });
     expect(activity.through).toBeNull();
   });
 

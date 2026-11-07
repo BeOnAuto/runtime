@@ -3,15 +3,7 @@ import { Effect, Schema } from 'effect';
 
 import { cursorOf } from '../positions/activity-position.ts';
 import { countsFor } from './activity-counts.ts';
-import {
-  AddressField,
-  addressOfCaller,
-  cursorField,
-  kindsOf,
-  mostRowsInAPage,
-  positionAt,
-  rowsInAPage,
-} from './activity-input.ts';
+import { cursorField, kindsOf, mostRowsInAPage, positionAt, rowsInAPage } from './activity-input.ts';
 import { pageOf } from './activity-page.ts';
 import { ActivityRowSchema, seenKinds, servedRow } from './activity-row.ts';
 import { isSeenBy, throughOf, viewerOf } from './activity-viewer.ts';
@@ -47,7 +39,6 @@ const ListActivityInputSchema = Schema.Struct({
         'true keeps, of the new and comment rows, those whose by is the caller, and leaves the other kinds as they are',
     }),
   ),
-  address: Schema.optionalKey(AddressField),
   since: Schema.optionalKey(cursorField('A cursor: keep the rows after the row it names')),
   limit: Schema.optionalKey(
     Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: mostRowsInAPage })).annotate({
@@ -80,11 +71,10 @@ const listed = Effect.fnUntraced(function* (input: ListActivityInput) {
   const register = yield* loadPlaybookRegister;
   const playbook = yield* playbookAsked(register, input.playbook);
   const kinds = yield* kindsOf(input.kind);
-  const address = yield* addressOfCaller(input.address);
   const since = yield* positionAt('since', input.since, register);
   const cursor = yield* positionAt('cursor', input.cursor, register);
   const readable = [...register.active].filter((each) => canAccessPlaybook(caller.playbooks, each)).toSorted();
-  const viewer = yield* viewerOf(caller.id, address);
+  const viewer = yield* viewerOf(caller.id);
   const withTheOrg = caller.playbooks === '*';
   const page = yield* pageOf(register, {
     kinds,

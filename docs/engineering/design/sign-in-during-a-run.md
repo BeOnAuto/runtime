@@ -262,7 +262,7 @@ An agent's own call of `browser_sign_in`, through `execute_connection`, gives `s
 A sign-in request is a request, so it is listed where every request is, with these changes:
 
 - **`waits_on` (new).** A request whose party is a person's id, `person:` and an id, waits on that person: its `needs_you` row holds that id in `waits_on`. A sign-in request's party is always one. The rule for a party that holds an `@`, and for any other party, is unchanged.
-- **Counted for the caller (new).** A request waits on the caller when its `waits_on` is `any_member`, the `address` the read gives, or the caller's own id. So `needs_you` counts a sign-in request for the person it asks, and for nobody else. In local mode every request still waits on the local developer.
+- **Counted for the caller (new).** A request waits on the caller when its `waits_on` is `any_member` or the caller's own id. So `needs_you` counts a sign-in request for the person it asks, and for nobody else. In local mode every request still waits on the local developer.
 - **`sign_in` (new).** `list_interactions` and the `needs_you` row give a sign-in request's `{ server, site, link }` as `sign_in`, and `null` for every other request. Studio shows a Sign in control there in place of the answer controls, for the person it waits on.
 - **`acts_for` (new).** `get_run` gives a triggered run's `acts_for`. The activity's `by` stays who started the run, `playbook:` and its id for a triggered run.
 

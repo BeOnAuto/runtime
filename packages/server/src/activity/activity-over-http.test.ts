@@ -59,17 +59,11 @@ describe('the activity of the org over HTTP, for the local developer', () => {
     ]);
   });
 
-  it('counts every open request as waiting on the local developer, whatever address the read gives, and none of their own work as new', async () => {
+  it('counts every open request as waiting on the local developer, and none of their own work as new', async () => {
     await alpha.refused('computation', 'tally', { fail: true });
     await asked();
 
     expect((await read()).counts).toEqual({ needs_you: 3, broken: 1, new: 0, comments: 0 });
-    expect((await read('?address=dana%40example.com')).counts).toEqual({
-      needs_you: 3,
-      broken: 1,
-      new: 0,
-      comments: 0,
-    });
   });
 });
 

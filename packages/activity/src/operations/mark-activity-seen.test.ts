@@ -54,10 +54,8 @@ describe('mark_activity_seen through a cursor', () => {
       { address: 'finance/definitions/reasoning/categorize-invoice/1', at: at('10:05') },
     ];
 
-    expect(
-      markedOf(await mark(ada, { items: [closed, closed, ...others], address: 'dana@example.com' })).counts,
-    ).toEqual({
-      needs_you: 2,
+    expect(markedOf(await mark(ada, { items: [closed, closed, ...others] })).counts).toEqual({
+      needs_you: 1,
       broken: 1,
       new: 1,
       comments: 0,

@@ -9,7 +9,6 @@ const unmarkedLookback = 7 * 24 * 60 * 60 * 1000;
 
 export interface Viewer {
   readonly caller: string;
-  readonly address: string | undefined;
   readonly seen: Seen;
   readonly through: ActivityPosition;
   readonly marked: ReadonlyMap<string, number>;
@@ -20,7 +19,7 @@ export interface ServedThrough {
   readonly seen_at: string;
 }
 
-export const viewerOf = Effect.fnUntraced(function* (caller: string, address: string | undefined) {
+export const viewerOf = Effect.fnUntraced(function* (caller: string) {
   const reader = yield* OrgReader;
   const [kept] = yield* reader.readProjectedRows(seenName, {
     where: [{ column: 'row_key', equals: caller }],
@@ -32,7 +31,6 @@ export const viewerOf = Effect.fnUntraced(function* (caller: string, address: st
   const now = yield* Clock.currentTimeMillis;
   const viewer: Viewer = {
     caller,
-    address,
     seen,
     through: seen.through ?? { at: now - unmarkedLookback, playbook: '', key: '' },
     marked: new Map(seen.marks.map(({ address: marked, at }) => [marked, at])),

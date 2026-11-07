@@ -17,7 +17,7 @@ describe('what mark_activity_seen refuses', () => {
     [{ items: [{ ...closed, at: '2026-13-45T99:99:99Z' }] }, '/items/0'],
     [{ through: 'not a cursor' }, '/through'],
     [{ through: cursorOf({ at: 1, playbook: 'payroll', key: 'runs/x' }) }, '/through'],
-    [{ items: [closed], address: 'dana' }, '/address'],
+    [{ items: [closed], address: 'dana@example.com' }, '/address'],
   ];
 
   it.each(refused)('refuses %o as invalid input at %s', async (input, pointer) => {

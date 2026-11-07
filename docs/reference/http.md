@@ -1264,10 +1264,10 @@ A run's own records, its steps and its tool calls name the run; read them with `
 
 The organization's activity is what its playbooks did that a person may want to see: the requests that wait on an answer, the definitions whose latest run broke, the runs, definitions and playbooks that are new, and the open [comments](#comments) people made on them and on the organization's own things. The runtime keeps it for the whole org, with what each caller has seen, so a client shows it with one read however many playbooks the org holds, and what a person marks seen on one device shows on every other. These two routes are served over HTTP alone; no MCP tool serves them. They are relative to `/v1/orgs/{org}`:
 
-| Operation            | Method and route      | Permission                    | Input                                                                         |
-| -------------------- | --------------------- | ----------------------------- | ----------------------------------------------------------------------------- |
-| `list_activity`      | `GET /activity`       | `org:read` or `playbook:read` | Optional `kind`, `playbook`, `mine`, `address`, `since`, `limit` and `cursor` |
-| `mark_activity_seen` | `POST /activity/seen` | `org:read` or `playbook:read` | `items`, `through` or both, and optional `address`                            |
+| Operation            | Method and route      | Permission                    | Input                                                              |
+| -------------------- | --------------------- | ----------------------------- | ------------------------------------------------------------------ |
+| `list_activity`      | `GET /activity`       | `org:read` or `playbook:read` | Optional `kind`, `playbook`, `mine`, `since`, `limit` and `cursor` |
+| `mark_activity_seen` | `POST /activity/seen` | `org:read` or `playbook:read` | `items`, `through` or both                                         |
 
 Each reads and marks only the activity of the playbooks the caller may access, as `list_playbooks` lists them, and the organization's own comments, which belong to no playbook, only for a caller who may access every playbook of the org; a caller who may access some playbooks alone reads the organization's comments with `list_comments` on the org's route ([The organization's comments](#the-organization-s-comments)) and sees none of them in the activity, while [`list_org_changes`](#changes) names each of them to every caller, as that route reads them. What a caller marks seen is theirs alone and changes nothing for anyone else.
 
@@ -1332,7 +1332,6 @@ An address is the playbook, or the organization, and the row's key in the activi
 | `kind`     | One kind, or several separated by commas, such as `needs_you,broken`: keep the rows of those kinds; `comment` keeps the open comments                    |
 | `playbook` | A playbook id: keep the rows of one playbook, which leaves out the organization's own comments                                                           |
 | `mine`     | `true` keeps, of the `new` and `comment` rows, those whose `by` is the caller, and leaves the rows of the other kinds as they are; `false` when left out |
-| `address`  | The caller's own email address, which decides which requests wait on the caller; it filters nothing and grants nothing                                   |
 | `since`    | A `cursor`: keep the rows newer than the row it names                                                                                                    |
 | `limit`    | 1 to 200, and 50 when left out                                                                                                                           |
 | `cursor`   | The `next_cursor` of the page before                                                                                                                     |
@@ -1345,7 +1344,7 @@ An address is the playbook, or the organization, and the row's key in the activi
 - The rows are kept as each fact is recorded, so a read is as current as the playbooks' history. A client reads again when it wants the counts current; [`list_org_changes`](#changes) does not name the activity.
 
 ```http
-GET /v1/orgs/acme/activity?limit=3&address=priya%40acme.example
+GET /v1/orgs/acme/activity?limit=3
 Authorization: Bearer <key>
 ```
 
@@ -1440,7 +1439,7 @@ Authorization: Bearer <key>
 
 Only `new` and `comment` rows are seen or unseen. Such a row is seen by the caller when its `by` is the caller, or, for a comment that was reopened, when the caller is who last reopened it, whoever made it; when the caller marked it seen; or when it is at or before the caller's `through`, the place they marked everything seen through. So a reopened comment's row keeps its maker as its `by` and takes the reopening's time as its `at`: it is new again to everyone but who reopened it, its maker among them, since a mark of the row before names the `at` it had then, and the one who reopened it has seen it from the start. A caller who has never sent a `through` reads as if their `through` were 7 days before the read, so a first read shows the last week as new. Each caller has its own seen: a person, a key or the local developer.
 
-A request waits on the caller when its `waits_on` is `any_member`, the `address` the read gives or the caller's own id. In local mode every client is the local developer, so every open request waits on them, whatever `address` says, and Auto Studio and an agent on that machine share one seen: what one marks seen, and the `through` it moves, are the other's too. A request that waits on someone else is listed all the same, to everyone who may read its playbook, as `list_interactions` lists it.
+A request waits on the caller when its `waits_on` is `any_member` or the caller's own id. The runtime knows a caller by their id, never by an address, so a request whose `waits_on` is an address, which waits on the member who signs in with it, is counted for no caller; a client that knows the person's address, as Auto Studio does from their sign-in, tells them it is theirs. In local mode every client is the local developer, so every open request waits on them, and Auto Studio and an agent on that machine share one seen: what one marks seen, and the `through` it moves, are the other's too. A request that waits on someone else is listed all the same, to everyone who may read its playbook, as `list_interactions` lists it.
 
 `counts` holds what the caller has to look at, over every playbook the caller may access and, for a caller who may access them all, the organization's own comments:
 
@@ -1460,8 +1459,7 @@ Marking items seen never changes `needs_you` or `broken`: a request leaves them 
 `mark_activity_seen` takes:
 
 - `items`, the `new` and `comment` rows the caller has seen, each its `address` and its `at` as the row gives them, at most 200;
-- `through`, a `cursor` from a read: everything at or before it is seen;
-- `address`, optional, the caller's own email address, as `list_activity` takes it, so the `counts` it answers are those of the read.
+- `through`, a `cursor` from a read: everything at or before it is seen.
 
 It records one fact, `activity_seen`, on the caller's own stream, and answers `counts` and `through` after it, as `list_activity` gives them. It answers `200`, and `conflict` when another mark of the same caller is recorded at the same moment; send it again.
 
