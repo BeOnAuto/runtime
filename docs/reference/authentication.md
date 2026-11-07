@@ -1,3 +1,7 @@
+---
+description: 'The rules Auto Runtime applies to credentials: how it reads one, what a token must hold, what a signed-in person may do and what a refused client is told.'
+---
+
 # Sign-in and token reference
 
 This page sets out the rules the runtime applies to credentials: how it reads one, what a token must hold, what a signed-in person may do and what a refused client is told. It also sets out how the runtime checks calls from a browser and requests in local mode. [Authentication and security](../self-host/security.md) covers the tasks: turning sign-in on, making API keys, local mode and calls from a browser.

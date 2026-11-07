@@ -1,3 +1,7 @@
+---
+description: The MCP tools Auto Runtime serves to agents for playbooks, functions, workflows and runs, how each maps to the HTTP API, and how an MCP client signs in.
+---
+
 # MCP reference
 
 Auto Runtime serves its playbook, function and workflow operations to agents over the Model Context Protocol (MCP). Each MCP tool runs one operation of the [HTTP API](http.md), with the same fields, limits and refusals. This page maps each tool to its HTTP section, which is the home of those rules. It also covers what only MCP has: the endpoints, authentication from an MCP client, annotations, guides and prompts, model information, and the shape of results and errors.

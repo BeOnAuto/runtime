@@ -1,3 +1,7 @@
+---
+description: 'The JSON Schemas Auto Runtime owns for what a definition produces: a series over time, values by category, a table, a text or an asset.'
+---
+
 <div v-pre>
 
 # Output shapes

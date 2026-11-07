@@ -1,3 +1,7 @@
+---
+description: A playbook is built around one business responsibility. It holds your team's methods as functions and workflows, with the information and limits they need.
+---
+
 # Playbooks and methods
 
 A playbook is a system built around one business responsibility, such as reviewing campaigns or evaluating budget changes. It holds your team's methods as functions and workflows, together with the information they need and limits on what the playbook may do.

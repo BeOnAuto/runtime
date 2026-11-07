@@ -1,3 +1,7 @@
+---
+description: "The glossary of Auto's playbooks: what playbook, function, workflow, run, event and organization mean in the documentation, the product and the code."
+---
+
 # Terminology
 
 This page is the glossary of Auto's playbooks. It defines the words the documentation, the product and the code use. [Availability](functions.md#availability) says what Auto runs today.

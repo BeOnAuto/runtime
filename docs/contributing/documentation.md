@@ -1,3 +1,7 @@
+---
+description: Where Auto's runtime documentation lives, the writing style it follows, and how to preview, check and propose a change to a page.
+---
+
 # Contribute to the documentation
 
 Runtime documentation lives in this public repository so a pull request can change behavior and its explanation together. The Auto website publishes these pages alongside its own guides and marketing content.

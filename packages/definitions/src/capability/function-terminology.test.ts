@@ -44,7 +44,7 @@ describe('playbook function terminology', () => {
       { singular: 'generation function', plural: 'generation functions' },
     ]);
     expect(functionTypeOrder.map((type) => functionDescriptions[type])).toEqual([
-      'Use a prompt, skills, and tools to interpret information or produce a response.',
+      'Use a prompt and tools to interpret information or produce a response.',
       "Obtain information that already exists, through one tool that only reads or from the playbook's own runs.",
       'Exchange information with people or systems.',
       "Predict a quantity from the playbook's own history, with a likely range.",

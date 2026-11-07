@@ -1,3 +1,7 @@
+---
+description: 'The document format of a reasoning function: its model, input and output contracts, settings and prompt template, and what a run records.'
+---
+
 <div v-pre>
 
 # Reasoning function format

@@ -1,3 +1,7 @@
+---
+description: A workflow puts a playbook's functions to work in steps. How steps, versions, triggers and waiting work, and how to inspect a run afterwards.
+---
+
 # Workflows and runs
 
 A workflow puts a playbook's functions to work in steps. A workflow can:

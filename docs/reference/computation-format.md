@@ -1,3 +1,7 @@
+---
+description: 'The document format of a computation function: its input and output contracts and the TypeScript program that computes the output from the input.'
+---
+
 <div v-pre>
 
 # Computation function format

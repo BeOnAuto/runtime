@@ -1,3 +1,7 @@
+---
+description: 'Connect two functions in a workflow: one reviews a campaign brief and another drafts feedback from the review. Run it and inspect both results.'
+---
+
 # Build your first workflow
 
 In this tutorial you connect two functions: one reviews a campaign brief, and another drafts feedback from that review. A workflow runs them in order and keeps both results.

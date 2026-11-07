@@ -1,3 +1,7 @@
+---
+description: 'What a playbook records: the definitions it saves, the runs it carries out and the events it takes in, and how triggers and pages use that history.'
+---
+
 # History and events
 
 A playbook records what happens in it: the definitions it saves, the runs it carries out and the events it takes in from elsewhere. You read that history to see what a run did and why. Event triggers and the views of pages read it too, so what the playbook recorded can shape later work.

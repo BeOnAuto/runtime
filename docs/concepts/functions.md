@@ -1,3 +1,8 @@
+---
+title: Function types and availability
+description: A function is one reusable piece of your team's method, saved in a playbook. Choose a function type by its job, and see what hosted and self-hosted Auto run.
+---
+
 # Functions
 
 A function is one reusable piece of your team's method, saved in a playbook. It defines what goes in, what comes out and what happens in between. A run carries it out once with particular inputs. Your agent can call a function directly, and the same function can be a step in several workflows.

@@ -7,7 +7,7 @@
       "label": "Reasoning",
       "singular": "reasoning function",
       "plural": "reasoning functions",
-      "description": "Use a prompt, skills, and tools to interpret information or produce a response."
+      "description": "Use a prompt and tools to interpret information or produce a response."
     },
     {
       "type": "lookup",

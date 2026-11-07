@@ -1,3 +1,7 @@
+---
+description: 'The YAML format of a workflow, in the Open Workflow Specification DSL 1.0: an example document, its fields, triggers and tasks, and its limits.'
+---
+
 <div v-pre>
 
 # Workflow format

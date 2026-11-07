@@ -1,5 +1,5 @@
 ---
-description: Compute figures that must be exact with a computation function, check them by hand, and have a workflow pass them to a reasoning function that writes about them.
+description: Compute exact figures with a computation function, check them by hand, and have a workflow pass them to a reasoning function that writes about them.
 ---
 
 # Calculate with a computation function

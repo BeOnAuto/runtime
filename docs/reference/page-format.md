@@ -1,3 +1,7 @@
+---
+description: Give every workflow and function a page that shows what each run achieved and what the runs add up to. The document format, its views, templates and charts.
+---
+
 <div v-pre>
 
 # Page format

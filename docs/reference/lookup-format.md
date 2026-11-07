@@ -1,3 +1,7 @@
+---
+description: The document format of a lookup function, which reads what already exists through one read-only tool or from the playbook's own runs, and asks no model.
+---
+
 <div v-pre>
 
 # Lookup function format

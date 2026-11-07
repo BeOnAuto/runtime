@@ -1,3 +1,7 @@
+---
+description: 'The document format of an interaction function: asking a system, asking a person or an agent and waiting for the answer, and sending a notification.'
+---
+
 <div v-pre>
 
 # Interaction function format

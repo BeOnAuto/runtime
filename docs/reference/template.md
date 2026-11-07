@@ -1,3 +1,8 @@
+---
+title: Liquid templates and filters
+description: Which parts of a playbook are Liquid templates, the standard filters they can use, and the filters Auto Runtime adds, such as money.
+---
+
 <div v-pre>
 
 # Templates

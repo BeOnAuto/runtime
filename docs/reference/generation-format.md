@@ -1,3 +1,7 @@
+---
+description: 'The document format of a generation function, which makes an image or audio from a prompt: what it produces, its model, its settings and its asset.'
+---
+
 <div v-pre>
 
 # Generation function format

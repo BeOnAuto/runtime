@@ -1,3 +1,7 @@
+---
+description: "The glance block of a workflow's page: what the workflow says about itself in a fixed shape, shown on the playbook's Overview in Auto Studio."
+---
+
 <div v-pre>
 
 # Glance format

@@ -19,7 +19,7 @@ export const functionResourceLabels = {
 } satisfies Record<FunctionType, { readonly singular: string; readonly plural: string }>;
 
 export const functionDescriptions = {
-  reasoning: 'Use a prompt, skills, and tools to interpret information or produce a response.',
+  reasoning: 'Use a prompt and tools to interpret information or produce a response.',
   lookup: "Obtain information that already exists, through one tool that only reads or from the playbook's own runs.",
   interaction: 'Exchange information with people or systems.',
   prediction: "Predict a quantity from the playbook's own history, with a likely range.",

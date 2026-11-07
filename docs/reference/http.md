@@ -1,3 +1,7 @@
+---
+description: Every route of Auto Runtime's HTTP API, for playbooks, definitions, runs and their history, requests and events, with its fields, limits and errors.
+---
+
 # HTTP API
 
 The HTTP API serves every operation of Auto Runtime. It covers playbooks, function and workflow definitions, runs and their history, and requests. It also covers events, analytics and the tool servers a playbook's functions may use. This page lists every route with its fields, limits and errors.

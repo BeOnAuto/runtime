@@ -1,5 +1,7 @@
 const fence = /^```/mu;
 
+const frontMatter = /^---\n(?:.*\n)*?---\n+/u;
+
 const verbatimOpening = /^<div v-pre>\n+/u;
 
 const verbatimClosing = /\n<\/div>\s*$/u;
@@ -31,6 +33,7 @@ function withoutFormatterLines(part: string): string {
 }
 
 export function withoutSiteMarkup(page: string): string {
-  const unformatted = outsideCode(page, (part) => withoutColumnPadding(withoutFormatterLines(part)));
+  const content = page.replace(frontMatter, '');
+  const unformatted = outsideCode(content, (part) => withoutColumnPadding(withoutFormatterLines(part)));
   return `${unformatted.replace(verbatimOpening, '').replace(verbatimClosing, '').trimEnd()}\n`;
 }

@@ -1,3 +1,8 @@
+---
+title: Addresses of playbooks, definitions and runs
+description: An address names one thing in Auto as text, such as a playbook, a definition at a version, a run or an event. Its forms, and the tools that read or change it.
+---
+
 # Addresses
 
 An address names one thing as text. Of a playbook, it names the playbook, a definition at a version, a step of a workflow, a run, an event of a run, a block of a run's result or a request. Of the organization, it names the organization, a connection, a member or a page of Studio's Settings. It can also name a part of most of these, such as a section of a playbook's Overview. The [organization's activity](http.md#the-organization-s-activity) names each of its rows by an address, and a [comment](http.md#comments) names what it is about by one. An agent given an address knows which tool reads the thing and which changes it.

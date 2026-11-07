@@ -1,3 +1,7 @@
+---
+description: The document format of a prediction function, which forecasts one quantity per series from the playbook's own history, and how its forecaster works.
+---
+
 <div v-pre>
 
 # Prediction function format

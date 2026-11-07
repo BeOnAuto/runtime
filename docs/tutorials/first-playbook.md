@@ -1,3 +1,7 @@
+---
+description: Teach Auto how your team reviews a campaign brief, use that review on two briefs and see what Auto kept. Every step is a message to your agent.
+---
+
 # Build your first playbook
 
 In this tutorial you teach Auto how your team reviews a campaign brief, use that review on two briefs, and look at what Auto kept. Everything you do is a message to your agent; your agent does the technical work.

@@ -1,5 +1,5 @@
 ---
-description: Connect your Zoom account to Auto, use your meetings, recordings and Team Chat through your agent, fix what goes wrong, and remove the connection when you no longer want it.
+description: Connect your Zoom account to Auto, use your meetings, recordings and Team Chat through your agent, fix what goes wrong, and remove the connection.
 ---
 
 # Connect Zoom
