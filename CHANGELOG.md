@@ -1,5 +1,56 @@
 # Changelog
 
+## [0.57.0](https://github.com/BeOnAuto/runtime/compare/v0.56.0...v0.57.0) (2026-11-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **interaction:** an interaction function asks a system, a person or an agent, never a sign-in
+* **reasoning:** a tool error is read as any error, and no run waits for a person's approval
+* **global:** the memory type leaves, and a playbook has six function types
+
+### Features
+
+* **api:** /debug shows a person everything an agent receives, with search ([68cb5b7](https://github.com/BeOnAuto/runtime/commit/68cb5b73266eb399a05fcdec25679994acd78859))
+* **api:** the debug page renders without a runtime of its own ([c85e3e6](https://github.com/BeOnAuto/runtime/commit/c85e3e63f2214e0ce4f6c59038145655c5ea1cc8))
+* **api:** the instructions send an agent to the guide start, which says what a workflow owns ([b43a039](https://github.com/BeOnAuto/runtime/commit/b43a039800d68487fcf81b24bb07c14f74a8e4a5))
+* **connections:** a key credential carries instructions, a key page and a format ([3564beb](https://github.com/BeOnAuto/runtime/commit/3564beb7888fd383642b9ba2ff790f49e8fb6a6a))
+* **connections:** approving a connection takes the playbooks that may use it ([f7d875b](https://github.com/BeOnAuto/runtime/commit/f7d875b8e32f5d75dbce0cdf1fd344e742a5a554))
+* **connections:** which playbooks may use a connection can be changed after it is added ([873afde](https://github.com/BeOnAuto/runtime/commit/873afde04227eec10df48a4ff439b2e887ecbf80))
+* **definitions:** a retired definition can be restored, paused ([da97992](https://github.com/BeOnAuto/runtime/commit/da97992ed0f100e7002821d139554c5b559dd8bc))
+* **definitions:** a workflow's page takes a glance, which Studio's Overview and share cards show ([5f55d4b](https://github.com/BeOnAuto/runtime/commit/5f55d4b5a3497f8af46f347e7187d4e23956fac9))
+* **generation:** an asset is read by its id, with a fresh address and byte ranges ([72ef78a](https://github.com/BeOnAuto/runtime/commit/72ef78a669ad813df7d7ae7928c52c794d43679b))
+* **global:** an agent sets a connected service up before the first run ([d1708ae](https://github.com/BeOnAuto/runtime/commit/d1708aee8b2f38b8c495503f6067bd75cba7963f))
+* **global:** the memory type leaves, and a playbook has six function types ([bba9886](https://github.com/BeOnAuto/runtime/commit/bba988654e541e5c1b9fbf68b628993d85b8ab48))
+* **interaction:** a run asks the person it acts for to sign in to a site, and waits ([76117a5](https://github.com/BeOnAuto/runtime/commit/76117a5d55496c3104c4f1a7e33b882f470cd29b))
+* **interaction:** an interaction function asks a system, a person or an agent, never a sign-in ([08882b9](https://github.com/BeOnAuto/runtime/commit/08882b9cdc85793caa162422a569cabe43139b23))
+* **lookup:** a lookup reads the outputs of the playbook's own runs ([6e58247](https://github.com/BeOnAuto/runtime/commit/6e58247ee10ae3113b49633ad0c2bf26e4dd76f5))
+* **playbooks:** a retired playbook can be restored ([206ffd6](https://github.com/BeOnAuto/runtime/commit/206ffd6a1b310c4d8405cdf93ce9c7b8c61d3d32))
+* **providers:** slack searches with search.messages and reads history fifteen messages a call ([c9dd607](https://github.com/BeOnAuto/runtime/commit/c9dd60795389c3316f1ca1e6b8dc78e081c3a136))
+* **providers:** the slack provider reaches Slack's Web API through Auto's own app ([51f04ce](https://github.com/BeOnAuto/runtime/commit/51f04cea76a567675453264dbf90f5d6cf20a3ef))
+* **reasoning:** a portable schema is enforced on every provider and read back exactly ([98fc2e2](https://github.com/BeOnAuto/runtime/commit/98fc2e2d37c3e17280b2cf665168018ed544faaa))
+* **reasoning:** a run waits for a person's approval of a tool call and sends it once ([a3a5839](https://github.com/BeOnAuto/runtime/commit/a3a583946c12140b1009fad1a92818af8ca246a0))
+* **reasoning:** a schema a provider refuses is described to the model instead ([de9e18e](https://github.com/BeOnAuto/runtime/commit/de9e18e0caad1ee4ff0f6713d8eb2572f825b6fb))
+* **reasoning:** a tool error is read as any error, and no run waits for a person's approval ([63d9a97](https://github.com/BeOnAuto/runtime/commit/63d9a9788d31241b952a60bea3dffd503162ff4a))
+* **reasoning:** an answer that misses its schema is asked for once more, with the issues ([c0c6ea4](https://github.com/BeOnAuto/runtime/commit/c0c6ea4058b58f5c12988ecd88dbd2c538fdc375))
+* **tool-servers:** an image a tool answers is kept as an asset of the run ([2ee16b3](https://github.com/BeOnAuto/runtime/commit/2ee16b3a9d3c8a6119e6d25b49cfa93000a92773))
+* **workflow-host:** a triggered run names the person whose sign-ins it uses ([0fd97ff](https://github.com/BeOnAuto/runtime/commit/0fd97ff541dbfb8997f0037b82c1522528a8c96f))
+
+
+### Bug Fixes
+
+* **activity:** the reader of the activity comes from the credential, and no address goes in its URL ([6f4756f](https://github.com/BeOnAuto/runtime/commit/6f4756f5bce2ac109d3d3258bd05c4c9ba689f42))
+* **deps:** the model clients and Azure sign-in run on dependencies with no known advisories ([88bbf84](https://github.com/BeOnAuto/runtime/commit/88bbf84be4ba75158b1e6922bba991a763b9ec9d))
+* **prediction:** the default history never exceeds the window ([2cb75b0](https://github.com/BeOnAuto/runtime/commit/2cb75b03feb4d4b919528471f6e1879e0be9ef32))
+* **providers:** slack asks for no search:read, and a reconnect asks nothing its provider dropped ([79c0a47](https://github.com/BeOnAuto/runtime/commit/79c0a47c6c08d431a433014cfb6730b5d3c37bca))
+* **reasoning:** a gateway lacking structured outputs gets the schema in the prompt, not json_object ([acf348a](https://github.com/BeOnAuto/runtime/commit/acf348ad06e0bd08de533f6f7d2203ea129fea72))
+
+
+### Performance Improvements
+
+* **activity:** list_activity reads the rows of the org's playbooks four at a time ([2a172e5](https://github.com/BeOnAuto/runtime/commit/2a172e5360db0ae40f19afdd0b6dbb719338c7b9))
+* **tool-servers:** the org's search asks for the providers it offers beside the servers it lists ([ebf6dd9](https://github.com/BeOnAuto/runtime/commit/ebf6dd93dbbe0ff260758241e7965dcb69991d49))
+
 ## [0.56.0](https://github.com/BeOnAuto/runtime/compare/v0.55.1...v0.56.0) (2026-11-03)
 
 
