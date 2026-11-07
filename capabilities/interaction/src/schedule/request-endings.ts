@@ -1,7 +1,6 @@
-import type { RecordedAnswer, Settlement, SignInRecord } from '@on.auto/definitions';
+import type { RecordedAnswer, Settlement } from '@on.auto/definitions';
 
 import type { DeliveredRecord } from '../run/request-record.ts';
-import { signInSettlement } from '../sign-in/sign-in-endings.ts';
 import { throughWords, type Route } from '../tool-blocks/routes.ts';
 
 export function expiredSettlement({ expires_at: expiresAt }: { readonly expires_at: number }): Settlement {
@@ -13,13 +12,8 @@ export function expiredSettlement({ expires_at: expiresAt }: { readonly expires_
   };
 }
 
-export function answeredSettlement(
-  signIn: SignInRecord | null | undefined,
-  { answer, by }: Pick<RecordedAnswer, 'answer' | 'by'>,
-): Settlement {
-  return signIn === null || signIn === undefined
-    ? { status: 'succeeded', output: answer, record: {}, by: by.id }
-    : signInSettlement(signIn, { answer, by });
+export function answeredSettlement({ answer, by }: Pick<RecordedAnswer, 'answer' | 'by'>): Settlement {
+  return { status: 'succeeded', output: answer, record: {}, by: by.id };
 }
 
 export function deliveredSettlement(at: string): Settlement {

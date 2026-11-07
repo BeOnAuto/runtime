@@ -134,21 +134,6 @@ describe('the settlement of a run that took an answer', () => {
       await Effect.runPromise(settle(run, { status: 'succeeded', output: { choice: 'approve' }, by: 'ada' })),
     ).toMatchObject({ status: 'succeeded', output: { choice: 'approve' } });
   });
-
-  it('may be unanswered of the kind declined, which an answer that declines brings', async () => {
-    const { record, ledger } = await asked();
-    await Effect.runPromise(record(run, answering({ choice: 'reject' }), lineage));
-    const settle = runSettler(ledger.service);
-
-    expect(
-      await Effect.runPromise(
-        settle(run, { status: 'rejected', reason: 'unanswered', kind: 'declined', detail: 'Ada did not sign in' }),
-      ),
-    ).toMatchObject({
-      status: 'rejected',
-      rejection: { reason: 'unanswered', kind: 'declined', detail: 'Ada did not sign in' },
-    });
-  });
 });
 
 describe('the answer a caller gives to a request a run waits on', () => {

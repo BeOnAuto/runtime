@@ -200,18 +200,6 @@ A client of the `2026-07-28` revision may declare in its request that it answers
 
 A client that declares links alone or no elicitation, or speaks an earlier revision, is not asked, and the agent asks the person in words, from the refusal's list.
 
-#### Asking a person to sign in
-
-When an agent builds a playbook that uses a site behind a sign-in, it asks the person three things and writes the answers into an interaction function with [`sign_in`](interaction-format.md#asking-a-person-to-sign-in): whether a run waits for them or stops at once, `if_signed_out`; where to reach them, `deliver`; and how long a run waits, `expires`. `create_definition` and `update_definition` refuse such a function that leaves out an answer, with the line of the field, one at a time. To a client that answers forms, the server first asks the person the question, as it asks where to reach a party:
-
-| Missing         | The question                                                    | Choices                                                                                 |
-| --------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `if_signed_out` | When you're not signed in to {site}, should a run wait for you? | Wait for me to sign in (`ask`), Stop at once (`fail`)                                   |
-| `deliver`       | Where should a run ask you to sign in to {site}?                | Each connection with a tool that sends, by its name, and Studio or your agent (`agent`) |
-| `expires`       | How long should a run wait for you to sign in to {site}?        | An hour (`PT1H`), A day (`P1D`), A week (`P7D`)                                         |
-
-Once the function is saved, the agent offers to sign the person in there and then, so the first run finds them signed in: once they agree, it calls the browser connection's `browser_sign_in` with `execute_connection` and the site, and gives the person the link it answers, where they sign in themselves. A run's own request to sign in is answered by that person alone, and `signed_in: true` only from their own session, never through an agent; the agent may answer `signed_in: false` when the person will not sign in.
-
 ### Events and history
 
 These tools are listed on `/mcp` and a playbook endpoint. Their routes are relative to `/v1/orgs/{org}/playbooks/{playbook}`.

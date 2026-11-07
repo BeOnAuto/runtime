@@ -29,5 +29,6 @@
   "src/runs/0.57.0/model_call_answered.json": "d9b614f7466eea87a571d6a2c1bc064eaabe098d1522a33c040bf953b312b519",
   "src/runs/0.57.0/model_call_failed.json": "44b78b0c44b0031d7260dbf31a856d2247e775a34632c7fc33a02cdc43c03689",
   "src/runs/0.57.0/run_deferred.json": "2bf4ea3e5e060ba0eda0ecd5aca90e3b1f1100e5cb12bb07fd3d20912b8c4311",
+  "src/runs/0.57.0/run_rejected.json": "6a9f87c26b537e8bf05a104390fa43dd50d41564f590fa2d0c7a6d912d05e9b4",
   "src/runs/0.57.0/run_started.json": "c39887fc256b984d8aebc0db44c7f566cd8e48aa8a34fd28f44e7680169beb9e"
 }

@@ -11,7 +11,7 @@ import { isAfter, type ActivityPosition } from '../positions/activity-position.t
 import { activityName } from '../projections/activity-rows.ts';
 import { brokenName } from '../projections/broken-rows.ts';
 import { commentsName } from '../projections/comment-rows.ts';
-import { SignInColumnSchema, requestsName } from '../projections/request-rows.ts';
+import { requestsName } from '../projections/request-rows.ts';
 import type { ActivityKind, ActivityRow } from './activity-row.ts';
 import { commentRowsOf } from './comment-activity-rows.ts';
 
@@ -48,7 +48,6 @@ const RequestColumnsSchema = Schema.Struct({
   answer_schema: AnswerSchemaSchema,
   waits_on: Schema.String,
   expires_at: Schema.Int,
-  sign_in: SignInColumnSchema,
 });
 
 const BrokenColumnsSchema = Schema.Struct({
@@ -112,7 +111,6 @@ function requestOf(playbook: string, key: string, columns: RequestColumns): Acti
     waits_on: columns.waits_on,
     expires_at: columns.expires_at,
     about: null,
-    sign_in: columns.sign_in,
   };
 }
 
@@ -135,7 +133,6 @@ function brokenOf(playbook: string, key: string, columns: BrokenColumns): Activi
     waits_on: null,
     expires_at: null,
     about: null,
-    sign_in: null,
   };
 }
 
@@ -158,7 +155,6 @@ function newOf(playbook: string, key: string, columns: NewColumns): ActivityRow 
     waits_on: null,
     expires_at: null,
     about: null,
-    sign_in: null,
   };
 }
 

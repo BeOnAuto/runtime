@@ -123,7 +123,7 @@ export const RunSchema = Schema.Struct({
   acts_for: Schema.optionalKey(
     Schema.String.annotate({
       description:
-        'On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing',
+        'On a run a trigger started, and on the runs its steps started: the person it acts for, who saved or restored the version it runs, by id; it grants the run nothing',
     }),
   ),
   finished_at: Schema.optionalKey(Schema.String.annotate({ description: 'When the run finished, in ISO 8601 UTC' })),

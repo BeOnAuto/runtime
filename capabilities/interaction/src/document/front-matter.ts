@@ -15,22 +15,9 @@ import {
 
 const SectionSchema = Schema.Struct({ schema: Schema.optionalKey(Schema.JsonObject) });
 
-const ifSignedOutAnswers = ['ask', 'fail'] as const;
-
-const SignInSchema = Schema.Struct({
-  server: Schema.String,
-  site: Schema.String,
-  if_signed_out: Schema.optionalKey(
-    Schema.Literals(ifSignedOutAnswers).annotate({ expected: 'ask, to wait for the person, or fail, to stop at once' }),
-  ),
-});
-
-export type WrittenSignIn = typeof SignInSchema.Type;
-
 const FrontMatterSchema = Schema.Struct({
   description: Schema.optionalKey(DescriptionSchema),
   call: Schema.optionalKey(CallBlockSchema),
-  sign_in: Schema.optionalKey(SignInSchema),
   to: Schema.optionalKey(Schema.String),
   from: Schema.optionalKey(Schema.String),
   expires: Schema.optionalKey(Schema.String),
@@ -48,7 +35,6 @@ const sections: readonly FrontMatterSection[] = [
   { name: 'input', keys: Object.keys(SectionSchema.fields) },
   { name: 'output', keys: Object.keys(SectionSchema.fields) },
   { name: 'call', keys: Object.keys(CallBlockSchema.fields) },
-  { name: 'sign_in', keys: Object.keys(SignInSchema.fields) },
   { name: 'deliver', keys: Object.keys(DeliverBlockSchema.fields) },
   { name: 'deliver.sent', keys: Object.keys(SentSchema.fields) },
   { name: 'replies', keys: Object.keys(RepliesSchema.fields) },
@@ -62,5 +48,5 @@ export const decodeFrontMatter = Schema.decodeUnknownResult(FrontMatterSchema, {
 export const interactionFrontMatter: FrontMatterShape = {
   sections,
   decode: decodeFrontMatter,
-  required: 'the tool it calls, the party it goes to and when it expires, or the site a person signs in to',
+  required: 'the tool it calls, or the party it goes to and when it expires',
 };

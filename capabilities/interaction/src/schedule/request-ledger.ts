@@ -20,7 +20,6 @@ import type { RequestAddress } from '../delivery/attempt-end.ts';
 import type { DeliveryEvent } from '../facts/run-facts.ts';
 import { deliveryRule } from '../facts/work-rules.ts';
 import { answerTakenIn, lastAnswerPage } from '../requests/request-reads.ts';
-import { signInOfRow } from '../requests/request-rows.ts';
 import type { DueRequest } from './delivery-parts.ts';
 import { answeredSettlement, deliveredSettlement } from './request-endings.ts';
 
@@ -79,13 +78,10 @@ function lastOnTheRun(ledger: RequestLedger, address: RequestAddress, page: Reco
   );
 }
 
-export function settledAnswered(ledger: RequestLedger, { address, lineage, row }: DueRequest): Effect.Effect<void> {
+export function settledAnswered(ledger: RequestLedger, { address, lineage }: DueRequest): Effect.Effect<void> {
   return Effect.flatMap(lastOnTheRun(ledger, address, lastAnswerPage), (records) => {
     const taken = answerTakenIn(records);
-    return settled(ledger, address, answeredSettlement(signInOfRow(row), taken), {
-      ...lineage,
-      causationId: taken.id,
-    });
+    return settled(ledger, address, answeredSettlement(taken), { ...lineage, causationId: taken.id });
   });
 }
 

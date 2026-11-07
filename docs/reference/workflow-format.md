@@ -236,7 +236,7 @@ Each filter is held to its own bounds, and its failure affects no other workflow
 - Saving a version without a schedule, or retiring the workflow, stops every trigger.
 - A run that a trigger starts uses the version that was current when the event was recorded or the time came. Its `run_id` is derived from the workflow, that version, the trigger and the event or due time. So an event or a time starts it once. A run it started that is rejected or fails is not started again, and the same event published again records nothing; the [`schedule` recipe](mcp.md#guides-and-prompts) says how to catch up.
 - The playbook itself starts a triggered run, which acts as the playbook. Its `started_by` has the `id` `playbook:` and the playbook's id, and the playbook's id as its `name`. Each step may read and write that playbook and nothing else, and no person's or key's permissions or revocation affect it.
-- A triggered run names, as `acts_for`, the person whose sign-ins it uses, by id: whoever saved or restored the version it runs. It grants the run nothing. The runs its steps start carry it, and `get_run` and the run's events show it. A version a key saved or restored gives none, and so does one whose person has left the organization, where the runtime knows its members.
+- A triggered run names, as `acts_for`, the person it acts for, by id: whoever saved or restored the version it runs. It grants the run nothing. The runs its steps start carry it, and `get_run` and the run's events show it. A version a key saved or restored gives none, and so does one whose person has left the organization, where the runtime knows its members.
 
 ### Trigger limits
 
@@ -410,7 +410,7 @@ Other function types:
 - The refusals of a [lookup](lookup-format.md#in-a-workflow), [computation](computation-format.md#in-a-workflow) or [prediction](prediction-format.md#in-a-workflow) function, and what a retry of it does, are under In a workflow on its page.
 - A prediction function's question counts every run that ended before it started, as in [this example](prediction-format.md#forecast-from-a-run-the-workflow-just-recorded).
 - A run that was cancelled raises `https://on.auto/problems/cancelled` with the kind of its cancellation: `requested`, `deadline`, `overrun` or `parent_ended` ([How a run ends](#how-a-run-ends)). Catch it on purpose, for example with `errors: { with: { type: https://on.auto/problems/cancelled } }` and `when: '${ $error.kind == "requested" }'`. Uncaught, it rejects the workflow as `invalid_input`, by its status 409, not as `cancelled`, since the workflow itself was not cancelled.
-- A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind says why, such as `expired` when it expired unanswered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.
+- A request that nobody answered, of an [interaction function](interaction-format.md), raises `https://on.auto/problems/unanswered`, status 410. Its kind is `expired` when it expired unanswered, or `undelivered` when a notification could not be delivered. Asking again is a decision, so catch it by its type, for example with `errors: { with: { type: https://on.auto/problems/unanswered, kind: expired } }`. Uncaught, it rejects the workflow as `unanswered` with the same kind.
 
 ### Waiting for events
 
@@ -688,7 +688,7 @@ The rejection gives a `reason`, and a `kind` where it has one:
 | `cancelled`     | `deadline`                                                                                                     | The workflow that waited for it ran out of time                            |
 | `cancelled`     | `overrun`                                                                                                      | It was still running at the longest a run may last                         |
 | `cancelled`     | `parent_ended`                                                                                                 | The workflow waiting for it ended first, or its waiting branch lost a race |
-| `unanswered`    | `expired`, `undelivered`, `declined`, `signed_out`, `no_person`                                                | It did not catch an unanswered request of an interaction function          |
+| `unanswered`    | `expired`, `undelivered`                                                                                       | It did not catch an unanswered request of an interaction function          |
 
 - A rejection of a kind with its own problem type, other than `tools_called`, keeps the error's `because`. A rejection's `detail` gives the error's title, or else its type, then the step that raised it by its name, then its detail, such as `The brief is not usable, at the step stop: Missing: audience.`
 - A step whose function refused its input keeps its `issues`, each at its pointer and in the field's words: `The computation function month-window refused its input, at the step work-out-month: month, The month to report on: expected at least 6 characters.` A workflow that called it reads `The workflow monthly stopped, at the step report: ` before those words.

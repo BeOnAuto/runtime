@@ -221,6 +221,14 @@ const askedToApproveAnAction: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
+const declinedASignIn: readonly (typeof RunEventSchema.Type)[] = [
+  {
+    type: 'run_rejected',
+    data: { rejection: { reason: 'unanswered', kind: 'declined', detail: 'Priya did not sign in to the portal' } },
+    context: { ...onTheRun, definitionType: 'interaction', definitionName: 'portal-sign-in' },
+  },
+];
+
 const answeredInEachMode: readonly (typeof RunEventSchema.Type)[] = [
   {
     type: 'model_call_answered',
@@ -279,7 +287,7 @@ describe('the facts a playbook records on the stream of a run', () => {
     folder: new URL('.', import.meta.url),
     releases: {
       '0.46.0': baseline,
-      '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...answeredInEachMode],
+      '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignIn, ...answeredInEachMode],
     },
   });
 });

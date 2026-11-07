@@ -2,14 +2,13 @@
 
 # Interaction function format
 
-An interaction function is a definition of the type `interaction`. It takes one of four shapes:
+An interaction function is a definition of the type `interaction`. It takes one of three shapes:
 
 | Shape                              | What a run does                                                                                                                                                            | Use it for                                                                |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Asks a system                      | Calls the tool named in `call` once, and returns part of the tool's result at once                                                                                         | What a system does and answers now, such as adding a contact to a list    |
 | Asks a person through a connection | Renders a request to a party, with an expiry, and sends it through the tool of a connection named in `deliver`, such as a chat's post tool, and may read the replies to it | An approval, a choice, or a figure only someone else has, where they work |
 | Asks an agent                      | Renders the same request and holds it for an agent, `deliver: agent`, which reads it with `list_interactions` and answers it with `answer_interaction`                     | The same, answered by the person in a conversation with their agent       |
-| Asks a person to sign in           | Asks the person a run acts for to sign in to a site in a browser, with `sign_in`, and waits until they have                                                                | A site the playbook's next steps use as that person                       |
 
 A run that asks a person renders the message from its input. Then it waits until the request is answered, expires or is cancelled, without using server resources. The answer is checked against the document's answer schema, and becomes the run's output. A function without an answer schema sends a **notification**, which needs no answer and goes through a connection.
 
@@ -45,7 +44,7 @@ The agent then learns what each tool takes with `introspect`. Once the person ag
 
 ### Whom a request waits on
 
-A request waits on a member of the org when its party, its `to` as rendered, is an email address, one that holds an `@`: it waits on the member whose address that is, compared without regard to case. A party that is a person's id, `person:` and an id, such as a [sign-in](#asking-a-person-to-sign-in)'s, waits on that person. Any other party, such as a channel, a role or a name, waits on any member of the org, whether the request goes through a connection or is held for an agent. Whom a request waits on does not limit who may answer it: any caller that may write to the playbook can answer, as [Answering a request](#answering-a-request) says.
+A request waits on a member of the org when its party, its `to` as rendered, is an email address, one that holds an `@`: it waits on the member whose address that is, compared without regard to case. A party that is a person's id, `person:` and an id, waits on that person. Any other party, such as a channel, a role or a name, waits on any member of the org, whether the request goes through a connection or is held for an agent. Whom a request waits on does not limit who may answer it: any caller that may write to the playbook can answer, as [Answering a request](#answering-a-request) says.
 
 So write `to: "{{ input.reviewer }}"`, given the reviewer's address such as `priya@acme.example`, for a request one person should see as theirs. A request answered by reply takes a reply only when the reading tool names its sender exactly as the answerer is written: `from`, or `to` when there is no `from`. So a chat request that waits on an address also writes `from` as the chat names the person, and gives the sending tool the conversation to post in from the input rather than from `to`; see [Answering by reply](#answering-by-reply). [The organization's activity](http.md#the-organization-s-activity) shows each open request as a `needs_you` row whose `waits_on` holds the address in lower case, the person's id or `any_member`. It counts a request for the caller whose id it names, or for every caller where it waits on any member, and one that names an address for no caller, since the runtime knows a caller by their id and never by an address: a client that knows the person's address, as Auto Studio does, tells them which of those are theirs.
 
@@ -257,8 +256,7 @@ A request sent through a tool is attempted at once. After a failed attempt it is
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `description`   | Optional explanation, 1 to 1,000 characters                                                                                                                                                                                                                                                                                   |
 | `call`          | The tool the function asks: `server`, `tool`, `with` and `read`; see [`call`](#call). With it, `output.schema` is required and `to`, `expires`, `deliver`, `replies`, `from`, `reply` and the body are refused                                                                                                                |
-| `sign_in`       | The site the person a run acts for signs in to, `server`, `site` and `if_signed_out`; see [Asking a person to sign in](#asking-a-person-to-sign-in)                                                                                                                                                                           |
-| `to`            | Required without `call` or `sign_in`, refused with them. A template that renders the party the request goes to: a name the playbook's readers filter by, which a delivery's templates may use as the tool's address                                                                                                           |
+| `to`            | Required without `call`, refused with it. A template that renders the party the request goes to: a name the playbook's readers filter by, which a delivery's templates may use as the tool's address                                                                                                                          |
 | `from`          | Optional. A template, as `to` is, that renders the party whose reply counts, the answerer; `to` when left out. A request sent to a room names the person here                                                                                                                                                                 |
 | `expires`       | Required without `call`, refused with it. An ISO 8601 duration from one minute to thirty days, such as `PT4H` or `P2D`, after which a request nobody answered ends                                                                                                                                                            |
 | `deliver`       | The tool the request is sent through: `server` and `tool` as `search` names them, and `with`, the call's arguments. `sent` holds two JSON Pointers into the tool's answer, to the conversation and to the message's identity; see [`deliver`](#deliver). Or `agent`, for a request held for an agent. Required without `call` |
@@ -285,7 +283,7 @@ Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Po
 | `reply`                       | Refused       | Optional, with `output.schema`; read only with `replies`         | Optional, with `output.schema`; nothing reads it |
 | `description`, `input.schema` | Optional      | Optional                                                         | Optional                                         |
 
-A function with `sign_in` takes the fields [Asking a person to sign in](#asking-a-person-to-sign-in) lists. A request that names no `deliver` is refused when saved, and so is a notification that names no tool, whether it leaves `deliver` out or writes `deliver: agent`; [How a request reaches its party](#how-a-request-reaches-its-party) says what the refusal names.
+A request that names no `deliver` is refused when saved, and so is a notification that names no tool, whether it leaves `deliver` out or writes `deliver: agent`; [How a request reaches its party](#how-a-request-reaches-its-party) says what the refusal names.
 
 A function that reads replies needs a reply rule: the one `reply` writes, or one made from the answer schema. Without either, it is refused when saved.
 
@@ -425,7 +423,7 @@ A person often answers in a conversation with their agent: they approve, reject,
 
 Rules of an answer:
 
-- A caller that may write to the playbook can answer, but for a [sign-in request](#asking-a-person-to-sign-in), which the person it asks answers alone.
+- A caller that may write to the playbook can answer.
 - The answer is checked against the answer schema the request recorded, and takes at most 64 KiB as JSON.
 - It is recorded on the run as one fact, `request_answered`, with the answer and `claimed_for`. `claimed_for` is whom the caller says it answers for: a claim the runtime keeps and never checks. The fact records the caller and the time itself.
 - `answer_interaction` returns that fact: the `run_id`, the `answer_id` of the fact (which `get_event` reads), the `answer`, `claimed_for`, `answered_by` (the caller who answered, by `id` and `name`) and `answered_at`.
@@ -443,8 +441,7 @@ Rules of an answer:
 - the message, whether it takes an answer, and when it was asked and expires;
 - the attempts made, and how its delivery stands: `held_for_an_agent`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked;
 - its `answer_schema`, the JSON Schema an answer is checked against as the request recorded it, or `null` for a notification;
-- for a request answered by reply, the `conversation` the playbook reads, its `answerer` and how many of its replies were refused;
-- for a [sign-in request](#asking-a-person-to-sign-in), its `sign_in`, with the `server`, the `site` and the `link` where the person signs in, and `null` for every other request.
+- for a request answered by reply, the `conversation` the playbook reads, its `answerer` and how many of its replies were refused.
 
 Filters:
 
@@ -502,9 +499,6 @@ How replies are taken:
 | `unavailable`, kind `requests_full`            | The playbook already has as many open requests as the runtime allows: 10,000 unless its operator sets another number with `INTERACTION_OPEN_REQUESTS`                                                                             |
 | `rejected` as `unanswered`, kind `expired`     | Nobody answered the request before it expired                                                                                                                                                                                     |
 | `rejected` as `unanswered`, kind `undelivered` | Every attempt to deliver a notification failed                                                                                                                                                                                    |
-| `rejected` as `unanswered`, kind `declined`    | The person a sign-in asked answered that they did not sign in                                                                                                                                                                     |
-| `rejected` as `unanswered`, kind `signed_out`  | A sign-in with `if_signed_out: fail` found its person not signed in                                                                                                                                                               |
-| `rejected` as `unanswered`, kind `no_person`   | A sign-in acts for no person, or for one who has left the organization                                                                                                                                                            |
 | `rejected` as `cancelled`                      | `cancel_run` cancelled the run, or the workflow that waited for it ran out of time or ended first                                                                                                                                 |
 | `failed`                                       | The runtime itself broke down                                                                                                                                                                                                     |
 
@@ -557,8 +551,6 @@ What is kept and shown:
 | `expires`                                     | 1 minute to 30 days                                                                                                        | Refused when saved                                                               |
 | An answer                                     | 64 KiB as JSON, 512 levels                                                                                                 | `invalid_input`                                                                  |
 | `claimed_for`                                 | 256 bytes                                                                                                                  | `invalid_input`                                                                  |
-| `sign_in.site`                                | A host name of 253 bytes, lower case, with no scheme, path or port                                                         | Refused when saved                                                               |
-| The `reason` of an answer to a sign-in        | 500 characters                                                                                                             | `invalid_input`                                                                  |
 | Attempts                                      | 5: at once, then after 1, 2, 4 and 8 minutes                                                                               | A question stays open; a notification ends `unanswered` as `undelivered`         |
 | Open requests of a playbook                   | 10,000 unless the operator sets another number                                                                             | `unavailable`, `requests_full`                                                   |
 
@@ -577,7 +569,7 @@ A function with `call` finishes within its call:
 A function that asks a person:
 
 - The step waits up to the function's `expires` plus one minute for the request, across a restart and without using server resources. Its output is the answer.
-- A request nobody answers raises an error of the [problem type](http.md#responses-and-errors) `https://on.auto/problems/unanswered`, status 410, with the kind `expired`, `undelivered` for a notification, or for a sign-in `declined`, `signed_out` or `no_person`.
+- A request nobody answers raises an error of the [problem type](http.md#responses-and-errors) `https://on.auto/problems/unanswered`, status 410, with the kind `expired`, or `undelivered` for a notification.
 - Only a `catch` that names that type or status 410, or catches every error, takes it. So a workflow handles an unanswered request only on purpose. A workflow that does not catch it ends `rejected` as `unanswered` with the same kind.
 - When the step runs out of time, or the workflow ends first, the request is cancelled.
 
@@ -679,55 +671,6 @@ page:
 Show numbers over time as a chart keyed by the period a run is about, and anything else in its clearest form: a table, a list or a sentence. Show the value of the work, not telemetry: never how long the runtime took, a model's tokens or a run's id.
 
 A notification takes no answer, so its page counts what was sent. [Page format](page-format.md) says how to write `data`, `result` and `runs`.
-
-## Asking a person to sign in
-
-A function with `sign_in` asks the person a run acts for to sign in to a site in a browser, and waits until they have. A playbook that uses a site behind a sign-in has this step before the steps that use the site. The person signs in themselves, in a browser the browser connection hands them, and the agent, the runtime and the run's history never see what they type.
-
-<!-- prettier-ignore -->
-```markdown
----
-description: Makes sure the person the stock check runs for is signed in to the supplier portal
-sign_in:
-  server: browser
-  site: portal.supplier.example
-  if_signed_out: ask
-expires: P1D
-deliver: agent
----
-
-The weekly stock check reads your open orders on the supplier portal, and you're not signed in there.
-```
-
-| Field                                | Purpose                                                                                                                                                   |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sign_in.server`                     | Required. The browser connection, as `search` names it, whose server offers `browser_sign_in`                                                             |
-| `sign_in.site`                       | Required. The site's host name, such as `portal.supplier.example`: lower case, without a scheme, a path or a port, at most 253 bytes, never a template    |
-| `sign_in.if_signed_out`              | Required. `ask` waits for the person; `fail` ends the run at once when they are not signed in                                                             |
-| `expires`, `deliver` and the message | Required with `ask` and refused with `fail`, as for every request. The run adds the link where the person signs in on a line of its own after the message |
-| `input.schema`, `description`        | Optional                                                                                                                                                  |
-
-`to`, `from`, `call`, `replies`, `reply` and `output.schema` are refused beside `sign_in`: the party is always the person the run acts for, the answer comes from their signing in, and the output is always `{ "signed_in": true }`.
-
-When the agent builds such a function, it asks the person three things: whether a run waits for them or stops at once, where to reach them, and how long to wait. A save that leaves out `if_signed_out`, or with `ask` leaves out `deliver` or `expires`, is refused with the line of the field. To a client that answers forms, the server asks the person first, one question at a time, as it asks where to reach a party.
-
-A run of it:
-
-1. Finds the person it acts for: whoever started it, the local developer in local mode, or for a run a trigger started, its `acts_for`, whoever saved or restored the version it runs ([When a trigger applies](workflow-format.md#when-a-trigger-applies)). A run a workflow's step started acts for the person the workflow's run acts for. A run started with a key acts for nobody, and so does a triggered run of a version a key saved. With nobody, or a person who has left the organization, it ends `unanswered`, kind `no_person`, and asks nothing.
-2. Checks that the server serves the playbook and offers `browser_sign_in`, and with `ask` the tool of `deliver`. Otherwise it ends `unavailable`, kind `tool_not_offered`, and sends nothing.
-3. Calls `browser_sign_in` once, recorded as a function's call is: with the site, the request's address `<playbook>/<run_id>` and `until`, when the request expires, or with `fail` the site and `ask: false`.
-4. Succeeds at once with `{ "signed_in": true }` when the person is signed in already. With `fail`, a person who is not ends the run `unanswered`, kind `signed_out`.
-5. With `ask`, makes a request and waits, as every request waits.
-
-The request waits on the person by id, such as `person:user_7kLm2`, as both its `to` and its answerer. `list_interactions` shows its `sign_in`: the `server`, the `site` and the `link` where the person signs in. [The organization's activity](http.md#the-organization-s-activity) lists it as a `needs_you` row whose `waits_on` holds that id, counted for that person alone.
-
-Only the person it asks may answer it, and any other caller is refused `forbidden`. `{ "signed_in": true }` is taken only from the person's own session, such as the one Auto Studio signs in with, and is refused `forbidden` through an agent's token. Their agent may answer `{ "signed_in": false, "reason": "..." }` when they will not sign in, the reason at most 500 characters. In local mode the local developer may give either answer.
-
-`{ "signed_in": true }` ends the run `succeeded` with that output. `{ "signed_in": false }` ends it `unanswered`, kind `declined`, its detail naming the site and the reason. A request nobody answers ends `expired`, as every request does. So a workflow catches every way of not being signed in with one `catch` of `https://on.auto/problems/unanswered`, and carries on or fails as the playbook says.
-
-The run's history shows the call of `browser_sign_in`, `interaction_requested` and `request_answered`. The answer records who answered and when, so it is the record that the person signed in to the site. Nothing of the sign-in itself reaches the runtime.
-
-Once the function is saved, offer to sign the person in there and then, so the first run finds them signed in: once they agree, call the browser connection's `browser_sign_in` with `execute_connection` and the site, and give them the link it answers.
 
 ## Availability
 

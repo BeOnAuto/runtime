@@ -97,14 +97,7 @@ export {
   type ReplyIdentity,
 } from './runs/run-events.ts';
 export { recordedAnswerOf, type RecordedAnswer, type RecordedAnswerFact, type RecordedWork } from './runs/run-state.ts';
-export {
-  RequestRecordSchema,
-  SignInRecordSchema,
-  isRequestRecord,
-  takesAnAnswer,
-  type RequestRecord,
-  type SignInRecord,
-} from './requests/request-record.ts';
+export { RequestRecordSchema, isRequestRecord, takesAnAnswer, type RequestRecord } from './requests/request-record.ts';
 export {
   runCorrelationIn,
   runStartCursorIn,

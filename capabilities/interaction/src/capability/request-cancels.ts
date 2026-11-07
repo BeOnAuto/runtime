@@ -10,7 +10,7 @@ export function cancelledRequest(run: CancelledRun): Settlement {
     return cancelledAsAsked(run);
   }
   if (run.answer !== null) {
-    return answeredSettlement(request.sign_in, run.answer);
+    return answeredSettlement(run.answer);
   }
   const { deliveredAt } = interactionWorkOf(run.work);
   return deliveredAt !== null && !takesAnswer(request) ? deliveredSettlement(deliveredAt) : cancelledAsAsked(run);

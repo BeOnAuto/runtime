@@ -26,5 +26,4 @@ Keep these notes accurate when changing the runtime. Publish the relevant user-f
 
 A design is agreed here before its code is written. It says what is new and what exists already, and the public pages describe it only once it ships.
 
-- [Signing in during a run](design/sign-in-during-a-run.md): a run asks the person it acts for to sign in to a site, and waits
 - [Refusal in the browser](design/refusal-in-the-browser.md): hosted Auto's browser connection refuses a high-impact action at once, and a run reads the refusal as any tool error

@@ -1,0 +1,18 @@
+{
+  "type": "run_rejected",
+  "data": {
+    "rejection": {
+      "reason": "unanswered",
+      "detail": "Priya did not sign in to the portal",
+      "kind": "declined"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "interaction",
+    "definitionName": "portal-sign-in",
+    "definitionVersion": 2
+  }
+}

@@ -82,11 +82,10 @@ export interface Asked {
   readonly message: string;
   readonly expiresAt: string;
   readonly answerSchema?: Schema.JsonObject;
-  readonly signIn?: Schema.JsonObject;
 }
 
 export function runDeferred(run: RunOf, at: string, asked: Asked): RecordedFact {
-  const { to, message, expiresAt, answerSchema, signIn } = asked;
+  const { to, message, expiresAt, answerSchema } = asked;
   return {
     type: 'run_deferred',
     data: {
@@ -96,7 +95,6 @@ export function runDeferred(run: RunOf, at: string, asked: Asked): RecordedFact 
         expires_at: expiresAt,
         requested_at: at,
         ...(answerSchema === undefined ? {} : { answer_schema: answerSchema }),
-        ...(signIn === undefined ? {} : { sign_in: signIn }),
       },
     },
     context: runContext(run, at),

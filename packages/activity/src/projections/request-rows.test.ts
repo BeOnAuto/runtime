@@ -61,59 +61,52 @@ describe('the requests of the activity', () => {
         answer_schema: JSON.stringify(yesOrNo),
         waits_on: 'priya@acme.example',
         expires_at: Date.parse(asked.expiresAt),
-        sign_in: null,
       },
-    });
-  });
-
-  it('opens a row that waits on the person a sign-in request asks, by id, keeping its site and link', async () => {
-    const { record, rows } = projected(requestRows);
-    const signIn = { server: 'browser', site: 'portal.supplier.example', link: 'https://studio.example/sign-in' };
-    await record(
-      streamOf(approve),
-      runStarted(approve, at(0), 'playbook:finance'),
-      runDeferred(approve, at(1), { ...asked, to: 'person:user_7kLm2', signIn }),
-    );
-
-    expect((await rows())[approve.runId]).toMatchObject({
-      open: true,
-      waits_on: 'person:user_7kLm2',
-      sign_in: JSON.stringify(signIn),
     });
   });
 });
 
-describe('a request a reasoning run recorded when it asked a person to approve an action', () => {
-  it('opens a row that waits on the person by id, with nothing of the approval kept, and closes at its answer', async () => {
-    const { record, rows } = projected(requestRows);
-    const pay: RunOf = { ...approve, type: 'reasoning', name: 'pay-supplier' };
-    const person = 'person:user_7kLm2';
-    const deferred = runDeferred(pay, at(1), { ...asked, to: person });
-    const approval = { server: 'browser', tool: 'browser_click', action: 'Click "Pay now"', kind: 'pay' };
-    const approvalAsked = {
-      ...deferred,
-      data: {
-        record: {
-          to: person,
-          answerer: person,
-          message: 'pay-supplier needs your approval for this action',
-          answer_schema: yesOrNo,
-          expires_at: asked.expiresAt,
-          requested_at: at(1),
-          approval,
-        },
-      },
-    };
-    await record(streamOf(pay), runStarted(pay, at(0), person), approvalAsked);
-    const opened = (await rows())[pay.runId];
-    await record(streamOf(pay), requestAnswered(pay, at(2), person));
+const recordedBefore = [
+  {
+    type: 'reasoning',
+    key: 'approval',
+    value: { server: 'browser', tool: 'browser_click', action: 'Click "Pay now"', kind: 'pay' },
+  },
+  {
+    type: 'interaction',
+    key: 'sign_in',
+    value: { server: 'browser', site: 'portal.supplier.example', link: 'https://studio.example/sign-in' },
+  },
+] as const;
 
-    expect([opened, (await rows())[pay.runId]]).toEqual([
-      expect.objectContaining({ open: true, definition_type: 'reasoning', waits_on: person, sign_in: null }),
-      expect.objectContaining({ open: false }),
-    ]);
-    expect(opened).not.toHaveProperty('approval');
-  });
+describe('a request recorded when a run asked a person to approve an action or to sign in to a site', () => {
+  it.each(recordedBefore)(
+    'opens a row of a $type run that waits on the person by id, with nothing of its $key kept, and closes at its answer',
+    async ({ type, key, value }) => {
+      const { record, rows } = projected(requestRows);
+      const asking: RunOf = { ...approve, type, name: 'asking-a-person' };
+      const person = 'person:user_7kLm2';
+      const deferred = runDeferred(asking, at(1), { ...asked, to: person });
+      const recorded = {
+        to: person,
+        answerer: person,
+        message: 'asking-a-person waits for you',
+        answer_schema: yesOrNo,
+        expires_at: asked.expiresAt,
+        requested_at: at(1),
+        [key]: value,
+      };
+      await record(streamOf(asking), runStarted(asking, at(0), person), { ...deferred, data: { record: recorded } });
+      const opened = (await rows())[asking.runId];
+      await record(streamOf(asking), requestAnswered(asking, at(2), person));
+
+      expect([opened, (await rows())[asking.runId]]).toEqual([
+        expect.objectContaining({ open: true, definition_type: type, waits_on: person }),
+        expect.objectContaining({ open: false }),
+      ]);
+      expect(opened).not.toHaveProperty(key);
+    },
+  );
 });
 
 describe('a request a workflow step made', () => {

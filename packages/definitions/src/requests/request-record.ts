@@ -1,12 +1,10 @@
 import { Schema } from 'effect';
 
-export const SignInRecordSchema = Schema.Struct({
+const SignInRecordSchema = Schema.Struct({
   server: Schema.String,
   site: Schema.String,
   link: Schema.String,
 });
-
-export type SignInRecord = typeof SignInRecordSchema.Type;
 
 const ApprovalRecordSchema = Schema.Struct({
   server: Schema.String,

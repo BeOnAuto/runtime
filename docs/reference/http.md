@@ -346,25 +346,24 @@ The requests of a playbook have two routes of their own, relative to `/v1/orgs/{
 
 Each request has these fields:
 
-| Field            | Contents                                                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `run_id`         | The run that asked, which `answer_interaction` takes                                                                                          |
-| `type`           | The type of the function that asked                                                                                                           |
-| `function`       | The name of the function that asked                                                                                                           |
-| `version`        | The version of the function that asked                                                                                                        |
-| `to`             | The party the request goes to                                                                                                                 |
-| `delivery`       | The `server` and `tool` the request is sent through, or `null` for a request held for an agent                                                |
-| `message`        | The message of the request                                                                                                                    |
-| `takes_answer`   | `true` for a question, `false` for a notification                                                                                             |
-| `answer_schema`  | The JSON Schema an answer must match, as the request recorded it when it was asked; `null` for a notification                                 |
-| `requested_at`   | When the request was made, in ISO 8601 UTC                                                                                                    |
-| `expires_at`     | When the request expires unanswered, in ISO 8601 UTC                                                                                          |
-| `attempts`       | The delivery attempts made so far                                                                                                             |
-| `conversation`   | The conversation the playbook reads replies in, or `null`                                                                                     |
-| `answerer`       | The party whose reply counts, or `null`                                                                                                       |
-| `reply_refusals` | How many replies from the answerer the playbook refused                                                                                       |
-| `standing`       | `held_for_an_agent`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked   |
-| `sign_in`        | For a [sign-in request](#sign-in-requests), the `server`, the `site` and the `link` where the person signs in; `null` for every other request |
+| Field            | Contents                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `run_id`         | The run that asked, which `answer_interaction` takes                                                                                        |
+| `type`           | The type of the function that asked                                                                                                         |
+| `function`       | The name of the function that asked                                                                                                         |
+| `version`        | The version of the function that asked                                                                                                      |
+| `to`             | The party the request goes to                                                                                                               |
+| `delivery`       | The `server` and `tool` the request is sent through, or `null` for a request held for an agent                                              |
+| `message`        | The message of the request                                                                                                                  |
+| `takes_answer`   | `true` for a question, `false` for a notification                                                                                           |
+| `answer_schema`  | The JSON Schema an answer must match, as the request recorded it when it was asked; `null` for a notification                               |
+| `requested_at`   | When the request was made, in ISO 8601 UTC                                                                                                  |
+| `expires_at`     | When the request expires unanswered, in ISO 8601 UTC                                                                                        |
+| `attempts`       | The delivery attempts made so far                                                                                                           |
+| `conversation`   | The conversation the playbook reads replies in, or `null`                                                                                   |
+| `answerer`       | The party whose reply counts, or `null`                                                                                                     |
+| `reply_refusals` | How many replies from the answerer the playbook refused                                                                                     |
+| `standing`       | `held_for_an_agent`, `to_deliver`, `delivering`, `delivered`, `retrying`, `undelivered`, or `cancelling` once a cancel of its run was asked |
 
 `answer_interaction` checks the `answer_schema` the request recorded. That holds even after the function has a newer version, whose `output_schema` is the one `get_definition` shows. A schema may be up to 64 KiB as JSON, so a page of 100 requests can contain up to 6.25 MiB of schemas. A smaller `limit` keeps a page smaller.
 
@@ -397,20 +396,10 @@ The run takes the answer within about a second (the server checks waiting runs e
 | The same answer again                                                                                                      | The fact the run took                                                 |
 | A different answer, an answer to a request that has ended or whose run was asked to cancel, or an answer to a notification | `conflict`                                                            |
 | A run the playbook does not have                                                                                           | `not_found`                                                           |
-| A [sign-in request](#sign-in-requests) answered by anyone but the person it asks, or `signed_in: true` through an agent    | `forbidden`                                                           |
 
 ### A request nobody answers
 
-When nobody answers a request before it expires, its run ends `rejected`, with the reason `unanswered` and the kind `expired`. A notification that could not be delivered ends with the kind `undelivered`, and a sign-in that ended without the person signing in with `declined`, `signed_out` or `no_person`. A request with the same run id and input then returns that ending as a `410` problem of the type `https://on.auto/problems/unanswered`. [How a run ends](interaction-format.md#how-a-run-ends) lists every ending.
-
-### Sign-in requests
-
-A request that asks the person a run acts for to sign in to a site, from an interaction function with [`sign_in`](interaction-format.md#asking-a-person-to-sign-in), waits on that person by id:
-
-- Its `to` and its answerer are the person's id, such as `person:user_7kLm2`. Its row in [the organization's activity](#the-organization-s-activity) holds that id in `waits_on`, and `needs_you` counts it for that person alone.
-- `list_interactions` and the activity show its `sign_in`: the `server`, the `site` and the `link` where the person signs in, which opens only for that person.
-- Only that person may answer it, and any other caller is refused `forbidden`. `{ "signed_in": true }` is taken only from their own session, the one Studio signs in with, which names no client; through an agent's token, which names its client, it is refused `forbidden`. Their agent may answer `{ "signed_in": false }`, with a `reason` of at most 500 characters. In local mode the local developer may give either answer.
-- `{ "signed_in": true }` ends the run `succeeded` with that output. `{ "signed_in": false }` ends it `rejected` as `unanswered`, kind `declined`.
+When nobody answers a request before it expires, its run ends `rejected`, with the reason `unanswered` and the kind `expired`. A notification that could not be delivered ends with the kind `undelivered`. A request with the same run id and input then returns that ending as a `410` problem of the type `https://on.auto/problems/unanswered`. [How a run ends](interaction-format.md#how-a-run-ends) lists every ending.
 
 ## Computation functions
 
@@ -602,7 +591,7 @@ A cancelled run's rejection names the kind of its cancellation:
 
 ## Runs and results
 
-A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A run a trigger started, and each run its workflow's steps start, has `acts_for`, the id of the person whose sign-ins it uses, such as `person:user_7kLm2`: whoever saved or restored the version the trigger runs, where that was a person ([When a trigger applies](workflow-format.md#when-a-trigger-applies)). It grants the run nothing, and a run without it acts for its caller where that is a person. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
+A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A run a trigger started, and each run its workflow's steps start, has `acts_for`, the id of the person it acts for, such as `person:user_7kLm2`: whoever saved or restored the version the trigger runs, where that was a person ([When a trigger applies](workflow-format.md#when-a-trigger-applies)). It grants the run nothing, and a run without it acts for its caller where that is a person. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
 Most runs finish within the request that starts them. These runs finish later, so `run_definition` returns them `started`, unless one ended before its first wait:
 
@@ -862,7 +851,7 @@ Each event has these fields, and no others:
 | `call_depth`          | On a run a call started: how many calls are above it                                                                                                                                                                |
 | `depth`               | On a run a trigger or another run started, and on an event a workflow emitted: how many reactions are above it                                                                                                      |
 | `trigger`             | On a run a trigger started: its `kind`, `event`, `cron` or `every`, and its `reference` in the document                                                                                                             |
-| `acts_for`            | On a run a trigger started, and on the runs its steps started: the id of the person whose sign-ins it uses, as on the run                                                                                           |
+| `acts_for`            | On a run a trigger started, and on the runs its steps started: the id of the person it acts for, as on the run                                                                                                      |
 | `trace_id`, `span_id` | The trace and span of the append that recorded the event, one pair for every event of one append; with telemetry on, the trace the server exported                                                                  |
 
 ### What `data` shows
@@ -1296,7 +1285,6 @@ Each row has these fields:
 | `status`        | For `broken`, how the latest failing run ended: `failed`, a run that failed inside the runtime, or `rejected`; otherwise `null`                                                                                                                                                                                                              |
 | `waits_on`      | For `needs_you`, whom the request waits on: the person its party names by id, such as `person:user_7kLm2`; the address its party names, in lower case, where the party is one, holding an `@`; or `any_member` where it names none. See [Whom a request waits on](interaction-format.md#whom-a-request-waits-on). `null` for the other kinds |
 | `expires_at`    | For `needs_you`, when the request expires unanswered, in ISO 8601 UTC; otherwise `null`                                                                                                                                                                                                                                                      |
-| `sign_in`       | For `needs_you` of a [sign-in request](#sign-in-requests), the `server`, the `site` and the `link` where the person signs in; otherwise `null`                                                                                                                                                                                               |
 | `about`         | For `comment`, the [address](addresses.md) of what the comment is about; otherwise `null`. Its `definition` and `run_id` are read from this address, so a comment on a run names its run and no definition. Read the comment whole with [`list_comments`](#listing-comments)                                                                 |
 | `seen`          | For `new` and `comment`, whether the caller has seen it, as [Seen and counted](#seen-and-counted) says; `null` for the other kinds, which nothing a caller marks seen changes                                                                                                                                                                |
 
@@ -1358,7 +1346,6 @@ Authorization: Bearer <key>
       "waits_on": null,
       "expires_at": null,
       "about": null,
-      "sign_in": null,
       "seen": false
     },
     {
@@ -1385,7 +1372,6 @@ Authorization: Bearer <key>
       "waits_on": "priya@acme.example",
       "expires_at": "2026-11-03T16:58:12.204Z",
       "about": null,
-      "sign_in": null,
       "seen": null
     },
     {
@@ -1408,7 +1394,6 @@ Authorization: Bearer <key>
       "waits_on": null,
       "expires_at": null,
       "about": null,
-      "sign_in": null,
       "seen": null
     }
   ],
@@ -2193,7 +2178,7 @@ A problem document's `type` is a URI that names its kind of problem:
 | `https://on.auto/problems/license_invalid`        | 409    | The runtime runs at the free rate since its license can't be used right now, its key rotated or removed, its org closed, out of touch past its license's `limit_at` or not yet activated, and has used the rate; or its offline credits stopped; or a key given to activate is invalid; its `reason` is `conflict`. Nothing of the run is recorded                                                                                                                                                                                                                                                     |
 | `https://on.auto/problems/account_closed`         | 409    | On hosted Auto, the account of the run's org is closed: its runs are refused, `because: "org_deleted"`, until Auto's support restores the org, which a person asks for at the `resolve_at` page until the date its `detail` gives. After that date the org is purged and its runs never run again, `because: "org_purged"`. Its `reason` is `conflict`, and nothing of the run is recorded. A self-hosted runtime answers it only to `activate_license` given the key of a closed org; the runtime of a closed org runs at the free rate instead, and refuses runs past that rate as `license_invalid` |
 | `https://on.auto/problems/cancelled`              | 409    | The run was cancelled, with the `kind` of its cancellation; its `reason` is `cancelled`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `https://on.auto/problems/unanswered`             | 410    | Nobody answered the request a run waited on, of an interaction function, with the `kind` `expired` or `undelivered`, or a sign-in ended without the person signing in, with the `kind` `declined`, `signed_out` or `no_person`                                                                                                                                                                                                                                                                                                                                                                         |
+| `https://on.auto/problems/unanswered`             | 410    | Nobody answered the request a run waited on, of an interaction function, with the `kind` `expired` or `undelivered`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `https://on.auto/problems/content_too_large`      | 413    | The body is larger than the operation accepts: 1,048,576 bytes of JSON                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `https://on.auto/problems/unsupported_media_type` | 415    | The body is not sent as the media type the operation accepts, `application/json` in UTF-8 unless the route says otherwise, or is sent compressed                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `https://on.auto/problems/range_not_satisfiable`  | 416    | The `Range` of a [content at a signed address](#content-at-a-signed-address) starts at or past its end                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |

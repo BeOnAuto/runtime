@@ -3,7 +3,6 @@ import type {
   ConflictKind,
   InvalidInputKind,
   RejectionBecause,
-  UnansweredKind,
   UnavailableKind,
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
@@ -117,16 +116,6 @@ function rejectedAsCancelled(rejection: Cancel): Effect.Effect<RunResult> {
   return rejectedWith({ reason: 'cancelled', detail, kind }, rejection);
 }
 
-interface Unanswered extends Recorded {
-  readonly detail: string;
-  readonly kind: UnansweredKind;
-}
-
-function rejectedAsUnanswered(rejection: Unanswered): Effect.Effect<RunResult> {
-  const { detail, kind } = rejection;
-  return rejectedWith({ reason: 'unanswered', detail, kind }, rejection);
-}
-
 export function attempt(running: Effect.Effect<CapabilityAnswer, CapabilityRejection>): Effect.Effect<RunOutcome> {
   return running.pipe(
     Effect.flatMap(outcomeOf),
@@ -135,7 +124,6 @@ export function attempt(running: Effect.Effect<CapabilityAnswer, CapabilityRejec
       unavailable: rejectedAsUnavailable,
       conflict: rejectedAsConflict,
       cancelled: rejectedAsCancelled,
-      unanswered: rejectedAsUnanswered,
     }),
   );
 }

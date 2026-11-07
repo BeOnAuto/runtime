@@ -4,10 +4,8 @@ import { defaultRunWords, outputInWords, type RunAccount, type RunWords } from '
 import { callOutputInWords } from '@on.auto/definitions/tool-blocks';
 import type { Schema } from 'effect';
 
-import { isNotification, requestRecordOf, takesAnswer, type RequestRecord } from '../run/request-record.ts';
+import { isNotification, requestRecordOf, takesAnswer } from '../run/request-record.ts';
 import { interactionBounds } from '../run/run-bounds.ts';
-import { signedInSiteOf } from '../sign-in/sign-in-endings.ts';
-import { signedInWords } from '../sign-in/sign-in-words.ts';
 import { routeOf, throughWords } from '../tool-blocks/routes.ts';
 
 function cutParty(party: string): string {
@@ -17,13 +15,6 @@ function cutParty(party: string): string {
     : new TextDecoder().decode(bytes.subarray(0, interactionBounds.toBytes));
 }
 
-function whatWaits({ sign_in: signIn }: RequestRecord, answers: boolean): string {
-  if (signIn !== undefined) {
-    return `A sign-in request is waiting for the person it asks to sign in to ${signIn.site}`;
-  }
-  return answers ? 'A request is waiting for an answer' : 'A notification is waiting to be delivered';
-}
-
 function requestAccount(record: Schema.JsonObject): RunAccount | undefined {
   const request = requestRecordOf(record);
   if (request === undefined) {
@@ -31,7 +22,7 @@ function requestAccount(record: Schema.JsonObject): RunAccount | undefined {
   }
   const answers = takesAnswer(request);
   const route = routeOf(request);
-  const what = whatWaits(request, answers);
+  const what = answers ? 'A request is waiting for an answer' : 'A notification is waiting to be delivered';
   const answerer = request.answerer === request.to ? undefined : request.answerer;
   const from = answerer === undefined ? '' : '; a reply counts from its answerer alone';
   return {
@@ -59,10 +50,6 @@ export function describeAnswer(output: Schema.Json, record?: Schema.JsonObject):
   const asked = callOutputInWords(output, record);
   if (asked !== undefined) {
     return asked;
-  }
-  const signedInTo = signedInSiteOf(record);
-  if (signedInTo !== undefined) {
-    return signedInWords(signedInTo);
   }
   return isNotification(record) ? 'It delivered its notification.' : answerInWords(output);
 }

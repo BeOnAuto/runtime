@@ -1739,37 +1739,6 @@
                           ],
                           "description": "For comment, the address of what the comment is about; otherwise null"
                         },
-                        "sign_in": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "server": {
-                                  "type": "string",
-                                  "description": "The browser connection the person signs in through"
-                                },
-                                "site": {
-                                  "type": "string",
-                                  "description": "The host name of the site the person signs in to"
-                                },
-                                "link": {
-                                  "type": "string",
-                                  "description": "Where the person signs in, which opens only for the person the request waits on"
-                                }
-                              },
-                              "required": [
-                                "server",
-                                "site",
-                                "link"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "For needs_you of a request that asks a person to sign in to a site, the site and the link where they sign in; otherwise null"
-                        },
                         "seen": {
                           "anyOf": [
                             {
@@ -1802,7 +1771,6 @@
                         "waits_on",
                         "expires_at",
                         "about",
-                        "sign_in",
                         "seen"
                       ],
                       "additionalProperties": false,
@@ -17065,7 +17033,7 @@
                     },
                     "acts_for": {
                       "type": "string",
-                      "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
+                      "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, who saved or restored the version it runs, by id; it grants the run nothing"
                     },
                     "finished_at": {
                       "type": "string",
@@ -17536,7 +17504,7 @@
                     },
                     "acts_for": {
                       "type": "string",
-                      "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
+                      "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, who saved or restored the version it runs, by id; it grants the run nothing"
                     },
                     "finished_at": {
                       "type": "string",
@@ -18033,7 +18001,7 @@
                     },
                     "acts_for": {
                       "type": "string",
-                      "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
+                      "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, who saved or restored the version it runs, by id; it grants the run nothing"
                     },
                     "finished_at": {
                       "type": "string",
@@ -18338,7 +18306,7 @@
                         },
                         "acts_for": {
                           "type": "string",
-                          "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, who saved or restored the version it runs, by id; it grants the run nothing"
+                          "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, who saved or restored the version it runs, by id; it grants the run nothing"
                         },
                         "finished_at": {
                           "type": "string",
@@ -18752,7 +18720,7 @@
                             },
                             "acts_for": {
                               "type": "string",
-                              "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id"
+                              "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, by id"
                             },
                             "trace_id": {
                               "type": "string",
@@ -19584,7 +19552,7 @@
                             },
                             "acts_for": {
                               "type": "string",
-                              "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id"
+                              "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, by id"
                             },
                             "trace_id": {
                               "type": "string",
@@ -20268,7 +20236,7 @@
                         },
                         "acts_for": {
                           "type": "string",
-                          "description": "On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id"
+                          "description": "On a run a trigger started, and on the runs its steps started: the person it acts for, by id"
                         },
                         "trace_id": {
                           "type": "string",
@@ -23065,34 +23033,6 @@
                             "cancelling"
                           ],
                           "description": "How its delivery stands: held_for_an_agent, to_deliver, delivering, delivered, retrying, undelivered once every attempt failed, or cancelling once a cancel was asked; an answered request leaves the list"
-                        },
-                        "sign_in": {
-                          "anyOf": [
-                            {
-                              "type": "object",
-                              "properties": {
-                                "server": {
-                                  "type": "string"
-                                },
-                                "site": {
-                                  "type": "string"
-                                },
-                                "link": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "server",
-                                "site",
-                                "link"
-                              ],
-                              "additionalProperties": false
-                            },
-                            {
-                              "type": "null"
-                            }
-                          ],
-                          "description": "For a request that asks a person to sign in to a site, its server, the site and the link where they sign in; null otherwise"
                         }
                       },
                       "required": [
@@ -23111,8 +23051,7 @@
                         "conversation",
                         "answerer",
                         "reply_refusals",
-                        "standing",
-                        "sign_in"
+                        "standing"
                       ],
                       "additionalProperties": false,
                       "description": "An open request of a function"

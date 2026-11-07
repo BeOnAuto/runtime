@@ -53,8 +53,7 @@ export const EventMetadataSchema = Schema.Struct({
   trigger: Schema.optionalKey(EventTriggerSchema),
   acts_for: Schema.optionalKey(
     Schema.String.annotate({
-      description:
-        'On a run a trigger started, and on the runs its steps started: the person whose sign-ins it uses, by id',
+      description: 'On a run a trigger started, and on the runs its steps started: the person it acts for, by id',
     }),
   ),
   trace_id: Schema.optionalKey(Schema.String.annotate({ description: 'The trace of the append that recorded it' })),

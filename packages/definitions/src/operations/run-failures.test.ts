@@ -139,22 +139,6 @@ describe('a run that could not finish after calling a tool that may change somet
   });
 });
 
-describe('a run the capability ends because nobody can answer what it would ask', () => {
-  it('is rejected as unanswered of that kind, a final result a call with its id answers again without running', async () => {
-    const { call, running, getRun, prober } = await withPlain();
-    prober.sufferOnNextRun('unanswerable');
-    const rejection = { reason: 'unanswered', detail: 'The probe acts for nobody who can answer', kind: 'no_person' };
-
-    expect(await running({})).toEqual({ status: 'rejected', ...rejection });
-    expect(await running({})).toEqual({ status: 'rejected', ...rejection });
-    expect(prober.runs()).toBe(1);
-    expect(await call(getRun, readingTheRun)).toStrictEqual({
-      status: 'succeeded',
-      output: { ...failedRun, status: 'rejected', rejection },
-    });
-  });
-});
-
 describe('a run whose capability breaks down', () => {
   it('fails with an incident that holds the defect, and is recorded as failed', async () => {
     const { call, running, getRun, prober, reported } = await withPlain();

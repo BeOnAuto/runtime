@@ -2,7 +2,7 @@ import type { CalledBy, RecordedCaller, RunContext, StartingTrigger } from '@on.
 import type { Schema } from 'effect';
 
 import { numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
-import { firstAttempt, type RunResult, type RunSettlement } from './run-commands.ts';
+import { firstAttempt, type RunResult } from './run-commands.ts';
 import type { CancelRequestKind, RecordedRunEvent, RecordedRunFact, ReplyIdentity } from './run-events.ts';
 import type { RunRecord } from './run.ts';
 
@@ -234,16 +234,6 @@ export function evolveRun(state: RunStreamState, event: RecordedRunEvent): RunSt
 export function hasFinalResult({ run }: RecordedRunState): boolean {
   const reason = run.rejection?.reason;
   return run.status === 'succeeded' || reason === 'invalid_input' || reason === 'cancelled' || reason === 'unanswered';
-}
-
-const theKindAnAnswerBrings = 'declined';
-
-export function unansweredThoughAnswered({ answer }: RecordedRunState, { result }: RunSettlement): boolean {
-  if (answer === null || result.type !== 'run_rejected') {
-    return false;
-  }
-  const { rejection } = result.data;
-  return rejection.reason === 'unanswered' && rejection.kind !== theKindAnAnswerBrings;
 }
 
 export function awaitsSettlement({ run, deferred }: RecordedRunState): boolean {

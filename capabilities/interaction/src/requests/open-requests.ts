@@ -73,7 +73,6 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     reply: jsonOf(request.reply),
     reply_refusals: 0,
     refusals_told: 0,
-    sign_in: jsonOf(request.sign_in),
   });
 }
 
@@ -192,7 +191,7 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 11,
+  version: 12,
   kinds: ['runs'],
   types: [
     'run_deferred',
@@ -234,7 +233,6 @@ export const openRequests: KeyedProjection = {
     { name: 'reply', kind: 'text' },
     { name: 'reply_refusals', kind: 'integer' },
     { name: 'refusals_told', kind: 'integer' },
-    { name: 'sign_in', kind: 'text' },
   ],
   indexes: [
     { name: 'by_open', columns: ['open', 'requested_at', 'row_key'] },
