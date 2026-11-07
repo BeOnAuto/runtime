@@ -4,7 +4,7 @@ description: Connect your Slack account to Auto, use your messages, channels and
 
 # Connect Slack
 
-Connect your Slack account to Auto, so that the functions in your playbooks can read your messages, channels and threads, search the messages you can see, look up people, and send messages and add reactions as you. Your agent does the setup. You sign in to Slack and allow access.
+Connect your Slack account to Auto, so that the functions in your playbooks can read your messages, channels and threads, look up people, and send messages and add reactions as you. Your agent does the setup. You sign in to Slack and allow access.
 
 ## What you need
 
@@ -51,14 +51,13 @@ Once Slack is connected, ask your agent to give a function in your playbook the 
 | A playbook can                                                                          | You might ask                                                                             |
 | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Read the history of a channel, a direct message or a group direct message, and a thread | "Summarize yesterday's thread in the support channel about the delayed order."            |
-| Search messages, across the workspace or in one channel                                 | "Find last week's messages about the delayed order."                                      |
 | Look up people and channels                                                             | "Find the channel about the trade show, and the job titles of the people who post there." |
 | Send a message, and change one it sent                                                  | "Post the weekly summary in the marketing channel."                                       |
 | Add a reaction, and see the reactions on a message                                      | "Add a check mark to each question in the support channel we answered today."             |
 
 The `slack` row of [the providers Auto ships](../self-host/connections.md#the-providers-auto-ships) is the full list of what a function may do with Slack.
 
-The `slack-bot` provider cannot search, because Slack's search works only with a person's token.
+Searching Slack messages is not available yet.
 
 [Slack limits](https://docs.slack.dev/changelog/2025/05/29/rate-limit-changes-for-non-marketplace-apps) how an app distributed outside the Slack Marketplace reads a conversation, and Auto's Slack app is distributed outside it. Through it, a function gets at most 15 messages of the history of a channel, or of a thread, in each call, however many it asks for, and reads more by calling again with the cursor Slack returned. Slack also allows such an app one of these reads a minute in each workspace. It answers a read past that limit with how long to wait, and the call fails as rate limited where the wait is longer than Auto waits for one call. An app your workspace builds for itself has no such limit, and whoever runs your Auto can register one, as [The providers Auto ships that take consent](../self-host/connections.md#the-providers-auto-ships-that-take-consent) sets out.
 

@@ -30,7 +30,7 @@ const StartedSchema = Schema.Struct({
 
 const startDescription = [
   "Starts the consent of a connection a person connects by signing in at its authorization server and allowing Auto, through the connection's open link, and answers the page of that authorization server to send the person to.",
-  "A link of a connection asks the scopes its credential asks with those of the scopes it asked that it was granted, where a client here covers them, and a link add_connection or reconnect_connection gave for a group of more asks the scopes it asked that it was granted, or its credential's while it was granted none, with the group's, so the person keeps what they allowed before.",
+  "A link of a connection asks the scopes its provider's way asks as it stands, or its credential's for a connection given by hand, with those of the scopes it asked that it was granted and the way still asks or offers, where a client here covers them, and a link add_connection or reconnect_connection gave for a group of more asks the scopes it asked that it was granted and the way still asks or offers, or those the way asks while it holds none of them, with the group's, so the person keeps what they allowed before and is never asked a scope its provider no longer names.",
   "A connection under the organization's own OAuth client starts with the client give_client gave, at the provider's authorization server, never through Auto's consent service, and is refused until it is given.",
   'The consent is finished within ten minutes, and a second start replaces the first.',
   'A connection that is connected stays connected with its credential while it is connected again, until the finish replaces the credential.',

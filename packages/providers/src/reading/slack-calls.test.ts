@@ -42,7 +42,6 @@ const calls: readonly Called[] = [
   { tool: 'conversations_info', input: { channel } },
   { tool: 'conversations_history', input: { channel, limit: 15 } },
   { tool: 'conversations_replies', input: { channel, ts } },
-  { tool: 'search_messages', input: { query: 'delayed order', count: 20 } },
   { tool: 'users_list', input: { limit: 100 } },
   { tool: 'users_info', input: { user: 'U012AB3CD' } },
   { tool: 'chat_postMessage', input: { body: { channel, text: 'The digest is ready.' } } },
@@ -57,7 +56,6 @@ const sentByEach: readonly Sent[] = [
   ['GET', '/v1/conversations.info', `?channel=${channel}`, ''],
   ['GET', '/v1/conversations.history', `?channel=${channel}&limit=15`, ''],
   ['GET', '/v1/conversations.replies', `?channel=${channel}&ts=${ts}`, ''],
-  ['GET', '/v1/search.messages', '?query=delayed+order&count=20', ''],
   ['GET', '/v1/users.list', '?limit=100', ''],
   ['GET', '/v1/users.info', '?user=U012AB3CD', ''],
   ['POST', '/v1/chat.postMessage', '', JSON.stringify({ channel, text: 'The digest is ready.' })],
@@ -65,10 +63,6 @@ const sentByEach: readonly Sent[] = [
   ['POST', '/v1/reactions.add', '', JSON.stringify({ channel, name: 'thumbsup', timestamp: ts })],
   ['GET', '/v1/reactions.get', `?channel=${channel}&full=true&timestamp=${ts}`, ''],
 ];
-
-const callsOfABot = calls.filter(({ tool }) => tool !== 'search_messages');
-
-const sentByEachOfABot = sentByEach.filter(([, path]) => path !== '/v1/search.messages');
 
 const readingOnInWords: unknown = expect.stringMatching(
   /Slack returns at most 15 messages a call to an app distributed outside the Slack Marketplace.+call again with cursor set to the response_metadata\.next_cursor of the last answer/u,
@@ -173,7 +167,7 @@ describe('the two Slack providers', () => {
     expect(slack.failure_codes).toEqual(slackBot.failure_codes);
   });
 
-  it('offer the person its twelve methods as tools, those that read marked read-only and those that post, update or react not', async () => {
+  it('offer the person its eleven methods as tools, those that read marked read-only and those that post, update or react not', async () => {
     const [listed] = await Effect.runPromise(listedBy(await asThePerson()));
 
     expect(listed).toMatchObject({
@@ -185,10 +179,10 @@ describe('the two Slack providers', () => {
     });
   });
 
-  it('offer the bot the eleven a bot token may call, leaving out search_messages, which Slack answers for a user token alone', async () => {
+  it('offer the bot the same eleven tools as the person', async () => {
     const [listed] = await Effect.runPromise(listedBy(await asTheBot()));
 
-    expect(listed).toMatchObject({ name: 'slack-bot', tools: callsOfABot.map(({ tool }) => ({ name: tool })) });
+    expect(listed).toMatchObject({ name: 'slack-bot', tools: calls.map(({ tool }) => ({ name: tool })) });
   });
 
   it('say on the history of a conversation and of a thread that Slack returns 15 messages a call outside its Marketplace, and how to read on', async () => {
@@ -205,9 +199,9 @@ describe('the two Slack providers', () => {
 describe('the calls of slack and slack-bot through their shipped document', () => {
   it('reach the Web API at the path of each method, with the user token of the person or the bot token of the app as a bearer', async () => {
     const asPerson = await sentThrough(await asThePerson(), calls);
-    const asBot = await sentThrough(await asTheBot(), callsOfABot);
+    const asBot = await sentThrough(await asTheBot(), calls);
 
-    expect([asPerson.sent, asBot.sent]).toEqual([sentByEach.toSorted(byPath), sentByEachOfABot.toSorted(byPath)]);
+    expect([asPerson.sent, asBot.sent]).toEqual([sentByEach.toSorted(byPath), sentByEach.toSorted(byPath)]);
     expect([asPerson.bearers, asBot.bearers]).toEqual([
       new Set([expect.stringMatching(/^Bearer token-1-/u)]),
       new Set([`Bearer ${botToken}`]),

@@ -3,7 +3,7 @@
   "info": {
     "title": "Slack Web API",
     "version": "2026-11-04",
-    "description": "Twelve Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the token, the bot token (xoxb-) of an app installed in the workspace or the user token (xoxp-) of the person who connects, is sent as Authorization: Bearer. search.messages takes a user token alone."
+    "description": "Eleven Slack Web API methods, written by hand from the vendor method references. Read methods take query arguments, write methods a JSON body; the token, the bot token (xoxb-) of an app installed in the workspace or the user token (xoxp-) of the person who connects, is sent as Authorization: Bearer."
   },
   "externalDocs": {
     "url": "https://docs.slack.dev/apis/web-api"
@@ -430,103 +430,6 @@
           },
           {
             "user_token": ["mpim:history"]
-          }
-        ]
-      }
-    },
-    "/search.messages": {
-      "get": {
-        "operationId": "search_messages",
-        "description": "Searches for messages matching a query, in the conversations the person who connects can see. Add in:channel_name to the query to search one channel, or from:<@UserID> to find the messages of one person.",
-        "externalDocs": {
-          "url": "https://docs.slack.dev/reference/methods/search.messages"
-        },
-        "parameters": [
-          {
-            "name": "query",
-            "in": "query",
-            "required": true,
-            "description": "Search query.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "count",
-            "in": "query",
-            "description": "Pass the number of results you want per \"page\". Maximum of 100.",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            }
-          },
-          {
-            "name": "cursor",
-            "in": "query",
-            "description": "Use this when getting results with cursormark pagination. For first call send * for subsequent calls, send the value of next_cursor returned in the previous call's results",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "highlight",
-            "in": "query",
-            "description": "Pass a value of true to enable query highlight markers.",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "description": "The page of results to return. Maximum of 100.",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            }
-          },
-          {
-            "name": "sort",
-            "in": "query",
-            "description": "Return matches sorted by either score or timestamp.",
-            "schema": {
-              "type": "string",
-              "default": "score"
-            }
-          },
-          {
-            "name": "sort_dir",
-            "in": "query",
-            "description": "Change sort direction to ascending (asc) or descending (desc).",
-            "schema": {
-              "type": "string",
-              "default": "desc"
-            }
-          },
-          {
-            "name": "team_id",
-            "in": "query",
-            "description": "encoded team id to search in, required if org token is used",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Every Web API answer is a JSON object whose ok says whether the call succeeded; a failure answers HTTP 200 with ok false and an error code.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Answer"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "user_token": ["search:read"]
           }
         ]
       }
@@ -1020,8 +923,7 @@
               "users:read": "View people in a workspace",
               "chat:write": "Send messages as your Slack app",
               "reactions:read": "View emoji reactions and their associated content in channels and conversations that your Slack app has been added to",
-              "reactions:write": "Add and edit emoji reactions",
-              "search:read": "Search a workspace's content"
+              "reactions:write": "Add and edit emoji reactions"
             }
           }
         }

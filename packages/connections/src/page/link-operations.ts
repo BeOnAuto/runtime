@@ -19,7 +19,13 @@ import {
   recordInRegistry,
   recordedCaller,
 } from '../operations/registry-access.ts';
-import { keptAskedOf, moreAskedOf, noLongerNamed, type AskedMore } from '../providers/asking-more.ts';
+import {
+  askedAgainOf,
+  moreAskedOf,
+  noLongerNamed,
+  scopesStillNamedOf,
+  type AskedMore,
+} from '../providers/asking-more.ts';
 import { ConnectionSchema, connectionShown, scopesAddedTo } from '../registry/connection.ts';
 import { isOpenConsent, linkedConnectionOf, type KeptWithLink } from '../registry/registry-lookup.ts';
 import {
@@ -39,7 +45,7 @@ const LinkedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
   asked_scopes: ConnectionSchema.fields.asked_scopes.annotate({
     description:
-      'The scopes the connection asked, and beside them those the consent this link starts asks, each with what a connection can do through it; empty where it asks none',
+      'The scopes the connection asked that its provider still asks or offers, and beside them those the consent this link starts asks, each with what a connection can do through it; empty where it asks none',
   }),
   link: Schema.Struct({
     expires_at: ExpiresAtField,
@@ -98,11 +104,16 @@ function askedOfALinkForMore(
   return asked === undefined ? Result.fail(noLongerNamed(connection, more)) : Result.succeed(asked);
 }
 
-function keptUnlessUncovered(connection: Linked, sources: Sources): string | undefined {
-  const kept = keptAskedOf(connection);
-  return kept === connection.credential.scope || isCoveredHere(connection, kept, sources)
-    ? kept
-    : connection.credential.scope;
+function askedAgainUnlessUncovered(
+  connection: Linked,
+  providers: LinkReading['providers'],
+  sources: Sources,
+): AskedOfTheLink {
+  const { scope, scopeOfTheWay, says } = askedAgainOf(connection, providers);
+  return {
+    scope: scope === scopeOfTheWay || isCoveredHere(connection, scope, sources) ? scope : scopeOfTheWay,
+    says,
+  };
 }
 
 export function askedOfTheLink(
@@ -111,7 +122,7 @@ export function askedOfTheLink(
   sources: Sources,
 ): Result.Result<AskedOfTheLink, Conflict> {
   return link.more === undefined
-    ? Result.succeed({ scope: keptUnlessUncovered(connection, sources), says: {} })
+    ? Result.succeed(askedAgainUnlessUncovered(connection, providers, sources))
     : askedOfALinkForMore(connection, providers, link.more);
 }
 
@@ -157,7 +168,11 @@ export function defineReadLink(reading: LinkReading) {
       const shown = connectionShown(kept.connection, null);
       return {
         ...shown,
-        asked_scopes: scopesAddedTo(shown.asked_scopes, asked.scope, asked.says),
+        asked_scopes: scopesAddedTo(
+          scopesStillNamedOf(kept.connection, reading.providers, shown.asked_scopes),
+          asked.scope,
+          asked.says,
+        ),
         link: { expires_at: kept.link.expires_at, ...moreOfTheLink(asked) },
         ...started,
         ...source,
