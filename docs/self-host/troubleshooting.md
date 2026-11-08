@@ -103,7 +103,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Cause.** A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month, and this one has used the day's or the month's.
 
-**Fix.** Wait until the time the `detail` gives, or open the refusal's `resolve_at` while signed in to Studio as an owner of the org, register the runtime its `runtime_id` names, and activate the key Studio shows once. [Activate the key](licenses.md#activate-the-key) gives the ways to activate it. A workflow whose call was refused waits at that step and asks again.
+**Fix.** Wait until the time the `detail` gives, or open the refusal's `resolve_at` while signed in to Studio as the account holder or an organization admin, register the runtime its `runtime_id` names, and activate the key Studio shows once. [Activate the key](licenses.md#activate-the-key) gives the ways to activate it. A workflow whose call was refused waits at that step and asks again.
 
 ## A runtime with a key runs at the free rate {#limited}
 
@@ -111,11 +111,11 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Cause and fix**, by the license's `limited_because` and the refusal's first words:
 
-- `credits`, `This runtime's organization is out of credits`: the org is on the Free plan and has used its credits. An owner adds credits at `resolve_at`, Billing in Studio; the runtime takes them at its next report, within the hour.
-- `cap`, `This runtime's organization has reached its overage cap`: the org owes as much overage as its plan allows. An owner adds credits at `resolve_at`, which repay what is owed first; the runtime takes them at its next report.
+- `credits`, `This runtime's organization is out of credits`: the org is on the Free plan and has used its credits. The account holder or an organization admin adds credits at `resolve_at`, Billing in Studio; the runtime takes them at its next report, within the hour.
+- `cap`, `This runtime's organization has reached its overage cap`: the org owes as much overage as its plan allows. The account holder or an organization admin adds credits at `resolve_at`, which repay what is owed first; the runtime takes them at its next report.
 - `out_of_touch`, `This runtime hasn't reached Auto since` a date: the runtime has not reached `billing.on.auto` for 28 days since its last license. Check its egress; it goes back to its org's credits at its next report.
-- `key_rotated`, `This runtime's license key was replaced`: an owner rotated the key in Studio. Activate the new key they were shown; a key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there. If the key is lost, an owner rotates it again at `resolve_at`.
-- `key_revoked`, `This runtime was removed from its organization` or `Auto no longer accepts this runtime's license key`: an owner removed the runtime. An owner registers it again at `resolve_at`; activate the new key.
+- `key_rotated`, `This runtime's license key was replaced`: the account holder or an organization admin rotated the key in Studio. Activate the new key they were shown; a key in `AUTO_RUNTIME_LICENSE_KEY` or the configuration file wins over one activated by the command or through the API, so replace it there. If the key is lost, the account holder or an organization admin rotates it again at `resolve_at`.
+- `key_revoked`, `This runtime was removed from its organization` or `Auto no longer accepts this runtime's license key`: the account holder or an organization admin removed the runtime. The account holder or an organization admin registers it again at `resolve_at`; activate the new key.
 - `org_closed`, `This runtime's organization at Auto is closed`: the organization was deleted. Auto support can restore it only within the restoration window. If restored, the runtime resumes using its credits at the next report. Otherwise, activate a key from another organization.
 - `not_activated`, `This runtime's license key isn't activated yet`: the runtime has not reached Auto since it was given the key. Check its egress; it activates the key at its next report, within the hour.
 
@@ -125,9 +125,9 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Cause and fix.**
 
-- `This runtime's key was replaced.`, with `because: "key_rotated"`: the key was rotated. Activate the new key an owner was shown, or have an owner rotate it again at `resolve_at`.
-- `This runtime was removed from its org.`, with `because: "installation_revoked"`: an owner registers the runtime again at `resolve_at`; activate the new key.
-- `This runtime's offline credits expired on` a date: offline credits last 30 days from when they were issued or last refreshed, or 90 under an Enterprise order. An owner requests new credits at `resolve_at`, or the runtime refreshes them with Auto.
+- `This runtime's key was replaced.`, with `because: "key_rotated"`: the key was rotated. Activate the new key that the account holder or an organization admin was shown, or have the account holder or an organization admin rotate it again at `resolve_at`.
+- `This runtime was removed from its org.`, with `because: "installation_revoked"`: the account holder or an organization admin registers the runtime again at `resolve_at`; activate the new key.
+- `This runtime's offline credits expired on` a date: offline credits last 30 days from when they were issued or last refreshed, or 90 under an Enterprise order. The account holder or an organization admin requests new credits at `resolve_at`, or the runtime refreshes them with Auto.
 - `This runtime's license is invalid`, followed by why: a key for another runtime is refused before the runtime asks Auto, so register this runtime, which `runtime_id` names, rather than reuse another's key; a license not signed by Auto is refused whatever key brought it.
 
 ## A run on offline credits is refused as `credits_exhausted` {#credits-exhausted}
@@ -136,7 +136,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Cause.** A [runtime on offline credits](licensing.md#offline-credits) has spent them. A run asked again under the id of a run that already started counts nothing more, and is not refused.
 
-**Fix.** An owner of the org requests more offline credits at `resolve_at`.
+**Fix.** The account holder or an organization admin requests more offline credits at `resolve_at`.
 
 ## Activating a key is refused as `account_closed` {#account-closed}
 
@@ -144,7 +144,7 @@ Never paste an API key into a prompt to fix a connection. The server reads keys 
 
 **Cause.** The org's account at Auto is closed. With `org_deleted`, the org was deleted and can still be restored, but only for a limited time; after it, the org is purged. With `org_purged`, it was, and cannot be restored.
 
-**Fix.** For `org_deleted`, an owner of the org restores it at `resolve_at`, which says until when it can be. For `org_purged`, register the runtime with another org and activate its key. Meanwhile the runtime runs at the free rate.
+**Fix.** For `org_deleted`, ask Auto support to restore the org on the Support page in Studio, which `resolve_at` links to, before the date it gives. For `org_purged`, register the runtime with another org and activate its key. Meanwhile the runtime runs at the free rate.
 
 ## Error responses
 
