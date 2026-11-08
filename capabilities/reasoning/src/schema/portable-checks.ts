@@ -121,14 +121,26 @@ const budgetWords: Readonly<Record<keyof Budget, (count: number, most: number) =
   characters: (count, most) => `${count} characters of names and enum values (most ${most})`,
 };
 
+const budgetRewrites: Readonly<Record<keyof Budget, string>> = {
+  unions: 'make some of these fields required and of one type, or split the answer',
+  depth: 'nest fewer levels of objects, or split the answer',
+  properties: 'split the answer',
+  enumValues: 'list fewer enum values, or split the answer',
+  characters: 'use shorter names and enum values, or split the answer',
+};
+
 const measures: readonly (keyof Budget)[] = ['unions', 'depth', 'properties', 'enumValues', 'characters'];
 
-export function overBudget(budget: Budget): readonly SchemaIssue[] {
+export interface NotPortableIssue extends SchemaIssue {
+  readonly rewrite?: string;
+}
+
+export function overBudget(budget: Budget): readonly NotPortableIssue[] {
   return measures.flatMap((measure) => {
     const count = budget[measure];
     const most = portableBudget[measure];
     return count > most
-      ? [{ pointer: '', detail: `over the portable budget: ${budgetWords[measure](count, most)}` }]
+      ? [{ pointer: '', detail: budgetWords[measure](count, most), rewrite: budgetRewrites[measure] }]
       : [];
   });
 }

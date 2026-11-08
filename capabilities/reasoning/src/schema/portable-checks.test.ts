@@ -121,15 +121,32 @@ describe('the budget of a portable form', () => {
 });
 
 describe('a measure over the portable budget', () => {
-  it('is reported, and a measure at the budget is not', () => {
-    expect([overBudget(portableBudget), overBudget(overEveryMeasure).map(({ detail }) => detail)]).toEqual([
+  it('is reported with how to bring it within, and a measure at the budget is not', () => {
+    expect([overBudget(portableBudget), overBudget(overEveryMeasure)]).toEqual([
       [],
       [
-        'over the portable budget: 17 fields that may be null or are a choice of types, counted where each definition is used (most 16)',
-        'over the portable budget: 11 levels of objects (most 10)',
-        'over the portable budget: 5001 properties (most 5000)',
-        'over the portable budget: 1001 enum values (most 1000)',
-        'over the portable budget: 120001 characters of names and enum values (most 120000)',
+        {
+          pointer: '',
+          detail:
+            '17 fields that may be null or are a choice of types, counted where each definition is used (most 16)',
+          rewrite: 'make some of these fields required and of one type, or split the answer',
+        },
+        {
+          pointer: '',
+          detail: '11 levels of objects (most 10)',
+          rewrite: 'nest fewer levels of objects, or split the answer',
+        },
+        { pointer: '', detail: '5001 properties (most 5000)', rewrite: 'split the answer' },
+        {
+          pointer: '',
+          detail: '1001 enum values (most 1000)',
+          rewrite: 'list fewer enum values, or split the answer',
+        },
+        {
+          pointer: '',
+          detail: '120001 characters of names and enum values (most 120000)',
+          rewrite: 'use shorter names and enum values, or split the answer',
+        },
       ],
     ]);
   });

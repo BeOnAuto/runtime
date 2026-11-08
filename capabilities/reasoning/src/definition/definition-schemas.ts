@@ -5,11 +5,13 @@ import { Result, type Schema } from 'effect';
 
 import type { OutputRequest } from '../model/model-request.ts';
 import {
-  checkAnswerSchema,
   compileAnswerSchema,
   compileInputSchema,
   shapedAnswerSchema,
+  type AnswerSchema,
 } from '../schema/answer-schema.ts';
+import type { NotPortableIssue } from '../schema/portable-checks.ts';
+import { answerSchemaReport } from '../schema/schema-report.ts';
 import type { InputSection, OutputSection } from './front-matter-schema.ts';
 import type { InputContract } from './reasoning-function-definition.ts';
 
@@ -23,6 +25,12 @@ const mostWarnings = 100;
 const missingKey = 'Missing key';
 
 const shapedText = 'An output that names a shape is JSON of that shape: leave format out, or set it to json';
+
+const notEnforced = 'answers to this schema cannot be enforced while a model writes them';
+
+const checkedAfter = 'Answers are checked after the model writes them.';
+
+const rewriteAsTheGuideSays = 'rewrite this part of the schema as the reasoning-function guide says';
 
 function issuesUnder(lines: SourceLines, at: string, issues: readonly SchemaIssue[]): readonly DocumentIssue[] {
   return issues.map(({ pointer, detail }) => issueAt(lines, `${at}${pointer}`, detail));
@@ -67,12 +75,14 @@ export function inputContractOf(
   return issues.length > 0 ? Result.fail(issues) : Result.succeed({ schema: compiled.success, defaults });
 }
 
-function warningsOf(document: Schema.JsonObject, lines: SourceLines, at: string): readonly string[] {
-  const { not_portable, unchecked } = checkAnswerSchema(document);
+function notEnforcedText({ detail, rewrite = rewriteAsTheGuideSays }: NotPortableIssue): string {
+  return `${notEnforced}: ${detail}. ${checkedAfter} To have them enforced, ${rewrite}.`;
+}
+
+function warningsOf(schema: AnswerSchema, lines: SourceLines, at: string): readonly string[] {
+  const { not_portable, unchecked } = answerSchemaReport(schema);
   return [
-    ...not_portable.map(({ pointer, detail, providers }) =>
-      issueAt(lines, `${at}${pointer}`, `${detail} (${providers.join(', ')})`),
-    ),
+    ...not_portable.map((issue) => issueAt(lines, `${at}${issue.pointer}`, notEnforcedText(issue))),
     ...issuesUnder(lines, at, unchecked),
   ]
     .slice(0, mostWarnings)
@@ -84,12 +94,14 @@ function shapedContractOf(
   format: 'text' | 'json' | undefined,
   lines: SourceLines,
 ): Result.Result<OutputContract, readonly DocumentIssue[]> {
-  return format === 'text'
-    ? Result.fail([issueAt(lines, '/output/format', shapedText)])
-    : Result.succeed({
-        output: { type: 'json', schema: shapedAnswerSchema(shape), shape },
-        warnings: warningsOf(shape.schema, lines, '/output/shape'),
-      });
+  if (format === 'text') {
+    return Result.fail([issueAt(lines, '/output/format', shapedText)]);
+  }
+  const schema = shapedAnswerSchema(shape);
+  return Result.succeed({
+    output: { type: 'json', schema, shape },
+    warnings: warningsOf(schema, lines, '/output/shape'),
+  });
 }
 
 export function outputContractOf(
@@ -130,6 +142,6 @@ function writtenContractOf(
     ? Result.fail(issuesUnder(lines, '/output/schema', compiled.failure))
     : Result.succeed({
         output: { type: 'json', schema: compiled.success },
-        warnings: warningsOf(document, lines, '/output/schema'),
+        warnings: warningsOf(compiled.success, lines, '/output/schema'),
       });
 }

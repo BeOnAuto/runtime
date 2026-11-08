@@ -7,7 +7,7 @@ import type { Definition, StoredDefinition } from '../registry/definition.ts';
 import { findDefinition } from '../registry/registry-lookup.ts';
 import { usersOf, type PlaybookRegistries } from '../used-by/definition-users.ts';
 import type { DefinitionUser } from '../used-by/user-relations.ts';
-import { definitionOf } from './definition-views.ts';
+import { definitionOf } from './answered-definitions.ts';
 import { loadRegistry, type DefinitionInRegistry } from './registry-access.ts';
 
 export interface ReadDefinition {
@@ -38,8 +38,11 @@ export function answeredDefinition(
   types: readonly string[],
   { registry, stored }: DefinitionInRegistry,
 ): Effect.Effect<Definition, never, PlaybookReader> {
-  return Effect.map(registriesWith(types, capability.type, registry), (registries) =>
-    withUsers(definitionOf(capability, stored), usersOf(registries, { type: capability.type, name: stored.name })),
+  return Effect.zipWith(
+    definitionOf(capability, stored),
+    registriesWith(types, capability.type, registry),
+    (definition, registries) =>
+      withUsers(definition, usersOf(registries, { type: capability.type, name: stored.name })),
   );
 }
 

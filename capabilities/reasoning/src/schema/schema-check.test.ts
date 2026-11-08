@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { checkAnswerSchema, notPortableAsToolInput } from './answer-schema.ts';
+import { notPortableAsToolInput } from './answer-schema.ts';
+import { checkAnswerSchema } from './schema-report.ts';
 
 const anthropicModels = ['anthropic', 'bedrock', 'bedrock-anthropic', 'vertex-anthropic'];
 const strictOpenAi = ['openai', 'azure'];
-const openObject = 'An object should set "additionalProperties": false; strict structured outputs reject open objects';
+const nothingToReport = { unsupported: [], not_portable: [], unchecked: [] };
 
 const portable = {
   type: 'object',
@@ -35,8 +36,18 @@ function withFormat(format: string): object {
 }
 
 describe('checkAnswerSchema', () => {
-  it('finds nothing to report in a schema within the portable subset', () => {
-    expect(checkAnswerSchema(portable)).toEqual({ unsupported: [], not_portable: [], unchecked: [] });
+  it('finds nothing to report in a schema the portable form carries: open, optional, bounded or not an object', () => {
+    const loose = {
+      type: 'object',
+      properties: { summary: { type: 'string', maxLength: 80 }, total: { type: 'number', minimum: 0 } },
+      required: ['summary'],
+    };
+
+    expect([
+      checkAnswerSchema(portable),
+      checkAnswerSchema(loose),
+      checkAnswerSchema({ type: 'array', items: { type: 'string' } }),
+    ]).toEqual([nothingToReport, nothingToReport, nothingToReport]);
   });
 
   it('reports a schema it cannot validate, and nothing else', () => {
@@ -52,67 +63,9 @@ describe('checkAnswerSchema', () => {
     });
   });
 
-  it('asks for an object at the root', () => {
-    expect(checkAnswerSchema({ type: 'array', items: { type: 'string' } }).not_portable).toEqual([
-      {
-        pointer: '/type',
-        detail: 'The root of the schema should be "type": "object"',
-        providers: [...anthropicModels, ...strictOpenAi],
-      },
-    ]);
-  });
-});
-
-describe('checkAnswerSchema for strict structured outputs', () => {
-  it('asks for closed objects with every property required', () => {
-    const open = { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } }, required: ['a'] };
-
-    expect(checkAnswerSchema(open).not_portable).toEqual([
-      { pointer: '', detail: openObject, providers: strictOpenAi },
-      {
-        pointer: '/required',
-        detail: 'Every property should be required (make an optional one nullable instead): b',
-        providers: strictOpenAi,
-      },
-    ]);
-  });
-
-  it('treats a schema with properties but no type as an object', () => {
-    const untyped = {
-      type: 'object',
-      properties: { inner: { properties: {} } },
-      required: ['inner'],
-      additionalProperties: false,
-    };
-
-    expect(checkAnswerSchema(untyped).not_portable).toEqual([
-      { pointer: '/properties/inner', detail: openObject, providers: strictOpenAi },
-    ]);
-  });
-});
-
-describe('checkAnswerSchema for Anthropic models', () => {
-  it('warns that bounds are not enforced', () => {
-    expect(checkAnswerSchema(withProperty('summary', { type: 'string', maxLength: 80 })).not_portable).toEqual([
-      {
-        pointer: '/properties/summary/maxLength',
-        detail:
-          'maxLength is not enforced while Anthropic models write the answer; an answer outside it fails as output_invalid',
-        providers: anthropicModels,
-      },
-    ]);
-  });
-
-  it('warns that oneOf becomes anyOf', () => {
-    const choice = withProperty('owner', { oneOf: [{ type: 'string' }, { type: 'null' }] });
-
-    expect(checkAnswerSchema(choice).not_portable).toEqual([
-      {
-        pointer: '/properties/owner/oneOf',
-        detail:
-          'oneOf is sent to Anthropic models as anyOf; an answer matching more than one branch fails as output_invalid',
-        providers: anthropicModels,
-      },
+  it('reports what the portable form cannot carry, at its pointer in the schema as written', () => {
+    expect(checkAnswerSchema(withProperty('payload', {})).not_portable).toEqual([
+      { pointer: '/properties/payload', detail: 'a value of any type' },
     ]);
   });
 });
@@ -120,7 +73,7 @@ describe('checkAnswerSchema for Anthropic models', () => {
 describe('checkAnswerSchema for keywords it does not check', () => {
   it('reports nothing of a format the runtime checks, and refuses a format it does not check', () => {
     expect([checkAnswerSchema(withFormat('email')), checkAnswerSchema(withFormat('phone'))]).toEqual([
-      { unsupported: [], not_portable: [], unchecked: [] },
+      nothingToReport,
       {
         unsupported: [
           {
@@ -130,6 +83,31 @@ describe('checkAnswerSchema for keywords it does not check', () => {
         ],
         not_portable: [],
         unchecked: [],
+      },
+    ]);
+  });
+
+  it('reports extension keywords', () => {
+    expect(checkAnswerSchema({ ...portable, propertyOrdering: ['summary'], nullable: true }).unchecked).toEqual([
+      {
+        pointer: '/propertyOrdering',
+        detail: 'propertyOrdering is not a keyword the runtime checks; answers are not checked against it',
+      },
+      {
+        pointer: '/nullable',
+        detail: 'nullable is not a keyword the runtime checks; answers are not checked against it',
+      },
+    ]);
+  });
+});
+
+describe('notPortableAsToolInput', () => {
+  it('asks for an object at the root', () => {
+    expect(notPortableAsToolInput({ type: 'array', items: { type: 'string' } })).toEqual([
+      {
+        pointer: '/type',
+        detail: 'The root of the schema should be "type": "object"',
+        providers: [...anthropicModels, ...strictOpenAi],
       },
     ]);
   });
@@ -144,40 +122,40 @@ describe('checkAnswerSchema for keywords it does not check', () => {
     ]);
   });
 
-  it('reports extension keywords', () => {
-    expect(checkAnswerSchema({ ...portable, propertyOrdering: ['summary'], nullable: true }).unchecked).toEqual([
+  it('names a oneOf whose arguments Anthropic models are not held to', () => {
+    expect(notPortableAsToolInput(withProperty('owner', { oneOf: [{ type: 'string' }, { type: 'null' }] }))).toEqual([
       {
-        pointer: '/propertyOrdering',
-        detail: 'propertyOrdering is not a keyword this package checks; it is sent to the provider as written',
-      },
-      {
-        pointer: '/nullable',
-        detail: 'nullable is not a keyword this package checks; it is sent to the provider as written',
+        pointer: '/properties/owner/oneOf',
+        detail:
+          "oneOf is not enforced while Anthropic models write a tool's arguments; arguments matching more than one branch reach the tool, which may refuse them",
+        providers: anthropicModels,
       },
     ]);
   });
 });
 
-describe('checkAnswerSchema across the whole schema', () => {
+describe('notPortableAsToolInput across the whole schema', () => {
   it('walks definitions, lists of schemas and single subschemas in document order', () => {
     const nested = {
       type: 'object',
-      $defs: { open: { type: 'object' } },
+      $defs: { short: { type: 'string', maxLength: 3 } },
       properties: {
-        choice: { anyOf: [{ type: 'object' }] },
-        list: { type: 'array', items: { type: 'object' }, prefixItems: [{ type: 'string', minLength: 1 }] },
+        choice: { anyOf: [{ type: 'string', minLength: 1 }] },
+        list: {
+          type: 'array',
+          items: { type: 'integer', maximum: 9 },
+          prefixItems: [{ type: 'string', minLength: 1 }],
+        },
         names: { type: 'object', additionalProperties: false, propertyNames: { maxLength: 3 } },
       },
-      required: ['choice', 'list', 'names'],
-      additionalProperties: false,
     };
 
-    expect(checkAnswerSchema(nested).not_portable.map(({ pointer }) => pointer)).toEqual([
-      '/properties/choice/anyOf/0',
-      '/properties/list/items',
+    expect(notPortableAsToolInput(nested).map(({ pointer }) => pointer)).toEqual([
+      '/properties/choice/anyOf/0/minLength',
+      '/properties/list/items/maximum',
       '/properties/list/prefixItems/0/minLength',
       '/properties/names/propertyNames/maxLength',
-      '/$defs/open',
+      '/$defs/short/maxLength',
     ]);
   });
 });

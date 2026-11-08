@@ -1,14 +1,14 @@
 import { outputShapeNamed, outputShapeOf, type OutputShapeName } from '@on.auto/definitions';
-import type { SchemaIssue } from '@on.auto/json-schema';
 import { Result, type Schema } from 'effect';
 
 import type { JsonOutput } from '../model/model-request.ts';
 import { compileAnswerSchema, shapedAnswerSchema } from '../schema/answer-schema.ts';
+import type { NotPortableIssue } from '../schema/portable-checks.ts';
 
 export interface AnswerSchemaCase {
   readonly name: string;
   readonly document: Schema.JsonObject;
-  readonly issues: readonly SchemaIssue[];
+  readonly issues: readonly NotPortableIssue[];
 }
 
 export const ticketSchema: Schema.JsonObject = {

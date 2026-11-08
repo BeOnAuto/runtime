@@ -5,8 +5,8 @@ import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionsListed, definitionWordsFor } from '../plain-language/definition-words.ts';
 import { isRetired, ListedDefinitionSchema } from '../registry/definition.ts';
+import { byName, listedDefinitionOf } from './answered-definitions.ts';
 import { IncludeRetiredField } from './definition-fields.ts';
-import { byName, listedDefinitionOf } from './definition-views.ts';
 import { loadRegistry } from './registry-access.ts';
 
 export function defineListDefinitions(capabilities: readonly Capability[]) {
@@ -33,7 +33,9 @@ export function defineListDefinitions(capabilities: readonly Capability[]) {
         const registry = yield* loadRegistry(capability.type);
         const definitions = [...registry.values()].filter((definition) => includeRetired || !isRetired(definition));
         return {
-          definitions: definitions.toSorted(byName).map((definition) => listedDefinitionOf(capability, definition)),
+          definitions: yield* Effect.forEach(definitions.toSorted(byName), (definition) =>
+            listedDefinitionOf(capability, definition),
+          ),
         };
       }),
       plainLanguage: {

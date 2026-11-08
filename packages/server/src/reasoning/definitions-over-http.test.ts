@@ -2,6 +2,25 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { alpha, servingReasoning, type ReasoningServer } from '../testing/servers/reasoning-server.ts';
 
+const seventeenOptionalFields = Object.fromEntries(
+  Array.from({ length: 17 }, (_, index) => [`field${index}`, { type: 'string' }]),
+);
+
+const overTheBudgetWarning =
+  'Line 5, /output/schema: answers to this schema cannot be enforced while a model writes them: 17 fields that may be null or are a choice of types, counted where each definition is used (most 16). Answers are checked after the model writes them. To have them enforced, make some of these fields required and of one type, or split the answer.';
+
+function scoring(properties: object): string {
+  return [
+    '---',
+    'model: anthropic/claude-sonnet-4-5',
+    'output:',
+    '  format: json',
+    `  schema: ${JSON.stringify({ type: 'object', properties, additionalProperties: false })}`,
+    '---',
+    'Score {{ input.text }}',
+  ].join('\n');
+}
+
 const summary = [
   '---',
   'model: anthropic/claude-sonnet-4-5',
@@ -65,25 +84,13 @@ describe('the life of a reasoning function definition over HTTP', () => {
     expect(retired).toMatchObject({ status: 200, body: { status: 'retired' } });
   });
 
-  it('shows the warnings of a JSON definition whose schema not every provider enforces', async () => {
-    const source = [
-      '---',
-      'model: anthropic/claude-sonnet-4-5',
-      'output:',
-      '  format: json',
-      '  schema: {type: object, properties: {score: {type: integer, maximum: 10}}, required: [score], additionalProperties: false}',
-      '---',
-      'Score {{ input.text }}',
-    ].join('\n');
+  it('shows no warnings for a JSON definition whose answers can be enforced, and a warning where they cannot', async () => {
+    const created = await creating('score', scoring({ score: { type: 'integer', maximum: 10 } }));
+    const overTheBudget = await creating('profile', scoring(seventeenOptionalFields));
 
-    expect(await creating('score', source)).toMatchObject({
-      status: 201,
-      body: {
-        warnings: [
-          'Line 5, /output/schema/properties/score/maximum: maximum is not enforced while Anthropic models write the answer; an answer outside it fails as output_invalid (anthropic, bedrock, bedrock-anthropic, vertex-anthropic)',
-        ],
-      },
-    });
+    expect(created).toMatchObject({ status: 201, body: { name: 'score' } });
+    expect(created.body).not.toHaveProperty('warnings');
+    expect(overTheBudget).toMatchObject({ status: 201, body: { warnings: [overTheBudgetWarning] } });
   });
 });
 

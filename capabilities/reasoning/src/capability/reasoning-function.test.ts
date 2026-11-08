@@ -89,7 +89,7 @@ describe('preparing a reasoning function definition', () => {
     const source = documentOf('model: openai/gpt-5\noutput:\n  format: json\n  schema: {type: object}');
 
     expect(prepared(source).summary.warnings).toEqual([
-      'Line 5, /output/schema: An object should set "additionalProperties": false; strict structured outputs reject open objects (openai, azure)',
+      'Line 5, /output/schema: answers to this schema cannot be enforced while a model writes them: an object of any keys and values. Answers are checked after the model writes them. To have them enforced, rewrite this part of the schema as the reasoning-function guide says.',
     ]);
   });
 });

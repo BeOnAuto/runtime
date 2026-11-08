@@ -1,46 +1,18 @@
 import { InvalidInput, PlaybookContext, type Unavailable } from '@on.auto/operations';
 import { articled, capitalized } from '@on.auto/phrasing';
-import { Effect, Order, Struct } from 'effect';
+import { Effect } from 'effect';
 
 import type { Capability, DefinitionSummary } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { withoutThePage, writtenInOf, type DocumentWrittenIn } from '../page/page-lines.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
-import {
-  isPlaybookFunctionType,
-  type ListedDefinition,
-  type Definition,
-  type StoredDefinition,
-} from '../registry/definition.ts';
-import { shapeNameIn } from '../shapes/published-output.ts';
+import { isPlaybookFunctionType } from '../registry/definition.ts';
 import { rejectionOfSource, type Rejection } from './issue-pointers.ts';
-
-export const byName = Order.mapInput(Order.String, ({ name }: StoredDefinition) => name);
-
-function publishedDetails({ details }: StoredDefinition): Pick<Definition, 'details'> {
-  const shape = shapeNameIn(details);
-  return shape === undefined ? {} : { details: { shape } };
-}
-
-type Kept = StoredDefinition & { readonly page?: DefinitionContent['page'] };
 
 type PageCheck = (
   text: string,
   writtenIn: DocumentWrittenIn,
 ) => Effect.Effect<DefinitionContent['page'], InvalidInput | Unavailable>;
-
-export function definitionOf(capability: Capability, stored: Kept): Definition {
-  return {
-    type: capability.type,
-    media_type: capability.mediaType,
-    ...Struct.omit(stored, ['details', 'stripped', 'page']),
-    ...publishedDetails(stored),
-  };
-}
-
-export function listedDefinitionOf(capability: Capability, stored: Kept): ListedDefinition {
-  return Struct.omit(definitionOf(capability, stored), ['source', 'overview', 'diagram']);
-}
 
 export interface WrittenDefinition {
   readonly source: string;

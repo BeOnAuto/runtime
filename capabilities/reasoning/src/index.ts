@@ -90,15 +90,10 @@ export type {
   TokenUsage,
 } from './model/model-result.ts';
 export { requestIssues } from './model/request-checks.ts';
-export {
-  checkAnswerSchema,
-  compileAnswerSchema,
-  schemaLimits,
-  type AnswerSchema,
-  type SchemaReport,
-} from './schema/answer-schema.ts';
+export { compileAnswerSchema, schemaLimits, type AnswerSchema } from './schema/answer-schema.ts';
+export { checkAnswerSchema, type SchemaReport } from './schema/schema-report.ts';
+export type { NotPortableIssue } from './schema/portable-checks.ts';
 export type { SchemaIssue } from '@on.auto/json-schema';
-export type { PortabilityIssue } from './schema/schema-portability.ts';
 export { ModelAliasesSchema } from './settings/alias-settings.ts';
 export { AllowedModelsSchema, DeclaredModelsSchema } from './settings/catalog-settings.ts';
 export { ModelGatewaysSchema } from './settings/gateway-settings.ts';

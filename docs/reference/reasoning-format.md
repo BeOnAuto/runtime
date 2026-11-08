@@ -193,12 +193,31 @@ These rules apply to `output.schema` and `input.schema` alike, and a schema that
 
 An answer may nest at most 128 levels deep. When an input or an answer does not match, the rejection reports each distinct issue once. It lists at most 20, then one line that counts the rest.
 
-Some providers reject or do not enforce parts of a schema. Such a schema is still saved, and the definition carries `warnings` that name the line and the providers concerned. The warnings also name the keywords the runtime does not know, which the runtime does not check: they are left out of the portable form, and written in the instructions as they are when the schema is told to the model there. A `format` the runtime takes is checked against the answer whatever the provider enforced while the model wrote it. A definition shows at most 100 warnings. `create_definition`, `get_definition`, `list_definitions` and `update_definition` show them. For example: `Line 8, /output/schema/properties/total/minimum: minimum is not enforced while Anthropic models write the answer; an answer outside it fails as output_invalid (anthropic, bedrock, bedrock-anthropic, vertex-anthropic)`. To write a schema every provider accepts:
+A schema whose answers cannot be enforced while the model writes them is still saved. Its answers are asked for with the schema in the instructions, as [a schema that is not portable](model-settings.md#the-portable-form-of-a-schema) is, and checked after the model writes them. The definition carries `warnings`, one for each part of the schema that keeps its answers from being enforced, at its line and pointer. They are the same whatever the model and the server, and the output shapes carry none. `create_definition`, `update_definition`, `get_definition` and `list_definitions` show them, at most 100. They are found in the definition's document whenever it is read, so a definition saved by an earlier release shows the warnings of this one. For example:
 
-- Make the root `"type": "object"`. OpenAI and Azure strict structured outputs accept only an object, and so do providers that return JSON through a tool call.
-- Give every object `"additionalProperties": false` and list every property in `required`. Write an optional property as nullable, such as `"type": ["string", "null"]`. OpenAI and Azure reject anything else.
-- Expect Anthropic models not to receive numeric, length and count bounds (`minimum`, `maxLength`, `minItems`, `uniqueItems` and the like). The runtime still checks them, so an answer outside them fails. The same holds for `oneOf`, which Anthropic models receive as `anyOf`.
-- Keep schemas small: Google notes that very large or deeply nested schemas may be rejected.
+```text
+Line 5, /output/schema: answers to this schema cannot be enforced while a model writes them: 17 fields that may be null or are a choice of types, counted where each definition is used (most 16). Answers are checked after the model writes them. To have them enforced, make some of these fields required and of one type, or split the answer.
+```
+
+The warnings also name the keywords the runtime does not know, which it does not check: they are left out of the portable form, and written in the instructions as they are when the schema is told to the model there. A `format` the runtime takes is checked against the answer whatever the provider enforced while the model wrote it.
+
+To have the answers enforced, rewrite what a warning names:
+
+| A warning names                                                                                 | Rewrite it                                                                                                                                       |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A value of any type, an object of any keys and values, or a list whose items may be of any type | Give the value a `type`, the object its `properties` or a schema of its values in `additionalProperties`, and the list its `items`               |
+| A schema no value matches                                                                       | Leave out the property or the list that takes it, such as one with `"items": false`                                                              |
+| Required names with no schema in properties                                                     | Give each name a schema in `properties`, or leave it out of `required`                                                                           |
+| `allOf`, `not`, or a list of fixed positions (`prefixItems`)                                    | Write the parts of an `allOf` as one schema, leave `not` out, and write a list of fixed positions as an object with a property for each position |
+| `oneOf` or `anyOf` beside other keywords                                                        | Move the other keywords into each choice: beside a choice, keep only a description, bounds and a type every choice shares                        |
+| A count of properties beside optional properties that may be null                               | Leave out `minProperties` and `maxProperties`, or make those properties required                                                                 |
+| An enum that mixes kinds of value                                                               | Keep to one kind of value in an `enum`, such as strings                                                                                          |
+| Keywords beside `$ref`                                                                          | Keep only a description and bounds beside a `$ref`, and move the other keywords into its definition                                              |
+| A definition that refers to itself                                                              | Write out each level the answer needs as a definition of its own                                                                                 |
+| Rules of the keys that cannot be put into words                                                 | Keep to an `enum`, a `type`, a description and bounds in `propertyNames`                                                                         |
+| Definitions under both `$defs` and `definitions`                                                | Keep them all under `$defs`                                                                                                                      |
+| A count over its most, such as 17 fields that may be null or are a choice of types (most 16)    | Do what the warning says: make fields required and of one type, nest fewer levels of objects, list fewer `enum` values, or split the answer      |
+| That no answer this schema accepts could be made to test its portable form with                 | Make bounds that contradict each other agree, such as a `minLength` above the `maxLength`                                                        |
 
 ## Tools
 

@@ -84,6 +84,28 @@ export function aLedgerHoldingAPredictionBuildAt(file: string): Promise<void> {
   });
 }
 
+export interface SavedEarlier {
+  readonly name: string;
+  readonly source: string;
+  readonly outputSchema: Schema.JsonObject;
+  readonly warnings: readonly string[];
+}
+
+export function aLedgerHoldingAReasoningFunctionSavedEarlierAt(file: string, saved: SavedEarlier): Promise<void> {
+  const { name, source, outputSchema, warnings } = saved;
+  return aLedgerHoldingAt(file, {
+    stream: 'playbook/acme/alpha/definitions/reasoning',
+    fact: {
+      type: 'definition_created',
+      data: {
+        content: { source, output_schema: outputSchema, warnings },
+        created_by: { id: 'key_7f3a', name: 'key_7f3a' },
+      },
+    },
+    context: { at, by: 'key_7f3a', definitionType: 'reasoning', definitionName: name, definitionVersion: 1 },
+  });
+}
+
 export function aLedgerHoldingAPredictionRejectedAt(file: string, kind: string): Promise<void> {
   return aLedgerHoldingAt(file, {
     stream: `playbook/acme/alpha/runs/${aRunOfAPredictionFunction}`,

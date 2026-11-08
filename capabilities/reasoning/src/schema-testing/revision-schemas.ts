@@ -119,7 +119,13 @@ export const revisionSchemas: readonly AnswerSchemaCase[] = [
   {
     name: 'eleven levels of objects',
     document: closedWith({ next: nested(10) }, ['next']),
-    issues: [{ pointer: '', detail: 'over the portable budget: 11 levels of objects (most 10)' }],
+    issues: [
+      {
+        pointer: '',
+        detail: '11 levels of objects (most 10)',
+        rewrite: 'nest fewer levels of objects, or split the answer',
+      },
+    ],
   },
   {
     name: 'enum of mixed kinds, optional',

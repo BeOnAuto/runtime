@@ -37,7 +37,7 @@ const listedDefinitionFields = {
   warnings: Schema.optionalKey(
     Schema.Array(Schema.String).annotate({
       description:
-        'What the parser found that may not work everywhere, such as a schema some providers reject; the definition was accepted with these warnings',
+        'What the parser finds in the document that may not work as written, such as an answer schema whose answers cannot be enforced while a model writes them, found again whenever the definition is read; the definition was accepted with them',
     }),
   ),
   details: Schema.optionalKey(

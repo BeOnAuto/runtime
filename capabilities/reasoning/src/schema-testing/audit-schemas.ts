@@ -81,8 +81,8 @@ export const auditSchemas: readonly AnswerSchemaCase[] = [
     issues: [
       {
         pointer: '',
-        detail:
-          'over the portable budget: 18 fields that may be null or are a choice of types, counted where each definition is used (most 16)',
+        detail: '18 fields that may be null or are a choice of types, counted where each definition is used (most 16)',
+        rewrite: 'make some of these fields required and of one type, or split the answer',
       },
     ],
   },

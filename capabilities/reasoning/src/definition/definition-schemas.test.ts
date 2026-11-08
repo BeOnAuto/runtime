@@ -1,7 +1,13 @@
 import { shapeNamed } from '@on.auto/definitions/testing';
 import { describe, expect, it } from 'vitest';
 
+import { measuredSchemas, type AnswerSchemaCase } from '../schema-testing/answer-schemas.ts';
+import { auditSchemas } from '../schema-testing/audit-schemas.ts';
+import { revisionSchemas } from '../schema-testing/revision-schemas.ts';
+import type { NotPortableIssue } from '../schema/portable-checks.ts';
 import { documentOf, issuesIn, parsed } from '../testing/definition-documents.ts';
+
+const declaredShapes = ['series', 'categories', 'table', 'text'];
 
 const inputSchema = [
   'input:',
@@ -147,57 +153,99 @@ describe('an output of a shape', () => {
     ]);
   });
 
-  it('carries the warnings of its schema, at the line that names it', () => {
-    const { warnings } = parsed(documentOf('model: openai/gpt-5\noutput:\n  shape: text'));
-
-    expect(warnings).toEqual([
-      'Line 4, /output/shape/properties/text/maxLength: maxLength is not enforced while Anthropic models write the answer; an answer outside it fails as output_invalid (anthropic, bedrock, bedrock-anthropic, vertex-anthropic)',
-    ]);
+  it.each(declaredShapes)('carries no warnings for the %s shape, whose answers can be enforced', (name) => {
+    expect(parsed(documentOf(`model: openai/gpt-5\noutput:\n  shape: ${name}`)).warnings).toEqual([]);
   });
 });
 
+const notEnforced = 'answers to this schema cannot be enforced while a model writes them';
+
+const checkedAfter = 'Answers are checked after the model writes them.';
+
+const asTheGuideSays = 'To have them enforced, rewrite this part of the schema as the reasoning-function guide says.';
+
+function withOutputSchema(...schema: readonly string[]): string {
+  return documentOf(['model: openai/gpt-5', 'output:', '  format: json', '  schema:', ...schema].join('\n'));
+}
+
+function optionalStrings(count: number): readonly string[] {
+  return Array.from({ length: count }, (_, index) => `      field${index}: {type: string}`);
+}
+
+function warningFor(line: number, { pointer, detail, rewrite }: NotPortableIssue): string {
+  const toEnforce = rewrite === undefined ? asTheGuideSays : `To have them enforced, ${rewrite}.`;
+  return `Line ${line}, /output/schema${pointer}: ${notEnforced}: ${detail}. ${checkedAfter} ${toEnforce}`;
+}
+
+const everyCase: readonly AnswerSchemaCase[] = [...measuredSchemas, ...auditSchemas, ...revisionSchemas];
+
 describe('the warnings of a definition', () => {
-  it('say where a JSON output schema is not portable across providers, and nothing of a format the runtime checks', () => {
+  it('say nothing of a schema whose answers can be enforced, with optional properties, an open object, bounds and a format', () => {
     const definition = parsed(
-      documentOf(
-        [
-          'model: openai/gpt-5',
-          'output:',
-          '  format: json',
-          '  schema:',
-          '    type: object',
-          '    properties:',
-          '      total: {type: number, minimum: 0}',
-          '      day: {type: string, format: date}',
-          '    required: [total, day]',
-          '    additionalProperties: false',
-        ].join('\n'),
+      withOutputSchema(
+        '    type: object',
+        '    properties:',
+        '      total: {type: number, minimum: 0}',
+        '      day: {type: string, format: date}',
+        '      note: {type: string, maxLength: 80}',
+        '    required: [total, day]',
+      ),
+    );
+
+    expect(definition.warnings).toEqual([]);
+  });
+
+  it.each(everyCase.map((one): readonly [string, AnswerSchemaCase] => [one.name, one]))(
+    'say, of each construct whose answers cannot be enforced, where it is and what it is: %s',
+    (_name, { document, issues }) => {
+      const { warnings } = parsed(withOutputSchema(`    ${JSON.stringify(document)}`));
+
+      expect(warnings).toEqual(issues.map((issue) => warningFor(6, issue)));
+    },
+  );
+});
+
+describe('the words of a warning', () => {
+  it('say how to have the answers enforced, in the words a reader of the warning can act on', () => {
+    const definition = parsed(withOutputSchema('    type: object', '    properties:', '      payload: {}'));
+
+    expect(definition.warnings).toEqual([
+      `Line 8, /output/schema/properties/payload: ${notEnforced}: a value of any type. ${checkedAfter} ${asTheGuideSays}`,
+    ]);
+  });
+
+  it('say when a schema is over the budget every provider takes, and how to bring it within', () => {
+    const atTheBudget = parsed(withOutputSchema('    type: object', '    properties:', ...optionalStrings(16)));
+    const overTheBudget = parsed(withOutputSchema('    type: object', '    properties:', ...optionalStrings(17)));
+
+    expect([atTheBudget.warnings, overTheBudget.warnings]).toEqual([
+      [],
+      [
+        `Line 6, /output/schema: ${notEnforced}: 17 fields that may be null or are a choice of types, counted where each definition is used (most 16). ${checkedAfter} To have them enforced, make some of these fields required and of one type, or split the answer.`,
+      ],
+    ]);
+  });
+
+  it('name a keyword the runtime does not check', () => {
+    const definition = parsed(
+      withOutputSchema(
+        '    type: object',
+        '    properties: {summary: {type: string}}',
+        '    required: [summary]',
+        '    propertyOrdering: [summary]',
       ),
     );
 
     expect(definition.warnings).toEqual([
-      'Line 8, /output/schema/properties/total/minimum: minimum is not enforced while Anthropic models write the answer; an answer outside it fails as output_invalid (anthropic, bedrock, bedrock-anthropic, vertex-anthropic)',
+      'Line 9, /output/schema/propertyOrdering: propertyOrdering is not a keyword the runtime checks; answers are not checked against it',
     ]);
   });
+});
 
+describe('the warnings a definition carries', () => {
   it('are at most 100', () => {
-    const properties = Array.from({ length: 120 }, (_, index) => `      p${index}: {type: integer, minimum: 0}`);
-    const names = Array.from({ length: 120 }, (_, index) => `p${index}`).join(', ');
-    const definition = parsed(
-      documentOf(
-        [
-          'model: openai/gpt-5',
-          'output:',
-          '  format: json',
-          '  schema:',
-          '    type: object',
-          '    properties:',
-          ...properties,
-          `    required: [${names}]`,
-          '    additionalProperties: false',
-        ].join('\n'),
-      ),
-    );
+    const properties = Array.from({ length: 120 }, (_, index) => `      p${index}: {}`);
+    const definition = parsed(withOutputSchema('    type: object', '    properties:', ...properties));
 
     expect(definition.warnings).toHaveLength(100);
   });

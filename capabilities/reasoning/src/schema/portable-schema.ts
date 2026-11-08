@@ -1,8 +1,7 @@
-import type { SchemaIssue } from '@on.auto/json-schema';
 import { Result, type Schema } from 'effect';
 
 import { compileAnswerSchema, type AnswerSchema } from './answer-schema.ts';
-import { budgetOf, overBudget, portableIssues, type Budget } from './portable-checks.ts';
+import { budgetOf, overBudget, portableIssues, type Budget, type NotPortableIssue } from './portable-checks.ts';
 import { loweredSchema } from './portable-lowering.ts';
 import { roundTripIssues } from './schema-round-trip.ts';
 
@@ -14,14 +13,14 @@ export interface PortableForm {
 
 interface NotPortable {
   readonly portable: false;
-  readonly issues: readonly SchemaIssue[];
+  readonly issues: readonly NotPortableIssue[];
 }
 
 export type Portability = PortableForm | NotPortable;
 
 const portabilityByDocument = new WeakMap<Schema.JsonObject, Portability>();
 
-function distinct(issues: readonly SchemaIssue[]): readonly SchemaIssue[] {
+function distinct(issues: readonly NotPortableIssue[]): readonly NotPortableIssue[] {
   return [...new Map(issues.map((issue) => [`${issue.pointer}\u0000${issue.detail}`, issue])).values()];
 }
 
