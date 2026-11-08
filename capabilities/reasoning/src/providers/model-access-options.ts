@@ -37,5 +37,6 @@ export interface ModelAccessOptions {
   readonly loadEntraIdentity?: EntraIdentityLoader;
   readonly reportProviderMessage?: ReportProviderMessage;
   readonly reportOperatorHint?: ReportOperatorHint;
+  readonly scrubProviderText?: (text: string) => string;
   readonly telemetry?: ModelTelemetry | undefined;
 }

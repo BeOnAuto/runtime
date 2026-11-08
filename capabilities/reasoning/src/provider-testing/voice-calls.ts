@@ -86,21 +86,23 @@ export function answered(text: string, headers: Readonly<Record<string, string>>
   return () => jsonResponse({ text }, 200, headers);
 }
 
-async function accessWith(
-  environment: Readonly<Record<string, string>>,
-  answer: Answering,
-  reports: Pick<ModelAccessOptions, 'reportProviderMessage' | 'reportOperatorHint'>,
-) {
+type VoiceOptions = Pick<ModelAccessOptions, 'reportProviderMessage' | 'reportOperatorHint' | 'scrubProviderText'>;
+
+async function accessWith(environment: Readonly<Record<string, string>>, answer: Answering, options: VoiceOptions) {
   const fetched = answeringFetch(answer);
-  const access = await accessFor(environment, { fetch: fetched.fetch, ...reports });
+  const access = await accessFor(environment, { fetch: fetched.fetch, ...options });
   return { voice: access.voice, sent: fetched.sent };
 }
 
-export async function voiceOf(environment: Readonly<Record<string, string>>, answer: Answering) {
+export async function voiceOf(
+  environment: Readonly<Record<string, string>>,
+  answer: Answering,
+  scrubbing: Pick<ModelAccessOptions, 'scrubProviderText'> = {},
+) {
   const reporter = recordingReporter();
   const hints = recordingHints();
-  const reports = { reportProviderMessage: reporter.report, reportOperatorHint: hints.report };
-  return { ...(await accessWith(environment, answer, reports)), reports: reporter.reports, hints: hints.hints };
+  const options = { reportProviderMessage: reporter.report, reportOperatorHint: hints.report, ...scrubbing };
+  return { ...(await accessWith(environment, answer, options)), reports: reporter.reports, hints: hints.hints };
 }
 
 export function unreportedVoiceOf(environment: Readonly<Record<string, string>>, answer: Answering) {

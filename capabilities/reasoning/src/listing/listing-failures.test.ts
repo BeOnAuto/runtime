@@ -50,6 +50,24 @@ describe('a list of models the provider answers with an error', () => {
     expect(catalog.hints()).toEqual([]);
   });
 
+  it('goes to the operator scrubbed by the scrub of the composer too, after the secrets of the settings', async () => {
+    const catalog = await catalogFor(
+      environment,
+      () =>
+        jsonResponse(
+          { error: { message: 'Invalid key gateway-secret-key-0042 for fake-tenant-of-the-composer' } },
+          401,
+        ),
+      { scrubProviderText: (text) => text.replaceAll(/gateway-secret|fake-tenant-of-the-composer/gu, '[scrubbed]') },
+    );
+
+    await catalog.list();
+
+    expect(catalog.reports().map(({ message }) => message)).toEqual([
+      '{"error":{"message":"Invalid key [redacted] for [scrubbed]"}}',
+    ]);
+  });
+
   it('gives the operator at most 2000 characters, or says when there was no message or too long a one', async () => {
     const long = await failedListing(() => new Response('x'.repeat(5000), { status: 500 }));
     const empty = await failedListing(() => new Response('   ', { status: 503 }));

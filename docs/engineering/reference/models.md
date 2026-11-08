@@ -27,6 +27,7 @@ The options of `makeModelAccess` (`ModelAccessOptions`, `src/providers/model-acc
 | `loadEntraIdentity`     | How `@azure/identity` is loaded; by default a dynamic import that answers `undefined` when the module is missing                                                          |
 | `reportProviderMessage` | `(report: ProviderMessageReport) => Effect<void>`; see [Reports](#reports)                                                                                                |
 | `reportOperatorHint`    | `(report: OperatorHintReport) => Effect<void>`; see [Reports](#reports)                                                                                                   |
+| `scrubProviderText`     | `(text: string) => string`: the composer's own scrub of what a provider says, after the secrets of the settings; see [Scrubbing](#scrubbing)                              |
 | `telemetry`             | `{ integrations, recordContent }`: the AI SDK telemetry integrations, and whether they record inputs and outputs                                                          |
 
 The server builds it in `packages/server/src/composition/served-reasoning.ts` (`loggedModelAccess`), logs `status` with `logModelProviders`, and hands `languageModel`, `offered` and `catalog.contextWindowOf` to `makeReasoningFunctionAdapter`.
@@ -122,7 +123,7 @@ No failure or defect carries the request or response bodies the SDK keeps on its
 
 ### Scrubbing
 
-`secretScrubber(settings)` (`src/settings/message-exposure.ts`) replaces every redacted value of the settings that is at least 8 characters long with `[redacted]`. `scrubberFor(policy, request)` (`src/model-calls/call-policy.ts`) first replaces the trimmed instructions and each message text of the request, each at least 8 characters long, with `[prompt]`. `providersShowingMessages(settings)` gives the providers whose `provider_message` may reach the caller.
+`providerTextScrubber(settings, options)` (`src/settings/message-exposure.ts`) replaces every redacted value of the settings that is at least 8 characters long with `[redacted]`, then applies the option `scrubProviderText` when the composer gives one. It is the one scrub of what a provider says: a model call, a list of models and a transcription each take it, so it reaches the reports, the operator hints, the `provider_message` and the error code in the `detail` of a failure, and so the `model_call_failed` fact and the caller's rejection, which are made of the failure. A composer passes `scrubProviderText` for secrets the settings do not hold, such as a key its own `fetch` adds to each request. `scrubberFor(policy, request)` (`src/model-calls/call-policy.ts`) first replaces the trimmed instructions and each message text of the request, each at least 8 characters long, with `[prompt]`. `providersShowingMessages(settings)` gives the providers whose `provider_message` may reach the caller.
 
 ## SDK globals
 

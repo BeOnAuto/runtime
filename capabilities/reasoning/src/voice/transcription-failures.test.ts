@@ -47,6 +47,22 @@ describe('a transcription the gateway refuses', () => {
   });
 });
 
+describe('a transcription the gateway refuses in words that echo a secret only the composer knows', () => {
+  it('keeps it from the caller and the operator, and the secrets of the settings stay redacted', async () => {
+    const secretOfTheComposer = 'fake-secret-of-the-composer-0003';
+    const exposing = { ...relayed, MODEL_GATEWAYS: JSON.stringify([{ ...relay, expose_provider_messages: true }]) };
+    const echoing = () =>
+      jsonResponse({ error: { message: `${relayKey} and ${secretOfTheComposer} may not transcribe` } }, 404);
+    const { voice, reports } = await voiceOf(exposing, echoing, {
+      scrubProviderText: (text) => text.replaceAll(secretOfTheComposer, '[scrubbed]'),
+    });
+    const said = '[redacted] and [scrubbed] may not transcribe';
+
+    expect(await heard(voice)).toMatchObject({ failure: { provider_message: said } });
+    expect(reports()).toMatchObject([{ status: 404, message: said }]);
+  });
+});
+
 describe('what the operator is told of a refusal', () => {
   it.each([
     ['a body that is not JSON', 'nope'],

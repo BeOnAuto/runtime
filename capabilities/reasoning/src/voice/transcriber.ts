@@ -4,7 +4,7 @@ import { TimedOut } from '../failure/timed-out.ts';
 import type { ModelAccessOptions } from '../providers/model-access-options.ts';
 import { withCertificateFailures } from '../providers/outbound-fetch.ts';
 import type { Fetch } from '../providers/sdk-model.ts';
-import { providersShowingMessages, secretScrubber } from '../settings/message-exposure.ts';
+import { providersShowingMessages, providerTextScrubber } from '../settings/message-exposure.ts';
 import type { ModelSettings } from '../settings/model-settings.ts';
 import { transcriptionAttempt } from './transcription-call.ts';
 import { endpointOf } from './transcription-endpoint.ts';
@@ -70,7 +70,7 @@ export function transcriberOf(
   const policy: TranscriptionPolicy = {
     fetch: withCertificateFailures(options.fetch),
     showsProviderMessages: providersShowingMessages(settings).has(endpoint.provider),
-    scrub: secretScrubber(settings),
+    scrub: providerTextScrubber(settings, options),
     report: options.reportProviderMessage ?? (() => Effect.void),
     reportHint: options.reportOperatorHint ?? (() => Effect.void),
   };

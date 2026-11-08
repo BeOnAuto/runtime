@@ -3,7 +3,11 @@ import { Effect } from 'effect';
 import type { ModelList } from '../catalog/model-list.ts';
 import { recordingHints, recordingReporter } from '../provider-testing/provider-errors.ts';
 import { recordingFetch, type RecordingFetch, type Responder } from '../provider-testing/recording-fetch.ts';
-import type { OperatorHintReport, ProviderMessageReport } from '../providers/model-access-options.ts';
+import type {
+  ModelAccessOptions,
+  OperatorHintReport,
+  ProviderMessageReport,
+} from '../providers/model-access-options.ts';
 import type { ModelAccess } from '../providers/model-access.ts';
 import type { Environment } from '../settings/setting-values.ts';
 import { accessFor } from './adapter-harness.ts';
@@ -16,7 +20,11 @@ export interface CatalogHarness {
   readonly hints: () => readonly OperatorHintReport[];
 }
 
-export async function catalogFor(environment: Environment, responder: Responder): Promise<CatalogHarness> {
+export async function catalogFor(
+  environment: Environment,
+  responder: Responder,
+  scrubbing: Pick<ModelAccessOptions, 'scrubProviderText'> = {},
+): Promise<CatalogHarness> {
   const recording = recordingFetch(responder);
   const reporter = recordingReporter();
   const hints = recordingHints();
@@ -24,6 +32,7 @@ export async function catalogFor(environment: Environment, responder: Responder)
     fetch: recording.fetch,
     reportProviderMessage: reporter.report,
     reportOperatorHint: hints.report,
+    ...scrubbing,
   });
   return {
     access,

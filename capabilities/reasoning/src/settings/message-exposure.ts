@@ -1,5 +1,6 @@
 import { Predicate, Redacted } from 'effect';
 
+import type { ModelAccessOptions } from '../providers/model-access-options.ts';
 import type { ModelSettings } from './model-settings.ts';
 import type { Availability } from './setting-values.ts';
 
@@ -40,7 +41,15 @@ function secretsIn(value: unknown): readonly string[] {
   return Predicate.isObject(value) ? Object.values(value).flatMap((entry: unknown) => secretsIn(entry)) : [];
 }
 
-export function secretScrubber(settings: ModelSettings): (text: string) => string {
+function secretScrubber(settings: ModelSettings): (text: string) => string {
   const secrets = secretsIn(settings).filter((secret) => secret.length >= leastSecretCharacters);
   return (text) => secrets.reduce((scrubbed, secret) => scrubbed.replaceAll(secret, '[redacted]'), text);
+}
+
+export function providerTextScrubber(
+  settings: ModelSettings,
+  { scrubProviderText }: ModelAccessOptions,
+): (text: string) => string {
+  const scrubSecrets = secretScrubber(settings);
+  return scrubProviderText === undefined ? scrubSecrets : (text) => scrubProviderText(scrubSecrets(text));
 }
