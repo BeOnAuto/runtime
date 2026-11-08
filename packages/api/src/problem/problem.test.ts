@@ -175,7 +175,7 @@ describe('a view still being built', () => {
 
 describe('a run refused because the account of its org is closed', () => {
   it('is described at 409 under a type of its own, with its reason and where to resolve it, and asks for no retry', () => {
-    const closed = problemOf('conflict', 'The org acme was deleted; an owner can restore it', {
+    const closed = problemOf('conflict', 'The org acme was deleted; Auto support can restore it', {
       kind: 'account_closed',
       because: 'org_deleted',
       resolve_at: 'https://studio.example.com/orgs/acme',
@@ -185,7 +185,7 @@ describe('a run refused because the account of its org is closed', () => {
       type: 'https://on.auto/problems/account_closed',
       title: 'Account closed',
       status: 409,
-      detail: 'The org acme was deleted; an owner can restore it',
+      detail: 'The org acme was deleted; Auto support can restore it',
       reason: 'conflict',
       kind: 'account_closed',
       because: 'org_deleted',

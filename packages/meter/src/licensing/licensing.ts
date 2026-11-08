@@ -43,10 +43,10 @@ export function accountClosed({ detail, because, resolve_at: resolveAt }: Accoun
 
 function invalidDetailOf({ detail, because }: Invalidity, page: string): string {
   if (because === 'key_rotated') {
-    return `This runtime's key was replaced. Activate the new key an owner was shown when they rotated it, then run this again. If the key is lost, an owner can rotate it again at ${page}.`;
+    return `This runtime's key was replaced. Activate the new key that the account holder or an organization admin was shown when they rotated it, then run this again. If the key is lost, the account holder or an organization admin can rotate it again at ${page}.`;
   }
   if (because === 'installation_revoked') {
-    return `This runtime was removed from its org. To use it again, an owner can register it again at ${page}, then activate the new key and run this again.`;
+    return `This runtime was removed from its org. To use it again, the account holder or an organization admin can register it again at ${page}, then activate the new key and run this again.`;
   }
   return `This runtime's license is invalid: ${detail}. Activate a license key for this runtime. The account holder or an organization admin can register it at ${page}.`;
 }

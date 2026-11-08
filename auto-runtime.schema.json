@@ -819,7 +819,7 @@
       "properties": {
         "key": {
           "type": "string",
-          "description": "The key Studio gave as an owner registered this runtime, written as a reference to the variable that holds it, such as ${LICENSE_KEY}. AUTO_RUNTIME_LICENSE_KEY wins over it"
+          "description": "The key Studio gave as the account holder or an organization admin registered this runtime, written as a reference to the variable that holds it, such as ${LICENSE_KEY}. AUTO_RUNTIME_LICENSE_KEY wins over it"
         },
         "allocation": {
           "type": "string",

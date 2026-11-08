@@ -49,7 +49,7 @@ describe('auto-runtime license, against the runtime running on this computer', (
     expect(accounts.account.activations().at(-1)).toEqual({ installation, actions: 0, licensed: 0 });
   }, 60_000);
 
-  it('gives the runtime an allocation, and prints its next report, signed, for an owner to upload', async () => {
+  it('gives the runtime an allocation, and prints its next report, signed, for the account holder or an organization admin to upload', async () => {
     const home = aHome();
     const { port, accounts } = await controlledLicensedServer(home);
     const said: string[] = [];

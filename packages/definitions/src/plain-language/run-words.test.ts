@@ -118,7 +118,7 @@ const rejections: ReadonlyArray<readonly [string, Readonly<Record<string, unknow
     'the step that waited for it ran out of time, so it was cancelled. Nothing more of it runs, but what it did before may have changed something; the step that waited for it decides what happens next.',
   ],
   [
-    'an account closed since its org was deleted, which an owner can restore for a limited time, in what its record holds',
+    'an account closed since its org was deleted, which Auto support can restore for a limited time, in what its record holds',
     { reason: 'conflict', detail: 'x', kind: 'account_closed', because: 'org_deleted' },
     'the account it runs under is closed, since its org was deleted. Auto support can restore the organization for a limited time. After that, it is permanently removed and its runs cannot resume. The rejection below gives the account details. If support restores the organization, this can be run again.',
   ],

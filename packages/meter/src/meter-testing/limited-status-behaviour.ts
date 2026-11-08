@@ -78,7 +78,7 @@ function keyLimitedStatusBehaviour(ledgerOf: LedgerOf): void {
 
   it('reads limited as org_closed once a report says its org was closed', async () => {
     const { metered } = await licensedOn(ledgerOf);
-    metered.account.close({ detail: 'The org acme was deleted; an owner can restore it', because: 'org_deleted' });
+    metered.account.close({ detail: 'The org acme was deleted; Auto support can restore it', because: 'org_deleted' });
     await metered.reported();
 
     expect((await metered.status()).limited_because).toBe('org_closed');

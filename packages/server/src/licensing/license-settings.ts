@@ -35,11 +35,12 @@ const signedIn = Schema.decodeUnknownOption(Schema.fromJsonString(SignedSchema))
 const aLicenseKey = Schema.makeFilter(
   (key: string) =>
     isLicenseKey(key) ||
-    'Expected the key Studio gave as an owner registered this runtime, alk.<org>.<runtime id>.<secret>',
+    'Expected the key Studio gave as the account holder or an organization admin registered this runtime, alk.<org>.<runtime id>.<secret>',
 );
 
 export const LicenseKey = Schema.String.annotate({
-  description: 'The key Studio gave as an owner of the org registered this runtime, alk.<org>.<runtime id>.<secret>',
+  description:
+    'The key Studio gave as the account holder or an organization admin registered this runtime, alk.<org>.<runtime id>.<secret>',
 }).check(aLicenseKey);
 
 const anAllocation = Schema.makeFilter(
@@ -53,7 +54,7 @@ const AllocationText = Schema.String.check(anAllocation);
 const LicenseInFile = Schema.Struct({
   key: Schema.optionalKey(
     Schema.String.annotate({
-      description: `The key Studio gave as an owner registered this runtime, written as a reference to the variable that holds it, such as \${LICENSE_KEY}. ${licenseKeyVariable} wins over it`,
+      description: `The key Studio gave as the account holder or an organization admin registered this runtime, written as a reference to the variable that holds it, such as \${LICENSE_KEY}. ${licenseKeyVariable} wins over it`,
     }).check(aLicenseKey),
   ),
   allocation: Schema.optionalKey(

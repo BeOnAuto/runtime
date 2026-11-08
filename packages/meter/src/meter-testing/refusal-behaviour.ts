@@ -69,7 +69,7 @@ const keyRefusals: readonly KeyRefusal[] = [
   [
     'its org was deleted',
     (account) => {
-      account.close({ detail: 'The org acme was deleted; an owner can restore it', because: 'org_deleted' });
+      account.close({ detail: 'The org acme was deleted; Auto support can restore it', because: 'org_deleted' });
     },
     `This runtime's organization at Auto is closed, so it's limited to ${freeRate}. ${usedToday} If the organization is restored, the runtime goes back to the organization's credits at its next report. Otherwise, the account holder or an admin of another organization can register this runtime at ${page}, then activate the new key.`,
     'org_closed',
@@ -176,9 +176,9 @@ export function fallbackWordsBehaviour(ledgerOf: LedgerOf): void {
   keyWordsBehaviour(ledgerOf);
 }
 
-const rotatedWords = `This runtime's key was replaced. Activate the new key an owner was shown when they rotated it, then run this again. If the key is lost, an owner can rotate it again at ${page}.`;
+const rotatedWords = `This runtime's key was replaced. Activate the new key that the account holder or an organization admin was shown when they rotated it, then run this again. If the key is lost, the account holder or an organization admin can rotate it again at ${page}.`;
 
-const removedWords = `This runtime was removed from its org. To use it again, an owner can register it again at ${page}, then activate the new key and run this again.`;
+const removedWords = `This runtime was removed from its org. To use it again, the account holder or an organization admin can register it again at ${page}, then activate the new key and run this again.`;
 
 const revocations: readonly (readonly [string, Revocation, string])[] = [
   ['its key was rotated', 'key_rotated', rotatedWords],
@@ -190,7 +190,7 @@ export const closedAccounts = [
     'deleted, which can still be restored',
     {
       because: 'org_deleted',
-      detail: 'The org acme was deleted; an owner can restore it',
+      detail: 'The org acme was deleted; Auto support can restore it',
       resolve_at: 'https://studio.example.com/orgs/acme',
     },
   ],

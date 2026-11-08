@@ -52,7 +52,7 @@ export function defineReportAllocation(license: Pick<LicensePorts, 'allocationRe
     title: 'Report allocation',
     description: [
       'Makes the next report of what this runtime spent of its offline credits, numbered one after the last and counted in all from the runs it started on them, signed with its key.',
-      'An owner of its org uploads it in Studio for a runtime that does not reach Auto; one that reaches Auto sends its report every hour itself.',
+      'The account holder or an organization admin uploads it in Studio for a runtime that does not reach Auto; one that reaches Auto sends its report every hour itself.',
       'A runtime with no offline credits, or with no key to sign with, is refused as a conflict.',
     ].join(' '),
     route: { method: 'POST', path: '/license/allocation/report' },

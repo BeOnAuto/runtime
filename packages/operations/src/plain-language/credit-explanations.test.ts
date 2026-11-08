@@ -33,17 +33,17 @@ const refusals: ReadonlyArray<readonly [string, ExplainedRejection, string]> = [
   [
     'a license that no longer stands',
     { reason: 'conflict', kind: 'license_invalid' },
-    'Could not run the workflow “tally”: the license this runtime holds no longer stands. The details below say why and what to do, and an owner of its org can put it right in Auto Studio at their resolve_at link; then run this again.',
+    'Could not run the workflow “tally”: the license this runtime holds no longer stands. The details below say why and what to do, and the account holder or an organization admin can put it right in Auto Studio at their resolve_at link; then run this again.',
   ],
   [
     'a key that was replaced',
     { reason: 'conflict', kind: 'license_invalid', because: 'key_rotated' },
-    'Could not run the workflow “tally”: the key of this runtime was replaced. Activate the new key an owner was shown when they rotated it, then run this again; if the key is lost, an owner can rotate it again at the resolve_at link in the details below.',
+    'Could not run the workflow “tally”: the key of this runtime was replaced. Activate the new key that the account holder or an organization admin was shown when they rotated it, then run this again; if the key is lost, the account holder or an organization admin can rotate it again at the resolve_at link in the details below.',
   ],
   [
     'a runtime removed from its org',
     { reason: 'conflict', kind: 'license_invalid', because: 'installation_revoked' },
-    'Could not run the workflow “tally”: this runtime was removed from its org. To use it again, an owner can register it again at the resolve_at link in the details below, then activate the new key and run this again.',
+    'Could not run the workflow “tally”: this runtime was removed from its org. To use it again, the account holder or an organization admin can register it again at the resolve_at link in the details below, then activate the new key and run this again.',
   ],
   [
     'a license that lacks a feature the work needs',

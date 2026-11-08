@@ -108,7 +108,7 @@ function lapsedBehaviour(ledgerOf: LedgerOf): void {
 
   it('include none once a report says its org was closed', async () => {
     const { metered } = await licensedOn(ledgerOf, {}, granted);
-    metered.account.close({ detail: 'The org acme was deleted; an owner can restore it', because: 'org_deleted' });
+    metered.account.close({ detail: 'The org acme was deleted; Auto support can restore it', because: 'org_deleted' });
     await metered.reported();
 
     expect(await seenOn(metered)).toEqual(none('limited'));

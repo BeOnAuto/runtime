@@ -143,7 +143,7 @@ describe('auto-runtime license allocation and report', () => {
     ]);
   });
 
-  it('prints the next signed report as the JSON an owner uploads in Studio', async () => {
+  it('prints the next signed report as the JSON the account holder or an organization admin uploads in Studio', async () => {
     const made = { report: { allocation: 'a1', sequence: 1 }, signature: 'f00d' };
     const asked = await ranWith(['report'], () => Promise.resolve(Response.json(made)));
 

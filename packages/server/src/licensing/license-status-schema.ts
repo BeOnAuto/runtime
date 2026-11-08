@@ -28,7 +28,9 @@ export const LicenseStatusSchema = Schema.Struct({
     LimitedBecauseSchema,
     'While it is limited, why: its org has no credits, or owes its overage cap; it has not reached Auto since its license limits from; its key was replaced or no longer stands; its org was closed; or it holds a key Auto has not answered for yet',
   ),
-  runtime_id: Schema.String.annotate({ description: 'The id of this runtime, which an owner registers in Studio' }),
+  runtime_id: Schema.String.annotate({
+    description: 'The id of this runtime, which the account holder or an organization admin registers in Studio',
+  }),
   free_runs: orNull(
     Schema.Struct({
       used: Schema.Int.annotate({ description: 'The first runs it has used, at most the runs it may run so' }),

@@ -51,7 +51,7 @@ export const creditExplanations: Readonly<Record<CreditKind, Explanation>> = {
   license_invalid: {
     why: 'the license this runtime holds no longer stands',
     remedy:
-      'The details below say why and what to do, and an owner of its org can put it right in Auto Studio at their resolve_at link; then run this again.',
+      'The details below say why and what to do, and the account holder or an organization admin can put it right in Auto Studio at their resolve_at link; then run this again.',
   },
   feature_unlicensed: {
     why: 'the license of this runtime does not include a feature it needs',
@@ -124,12 +124,12 @@ export const creditExplanationsByBecause: Readonly<
     key_rotated: {
       why: 'the key of this runtime was replaced',
       remedy:
-        'Activate the new key an owner was shown when they rotated it, then run this again; if the key is lost, an owner can rotate it again at the resolve_at link in the details below.',
+        'Activate the new key that the account holder or an organization admin was shown when they rotated it, then run this again; if the key is lost, the account holder or an organization admin can rotate it again at the resolve_at link in the details below.',
     },
     installation_revoked: {
       why: 'this runtime was removed from its org',
       remedy:
-        'To use it again, an owner can register it again at the resolve_at link in the details below, then activate the new key and run this again.',
+        'To use it again, the account holder or an organization admin can register it again at the resolve_at link in the details below, then activate the new key and run this again.',
     },
   },
   account_closed: {

@@ -129,7 +129,7 @@ describe('a key of an org whose account Auto says was deleted', () => {
     const server = await servedBy(accounts);
     const closed = {
       because: 'org_deleted',
-      detail: 'The org acme was deleted; an owner can restore it',
+      detail: 'The org acme was deleted; Auto support can restore it',
       resolve_at: 'https://studio.example.com/orgs/acme',
     } as const;
     accounts.account.close(closed);

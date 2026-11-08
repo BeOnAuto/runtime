@@ -93,7 +93,7 @@ describe('the allocation settings', () => {
       'license.key: Looks like a credential, which this file never holds',
     );
     expect(() => readSettingsOf({ CONFIG_FILE: configFile('license:\n  key: ${KEY}\n'), KEY: 'ak_one_two' })).toThrow(
-      'license.key: Expected the key Studio gave as an owner registered this runtime, alk.<org>.<runtime id>.<secret>',
+      'license.key: Expected the key Studio gave as the account holder or an organization admin registered this runtime, alk.<org>.<runtime id>.<secret>',
     );
   });
 
