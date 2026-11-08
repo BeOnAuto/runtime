@@ -25,6 +25,7 @@ export interface JsonOutput {
   readonly shape?: OutputShape;
   readonly name?: string;
   readonly description?: string;
+  readonly enforced_as_written?: true;
 }
 
 export type OutputRequest = TextOutput | JsonOutput;

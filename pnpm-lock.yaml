@@ -1460,6 +1460,9 @@ importers:
       '@on.auto/definitions':
         specifier: workspace:*
         version: link:../packages/definitions
+      '@on.auto/reasoning':
+        specifier: workspace:*
+        version: link:../capabilities/reasoning
       '@on.auto/server':
         specifier: workspace:*
         version: link:../packages/server

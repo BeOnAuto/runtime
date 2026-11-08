@@ -19,7 +19,8 @@ The [model settings reference](../reference/model-settings.md) holds the rules b
 3. Start or restart the server. It reads the model settings once, at start, so a changed setting takes effect at the next start.
 4. [Check the start-up line](#check-the-start-up-line) for `Model providers configured: ...`.
 5. [Check which models you can call](#check-which-models-you-can-call) with `list_models`.
-6. [Name a model](#name-a-model) in the definition.
+6. [Check your models](#check-your-models) with the answer check, to see which take JSON answer schemas.
+7. [Name a model](#name-a-model) in the definition.
 
 ## Choose a provider
 
@@ -219,6 +220,94 @@ Ask your agent to call `list_models`. It needs `org:read`, and over HTTP it is `
 - `narrowed: true` means `allowed_models` is set, and the list holds only what it allows.
 
 [Listing the models](../reference/model-settings.md#listing-the-models) sets out where each list comes from and what the log says when one cannot be read.
+
+## Check your models
+
+The answer check asks each model you name the same nine cases, through the model access the server uses, and prints a JSON report of how each was answered. It tells you which models take [the portable form of a schema](../reference/model-settings.md#the-portable-form-of-a-schema) enforced while they write, which answer only with the schema in their instructions, and which cannot be asked at all. Run it when you add a model or a gateway, and after your gateway or provider changes.
+
+The check runs from a checkout of the [runtime repository](https://github.com/BeOnAuto/runtime), set up as its [contribution guide](https://github.com/BeOnAuto/runtime/blob/main/CONTRIBUTING.md#set-up) says. Give it the server's model settings in the environment, and name the models:
+
+```sh
+MODEL_GATEWAYS='[{"name":"internal","base_url":"https://llm.internal.example/v1","api_key_env":"INTERNAL_LLM_KEY","structured_outputs":true}]' \
+INTERNAL_LLM_KEY=... \
+pnpm answer-check internal/llama-3.3-70b anthropic/claude-sonnet-4-5
+```
+
+- It reads the same variables as the server. A setting from the configuration file goes in its variable here, such as `model_gateways` in `MODEL_GATEWAYS`. Settings that are invalid stop it with `The model settings are invalid.` and the settings at fault.
+- Every case is a real model call, which your provider bills as any other: 10 calls a model when every answer matches, more for a correction or a refused schema. The provider's SDK sends a request again on HTTP 408, 409, 429 or 5xx, as for a run (see [Retries](../reference/model-settings.md#retries)).
+- It asks up to 4 models at once, and the cases of one model one after another. Each call may write 4,096 output tokens, and has the deadline of a run's call that may write as many: 162.4 seconds.
+- It exits with `0` when every model passed, with a correction or without, and with `1` otherwise.
+
+### The cases
+
+| Case                                    | Kind        | What it asks for                                                                                                                                                                                                                 |
+| --------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `categories`, `series`, `table`, `text` | `portable`  | An answer of each [output shape](../reference/output-shapes.md)                                                                                                                                                                  |
+| `reference`                             | `portable`  | An answer to a schema exactly at the budget: 16 fields that may be `null` or are a choice of types, and 10 levels of objects. It has nested objects, enums, optional properties, a map, `oneOf` over `$defs`, bounds and formats |
+| `described`                             | `described` | An answer to a schema whose sections refer to themselves. Such a schema is never portable, so it goes in the instructions on every route                                                                                         |
+| `tools`                                 | `tools`     | The populations of two cities in the `categories` shape, which the model must look up with a tool the case offers before it answers                                                                                              |
+| `seventeen_unions`                      | `canary`    | An answer to a schema sent as written and enforced, with one field that may be `null` more than the budget allows                                                                                                                |
+| `large_max_items`                       | `canary`    | An answer to a schema sent as written and enforced, with `maxItems: 200` kept as a keyword, where the portable form puts a bound into words                                                                                      |
+
+A canary tells whether the budget still matches the providers. A provider that refuses one is expected; a provider that takes one has raised its limit. Canaries do not count toward a model's outcome.
+
+### Outcomes
+
+| Outcome               | A case gets it when                                                                                                                                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `passed`              | The answer matched its schema                                                                                                                                                                                                         |
+| `passed_after_repair` | The answer matched once it was [asked for once more](../reference/model-settings.md#an-answer-that-misses-its-schema)                                                                                                                 |
+| `invalid`             | The answer still missed its schema after the correction, or the model refused to answer. In the `tools` case, also when the model answered without calling the tool, or still called tools after 3 requests                           |
+| `schema_refused`      | The provider refused the enforced request for its schema, with HTTP 400 or 422, whatever the request [asked again with the schema in the instructions](../reference/model-settings.md#a-schema-the-provider-refuses) then answered    |
+| `unavailable`         | The provider limited the request (429), could not serve it (5xx), or did not answer in time, or the call failed in a way the runtime does not classify. Try again later                                                               |
+| `unreachable`         | The provider refused the credentials (401, 403), does not serve the model (404), or refused the request as too long or for something other than its schema; or this server does not configure the model's provider or offer the model |
+
+A model's outcome is the worst of its cases, canaries left out, in this order: `unreachable`, `schema_refused`, `invalid`, `unavailable`, `passed_after_repair`, `passed`.
+
+- A model with `schema_refused` still answers runs, with the schema in its instructions, after one refused request each time.
+- Through a gateway without `structured_outputs: true`, every case is asked with the schema in the instructions. The report then says nothing about enforcement.
+
+### The report
+
+```json
+{
+  "checked_at": "2026-11-08T03:00:00.000Z",
+  "models": [
+    {
+      "model": "internal/llama-3.3-70b",
+      "outcome": "schema_refused",
+      "cases": [
+        {
+          "case": "categories",
+          "kind": "portable",
+          "outcome": "schema_refused",
+          "output_mode": "described",
+          "cost_usd": 0.0021,
+          "schema_refusal": { "outcome": "described", "status": 400, "duration_ms": 640 },
+          "duration_ms": 3120
+        },
+        {
+          "case": "described",
+          "kind": "described",
+          "outcome": "passed",
+          "output_mode": "described",
+          "cost_usd": 0.0018,
+          "duration_ms": 2410
+        }
+      ]
+    }
+  ]
+}
+```
+
+`checked_at` is when the check began. Each model has its `model`, its `outcome` and its `cases`, in the order of the table above. A case has:
+
+- `case`, `kind` and `outcome`;
+- `output_mode`: `portable` when the provider was sent the schema to enforce, as written for a canary, or `described` when the schema was in the instructions;
+- `detail`, the runtime's words for a failure, with `status`, the provider's HTTP status, where there was one, and `provider_message` where the gateway's `expose_provider_messages` is `true`;
+- `issues`, up to 5: those of the answer that failed, or, for `passed_after_repair`, those of the first answer;
+- `schema_refusal`, as a run records it, when the provider refused a schema;
+- `cost_usd`, where the gateway answers a cost, and `duration_ms`, the time the case took.
 
 ## Name a model
 

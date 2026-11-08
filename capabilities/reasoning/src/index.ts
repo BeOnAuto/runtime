@@ -120,3 +120,6 @@ export {
 } from './voice/transcription.ts';
 export { VoiceEventSchema, type RecordedVoiceEvent } from './voice/voice-facts.ts';
 export type { VoiceModel } from './voice/voice-settings.ts';
+export { answerCheck, type AnswerCheckReport, type CaseReport, type ModelReport } from './answer-check/answer-check.ts';
+export type { CheckOutcome } from './answer-check/case-findings.ts';
+export type { CaseKind } from './answer-check/check-cases.ts';

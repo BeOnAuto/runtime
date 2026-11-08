@@ -14,7 +14,7 @@ const firstAnswerMilliseconds = 60_000;
 
 const millisecondsPerOutputToken = 25;
 
-function timeoutFor(maxOutputTokens: number): number {
+export function timeoutFor(maxOutputTokens: number): number {
   return firstAnswerMilliseconds + millisecondsPerOutputToken * maxOutputTokens;
 }
 

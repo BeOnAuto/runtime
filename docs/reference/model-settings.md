@@ -372,7 +372,7 @@ The runtime sends the provider [the portable form of the schema](#the-portable-f
 | `bedrock`          | Native structured output for the Anthropic models that support it; a forced `json` tool otherwise          |
 | A gateway          | `response_format`: `json_schema` with `structured_outputs: true`; the schema in the instructions otherwise |
 
-A schema that is not portable is told to the model in the instructions on every route, as through [a gateway without structured outputs](#a-gateway-without-structured-outputs). Which way a call takes is worked out for each call from the route and the schema, never from the model's name, so choosing another model needs no change to the definition.
+A schema that is not portable is told to the model in the instructions on every route, as through [a gateway without structured outputs](#a-gateway-without-structured-outputs). Which way a call takes is worked out for each call from the route and the schema, never from the model's name, so choosing another model needs no change to the definition. [Check your models](../self-host/models.md#check-your-models) tells which of your models take the portable form.
 
 ### The portable form of a schema
 
