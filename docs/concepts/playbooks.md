@@ -59,6 +59,12 @@ Auto Studio shows running work, history and operating controls. Authoring starts
 
 Comments are the way back. When something in Studio looks wrong, such as a step's prompt, a run's result or a figure on a page, you comment on it where you see it. Your teammates see your comments, and you see theirs. Each comment carries the address of what it is about, so when you tell your agent you left comments, or paste them from Studio, it reads them, opens each place, makes the change and resolves the comment. The agent never comments itself; it tells you what it changed. [Comments](../reference/http.md#comments) gives the routes, and [Addresses](../reference/addresses.md) the forms an address takes.
 
+## Retiring and restoring work
+
+Retire a playbook when you no longer want to change it or start new runs. Its definitions and history remain readable. If you need it again, ask your agent to restore it: it becomes active with its definitions, page and history as they were. [Playbooks](../reference/http.md#playbooks) gives the operations and permissions.
+
+You can also retire an individual function or workflow. Restoring one brings it back paused, so you can review it before resuming it. Its name and history stay with it. [Definitions](../reference/mcp.md#definitions) lists the tools for retiring, restoring and resuming a definition.
+
 ## Authority and judgment
 
 A playbook should do only what your team would trust it to do. Decide which actions it may take on its own, and where a person must decide. A review function can recommend a budget change without being allowed to make one.

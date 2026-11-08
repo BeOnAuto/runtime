@@ -52,5 +52,5 @@ await test('the words of interaction are on the terminology page, and the intera
     ),
   );
   assert.ok(reference.includes('answer_interaction'));
-  assert.ok(workflows.includes('An approval is an interaction function'));
+  assert.ok(workflows.includes("To include a person's decision in a workflow, use an interaction function"));
 });

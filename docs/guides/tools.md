@@ -4,7 +4,7 @@ description: Find the tools your Auto offers a playbook, try one, name it in a r
 
 # Give a function tools
 
-Let a reasoning function call tools while it runs, such as tools that read files, search the news or look up records in a business system. Tools come from a tool server: a service or program that offers tools for a function to call. Connect a provider to your organization through your agent or Studio. That connection can serve several playbooks. Self-hosted operators can also configure tool servers for their deployment. This guide uses the servers your Auto already has, and needs only your agent.
+Let a reasoning function call tools while it runs, such as tools that read files, search the news or look up records in a business system. Tools come from a tool server: a service or program that offers tools for a function to call. Connect the service to your organization through your agent or Studio, then choose which playbooks may use it. This guide uses your connected agent; hosted Auto needs no local setup.
 
 If no server offers the tools you need, [connect a provider](#connect-a-provider) that does, or [ask for a tool server](#ask-for-a-tool-server). If you run Auto yourself, [Add a tool server](../self-host/tool-servers.md) shows how to add it.
 
@@ -140,18 +140,35 @@ Its `tools` names one tool, so it cannot list the folder. Its page shows each re
 
 ## Connect a provider
 
-Where whoever runs your Auto lets people add connections, `search` also lists the providers you may connect that nothing serves yet: services Auto knows by name, each with a title and a description. It lists them to an agent signed in as you, if you may change the organization, or to any agent in local mode. An agent connected with a key, or as someone who may only read, sees none. Ask your agent:
+To connect a service on hosted Auto, ask your agent:
 
 ```text
 Connect the "<provider title>" provider to Auto, so that the functions in my
 "<playbook name>" playbook can call its tools.
 ```
 
-Before it adds the connection, the agent works out with you what the playbook's runs will do at the service and what must already exist there for that to work, such as a team with the statuses work moves between, a channel, a label or a folder. Setting that up is not a run's job: the agent does it with you before the first run. Where the provider offers the access that setup takes as a group of `more`, the agent asks for it with the connection, so you approve once. Where none of the provider's tools can make what must exist, the agent connects the service's own API for the setup as well, or tells you what to set up yourself. The `connect-a-service` recipe sets this out for your agent.
+Your agent uses `search` to find the services Auto can connect. It can offer a new connection when it is signed in as you and has permission to manage the organization (`org:write`). An agent connected with an API key cannot add one on your behalf.
 
-The agent adds the connection by the provider's name and gives you a link to Studio's page. There you approve it and give its credential, such as a key, which never goes through your agent. Once it is connected, the agent reads what the service already holds, shows you what it would create, change and reuse, and makes each change with `execute_connection` once you agree, reading it back afterwards. Where no tool of the connection can make a change, it tells you exactly what to change in the service and checks it once you have. Then start again at [Find the tools](#find-the-tools).
+Before connecting, agree on what the playbook should do in the service and what it needs there: for example, a channel for updates or a folder for reports. The agent requests the access needed both to set that up and to run the playbook.
 
-If `search` lists no provider for the service, the agent can add its server by hand instead, from the service's remote MCP address or OpenAPI document and how it takes its key, never the key itself. The [connection reference](../reference/http.md#connections) describes these options. As with a provider, you approve it and give its credential on the Studio page the agent gives you. If your Auto does not let people add connections, `search` lists no providers, and you [ask for a tool server](#ask-for-a-tool-server).
+Open the Studio link the agent gives you. Check the service and the [playbooks that may use it](#choose-which-playbooks-can-use-a-connection), then approve. Depending on the service, you sign in with the provider or enter a credential on that page. Never paste a key or password into the conversation with your agent.
+
+After the connection is ready, the agent checks the service's existing setup and shows you any changes it needs to make. Once you agree, it makes those changes and checks them. If the service's tools cannot make a change, it tells you what to do in the service instead. Setup happens before the first run. Then continue at [Find the tools](#find-the-tools).
+
+If `search` lists no provider for the service, the agent can add its server from a remote MCP address or an OpenAPI document. It needs to know how the service accepts a credential, but never the credential itself. You approve and enter it on the Studio page as above. The [connection reference](../reference/http.md#connections) describes the supported options. If your self-hosted deployment does not allow people to add connections, [ask its operator for a tool server](#ask-for-a-tool-server).
+
+### Choose which playbooks can use a connection
+
+On the approval page, under Playbooks, choose:
+
+- **All playbooks** to allow every playbook in the organization, including ones created later.
+- **Only select playbooks** to choose the playbooks that need this service. Select at least one.
+
+If your agent requested particular playbooks, you can change that choice before approving. This limits which playbooks may use the connection; the account and permissions you grant at the service still determine what its tools can do.
+
+To change access later, open Connections in Studio, open the connection, and choose Change beside its playbook access. Make your selection and choose Save. You need permission to manage connections and access to all the organization's playbooks.
+
+A run that has already opened the connection's tools keeps them until it ends. Removing its playbook from the list does not revoke those tools mid-run. Later calls from that playbook cannot use the connection. The [connection reference](../reference/http.md#connections) describes the access rules.
 
 ## Ask for a tool server
 

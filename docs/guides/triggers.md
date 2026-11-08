@@ -40,7 +40,7 @@ No trigger has an input of its own. A run that a schedule starts gets only `{ "s
 - A workflow started by an event takes its data from the event. `input.from` shapes the run's input before the first step.
 - A workflow that your agent also runs tells the two apart in `input.from`, as steps 1 and 6 show.
 
-A run that a trigger starts acts as the playbook itself, not as you. Its `started_by` names the playbook: the `id` is `playbook:` followed by the playbook's id, and the `name` is the playbook's id. The run's steps can read and write that playbook and nothing else. The run is kept in the playbook's history like any other run.
+A run that a trigger starts acts as the playbook. Its `started_by` names the playbook: the `id` is `playbook:` followed by the playbook's id, and the `name` is the playbook's id. The run's steps can read and write that playbook and nothing else. Its separate `acts_for` field identifies the person who saved or restored the workflow version, where that person still belongs to the organization; it adds no permissions. [When a trigger applies](../reference/workflow-format.md#when-a-trigger-applies) gives the identity rules. The run is kept in the playbook's history like any other run.
 
 ### Overlap and cost
 

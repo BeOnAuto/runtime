@@ -39,9 +39,9 @@ You should see the agent name each comment, what it changed for it, and a link t
 
 ## 3. Check the change
 
-Open the link the agent gave you. The new version of the definition is there, and the comment is resolved: its pin is gone, and it no longer shows among the open comments or in the organization's activity. Ask your agent to run the workflow again when you want to see the change at work.
+Open the link the agent gave you. The new version of the definition is there, and the comment is resolved: its pin is gone, and it no longer appears among the open comments or in Notifications. Ask your agent to run the workflow again when you want to see the change at work.
 
-If the change doesn't do what the comment asked, reopen it: in Show all requests, turn on Show resolved and choose Reopen on the comment, or Reopen in its thread. It is open again, back among the open comments and new again in your teammates' activity, for your agent to act on.
+If the change doesn't do what the comment asked, reopen it: in Show all requests, turn on Show resolved and choose Reopen on the comment, or Reopen in its thread. It returns to the open comments and your teammates' Notifications, ready for your agent to act on.
 
 ## If something goes wrong
 
@@ -49,7 +49,7 @@ If the change doesn't do what the comment asked, reopen it: in Show all requests
 - **A comment is about an older version.** The definition changed after the comment was made. The agent reads the comment against the current version and acts only where it still applies.
 - **A pin is not where you left it.** A pin is drawn on the thing it was dropped on. When that thing is not on the page, as a block of a result that changed, the pin is not drawn, and the comment is still listed in Show all requests.
 - **The agent cannot change the thing.** Changing a definition needs `playbook:write`, and changing a connection `org:write`, which commenting does not. Connect the agent with a key or a sign-in that may change it.
-- **The playbook is retired.** Its comments stay readable, open or resolved, but nothing in it can be changed, and its comments cannot be resolved or added to. Your agent can only read them and report them to you.
+- **The playbook is retired.** Its comments stay readable, but cannot be added to or resolved. If you want to use the playbook again, ask your agent to restore it with `restore_playbook`. It can then act on the comments. Restoring a playbook needs `org:write`.
 - **You want to take a comment back.** Comments cannot be edited. Mark it resolved in Studio and comment again.
 
 ## Next

@@ -17,7 +17,7 @@ A playbook records:
 
 For example, after a campaign review you can go back to the review the run produced. You can also see the prompt it filled in, the version of "Review campaign brief" it used and the model's usage.
 
-History holds only what was recorded in it. Conversations with your agent and data in other systems are not kept, unless they reach the playbook as a run's input or as an event. Recorded history needs persistent storage and tested backups, so include both when you plan how to run Auto; see the [self-hosting overview](../self-host.md).
+History holds only what was recorded in it. Conversations with your agent and data in other systems are not kept, unless they reach the playbook as a run's input or as an event. Auto hosts this history with your playbooks. For a self-hosted deployment, persistent storage and tested backups are part of the deployment plan; see the [self-hosting overview](../self-host.md).
 
 ## Reading the history
 
@@ -25,7 +25,7 @@ Your agent can read where a run stands, the history of one run, the events of th
 
 A run's record holds its result. What the run was given is on the first event of its history. The history keeps each event small, so a large value appears as its size until you read that one event in full.
 
-Across an organization, the runtime also keeps its activity: the requests that wait on a person, the definitions whose latest run broke, the runs, definitions and playbooks that are new, and the comments people left open, from every playbook at once. Each person marks new items seen, and the runtime keeps what each person has seen, so one read shows a person what waits on them and what is new to them, on every device they use. [The organization's activity](../reference/http.md#the-organization-s-activity) gives the two routes.
+In Studio, open Notifications from the bell to find requests waiting for you, failed runs and new comments. Open the Activity log to browse activity across playbooks and filter it by person, playbook or kind of activity. What you mark seen is saved for your account across devices. [The organization's activity](../reference/http.md#the-organization-s-activity) describes the underlying reads and their fields.
 
 [Inspecting a run](workflows.md#inspecting-a-run) says what a workflow run's history shows. [Run history and playbook events](../reference/http.md#run-history-and-playbook-events) lists the reads and every event field, and the [MCP reference](../reference/mcp.md#events-and-history) lists the tools your agent uses.
 
@@ -48,7 +48,9 @@ Triggers, waiting runs and the folds of pages see a run only as the fact that it
 
 ## Using history in later runs
 
-A new run does not see earlier results by itself. Give a function what it needs as input.
+A new run does not see earlier results by itself. A [lookup function](functions.md#lookup) can read the outputs of successful runs of one definition in the same playbook. For example, a workflow can collect this month's campaign reviews, then pass them to a reasoning function to identify recurring problems.
+
+The lookup can filter by words in the output and by the date a run started. Its result says when older runs remain unread, so a workflow must not assume it has the complete history. [Reading the playbook's own runs](../reference/lookup-format.md#reading-the-playbook-s-own-runs) gives the output fields and limits. You can also supply earlier results directly as a function's input.
 
 ## Dream (planned)
 

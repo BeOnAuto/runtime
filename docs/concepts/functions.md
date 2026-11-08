@@ -14,7 +14,7 @@ Each function has one of six types, described below. Workflows coordinate functi
 | Type        | Use it to                                          | Example                                              |
 | ----------- | -------------------------------------------------- | ---------------------------------------------------- |
 | Reasoning   | Interpret, judge or write with a language model    | Review a campaign brief against your team's criteria |
-| Lookup      | Read what another system holds right now           | Read a campaign's figures from the reporting tool    |
+| Lookup      | Read from another system or earlier run results    | Read this month's campaign figures or past reviews   |
 | Interaction | Ask a person or a system, and take the answer      | Ask the brief's owner to approve the review          |
 | Prediction  | Predict a quantity from the playbook's own history | Forecast next week's sign-ups in each region         |
 | Computation | Calculate or transform data exactly, with code     | Total a campaign's spend and its pace against budget |
@@ -49,11 +49,11 @@ Choose reasoning when the work needs judgment or language. Leave exact arithmeti
 
 ## Lookup
 
-A lookup function obtains information that already exists, through one tool that only reads or from the playbook's own runs. Through a tool, it reads the replies of a thread, a contact's record, this week's figures from a reporting tool: a run calls the tool once and returns the part of its result the function points at, at once. From the playbook's runs, it reads the outputs of the runs of one of its definitions that succeeded, newest first, such as the paces a computation function computed this month, kept to those that hold its words and started since its day.
+A lookup function reads information that already exists. It can call one tool marked `reads`, such as a tool that returns a contact's record or a campaign's figures. It can also read the outputs of successful runs of one definition in its playbook, newest first. For example, a lookup can collect the campaign reviews a reasoning function produced this month.
 
-Choose lookup when the playbook needs what another system holds right now, or what its own functions found before. What a person wants kept is the output of a run: run a function whose output is that thing, and read it back with a lookup of that definition's runs. A lookup function interprets nothing and changes nothing: it asks no model, and it calls only a tool marked `reads`, or reads the playbook's runs, so running it again is always safe. A reasoning function then interprets what it read.
+Choose lookup when the playbook needs current information from another system or the results of earlier work. The lookup makes no model call and does not interpret what it finds. Pass its output to a reasoning function for judgment, or to a computation function for calculations.
 
-- [Lookup function format](../reference/lookup-format.md) describes the document and the mark its tool needs.
+- [Lookup function format](../reference/lookup-format.md) describes tool calls and reading earlier runs, including filters and limits.
 
 ## Interaction
 

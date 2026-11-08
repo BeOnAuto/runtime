@@ -46,7 +46,9 @@ A trigger starts a run without anyone asking for it. A workflow can have two kin
 - An event trigger starts a run for each matching event in the playbook. The event can come from another system or another workflow. It can also be one of the playbook's own records, such as a review that succeeded.
 - A schedule trigger starts a run at set times, such as 09:00 UTC on working days, or once every fifteen minutes.
 
-A run that a trigger starts acts for the playbook itself, not for a person. A trigger applies from the moment it is saved; it never reacts to what the playbook recorded before. Limits stop triggers from starting runs without end. A workflow can also record an event of its own. Another workflow's trigger can react to it, and so can a run that waits for that event.
+A run that a trigger starts acts as the playbook, with permission to read and write that playbook. The run also records the person it works on behalf of: whoever saved or restored the workflow version, provided that person still belongs to the organization. This adds no permissions. [When a trigger applies](../reference/workflow-format.md#when-a-trigger-applies) gives the identity rules.
+
+A trigger applies from the moment it is saved; it never reacts to what the playbook recorded before. Limits stop triggers from starting runs without end. A workflow can also record an event of its own. Another workflow's trigger can react to it, and so can a run that waits for that event.
 
 Pausing a workflow stops its triggers until someone resumes it. While it is paused, the times its schedule names and the events its trigger matches start nothing, and it cannot be run by hand or from another workflow. Runs already under way finish. Resuming it makes up nothing it missed: its next run is at the first scheduled time or matching event after the resume. Pausing changes no version, and a version saved while it is paused stays paused. Every function pauses and resumes the same way, and the definition shows who paused it, when and why.
 
@@ -63,7 +65,7 @@ Two kinds of input reach a run that is already waiting, and neither starts a new
 - an answer to a request that one of its steps made;
 - an event, for input that is not an answer, such as a revised brief: one sent to the run, or one the playbook records while the run listens for its type.
 
-An approval is an interaction function. The workflow calls it as it calls any function. The function asks the person through a connection they chose, such as a chat message, or holds the request for an agent they answer through, and the workflow waits. The person's answer is the result of that step. If nobody answers before the request expires, the workflow can catch that and take another path.
+To include a person's decision in a workflow, use an interaction function. For example, it can ask a campaign owner to approve a brief through a chat message, or hold the request for an agent they answer through. The workflow waits, and the person's answer becomes the result of that step. If nobody answers before the request expires, the workflow can catch that and take another path.
 
 [Waiting for events](../reference/workflow-format.md#waiting-for-events) gives the rules for events.
 
