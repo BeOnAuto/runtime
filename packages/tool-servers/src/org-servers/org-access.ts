@@ -2,6 +2,7 @@ import { Effect, Option } from 'effect';
 
 import type { LinkedAccess } from '../access/linked-access.ts';
 import type { Secrets } from '../bounds/secrets.ts';
+import { keptListingsOf, type KeptListings } from '../listing/kept-listings.ts';
 import type { LinkedServerSettings, ToolServers } from '../openapi/described-api.ts';
 import { connectionLinks, type LinkConnection } from './connection-links.ts';
 import type { ConnectionSource } from './connection-source.ts';
@@ -12,6 +13,7 @@ export type Load = () => Promise<LinkedAccess>;
 export interface OrgAccess {
   readonly loaded: Load;
   readonly serversOf: (org: string) => Effect.Effect<readonly OrgServer[]>;
+  readonly listingsKept: KeptListings;
   readonly close: () => Promise<void>;
 }
 
@@ -19,11 +21,14 @@ export interface OrgAccessParts {
   readonly source: ConnectionSource;
   readonly loaded: Load;
   readonly secrets: Pick<Secrets, 'keep' | 'scrub'>;
+  readonly listingsKept: KeptListings | undefined;
+  readonly now: () => number;
 }
 
 function fileServer(settings: LinkedServerSettings, loaded: Load): OrgServer {
   return {
     settings,
+    keptAs: `file ${settings.name}`,
     checked: () => Promise.resolve([]),
     linked: async () => {
       const { fileLinks } = await loaded();
@@ -32,13 +37,15 @@ function fileServer(settings: LinkedServerSettings, loaded: Load): OrgServer {
   };
 }
 
-export function orgAccessOf(settings: ToolServers, { source, loaded, secrets }: OrgAccessParts): OrgAccess {
+export function orgAccessOf(settings: ToolServers, parts: OrgAccessParts): OrgAccess {
+  const { source, loaded, secrets } = parts;
   const linkOf: LinkConnection = async (id, server) => (await loaded()).connectionLink(id, server);
   const connections = connectionLinks(source, linkOf, secrets);
   const files = settings.servers.map((server) => fileServer(server, loaded));
   return {
     loaded,
     serversOf: (org) => Effect.map(connections.serversOf(org), (ofTheOrg) => withTheFileFirst(files, ofTheOrg)),
+    listingsKept: parts.listingsKept ?? keptListingsOf(parts.now),
     close: connections.close,
   };
 }

@@ -11,7 +11,7 @@ export function makeToolAccess(settings: ToolServers, options: ToolAccessOptions
     const consent: ConsentTokenSources = {
       tokenSource: (served, serving) => options.consent.tokenSource(served, { ...serving, fetch }),
     };
-    return toolAccessOf(settings, { ...options, fetch, consent }, own.linksSendingNoRequest);
+    return toolAccessOf(settings, { ...options, fetch, consent }, own.linksSendingNoRequest, own.listingsKept);
   });
   return {
     configured: own.configured,

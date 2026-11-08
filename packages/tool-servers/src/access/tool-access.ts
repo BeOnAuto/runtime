@@ -3,7 +3,7 @@ import type { LinkOptions } from '../clients/link-openers.ts';
 import { listingWaysOf, type ListingWays } from '../listing/listing-ways.ts';
 import type { Describing, ToolServers } from '../openapi/described-api.ts';
 import { noConnections, type ConnectionSource } from '../org-servers/connection-source.ts';
-import { orgAccessOf } from '../org-servers/org-access.ts';
+import { orgAccessOf, type OrgAccess } from '../org-servers/org-access.ts';
 import type { ServerMessage } from './caller-context.ts';
 import { recordingPartsOf, type ContentStore, type RecordingParts, type SecretValues } from './entry-reads.ts';
 import type { LinkedAccess } from './linked-access.ts';
@@ -43,6 +43,7 @@ export interface LinkedOptions extends ToolAccessOptions, RecordingParts {
 
 interface LendingAccess extends ToolAccess {
   readonly linksSendingNoRequest: LinksLent;
+  readonly listingsKept: OrgAccess['listingsKept'];
 }
 
 const nothingLent: LinksLent = () => Promise.resolve(new Map());
@@ -61,7 +62,12 @@ function sendingNoRequest(links: Links): Links {
   return new Map(local.map((link) => [link.settings.name, link]));
 }
 
-export function toolAccessOf(settings: ToolServers, options: ToolAccessOptions, lent = nothingLent): LendingAccess {
+export function toolAccessOf(
+  settings: ToolServers,
+  options: ToolAccessOptions,
+  lent = nothingLent,
+  listingsKept?: OrgAccess['listingsKept'],
+): LendingAccess {
   const loading: { access?: Promise<LinkedAccess> } = {};
   const recording = recordingPartsOf(settings.servers, options.content, options.runtimeSecrets ?? []);
   const source = options.connections ?? noConnections;
@@ -71,13 +77,20 @@ export function toolAccessOf(settings: ToolServers, options: ToolAccessOptions, 
     loading.access ??= linked(settings, { ...options, ...recording, reportLeftOut, reportMarkUnlisted }, lent);
     return loading.access;
   };
-  const access = orgAccessOf(settings, { source, loaded: linkedOnUse, secrets: recording.secrets });
+  const access = orgAccessOf(settings, {
+    source,
+    loaded: linkedOnUse,
+    secrets: recording.secrets,
+    listingsKept,
+    now: options.now ?? Date.now,
+  });
   return {
     configured: settings.servers.length > 0 || source.takesConnections,
     takesConnections: source.takesConnections,
     ...runWaysOf(access, recording, options.timing),
     ...listingWaysOf(access),
     linksSendingNoRequest: async () => sendingNoRequest((await linkedOnUse()).fileLinks),
+    listingsKept: access.listingsKept,
     close: async () => {
       await access.close();
       const loaded = await loading.access;

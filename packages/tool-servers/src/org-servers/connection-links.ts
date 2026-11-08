@@ -182,6 +182,7 @@ function serverOf(holding: Holding, { id, serving, state }: OrgConnection): OrgS
   };
   return {
     settings,
+    keptAs: `connection ${connected.connecting}`,
     checked: async () => unreadinessOf(await prepared()),
     linked: () => linkedIn(holding, connected, prepared()),
   };

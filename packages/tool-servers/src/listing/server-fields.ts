@@ -2,7 +2,7 @@ import { cutToFailureBound } from '../bounds/call-bounds.ts';
 import type { Served } from '../org-servers/org-servers.ts';
 import type { Unusable } from '../org-servers/server-refusals.ts';
 import { everyPlaybook } from '../settings/server-settings.ts';
-import type { ServerFields, UnavailableServer } from './tool-server.ts';
+import type { AvailableServer, ServerFields, ServerTool, UnavailableServer } from './tool-server.ts';
 
 export function serverFieldsOf({
   name,
@@ -22,6 +22,10 @@ export function serverFieldsOf({
     provider,
     ...(handlesMoney === true ? { handles_money: handlesMoney } : {}),
   };
+}
+
+export function availableServer(settings: Served, tools: readonly ServerTool[]): AvailableServer {
+  return { ...serverFieldsOf(settings), tools };
 }
 
 export function unavailableServer(settings: Served, { because, detail }: Unusable): UnavailableServer {

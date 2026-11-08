@@ -72,6 +72,7 @@ describe('a call that needs its tool marked reads, to a tool its server lists tw
   it('is refused before anything is sent when either entry is not marked reads', async () => {
     const server = {
       settings,
+      keptAs: undefined,
       checked: () => Promise.resolve([]),
       linked: () => Promise.resolve({ link: listingSearchAs('reads', 'acts') }),
     };

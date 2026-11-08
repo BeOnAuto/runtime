@@ -1575,7 +1575,7 @@ Six operations find and call the tools of the tool servers of a playbook: those 
 
 - `query_connection` and `execute_connection` need `playbook:write` for every tool, since a call acts as the playbook, under the credential of the server's entry or of the connection.
 - `validate` and `dry_run` are routed by `POST` because their `arguments` are an object a query string cannot carry. They are still reads: they change nothing, call no tool and need only `playbook:read`. A query string beside their body returns `bad_request`.
-- The four reads ask each server they need for its tool list when you call them, as a run does, with the same time limits to connect and to list. They record nothing. An HTTP API is not asked, since its OpenAPI document is the list.
+- The four reads ask each server they need for its tool list when you call them, as a run does, with the same time limits to connect and to list. They record nothing. An HTTP API is not asked, since its OpenAPI document is the list. The org route of `search` is the one exception, as [below](#searching-the-tools) says: it answers a server's tools from what it listed for the org within the last five minutes.
 - On a playbook route, a playbook that does not exist returns `not_found`. A retired playbook serves the reads like any other. It refuses `query_connection` and `execute_connection` with `conflict` of the kind `retired`, as it refuses every command.
 
 ### Searching the tools
@@ -1669,6 +1669,7 @@ On the org route, `search` covers the org's playbooks. So you can see what the o
 - A key limited to some playbooks must pass `playbook`, and sees in `playbooks` only the playbooks it may access. Without `playbook` it is refused with `forbidden`, whose detail says to name one of its playbooks in `playbook`.
 - A `playbook` the org does not have returns `not_found`, as the playbook's own route does, and no server is asked.
 - A `server` that no server of the org, or of the playbook given, has returns `invalid_input` at `/server`.
+- A server it listed for the org within the last five minutes is not asked again: its tools are the ones it listed then, kept for this org alone. A connection connected again since, as with a new credential, is asked again, a connection removed is gone at once, and nothing is kept of a server that could not be listed or of a connection that is not ready. What `playbooks` holds, and so which servers `playbook` keeps, is read anew each time. The playbook's own route asks each server each time.
 
 On the org route, `search` also returns `providers`: the [providers](#providers) the caller may connect here that no server of the org serves yet, each with its `name`, which `add_connection` takes as `provider`, its `title`, its `description` and, where its way offers groups of scopes beyond its first consent, `more`, each group by the `name` `add_connection` takes as `more` and what it is `for`, whether or not a client set up here covers it; `add_connection` refuses a group no client covers as `conflict`. So an agent asked for a service that no server serves can offer to connect one, and ask with it for what setting the service up takes.
 

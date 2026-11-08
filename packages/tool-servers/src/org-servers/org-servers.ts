@@ -26,6 +26,7 @@ export type Linked = { readonly link: ServerLink } | { readonly refused: Unusabl
 
 export interface OrgServer {
   readonly settings: Served;
+  readonly keptAs: string | undefined;
   readonly checked: () => Promise<readonly ConnectionUnready[]>;
   readonly linked: () => Promise<Linked>;
 }
@@ -46,6 +47,7 @@ export function linksOf(
 export function unreadyServer(settings: Served, unready: ConnectionUnready): OrgServer {
   return {
     settings,
+    keptAs: undefined,
     checked: () => Promise.resolve([unready]),
     linked: () => Promise.resolve({ refused: unready }),
   };
