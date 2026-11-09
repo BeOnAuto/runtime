@@ -3,6 +3,7 @@ import type { Capability } from '@on.auto/definitions';
 import {
   assetsDue,
   defineGetAsset,
+  defineListGenerationModels,
   generationsDue,
   makeGenerationFunctionAdapter,
   readGenerationCatalog,
@@ -28,9 +29,13 @@ interface PlaybookOperation {
   readonly registration: RouteRegistration<'playbook'>;
 }
 
+interface OrgOperation {
+  readonly registration: RouteRegistration<'org'>;
+}
+
 export interface ServedGeneration {
   readonly capability: Capability;
-  readonly operations: readonly PlaybookOperation[];
+  readonly operations: readonly (PlaybookOperation | OrgOperation)[];
   readonly dueWork: readonly (AssetsDue | GenerationsDue)[];
 }
 
@@ -54,7 +59,13 @@ export async function generationServedBy(
   };
   return {
     capability: makeGenerationFunctionAdapter({ ...ports, catalog, ownKey: true }),
-    operations: [defineGetAsset(ports)],
+    operations: [
+      defineGetAsset(ports),
+      defineListGenerationModels(
+        catalog,
+        models.gateways.map(({ name }) => name),
+      ),
+    ],
     dueWork: [assetsDue({ ledger }), generationsDue(ports)],
   };
 }

@@ -18,16 +18,16 @@ A reasoning function can call tools itself, through tool servers the runtime's o
 
 For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization and its playbooks, and handles sign-in through MCP authentication. The paths below describe a [self-hosted runtime](../self-host.md). The tools a deployment exposes depend on its capabilities and your permissions.
 
-| Path                                   | Acts on                                                                | Tools                                                                                                                                                                  |
-| -------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/mcp`                                 | The caller's own org and, through a `playbook` argument, its playbooks | Every tool. A tool that works inside a playbook takes a required `playbook` argument; `search`, `list_comments` and `resolve_comment` take it as an optional one       |
-| `/orgs/{org}/mcp`                      | One org's playbooks                                                    | Playbook management, `list_models`, `search`, `list_comments` and `resolve_comment` with `playbook` optional, the connection tools, `activate_license` and `get_guide` |
-| `/orgs/{org}/playbooks/{playbook}/mcp` | One playbook                                                           | The tools that work inside a playbook, with no `playbook` argument, and `search` and `get_guide`                                                                       |
-| `/directory`                           | The caller's own org, as `/mcp` does                                   | The tools of `/mcp`, less what the directory listing leaves out, listed below                                                                                          |
+| Path                                   | Acts on                                                                | Tools                                                                                                                                                                                            |
+| -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `/mcp`                                 | The caller's own org and, through a `playbook` argument, its playbooks | Every tool. A tool that works inside a playbook takes a required `playbook` argument; `search`, `list_comments` and `resolve_comment` take it as an optional one                                 |
+| `/orgs/{org}/mcp`                      | One org's playbooks                                                    | Playbook management, `list_models`, `list_generation_models`, `search`, `list_comments` and `resolve_comment` with `playbook` optional, the connection tools, `activate_license` and `get_guide` |
+| `/orgs/{org}/playbooks/{playbook}/mcp` | One playbook                                                           | The tools that work inside a playbook, with no `playbook` argument, and `search` and `get_guide`                                                                                                 |
+| `/directory`                           | The caller's own org, as `/mcp` does                                   | The tools of `/mcp`, less what the directory listing leaves out, listed below                                                                                                                    |
 
 - Every endpoint uses streamable HTTP without sessions and accepts `POST`.
 - `/directory` is the directory listing. It leaves out two things.
-  - No generation function: the definition tools take no `generation` type, `get_guide` holds no generation guide, `list_playbook_events` names none of its events, and `get_asset`, which reads what one made, is not listed. A call that names a generation function is refused as `not_found`.
+  - No generation function: the definition tools take no `generation` type, `get_guide` holds no generation guide, `list_playbook_events` names none of its events, and neither `get_asset`, which reads what one made, nor `list_generation_models`, which lists the models one may name, is listed. A call that names a generation function is refused as `not_found`.
   - No tool server whose tools pay, refund, transfer or pay out money, which its provider's entry or its configuration marks `handles_money: true`, such as Stripe. `search` lists neither the server nor its provider, and `add_connection`, `list_connection_tools`, `query_connection` and `execute_connection` refuse it as `unavailable`, saying the directory listing does not offer it. Through `/mcp` the same calls work.
 - The answer to a request the runtime handles comes as an event stream that carries a heartbeat, an SSE comment, every 5 seconds while the request runs, so an MCP client can tell a call that is still running from a server that has stopped. A request refused before it is handled keeps its JSON answer and its status, and a notification is answered `202 Accepted`. A stream that breaks is not resumed: closing it cancels the request.
 - When the runtime stops while it handles a request, it answers the request with the JSON-RPC error `Auto Runtime stopped while it handled this request, so it may or may not have taken effect` before the stream ends, and a request that comes while it stops gets a `503`.
@@ -124,15 +124,16 @@ A client that honours the hints asks the person before it calls a tool marked de
 
 These tools are listed on `/mcp` and the org endpoint. Their routes are relative to `/v1/orgs/{org}`.
 
-| Tool               | HTTP operation                       | What it is for                                                                             |
-| ------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------ |
-| `create_playbook`  | `POST /playbooks`                    | Create a playbook, active and empty                                                        |
-| `list_playbooks`   | `GET /playbooks`                     | List the playbooks the caller may access                                                   |
-| `get_playbook`     | `GET /playbooks/{playbook}`          | Read a playbook, with the source of its page                                               |
-| `update_playbook`  | `PUT /playbooks/{playbook}`          | Change a playbook's name, description or page                                              |
-| `retire_playbook`  | `POST /playbooks/{playbook}/retire`  | Retire a playbook, which keeps its id and stays readable                                   |
-| `restore_playbook` | `POST /playbooks/{playbook}/restore` | Bring a retired playbook back, active again                                                |
-| `list_models`      | `GET /models`                        | List the models a reasoning function may name; see [Model information](#model-information) |
+| Tool                     | HTTP operation                       | What it is for                                                                              |
+| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `create_playbook`        | `POST /playbooks`                    | Create a playbook, active and empty                                                         |
+| `list_playbooks`         | `GET /playbooks`                     | List the playbooks the caller may access                                                    |
+| `get_playbook`           | `GET /playbooks/{playbook}`          | Read a playbook, with the source of its page                                                |
+| `update_playbook`        | `PUT /playbooks/{playbook}`          | Change a playbook's name, description or page                                               |
+| `retire_playbook`        | `POST /playbooks/{playbook}/retire`  | Retire a playbook, which keeps its id and stays readable                                    |
+| `restore_playbook`       | `POST /playbooks/{playbook}/restore` | Bring a retired playbook back, active again                                                 |
+| `list_models`            | `GET /models`                        | List the models a reasoning function may name; see [Model information](#model-information)  |
+| `list_generation_models` | `GET /generation-models`             | List the models a generation function may name; see [Generation models](#generation-models) |
 
 Each playbook `list_playbooks` returns holds every field of the playbook but its page, a retired one among them with `include_retired`; `get_playbook` adds the page's `source`, as `update_playbook` answers it. [Playbooks](http.md#playbooks) and [Models](http.md#models) give the fields, limits and refusals.
 
@@ -458,6 +459,44 @@ A server with six models, for example, says: `This server can call 6 models thro
 [Set up a model provider](../self-host/models.md) explains how an operator sets up a provider. The [Model settings reference](model-settings.md) covers aliases, declared models, the allow list and how each list is built.
 
 This catalog lists language models, not MCP tools. `search` finds the tools of the tool servers a playbook's functions may use. A separately managed tool library is still planned.
+
+## Generation models
+
+`list_generation_models` lists the models a [generation function](generation-format.md) may name, from the catalogue the server holds, so an agent or Studio shows the models of the runtime it talks to rather than those of another release. It requires `org:read`, and it only reads: it reads the catalogue the server read as it started, and asks no gateway. It is served on `/mcp` and the org endpoint, and is not available on a playbook-scoped endpoint. Over HTTP it is [`GET /v1/orgs/{org}/generation-models`](http.md#models), which returns the same result.
+
+Its optional `kind` input, `image`, `audio` or `video`, lists only the models that produce that kind.
+
+```json
+{
+  "object": "list",
+  "gateways": ["gateway"],
+  "data": [
+    {
+      "model": "openai/gpt-image-2",
+      "kind": "image",
+      "media_types": ["image/png", "image/jpeg", "image/webp"],
+      "limits": {
+        "sizes": ["auto", "1024x1024", "1536x1024", "1024x1536"],
+        "qualities": ["auto", "low", "medium", "high"],
+        "prompt_characters": 32000,
+        "references": { "most": 16, "bytes": 52428800 }
+      }
+    }
+  ]
+}
+```
+
+| Field         | Meaning                                                                                                                                                                                                                      |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `gateways`    | The names of the gateways of `MODEL_GATEWAYS`, one of which a generation function writes before its model, as `gateway/openai/gpt-image-2`. Empty where no gateway is configured, so no generation function can run          |
+| `data`        | The models of the catalogue, sorted by `model`, each as [The models](generation-format.md#the-models) gives it                                                                                                               |
+| `model`       | The model as the gateway names it                                                                                                                                                                                            |
+| `kind`        | What it produces: `image`, `audio` or `video`                                                                                                                                                                                |
+| `media_types` | The media types of the assets it takes as references; empty where it takes none                                                                                                                                              |
+| `limits`      | The values each [parameter](generation-format.md#parameters) may take, the most characters of a prompt, and, where it takes references, how many and how large                                                               |
+| `retired`     | For a retired model, `on`, the day it retired, as `YYYY-MM-DD`, and `replacement`, the model that replaces it. A retired model is listed so a saved function that names it can be explained; a save that names it is refused |
+
+The plain-language summary names the models a function can name by what each makes, each by the last part of its id, with its provider where two share it. With the catalogue the runtime ships and one gateway, it says: `A generation function can name 5 models through gateway: it makes an image with gpt-image-1-mini or gpt-image-2, and audio with gpt-4o-mini-tts, tts-1 or tts-1-hd.` It then names each retired model with the one that replaces it, as `<model> was retired on <day>; <replacement> replaces it.` Where no gateway is configured, it says first that no generation function can run until whoever runs the server configures one.
 
 ## Successful results
 

@@ -58,10 +58,11 @@ describe('the directory listing at /directory', () => {
     expect([/"name":"stripe"/u.test(everything), /"name":"stripe"/u.test(directory)]).toEqual([true, false]);
   });
 
-  it('lists the tools /mcp lists but get_asset, which reads what a generation function made', async () => {
+  it('lists the tools /mcp lists but those of the generation functions, get_asset, which reads what one made, and list_generation_models, which lists the models one may name', async () => {
     const everyName = await namesAt('/mcp');
+    const ofTheGenerationFunctions = [readingAnAsset, '"name":"list_generation_models"'];
 
-    expect(everyName).toContain(readingAnAsset);
-    expect(await namesAt('/directory')).toEqual(everyName.filter((name) => name !== readingAnAsset));
+    expect(everyName).toEqual(expect.arrayContaining(ofTheGenerationFunctions));
+    expect(await namesAt('/directory')).toEqual(everyName.filter((name) => !ofTheGenerationFunctions.includes(name)));
   });
 });

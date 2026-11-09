@@ -119,6 +119,7 @@ describe('the org endpoint of the server', () => {
         'reconnect_connection',
         'remove_connection',
         'activate_license',
+        'list_generation_models',
         'get_guide',
       ],
     });
@@ -192,6 +193,7 @@ const readerToolsOfTheOrg = [
   'search',
   'list_connection_tools',
   'list_connections',
+  'list_generation_models',
   'get_guide',
 ];
 

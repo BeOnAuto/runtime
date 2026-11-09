@@ -97,7 +97,7 @@ Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Po
 
 ## The models
 
-The runtime keeps a catalogue of the models a generation function may name, each with the kind it produces and the limits of what it takes. A model is named as the gateway names it, after the gateway's own name: a gateway named `gateway` that serves `openai/gpt-image-2` is named `gateway/openai/gpt-image-2`.
+The runtime keeps a catalogue of the models a generation function may name, each with the kind it produces and the limits of what it takes. A model is named as the gateway names it, after the gateway's own name: a gateway named `gateway` that serves `openai/gpt-image-2` is named `gateway/openai/gpt-image-2`. `list_generation_models` answers the catalogue a server holds, with the names of its gateways; see [Generation models](mcp.md#generation-models).
 
 | Model                     | Produces | Takes                                                                                                                                                                                                 |
 | ------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

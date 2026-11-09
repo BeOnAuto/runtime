@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-const GenerationKindSchema = Schema.Literals(['image', 'audio', 'video']);
+export const GenerationKindSchema = Schema.Literals(['image', 'audio', 'video']);
 
 export type GenerationKind = typeof GenerationKindSchema.Type;
 

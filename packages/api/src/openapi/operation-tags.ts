@@ -9,7 +9,7 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
   playbooks: 'The playbooks of the org: made, listed, read, renamed and retired',
   activity:
     "What the playbooks of the org did that a person may want to see, the requests that wait on an answer, the broken definitions, what is new and the open comments, the organization's own among them, and what each caller has seen of it",
-  models: 'The models this server can call, which a reasoning function names',
+  models: 'The models this server can call, which a reasoning function names, and those a generation function may name',
   voice:
     'The voice model this server transcribes a recording with, so a person speaks a comment in Studio rather than typing it',
   definitions: "A playbook's function and workflow definitions, and the runs they start",
@@ -33,6 +33,7 @@ const descriptionsOfTags: Readonly<Record<string, string>> = {
 
 const resourcesOfOperations: Readonly<Record<string, string>> = {
   answer_interaction: 'interactions',
+  list_generation_models: 'models',
   render_playbook_page: 'playbooks',
 };
 

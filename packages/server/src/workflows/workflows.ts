@@ -33,7 +33,7 @@ interface PlaybookOperation {
 export interface WorkflowParts extends HostParts, ServedPages {
   readonly orgOperations: readonly OrgOperation[];
   readonly playbookOperations: readonly PlaybookOperation[];
-  readonly capabilityOperations: readonly CapabilityOperations<PlaybookOperation>[];
+  readonly capabilityOperations: readonly CapabilityOperations<PlaybookOperation | OrgOperation>[];
   readonly check: ExpressionCheck;
   readonly facts: CapabilityFacts;
   readonly names: PlaybookOwnNames;
@@ -41,6 +41,10 @@ export interface WorkflowParts extends HostParts, ServedPages {
   readonly retryStateKeys: ServedCatalog['retryStateKeys'];
   readonly contentAddressKey: ServedCatalog['contentAddressKey'];
   readonly shippedFiles: ShippedFiles;
+}
+
+function isOrgOperation(operation: PlaybookOperation | OrgOperation): operation is OrgOperation {
+  return operation.registration.scope === 'org';
 }
 
 export function longestCallOf(capabilities: readonly Pick<Capability, 'longestAnyRunMs'>[]): number {
@@ -64,13 +68,14 @@ function catalogsOf(
 ) {
   const catalogOf = (
     definitionOperations: ReturnType<typeof playbookOperationsServing>,
-    capabilityOperations: readonly PlaybookOperation[],
+    capabilityOperations: readonly (PlaybookOperation | OrgOperation)[],
   ) =>
     makeCatalog([
       ...parts.orgOperations,
+      ...capabilityOperations.filter((operation) => isOrgOperation(operation)),
       ...definitionOperations,
       ...parts.playbookOperations,
-      ...capabilityOperations,
+      ...capabilityOperations.filter((operation) => !isOrgOperation(operation)),
       sendRunEvent,
     ]);
   return {

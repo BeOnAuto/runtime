@@ -37,8 +37,8 @@ grep --quiet '"id":"smoke","name":"Smoke test"' listed.txt
 test "$(answered read.json --header "authorization: Bearer $key" http://127.0.0.1:$port/v1/orgs/demo/playbooks/smoke)" = 200
 grep --quiet '"id":"smoke","name":"Smoke test"' read.json
 call_mcp /mcp '{"jsonrpc":"2.0","id":4,"method":"tools/list"}' all-tools.txt
-test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 40
-for tool in list_models list_runs get_event list_playbook_events publish_event search introspect dry_run query_connection execute_connection list_connection_tools list_interactions answer_interaction get_asset send_run_event cancel_run get_guide; do
+test "$(grep --only-matching '"name":"[a-z_]*","title"' all-tools.txt | wc -l)" -eq 41
+for tool in list_models list_generation_models list_runs get_event list_playbook_events publish_event search introspect dry_run query_connection execute_connection list_connection_tools list_interactions answer_interaction get_asset send_run_event cancel_run get_guide; do
   grep --quiet "\"name\":\"$tool\"" all-tools.txt
 done
 call_mcp /mcp '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"list_definitions","arguments":{"playbook":"smoke","type":"reasoning"}}}' definitions.txt

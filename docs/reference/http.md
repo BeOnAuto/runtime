@@ -179,11 +179,14 @@ A part adds no parameter: a comment on a part opens the page of its thing, and S
 
 ## Models
 
-| Operation     | Method and route            | Permission | Input               |
-| ------------- | --------------------------- | ---------- | ------------------- |
-| `list_models` | `GET /v1/orgs/{org}/models` | `org:read` | Optional `provider` |
+| Operation                | Method and route                       | Permission | Input               |
+| ------------------------ | -------------------------------------- | ---------- | ------------------- |
+| `list_models`            | `GET /v1/orgs/{org}/models`            | `org:read` | Optional `provider` |
+| `list_generation_models` | `GET /v1/orgs/{org}/generation-models` | `org:read` | Optional `kind`     |
 
-`provider` is a provider prefix of 1 to 32 lowercase letters, digits or hyphens, starting with a letter. The result is the same over HTTP and MCP; [Model information](mcp.md#model-information) describes its fields, aliases, wildcard entries and incomplete lists.
+`list_models` lists the models a reasoning function may name. `provider` is a provider prefix of 1 to 32 lowercase letters, digits or hyphens, starting with a letter. The result is the same over HTTP and MCP; [Model information](mcp.md#model-information) describes its fields, aliases, wildcard entries and incomplete lists.
+
+`list_generation_models` lists the models a generation function may name, with the gateways it names them through. `kind` is `image`, `audio` or `video`. [Generation models](mcp.md#generation-models) describes its result.
 
 ## Voice
 

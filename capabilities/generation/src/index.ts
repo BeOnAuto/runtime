@@ -21,6 +21,7 @@ export {
 export type { GenerationFunctionDefinitionDocument } from './document/generation-document.ts';
 export { assetsDue, type AssetsDue, type ExpiryParts } from './expiry/assets-due.ts';
 export { defineGetAsset } from './operations/get-asset.ts';
+export { defineListGenerationModels } from './operations/list-generation-models.ts';
 export { generationsDue, type GenerationsDue } from './waiting/generations-due.ts';
 export type { WaitingLedger, WaitingParts } from './waiting/waiting-parts.ts';
 export { generationsWaiting, generationsWaitingName } from './waiting/waiting-rows.ts';

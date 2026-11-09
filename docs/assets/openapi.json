@@ -29,7 +29,7 @@
     },
     {
       "name": "models",
-      "description": "The models this server can call, which a reasoning function names"
+      "description": "The models this server can call, which a reasoning function names, and those a generation function may name"
     },
     {
       "name": "voice",
@@ -12255,6 +12255,236 @@
           {
             "openIdConnect": [
               "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/generation-models": {
+      "get": {
+        "operationId": "list_generation_models",
+        "summary": "List generation models",
+        "description": "Lists the models a generation function may name, from this server's catalogue, with what each produces and takes, and the gateways a function names a model through. A function names its model as gateway/model, such as auto/openai/gpt-image-2. A retired model is listed so a saved function that names it can be explained; it is not one to name. Use it before a generation function names its model or its parameters.",
+        "tags": [
+          "models"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "image",
+                "audio",
+                "video"
+              ],
+              "description": "Lists only the models that produce this kind: image, audio or video"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/list_generation_models/output",
+                  "type": "object",
+                  "properties": {
+                    "object": {
+                      "type": "string",
+                      "enum": [
+                        "list"
+                      ]
+                    },
+                    "gateways": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The gateways of MODEL_GATEWAYS a function names its model through, by name; none where none is set"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "model": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "image",
+                              "audio",
+                              "video"
+                            ]
+                          },
+                          "media_types": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "The media types of the assets it takes as references"
+                          },
+                          "limits": {
+                            "type": "object",
+                            "properties": {
+                              "sizes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "aspects": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "qualities": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "voices": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "formats": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "seconds": {
+                                "type": "object",
+                                "properties": {
+                                  "least": {
+                                    "type": "integer"
+                                  },
+                                  "most": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "least",
+                                  "most"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "prompt_characters": {
+                                "type": "integer"
+                              },
+                              "references": {
+                                "type": "object",
+                                "properties": {
+                                  "most": {
+                                    "type": "integer"
+                                  },
+                                  "bytes": {
+                                    "type": "integer"
+                                  }
+                                },
+                                "required": [
+                                  "most",
+                                  "bytes"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "prompt_characters"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The values each parameter takes, the seconds it makes and the references it takes"
+                          },
+                          "retired": {
+                            "type": "object",
+                            "properties": {
+                              "on": {
+                                "type": "string"
+                              },
+                              "replacement": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "on",
+                              "replacement"
+                            ],
+                            "additionalProperties": false,
+                            "description": "The day it retired, YYYY-MM-DD, and the model that replaces it"
+                          }
+                        },
+                        "required": [
+                          "model",
+                          "kind",
+                          "media_types",
+                          "limits"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "The models of the catalogue, sorted by model, those that produce kind where it is given"
+                    }
+                  },
+                  "required": [
+                    "object",
+                    "gateways",
+                    "data"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:read"
             ]
           }
         ]

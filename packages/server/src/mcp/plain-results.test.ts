@@ -125,6 +125,7 @@ async function playbooksCalled(session: McpSession): Promise<Called> {
     ['update_playbook', await session.callTool('update_playbook', { ...describing, description: 'Answers questions' })],
     ['get_playbook', await session.callTool('get_playbook', { playbook: 'sales' })],
     ['list_models', await session.callTool('list_models', {})],
+    ['list_generation_models', await session.callTool('list_generation_models', {})],
   ];
 }
 
