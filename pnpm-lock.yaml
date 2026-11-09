@@ -1460,12 +1460,18 @@ importers:
       '@on.auto/definitions':
         specifier: workspace:*
         version: link:../packages/definitions
+      '@on.auto/providers':
+        specifier: workspace:*
+        version: link:../packages/providers
       '@on.auto/reasoning':
         specifier: workspace:*
         version: link:../capabilities/reasoning
       '@on.auto/server':
         specifier: workspace:*
         version: link:../packages/server
+      '@on.auto/shipped-files':
+        specifier: workspace:*
+        version: link:../packages/shipped-files
       effect:
         specifier: 'catalog:'
         version: 4.0.0

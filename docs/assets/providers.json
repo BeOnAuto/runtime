@@ -1,0 +1,2416 @@
+{
+  "schema": 1,
+  "source": "@on.auto/providers",
+  "providers": [
+    {
+      "name": "adobe-analytics",
+      "title": "Adobe Analytics",
+      "description": "Run Adobe Analytics reports and top-item reports, read report suites, dimensions, metrics, segments, calculated metrics, date ranges and projects, and create segments, through the Analytics 2.0 API.",
+      "website": "https://developer.adobe.com/analytics-apis/docs/2.0/",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "analytics.adobe.io"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "client_credentials",
+          "description": "The client id and secret of a Server-to-Server credential of an Adobe Developer Console project with the Adobe Analytics API.",
+          "scopes": [
+            {
+              "scope": "openid",
+              "says": "Read the unique identifier of the Adobe account the connection signs in as."
+            },
+            {
+              "scope": "session",
+              "says": "Keep a session at Adobe IMS for the technical account of the credential."
+            },
+            {
+              "scope": "AdobeID",
+              "says": "Act as the Adobe ID of the account in calls to Adobe APIs."
+            },
+            {
+              "scope": "read_organizations",
+              "says": "Read the Adobe organizations the account belongs to."
+            },
+            {
+              "scope": "additional_info.projectedProductContext",
+              "says": "Read the Adobe product profiles and Adobe Analytics permissions of the account."
+            }
+          ]
+        },
+        {
+          "kind": "authorization",
+          "description": "Sign in with your Adobe ID and allow Adobe Analytics.",
+          "scopes": [
+            {
+              "scope": "openid",
+              "says": "Read the unique identifier of the Adobe account the connection signs in as."
+            },
+            {
+              "scope": "AdobeID",
+              "says": "Act as the Adobe ID of the account in calls to Adobe APIs."
+            },
+            {
+              "scope": "read_organizations",
+              "says": "Read the Adobe organizations the account belongs to."
+            },
+            {
+              "scope": "additional_info.projectedProductContext",
+              "says": "Read the Adobe product profiles and Adobe Analytics permissions of the account."
+            },
+            {
+              "scope": "additional_info.job_function",
+              "says": "Read the job function in the Adobe profile of the account."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to Adobe Analytics when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "global_company_id",
+          "description": "Your global company ID, which https://analytics.adobe.io/discovery/me answers.",
+          "required": true
+        }
+      ],
+      "tools": [
+        {
+          "name": "findCalculatedMetrics",
+          "mark": "reads"
+        },
+        {
+          "name": "getDateRanges_1",
+          "mark": "reads"
+        },
+        {
+          "name": "dimensions_getDimensions",
+          "mark": "reads"
+        },
+        {
+          "name": "getMetrics",
+          "mark": "reads"
+        },
+        {
+          "name": "projects_getProjects",
+          "mark": "reads"
+        },
+        {
+          "name": "runReport",
+          "mark": "reads"
+        },
+        {
+          "name": "runTopItemReport",
+          "mark": "reads"
+        },
+        {
+          "name": "segments_getSegments",
+          "mark": "reads"
+        },
+        {
+          "name": "segments_createSegment",
+          "mark": "acts"
+        },
+        {
+          "name": "segments_getSegment",
+          "mark": "reads"
+        },
+        {
+          "name": "getCurrentUser",
+          "mark": "reads"
+        },
+        {
+          "name": "getSuites_1",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "adobe-analytics-mcp",
+      "title": "Adobe Analytics MCP",
+      "description": "Ask Adobe Analytics about report suites, dimensions, metrics and reports through Adobe's Analytics MCP server, with the access the product profile of the person who connects gives. The connection ends with its sign-in, which issues no refresh token.",
+      "website": "https://developer.adobe.com/analytics-mcp/docs/guides/",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "aa-mcp.adobe.io"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with your Adobe ID and allow the Analytics MCP server.",
+          "scopes": [
+            {
+              "scope": "openid",
+              "says": "Read the unique identifier of the Adobe account the connection signs in as."
+            },
+            {
+              "scope": "AdobeID",
+              "says": "Act as the Adobe ID of the account in calls to Adobe APIs."
+            },
+            {
+              "scope": "additional_info.projectedProductContext",
+              "says": "Read the Adobe product profiles and Adobe Analytics permissions of the account."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "amazon-ads",
+      "title": "Amazon Ads",
+      "description": "Read and change Amazon Ads campaigns, ad groups and targets, read ads, advertiser accounts and recommendations, and request reports. A connection without an advertiser account lists the accounts, and one with an account acts on it. A report's file is a download a call does not fetch.",
+      "website": "https://advertising.amazon.com/API/docs/en-us/guides/onboarding/overview",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "advertising-api.amazon.com",
+          "advertising-api-eu.amazon.com",
+          "advertising-api-fe.amazon.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with Amazon and allow Amazon Ads campaign management.",
+          "scopes": [
+            {
+              "scope": "advertising::campaign_management",
+              "says": "Read and manage the campaigns, ad groups, ads, targets and reports of Amazon Ads advertiser accounts."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "region",
+          "description": "The region of your advertiser account, which sets the host of the Amazon Ads API and the Login with Amazon hosts a person signs in at and the tokens come from.",
+          "required": true,
+          "choices": [
+            {
+              "value": "na",
+              "title": "North America"
+            },
+            {
+              "value": "eu",
+              "title": "Europe"
+            },
+            {
+              "value": "fe",
+              "title": "Far East"
+            }
+          ]
+        },
+        {
+          "name": "account_id",
+          "description": "The ID of the Amazon Ads advertiser account the connection acts on, which QueryAdvertiserAccount lists; leave it empty to connect without one and list the accounts.",
+          "required": false
+        }
+      ],
+      "tools": [
+        {
+          "name": "QueryAdvertiserAccount",
+          "mark": "reads"
+        },
+        {
+          "name": "QueryCampaign",
+          "mark": "reads"
+        },
+        {
+          "name": "QueryAdGroup",
+          "mark": "reads"
+        },
+        {
+          "name": "QueryAd",
+          "mark": "reads"
+        },
+        {
+          "name": "QueryTarget",
+          "mark": "reads"
+        },
+        {
+          "name": "UpdateCampaign",
+          "mark": "acts"
+        },
+        {
+          "name": "UpdateAdGroup",
+          "mark": "acts"
+        },
+        {
+          "name": "UpdateTarget",
+          "mark": "acts"
+        },
+        {
+          "name": "AdsApiv1CreateReport",
+          "mark": "acts"
+        },
+        {
+          "name": "AdsApiv1RetrieveReport",
+          "mark": "reads"
+        },
+        {
+          "name": "QueryRecommendation",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "amazon-ads-mcp",
+      "title": "Amazon Ads MCP",
+      "description": "Read and manage Amazon Ads campaigns, ad groups, ads, targets and reports through Amazon's Ads MCP server, in the region of your advertiser account.",
+      "website": "https://advertising.amazon.com/API/docs/en-us/mcp/get-started",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "advertising-ai.amazon.com",
+          "advertising-ai-eu.amazon.com",
+          "advertising-ai-fe.amazon.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with Amazon and allow Amazon Ads campaign management.",
+          "scopes": [
+            {
+              "scope": "advertising::campaign_management",
+              "says": "Read and manage the campaigns, ad groups, ads, targets and reports of Amazon Ads advertiser accounts."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "region",
+          "description": "The region of your advertiser account, which sets the host of the Amazon Ads MCP server.",
+          "required": true,
+          "choices": [
+            {
+              "value": "na",
+              "title": "North America"
+            },
+            {
+              "value": "eu",
+              "title": "Europe"
+            },
+            {
+              "value": "fe",
+              "title": "Far East"
+            }
+          ]
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "atlassian",
+      "title": "Atlassian",
+      "description": "Search and read Jira work items and Confluence pages, and create, update and comment on them, through Atlassian's MCP server, as the person who connects and with their permissions.",
+      "website": "https://support.atlassian.com/atlassian-ai-gateway/docs/get-started-with-the-atlassian-remote-mcp-server/",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.atlassian.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Atlassian, choose a site and allow Jira and Confluence.",
+          "scopes": [
+            {
+              "scope": "read:me",
+              "says": "Read the Atlassian profile of the person who connects."
+            },
+            {
+              "scope": "read:account",
+              "says": "Read the profiles of Atlassian users."
+            },
+            {
+              "scope": "email",
+              "says": "Read the email address of the Atlassian account that connects."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to Jira and Confluence when nobody is signed in."
+            },
+            {
+              "scope": "read:jira:agent-interface",
+              "says": "Read Jira work items, projects, boards, sprints, comments, worklogs and attachments."
+            },
+            {
+              "scope": "search:jira:agent-interface",
+              "says": "Search Jira work items with JQL."
+            },
+            {
+              "scope": "read:confluence:agent-interface",
+              "says": "Read Confluence pages, spaces, comments, attachments and versions."
+            },
+            {
+              "scope": "search:confluence:agent-interface",
+              "says": "Search Confluence content with CQL."
+            },
+            {
+              "scope": "write:jira:agent-interface",
+              "says": "Create and change Jira work items, comments, worklogs, links, versions, sprints and boards."
+            },
+            {
+              "scope": "write:confluence:agent-interface",
+              "says": "Create, change, move and archive Confluence pages, spaces, comments, labels and permissions."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "buffer",
+      "title": "Buffer",
+      "description": "Read the channels, posts, ideas and post metrics of every Buffer organization the person who connects belongs to, and schedule or publish posts and save ideas, as that person, through Buffer's MCP server. It connects with an API key, since Buffer's sign-in takes the apps Buffer lists alone.",
+      "website": "https://developers.buffer.com/guides/integrations/mcp.html",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.buffer.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "secret",
+          "description": "Buffer API key",
+          "key_page": "https://publish.buffer.com/settings/api",
+          "instructions": "Make a key in Buffer at [Settings, API](https://publish.buffer.com/settings/api): open the **Personal Access** tab, select **+ New Key** under **Keys**, name the key, leave every permission ticked, choose when it expires and select **Generate API Key**. Only the owner of a Buffer organization can make one, and the key reaches your whole Buffer account. Copy it when Buffer shows it."
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "campaign-manager-360",
+      "title": "Campaign Manager 360",
+      "description": "Create, run and list Campaign Manager 360 reports and their files, query dimension values and compatible fields, and read user profiles, campaigns, advertisers, placements, ads, creatives and sites. A report file's content is a download a call does not fetch.",
+      "website": "https://developers.google.com/doubleclick-advertisers/getting_started",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "dfareporting.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Campaign Manager 360 reporting and trafficking.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/dfareporting",
+              "says": "Read and manage Campaign Manager 360 reports."
+            },
+            {
+              "scope": "https://www.googleapis.com/auth/dfatrafficking",
+              "says": "Read and manage Campaign Manager 360 display ad campaigns."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "dfareporting.userProfiles.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.userProfiles.get",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.reports.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.reports.insert",
+          "mark": "acts"
+        },
+        {
+          "name": "dfareporting.reports.get",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.reports.run",
+          "mark": "acts"
+        },
+        {
+          "name": "dfareporting.reports.files.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.reports.files.get",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.files.get",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.dimensionValues.query",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.reports.compatibleFields.query",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.campaigns.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.campaigns.get",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.advertisers.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.placements.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.ads.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.creatives.list",
+          "mark": "reads"
+        },
+        {
+          "name": "dfareporting.sites.list",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "display-video-360",
+      "title": "Display & Video 360",
+      "description": "Read Display & Video 360 partners, advertisers, campaigns, insertion orders, line items, ad groups and creatives, and change campaigns, insertion orders and line items.",
+      "website": "https://developers.google.com/display-video/api/guides/quickstart/overview",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "displayvideo.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Display & Video 360.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/display-video",
+              "says": "See, create, change and permanently delete Display & Video 360 entities and reports."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "displayvideo.partners.list",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.list",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.get",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.campaigns.list",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.campaigns.get",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.campaigns.patch",
+          "mark": "acts"
+        },
+        {
+          "name": "displayvideo.advertisers.insertionOrders.list",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.insertionOrders.get",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.insertionOrders.patch",
+          "mark": "acts"
+        },
+        {
+          "name": "displayvideo.advertisers.lineItems.list",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.lineItems.get",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.lineItems.patch",
+          "mark": "acts"
+        },
+        {
+          "name": "displayvideo.advertisers.adGroups.list",
+          "mark": "reads"
+        },
+        {
+          "name": "displayvideo.advertisers.creatives.list",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "display-video-360-reports",
+      "title": "Display & Video 360 Reports",
+      "description": "Create, run, list and remove Display & Video 360 report queries, and read their reports and status, through the Bid Manager API. A report's file sits in Cloud Storage, which a call does not fetch.",
+      "website": "https://developers.google.com/bid-manager/guides/get-started/overview",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "doubleclickbidmanager.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Display & Video 360 reporting.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/doubleclickbidmanager",
+              "says": "Read and manage Display & Video 360 reports in Bid Manager."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "doubleclickbidmanager.queries.list",
+          "mark": "reads"
+        },
+        {
+          "name": "doubleclickbidmanager.queries.create",
+          "mark": "acts"
+        },
+        {
+          "name": "doubleclickbidmanager.queries.get",
+          "mark": "reads"
+        },
+        {
+          "name": "doubleclickbidmanager.queries.delete",
+          "mark": "acts"
+        },
+        {
+          "name": "doubleclickbidmanager.queries.run",
+          "mark": "acts"
+        },
+        {
+          "name": "doubleclickbidmanager.queries.reports.list",
+          "mark": "reads"
+        },
+        {
+          "name": "doubleclickbidmanager.queries.reports.get",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "github",
+      "title": "GitHub",
+      "description": "Read repositories, files and commits, and read, open and update issues and pull requests and their comments and reviews on GitHub, through GitHub's MCP server.",
+      "website": "https://docs.github.com/en/copilot/how-tos/copilot-in-your-ide/customize-copilot/extend-copilot-with-tools-and-context/set-up-the-github-mcp-server",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "api.githubcopilot.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to GitHub and allow access to your repositories.",
+          "scopes": [
+            {
+              "scope": "read:org",
+              "says": "Read organization membership, organization projects and team membership."
+            },
+            {
+              "scope": "repo",
+              "says": "Manage all repositories with collaborators, invitations and webhooks, and organization projects and team memberships."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        },
+        {
+          "kind": "secret",
+          "description": "GitHub fine-grained personal access token",
+          "key_page": "https://github.com/settings/personal-access-tokens/new",
+          "instructions": "Make a token at [GitHub](https://github.com/settings/personal-access-tokens/new), under **Settings**, **Developer settings**, **Personal access tokens**, **Fine-grained tokens**. As **Resource owner**, choose the account or organization that owns the repositories, and under **Repository access** select the repositories your functions use. Under **Permissions**, give **Contents** read-only access, and **Issues** and **Pull requests** read and write access. An organization that requires approval keeps the token pending, reading public resources alone, until an organization administrator approves it. The token starts with `github_pat_`."
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "gmail",
+      "title": "Gmail",
+      "description": "Search and read Gmail threads and their messages, and list drafts and labels. It drafts, labels and sends no mail, since it asks the scope that reads alone. Google classifies its scope, gmail.readonly, as restricted.",
+      "website": "https://developers.google.com/workspace/gmail/api/reference/rest",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "gmail.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Gmail.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/gmail.readonly",
+              "says": "Read Gmail messages, threads, drafts, labels and settings."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "gmail.users.threads.list",
+          "mark": "reads"
+        },
+        {
+          "name": "gmail.users.threads.get",
+          "mark": "reads"
+        },
+        {
+          "name": "gmail.users.messages.list",
+          "mark": "reads"
+        },
+        {
+          "name": "gmail.users.messages.get",
+          "mark": "reads"
+        },
+        {
+          "name": "gmail.users.drafts.list",
+          "mark": "reads"
+        },
+        {
+          "name": "gmail.users.labels.list",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-ads",
+      "title": "Google Ads",
+      "description": "Query Google Ads accounts with its query language, list the customers and report fields you can reach, and create or change campaign budgets, campaigns, ad groups and ad group criteria such as keywords.",
+      "website": "https://developers.google.com/google-ads/api/docs/get-started/introduction",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "googleads.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Google Ads.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/adwords",
+              "says": "See, create, change and delete Google Ads accounts and data."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "manager_id",
+          "description": "The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.",
+          "required": false
+        }
+      ],
+      "tools": [
+        {
+          "name": "googleads.customers.listAccessibleCustomers",
+          "mark": "reads"
+        },
+        {
+          "name": "googleads.customers.googleAds.search",
+          "mark": "reads"
+        },
+        {
+          "name": "googleads.customers.googleAds.searchStream",
+          "mark": "reads"
+        },
+        {
+          "name": "googleads.googleAdsFields.search",
+          "mark": "reads"
+        },
+        {
+          "name": "googleads.googleAdsFields.get",
+          "mark": "reads"
+        },
+        {
+          "name": "googleads.customers.googleAds.mutate",
+          "mark": "acts"
+        },
+        {
+          "name": "googleads.customers.campaigns.mutate",
+          "mark": "acts"
+        },
+        {
+          "name": "googleads.customers.campaignBudgets.mutate",
+          "mark": "acts"
+        },
+        {
+          "name": "googleads.customers.adGroups.mutate",
+          "mark": "acts"
+        },
+        {
+          "name": "googleads.customers.adGroupCriteria.mutate",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-analytics",
+      "title": "Google Analytics",
+      "description": "Run Google Analytics 4 reports, pivot, batch and realtime reports, check which dimensions and metrics go together, read a property's metadata, and create and read audience exports, for any property you can read.",
+      "website": "https://developers.google.com/analytics/devguides/reporting/data/v1",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "analyticsdata.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Google Analytics reporting.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/analytics.readonly",
+              "says": "See and download Google Analytics data."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "analyticsdata.properties.runReport",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.runPivotReport",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.batchRunReports",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.batchRunPivotReports",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.runRealtimeReport",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.checkCompatibility",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.getMetadata",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.audienceExports.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.audienceExports.create",
+          "mark": "acts"
+        },
+        {
+          "name": "analyticsdata.properties.audienceExports.get",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsdata.properties.audienceExports.query",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-analytics-admin",
+      "title": "Google Analytics Admin",
+      "description": "Read Google Analytics accounts, properties, data streams, custom dimensions, custom metrics and key events, and run data access reports.",
+      "website": "https://developers.google.com/analytics/devguides/config/admin/v1",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "analyticsadmin.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Google Analytics administration.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/analytics.readonly",
+              "says": "See and download Google Analytics data."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "analyticsadmin.accountSummaries.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.accounts.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.properties.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.properties.get",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.properties.dataStreams.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.properties.customDimensions.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.properties.customMetrics.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.properties.keyEvents.list",
+          "mark": "reads"
+        },
+        {
+          "name": "analyticsadmin.properties.runAccessReport",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-docs",
+      "title": "Google Docs",
+      "description": "Read Google Docs documents and update their content.",
+      "website": "https://developers.google.com/workspace/docs/api/reference/rest",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "docs.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Google Docs.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/documents.readonly",
+              "says": "See all Google Docs documents."
+            },
+            {
+              "scope": "https://www.googleapis.com/auth/documents",
+              "says": "See, change, create and delete all Google Docs documents."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "docs.documents.get",
+          "mark": "reads"
+        },
+        {
+          "name": "docs.documents.batchUpdate",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-drive",
+      "title": "Google Drive",
+      "description": "Searches, lists and reads every file of the person's Google Drive, text included, exporting Docs, Sheets and Slides as text, through drive.readonly, which Google restricts, and creates empty files and copies files, writing only the files Auto creates, through drive.file.",
+      "website": "https://developers.google.com/workspace/drive/api/reference/rest/v3",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "www.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow every Google Drive file to be read, and the files Auto creates to be changed.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/drive.readonly",
+              "says": "See and download every file of the person's Google Drive."
+            },
+            {
+              "scope": "https://www.googleapis.com/auth/drive.file",
+              "says": "See, change, create and delete only the Google Drive files opened or created through this connection."
+            }
+          ],
+          "more": [
+            {
+              "name": "edit",
+              "for": "Change and delete files you already have.",
+              "scopes": [
+                {
+                  "scope": "https://www.googleapis.com/auth/drive",
+                  "says": "See, change, create and delete every file of the person's Google Drive."
+                }
+              ]
+            }
+          ],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "drive.files.list",
+          "mark": "reads"
+        },
+        {
+          "name": "drive.files.create",
+          "mark": "acts"
+        },
+        {
+          "name": "drive.files.get",
+          "mark": "reads"
+        },
+        {
+          "name": "drive.permissions.list",
+          "mark": "reads"
+        },
+        {
+          "name": "drive.files.export",
+          "mark": "reads"
+        },
+        {
+          "name": "drive.files.copy",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-search-console",
+      "title": "Google Search Console",
+      "description": "Query clicks, impressions, click-through rates and positions, inspect how Google indexes a URL, list sitemaps, and add or remove properties. It reaches domain properties, named sc-domain:example.com, and URL-prefix properties, named with their scheme and trailing slash, https://www.example.com/.",
+      "website": "https://developers.google.com/webmaster-tools",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "searchconsole.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Search Console.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/webmasters",
+              "says": "Read and manage Search Console data of verified sites."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "webmasters.searchanalytics.query",
+          "mark": "reads"
+        },
+        {
+          "name": "webmasters.sites.list",
+          "mark": "reads"
+        },
+        {
+          "name": "webmasters.sites.get",
+          "mark": "reads"
+        },
+        {
+          "name": "webmasters.sites.add",
+          "mark": "acts"
+        },
+        {
+          "name": "webmasters.sites.delete",
+          "mark": "acts"
+        },
+        {
+          "name": "webmasters.sitemaps.list",
+          "mark": "reads"
+        },
+        {
+          "name": "searchconsole.urlInspection.index.inspect",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-sheets",
+      "title": "Google Sheets",
+      "description": "Read spreadsheets and cell values in Google Sheets, update values and formulas, insert rows and columns, and change their sheets, ranges and properties.",
+      "website": "https://developers.google.com/workspace/sheets/api/reference/rest",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "sheets.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Google Sheets.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/spreadsheets.readonly",
+              "says": "See all Google Sheets spreadsheets."
+            },
+            {
+              "scope": "https://www.googleapis.com/auth/spreadsheets",
+              "says": "See, change, create and delete all Google Sheets spreadsheets."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "sheets.spreadsheets.get",
+          "mark": "reads"
+        },
+        {
+          "name": "sheets.spreadsheets.values.get",
+          "mark": "reads"
+        },
+        {
+          "name": "sheets.spreadsheets.values.update",
+          "mark": "acts"
+        },
+        {
+          "name": "sheets.spreadsheets.values.append",
+          "mark": "acts"
+        },
+        {
+          "name": "sheets.spreadsheets.values.batchUpdate",
+          "mark": "acts"
+        },
+        {
+          "name": "sheets.spreadsheets.batchUpdate",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "google-slides",
+      "title": "Google Slides",
+      "description": "Read Google Slides presentations and update them.",
+      "website": "https://developers.google.com/workspace/slides/api/reference/rest",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "slides.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Google Slides.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/presentations.readonly",
+              "says": "See all Google Slides presentations."
+            },
+            {
+              "scope": "https://www.googleapis.com/auth/presentations",
+              "says": "See, change, create and delete all Google Slides presentations."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "slides.presentations.get",
+          "mark": "reads"
+        },
+        {
+          "name": "slides.presentations.batchUpdate",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "hubspot",
+      "title": "HubSpot",
+      "description": "Read and change contacts, companies, deals, tickets, line items, products, activities, campaigns, segments and landing pages, and read invoices, owners and conversations, as the person who connects, through HubSpot's MCP server, which gives this runtime no blog or website tools.",
+      "website": "https://developers.hubspot.com/docs/apps/developer-platform/build-apps/integrate-with-the-remote-hubspot-mcp-server",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.hubspot.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to HubSpot, choose an account and allow access.",
+          "scopes": [],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "linear",
+      "title": "Linear",
+      "description": "Find, create and update Linear issues, projects and comments, in the workspace the person who connects chooses, as that person, through Linear's MCP server.",
+      "website": "https://linear.app/docs/mcp",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.linear.app"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Linear, choose a workspace and allow access.",
+          "scopes": [
+            {
+              "scope": "read",
+              "says": "Read the issues, projects, comments, teams and other data the Linear account can see."
+            },
+            {
+              "scope": "write",
+              "says": "Create, change, archive and delete issues, projects, comments and other data as the Linear account."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "linkedin",
+      "title": "LinkedIn",
+      "description": "Read who you are at LinkedIn, create posts of text alone or with an article, delete them, and comment on and react to posts, as yourself, through the LinkedIn API; no post is read, since LinkedIn grants reading posts to the apps it approves alone.",
+      "website": "https://learn.microsoft.com/en-us/linkedin/consumer/integrations/self-serve/share-on-linkedin",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "api.linkedin.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to LinkedIn and allow posting as you.",
+          "scopes": [
+            {
+              "scope": "openid",
+              "says": "Read the member id that confirms the LinkedIn member who connects."
+            },
+            {
+              "scope": "profile",
+              "says": "Read the name and photo of the LinkedIn member who connects."
+            },
+            {
+              "scope": "email",
+              "says": "Read the primary email address of the LinkedIn account of the member who connects."
+            },
+            {
+              "scope": "w_member_social",
+              "says": "Create, change and delete posts, comments and reactions as the LinkedIn member who connects."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "get_userinfo",
+          "mark": "reads"
+        },
+        {
+          "name": "create_post",
+          "mark": "acts"
+        },
+        {
+          "name": "delete_post",
+          "mark": "acts"
+        },
+        {
+          "name": "create_comment",
+          "mark": "acts"
+        },
+        {
+          "name": "create_reaction",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "microsoft-advertising",
+      "title": "Microsoft Advertising",
+      "description": "Read Microsoft Advertising accounts, campaigns, ad groups, ads, keywords and performance for the accounts you can reach, through Microsoft's Advertising MCP server.",
+      "website": "https://learn.microsoft.com/en-us/advertising/guides/mcp-setup?view=bingads-13",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "partner.api.bingads.microsoft.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with the Microsoft account you use for Microsoft Advertising and allow access.",
+          "scopes": [
+            {
+              "scope": "https://ads.microsoft.com/msads.manage",
+              "says": "Manage the Microsoft Advertising accounts of the person who connects."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to Microsoft Advertising when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "microsoft-teams",
+      "title": "Microsoft Teams",
+      "description": "List the Microsoft Teams teams the person is in and their channels, send channel messages, list chats, and read and send chat messages, as the person who connects, through Microsoft Graph. It reads no channel's messages, whose scope always needs an administrator's consent.",
+      "website": "https://learn.microsoft.com/en-us/graph/auth-v2-user",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "graph.microsoft.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with your work account and allow access to your teams, channels and chats. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for chats.",
+          "scopes": [
+            {
+              "scope": "Team.ReadBasic.All",
+              "says": "Read the names and descriptions of teams in Microsoft Teams."
+            },
+            {
+              "scope": "Channel.ReadBasic.All",
+              "says": "Read the names and descriptions of channels in Microsoft Teams."
+            },
+            {
+              "scope": "ChannelMessage.Send",
+              "says": "Send channel messages in Microsoft Teams."
+            },
+            {
+              "scope": "Chat.Read",
+              "says": "Read the one-to-one and group chat messages of the person who connects in Microsoft Teams."
+            },
+            {
+              "scope": "ChatMessage.Send",
+              "says": "Send one-to-one and group chat messages in Microsoft Teams."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to Microsoft Teams when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "me.ListJoinedTeams",
+          "mark": "reads"
+        },
+        {
+          "name": "teams.ListChannels",
+          "mark": "reads"
+        },
+        {
+          "name": "me.ListChats",
+          "mark": "reads"
+        },
+        {
+          "name": "chats.ListMessages",
+          "mark": "reads"
+        },
+        {
+          "name": "chats.CreateMessages",
+          "mark": "acts"
+        },
+        {
+          "name": "teams.channels.CreateMessages",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "notion",
+      "title": "Notion",
+      "description": "Search Notion and the sources connected to it, read pages and databases, and create, update, move and comment on them, in the workspace the person who connects chooses, as that person, through Notion's MCP server.",
+      "website": "https://developers.notion.com/guides/mcp/get-started-with-mcp",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.notion.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Notion, choose a workspace and allow access.",
+          "scopes": [
+            {
+              "scope": "default",
+              "says": "Search, read, create and change the pages and databases of the Notion workspace chosen."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "onedrive",
+      "title": "OneDrive, SharePoint and Excel",
+      "description": "List and search OneDrive, read file details, list folders, read Excel worksheets, ranges and tables, add worksheets and table rows, and list a SharePoint site's drives, as the person who connects, through Microsoft Graph. It fetches no file's bytes, but answers may carry a link that downloads one.",
+      "website": "https://learn.microsoft.com/en-us/graph/auth-v2-user",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "graph.microsoft.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with your work account and allow access to your files and the SharePoint sites you can read. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for files and sites.",
+          "scopes": [
+            {
+              "scope": "Files.ReadWrite.All",
+              "says": "Read, create, change and delete all OneDrive and SharePoint files the person who connects can reach."
+            },
+            {
+              "scope": "Sites.Read.All",
+              "says": "Read documents and list items in the SharePoint sites the person who connects can reach."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to OneDrive and SharePoint when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "me.GetDrive",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.drive.search",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.items.ListChildren",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.GetItems",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.items.workbook.ListWorksheets",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.range-b0fa",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.drive.items.driveItem.workbook.worksheets.workbookWorksheet.usedRange-5ff6",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.items.workbook.ListTables",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.items.workbook.tables.ListRows",
+          "mark": "reads"
+        },
+        {
+          "name": "sites.ListDrives",
+          "mark": "reads"
+        },
+        {
+          "name": "drives.drive.items.driveItem.workbook.worksheets.add",
+          "mark": "acts"
+        },
+        {
+          "name": "drives.drive.items.driveItem.workbook.tables.workbookTable.rows.add",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "outlook",
+      "title": "Outlook",
+      "description": "List, search and read Outlook mail and mail folders, send mail, reply and make drafts, and read the calendar between two dates and read, create, update and cancel events, as the person who connects, through Microsoft Graph.",
+      "website": "https://learn.microsoft.com/en-us/graph/auth-v2-user",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "graph.microsoft.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with your work account and allow access to your mail and calendar. Your tenant's consent policy may require an administrator to allow Auto once, as Microsoft's default policy for new tenants does for mail and calendar.",
+          "scopes": [
+            {
+              "scope": "Mail.ReadWrite",
+              "says": "Read, create, change and delete Outlook mail, without sending it."
+            },
+            {
+              "scope": "Mail.Send",
+              "says": "Send mail as the person who connects."
+            },
+            {
+              "scope": "Calendars.ReadWrite",
+              "says": "Read, create, change and delete events in Outlook calendars."
+            },
+            {
+              "scope": "User.Read",
+              "says": "Read the Microsoft profile of the person who connects, and basic company information."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to Outlook mail and calendars when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "me.ListMessages",
+          "mark": "reads"
+        },
+        {
+          "name": "me.CreateMessages",
+          "mark": "acts"
+        },
+        {
+          "name": "me.GetMessages",
+          "mark": "reads"
+        },
+        {
+          "name": "me.ListMailFolders",
+          "mark": "reads"
+        },
+        {
+          "name": "me.ListCalendarView",
+          "mark": "reads"
+        },
+        {
+          "name": "me.ListEvents",
+          "mark": "reads"
+        },
+        {
+          "name": "me.CreateEvents",
+          "mark": "acts"
+        },
+        {
+          "name": "me.GetEvents",
+          "mark": "reads"
+        },
+        {
+          "name": "me.UpdateEvents",
+          "mark": "acts"
+        },
+        {
+          "name": "me.sendMail",
+          "mark": "acts"
+        },
+        {
+          "name": "me.messages.message.reply",
+          "mark": "acts"
+        },
+        {
+          "name": "me.events.event.cancel",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "posthog",
+      "title": "PostHog",
+      "description": "Query PostHog's product and web analytics, session replays, error tracking, logs and data warehouse, and create and change insights, dashboards, feature flags, experiments and surveys, in the projects the person who connects reaches, as that person, through PostHog's MCP server.",
+      "website": "https://posthog.com/docs/model-context-protocol",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.posthog.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to PostHog and allow access to your organizations and projects.",
+          "scopes": [
+            {
+              "scope": "organization:read",
+              "says": "Read PostHog organizations."
+            },
+            {
+              "scope": "project:read",
+              "says": "Read PostHog projects and their settings."
+            },
+            {
+              "scope": "user:read",
+              "says": "Read PostHog user profiles."
+            },
+            {
+              "scope": "query:read",
+              "says": "Run queries over PostHog data."
+            },
+            {
+              "scope": "action:read",
+              "says": "Read PostHog actions."
+            },
+            {
+              "scope": "event_definition:read",
+              "says": "Read PostHog event definitions."
+            },
+            {
+              "scope": "property_definition:read",
+              "says": "Read PostHog property definitions."
+            },
+            {
+              "scope": "person:read",
+              "says": "Read PostHog persons and their properties."
+            },
+            {
+              "scope": "activity_log:read",
+              "says": "Read the PostHog activity log."
+            },
+            {
+              "scope": "web_analytics:read",
+              "says": "Read PostHog web analytics."
+            },
+            {
+              "scope": "heatmap:read",
+              "says": "Read PostHog heatmaps."
+            },
+            {
+              "scope": "session_recording:read",
+              "says": "Read PostHog session recordings."
+            },
+            {
+              "scope": "session_recording_playlist:read",
+              "says": "Read PostHog session recording playlists."
+            },
+            {
+              "scope": "error_tracking:read",
+              "says": "Read PostHog error tracking issues and settings."
+            },
+            {
+              "scope": "logs:read",
+              "says": "Read PostHog logs."
+            },
+            {
+              "scope": "warehouse_table:read",
+              "says": "Read the tables of the PostHog data warehouse."
+            },
+            {
+              "scope": "warehouse_view:read",
+              "says": "Read the views of the PostHog data warehouse."
+            },
+            {
+              "scope": "external_data_source:read",
+              "says": "Read the external data sources of the PostHog data warehouse."
+            },
+            {
+              "scope": "dashboard_template:read",
+              "says": "Read PostHog dashboard templates."
+            },
+            {
+              "scope": "insight:write",
+              "says": "Read, create, change and delete PostHog insights."
+            },
+            {
+              "scope": "dashboard:write",
+              "says": "Read, create, change and delete PostHog dashboards."
+            },
+            {
+              "scope": "feature_flag:write",
+              "says": "Read, create, change and delete PostHog feature flags."
+            },
+            {
+              "scope": "experiment:write",
+              "says": "Read, create, change and delete PostHog experiments."
+            },
+            {
+              "scope": "experiment_holdout:write",
+              "says": "Read, create, change and delete the holdouts of PostHog experiments."
+            },
+            {
+              "scope": "experiment_saved_metric:write",
+              "says": "Read, create, change and delete the saved metrics of PostHog experiments."
+            },
+            {
+              "scope": "survey:write",
+              "says": "Read, create, change and delete PostHog surveys."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "profound",
+      "title": "Profound",
+      "description": "Read how your brand appears in AI answers, its visibility, citations, sentiment and prompts, and the traffic AI agents send to your site, through Profound's MCP server.",
+      "website": "https://docs.tryprofound.com/mcp/overview",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.tryprofound.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Profound and allow access.",
+          "scopes": [
+            {
+              "scope": "openid",
+              "says": "Read the unique identifier of the Profound account that connects."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to Profound when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        },
+        {
+          "kind": "secret",
+          "description": "Profound API key",
+          "key_page": "https://platform.tryprofound.com/",
+          "instructions": "Make a key in the [Profound platform](https://platform.tryprofound.com/): select your organization's name at the top left, then **Settings**, and under **Account**, **API Keys**. In the **Create API Key** banner, name the key, choose when it expires and select **Create API Key**. API keys come with Profound's Enterprise plan, and a key reaches the data of every organization you belong to. Copy it now: Profound shows it once."
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "search-ads-360",
+      "title": "Search Ads 360",
+      "description": "Run Search Ads 360 reports with its query language, and list the accounts, report fields and custom columns you can read.",
+      "website": "https://developers.google.com/search-ads/reporting/overview",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "searchads360.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow Search Ads 360 reporting.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/doubleclicksearch",
+              "says": "Read and manage Search Ads 360 advertising data."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [
+        {
+          "name": "manager_id",
+          "description": "The customer ID of the manager account you reach other accounts through, ten digits without hyphens; leave it empty when you connect an account directly.",
+          "required": false
+        }
+      ],
+      "tools": [
+        {
+          "name": "searchads360.customers.searchAds360.search",
+          "mark": "reads"
+        },
+        {
+          "name": "searchads360.customers.listAccessibleCustomers",
+          "mark": "reads"
+        },
+        {
+          "name": "searchads360.searchAds360Fields.search",
+          "mark": "reads"
+        },
+        {
+          "name": "searchads360.searchAds360Fields.get",
+          "mark": "reads"
+        },
+        {
+          "name": "searchads360.customers.customColumns.list",
+          "mark": "reads"
+        },
+        {
+          "name": "searchads360.customers.customColumns.get",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "slack",
+      "title": "Slack",
+      "description": "Read Slack messages in public and private channels, direct messages and threads, look up people and channels, see reactions, and send and update messages and add reactions, as the person who connects, through the Slack Web API.",
+      "website": "https://docs.slack.dev/apis/web-api/",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "slack.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Slack and allow access as yourself.",
+          "scopes": [
+            {
+              "scope": "channels:read",
+              "says": "See basic information about public channels in a Slack workspace."
+            },
+            {
+              "scope": "groups:read",
+              "says": "See basic information about private channels the person who connects is in."
+            },
+            {
+              "scope": "im:read",
+              "says": "See basic information about the direct messages of the person who connects."
+            },
+            {
+              "scope": "mpim:read",
+              "says": "See basic information about the group direct messages of the person who connects."
+            },
+            {
+              "scope": "channels:history",
+              "says": "Read messages and other content in Slack public channels."
+            },
+            {
+              "scope": "groups:history",
+              "says": "Read messages and other content in private channels the person who connects is in."
+            },
+            {
+              "scope": "im:history",
+              "says": "Read messages and other content in the direct messages of the person who connects."
+            },
+            {
+              "scope": "mpim:history",
+              "says": "Read messages and other content in the group direct messages of the person who connects."
+            },
+            {
+              "scope": "users:read",
+              "says": "See the people in a Slack workspace."
+            },
+            {
+              "scope": "reactions:read",
+              "says": "See emoji reactions and the content they are on in Slack channels and conversations."
+            },
+            {
+              "scope": "chat:write",
+              "says": "Send Slack messages as the person who connects."
+            },
+            {
+              "scope": "reactions:write",
+              "says": "Add and change emoji reactions in Slack."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "auth_test",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_list",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_info",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_history",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_replies",
+          "mark": "reads"
+        },
+        {
+          "name": "users_list",
+          "mark": "reads"
+        },
+        {
+          "name": "users_info",
+          "mark": "reads"
+        },
+        {
+          "name": "chat_postMessage",
+          "mark": "acts"
+        },
+        {
+          "name": "chat_update",
+          "mark": "acts"
+        },
+        {
+          "name": "reactions_add",
+          "mark": "acts"
+        },
+        {
+          "name": "reactions_get",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "slack-bot",
+      "title": "Slack Bot",
+      "description": "Read channels, conversation history, threads, people and reactions, and post and update messages and add reactions as the bot of a Slack app installed in your workspace, through the Slack Web API.",
+      "website": "https://docs.slack.dev/apis/web-api/",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "slack.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "secret",
+          "description": "Slack bot token",
+          "key_page": "https://api.slack.com/apps",
+          "instructions": "Find the token in your Slack app's settings at [api.slack.com/apps](https://api.slack.com/apps): choose the app, then **OAuth & Permissions**. Under **Bot Token Scopes**, add `channels:read`, `channels:history`, `users:read`, `chat:write`, `reactions:read` and `reactions:write`, and `groups:read` and `groups:history` for private channels. Select **Install to Workspace** and **Allow**, then copy the token under **OAuth Tokens**. It starts with `xoxb-`."
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "auth_test",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_list",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_info",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_history",
+          "mark": "reads"
+        },
+        {
+          "name": "conversations_replies",
+          "mark": "reads"
+        },
+        {
+          "name": "users_list",
+          "mark": "reads"
+        },
+        {
+          "name": "users_info",
+          "mark": "reads"
+        },
+        {
+          "name": "chat_postMessage",
+          "mark": "acts"
+        },
+        {
+          "name": "chat_update",
+          "mark": "acts"
+        },
+        {
+          "name": "reactions_add",
+          "mark": "acts"
+        },
+        {
+          "name": "reactions_get",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "stripe",
+      "title": "Stripe",
+      "description": "Read and write with the Stripe API methods Stripe's MCP server supports, money movement among them, as the Stripe user who connects and for no connected account. Stripe asks that user to confirm certain writes, such as refunds and outbound payments, and a write they approve is asked again.",
+      "website": "https://docs.stripe.com/mcp",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "mcp.stripe.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Stripe and allow access to the accounts and sandboxes you choose.",
+          "scopes": [
+            {
+              "scope": "mcp",
+              "says": "Read and change Stripe data in the accounts and sandboxes chosen, with the permissions granted at sign-in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": true
+    },
+    {
+      "name": "work-iq",
+      "title": "Microsoft 365 Work IQ",
+      "description": "Read and search Outlook mail and calendar events and the rest of the person's Microsoft 365 data through Microsoft's Work IQ MCP server, as the person who connects, and send, move and change them where the tenant's Work IQ policy allows, which by default it does not.",
+      "website": "https://learn.microsoft.com/en-us/microsoft-365/copilot/extensibility/work-iq/mcp/overview",
+      "server": {
+        "type": "mcp",
+        "hosts": [
+          "workiq.svc.cloud.microsoft"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in with your work account and allow Work IQ.",
+          "scopes": [
+            {
+              "scope": "fdcc1f02-fc51-4226-8753-f668596af7f7/WorkIQAgent.Ask",
+              "says": "Ask Work IQ about Microsoft 365 mail, meetings, files and chats, and act on them where the tenant allows."
+            },
+            {
+              "scope": "offline_access",
+              "says": "Keep access to Work IQ when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "handles_money": false
+    },
+    {
+      "name": "x",
+      "title": "X",
+      "description": "Read who you are at X, create, edit and delete posts, and read a user's posts, their mentions and the posts of the last seven days a search matches, as yourself, through the X API, under your organization's own OAuth client, which X bills for each call.",
+      "website": "https://docs.x.com/fundamentals/developer-apps",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "api.x.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to X and allow posting as you, under your organization's own OAuth client.",
+          "scopes": [
+            {
+              "scope": "tweet.read",
+              "says": "Read every post the X account can see, those of protected accounts among them."
+            },
+            {
+              "scope": "tweet.write",
+              "says": "Create, edit, repost and delete posts as the X account that connects."
+            },
+            {
+              "scope": "users.read",
+              "says": "Read the profiles of every account the X account can see, protected accounts among them."
+            },
+            {
+              "scope": "offline.access",
+              "says": "Keep access to X when nobody is signed in."
+            }
+          ],
+          "more": [],
+          "own_client": true
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "getUsersMe",
+          "mark": "reads"
+        },
+        {
+          "name": "createPosts",
+          "mark": "acts"
+        },
+        {
+          "name": "deletePosts",
+          "mark": "acts"
+        },
+        {
+          "name": "getUsersPosts",
+          "mark": "reads"
+        },
+        {
+          "name": "getUsersMentions",
+          "mark": "reads"
+        },
+        {
+          "name": "searchPostsRecent",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "youtube",
+      "title": "YouTube",
+      "description": "Read a YouTube channel's details, its videos and their statistics, and its playlists and their items.",
+      "website": "https://developers.google.com/youtube/v3",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "youtube.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow YouTube to be read.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/youtube.readonly",
+              "says": "See the YouTube account, its channel, videos, playlists and their statistics."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "youtube.channels.list",
+          "mark": "reads"
+        },
+        {
+          "name": "youtube.playlists.list",
+          "mark": "reads"
+        },
+        {
+          "name": "youtube.playlistItems.list",
+          "mark": "reads"
+        },
+        {
+          "name": "youtube.videos.list",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "youtube-analytics",
+      "title": "YouTube Analytics",
+      "description": "Query YouTube Analytics reports of a channel's views, watch time, audience, traffic sources and, for a channel in the YouTube Partner Program, its estimated revenue, by day, video, country and the other dimensions YouTube offers.",
+      "website": "https://developers.google.com/youtube/analytics",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "youtubeanalytics.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow YouTube Analytics.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/yt-analytics.readonly",
+              "says": "See YouTube Analytics reports for YouTube content."
+            },
+            {
+              "scope": "https://www.googleapis.com/auth/yt-analytics-monetary.readonly",
+              "says": "See monetary and non-monetary YouTube Analytics reports for YouTube content."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "youtubeAnalytics.reports.query",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "youtube-management",
+      "title": "YouTube management",
+      "description": "Read the comments on a YouTube channel's videos and their replies, and update a video's title, description, tags, category, language, privacy, publish time, licence, embedding, audience, synthetic media label, recording date and translations, clearing what a call leaves out of a part it sends.",
+      "website": "https://developers.google.com/youtube/v3",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "youtube.googleapis.com"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Google and allow YouTube management.",
+          "scopes": [
+            {
+              "scope": "https://www.googleapis.com/auth/youtube.force-ssl",
+              "says": "See, change and permanently delete YouTube videos, ratings, comments and captions."
+            }
+          ],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "youtube.commentThreads.list",
+          "mark": "reads"
+        },
+        {
+          "name": "youtube.comments.list",
+          "mark": "reads"
+        },
+        {
+          "name": "youtube.videos.update",
+          "mark": "acts"
+        }
+      ],
+      "handles_money": false
+    },
+    {
+      "name": "zoom",
+      "title": "Zoom",
+      "description": "Read your Zoom meetings, past meetings and their participants, cloud recordings, transcript details and AI summaries, and Team Chat channels, messages and threads, and create and update meetings and send chat messages, as yourself. A recording's or transcript's file is not fetched.",
+      "website": "https://developers.zoom.us/docs/integrations/oauth/",
+      "server": {
+        "type": "openapi",
+        "hosts": [
+          "api.zoom.us"
+        ]
+      },
+      "ways": [
+        {
+          "kind": "authorization",
+          "description": "Sign in to Zoom and allow access to your meetings, recordings and Team Chat.",
+          "scopes": [],
+          "more": [],
+          "own_client": false
+        }
+      ],
+      "placeholders": [],
+      "tools": [
+        {
+          "name": "user",
+          "mark": "reads"
+        },
+        {
+          "name": "meetings",
+          "mark": "reads"
+        },
+        {
+          "name": "meetingCreate",
+          "mark": "acts"
+        },
+        {
+          "name": "meeting",
+          "mark": "reads"
+        },
+        {
+          "name": "meetingUpdate",
+          "mark": "acts"
+        },
+        {
+          "name": "pastMeetingDetails",
+          "mark": "reads"
+        },
+        {
+          "name": "pastMeetingParticipants",
+          "mark": "reads"
+        },
+        {
+          "name": "recordingsList",
+          "mark": "reads"
+        },
+        {
+          "name": "recordingGet",
+          "mark": "reads"
+        },
+        {
+          "name": "GetMeetingTranscript",
+          "mark": "reads"
+        },
+        {
+          "name": "Getameetingsummary",
+          "mark": "reads"
+        },
+        {
+          "name": "getChannels",
+          "mark": "reads"
+        },
+        {
+          "name": "getChatMessages",
+          "mark": "reads"
+        },
+        {
+          "name": "sendaChatMessage",
+          "mark": "acts"
+        },
+        {
+          "name": "retrieveThread",
+          "mark": "reads"
+        }
+      ],
+      "handles_money": false
+    }
+  ]
+}

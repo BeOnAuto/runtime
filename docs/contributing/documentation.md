@@ -94,6 +94,8 @@ Describe the checkout's implemented behavior precisely. Mark a planned capabilit
 
 The Auto website imports public Markdown, `assets/` and `nav.json` from a pinned runtime commit. Its own documentation index can replace this preview's `index.md`. The import excludes `engineering/`, `.vitepress`, generated output and tooling.
 
+Two of those assets are made from the runtime's code: `assets/brain-functions.json`, the function types, by `pnpm docs:taxonomy`, and `assets/providers.json`, the providers the runtime ships, by `pnpm docs:providers`. The website makes its function overview and its integration pages from them. `pnpm docs:check` fails while either differs from its source, so commit the regenerated asset with the change to the definitions or to a provider's entry.
+
 The website combines both sources in one build, with a shared sidebar and search. Imported pages link back to the corresponding public file through Edit this page. They are generated build inputs in the website; contributors edit the original here.
 
 Updating the website's source pin publishes approved documentation changes. Release documentation should match the runtime release; documentation-only corrections can update the pin without a new runtime release. Source links identify the imported revision.
