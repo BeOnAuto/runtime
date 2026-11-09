@@ -2078,7 +2078,7 @@ A connected connection is a tool server of its org: `search` lists it with `conn
 
 ## License
 
-A runtime without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month; with a key it runs on the credits of an org at Auto, starting each run itself against a license Auto signed and reporting what it started every hour. [License a self-hosted runtime](../self-host/licenses.md) sets out how a key is had and the ways to activate it, and the [self-hosted licensing reference](../self-host/licensing.md) how a licensed runtime runs. These routes are relative to `/v1/orgs/{org}`; the license covers the whole runtime, whatever org the route names.
+A [self-hosted runtime](../self-host.md) without a key runs 100 free runs, then at most 15 a UTC day and 75 a UTC calendar month; with a key it runs on the credits of an org at Auto, starting each run itself against a license Auto signed and reporting what it started every hour. [License a self-hosted runtime](../self-host/licenses.md) sets out how a key is had and the ways to activate it, and the [self-hosted licensing reference](../self-host/licensing.md) how a licensed runtime runs. These routes are relative to `/v1/orgs/{org}`; the license covers the whole runtime, whatever org the route names.
 
 | Operation             | Method and route                  | Permission                    | Input                                                                                          |
 | --------------------- | --------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------- |

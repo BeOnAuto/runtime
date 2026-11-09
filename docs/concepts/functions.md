@@ -28,7 +28,7 @@ Real work often combines types. A budget review might compute the totals, reason
 
 Hosted Auto runs reasoning, lookup, interaction, prediction, computation and generation functions, and workflows. Pages present their results. Your agent can list the definition types available through its connection.
 
-The self-hosted runtime runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction and computation functions are available, and generation functions once a model gateway is set in `MODEL_GATEWAYS`. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers, and through [the connections people add](../self-host/connections.md#which-runtimes-take-connections) on a runtime that signs people in or runs in local mode. There is nothing to turn on.
+[The self-hosted runtime](../self-host.md) runs every function type, whether you start it with npx or with Docker. So reasoning, lookup, interaction, prediction and computation functions are available, and generation functions once a model gateway is set in `MODEL_GATEWAYS`. Workflows are available and coordinate the functions above, and pages present the results of both. Tool access is available wherever the runtime's operator has set up tool servers, and through [the connections people add](../self-host/connections.md#which-runtimes-take-connections) on a runtime that signs people in or runs in local mode. There is nothing to turn on.
 
 These are planned and not available yet:
 

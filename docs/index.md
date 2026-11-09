@@ -24,7 +24,7 @@ The guides show how to [give a function tools](guides/tools.md), [run a workflow
 
 Open [Auto Studio](https://studio.on.auto) to inspect your work and manage your organization. The website guides cover [sharing a playbook](https://on.auto/docs/cloud/sharing) and [connecting business data](https://on.auto/docs/cloud/connections).
 
-If your organization needs its own deployment, [get in touch about self-hosting](self-host.md).
+To run Auto Runtime on your organization's own infrastructure, see [Self-host Auto Runtime](self-host.md).
 
 ## Look up a detail
 

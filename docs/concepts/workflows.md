@@ -54,7 +54,7 @@ Pausing a workflow stops its triggers until someone resumes it. While it is paus
 
 [Run a workflow on a schedule or event](../guides/triggers.md) shows how to add a trigger, and [Triggers](../reference/workflow-format.md#triggers) in the workflow format gives the rules and limits.
 
-Each function a workflow calls has a run of its own, and every run counts toward usage. If the runtime refuses a triggered run because it has reached a usage limit, that run does not start and is not retried. The playbook records a `reaction_refused` event. The [trigger reference](../reference/workflow-format.md#triggers) explains refusals; self-hosted limits are in the [licensing reference](../self-host/licensing.md).
+Each function a workflow calls has a run of its own, and every run counts toward usage. If the runtime refuses a triggered run because it has reached a usage limit, that run does not start and is not retried. The playbook records a `reaction_refused` event. The [trigger reference](../reference/workflow-format.md#triggers) explains refusals; the limits of a [self-hosted runtime](../self-host.md) are in the [licensing reference](../self-host/licensing.md).
 
 ## How a run waits
 

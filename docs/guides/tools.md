@@ -6,7 +6,7 @@ description: Find the tools your Auto offers a playbook, try one, name it in a r
 
 Let a reasoning function call tools while it runs, such as tools that read files, search the news or look up records in a business system. Tools come from a tool server: a service or program that offers tools for a function to call. Connect the service to your organization through your agent or Studio, then choose which playbooks may use it. This guide uses your connected agent; hosted Auto needs no local setup.
 
-If no server offers the tools you need, [connect a provider](#connect-a-provider) that does, or [ask for a tool server](#ask-for-a-tool-server). If you run Auto yourself, [Add a tool server](../self-host/tool-servers.md) shows how to add it.
+If no server offers the tools you need, [connect a provider](#connect-a-provider) that does, or [ask for a tool server](#ask-for-a-tool-server). If you [run Auto yourself](../self-host.md), [Add a tool server](../self-host/tool-servers.md) shows how to add it.
 
 ## Before you start
 

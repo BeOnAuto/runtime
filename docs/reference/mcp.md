@@ -16,7 +16,7 @@ A reasoning function can call tools itself, through tool servers the runtime's o
 
 ## Endpoints {#endpoint-scope}
 
-For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization and its playbooks, and handles sign-in through MCP authentication. The paths below describe a self-hosted runtime. The tools a deployment exposes depend on its capabilities and your permissions.
+For hosted Auto, use `https://mcp.on.auto`. It serves the caller's organization and its playbooks, and handles sign-in through MCP authentication. The paths below describe a [self-hosted runtime](../self-host.md). The tools a deployment exposes depend on its capabilities and your permissions.
 
 | Path                                   | Acts on                                                                | Tools                                                                                                                                                                  |
 | -------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

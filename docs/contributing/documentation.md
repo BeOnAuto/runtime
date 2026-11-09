@@ -84,7 +84,7 @@ Open the printed `/docs/` URL. Serve the preview through VitePress rather than o
 
 ## Add or change a page
 
-Create Markdown under the relevant directory and add its route to `docs/nav.json`. The local setup page, detailed self-hosting guides and operator model settings retain their addresses for existing links, but stay out of navigation and search. The public self-hosting overview directs new deployments to contact Auto. Links in that file are relative to the documentation base, such as `/concepts/playbooks`; do not prefix them with `/docs`.
+Create Markdown under the relevant directory and add its route to `docs/nav.json`. The local setup page, detailed self-hosting guides and operator model settings retain their addresses for existing links, but stay out of navigation and search. The public self-hosting overview says what runs where, how the runtime is installed and licensed, and links to each of those guides. It directs new deployments to contact Auto. Links in that file are relative to the documentation base, such as `/concepts/playbooks`; do not prefix them with `/docs`.
 
 Use relative Markdown links inside pages, such as `../concepts/functions.md`. They work in the repository, the standalone preview and the composed website. Do not link to the website's own guides: the standalone preview does not have them, and its build fails on a dead link. Keep assets in `docs/assets/` and refer to them relatively. Do not place secrets or account information in public examples.
 
