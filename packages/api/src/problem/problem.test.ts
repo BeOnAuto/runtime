@@ -159,20 +159,6 @@ describe('room for a request the server cannot give', () => {
   });
 });
 
-describe('a view still being built', () => {
-  it('describes a view still being built with a type of its own, and asks for a retry of it', () => {
-    expect(problemOf('unavailable', 'It is rebuilding', { kind: 'rebuilding' })).toEqual({
-      type: 'https://on.auto/problems/rebuilding',
-      title: 'Rebuilding',
-      status: 503,
-      detail: 'It is rebuilding',
-      reason: 'unavailable',
-      kind: 'rebuilding',
-    });
-    expect(retryAfterOf({ kind: 'rebuilding' })).toBe('5');
-  });
-});
-
 describe('a run refused because the account of its org is closed', () => {
   it('is described at 409 under a type of its own, with its reason and where to resolve it, and asks for no retry', () => {
     const closed = problemOf('conflict', 'The org acme was deleted; Auto support can restore it', {

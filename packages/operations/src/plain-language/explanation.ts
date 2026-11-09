@@ -76,10 +76,6 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     remedy:
       'It answers again once a corrected version is saved, which builds it anew from the history; the details below say which event stopped it and why.',
   },
-  rebuilding: {
-    why: 'what it keeps of the playbook’s history is still being built from that history',
-    remedy: 'Nothing needs to change: trying again in a little while should work.',
-  },
   tools_called: {
     why: 'this run calls tools, and an attempt of it under the same id may still be in progress or did not succeed, so its tools may have changed something',
     remedy:

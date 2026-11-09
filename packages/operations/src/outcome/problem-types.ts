@@ -4,7 +4,6 @@ const reasonsOfKinds = {
   tools_unfinished: 'unavailable',
   tools_called: 'conflict',
   effect_unknown: 'conflict',
-  rebuilding: 'unavailable',
   credits_exhausted: 'conflict',
   license_required: 'conflict',
   license_invalid: 'conflict',

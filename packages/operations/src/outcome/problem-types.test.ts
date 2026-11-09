@@ -7,12 +7,11 @@ describe('the types of problems', () => {
     expect(problemTypeOf('unavailable')).toBe('https://on.auto/problems/unavailable');
   });
 
-  it('give tools_unfinished, tools_called, effect_unknown, rebuilding, the meter’s four refusals and cursor_not_held types of their own, and no other kind', () => {
+  it('give tools_unfinished, tools_called, effect_unknown, the meter’s four refusals and cursor_not_held types of their own, and no other kind', () => {
     expect(kindsWithTypes).toEqual([
       'tools_unfinished',
       'tools_called',
       'effect_unknown',
-      'rebuilding',
       'credits_exhausted',
       'license_required',
       'license_invalid',
@@ -23,7 +22,6 @@ describe('the types of problems', () => {
       isKindWithType('tools_unfinished'),
       isKindWithType('tools_called'),
       isKindWithType('effect_unknown'),
-      isKindWithType('rebuilding'),
       isKindWithType('credits_exhausted'),
       isKindWithType('account_closed'),
       isKindWithType('cursor_not_held'),
@@ -31,7 +29,7 @@ describe('the types of problems', () => {
       isKindWithType('tool_not_offered'),
       isKindWithType('toString'),
       isKindWithType(),
-    ]).toEqual([true, true, true, true, true, true, true, false, false, false, false]);
+    ]).toEqual([true, true, true, true, true, true, false, false, false, false]);
   });
 
   it('keep the reason of each kind with a type of its own', () => {
@@ -39,7 +37,6 @@ describe('the types of problems', () => {
       'unavailable',
       'conflict',
       'conflict',
-      'unavailable',
       'conflict',
       'conflict',
       'conflict',

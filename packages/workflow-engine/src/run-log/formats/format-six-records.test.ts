@@ -248,6 +248,12 @@ describe('the words of an event of formats 1 to 6', () => {
 
     expect(Result.isFailure(decodeEvent(settledWith(raisedByItsDocument)))).toBe(true);
   });
+
+  it('refuse a settlement of the kind rebuilding, which only the recall functions of earlier releases answered', () => {
+    const rebuilding = { ...rejected, reason: 'unavailable', kind: 'rebuilding' };
+
+    expect(Result.isFailure(decodeEvent(settledWith(rebuilding)))).toBe(true);
+  });
 });
 
 describe('a snapshot of formats 1 to 6', () => {

@@ -79,7 +79,6 @@ const UnavailableKindSchema = Schema.Literals([
   'tool_not_offered',
   'mcp_server_failed',
   'tools_unfinished',
-  'rebuilding',
   'requests_full',
 ]);
 

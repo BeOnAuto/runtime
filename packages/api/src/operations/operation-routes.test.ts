@@ -190,23 +190,6 @@ describe('an ending that names its kind', () => {
     expect(failing).toMatchObject({ status: 503, body: { kind: 'tool_server_failed', because: 'unreachable' } });
     expect([unfinished.headers.get('retry-after'), failing.headers.get('retry-after')]).toEqual([null, '5']);
   });
-
-  it('answers a view still being built with its own problem type, no because, and a time to try again', async () => {
-    const { handler } = await operationServer();
-
-    const rebuilding = await call(handler, `${notes}/sending`, {
-      method: 'POST',
-      headers: jsonAsAdmin,
-      body: JSON.stringify({ kind: 'rebuilding' }),
-    });
-
-    expect(rebuilding).toMatchObject({
-      status: 503,
-      body: { reason: 'unavailable', type: 'https://on.auto/problems/rebuilding', kind: 'rebuilding' },
-    });
-    expect(rebuilding.body).not.toHaveProperty('because');
-    expect(rebuilding.headers.get('retry-after')).toBe('5');
-  });
 });
 
 describe('a call the client leaves', () => {

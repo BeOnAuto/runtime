@@ -394,7 +394,7 @@ A run of the function that does not succeed raises an error the workflow can cat
 | Rejected with `conflict`                                                                                                                              | `runtime`                             | 409    |
 | Rejected with `conflict` of the kind `tools_called`, `effect_unknown`, `credits_exhausted`, `license_required`, `license_invalid` or `account_closed` | `https://on.auto/problems/<kind>`     | 409    |
 | Rejected with `unavailable`                                                                                                                           | `communication`                       | 503    |
-| Rejected with `unavailable` of the kind `tools_unfinished` or `rebuilding`                                                                            | `https://on.auto/problems/<kind>`     | 503    |
+| Rejected with `unavailable` of the kind `tools_unfinished`                                                                                            | `https://on.auto/problems/<kind>`     | 503    |
 | Rejected with `cancelled`                                                                                                                             | `https://on.auto/problems/cancelled`  | 409    |
 | Rejected with `unanswered`                                                                                                                            | `https://on.auto/problems/unanswered` | 410    |
 | Ran past the wait of its task                                                                                                                         | `timeout`                             | 408    |
@@ -684,7 +684,7 @@ The rejection gives a `reason`, and a `kind` where it has one:
 | `invalid_input` | None                                                                                                           | An uncaught error had a 4xx status other than 408 and 429                  |
 | `invalid_input` | `input_schema`                                                                                                 | Its input schema refused the input a caller gave, before any step ran      |
 | `unavailable`   | None                                                                                                           | Any other uncaught error, such as a `timeout`                              |
-| `unavailable`   | `tools_unfinished`, `rebuilding`                                                                               | An uncaught error of the problem type of that kind                         |
+| `unavailable`   | `tools_unfinished`                                                                                             | An uncaught error of the problem type of that kind                         |
 | `conflict`      | `effect_unknown`, `tools_called`, `credits_exhausted`, `license_required`, `license_invalid`, `account_closed` | An uncaught error of the problem type of that kind                         |
 | `conflict`      | `oversized`                                                                                                    | Its output is larger than 1,048,574 bytes as JSON                          |
 | `conflict`      | `unworkable`                                                                                                   | Its output does not match the shape its `output.shape` names               |

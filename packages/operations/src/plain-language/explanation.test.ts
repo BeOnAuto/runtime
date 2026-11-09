@@ -71,15 +71,6 @@ const byCancellation: ReadonlyArray<readonly [CancelledKind, string, string]> = 
 const calledToolsWords =
   'Could not run the reasoning function “summary”: this run calls tools, and an attempt of it under the same id may still be in progress or did not succeed, so its tools may have changed something. So it was not run again: start a new run instead, after checking what its history shows it has called so far.';
 
-describe('the explanation of a view still being built', () => {
-  it('says that trying again later should work, and that nothing needs to change', () => {
-    expect(explanationOf({ reason: 'unavailable', kind: 'rebuilding' })).toEqual({
-      why: 'what it keeps of the playbook’s history is still being built from that history',
-      remedy: 'Nothing needs to change: trying again in a little while should work.',
-    });
-  });
-});
-
 const switchable =
   'This can be put right on your side: once its prompt names one of the models this server can call, which list_models shows, it can be tried again.';
 

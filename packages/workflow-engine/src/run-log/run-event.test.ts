@@ -98,16 +98,17 @@ describe('a run event', () => {
     ]).toEqual([true, true]);
   });
 
-  it('is refused when it settles a run with a kind of rejection this release no longer has, as the prediction refusals of earlier releases, in any format', () => {
+  it('is refused when it settles a run with a kind of rejection this release no longer has, as the prediction refusals and the rebuilding of recall functions of earlier releases, in any format', () => {
     expect(
       [stateFormat, 9, 8].map((format) => [
         readsBack(format, 'dataset_not_ready'),
         readsBack(format, 'model_process_busy'),
+        readsBack(format, 'rebuilding'),
       ]),
     ).toEqual([
-      [true, false],
-      [true, false],
-      [true, false],
+      [true, false, false],
+      [true, false, false],
+      [true, false, false],
     ]);
   });
 

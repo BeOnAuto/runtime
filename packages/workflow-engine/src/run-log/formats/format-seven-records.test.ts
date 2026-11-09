@@ -109,6 +109,12 @@ describe('an event of format 7', () => {
     expect(Result.isFailure(decodeEvent(settledWith({ ...rejected, reason: 'conflict', ...rejection })))).toBe(true);
   });
 
+  it('is refused when it settles a run of the kind rebuilding, which only the recall functions of earlier releases answered', () => {
+    const rebuilding = { ...rejected, reason: 'unavailable', kind: 'rebuilding' };
+
+    expect(Result.isFailure(decodeEvent(settledWith(rebuilding)))).toBe(true);
+  });
+
   it('is refused when it names a kind as format 8 does, or holds a member format 7 does not describe', () => {
     expect([
       Result.isFailure(decodeEvent(settledWith(unavailableNow))),

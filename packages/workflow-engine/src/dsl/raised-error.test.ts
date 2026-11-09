@@ -226,7 +226,7 @@ function raisedWith(kind: string, because: string) {
 describe('the settlement of a workflow that ended otherwise', () => {
   it('keeps no kind or because of a step whose words hold for that step alone', () => {
     expect([
-      settlementOf(raisedWith('rebuilding', 'run_bound')),
+      settlementOf(raisedWith('tool_server_failed', 'unreachable')),
       settlementOf(raisedWith('taken', 'nothing_known')),
       settlementOf({
         kind: 'raised',
@@ -272,16 +272,16 @@ describe('the settlement of a workflow whose output or run broke', () => {
   });
 
   it('keeps no because of a kind of a type of its own that names none', () => {
-    const rebuilding = callErrorOf(
-      { status: 'rejected', reason: 'unavailable', detail: 'Still building', kind: 'rebuilding' },
+    const unfinished = callErrorOf(
+      { status: 'rejected', reason: 'unavailable', detail: 'Stopped', kind: 'tools_unfinished' },
       { function: 'notify', label: 'the function notify', reference: '/do/0/ask' },
     );
 
-    expect(settlementOf({ kind: 'raised', error: rebuilding })).toEqual({
+    expect(settlementOf({ kind: 'raised', error: unfinished })).toEqual({
       status: 'rejected',
       reason: 'unavailable',
-      detail: 'The function notify was not available, at the step ask: Still building.',
-      kind: 'rebuilding',
+      detail: 'The function notify was not available, at the step ask: Stopped.',
+      kind: 'tools_unfinished',
     });
   });
 

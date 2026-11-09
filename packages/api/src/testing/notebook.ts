@@ -258,7 +258,6 @@ const becauseOfKind = {
   tool_not_read_only: {},
   tool_server_failed: { because: 'unreachable' },
   tools_unfinished: { because: 'model_unavailable' },
-  rebuilding: {},
   requests_full: {},
   dataset_not_ready: {},
   generation_timed_out: {},

@@ -8,7 +8,6 @@ export const UnavailableKindSchema = Schema.Literals([
   'tool_not_read_only',
   'tool_server_failed',
   'tools_unfinished',
-  'rebuilding',
   'requests_full',
   'dataset_not_ready',
   'generation_timed_out',
