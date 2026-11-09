@@ -9,6 +9,7 @@ Connect your Zoom account to Auto, so that the functions in your playbooks can r
 ## What you need
 
 - An Auto account in an organization. On Auto Cloud, Studio asks you to sign in or create an account when you open the link under [Add Zoom](#add-zoom). It also asks you to create an organization if you belong to none.
+- On Auto Cloud, Zoom offered to you in Studio. Studio offers Zoom to everyone once Zoom has reviewed Auto's Zoom app. Until then, the Connections page may show you no Zoom tile, and the link under [Add Zoom](#add-zoom) opens Connections without Zoom.
 - A Zoom account. Auto reaches Zoom at `zoom.us`, so it does not serve a Zoom for Government account.
 - To use Zoom through your agent, your agent connected to Auto and signed in as you. Follow the [quick start](../get-started/cloud.md) if you have not connected yet. An agent connected with an API key cannot add a connection.
 
@@ -16,7 +17,7 @@ You connect as yourself. The connection reaches your own meetings, recordings an
 
 ## Add Zoom
 
-On Auto Cloud, open [Add Zoom to Auto](https://studio.on.auto/?settings=connections&connect=zoom). This link opens Studio's Connections page with Zoom ready to add.
+On Auto Cloud, open [Add Zoom to Auto](https://studio.on.auto/?settings=connections&connect=zoom). This link opens Studio's Connections page, with Zoom ready to add if Studio offers it to you, as [What you need](#what-you-need) says.
 
 1. If you are signed out, sign in to Auto, or create an account, on the page Studio shows. Studio then brings you back to Connections.
 2. Studio shows the dialog Connect Zoom. Leave the name `zoom`, unless you connect Zoom a second time, and press Connect.
@@ -121,6 +122,7 @@ Auto's Zoom app is user-managed: each person adds it for themselves, for their o
 
 | What you see                                                                                                                 | What it means and what to do                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Connections shows no Zoom tile, and the link under Add Zoom opens no dialog                                                  | Studio does not offer Zoom to you yet, as [What you need](#what-you-need) says. Add Zoom once Connections shows its tile                                                                                                                |
 | Studio says Zoom denied access                                                                                               | You did not allow access at Zoom, or Zoom refused it. Press Start again to go back to Zoom while the connection's link lasts, or Open Connections to leave it. The connection waits, pending, until you allow access or remove it       |
 | Zoom says the app needs your admin's approval                                                                                | Your Zoom account requires pre-approval. Request it at Zoom, or ask your admin to pre-approve Auto, as [What your Zoom admin may have to allow](#what-your-zoom-admin-may-have-to-allow) says, then press Start again or add Zoom again |
 | The `zoom` row says Needs attention, with Zoom asks for access this connection was not granted                               | A call needs a permission the connection was not granted. Open the row and press Connect again, then allow access at Zoom. If your admin has turned the feature off, ask them first                                                     |
