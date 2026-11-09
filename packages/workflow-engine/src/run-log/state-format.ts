@@ -1,6 +1,6 @@
 import { Effect, Schema, SchemaGetter, type SchemaIssue } from 'effect';
 
-export const stateFormat = 10;
+export const stateFormat = 11;
 
 export const StateFormatSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1));
 

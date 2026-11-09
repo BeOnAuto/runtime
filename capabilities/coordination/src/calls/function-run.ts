@@ -7,6 +7,7 @@ import type {
   RejectionKind,
   RejectionReason,
   RejectionBecause,
+  RejectionCause,
 } from '@on.auto/operations';
 import type { Effect, Schema } from 'effect';
 
@@ -40,6 +41,7 @@ export type EndedRunResult =
       readonly resolve_at?: string;
       readonly lifts_at?: string;
       readonly limited_because?: LimitedBecause;
+      readonly cause?: RejectionCause;
     }
   | { readonly status: 'failed'; readonly detail: string };
 

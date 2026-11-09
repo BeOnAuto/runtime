@@ -1,8 +1,9 @@
+import { nestedRunId } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
 import type { WorkflowEnding } from '../testing/endings.ts';
 import type { DefinitionCallResult } from '../testing/run-terms.ts';
-import { interpret, workflow } from '../testing/workflows.ts';
+import { interpret, runId, workflow } from '../testing/workflows.ts';
 
 const calling = workflow(`
 do:
@@ -24,6 +25,10 @@ async function caughtFor(respond: () => DefinitionCallResult | Promise<Definitio
 
 const types = 'https://open-workflow-specification.org/spec/1.0.0/errors';
 
+const fetchReference = '/do/0/lookup/try/0/fetch';
+
+const fetched = nestedRunId(runId, fetchReference, 1);
+
 function unreachable(): Promise<DefinitionCallResult> {
   return Promise.reject(new Error('The call was lost', { cause: new Error('the host is gone') }));
 }
@@ -42,9 +47,10 @@ describe('a rejected run', () => {
       output: {
         type: `${types}/${kind}`,
         status,
-        instance: '/do/0/lookup/try/0/fetch',
+        instance: fetchReference,
         title: `The reasoning function lookup ${refused}`,
         detail: 'The model is busy',
+        cause: { status: 'rejected', run_id: fetched, reason },
       },
     });
   });
@@ -83,11 +89,18 @@ describe('a rejected run that names its kind and because', () => {
       output: {
         type: 'https://on.auto/problems/tools_unfinished',
         status: 503,
-        instance: '/do/0/lookup/try/0/fetch',
+        instance: fetchReference,
         title: 'The reasoning function lookup was not available',
         detail: rejected.detail,
         kind: 'tools_unfinished',
         because: 'server_failed',
+        cause: {
+          status: 'rejected',
+          run_id: fetched,
+          reason: 'unavailable',
+          kind: 'tools_unfinished',
+          because: 'server_failed',
+        },
       },
     });
   });
@@ -167,18 +180,20 @@ describe('a step that meets a run whose tools may have been called', () => {
       reason: 'conflict',
       detail: 'The reasoning function lookup could not go through, at the step fetch: It may have called tools.',
       kind: 'tools_called',
+      cause: {
+        step: fetchReference.slice(1),
+        run_id: fetched,
+        status: 'rejected',
+        reason: 'conflict',
+        kind: 'tools_called',
+      },
     });
   });
 });
 
 describe('a step whose run the meter refuses because the account of its org is closed', () => {
-  const closed = {
-    status: 'rejected',
-    reason: 'conflict',
-    detail: 'The org acme was deleted for good',
-    kind: 'account_closed',
-    because: 'org_purged',
-  } as const;
+  const codes = { reason: 'conflict', kind: 'account_closed', because: 'org_purged' } as const;
+  const closed = { status: 'rejected', detail: 'The org acme was deleted for good', ...codes } as const;
 
   it('raises a 409 of the type of account_closed, with its reason, which the document can catch', async () => {
     expect(await caughtFor(() => closed)).toEqual({
@@ -186,11 +201,12 @@ describe('a step whose run the meter refuses because the account of its org is c
       output: {
         type: 'https://on.auto/problems/account_closed',
         status: 409,
-        instance: '/do/0/lookup/try/0/fetch',
+        instance: fetchReference,
         title: 'The reasoning function lookup could not go through',
         detail: closed.detail,
         kind: 'account_closed',
         because: 'org_purged',
+        cause: { status: 'rejected', run_id: fetched, ...codes },
       },
     });
   });
@@ -205,6 +221,7 @@ describe('a step whose run the meter refuses because the account of its org is c
         'The reasoning function lookup could not go through, at the step fetch: The org acme was deleted for good.',
       kind: 'account_closed',
       because: 'org_purged',
+      cause: { step: fetchReference.slice(1), run_id: fetched, status: 'rejected', ...codes },
     });
   });
 });
@@ -216,9 +233,10 @@ describe('a failed run', () => {
       output: {
         type: `${types}/runtime`,
         status: 500,
-        instance: '/do/0/lookup/try/0/fetch',
+        instance: fetchReference,
         title: 'The reasoning function lookup failed',
         detail: 'It failed with incident 7',
+        cause: { status: 'failed', run_id: fetched },
       },
     });
   });
@@ -229,9 +247,10 @@ describe('a failed run', () => {
       output: {
         type: `${types}/communication`,
         status: 503,
-        instance: '/do/0/lookup/try/0/fetch',
+        instance: fetchReference,
         title: 'run_definition could not reach the reasoning function lookup',
         detail: 'Error: The call was lost: Error: the host is gone',
+        cause: { status: 'unreachable', run_id: fetched },
       },
     });
   });

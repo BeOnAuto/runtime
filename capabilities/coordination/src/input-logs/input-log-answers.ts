@@ -33,3 +33,16 @@ const outOfCredits: CallResult = {
 export function admittedOnTheThirdTry(definition: DefinitionArguments, run: number): CallResult {
   return definition.name === 'tally' && run < 3 ? outOfCredits : summarizing(definition);
 }
+
+export const todaysFreeCreditsUsed = 'The org has used today’s Free credits';
+
+const outOfCreditsForTheDay: CallResult = {
+  ...outOfCredits,
+  detail: todaysFreeCreditsUsed,
+  because: 'free_daily_limit',
+  lifts_at: '2026-10-02T00:00:00.000Z',
+};
+
+export function neverAdmittingTally(definition: DefinitionArguments): CallResult {
+  return definition.name === 'tally' ? outOfCreditsForTheDay : summarizing(definition);
+}

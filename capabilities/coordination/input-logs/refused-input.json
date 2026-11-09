@@ -129,7 +129,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000315",
@@ -573,7 +573,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"/do/0/race/fork/branches/0/first\",1]",
@@ -655,7 +655,12 @@
                 "pointer": "/input/seats",
                 "detail": "seats, How many seats to hold: expected at least 1."
               }
-            ]
+            ],
+            "cause": {
+              "status": "rejected",
+              "run_id": "676e4b31-e401-5fe7-adbb-0dc9c66db0f2",
+              "reason": "invalid_input"
+            }
           }
         },
         {
@@ -666,7 +671,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 7691
+          "value": 7794
         }
       ],
       "outputs": [
@@ -679,7 +684,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "timer_fired",
         "key": "3",
@@ -841,7 +846,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 11321
+          "value": 11424
         }
       ],
       "outputs": [
@@ -871,7 +876,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000315\",\"/do/0/race/fork/branches/1/later/do/1/again\",1]",
@@ -994,14 +999,19 @@
                   "detail": "seats, How many seats to hold: expected at least 1.",
                   "pointer": "/input/seats"
                 }
-              ]
+              ],
+              "cause": {
+                "status": "rejected",
+                "run_id": "676e4b31-e401-5fe7-adbb-0dc9c66db0f2",
+                "reason": "invalid_input"
+              }
             }
           }
         },
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 14225
+          "value": 14575
         }
       ],
       "outputs": [
@@ -1021,6 +1031,12 @@
           "settlement": {
             "status": "rejected",
             "detail": "The computation function hold-seats refused its input, at the step first: seats, How many seats to hold: expected at least 1.",
+            "cause": {
+              "step": "do/0/race/fork/branches/0/first",
+              "run_id": "676e4b31-e401-5fe7-adbb-0dc9c66db0f2",
+              "status": "rejected",
+              "reason": "invalid_input"
+            },
             "reason": "invalid_input",
             "issues": [
               {

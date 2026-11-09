@@ -98,6 +98,15 @@ const largestAnswer = {
 
 const largestReply = { id: awkward, sender: awkward };
 
+const largestCause = {
+  step: awkward,
+  run_id: awkward,
+  status: 'unreachable',
+  reason: 'invalid_input',
+  kind: 'blocked_by_moderation',
+  because: 'tool_server_not_configured',
+} as const;
+
 const largestRunEvents: readonly RunEvent[] = [
   { type: 'run_started', data: { started_by: recordedAdmin, input: { text: 'x'.repeat(mostInputBytes - 16) } } },
   { type: 'run_succeeded', data: { output: largestJson, record: largestJson } },
@@ -108,11 +117,30 @@ const largestRunEvents: readonly RunEvent[] = [
   {
     type: 'run_rejected',
     data: {
+      rejection: { reason: 'invalid_input', detail: awkward, issues: manyIssues, cause: largestCause },
+      record: largestJson,
+    },
+  },
+  {
+    type: 'run_rejected',
+    data: {
       rejection: {
         reason: 'unavailable',
         detail: awkward,
         kind: 'model_not_offered',
         because: 'provider_not_configured',
+      },
+    },
+  },
+  {
+    type: 'run_rejected',
+    data: {
+      rejection: {
+        reason: 'unavailable',
+        detail: awkward,
+        kind: 'model_not_offered',
+        because: 'provider_not_configured',
+        cause: largestCause,
       },
     },
   },

@@ -10,7 +10,6 @@ import type {
   PlaybookReader,
   PlaybookContext,
   PlaybookWriter,
-  HandlerServices,
   IncidentReporter,
   Ledger,
   OrgAddress,
@@ -23,6 +22,7 @@ import type {
   StreamWriter,
 } from '../index.ts';
 import type { OrgAppendedFactsReader, PlaybookAppendedFactsReader } from '../ledger/stream-ports.ts';
+import type { HandlerServices } from './handler-services.ts';
 
 describe('the services a handler may ask for', () => {
   it('give an org handler nothing of a playbook', () => {

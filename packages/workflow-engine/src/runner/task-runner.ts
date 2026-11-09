@@ -5,6 +5,7 @@ import { caughtRaise, raised } from '../dsl/raised-error.ts';
 import { timedOut, timeoutMilliseconds } from '../dsl/task-outcomes.ts';
 import { entryAt, typeOf, type TaskEntry } from '../dsl/tasks.ts';
 import type { TaskFrame, ValueId, Variables as Scope } from '../machine/run-state.ts';
+import { raisedAtTimeout } from '../tasks/call-task.ts';
 import { cancelBody, resumeBody, startBody } from '../tasks/task-bodies.ts';
 import {
   raisedOf,
@@ -149,7 +150,8 @@ export function resumeTask(machine: Machine, frame: TaskFrame, signal: Signal): 
   session.continues(frame);
   if (signal.kind === 'timer' && signal.timerId === frame.timeout) {
     cancelBody(machine, frame, 'deadline');
-    const { error } = timedOut(signal.timer.dueAt - signal.timer.armedAt, frame.reference);
+    const { error: timeout } = timedOut(signal.timer.dueAt - signal.timer.armedAt, frame.reference);
+    const error = raisedAtTimeout(machine, frame, timeout);
     session.record({ reference: frame.reference, run: frame.run, outcome: 'timed_out', error });
     return raisedOf(error);
   }

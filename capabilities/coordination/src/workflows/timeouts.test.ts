@@ -1,7 +1,8 @@
+import { nestedRunId } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
 import type { Command } from '../testing/machine-host.ts';
-import { interpret, neverAnswers, workflow } from '../testing/workflows.ts';
+import { interpret, neverAnswers, runId, workflow } from '../testing/workflows.ts';
 
 function timersAndCalls(commands: readonly Command[]): readonly string[] {
   return commands.flatMap(({ kind }) => (kind === 'timer' || kind === 'call' ? [kind] : []));
@@ -23,6 +24,7 @@ do:
       status: 'rejected',
       reason: 'unavailable',
       detail: 'The task did not finish within 30000 ms, at the step slow.',
+      cause: { step: 'do/0/slow', run_id: nestedRunId(runId, '/do/0/slow', 1), status: 'timed_out' },
     });
     expect(commands).toContainEqual({ kind: 'cancelled', summary: '/do/0/slow' });
   });

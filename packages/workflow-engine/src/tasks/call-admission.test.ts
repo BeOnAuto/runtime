@@ -106,6 +106,13 @@ describe('a call its function keeps refusing admission', () => {
         detail: 'The account has no credits left for this run',
         kind: 'credits_exhausted',
         because: 'none_left',
+        cause: {
+          status: 'rejected',
+          run_id: 'notify at /do/1/second #30',
+          reason: 'conflict',
+          kind: 'credits_exhausted',
+          because: 'none_left',
+        },
       },
     });
   });

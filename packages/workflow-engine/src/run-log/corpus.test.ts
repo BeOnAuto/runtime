@@ -81,6 +81,15 @@ describe('the committed corpus of past state formats', () => {
     );
   });
 
+  it('reads the state each snapshot holds, before the run ended, in the current format, so a member no format describes is refused there', () => {
+    expect(
+      corpora.map((corpus) => {
+        const { format, state } = snapshotIn(corpus);
+        return stateInCurrentFormat(format, state).runId;
+      }),
+    ).toEqual(corpora.map(({ format, state }) => stateInCurrentFormat(format, state).runId));
+  });
+
   it('still loads, from the whole stream and from the snapshot and its tail, to the state it recorded', () => {
     expect(corpora.map((corpus) => loadedBothWays(corpus))).toEqual(
       corpora.map(({ format, state, stream }) => {

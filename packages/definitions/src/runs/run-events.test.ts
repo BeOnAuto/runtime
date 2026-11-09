@@ -221,11 +221,18 @@ const askedToApproveAnAction: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
-const declinedASignIn: readonly (typeof RunEventSchema.Type)[] = [
+const signInDeclined = {
+  reason: 'unanswered',
+  kind: 'declined',
+  detail: 'The interaction function portal-sign-in went unanswered, at the step sign-in: Priya did not sign in.',
+  cause: { step: 'do/0/sign-in', run_id: onTheRun.runId, status: 'rejected', reason: 'unanswered', kind: 'declined' },
+} as const;
+
+const declinedASignInAtAStep: readonly (typeof RunEventSchema.Type)[] = [
   {
     type: 'run_rejected',
-    data: { rejection: { reason: 'unanswered', kind: 'declined', detail: 'Priya did not sign in to the portal' } },
-    context: { ...onTheRun, definitionType: 'interaction', definitionName: 'portal-sign-in' },
+    data: { rejection: signInDeclined },
+    context: { ...onTheRun, runId: calledByAWorkflow.calledBy.runId, definitionType: 'workflow' },
   },
 ];
 
@@ -287,7 +294,7 @@ describe('the facts a playbook records on the stream of a run', () => {
     folder: new URL('.', import.meta.url),
     releases: {
       '0.46.0': baseline,
-      '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignIn, ...answeredInEachMode],
+      '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
     },
   });
 });

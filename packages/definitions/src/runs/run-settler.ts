@@ -19,7 +19,7 @@ import type { RunResult, RunSettlement } from './run-commands.ts';
 import { runDecider, runDeciderAsRead, runStreamNameOf } from './run-decider.ts';
 import { runOf } from './run-lookup.ts';
 import type { RunStreamState } from './run-state.ts';
-import type { RunRejection, Run } from './run.ts';
+import { causeOf, type RunRejection, type Run } from './run.ts';
 
 export type { Settlement } from '@on.auto/operations';
 
@@ -58,19 +58,36 @@ const failure: RunResult = { type: 'run_failed', data: {} };
 
 function rejectionOf(settlement: SettledRejection): RunRejection {
   if (settlement.reason === 'invalid_input') {
-    return { reason: settlement.reason, detail: settlement.detail, issues: settlement.issues ?? [] };
+    return {
+      reason: settlement.reason,
+      detail: settlement.detail,
+      issues: settlement.issues ?? [],
+      ...causeOf(settlement),
+    };
   }
   if (settlement.reason === 'unavailable') {
     const { reason, detail, kind, because } = settlement;
-    return { reason, detail, ...(kind === undefined ? {} : { kind }), ...(because === undefined ? {} : { because }) };
+    return {
+      reason,
+      detail,
+      ...(kind === undefined ? {} : { kind }),
+      ...(because === undefined ? {} : { because }),
+      ...causeOf(settlement),
+    };
   }
   if (settlement.reason === 'conflict') {
     const { reason, detail, kind, because } = settlement;
-    return { reason, detail, ...(kind === undefined ? {} : { kind }), ...(because === undefined ? {} : { because }) };
+    return {
+      reason,
+      detail,
+      ...(kind === undefined ? {} : { kind }),
+      ...(because === undefined ? {} : { because }),
+      ...causeOf(settlement),
+    };
   }
   if (settlement.reason === 'unanswered') {
     const { reason, detail, kind } = settlement;
-    return { reason, detail, kind };
+    return { reason, detail, kind, ...causeOf(settlement) };
   }
   const { reason, detail, kind } = settlement;
   return { reason, detail, kind };

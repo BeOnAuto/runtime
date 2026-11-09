@@ -4,6 +4,7 @@ import {
   InvalidInputKindSchema,
   UnansweredKindSchema,
   RejectionBecauseSchema,
+  RejectionCauseSchema,
   UnavailableKindSchema,
   type RecordedEvent,
 } from '@on.auto/operations';
@@ -13,7 +14,7 @@ import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
 import { RunEventSchema, type RecordedRunEvent } from '../runs/run-events.ts';
 import { runOf } from '../runs/run-lookup.ts';
 import { evolveRun, startedRunOf, type RunStreamState } from '../runs/run-state.ts';
-import { RunSchema, type Run, type RunRejection } from '../runs/run.ts';
+import { causeOf, RunSchema, type Run, type RunRejection } from '../runs/run.ts';
 
 const ListedRejectionSchema = Schema.Struct({
   reason: Schema.Literals(['invalid_input', 'unavailable', 'conflict', 'cancelled', 'unanswered']),
@@ -27,9 +28,10 @@ const ListedRejectionSchema = Schema.Struct({
     ]),
   ),
   because: Schema.optionalKey(RejectionBecauseSchema),
+  cause: Schema.optionalKey(RejectionCauseSchema),
 }).annotate({
   description:
-    'Why the run was rejected: its reason, the kind it gave for invalid_input, unavailable or conflict, the kind of a cancellation or of a request nobody answered, and for unavailable or conflict the because it gave',
+    "Why the run was rejected: its reason, the kind it gave for invalid_input, unavailable or conflict, the kind of a cancellation or of a request nobody answered, for unavailable or conflict the because it gave, and for a workflow run a step's uncaught error ended, its cause",
 });
 
 export const ListedRunSchema = Schema.Struct({
@@ -59,14 +61,23 @@ export function runsOf(records: readonly RecordedEvent[]): ReadonlyMap<string, r
 function listedRejectionOf(rejection: RunRejection): ListedRejection {
   if (rejection.reason === 'invalid_input') {
     const { reason, kind } = rejection;
-    return kind === undefined ? { reason } : { reason, kind };
+    return { reason, ...(kind === undefined ? {} : { kind }), ...causeOf(rejection) };
   }
-  if (rejection.reason === 'cancelled' || rejection.reason === 'unanswered') {
+  if (rejection.reason === 'cancelled') {
     const { reason, kind } = rejection;
     return { reason, kind };
   }
+  if (rejection.reason === 'unanswered') {
+    const { reason, kind } = rejection;
+    return { reason, kind, ...causeOf(rejection) };
+  }
   const { reason, kind, because } = rejection;
-  return { reason, ...(kind === undefined ? {} : { kind }), ...(because === undefined ? {} : { because }) };
+  return {
+    reason,
+    ...(kind === undefined ? {} : { kind }),
+    ...(because === undefined ? {} : { because }),
+    ...causeOf(rejection),
+  };
 }
 
 function listedOf(run: Run): ListedRun {

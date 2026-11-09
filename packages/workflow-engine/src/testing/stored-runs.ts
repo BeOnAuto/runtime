@@ -5,6 +5,7 @@ import type { RunInput } from '../machine/run-input.ts';
 import { newRun, type RunState } from '../machine/run-state.ts';
 import { testWorkflowMachine } from '../pool-testing/test-sandbox.ts';
 import { evolveRun } from '../run-log/run-fold.ts';
+import type { TimerPurpose } from '../timers/timer-id.ts';
 import { armedTimerIds, drivenRun } from './run-history.ts';
 
 export function startedStateOf(document: JsonObject): RunState {
@@ -13,8 +14,8 @@ export function startedStateOf(document: JsonObject): RunState {
     .reduce((state, { event }) => evolveRun(state, event), newRun);
 }
 
-export function afterTheWaits(state: RunState, milliseconds: number): RunState {
-  return armedTimerIds(state, 'wait')
+function afterTheTimers(state: RunState, purpose: TimerPurpose, milliseconds: number): RunState {
+  return armedTimerIds(state, purpose)
     .map((timerId): RunInput => ({
       kind: 'timer_fired',
       runId: state.runId,
@@ -29,4 +30,12 @@ export function afterTheWaits(state: RunState, milliseconds: number): RunState {
         ),
       state,
     );
+}
+
+export function afterTheWaits(state: RunState, milliseconds: number): RunState {
+  return afterTheTimers(state, 'wait', milliseconds);
+}
+
+export function afterTheTimeouts(state: RunState, milliseconds: number): RunState {
+  return afterTheTimers(state, 'timeout', milliseconds);
 }

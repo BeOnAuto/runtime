@@ -3,16 +3,23 @@
   "data": {
     "rejection": {
       "reason": "unanswered",
-      "detail": "Priya did not sign in to the portal",
-      "kind": "declined"
+      "detail": "The interaction function portal-sign-in went unanswered, at the step sign-in: Priya did not sign in.",
+      "kind": "declined",
+      "cause": {
+        "step": "do/0/sign-in",
+        "run_id": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+        "status": "rejected",
+        "reason": "unanswered",
+        "kind": "declined"
+      }
     }
   },
   "context": {
     "at": "2026-10-29T10:00:00.000Z",
     "by": "key_7f3a",
-    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
-    "definitionType": "interaction",
-    "definitionName": "portal-sign-in",
+    "runId": "019a3c4e-1111-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "workflow",
+    "definitionName": "qualify-lead",
     "definitionVersion": 2
   }
 }

@@ -4,6 +4,7 @@ import {
   type PresentedFact,
   type Presenter,
   type RecordedFact,
+  type RejectionCause,
 } from '@on.auto/operations';
 import { callFieldsShown, keptAnswerOf, keptArgumentsOf } from '@on.auto/tool-servers';
 
@@ -38,18 +39,48 @@ type Shown<Type extends RunEvent['type']> = RecordedRunFact<Type>;
 
 type ToolCallShown = Shown<'tool_call_started' | 'tool_call_answered' | 'tool_call_failed'>;
 
+const mostReferenceBytes = 256;
+
+function causeShown({ cause }: { readonly cause?: RejectionCause }) {
+  if (cause === undefined) {
+    return {};
+  }
+  const { step, run_id: runId } = cause;
+  const references = {
+    step: cutAtCodePoint(step, mostReferenceBytes),
+    ...(runId === undefined ? {} : { run_id: cutAtCodePoint(runId, mostReferenceBytes) }),
+  };
+  return { cause: { ...cause, ...references } };
+}
+
 function rejectionShown(rejection: RunRejection) {
   const detail = cutAtCodePoint(rejection.detail, mostDetailBytes);
   if (rejection.reason === 'invalid_input') {
     const { reason, kind, issues } = rejection;
-    return { reason, detail, ...(kind === undefined ? {} : { kind }), ...issuesShown(issues) };
+    return {
+      reason,
+      detail,
+      ...(kind === undefined ? {} : { kind }),
+      ...issuesShown(issues),
+      ...causeShown(rejection),
+    };
   }
-  if (rejection.reason === 'cancelled' || rejection.reason === 'unanswered') {
+  if (rejection.reason === 'cancelled') {
     const { reason, kind } = rejection;
     return { reason, detail, kind };
   }
+  if (rejection.reason === 'unanswered') {
+    const { reason, kind } = rejection;
+    return { reason, detail, kind, ...causeShown(rejection) };
+  }
   const { reason, kind, because } = rejection;
-  return { reason, detail, ...(kind === undefined ? {} : { kind }), ...(because === undefined ? {} : { because }) };
+  return {
+    reason,
+    detail,
+    ...(kind === undefined ? {} : { kind }),
+    ...(because === undefined ? {} : { because }),
+    ...causeShown(rejection),
+  };
 }
 
 function named(text: string): string {

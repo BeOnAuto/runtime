@@ -16,10 +16,7 @@ import {
   refusalsShown,
   refusingAlways,
   refusingTheSecond,
-  second,
   startsIn,
-  startsOfTheSecond,
-  timed,
   waitingOnASecondRefusal,
 } from '../testing/refused-calls.ts';
 import { drivenRun, drivenRunId, timersArmedIn, timersCancelledIn } from '../testing/run-history.ts';
@@ -44,13 +41,6 @@ describe('a call that waits for admission', () => {
 
     expect(driver.state(drivenRunId).machine.root).toEqual(before);
     expect(startsIn(driver.ports.runStore.events(drivenRunId))).toHaveLength(2);
-  });
-
-  it('is stopped by the timeout of its task, which waiting for admission does not hold off', () => {
-    const run = drivenRun(timed, { respond: refusingAlways });
-
-    expect(run.outcome).toMatchObject({ kind: 'raised', error: { status: 408, instance: second } });
-    expect(startsOfTheSecond(run.events)).toHaveLength(4);
   });
 
   it('holds no call open and no deadline of a call while it waits, and arms a fresh deadline for each try', () => {

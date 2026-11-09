@@ -1,9 +1,10 @@
+import { nestedRunId } from '@on.auto/definitions';
 import { IssueSchema, type Issue } from '@on.auto/operations';
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { DefinitionCallResult } from '../testing/run-terms.ts';
-import { interpret, workflow } from '../testing/workflows.ts';
+import { interpret, runId, workflow } from '../testing/workflows.ts';
 
 const booking = workflow(`
 do:
@@ -52,6 +53,12 @@ describe('a workflow whose step refused its input', () => {
       detail:
         'The computation function seat-hold refused its input, at the step hold-seats: seats, How many seats to hold: expected at least 1. day: expected a date.',
       issues: refusedSeats,
+      cause: {
+        step: 'do/0/hold-seats',
+        run_id: nestedRunId(runId, '/do/0/hold-seats', 1),
+        status: 'rejected',
+        reason: 'invalid_input',
+      },
     });
   });
 });
@@ -68,6 +75,12 @@ describe('a workflow that called a workflow whose step refused its input', () =>
       detail:
         'The workflow booking stopped, at the step book: The computation function seat-hold refused its input, at the step hold-seats: seats, How many seats to hold: expected at least 1.',
       issues: refusedSeats.slice(0, 1),
+      cause: {
+        step: 'do/0/book',
+        run_id: nestedRunId(runId, '/do/0/book', 1),
+        status: 'rejected',
+        reason: 'invalid_input',
+      },
     });
   });
 });

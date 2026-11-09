@@ -1,5 +1,5 @@
 import type { JsonObject } from '../dsl/json.ts';
-import { settlementOf } from '../dsl/raised-error.ts';
+import { settlementOf } from '../dsl/settlement.ts';
 import type { RunLimits } from '../machine/run-input.ts';
 import type { RunOutcome, ValueId } from '../machine/run-state.ts';
 import type { RunCell } from './run-cell.ts';

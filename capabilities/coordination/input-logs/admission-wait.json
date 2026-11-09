@@ -141,7 +141,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000316",
@@ -432,7 +432,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000316\",\"/do/0/first\",1]",
@@ -645,7 +645,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000316\",\"/do/1/second\",1]",
@@ -743,13 +743,20 @@
           "value": {
             "since": 1790845200100,
             "refusals": 1,
-            "waited": 2
+            "waited": 2,
+            "refusal": {
+              "reason": "conflict",
+              "detail": "The account has no credits left for this run",
+              "kind": "credits_exhausted",
+              "because": "none_left",
+              "resolve_at": "https://studio.example.com/billing"
+            }
           }
         },
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 8647
+          "value": 8834
         }
       ],
       "outputs": [
@@ -770,7 +777,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "timer_fired",
         "key": "4",
@@ -873,7 +880,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 10570
+          "value": 10757
         }
       ],
       "outputs": [
@@ -903,7 +910,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000316\",\"/do/1/second\",2]",
@@ -1008,7 +1015,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 12551
+          "value": 12738
         }
       ],
       "outputs": [
@@ -1029,7 +1036,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "timer_fired",
         "key": "6",
@@ -1132,7 +1139,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 14474
+          "value": 14661
         }
       ],
       "outputs": [
@@ -1162,7 +1169,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000316\",\"/do/1/second\",3]",
@@ -1253,7 +1260,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 15944
+          "value": 16131
         }
       ],
       "outputs": [

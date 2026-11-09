@@ -374,9 +374,9 @@ Some runs finish within their call, and others later. A task waits for the longe
 A runtime starts a run only once its meter admits it ([Self-hosted licensing reference](../self-host/licensing.md)). When the meter refuses the run a task calls with `credits_exhausted`, `license_required`, `license_invalid` or `meter_unavailable`, the task does not fail. It waits at its step and asks again:
 
 - It asks again a minute after the refusal, then after 2, 4, 8, 16 and 32 minutes, and then every hour.
-- It stops 24 hours after the first refusal. The last try is made at that moment, and a refusal then raises the error of that refusal, as the table below says, in its words. A `catch` sees the refusal only then.
+- It stops 24 hours after the first refusal. The last try is made at that moment, and a refusal then raises the error of that refusal, as the table below says, in its words. A `catch` sees the refusal only then, or at the task's own `timeout`.
 - Each try starts a new run of the function, under a new `run_id`. A run the meter refused never started, so nothing of it is counted, and the steps before the task never run again.
-- While it waits, the task holds no call and no deadline of its call; each try has the whole wait of its call. The task's own `timeout`, the longest the workflow may run and `cancel_run` still stop it.
+- While it waits, the task holds no call and no deadline of its call; each try has the whole wait of its call. The longest the workflow may run and `cancel_run` still stop it.
 - The wait outlasts a restart of the server: the next try is due when it was due, and a try due while the server was down is made once it is back.
 - A refusal of any other kind, or a run that started and was then rejected with one of these kinds, raises its error at once.
 
@@ -479,7 +479,7 @@ That error is not caught, so the run ends `rejected` as `unavailable`, by its st
 
 Without `catch.do`, a task whose retries ran out hands on its own input as its output, and the run goes on with the wrong data. So give every retrying `catch` a `do` that raises an error, unless the workflow should go on without the output.
 
-An error has a `type` (a URI), an integer `status`, an `instance` that names the task that raised it as a JSON Pointer, and an optional `title` and `detail`. An error a function's rejection raised also has its `kind`, `because` and `issues`, when the rejection has them.
+An error has a `type` (a URI), an integer `status`, an `instance` that names the task that raised it as a JSON Pointer, and an optional `title` and `detail`. An error a call raised also has its `cause`, and one a function's rejection raised has its `kind`, `because` and `issues`, when the rejection has them.
 
 A `raise` task raises an error written inline, whose values can be expressions, or one named in `use.errors`. A `raise` may name a `kind`, a `because` and `issues` too, so a `catch` can raise the error it caught again without losing them: `kind: '${ $error.kind }'`. The short types of the errors the runtime raises, here and above, are under `https://open-workflow-specification.org/spec/1.0.0/errors/`:
 
@@ -694,7 +694,7 @@ The rejection gives a `reason`, and a `kind` where it has one:
 | `cancelled`     | `parent_ended`                                                                                                 | The workflow waiting for it ended first, or its waiting branch lost a race |
 | `unanswered`    | `expired`, `undelivered`                                                                                       | It did not catch an unanswered request of an interaction function          |
 
-- A rejection of a kind with its own problem type, other than `tools_called`, keeps the error's `because`. A rejection's `detail` gives the error's title, or else its type, then the step that raised it by its name, then its detail, such as `The brief is not usable, at the step stop: Missing: audience.`
+- A rejection of a kind with its own problem type, other than `tools_called`, keeps the error's `because`. A rejection's `detail` gives the error's title, or else its type, then the step that raised it by its name, then its detail, such as `The brief is not usable, at the step stop: Missing: audience.` The rejection's `cause` names that step, its run and how it ended.
 - A step whose function refused its input keeps its `issues`, each at its pointer and in the field's words: `The computation function month-window refused its input, at the step work-out-month: month, The month to report on: expected at least 6 characters.` A workflow that called it reads `The workflow monthly stopped, at the step report: ` before those words.
 - A cancelled run's `detail` says why, in the words of whoever cancelled it.
 

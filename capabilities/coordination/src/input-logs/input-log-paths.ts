@@ -1,34 +1,14 @@
-import type { CallResult } from '@on.auto/operations';
-import type { JsonObject, RunOutcome } from '@on.auto/workflow-engine';
+import { nestedRunId } from '@on.auto/definitions';
+import type { JsonObject } from '@on.auto/workflow-engine';
 import { memoryDriver, type MemoryDriver, type Responder } from '@on.auto/workflow-engine/testing';
 
-import {
-  isArgumentsProblem,
-  definitionArgumentsOf,
-  type DefinitionArguments,
-} from '../document/definition-arguments.ts';
+import { isArgumentsProblem, definitionArgumentsOf } from '../document/definition-arguments.ts';
 import { testSandbox, testWorkflowSettings } from '../testing/test-sandbox.ts';
 import { workflow } from '../testing/workflows.ts';
-import {
-  admittedOnTheThirdTry,
-  fewerThanOneSeat,
-  flakyTwice,
-  refusedSeats,
-  refusingSeats,
-  summarizing,
-} from './input-log-answers.ts';
+import { admissionPaths } from './admission-paths.ts';
+import { fewerThanOneSeat, flakyTwice, refusedSeats, refusingSeats, summarizing } from './input-log-answers.ts';
 import type { InputLog } from './input-log-corpus.ts';
-
-type Answer = (definition: DefinitionArguments, run: number) => CallResult;
-
-export interface InputLogPath {
-  readonly name: string;
-  readonly source: string;
-  readonly ends: RunOutcome;
-  readonly input?: JsonObject;
-  readonly answer?: Answer;
-  readonly meanwhile?: (driver: MemoryDriver, runId: string) => void;
-}
+import type { Answer, InputLogPath } from './input-log-path.ts';
 
 function attributesOf(name: string, runId: string): JsonObject {
   return {
@@ -244,20 +224,16 @@ do:
         title: 'The computation function hold-seats refused its input',
         detail: fewerThanOneSeat,
         issues: refusedSeats,
+        cause: {
+          status: 'rejected',
+          run_id: nestedRunId('0199a3c4-7d2e-7c1a-9b3f-000000000315', '/do/0/race/fork/branches/0/first', 1),
+          reason: 'invalid_input',
+        },
       },
     },
     answer: refusingSeats,
   },
-  {
-    name: 'admission-wait',
-    source: `
-do:
-  - first: { call: run_definition, with: { type: reasoning, name: summarize, input: { text: hello } } }
-  - second: { call: run_definition, with: { type: reasoning, name: tally } }
-`,
-    ends: { kind: 'completed', output: { summary: 'tally of {}' } },
-    answer: admittedOnTheThirdTry,
-  },
+  ...admissionPaths,
 ];
 
 export function responderOf(answer: Answer): Responder {

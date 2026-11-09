@@ -134,7 +134,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000307",
@@ -488,7 +488,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",1]",
@@ -588,7 +588,12 @@
             "status": 503,
             "title": "The reasoning function flaky was not available",
             "detail": "busy on call 1",
-            "instance": "/do/0/guarded/try/0/fetch"
+            "instance": "/do/0/guarded/try/0/fetch",
+            "cause": {
+              "status": "rejected",
+              "run_id": "5f2def8d-0781-5202-bfc8-b4dad2e6308c",
+              "reason": "unavailable"
+            }
           }
         },
         {
@@ -604,7 +609,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 6702
+          "value": 6803
         }
       ],
       "outputs": [
@@ -625,7 +630,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "timer_fired",
         "key": "3",
@@ -782,7 +787,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 9521
+          "value": 9622
         }
       ],
       "outputs": [
@@ -815,7 +820,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",2]",
@@ -915,7 +920,12 @@
             "status": 503,
             "title": "The reasoning function flaky was not available",
             "detail": "busy on call 2",
-            "instance": "/do/0/guarded/try/0/fetch"
+            "instance": "/do/0/guarded/try/0/fetch",
+            "cause": {
+              "status": "rejected",
+              "run_id": "3344f00b-b573-55f3-8d07-7258d35891c9",
+              "reason": "unavailable"
+            }
           }
         },
         {
@@ -931,7 +941,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 11815
+          "value": 12017
         }
       ],
       "outputs": [
@@ -952,7 +962,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "timer_fired",
         "key": "5",
@@ -1109,7 +1119,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 14635
+          "value": 14837
         }
       ],
       "outputs": [
@@ -1142,7 +1152,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000307\",\"/do/0/guarded/try/0/fetch\",3]",
@@ -1242,7 +1252,7 @@
         {
           "op": "replace",
           "path": "/historyBytes",
-          "value": 16268
+          "value": 16470
         }
       ],
       "outputs": [

@@ -1,0 +1,1879 @@
+{
+  "format": 11,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+          "at": 1790845200000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/first",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "first",
+            "times": 1,
+            "caused_by": "input",
+            "waits_for": "call",
+            "child": "d9641afd-0f2b-5923-a03b-79c183705d0d"
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/runId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-000000000317"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "first": {
+                      "call": "run_definition",
+                      "with": {
+                        "type": "reasoning",
+                        "name": "summarize",
+                        "input": {
+                          "text": "hello"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "second": {
+                      "call": "run_definition",
+                      "with": {
+                        "type": "reasoning",
+                        "name": "tally"
+                      },
+                      "timeout": {
+                        "after": "PT10M"
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/attributes/org",
+            "value": "acme"
+          },
+          {
+            "op": "add",
+            "path": "/attributes/playbook",
+            "value": "alpha"
+          },
+          {
+            "op": "add",
+            "path": "/attributes/run_id",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-000000000317"
+          },
+          {
+            "op": "add",
+            "path": "/attributes/definition",
+            "value": {
+              "name": "admission-timeout",
+              "version": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/attributes/caller",
+            "value": {
+              "id": "acme-admin"
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1first",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/1",
+            "value": {
+              "purpose": "deadline",
+              "reference": "/",
+              "armedAt": 1790845200000,
+              "dueAt": 1793437200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/2",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/0/first",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845800000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~10~1first\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/0/first",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 8562
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {},
+              "bytes": 2
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/2",
+            "value": {
+              "value": {
+                "type": "reasoning",
+                "name": "summarize",
+                "input": {
+                  "text": "hello"
+                }
+              },
+              "bytes": 64
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": {
+              "reference": "/",
+              "run": 1,
+              "startedAt": 1790845200000,
+              "context": 0,
+              "rawInput": 1,
+              "input": 1,
+              "variables": {},
+              "timeout": null,
+              "body": {
+                "kind": "list",
+                "list": {
+                  "pointer": "/do",
+                  "position": 0,
+                  "data": 1,
+                  "variables": {},
+                  "current": {
+                    "kind": "running",
+                    "task": {
+                      "reference": "/do/0/first",
+                      "run": 1,
+                      "startedAt": 1790845200000,
+                      "context": 0,
+                      "rawInput": 1,
+                      "input": 1,
+                      "variables": {},
+                      "timeout": null,
+                      "body": {
+                        "kind": "call",
+                        "key": {
+                          "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+                          "reference": "/do/0/first",
+                          "run": 1
+                        },
+                        "function": "run_definition",
+                        "arguments": 2,
+                        "label": "the reasoning function summarize",
+                        "deadline": "2"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 3664
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "1",
+            "dueAt": 1793437200000,
+            "purpose": "deadline",
+            "label": "the most the workflow may run"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/0/first",
+              "run": 1
+            },
+            "function": "run_definition",
+            "arguments": {
+              "type": "reasoning",
+              "name": "summarize",
+              "input": {
+                "text": "hello"
+              }
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "2",
+            "dueAt": 1790845800000,
+            "purpose": "call_deadline",
+            "label": "/do/0/first deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"/do/0/first\",1]",
+          "at": 1790845200050,
+          "status": "succeeded"
+        },
+        "steps": [
+          {
+            "reference": "/do/0/first",
+            "run": 1,
+            "outcome": "completed",
+            "name": "first",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/first",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/first",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "cae148c9-e5a0-5d85-b249-fb410872fc04"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/0/first",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200050
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~11~1second",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 5
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/2"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/3",
+            "value": {
+              "purpose": "timeout",
+              "reference": "/do/1/second",
+              "armedAt": 1790845200050,
+              "dueAt": 1790845800050
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/4",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/1/second",
+              "armedAt": 1790845200050,
+              "dueAt": 1790845800050
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~10~1first\",1]"
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 8580
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/2"
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/3",
+            "value": {
+              "value": {
+                "summary": "summarize of {\"text\":\"hello\"}"
+              },
+              "bytes": 47
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/4",
+            "value": {
+              "value": {
+                "type": "reasoning",
+                "name": "tally"
+              },
+              "bytes": 35
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 5
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/position",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/data",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/reference",
+            "value": "/do/1/second"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/startedAt",
+            "value": 1790845200050
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/rawInput",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/input",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/timeout",
+            "value": "3"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/key/reference",
+            "value": "/do/1/second"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/arguments",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/label",
+            "value": "the reasoning function tally"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/deadline",
+            "value": "4"
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 7137
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "2"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "3",
+            "dueAt": 1790845800050,
+            "purpose": "timeout",
+            "label": "/do/1/second timeout"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 1
+            },
+            "function": "run_definition",
+            "arguments": {
+              "type": "reasoning",
+              "name": "tally"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "4",
+            "dueAt": 1790845800050,
+            "purpose": "call_deadline",
+            "label": "/do/1/second deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 3,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"/do/1/second\",1]",
+          "at": 1790845200100,
+          "status": "rejected",
+          "rejection": {
+            "kind": "credits_exhausted",
+            "because": "free_daily_limit"
+          }
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 2,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            },
+            "waits_for": "admission",
+            "refusal": {
+              "kind": "credits_exhausted",
+              "because": "free_daily_limit",
+              "detail": "The org has used today’s Free credits",
+              "resolve_at": "https://studio.example.com/billing",
+              "lifts_at": "2026-10-02T00:00:00.000Z",
+              "retry_at": 1790845260100,
+              "until": 1790931600100
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200100
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 6
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/4"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/5",
+            "value": {
+              "purpose": "retry_delay",
+              "reference": "/do/1/second",
+              "armedAt": 1790845200100,
+              "dueAt": 1790845260100
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",1]"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/key"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/deadline"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "admission"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/timer",
+            "value": "5"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/refused",
+            "value": {
+              "since": 1790845200100,
+              "refusals": 1,
+              "waited": 2,
+              "refusal": {
+                "reason": "conflict",
+                "detail": "The org has used today’s Free credits",
+                "kind": "credits_exhausted",
+                "because": "free_daily_limit",
+                "resolve_at": "https://studio.example.com/billing",
+                "lifts_at": "2026-10-02T00:00:00.000Z"
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 9331
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "4"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "5",
+            "dueAt": 1790845260100,
+            "purpose": "retry_delay",
+            "label": "/do/1/second admission 1"
+          }
+        ]
+      }
+    },
+    {
+      "version": 4,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "5",
+          "at": 1790845260100
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 3,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 2
+            },
+            "waits_for": "call",
+            "child": "32405919-538a-51a4-ac8a-e6f39f38e790"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "times": 2
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845260100
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/runs/~1do~11~1second",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 7
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/5"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/6",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/1/second",
+              "armedAt": 1790845260100,
+              "dueAt": 1790845860100
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",2]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 2
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/timer"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "call"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/key",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 2
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/deadline",
+            "value": "6"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/waited",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 11254
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 2
+            },
+            "function": "run_definition",
+            "arguments": {
+              "type": "reasoning",
+              "name": "tally"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "6",
+            "dueAt": 1790845860100,
+            "purpose": "call_deadline",
+            "label": "/do/1/second deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 5,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"/do/1/second\",2]",
+          "at": 1790845260150,
+          "status": "rejected",
+          "rejection": {
+            "kind": "credits_exhausted",
+            "because": "free_daily_limit"
+          }
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 4,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 3
+            },
+            "waits_for": "admission",
+            "refusal": {
+              "kind": "credits_exhausted",
+              "because": "free_daily_limit",
+              "detail": "The org has used today’s Free credits",
+              "resolve_at": "https://studio.example.com/billing",
+              "lifts_at": "2026-10-02T00:00:00.000Z",
+              "retry_at": 1790845380150,
+              "until": 1790931600100
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "times": 3
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845260150
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 5
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 8
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/6"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/7",
+            "value": {
+              "purpose": "retry_delay",
+              "reference": "/do/1/second",
+              "armedAt": 1790845260150,
+              "dueAt": 1790845380150
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",2]"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/key"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/deadline"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "admission"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/timer",
+            "value": "7"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/refusals",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/waited",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 13282
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "6"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "7",
+            "dueAt": 1790845380150,
+            "purpose": "retry_delay",
+            "label": "/do/1/second admission 2"
+          }
+        ]
+      }
+    },
+    {
+      "version": 6,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "7",
+          "at": 1790845380150
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 5,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 4
+            },
+            "waits_for": "call",
+            "child": "4057c575-5d3a-5758-8a51-b305d64d72e4"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "times": 4
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845380150
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 6
+          },
+          {
+            "op": "replace",
+            "path": "/runs/~1do~11~1second",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 9
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/7"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/8",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/1/second",
+              "armedAt": 1790845380150,
+              "dueAt": 1790845980150
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",3]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 3
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/timer"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "call"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/key",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 3
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/deadline",
+            "value": "8"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/waited",
+            "value": 5
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 15205
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 3
+            },
+            "function": "run_definition",
+            "arguments": {
+              "type": "reasoning",
+              "name": "tally"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "8",
+            "dueAt": 1790845980150,
+            "purpose": "call_deadline",
+            "label": "/do/1/second deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 7,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"/do/1/second\",3]",
+          "at": 1790845380200,
+          "status": "rejected",
+          "rejection": {
+            "kind": "credits_exhausted",
+            "because": "free_daily_limit"
+          }
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 6,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 5
+            },
+            "waits_for": "admission",
+            "refusal": {
+              "kind": "credits_exhausted",
+              "because": "free_daily_limit",
+              "detail": "The org has used today’s Free credits",
+              "resolve_at": "https://studio.example.com/billing",
+              "lifts_at": "2026-10-02T00:00:00.000Z",
+              "retry_at": 1790845620200,
+              "until": 1790931600100
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "times": 5
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845380200
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 7
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 10
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/8"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/9",
+            "value": {
+              "purpose": "retry_delay",
+              "reference": "/do/1/second",
+              "armedAt": 1790845380200,
+              "dueAt": 1790845620200
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",3]"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/key"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/deadline"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "admission"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/timer",
+            "value": "9"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/refusals",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/waited",
+            "value": 6
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 17234
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "8"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "9",
+            "dueAt": 1790845620200,
+            "purpose": "retry_delay",
+            "label": "/do/1/second admission 3"
+          }
+        ]
+      }
+    },
+    {
+      "version": 8,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "9",
+          "at": 1790845620200
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 7,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 6
+            },
+            "waits_for": "call",
+            "child": "4638064d-6768-5d4c-8937-8ada652cefe8"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "times": 6
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845620200
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 8
+          },
+          {
+            "op": "replace",
+            "path": "/runs/~1do~11~1second",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 11
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/9"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/10",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/1/second",
+              "armedAt": 1790845620200,
+              "dueAt": 1790846220200
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",4]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 4
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/timer"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "call"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/key",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 4
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/deadline",
+            "value": "10"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/waited",
+            "value": 7
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 19161
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "reference": "/do/1/second",
+              "run": 4
+            },
+            "function": "run_definition",
+            "arguments": {
+              "type": "reasoning",
+              "name": "tally"
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "10",
+            "dueAt": 1790846220200,
+            "purpose": "call_deadline",
+            "label": "/do/1/second deadline"
+          }
+        ]
+      }
+    },
+    {
+      "version": 9,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"/do/1/second\",4]",
+          "at": 1790845620250,
+          "status": "rejected",
+          "rejection": {
+            "kind": "credits_exhausted",
+            "because": "free_daily_limit"
+          }
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "second",
+            "times": 8,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 7
+            },
+            "waits_for": "admission",
+            "refusal": {
+              "kind": "credits_exhausted",
+              "because": "free_daily_limit",
+              "detail": "The org has used today’s Free credits",
+              "resolve_at": "https://studio.example.com/billing",
+              "lifts_at": "2026-10-02T00:00:00.000Z",
+              "retry_at": 1790846100250,
+              "until": 1790931600100
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/second",
+          "run": 1,
+          "times": 7
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845620250
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 9
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 12
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/10"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/11",
+            "value": {
+              "purpose": "retry_delay",
+              "reference": "/do/1/second",
+              "armedAt": 1790845620250,
+              "dueAt": 1790846100250
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"~1do~11~1second\",4]"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/key"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/deadline"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "admission"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/timer",
+            "value": "11"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/refusals",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/refused/waited",
+            "value": 8
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 21195
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "10"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "11",
+            "dueAt": 1790846100250,
+            "purpose": "retry_delay",
+            "label": "/do/1/second admission 4"
+          }
+        ]
+      }
+    },
+    {
+      "version": 10,
+      "event": {
+        "type": "input_applied",
+        "format": 11,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "3",
+          "at": 1790845800050
+        },
+        "steps": [
+          {
+            "reference": "/do/1/second",
+            "run": 1,
+            "outcome": "timed_out",
+            "name": "second",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 8
+            },
+            "error": {
+              "type": "https://on.auto/problems/credits_exhausted",
+              "title": "The reasoning function tally could not go through"
+            }
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "ended"
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845800050
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 10
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/1"
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/3"
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/11"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 306
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/3"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/4"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": null
+          },
+          {
+            "op": "replace",
+            "path": "/outcome",
+            "value": {
+              "kind": "raised",
+              "error": {
+                "type": "https://on.auto/problems/credits_exhausted",
+                "status": 409,
+                "title": "The reasoning function tally could not go through",
+                "detail": "The org has used today’s Free credits",
+                "instance": "/do/1/second",
+                "kind": "credits_exhausted",
+                "because": "free_daily_limit",
+                "cause": {
+                  "status": "rejected",
+                  "reason": "conflict",
+                  "kind": "credits_exhausted",
+                  "because": "free_daily_limit"
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 23180
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "11"
+          },
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "timerId": "1"
+          },
+          {
+            "kind": "settle",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+            "settlement": {
+              "status": "rejected",
+              "detail": "The reasoning function tally could not go through, at the step second: The org has used today’s Free credits.",
+              "cause": {
+                "step": "do/1/second",
+                "status": "rejected",
+                "reason": "conflict",
+                "kind": "credits_exhausted",
+                "because": "free_daily_limit"
+              },
+              "reason": "conflict",
+              "kind": "credits_exhausted",
+              "because": "free_daily_limit"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "snapshot": {
+    "chunks": [
+      "{\"format\":11,\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"version\":9,\"historyBytes\":21195,\"state\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"status\":\"running\",\"workflow\":{\"document\":{\"document\":{\"dsl\":\"1.0.3\",\"namespace\":\"acme\",\"name\":\"test\",\"version\":\"1.0.0\"},\"do\":[{\"first\":{\"call\":\"run_definition\",\"with\":{\"type\":\"reasoning\",\"name\":\"summarize\",\"input\":{\"text\":\"hello\"}}}},{\"second\":{\"call\":\"run_definition\",\"with\":{\"type\":\"reasoning\",\"name\":\"tally\"},\"timeout\":{\"after\":\"PT10M\"}}}]},\"input\":1},\"attributes\":{\"org\":\"acme\",\"playbook\":\"alpha\",\"run_id\":\"0199a3c4-7d2e-7c1a-9b3f-000000000317\",\"definition\":{\"name\":\"admission-timeout\",\"version\":1},\"caller\":{\"id\":\"acme-admin\"}},\"limits\":{\"mostDurationMs\":2592000000,\"longestCallMs\":600000},\"startedAt\":1790845200000,\"lastInputAt\":1790845620250,\"inputs\":9,\"random\":{\"seed\":7,\"draws\":0},\"runs\":{\"/do/0/first\":1,\"/do/1/second\":4},\"timers\":{\"next\":12,\"armed\":{\"1\":{\"purpose\":\"deadline\",\"reference\":\"/\",\"armedAt\":1790845200000,\"dueAt\":1793437200000},\"3\":{\"purpose\":\"timeout\",\"reference\":\"/do/1/second\",\"armedAt\":1790845200050,\"dueAt\":1790845800050},\"11\":{\"purpose\":\"retry_delay\",\"reference\":\"/do/1/second\",\"armedAt\":1790845620250,\"dueAt\":1790846100250}}},\"calls\":{},\"listeners\":{},\"emitted\":{\"count\":0,\"bytes\":0},\"inbox\":{\"waiting\":[],\"waitingBytes\":0,\"receivedIds\":[],\"offeredIds\":[],\"received\":0,\"receivedBytes\":0},\"heldBytes\":8580,\"historyBytes\":21195,\"stepsWithoutWaiting\":0,\"cancelRequested\":false,\"machine\":{\"values\":{\"0\":{\"value\":{},\"bytes\":2},\"1\":{\"value\":{},\"bytes\":2},\"3\":{\"value\":{\"summary\":\"summarize of {\\\"text\\\":\\\"hello\\\"}\"},\"bytes\":47},\"4\":{\"value\":{\"type\":\"reasoning\",\"name\":\"tally\"},\"bytes\":35}},\"nextValue\":5,\"context\":0,\"root\":{\"reference\":\"/\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"list\",\"list\":{\"pointer\":\"/do\",\"position\":1,\"data\":3,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/1/second\",\"run\":1,\"startedAt\":1790845200050,\"context\":0,\"rawInput\":3,\"input\":3,\"variables\":{},\"timeout\":\"3\",\"body\":{\"kind\":\"admission\",\"function\":\"run_definition\",\"arguments\":4,\"label\":\"the reasoning function tally\",\"timer\":\"11\",\"refused\":{\"since\":1790845200100,\"refusals\":4,\"waited\":8,\"refusal\":{\"reason\":\"conflict\",\"detail\":\"The org has used today’s Free credits\",\"kind\":\"credits_exhausted\",\"because\":\"free_daily_limit\",\"resolve_at\":\"https://studio.example.com/billing\",\"lifts_at\":\"2026-10-02T00:00:00.000Z\"}}}}}}}}},\"outcome\":null}}"
+    ],
+    "bytes": 2485,
+    "tail": [
+      {
+        "version": 10,
+        "event": {
+          "type": "input_applied",
+          "format": 11,
+          "receipt": {
+            "kind": "timer_fired",
+            "key": "3",
+            "at": 1790845800050
+          },
+          "steps": [
+            {
+              "reference": "/do/1/second",
+              "run": 1,
+              "outcome": "timed_out",
+              "name": "second",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/1/second",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 8
+              },
+              "error": {
+                "type": "https://on.auto/problems/credits_exhausted",
+                "title": "The reasoning function tally could not go through"
+              }
+            }
+          ],
+          "resumed": null,
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/status",
+              "value": "ended"
+            },
+            {
+              "op": "replace",
+              "path": "/lastInputAt",
+              "value": 1790845800050
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 10
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/1"
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/3"
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/11"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 306
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/3"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/4"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root",
+              "value": null
+            },
+            {
+              "op": "replace",
+              "path": "/outcome",
+              "value": {
+                "kind": "raised",
+                "error": {
+                  "type": "https://on.auto/problems/credits_exhausted",
+                  "status": 409,
+                  "title": "The reasoning function tally could not go through",
+                  "detail": "The org has used today’s Free credits",
+                  "instance": "/do/1/second",
+                  "kind": "credits_exhausted",
+                  "because": "free_daily_limit",
+                  "cause": {
+                    "status": "rejected",
+                    "reason": "conflict",
+                    "kind": "credits_exhausted",
+                    "because": "free_daily_limit"
+                  }
+                }
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 23180
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "timerId": "11"
+            },
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "timerId": "1"
+            },
+            {
+              "kind": "settle",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+              "settlement": {
+                "status": "rejected",
+                "detail": "The reasoning function tally could not go through, at the step second: The org has used today’s Free credits.",
+                "cause": {
+                  "step": "do/1/second",
+                  "status": "rejected",
+                  "reason": "conflict",
+                  "kind": "credits_exhausted",
+                  "because": "free_daily_limit"
+                },
+                "reason": "conflict",
+                "kind": "credits_exhausted",
+                "because": "free_daily_limit"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "state": {
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+    "status": "ended",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "first": {
+              "call": "run_definition",
+              "with": {
+                "type": "reasoning",
+                "name": "summarize",
+                "input": {
+                  "text": "hello"
+                }
+              }
+            }
+          },
+          {
+            "second": {
+              "call": "run_definition",
+              "with": {
+                "type": "reasoning",
+                "name": "tally"
+              },
+              "timeout": {
+                "after": "PT10M"
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {
+      "org": "acme",
+      "playbook": "alpha",
+      "run_id": "0199a3c4-7d2e-7c1a-9b3f-000000000317",
+      "definition": {
+        "name": "admission-timeout",
+        "version": 1
+      },
+      "caller": {
+        "id": "acme-admin"
+      }
+    },
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000
+    },
+    "startedAt": 1790845200000,
+    "lastInputAt": 1790845800050,
+    "inputs": 10,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/first": 1,
+      "/do/1/second": 4
+    },
+    "timers": {
+      "next": 12,
+      "armed": {}
+    },
+    "calls": {},
+    "listeners": {},
+    "emitted": {
+      "count": 0,
+      "bytes": 0
+    },
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "offeredIds": [],
+      "received": 0,
+      "receivedBytes": 0
+    },
+    "heldBytes": 306,
+    "historyBytes": 23180,
+    "stepsWithoutWaiting": 0,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {},
+          "bytes": 2
+        }
+      },
+      "nextValue": 5,
+      "context": 0,
+      "root": null
+    },
+    "outcome": {
+      "kind": "raised",
+      "error": {
+        "type": "https://on.auto/problems/credits_exhausted",
+        "status": 409,
+        "instance": "/do/1/second",
+        "title": "The reasoning function tally could not go through",
+        "detail": "The org has used today’s Free credits",
+        "kind": "credits_exhausted",
+        "because": "free_daily_limit",
+        "cause": {
+          "status": "rejected",
+          "reason": "conflict",
+          "kind": "credits_exhausted",
+          "because": "free_daily_limit"
+        }
+      }
+    }
+  }
+}

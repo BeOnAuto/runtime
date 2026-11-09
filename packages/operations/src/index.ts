@@ -148,7 +148,6 @@ export { keptContentOf } from './reading/kept-content.ts';
 export { shownData, type EventView } from './reading/shown-data.ts';
 export { ServedAsTool } from './dispatch/served-as-tool.ts';
 export { OperationsServed } from './dispatch/operations-served.ts';
-export type { HandlerServices } from './definition/handler-services.ts';
 export { PlaybookIdSchema, OrgIdSchema } from './caller/identifiers.ts';
 export { IncidentReporter, type CallSummary, type Incident } from './dispatch/incident-reporter.ts';
 export { InvalidInput, InvalidInputKindSchema, type InvalidInputKind } from './outcome/invalid-input.ts';
@@ -240,6 +239,7 @@ export { callSummaryOf, DirectoryListing, type PlaybookRequest, type OrgRequest 
 export { takesNoBody, type Method, type Route } from './definition/route.ts';
 export type { OperationKind, OperationScope } from './caller/operation-scope.ts';
 export { settle } from './dispatch/settle.ts';
+export { RejectionCauseSchema, type RejectionCause } from './outcome/rejection-cause.ts';
 export { SettlementSchema, type SettledRejection, type Settlement } from './outcome/settlement.ts';
 export type {
   PlaybookRecordedReader,

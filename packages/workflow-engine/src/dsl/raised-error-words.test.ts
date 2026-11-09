@@ -1,7 +1,8 @@
 import type { Issue } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
-import { callErrorOf, describeError, errorAsJson, errorFromJson, errorType, settlementOf } from './raised-error.ts';
+import { callErrorOf, describeError, errorAsJson, errorFromJson, errorType } from './raised-error.ts';
+import { settlementOf } from './settlement.ts';
 
 const site = { function: 'notify', label: 'the function notify', reference: '/do/0/ask' };
 
@@ -72,6 +73,7 @@ describe('the issues of a refused input a step met', () => {
       detail:
         'The function notify refused its input, at the step ask: seats, How many seats: expected at least 1. day: expected a date such as 2026-04-01.',
       issues,
+      cause: { step: 'do/0/ask', status: 'rejected', reason: 'invalid_input' },
     });
     expect(settlementOf({ kind: 'raised', error: { ...refused, status: 503 } })).not.toHaveProperty('issues');
   });

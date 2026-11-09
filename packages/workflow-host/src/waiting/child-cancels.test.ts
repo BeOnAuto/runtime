@@ -53,6 +53,7 @@ describe('the deadline of a call that waits for a run', () => {
       status: 'rejected',
       reason: 'unavailable',
       detail: 'The function notify did not finish within 600000 ms, the most it may take, at the step ask.',
+      cause: { step: 'do/0/ask', run_id: 'notify at /do/0/ask #1', status: 'timed_out' },
     });
     expect(waiting.cancels().map(({ run, request }) => [run, request.kind])).toEqual([
       [{ org: 'acme', playbook: 'alpha', id: child.runId }, 'deadline'],

@@ -137,6 +137,24 @@ describe('the ending of a run a step waits for', () => {
   });
 });
 
+describe('the ending of a workflow a step waits for, which a step of its own ended', () => {
+  it('answers the step with the rejection and its cause, so the step names the codes of the run that ended it', () => {
+    const paused = {
+      step: 'do/0/judge',
+      run_id: nestedRunId(workflowRun, '/do/0/judge', 1),
+      status: 'rejected',
+      reason: 'conflict',
+      kind: 'paused',
+    } as const;
+    const stopped = { reason: 'invalid_input', detail: 'The step judge stopped', issues: [], cause: paused } as const;
+
+    expect(callResultOfEnding({ type: 'run_rejected', data: { rejection: stopped }, context: ofTheChild })).toEqual({
+      status: 'rejected',
+      ...stopped,
+    });
+  });
+});
+
 describe('the ending of a run a step waits for, out of credits', () => {
   it('answers the step with the rejection of a run that ended out of credits as one to raise, never one to wait out', () => {
     const outOfCredits = { reason: 'conflict', kind: 'credits_exhausted', detail: 'The step stopped' } as const;

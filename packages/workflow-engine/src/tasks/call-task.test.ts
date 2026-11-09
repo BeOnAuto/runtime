@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { StartCall } from '../dispatch/run-output.ts';
 import { errorType } from '../dsl/raised-error.ts';
+import type { ErrorCause } from '../machine/dsl-error.ts';
 import { mostCallArgumentsBytes } from '../machine/limits.ts';
 import type { Responder } from '../memory/memory-executor.ts';
 import type { MemoryDriver } from '../testing/memory-driver.ts';
@@ -23,8 +24,13 @@ function startsIn(run: ReturnType<typeof drivenRun>): readonly StartCall[] {
   return outputsIn(run.events).filter((output): output is StartCall => output.kind === 'start_call');
 }
 
-function raisedBy(kind: Parameters<typeof errorType>[0], status: number, title: string, detail: string) {
-  return { kind: 'raised', error: { type: errorType(kind), status, title, detail, instance: '/do/0/ask' } };
+const child = 'notify at /do/0/ask #1';
+
+function raisedBy(kind: Parameters<typeof errorType>[0], status: number, title: string, cause: ErrorCause) {
+  return {
+    kind: 'raised',
+    error: { type: errorType(kind), status, title, detail: 'no', instance: '/do/0/ask', cause },
+  };
 }
 
 function answeringOnlyTheSecondRun(record: (entry: string) => void): Responder {
@@ -66,20 +72,30 @@ describe('a call task', () => {
     ['conflict', 'runtime', 409, 'could not go through'],
     ['unavailable', 'communication', 503, 'was not available'],
   ] as const)(
-    'raises a rejection for %s as a %s error, status %d, titled in plain words',
+    'raises a rejection for %s as a %s error, status %d, titled in plain words, caused by the run it started',
     (reason, kind, status, refused) => {
       expect(answeredWith({ status: 'rejected', reason, detail: 'no' }).outcome).toEqual(
-        raisedBy(kind, status, `The function notify ${refused}`, 'no'),
+        raisedBy(kind, status, `The function notify ${refused}`, { status: 'rejected', run_id: child, reason }),
       );
     },
   );
 
+  it('names no run in the cause of a call the functions name no run for, as one whose arguments are not an object', () => {
+    const texting = workflow('do:\n  - ask: { call: notify, with: ada }');
+    const run = drivenRun(texting, { respond: () => ({ after: 10, result: { status: 'failed', detail: 'no' } }) });
+
+    expect(run.outcome).toEqual(raisedBy('runtime', 500, 'The function notify failed', { status: 'failed' }));
+  });
+
   it('raises a failure as a runtime error, status 500, and an unreachable call as a communication error, status 503', () => {
-    expect(answeredWith({ status: 'failed', detail: 'it broke' }).outcome).toEqual(
-      raisedBy('runtime', 500, 'The function notify failed', 'it broke'),
+    expect(answeredWith({ status: 'failed', detail: 'no' }).outcome).toEqual(
+      raisedBy('runtime', 500, 'The function notify failed', { status: 'failed', run_id: child }),
     );
-    expect(answeredWith({ status: 'unreachable', detail: 'gone' }).outcome).toEqual(
-      raisedBy('communication', 503, 'notify could not reach the function notify', 'gone'),
+    expect(answeredWith({ status: 'unreachable', detail: 'no' }).outcome).toEqual(
+      raisedBy('communication', 503, 'notify could not reach the function notify', {
+        status: 'unreachable',
+        run_id: child,
+      }),
     );
   });
 });

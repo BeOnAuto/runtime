@@ -1,6 +1,7 @@
 import { Schema } from 'effect';
 
 import { IssueSchema } from './issue.ts';
+import { RejectionCauseSchema } from './rejection-cause.ts';
 
 export const invalidArguments = 'invalid_arguments';
 
@@ -16,6 +17,7 @@ export const CallResultSchema = Schema.Union([
     resolve_at: Schema.optionalKey(Schema.String),
     lifts_at: Schema.optionalKey(Schema.String),
     limited_because: Schema.optionalKey(Schema.String),
+    cause: Schema.optionalKey(RejectionCauseSchema),
     admission: Schema.optionalKey(Schema.Literal('refused')),
   }),
   Schema.Struct({ status: Schema.Literal('failed'), detail: Schema.String }),

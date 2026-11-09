@@ -5,6 +5,7 @@ import { ConflictKindSchema } from './conflict.ts';
 import { InvalidInputKindSchema } from './invalid-input.ts';
 import { IssueSchema } from './issue.ts';
 import { RejectionBecauseSchema } from './rejection-because.ts';
+import { RejectionCauseSchema } from './rejection-cause.ts';
 import { UnansweredKindSchema } from './unanswered-run.ts';
 import { UnavailableKindSchema } from './unavailable.ts';
 
@@ -14,28 +15,30 @@ const recorded = { record: Schema.optionalKey(Schema.JsonObject), ...settledBy }
 
 const rejected = { status: Schema.Literal('rejected'), detail: Schema.String, ...recorded };
 
+const endedByAStep = { ...rejected, cause: Schema.optionalKey(RejectionCauseSchema) };
+
 export const SettlementSchema = Schema.Union([
   Schema.Struct({ status: Schema.Literal('succeeded'), output: Schema.Json, ...recorded }),
   Schema.Struct({
-    ...rejected,
+    ...endedByAStep,
     reason: Schema.Literal('invalid_input'),
     kind: Schema.optionalKey(InvalidInputKindSchema),
     issues: Schema.optionalKey(Schema.Array(IssueSchema)),
   }),
   Schema.Struct({
-    ...rejected,
+    ...endedByAStep,
     reason: Schema.Literal('unavailable'),
     kind: Schema.optionalKey(UnavailableKindSchema),
     because: Schema.optionalKey(RejectionBecauseSchema),
   }),
   Schema.Struct({
-    ...rejected,
+    ...endedByAStep,
     reason: Schema.Literal('conflict'),
     kind: Schema.optionalKey(ConflictKindSchema),
     because: Schema.optionalKey(RejectionBecauseSchema),
   }),
   Schema.Struct({ ...rejected, reason: Schema.Literal('cancelled'), kind: CancelledKindSchema }),
-  Schema.Struct({ ...rejected, reason: Schema.Literal('unanswered'), kind: UnansweredKindSchema }),
+  Schema.Struct({ ...endedByAStep, reason: Schema.Literal('unanswered'), kind: UnansweredKindSchema }),
   Schema.Struct({ status: Schema.Literal('failed'), incident: Schema.optionalKey(Schema.String), ...settledBy }),
 ]);
 

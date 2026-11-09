@@ -96,7 +96,7 @@
   "events": [
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "started",
         "key": "0199a3c4-7d2e-7c1a-9b3f-000000000306",
@@ -520,7 +520,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000306\",\"/do/0/both/fork/branches/0/left\",1]",
@@ -625,7 +625,7 @@
     },
     {
       "type": "input_applied",
-      "format": 10,
+      "format": 11,
       "receipt": {
         "kind": "call_answered",
         "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000306\",\"/do/0/both/fork/branches/1/right\",1]",

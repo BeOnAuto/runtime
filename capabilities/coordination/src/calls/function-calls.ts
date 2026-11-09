@@ -16,21 +16,26 @@ const noCaller: CallAnswer = {
   detail: 'The run names no playbook and no caller to run a definition for',
 };
 
+function rejectedCallOf(result: Extract<EndedRunResult, { readonly status: 'rejected' }>): CallResult {
+  const { reason, detail, kind, because, issues, resolve_at: resolveAt } = result;
+  const { lifts_at: liftsAt, limited_because: limitedBecause, cause } = result;
+  return {
+    status: 'rejected',
+    reason,
+    detail,
+    ...(kind === undefined ? {} : { kind }),
+    ...(because === undefined ? {} : { because }),
+    ...(issues === undefined ? {} : { issues }),
+    ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
+    ...(liftsAt === undefined ? {} : { lifts_at: liftsAt }),
+    ...(limitedBecause === undefined ? {} : { limited_because: limitedBecause }),
+    ...(cause === undefined ? {} : { cause }),
+  };
+}
+
 function callResultOf(result: EndedRunResult): CallResult {
   if (result.status === 'rejected') {
-    const { reason, detail, kind, because, issues, resolve_at: resolveAt } = result;
-    const { lifts_at: liftsAt, limited_because: limitedBecause } = result;
-    return {
-      status: 'rejected',
-      reason,
-      detail,
-      ...(kind === undefined ? {} : { kind }),
-      ...(because === undefined ? {} : { because }),
-      ...(issues === undefined ? {} : { issues }),
-      ...(resolveAt === undefined ? {} : { resolve_at: resolveAt }),
-      ...(liftsAt === undefined ? {} : { lifts_at: liftsAt }),
-      ...(limitedBecause === undefined ? {} : { limited_because: limitedBecause }),
-    };
+    return rejectedCallOf(result);
   }
   if (result.status === 'failed') {
     return result;

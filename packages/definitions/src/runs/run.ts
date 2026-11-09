@@ -6,7 +6,9 @@ import {
   RecordedCallerSchema,
   UnansweredKindSchema,
   RejectionBecauseSchema,
+  RejectionCauseSchema,
   UnavailableKindSchema,
+  type RejectionCause,
 } from '@on.auto/operations';
 import { Schema } from 'effect';
 
@@ -17,6 +19,8 @@ import {
 } from '../registry/definition.ts';
 import { OutputShapeNameSchema } from '../shapes/shape-names.ts';
 import { mostResultBytes } from './recorded-size.ts';
+
+const endedByAStep = { cause: Schema.optionalKey(RejectionCauseSchema) };
 
 export const RunRejectionSchema = Schema.Union([
   Schema.Struct({
@@ -29,6 +33,7 @@ export const RunRejectionSchema = Schema.Union([
           'What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right',
       }),
     ),
+    ...endedByAStep,
   }),
   Schema.Struct({
     reason: Schema.Literal('unavailable'),
@@ -45,6 +50,7 @@ export const RunRejectionSchema = Schema.Union([
           'Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content',
       }),
     ),
+    ...endedByAStep,
   }),
   Schema.Struct({
     reason: Schema.Literal('conflict'),
@@ -61,6 +67,7 @@ export const RunRejectionSchema = Schema.Union([
           'Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown',
       }),
     ),
+    ...endedByAStep,
   }),
   Schema.Struct({
     reason: Schema.Literal('cancelled'),
@@ -77,10 +84,15 @@ export const RunRejectionSchema = Schema.Union([
       description:
         'Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization',
     }),
+    ...endedByAStep,
   }),
 ]).annotate({ description: 'Why the run was rejected, that it was cancelled, or that nobody answered it' });
 
 export type RunRejection = typeof RunRejectionSchema.Type;
+
+export function causeOf({ cause }: { readonly cause?: RejectionCause }): { readonly cause?: RejectionCause } {
+  return cause === undefined ? {} : { cause };
+}
 
 const RunWithinSchema = Schema.Struct({
   run_id: Schema.String.annotate({ description: "The workflow's run whose step started this run" }),

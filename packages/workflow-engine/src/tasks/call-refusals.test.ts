@@ -37,6 +37,7 @@ describe('a call whose functions word its refusals', () => {
           'The function notify turned notify for {"to":"ada"} down as invalid_input of the kind input_schema, saying No',
         detail: 'No',
         kind: 'input_schema',
+        cause: { status: 'rejected', run_id: 'notify at /do/0/ask #1', reason: 'invalid_input', kind: 'input_schema' },
       },
     });
   });

@@ -1,23 +1,24 @@
 import { invalidArguments, type CallResult, type RejectedCall } from '@on.auto/operations';
 
-import type { CancelReason } from '../dispatch/run-output.ts';
 import { evaluateTemplate } from '../dsl/evaluation.ts';
 import { field, jsonBytesOf } from '../dsl/json.ts';
 import { callErrorOf, capitalized, errorType, raised, type CallSite } from '../dsl/raised-error.ts';
-import { callKeyText } from '../executor/call-key.ts';
-import type { DslError } from '../machine/dsl-error.ts';
+import { admissionRefusalOf } from '../executor/admission-refusal.ts';
+import { callKeyText, type CallKey } from '../executor/call-key.ts';
+import type { DslError, ErrorCause } from '../machine/dsl-error.ts';
 import {
   firstAdmissionWaitMs,
   longestAdmissionWaitMs,
   mostAdmissionWaitMs,
   mostCallArgumentsBytes,
 } from '../machine/limits.ts';
-import type { FrameBody, ValueId } from '../machine/run-state.ts';
+import type { FrameBody, TaskFrame, ValueId } from '../machine/run-state.ts';
 import {
   doneOf,
   raisedOf,
   waitingOn,
   type BodyAdvance,
+  type CancelReason,
   type Invocation,
   type Machine,
   type Signal,
@@ -33,21 +34,28 @@ interface Called {
   readonly label: string;
 }
 
+function childOf({ session }: Machine, call: Called, { reference, run }: Pick<CallKey, 'reference' | 'run'>) {
+  return session.options.functions.childOf?.({
+    function: call.function,
+    reference,
+    run,
+    arguments: session.valueOf(call.arguments),
+    attributes: session.attributes(),
+  });
+}
+
 function called(invocation: Invocation, call: Called, run: number, refused?: CallBody['refused']): BodyAdvance {
   const { machine, entry, frame } = invocation;
   const { session } = machine;
   const { reference } = entry;
-  const given = session.valueOf(call.arguments);
   session.beforeWaiting();
   const key = { runId: session.runId(), reference, run };
-  const deadline = session.calls.startCall({ key, function: call.function, arguments: given });
-  const child = session.options.functions.childOf?.({
+  const deadline = session.calls.startCall({
+    key,
     function: call.function,
-    reference,
-    run,
-    arguments: given,
-    attributes: session.attributes(),
+    arguments: session.valueOf(call.arguments),
   });
+  const child = childOf(machine, call, key);
   session.record({
     reference,
     run: frame.run,
@@ -91,23 +99,29 @@ export function startCall(invocation: Invocation): BodyAdvance {
 
 type FailedResult = Exclude<CallResult, { readonly status: 'succeeded' }>;
 
-function refusedBy(machine: Machine, body: CallBody, result: FailedResult): Pick<CallSite, 'refused'> {
+function refusedBy(machine: Machine, body: Called, result: FailedResult): Pick<CallSite, 'refused'> {
   const words = machine.session.options.functions.refusal;
   return result.status !== 'rejected' || words === undefined
     ? {}
     : { refused: words(body.function, machine.session.valueOf(body.arguments), result) };
 }
 
-function errorOf(machine: Machine, result: FailedResult, body: CallBody): DslError {
-  if (result.status === 'rejected' && result.reason === invalidArguments) {
-    return { type: errorType('validation'), status: 400, title: result.detail, instance: body.key.reference };
-  }
-  return callErrorOf(result, {
+function siteOf(machine: Machine, body: CallBody, result: FailedResult): CallSite {
+  const child = childOf(machine, body, body.key);
+  return {
     function: body.function,
     label: body.label,
     reference: body.key.reference,
     ...refusedBy(machine, body, result),
-  });
+    ...(child === undefined ? {} : { child }),
+  };
+}
+
+function errorOf(machine: Machine, result: FailedResult, body: CallBody): DslError {
+  if (result.status === 'rejected' && result.reason === invalidArguments) {
+    return { type: errorType('validation'), status: 400, title: result.detail, instance: body.key.reference };
+  }
+  return callErrorOf(result, siteOf(machine, body, result));
 }
 
 function admissionWaitAfter(refusals: number): number {
@@ -148,7 +162,7 @@ function waitedForAdmission(invocation: Invocation, body: CallBody, refusal: Rej
     arguments: given,
     label,
     timer,
-    refused: { since, refusals, waited },
+    refused: { since, refusals, waited, refusal: admissionRefusalOf(refusal) },
   });
 }
 
@@ -166,6 +180,11 @@ function answered(invocation: Invocation, body: CallBody, result: CallResult): B
   return result.status === 'succeeded' ? doneOf(session.hold(result.output)) : failedWith(invocation, body, result);
 }
 
+function timedOutCauseOf(machine: Machine, body: FrameBody): ErrorCause {
+  const child = body.kind === 'call' ? childOf(machine, body, body.key) : undefined;
+  return child === undefined ? { status: 'timed_out' } : { status: 'timed_out', run_id: child };
+}
+
 function timedOutCall({ machine }: Invocation, body: CallBody, milliseconds: number): BodyAdvance {
   machine.session.calls.cancelCall(body, 'deadline');
   return raisedOf({
@@ -173,7 +192,29 @@ function timedOutCall({ machine }: Invocation, body: CallBody, milliseconds: num
     status: 408,
     title: `${capitalized(body.label)} did not finish within ${milliseconds} ms, the most it may take`,
     instance: body.key.reference,
+    cause: timedOutCauseOf(machine, body),
   });
+}
+
+function refusalOutlasted(machine: Machine, body: CallBody | AdmissionBody, reference: string): DslError | undefined {
+  const latest = body.refused?.refusal;
+  if (latest === undefined) {
+    return undefined;
+  }
+  const refusal: RejectedCall = { status: 'rejected', ...latest };
+  const site = { function: body.function, label: body.label, reference, ...refusedBy(machine, body, refusal) };
+  return callErrorOf(refusal, site);
+}
+
+export function raisedAtTimeout(
+  machine: Machine,
+  frame: Pick<TaskFrame, 'reference' | 'body'>,
+  timeout: DslError,
+): DslError {
+  const { body, reference } = frame;
+  const refused =
+    body.kind === 'admission' || body.kind === 'call' ? refusalOutlasted(machine, body, reference) : undefined;
+  return refused ?? { ...timeout, cause: timedOutCauseOf(machine, body) };
 }
 
 function resumed({ machine, frame }: Invocation, { refused }: CallBody): void {

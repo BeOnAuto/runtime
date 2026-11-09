@@ -597,6 +597,15 @@ A cancelled run's rejection names the kind of its cancellation:
 
 A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A run a trigger started, and each run its workflow's steps start, has `acts_for`, the id of the person it acts for, such as `person:user_7kLm2`: whoever saved or restored the version the trigger runs, where that was a person ([When a trigger applies](workflow-format.md#when-a-trigger-applies)). It grants the run nothing, and a run without it acts for its caller where that is a person. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
+The rejection of a workflow run that a step's uncaught error ended also has `cause`: the step and how its work ended, in codes, which the rejection's `detail` says in words.
+
+- `step`: the step's reference without its leading `/`, as `within` names one.
+- `run_id`: the run the step's call started, when it called a definition. A run the meter refused before it started was never recorded, so this id may name no run.
+- `status`: `rejected`, `failed` or `unreachable`, as the call answered, or `timed_out`, when the step's `timeout` or its call's deadline passed first.
+- `reason`, `kind` and `because`: with `rejected`, those of the run the step started, or, where that run is a workflow a step of its own ended, those of the run that ended it, so a step that called a workflow whose function was paused names `paused`.
+
+The workflow run's own `reason` is that of the step's error, so a run that a paused function ended is `invalid_input`, and its cause has the reason `conflict` and the kind `paused`.
+
 Most runs finish within the request that starts them. These runs finish later, so `run_definition` returns them `started`, unless one ended before its first wait:
 
 - a workflow's run, whose `record` is empty while it is in progress;
@@ -757,7 +766,7 @@ A retired playbook stays readable: these reads work on it, while every change to
 `list_runs` returns `runs`, newest first by when each run first started.
 
 - A listed run has the fields `get_run` returns, without `output`, `record` and the detail and issues of a rejection.
-- A rejection shows its `reason`, with `kind` and `because` when the function gave them.
+- A rejection shows its `reason`, with `kind` and `because` when the function gave them, and the `cause` of a workflow run a step ended.
 - `status` keeps only the runs whose status is `started`, `succeeded`, `rejected` or `failed`.
 - `type` and `name` keep only the runs of one definition.
 - `steps: false` leaves out the runs that a workflow's step started. Left out, `steps` is `true`, and those runs are listed among the others, each with its `within`.
@@ -865,7 +874,7 @@ Each event has these fields, and no others:
 - Large values are shown in full when each is at most 2 KiB as JSON. They are an input, an output, a record, an answer, a call's arguments, a model call's messages, response, tool calls, warnings, issues and repair, and a published event's data. A larger one is shown as its size in bytes, under its name plus `_bytes`, such as `output_bytes`. A call's `result` is never shown by `get_run_history` or `list_playbook_events`, only its size, `result_bytes`; `get_event` reads it in full.
 - When the event's data would still be larger than 4 KiB, its largest field is shown as its size first.
 - A definition's document and schemas appear as their sizes. Its description shows its first 300 characters, and its warnings as a count.
-- A rejection shows its reason, its detail shortened to fit, and for invalid input the number of issues and the first five.
+- A rejection shows its reason, its detail shortened to fit, for invalid input the number of issues and the first five, and the `cause` of a workflow run a step ended, its step and run id shortened to fit.
 - A rejection that kept a record shows the record as a success does. A run of a reasoning function keeps one when it is rejected after its model answered.
 
 The full values are read elsewhere: `get_run` returns a run's output and record, `get_definition` a definition's document and schemas, and `get_event` one event with every field in full.
@@ -2218,7 +2227,7 @@ Inside a workflow, three rejections of a run the workflow called differ from the
 
 - `invalid_input` is status 422 over HTTP, but a workflow raises it as a `validation` error of status 400. A `catch` for it matches status 400 or the `validation` type, never 422.
 - A cancellation of a called run that the workflow does not catch rejects the workflow as `invalid_input`, not as `cancelled`, since the workflow itself was not cancelled.
-- `credits_exhausted`, `license_required`, `license_invalid` and `meter_unavailable`, when the meter would not start the run, reach the workflow only 24 hours on: until then its step waits and asks again ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)).
+- `credits_exhausted`, `license_required`, `license_invalid` and `meter_unavailable`, when the meter would not start the run, reach the workflow only 24 hours on, or once the step's own `timeout` passes: until then its step waits and asks again ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)).
 
 [When the function's run does not succeed](workflow-format.md#when-the-function-s-run-does-not-succeed) has the full table of what a workflow `catch` sees.
 

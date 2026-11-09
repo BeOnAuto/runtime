@@ -16784,6 +16784,9 @@
                                 "cursor_not_held"
                               ],
                               "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -16856,6 +16859,9 @@
                                 "org_purged"
                               ],
                               "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -16935,6 +16941,9 @@
                                 "org_purged"
                               ],
                               "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -16995,6 +17004,9 @@
                                 "no_person"
                               ],
                               "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17062,6 +17074,128 @@
                   "additionalProperties": false,
                   "description": "A run run_definition answers: how it stands or ended, what its runtime adapter recorded and its page in Studio",
                   "$defs": {
+                    "RejectionCause": {
+                      "type": "object",
+                      "properties": {
+                        "step": {
+                          "type": "string",
+                          "description": "The step whose work ended the run, its reference in the workflow without its leading /, such as do/1/review"
+                        },
+                        "run_id": {
+                          "type": "string",
+                          "description": "The run the step started, by id, when its call was of a definition; a run refused before it started was never recorded, so the id may name no run"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "rejected",
+                            "failed",
+                            "unreachable",
+                            "timed_out"
+                          ],
+                          "description": "How the step's work ended: rejected, failed or unreachable, as its call answered, or timed_out, when the step's time limit or the call's deadline passed first"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_input",
+                            "forbidden",
+                            "not_found",
+                            "conflict",
+                            "unavailable",
+                            "cancelled",
+                            "unanswered"
+                          ],
+                          "description": "With rejected: the reason of the run the step started, or, where that run is a workflow a step of its own ended, of the run that ended it"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "input_schema",
+                            "cursor_not_held",
+                            "model_not_offered",
+                            "tool_not_offered",
+                            "tool_not_read_only",
+                            "tool_server_failed",
+                            "tools_unfinished",
+                            "requests_full",
+                            "dataset_not_ready",
+                            "generation_timed_out",
+                            "meter_unavailable",
+                            "taken",
+                            "retired",
+                            "paused",
+                            "concurrent_change",
+                            "unworkable",
+                            "stalled",
+                            "tools_called",
+                            "effect_unknown",
+                            "oversized",
+                            "history_too_short",
+                            "feature_unlicensed",
+                            "connections_full",
+                            "credits_exhausted",
+                            "license_required",
+                            "license_invalid",
+                            "account_closed",
+                            "blocked_by_moderation",
+                            "requested",
+                            "deadline",
+                            "overrun",
+                            "parent_ended",
+                            "expired",
+                            "undelivered",
+                            "declined",
+                            "signed_out",
+                            "no_person"
+                          ],
+                          "description": "With rejected: its kind, where it gave one"
+                        },
+                        "because": {
+                          "type": "string",
+                          "enum": [
+                            "provider_not_configured",
+                            "model_not_allowed",
+                            "tool_server_not_configured",
+                            "tool_not_allowed",
+                            "tool_not_listed",
+                            "connection_pending",
+                            "connection_broken",
+                            "connection_not_allowed",
+                            "connection_unavailable",
+                            "failing",
+                            "rate_limited",
+                            "unreachable",
+                            "key_refused",
+                            "scope_lacking",
+                            "server_failed",
+                            "tool_error",
+                            "model_unavailable",
+                            "definition_refused",
+                            "run_bound",
+                            "no_answer",
+                            "restarted_without_content",
+                            "call_outcome_unknown",
+                            "only_read",
+                            "stalled",
+                            "none_left",
+                            "free_daily_limit",
+                            "free_month_used",
+                            "key_rotated",
+                            "installation_revoked",
+                            "org_deleted",
+                            "org_purged"
+                          ],
+                          "description": "With rejected: its because, where it gave one"
+                        }
+                      },
+                      "required": [
+                        "step",
+                        "status"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The step whose work ended a workflow run, and how that work ended, in codes; the rejection's detail says it in words"
+                    },
                     "RunWithin": {
                       "type": "object",
                       "properties": {
@@ -17254,6 +17388,9 @@
                                 "cursor_not_held"
                               ],
                               "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17326,6 +17463,9 @@
                                 "org_purged"
                               ],
                               "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17405,6 +17545,9 @@
                                 "org_purged"
                               ],
                               "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17465,6 +17608,9 @@
                                 "no_person"
                               ],
                               "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17543,6 +17689,128 @@
                   "additionalProperties": false,
                   "description": "One run as get_run reads it: how it ended, what its runtime adapter recorded, and its page where its definition has one",
                   "$defs": {
+                    "RejectionCause": {
+                      "type": "object",
+                      "properties": {
+                        "step": {
+                          "type": "string",
+                          "description": "The step whose work ended the run, its reference in the workflow without its leading /, such as do/1/review"
+                        },
+                        "run_id": {
+                          "type": "string",
+                          "description": "The run the step started, by id, when its call was of a definition; a run refused before it started was never recorded, so the id may name no run"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "rejected",
+                            "failed",
+                            "unreachable",
+                            "timed_out"
+                          ],
+                          "description": "How the step's work ended: rejected, failed or unreachable, as its call answered, or timed_out, when the step's time limit or the call's deadline passed first"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_input",
+                            "forbidden",
+                            "not_found",
+                            "conflict",
+                            "unavailable",
+                            "cancelled",
+                            "unanswered"
+                          ],
+                          "description": "With rejected: the reason of the run the step started, or, where that run is a workflow a step of its own ended, of the run that ended it"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "input_schema",
+                            "cursor_not_held",
+                            "model_not_offered",
+                            "tool_not_offered",
+                            "tool_not_read_only",
+                            "tool_server_failed",
+                            "tools_unfinished",
+                            "requests_full",
+                            "dataset_not_ready",
+                            "generation_timed_out",
+                            "meter_unavailable",
+                            "taken",
+                            "retired",
+                            "paused",
+                            "concurrent_change",
+                            "unworkable",
+                            "stalled",
+                            "tools_called",
+                            "effect_unknown",
+                            "oversized",
+                            "history_too_short",
+                            "feature_unlicensed",
+                            "connections_full",
+                            "credits_exhausted",
+                            "license_required",
+                            "license_invalid",
+                            "account_closed",
+                            "blocked_by_moderation",
+                            "requested",
+                            "deadline",
+                            "overrun",
+                            "parent_ended",
+                            "expired",
+                            "undelivered",
+                            "declined",
+                            "signed_out",
+                            "no_person"
+                          ],
+                          "description": "With rejected: its kind, where it gave one"
+                        },
+                        "because": {
+                          "type": "string",
+                          "enum": [
+                            "provider_not_configured",
+                            "model_not_allowed",
+                            "tool_server_not_configured",
+                            "tool_not_allowed",
+                            "tool_not_listed",
+                            "connection_pending",
+                            "connection_broken",
+                            "connection_not_allowed",
+                            "connection_unavailable",
+                            "failing",
+                            "rate_limited",
+                            "unreachable",
+                            "key_refused",
+                            "scope_lacking",
+                            "server_failed",
+                            "tool_error",
+                            "model_unavailable",
+                            "definition_refused",
+                            "run_bound",
+                            "no_answer",
+                            "restarted_without_content",
+                            "call_outcome_unknown",
+                            "only_read",
+                            "stalled",
+                            "none_left",
+                            "free_daily_limit",
+                            "free_month_used",
+                            "key_rotated",
+                            "installation_revoked",
+                            "org_deleted",
+                            "org_purged"
+                          ],
+                          "description": "With rejected: its because, where it gave one"
+                        }
+                      },
+                      "required": [
+                        "step",
+                        "status"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The step whose work ended a workflow run, and how that work ended, in codes; the rejection's detail says it in words"
+                    },
                     "RunWithin": {
                       "type": "object",
                       "properties": {
@@ -17750,6 +18018,9 @@
                                 "cursor_not_held"
                               ],
                               "description": "What refused the input, when it was the definition before it ran: input_schema when the input does not match its input schema, which only a corrected input puts right"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17822,6 +18093,9 @@
                                 "org_purged"
                               ],
                               "description": "Why. With model_not_offered: provider_not_configured when its provider is not set up on this server while others are, model_not_allowed when it is outside the models the operator allows. With tool_not_offered: tool_server_not_configured, tool_not_allowed or tool_not_listed, or connection_pending, connection_broken, connection_not_allowed or connection_unavailable for a connection a person added. With tool_server_failed: failing, rate_limited, unreachable, key_refused or scope_lacking. With tools_unfinished: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer or restarted_without_content"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17901,6 +18175,9 @@
                                 "org_purged"
                               ],
                               "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -17961,6 +18238,9 @@
                                 "no_person"
                               ],
                               "description": "Why nobody answered what the run asked: expired when its request expired before an answer came; undelivered when a notification could not be delivered in any of its attempts; declined when the person a sign-in asked answered that they did not sign in; signed_out when the person a sign-in acts for is not signed in and its function stops rather than asks; no_person when a sign-in acts for no person, or for one who has left the organization"
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
@@ -18020,6 +18300,128 @@
                   "additionalProperties": false,
                   "description": "One run of a definition with an input, and how it ended",
                   "$defs": {
+                    "RejectionCause": {
+                      "type": "object",
+                      "properties": {
+                        "step": {
+                          "type": "string",
+                          "description": "The step whose work ended the run, its reference in the workflow without its leading /, such as do/1/review"
+                        },
+                        "run_id": {
+                          "type": "string",
+                          "description": "The run the step started, by id, when its call was of a definition; a run refused before it started was never recorded, so the id may name no run"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "rejected",
+                            "failed",
+                            "unreachable",
+                            "timed_out"
+                          ],
+                          "description": "How the step's work ended: rejected, failed or unreachable, as its call answered, or timed_out, when the step's time limit or the call's deadline passed first"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_input",
+                            "forbidden",
+                            "not_found",
+                            "conflict",
+                            "unavailable",
+                            "cancelled",
+                            "unanswered"
+                          ],
+                          "description": "With rejected: the reason of the run the step started, or, where that run is a workflow a step of its own ended, of the run that ended it"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "input_schema",
+                            "cursor_not_held",
+                            "model_not_offered",
+                            "tool_not_offered",
+                            "tool_not_read_only",
+                            "tool_server_failed",
+                            "tools_unfinished",
+                            "requests_full",
+                            "dataset_not_ready",
+                            "generation_timed_out",
+                            "meter_unavailable",
+                            "taken",
+                            "retired",
+                            "paused",
+                            "concurrent_change",
+                            "unworkable",
+                            "stalled",
+                            "tools_called",
+                            "effect_unknown",
+                            "oversized",
+                            "history_too_short",
+                            "feature_unlicensed",
+                            "connections_full",
+                            "credits_exhausted",
+                            "license_required",
+                            "license_invalid",
+                            "account_closed",
+                            "blocked_by_moderation",
+                            "requested",
+                            "deadline",
+                            "overrun",
+                            "parent_ended",
+                            "expired",
+                            "undelivered",
+                            "declined",
+                            "signed_out",
+                            "no_person"
+                          ],
+                          "description": "With rejected: its kind, where it gave one"
+                        },
+                        "because": {
+                          "type": "string",
+                          "enum": [
+                            "provider_not_configured",
+                            "model_not_allowed",
+                            "tool_server_not_configured",
+                            "tool_not_allowed",
+                            "tool_not_listed",
+                            "connection_pending",
+                            "connection_broken",
+                            "connection_not_allowed",
+                            "connection_unavailable",
+                            "failing",
+                            "rate_limited",
+                            "unreachable",
+                            "key_refused",
+                            "scope_lacking",
+                            "server_failed",
+                            "tool_error",
+                            "model_unavailable",
+                            "definition_refused",
+                            "run_bound",
+                            "no_answer",
+                            "restarted_without_content",
+                            "call_outcome_unknown",
+                            "only_read",
+                            "stalled",
+                            "none_left",
+                            "free_daily_limit",
+                            "free_month_used",
+                            "key_rotated",
+                            "installation_revoked",
+                            "org_deleted",
+                            "org_purged"
+                          ],
+                          "description": "With rejected: its because, where it gave one"
+                        }
+                      },
+                      "required": [
+                        "step",
+                        "status"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The step whose work ended a workflow run, and how that work ended, in codes; the rejection's detail says it in words"
+                    },
                     "RunWithin": {
                       "type": "object",
                       "properties": {
@@ -18238,6 +18640,128 @@
                       "additionalProperties": false,
                       "description": "The workflow run and the step that started this run; left out for a run no workflow's step started"
                     },
+                    "RejectionCause": {
+                      "type": "object",
+                      "properties": {
+                        "step": {
+                          "type": "string",
+                          "description": "The step whose work ended the run, its reference in the workflow without its leading /, such as do/1/review"
+                        },
+                        "run_id": {
+                          "type": "string",
+                          "description": "The run the step started, by id, when its call was of a definition; a run refused before it started was never recorded, so the id may name no run"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "rejected",
+                            "failed",
+                            "unreachable",
+                            "timed_out"
+                          ],
+                          "description": "How the step's work ended: rejected, failed or unreachable, as its call answered, or timed_out, when the step's time limit or the call's deadline passed first"
+                        },
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "invalid_input",
+                            "forbidden",
+                            "not_found",
+                            "conflict",
+                            "unavailable",
+                            "cancelled",
+                            "unanswered"
+                          ],
+                          "description": "With rejected: the reason of the run the step started, or, where that run is a workflow a step of its own ended, of the run that ended it"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "input_schema",
+                            "cursor_not_held",
+                            "model_not_offered",
+                            "tool_not_offered",
+                            "tool_not_read_only",
+                            "tool_server_failed",
+                            "tools_unfinished",
+                            "requests_full",
+                            "dataset_not_ready",
+                            "generation_timed_out",
+                            "meter_unavailable",
+                            "taken",
+                            "retired",
+                            "paused",
+                            "concurrent_change",
+                            "unworkable",
+                            "stalled",
+                            "tools_called",
+                            "effect_unknown",
+                            "oversized",
+                            "history_too_short",
+                            "feature_unlicensed",
+                            "connections_full",
+                            "credits_exhausted",
+                            "license_required",
+                            "license_invalid",
+                            "account_closed",
+                            "blocked_by_moderation",
+                            "requested",
+                            "deadline",
+                            "overrun",
+                            "parent_ended",
+                            "expired",
+                            "undelivered",
+                            "declined",
+                            "signed_out",
+                            "no_person"
+                          ],
+                          "description": "With rejected: its kind, where it gave one"
+                        },
+                        "because": {
+                          "type": "string",
+                          "enum": [
+                            "provider_not_configured",
+                            "model_not_allowed",
+                            "tool_server_not_configured",
+                            "tool_not_allowed",
+                            "tool_not_listed",
+                            "connection_pending",
+                            "connection_broken",
+                            "connection_not_allowed",
+                            "connection_unavailable",
+                            "failing",
+                            "rate_limited",
+                            "unreachable",
+                            "key_refused",
+                            "scope_lacking",
+                            "server_failed",
+                            "tool_error",
+                            "model_unavailable",
+                            "definition_refused",
+                            "run_bound",
+                            "no_answer",
+                            "restarted_without_content",
+                            "call_outcome_unknown",
+                            "only_read",
+                            "stalled",
+                            "none_left",
+                            "free_daily_limit",
+                            "free_month_used",
+                            "key_rotated",
+                            "installation_revoked",
+                            "org_deleted",
+                            "org_purged"
+                          ],
+                          "description": "With rejected: its because, where it gave one"
+                        }
+                      },
+                      "required": [
+                        "step",
+                        "status"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The step whose work ended a workflow run, and how that work ended, in codes; the rejection's detail says it in words"
+                    },
                     "ListedRun": {
                       "type": "object",
                       "properties": {
@@ -18402,13 +18926,16 @@
                                 "org_deleted",
                                 "org_purged"
                               ]
+                            },
+                            "cause": {
+                              "$ref": "#/$defs/RejectionCause"
                             }
                           },
                           "required": [
                             "reason"
                           ],
                           "additionalProperties": false,
-                          "description": "Why the run was rejected: its reason, the kind it gave for invalid_input, unavailable or conflict, the kind of a cancellation or of a request nobody answered, and for unavailable or conflict the because it gave"
+                          "description": "Why the run was rejected: its reason, the kind it gave for invalid_input, unavailable or conflict, the kind of a cancellation or of a request nobody answered, for unavailable or conflict the because it gave, and for a workflow run a step's uncaught error ended, its cause"
                         }
                       },
                       "required": [

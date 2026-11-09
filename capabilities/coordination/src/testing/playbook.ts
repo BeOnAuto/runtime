@@ -1,5 +1,6 @@
 import {
   defineCreateDefinition,
+  definePauseDefinition,
   defineRunDefinition,
   runSettler,
   defineGetRun,
@@ -28,6 +29,7 @@ interface PlaybookOperation {
 
 export interface Playbook {
   readonly createDefinition: PlaybookOperation;
+  readonly pauseDefinition: PlaybookOperation;
   readonly runDefinition: PlaybookOperation;
   readonly getRun: PlaybookOperation;
   readonly call: (operation: PlaybookOperation, input: object, caller?: CallerIdentity) => Promise<Outcome>;
@@ -58,6 +60,7 @@ export function playbookOn(ledger: MemoryLedger, capabilities: readonly Capabili
     Effect.runPromise(dispatch(operation, input, caller));
   return {
     createDefinition,
+    pauseDefinition: definePauseDefinition(capabilities),
     runDefinition,
     getRun: defineGetRun(capabilities, uncheckedPages),
     call,

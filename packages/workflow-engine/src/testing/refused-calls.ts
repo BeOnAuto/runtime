@@ -1,6 +1,7 @@
 import type { CallResult, RejectedCall } from '@on.auto/operations';
 
 import type { StartCall } from '../dispatch/run-output.ts';
+import type { JsonObject } from '../dsl/json.ts';
 import type { Responder } from '../memory/memory-executor.ts';
 import { testSandbox } from '../pool-testing/test-sandbox.ts';
 import type { PositionedEvent } from '../run-log/run-event.ts';
@@ -80,6 +81,13 @@ export const refusingAlways = secondAnswers([], outOfCredits);
 export const slowlyRefusing: Responder = (call) =>
   call.key.reference === second ? { after: 30 * minute, result: outOfCredits } : { after: 10, result: sent };
 
+export const refusedOnceThenSlow: Responder = (call) => {
+  if (call.key.reference !== second) {
+    return { after: 10, result: sent };
+  }
+  return call.key.run === 1 ? { after: 10, result: outOfCredits } : { after: 30 * minute, result: sent };
+};
+
 export function startsIn(events: readonly PositionedEvent[]): readonly StartCall[] {
   return outputsIn(events).filter((output): output is StartCall => output.kind === 'start_call');
 }
@@ -112,9 +120,12 @@ export const doubling = [1, 2, 4, 8, 16, 32].map((minutes) => minutes * minute);
 
 export const hourly = Array.from({ length: 22 }, () => hour);
 
-export function waitingOnASecondRefusal(): MemoryDriver {
-  const driver = memoryDriver({ sandbox: testSandbox, respond: refusingAlways });
-  driver.start({ runId: drivenRunId, document: calling });
+export function waitingOnASecondRefusal(
+  document: JsonObject = calling,
+  respond: Responder = refusingAlways,
+): MemoryDriver {
+  const driver = memoryDriver({ sandbox: testSandbox, respond });
+  driver.start({ runId: drivenRunId, document });
   driver.clock.advance();
   driver.clock.advance();
   return driver;

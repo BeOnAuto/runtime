@@ -189,6 +189,7 @@ describe('every open call', () => {
         status: 408,
         title: `The function notify did not finish within ${longestCallMs} ms, the most it may take`,
         instance: '/do/0/ask',
+        cause: { status: 'timed_out', run_id: 'notify at /do/0/ask #1' },
       },
     });
     expect(driver.ports.executor.cancelled()).toEqual([

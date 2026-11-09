@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { errorType, settlementOf, unworkableOutputOf } from './raised-error.ts';
+import { errorType, unworkableOutputOf } from './raised-error.ts';
+import { settlementOf } from './settlement.ts';
 
 describe('the rejection of an output that cannot work as its workflow is written', () => {
   it('settles as a conflict of the kind unworkable, in the words of the error at the root', () => {
