@@ -1,6 +1,7 @@
 import type { PlaybookAddress, RecordedEvent } from '@on.auto/operations';
 import { Data, type Effect } from 'effect';
 
+import type { FailureDetail } from '../reactions/refusals.ts';
 import type { FollowedEvent } from './followed-events.ts';
 
 export interface CallRecord {
@@ -13,13 +14,13 @@ export interface FollowedRecord extends CallRecord {
   readonly event: FollowedEvent;
 }
 
-export class DeliveryFailed extends Data.TaggedError('delivery_failed')<{ readonly detail: string }> {}
+export class DeliveryFailed extends Data.TaggedError('delivery_failed')<FailureDetail> {}
 
 export interface Delivery {
   readonly key: string;
   readonly workflow: string;
   readonly deliver: Effect.Effect<void, DeliveryFailed>;
-  readonly skipped: (detail: string) => Effect.Effect<void>;
+  readonly skipped: (failure: FailureDetail) => Effect.Effect<void>;
 }
 
 interface Batch {

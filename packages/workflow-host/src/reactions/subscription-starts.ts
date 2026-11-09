@@ -19,7 +19,7 @@ import {
 } from '../follower/consumers.ts';
 import { eventSubscriptionsOf, type EventSubscription } from '../triggers/trigger-rows.ts';
 import { reactionRunIdOf } from './reaction-ids.ts';
-import type { RefuseReaction } from './refusals.ts';
+import { codesOf, type FailureDetail, type Refusal, type RefuseReaction, type RejectionCodes } from './refusals.ts';
 import type { WorkflowOfRun } from './run-workflows.ts';
 import type { Starting } from './start-rates.ts';
 
@@ -55,6 +55,18 @@ function verdictOf(verdicts: readonly FilterVerdict[]): Verdict {
 
 function placeOf(playbookKey: string, { workflow, version, reference }: EventSubscription): FilterPlace {
   return { kind: 'trigger', playbookKey, workflow, version, reference };
+}
+
+function refusalOf(
+  { workflow, version, reference }: EventSubscription,
+  reason: string,
+  codes: RejectionCodes = {},
+): Refusal {
+  return { workflow, version, trigger: { kind: 'event', reference }, reason, ...codesOf(codes) };
+}
+
+function unstarted(subscription: EventSubscription, failure: FailureDetail): Refusal {
+  return refusalOf(subscription, `The workflow could not be started by its event trigger: ${failure.detail}`, failure);
 }
 
 function verdictsOf(
@@ -97,18 +109,15 @@ function startOf(parts: StartParts, subscription: EventSubscription, followed: F
   return {
     key: workflow,
     workflow,
-    skipped: (detail) =>
-      parts.refusals.refuse(
-        playbookKey,
-        subscription,
-        `The workflow could not be started by its event trigger: ${detail}`,
-      ),
+    skipped: (failure) => parts.refusals.refuse(playbookKey, unstarted(subscription, failure)),
     deliver:
       event.depth > mostReactionDepth
         ? parts.refusals.refuse(
             playbookKey,
-            subscription,
-            `An event matched the event trigger of the workflow at reaction depth ${event.depth}, past the ${mostReactionDepth} a chain of reactions may reach`,
+            refusalOf(
+              subscription,
+              `An event matched the event trigger of the workflow at reaction depth ${event.depth}, past the ${mostReactionDepth} a chain of reactions may reach`,
+            ),
           )
         : parts.starting.start(playbookKey, {
             ...playbook,
@@ -129,12 +138,7 @@ function matchedLater(parts: StartParts, playbookKey: string, subscription: Even
   return {
     key: workflow,
     workflow,
-    skipped: (detail) =>
-      parts.refusals.refuse(
-        playbookKey,
-        subscription,
-        `The workflow could not be started by its event trigger: ${detail}`,
-      ),
+    skipped: (failure) => parts.refusals.refuse(playbookKey, unstarted(subscription, failure)),
     deliver: Effect.fail(
       new DeliveryFailed({
         detail:
@@ -162,16 +166,20 @@ function reported(parts: StartParts, { place, verdict, stopped, subscription }: 
       (error) =>
         parts.refusals.refuse(
           playbookKey,
-          subscription,
-          `The filter of the workflow's event trigger was stopped by its deadline or its memory ${stopsInARowBeforeTheVersion} times in a row, so it is not evaluated again for this version of the workflow; a new version evaluates it again: ${describeError(error)}`,
+          refusalOf(
+            subscription,
+            `The filter of the workflow's event trigger was stopped by its deadline or its memory ${stopsInARowBeforeTheVersion} times in a row, so it is not evaluated again for this version of the workflow; a new version evaluates it again: ${describeError(error)}`,
+          ),
         ),
       { discard: true },
     ),
     typeof verdict === 'object' && parts.stops.failedFirst(place)
       ? parts.refusals.refuse(
           playbookKey,
-          subscription,
-          `The filter of the workflow's event trigger failed on an event, so it did not match: ${verdict.error}`,
+          refusalOf(
+            subscription,
+            `The filter of the workflow's event trigger failed on an event, so it did not match: ${verdict.error}`,
+          ),
         )
       : Effect.void,
   );

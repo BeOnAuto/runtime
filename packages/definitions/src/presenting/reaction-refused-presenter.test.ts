@@ -29,7 +29,7 @@ const reason =
   'An event matched the event trigger of the workflow at reaction depth 9, past the 8 a chain of reactions may reach';
 
 describe('the presenter of the refused reactions of a workflow', () => {
-  it('says in words that the workflow of its context was not started every time its triggers called for it, and gives the count and the last reason', () => {
+  it('says in words that the workflow of its context was not started every time its triggers called for it, and gives the count and the last reason, with its kind, because and trigger where it has them', () => {
     const context = {
       at: '2026-10-01T09:01:00.000Z',
       by: 'playbook:alpha',
@@ -39,6 +39,13 @@ describe('the presenter of the refused reactions of a workflow', () => {
     };
     const data = { count: 3, reason, minute: '2026-10-01T09:00:00.000Z' };
 
+    const coded = {
+      ...data,
+      kind: 'credits_exhausted',
+      because: 'free_daily_limit',
+      trigger: { kind: 'every', reference: '/schedule/every' },
+    };
+
     expect(present(recordOf('reactions/close-the-month', 'reaction_refused', data, context), showing)).toMatchObject([
       {
         type: 'reaction_refused',
@@ -47,6 +54,9 @@ describe('the presenter of the refused reactions of a workflow', () => {
         data,
         metadata: { definition: { type: 'workflow', name: 'close-the-month', version: 2 } },
       },
+    ]);
+    expect(present(recordOf('reactions/close-the-month', 'reaction_refused', coded, context), showing)).toMatchObject([
+      { type: 'reaction_refused', data: coded },
     ]);
   });
 });

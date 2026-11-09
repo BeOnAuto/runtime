@@ -886,7 +886,7 @@ Some events show more in `data`:
 - `step_waiting` adds what it waits for, `call`, `timer`, `event` or `admission`. For a call it adds the `run_id` of the run it started, whose `run_started` names the input that started the call as its cause. For `admission`, a call the meter would not start for now ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)), it adds the refusal's `detail`, its `kind`, its `because`, its `resolve_at`, its `lifts_at` and its `limited_because` where it gave them, `retry_at`, when the step tries again, and `until`, when it stops waiting, both in ISO 8601 UTC; its summary says what it waits for, why, when it tries again and stops waiting, and where to fix it.
 - `step_failed` adds how it failed, and its error's type and title.
 - `event_published` shows the published event's `event_id`, `event_type`, `source`, `subject`, `time` and `data`, and which attributes the runtime `filled` in.
-- `reaction_refused` shows how many times in the `minute` a trigger did not start its workflow, as `count`, and the last `reason`.
+- `reaction_refused` shows how many times in the `minute` a trigger did not start its workflow, as `count`, and the last `reason`. Where the last refusal had them, it adds the `trigger` that refused, with its `kind` and `reference`, and the `kind` and `because` of the start's rejection, the same codes a run's rejection has, such as `credits_exhausted` and `free_daily_limit`.
 
 Some events say more in their `metadata`:
 

@@ -95,6 +95,7 @@ export { runLogContextOf } from './runs/run-log-context.ts';
 export { recordIdOf } from './runs/run-lineage.ts';
 export {
   StartRefused,
+  startAnswered,
   type ReactionOptions,
   type ReactionStart,
   type StartReaction,

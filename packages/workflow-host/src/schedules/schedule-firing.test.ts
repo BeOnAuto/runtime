@@ -12,7 +12,7 @@ import {
   definitionRecorded,
 } from '../reaction-testing/playbook-writes.ts';
 import { reactingHost, type ReactingHost } from '../reaction-testing/reacting-host.ts';
-import { refusedWhile, type FailingStart } from '../reaction-testing/recorded-reactions.ts';
+import { refusedWhile, rejectedWith, type FailingStart } from '../reaction-testing/recorded-reactions.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import { until } from '../testing/until.ts';
 
@@ -20,7 +20,17 @@ const activatedAt = Date.parse(at);
 
 const aMinute = 60_000;
 
-const RefusalRow = Schema.Struct({ reason: Schema.String });
+const RefusalRow = Schema.Struct({
+  reason: Schema.String,
+  kind: Schema.NullOr(Schema.String),
+  because: Schema.NullOr(Schema.String),
+  trigger_kind: Schema.String,
+  trigger_reference: Schema.String,
+});
+
+const ofTheSchedule = { trigger_kind: 'every', trigger_reference: '/schedule/every' };
+
+const uncoded = { kind: null, because: null, ...ofTheSchedule };
 
 interface Ticking {
   readonly reacting: ReactingHost;
@@ -54,7 +64,12 @@ function refusalsOf(reacting: ReactingHost) {
   return until(
     () =>
       Effect.runPromise(
-        rowsOf(RefusalRow, reacting.database.read(statement`SELECT reason FROM workflow_reaction_refusals`)),
+        rowsOf(
+          RefusalRow,
+          reacting.database.read(
+            statement`SELECT reason, kind, because, trigger_kind, trigger_reference FROM workflow_reaction_refusals`,
+          ),
+        ),
       ),
     (found) => found.length > 0,
   );
@@ -110,6 +125,7 @@ describe('the due times of a schedule', () => {
       [
         {
           reason: `The run its every schedule had due at ${isoAt(2)} was skipped: the run its every schedule started before still runs`,
+          ...uncoded,
         },
       ],
     ]);
@@ -131,13 +147,40 @@ describe('a due time of a schedule', () => {
       [
         {
           reason: `The run its every schedule had due at ${isoAt(1)} could not be started: The playbook refused the start`,
+          ...uncoded,
         },
       ],
       [{ schedule: { due: isoAt(2) } }],
     ]);
   });
+});
 
-  it('missed while the server was down runs only the latest, and the missed ones are said', async () => {
+describe('a due time of a schedule whose run the playbook rejects', () => {
+  it('is said with the kind and because of the rejection and the trigger', async () => {
+    const { reacting, clock } = await ticking(
+      rejectedWith({
+        detail: 'The org has used today’s Free credits',
+        kind: 'credits_exhausted',
+        because: 'free_daily_limit',
+      }),
+    );
+
+    clock.moveTo(activatedAt + aMinute);
+    const refusals = await refusalsOf(reacting);
+
+    expect(refusals).toEqual([
+      {
+        reason: `The run its every schedule had due at ${isoAt(1)} could not be started: The org has used today’s Free credits`,
+        kind: 'credits_exhausted',
+        because: 'free_daily_limit',
+        ...ofTheSchedule,
+      },
+    ]);
+  });
+});
+
+describe('the due times of a schedule missed while the server was down', () => {
+  it('run only the latest, and the missed ones are said', async () => {
     const { reacting, clock } = await ticking();
 
     clock.moveTo(activatedAt + 5 * aMinute + 10_000);
@@ -149,6 +192,7 @@ describe('a due time of a schedule', () => {
       [
         {
           reason: `The runs its every schedule had due from ${isoAt(1)} to ${isoAt(5)} came while the server was down, and only the latest ran`,
+          ...uncoded,
         },
       ],
     ]);

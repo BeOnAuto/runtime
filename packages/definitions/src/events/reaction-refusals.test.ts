@@ -6,22 +6,29 @@ import { describe, expect, it } from 'vitest';
 
 import { makeDefinitionPresenters } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
-import { reactionRefusalDecider, ReactionRefusedSchema } from './reaction-refusals.ts';
+import { reactionRefusalDecider, ReactionRefusedSchema, type ReactionRefusal } from './reaction-refusals.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 const prefix = 'playbook/acme/alpha/';
 
-const refusal = {
+const refusal: ReactionRefusal = {
   playbook: alpha,
   workflow: 'close-the-month',
   version: 3,
-  refused: { count: 2, reason: 'Past the bound of a chain', minute: '2026-10-01T09:00:00.000Z' },
+  refused: {
+    count: 2,
+    reason: 'The run its cron schedule had due at 2026-10-01T09:00:00.000Z could not be started',
+    minute: '2026-10-01T09:00:00.000Z',
+    kind: 'credits_exhausted',
+    because: 'free_daily_limit',
+    trigger: { kind: 'cron', reference: '/schedule/cron' },
+  },
   at: '2026-10-01T09:01:00.000Z',
 };
 
 describe('a refused reaction of a workflow', () => {
-  it('is recorded through its decider with the playbook as its actor and the workflow and its version as its context', async () => {
+  it('is recorded through its decider, with the kind, because and trigger of its last refusal, the playbook as its actor and the workflow and its version as its context', async () => {
     const ledger = memoryLedger();
     const stream = 'playbook/acme/alpha/reactions/close-the-month';
 
@@ -54,7 +61,11 @@ describe('a refused reaction of a workflow', () => {
       },
     ]);
     expect(rows).toMatchObject([
-      { type: 'reaction_refused', metadata: { definition: { type: 'workflow', name: 'close-the-month', version: 3 } } },
+      {
+        type: 'reaction_refused',
+        data: refusal.refused,
+        metadata: { definition: { type: 'workflow', name: 'close-the-month', version: 3 } },
+      },
     ]);
   });
 });
@@ -74,6 +85,27 @@ describe('the facts of the reactions a playbook refused', () => {
             definitionType: 'workflow',
             definitionName: 'close-the-month',
             definitionVersion: 3,
+          },
+        },
+      ],
+      '0.57.0': [
+        {
+          type: 'reaction_refused',
+          data: {
+            count: 3,
+            reason:
+              'The run its cron schedule had due at 2026-11-09T09:00:00.000Z could not be started: The org has used today’s Free credits',
+            minute: '2026-11-09T09:00:00.000Z',
+            kind: 'credits_exhausted',
+            because: 'free_daily_limit',
+            trigger: { kind: 'cron', reference: '/schedule/cron' },
+          },
+          context: {
+            at: '2026-11-09T09:01:00.000Z',
+            by: 'playbook:sales',
+            definitionType: 'workflow',
+            definitionName: 'close-the-month',
+            definitionVersion: 4,
           },
         },
       ],

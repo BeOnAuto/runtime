@@ -101,7 +101,7 @@ describe('a delivery of an ending that the run cannot take now', () => {
 
     const { deliveries } = await Effect.runPromise(consumer.batchOf(undefined, 100));
     const failure = await Effect.runPromise(Effect.flip(Effect.forEach(deliveries, ({ deliver }) => deliver)));
-    const skipped = Effect.forEach(deliveries, (delivery) => delivery.skipped(''));
+    const skipped = Effect.forEach(deliveries, (delivery) => delivery.skipped(failure));
     const resumed = await Effect.runPromise(consumer.batchOf('call', 100));
 
     expect([failure.detail, consumer.skippedAfterSweeps]).toEqual(['The log of the run kept changing', Infinity]);

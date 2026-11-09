@@ -150,7 +150,7 @@ describe('the consumer of cancel requests', () => {
     const consumer = readBy(await failingConsumer(), askedToCancel);
     const { deliveries } = await Effect.runPromise(consumer.batchOf(undefined, 100));
     const failure = await Effect.runPromise(Effect.flip(Effect.forEach(deliveries, ({ deliver }) => deliver)));
-    const skipped = Effect.forEach(deliveries, (delivery) => delivery.skipped(''));
+    const skipped = Effect.forEach(deliveries, (delivery) => delivery.skipped(failure));
 
     expect([failure.detail, consumer.skippedAfterSweeps]).toEqual(['The log of the run kept changing', Infinity]);
     expect(await Effect.runPromise(Effect.as(skipped, 'nothing skipped'))).toBe('nothing skipped');

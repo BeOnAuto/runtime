@@ -3,11 +3,12 @@ import { Effect } from 'effect';
 
 import type { FollowedRecord } from '../follower/consumers.ts';
 import type { FollowedEvent } from '../follower/followed-events.ts';
-import type { RefuseReaction } from '../reactions/refusals.ts';
+import type { Refusal, RefuseReaction } from '../reactions/refusals.ts';
 
 export interface SaidRefusals {
   readonly refusals: RefuseReaction;
   readonly said: () => readonly string[];
+  readonly refused: () => readonly Refusal[];
   readonly say: (line: string) => Effect.Effect<void>;
 }
 
@@ -43,13 +44,23 @@ export function followedRecordOf(data: Json, about: Partial<FollowedEvent> = {})
 
 export function saidRefusals(): SaidRefusals {
   const said: string[] = [];
+  const refused: Refusal[] = [];
   const say = (line: string) =>
     Effect.sync(() => {
       said.push(line);
     });
   return {
-    refusals: { refuse: (_playbookKey, { workflow }, reason) => say(`${workflow}: ${reason}`) },
+    refusals: {
+      refuse: (_playbookKey, refusal) =>
+        Effect.andThen(
+          Effect.sync(() => {
+            refused.push(refusal);
+          }),
+          say(`${refusal.workflow}: ${refusal.reason}`),
+        ),
+    },
     said: () => said,
+    refused: () => refused,
     say,
   };
 }

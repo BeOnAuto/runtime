@@ -40,7 +40,7 @@ function counted(
       : Effect.sync(() => {
           delivered.push(`${name} ${key}`);
         }),
-    skipped: (detail) =>
+    skipped: ({ detail }) =>
       Effect.sync(() => {
         skipped.push(`${key}: ${detail}`);
       }),

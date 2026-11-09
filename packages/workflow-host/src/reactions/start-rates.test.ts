@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
-import { deliverySweeps } from '../follower/consumers.ts';
+import { DeliveryFailed, deliverySweeps } from '../follower/consumers.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { StartRefused, type ReactionStart } from './reaction-options.ts';
 import { refusalsOn } from './refusals.ts';
@@ -17,6 +17,8 @@ const minute = Date.parse('2026-10-01T09:00:00.000Z');
 const aMinute = 60_000;
 
 const CountRow = Schema.Struct({ count: WholeNumber });
+
+const onEvent = { kind: 'event', reference: '/schedule/on' };
 
 function startNumber(index: number): ReactionStart {
   return {
@@ -40,7 +42,7 @@ async function startingAt(time: Readonly<{ now: number }>, refuses = () => false
     database,
     (start) =>
       refuses()
-        ? Effect.fail(new StartRefused({ detail: 'refused' }))
+        ? Effect.fail(new StartRefused({ detail: 'refused', kind: 'meter_unavailable' }))
         : Effect.sync(() => {
             started.push(start.runId);
           }),
@@ -126,19 +128,15 @@ describe('the starts that wait for a later minute', () => {
 
     expect([deferred, messages]).toMatchObject([
       mostDeferredStarts,
-      [
-        {
-          type: 'reaction_refused',
-          data: {
-            count: 2,
-            reason:
-              'The workflow was started by its event trigger 60 times a minute and 1000 starts already waited for a later minute, the most it keeps; this start was refused',
-            minute: '2026-10-01T09:00:00.000Z',
-          },
-          context: { definitionName: 'close' },
-        },
-      ],
+      [{ type: 'reaction_refused', context: { definitionName: 'close' } }],
     ]);
+    expect(messages[0]?.data).toEqual({
+      count: 2,
+      reason:
+        'The workflow was started by its event trigger 60 times a minute and 1000 starts already waited for a later minute, the most it keeps; this start was refused',
+      minute: '2026-10-01T09:00:00.000Z',
+      trigger: onEvent,
+    });
   });
 });
 
@@ -157,10 +155,17 @@ describe('a start the playbook refuses', () => {
     time.now = minute + 2 * aMinute;
     const again = await Effect.runPromise(starting.startDeferred());
 
-    expect([tried, failure.detail, again, started.at(-1)]).toEqual([1, 'refused', 1, 'run-60']);
+    expect([tried, failure, again, started.at(-1)]).toEqual([
+      1,
+      new DeliveryFailed({ detail: 'refused', kind: 'meter_unavailable' }),
+      1,
+      'run-60',
+    ]);
   });
+});
 
-  it('when deferred, is tried in 20 minutes and then dropped, which is said', async () => {
+describe('a deferred start the playbook refuses', () => {
+  it('is tried in 20 minutes and then dropped, which is said with the kind of its refusal and its trigger', async () => {
     const time = { now: minute + 1000 };
     const { database, starting, refusals } = await startingAt(time, () => time.now >= minute + aMinute);
     await startsOf(starting, mostStartsAMinute + 1);
@@ -186,7 +191,11 @@ describe('a start the playbook refuses', () => {
       [
         {
           type: 'reaction_refused',
-          data: { reason: 'The workflow could not be started by its event trigger: refused' },
+          data: {
+            reason: 'The workflow could not be started by its event trigger: refused',
+            kind: 'meter_unavailable',
+            trigger: onEvent,
+          },
         },
       ],
     ]);
@@ -194,13 +203,20 @@ describe('a start the playbook refuses', () => {
 });
 
 describe('a start the playbook rejects for good', () => {
-  it('is said and not tried again, whether it starts at once or waited for a later minute', async () => {
+  it('is said with the kind and because of its rejection and its trigger, and not tried again, whether it starts at once or waited for a later minute', async () => {
     const time = { now: minute + 1000 };
     const database = await openedOn(await onSQLite());
     const refusals = refusalsOn(database, () => time.now);
     const rejecting = startingOn(
       database,
-      () => Effect.fail(new StartRejected({ detail: 'The input is not what the workflow takes' })),
+      () =>
+        Effect.fail(
+          new StartRejected({
+            detail: 'The org has used today’s Free credits',
+            kind: 'credits_exhausted',
+            because: 'free_daily_limit',
+          }),
+        ),
       refusals,
       () => time.now,
     );
@@ -219,7 +235,10 @@ describe('a start the playbook rejects for good', () => {
         {
           data: {
             count: mostStartsAMinute,
-            reason: 'The workflow could not be started by its event trigger: The input is not what the workflow takes',
+            reason: 'The workflow could not be started by its event trigger: The org has used today’s Free credits',
+            kind: 'credits_exhausted',
+            because: 'free_daily_limit',
+            trigger: onEvent,
           },
         },
         { data: { count: 1 } },

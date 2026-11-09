@@ -47,11 +47,11 @@ export function sqlListeners(database: HostDatabase, refusals: Refusals, stops: 
         const reaction = reactionOfRun(run.attributes);
         const { workflow, version } = reaction;
         if ((yield* listenersInPlaybook(database, playbookKey)) >= mostListenersInAPlaybook) {
-          yield* refusals.refuse(
-            playbookKey,
-            reaction,
-            `A run listened for events of the playbook while ${mostListenersInAPlaybook} listeners were already open in it, the most a playbook keeps; the run takes only the events sent to it`,
-          );
+          yield* refusals.refuse(playbookKey, {
+            workflow,
+            version,
+            reason: `A run listened for events of the playbook while ${mostListenersInAPlaybook} listeners were already open in it, the most a playbook keeps; the run takes only the events sent to it`,
+          });
           return 'refused';
         }
         yield* insertedListener(database, {

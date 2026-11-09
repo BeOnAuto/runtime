@@ -93,6 +93,10 @@ const followerTables: readonly Statement[] = [
     count INTEGER NOT NULL,
     reason TEXT NOT NULL,
     recorded INTEGER NOT NULL DEFAULT 0,
+    kind TEXT,
+    because TEXT,
+    trigger_kind TEXT,
+    trigger_reference TEXT,
     PRIMARY KEY (playbook_key, workflow)
   )`,
 ];
@@ -177,6 +181,15 @@ const hostTables: readonly Statement[] = [
 export const hostLayoutSteps: readonly LayoutStep[] = [
   { layout: 9, statements: [statement`DROP TABLE IF EXISTS recall_views`] },
   { layout: 14, statements: [] },
+  {
+    layout: 16,
+    statements: [
+      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN kind TEXT`,
+      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN because TEXT`,
+      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN trigger_kind TEXT`,
+      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN trigger_reference TEXT`,
+    ],
+  },
 ];
 
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {

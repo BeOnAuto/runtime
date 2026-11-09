@@ -4,6 +4,7 @@ import { filterSandboxOf, freshInstances, sandboxModuleIn, sandboxShippedRoots }
 import { Effect } from 'effect';
 
 import { StartRefused, type ReactionOptions, type ReactionStart } from '../reactions/reaction-options.ts';
+import type { FailureDetail } from '../reactions/refusals.ts';
 import { StartRejected } from '../reactions/start-rejected.ts';
 
 const sandboxFiles = shippedFilesOnDisk(sandboxShippedRoots());
@@ -30,6 +31,10 @@ export function refusedWhile(refusing: Readonly<{ now: boolean }>): FailingStart
 
 export function rejectedFor(workflow: string, detail: string): FailingStart {
   return (start) => (start.workflow === workflow ? new StartRejected({ detail }) : null);
+}
+
+export function rejectedWith(failure: FailureDetail): FailingStart {
+  return () => new StartRejected(failure);
 }
 
 export function recordedReactions(behaviour: ReactionBehaviour = {}): RecordedReactions {

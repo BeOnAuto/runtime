@@ -6,7 +6,13 @@ import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-databas
 import type { FollowerHost } from '../follower/follower-host.ts';
 import { reactionRunIdOf } from '../reactions/reaction-ids.ts';
 import type { ReactionStart, StartReaction } from '../reactions/reaction-options.ts';
-import type { Refusals } from '../reactions/refusals.ts';
+import {
+  codesOf,
+  type FailureDetail,
+  type Refusal,
+  type Refusals,
+  type RejectionCodes,
+} from '../reactions/refusals.ts';
 import { dueSchedules, nextScheduleDue, scheduleMovedOn, type Schedule } from './schedule-rows.ts';
 import { dueTimesOf } from './schedule-times.ts';
 
@@ -44,6 +50,16 @@ function namedOf({ subscription }: Firing): string {
   return scheduleNamed(subscription.trigger);
 }
 
+function refusalOf({ workflow, version, trigger }: Schedule, reason: string, codes: RejectionCodes = {}): Refusal {
+  return {
+    workflow,
+    version,
+    trigger: { kind: trigger.kind, reference: trigger.reference },
+    reason,
+    ...codesOf(codes),
+  };
+}
+
 function stillRuns(database: HostDatabase, playbookKey: string, running: string | null): Effect.Effect<boolean> {
   if (running === null) {
     return Effect.succeed(false);
@@ -62,8 +78,10 @@ function skipped({ database, refusals }: FiringParts, firing: Firing) {
   return Effect.andThen(
     refusals.refuse(
       subscription.playbookKey,
-      subscription,
-      `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} was skipped: the run its ${namedOf(firing)} started before still runs`,
+      refusalOf(
+        subscription,
+        `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} was skipped: the run its ${namedOf(firing)} started before still runs`,
+      ),
     ),
     scheduleMovedOn(database, subscription, next, subscription.running),
   );
@@ -74,8 +92,10 @@ function missedSaid({ refusals }: FiringParts, firing: Firing) {
   return latest > subscription.nextDue
     ? refusals.refuse(
         subscription.playbookKey,
-        subscription,
-        `The runs its ${namedOf(firing)} had due from ${new Date(subscription.nextDue).toISOString()} to ${dueAtOf(firing)} came while the server was down, and only the latest ran`,
+        refusalOf(
+          subscription,
+          `The runs its ${namedOf(firing)} had due from ${new Date(subscription.nextDue).toISOString()} to ${dueAtOf(firing)} came while the server was down, and only the latest ran`,
+        ),
       )
     : Effect.void;
 }
@@ -105,12 +125,15 @@ function ran(parts: FiringParts, firing: Firing) {
         missedSaid(parts, firing),
       ),
     ),
-    Effect.catch(({ detail }: Readonly<{ detail: string }>) =>
+    Effect.catch((failure: FailureDetail) =>
       Effect.andThen(
         parts.refusals.refuse(
           playbookKey,
-          firing.subscription,
-          `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} could not be started: ${detail}`,
+          refusalOf(
+            firing.subscription,
+            `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} could not be started: ${failure.detail}`,
+            failure,
+          ),
         ),
         scheduleMovedOn(parts.database, firing.subscription, firing.next, null),
       ),
@@ -124,8 +147,10 @@ function stopped(parts: FiringParts, subscription: Schedule, detail: string) {
     Effect.andThen(
       parts.refusals.refuse(
         playbookKey,
-        subscription,
-        `The times of its ${scheduleNamed(trigger)} cannot be computed, so it starts no more runs: ${detail}`,
+        refusalOf(
+          subscription,
+          `The times of its ${scheduleNamed(trigger)} cannot be computed, so it starts no more runs: ${detail}`,
+        ),
       ),
       parts.reports.note({
         kind: 'schedule_stopped',

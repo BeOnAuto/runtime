@@ -67,20 +67,34 @@ describe('a start of a workflow its trigger matched', () => {
       },
     ]);
   });
+});
 
-  it('is tried again when the playbook cannot take it now, and not when it never will', async () => {
+describe('a start of a workflow the playbook does not take', () => {
+  it('is tried again when the playbook cannot take it now, and not when it never will, with the kind and because of its refusal', async () => {
     const { reactions } = await reactingWith([
       { status: 'rejected', reason: 'unavailable', detail: 'The ledger is busy' },
       { status: 'failed', incident: 'i-1' },
       { status: 'rejected', reason: 'invalid_input', detail: 'The input is not what the workflow takes' },
+      {
+        status: 'rejected',
+        reason: 'conflict',
+        detail: 'The org has used today’s Free credits',
+        kind: 'credits_exhausted',
+        because: 'free_daily_limit',
+      },
     ]);
 
-    const failures = await Effect.runPromise(Effect.forEach([1, 2, 3], () => Effect.flip(reactions.start(start))));
+    const failures = await Effect.runPromise(Effect.forEach([1, 2, 3, 4], () => Effect.flip(reactions.start(start))));
 
     expect(failures).toStrictEqual([
       new StartRefused({ detail: 'The ledger is busy' }),
       new StartRefused({ detail: 'The start failed with incident i-1' }),
       new StartRejected({ detail: 'The input is not what the workflow takes' }),
+      new StartRejected({
+        detail: 'The org has used today’s Free credits',
+        kind: 'credits_exhausted',
+        because: 'free_daily_limit',
+      }),
     ]);
   });
 });

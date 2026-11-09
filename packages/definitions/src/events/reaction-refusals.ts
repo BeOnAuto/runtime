@@ -2,6 +2,9 @@ import {
   playbookCallerOf,
   DefinitionContextSchema,
   factOf,
+  RejectionBecauseSchema,
+  RejectionKindSchema,
+  StartingTriggerSchema,
   type PlaybookAddress,
   type Decided,
   type Decider,
@@ -12,7 +15,14 @@ export const reactionsStreamKind = 'reactions';
 
 export const ReactionRefusedSchema = factOf(
   'reaction_refused',
-  Schema.Struct({ count: Schema.Int, reason: Schema.String, minute: Schema.String }),
+  Schema.Struct({
+    count: Schema.Int,
+    reason: Schema.String,
+    minute: Schema.String,
+    kind: Schema.optionalKey(RejectionKindSchema),
+    because: Schema.optionalKey(RejectionBecauseSchema),
+    trigger: Schema.optionalKey(StartingTriggerSchema),
+  }),
   DefinitionContextSchema,
 );
 

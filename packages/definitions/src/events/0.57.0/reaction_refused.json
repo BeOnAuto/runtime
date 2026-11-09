@@ -1,0 +1,21 @@
+{
+  "type": "reaction_refused",
+  "data": {
+    "count": 3,
+    "reason": "The run its cron schedule had due at 2026-11-09T09:00:00.000Z could not be started: The org has used today’s Free credits",
+    "minute": "2026-11-09T09:00:00.000Z",
+    "kind": "credits_exhausted",
+    "because": "free_daily_limit",
+    "trigger": {
+      "kind": "cron",
+      "reference": "/schedule/cron"
+    }
+  },
+  "context": {
+    "at": "2026-11-09T09:01:00.000Z",
+    "by": "playbook:sales",
+    "definitionType": "workflow",
+    "definitionName": "close-the-month",
+    "definitionVersion": 4
+  }
+}

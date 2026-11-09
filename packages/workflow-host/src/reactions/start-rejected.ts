@@ -1,3 +1,5 @@
 import { Data } from 'effect';
 
-export class StartRejected extends Data.TaggedError('start_rejected')<{ readonly detail: string }> {}
+import type { FailureDetail } from './refusals.ts';
+
+export class StartRejected extends Data.TaggedError('start_rejected')<FailureDetail> {}

@@ -148,7 +148,7 @@ describe('an event a filter was stopped on, kept waiting', () => {
     await subscribed(database, 'filling', filling);
 
     const { deliveries } = await Effect.runPromise(consumer.batchOf(followedRecordOf({ region: 'us' }), undefined, 10));
-    await Effect.runPromise(Effect.forEach(deliveries, ({ skipped }) => skipped('it waited too long')));
+    await Effect.runPromise(Effect.forEach(deliveries, ({ skipped }) => skipped({ detail: 'it waited too long' })));
 
     expect(said()).toEqual(['filling: The workflow could not be started by its event trigger: it waited too long']);
   });
@@ -193,8 +193,8 @@ describe('the starts a workflow is kept from', () => {
 });
 
 describe('the subscriptions an event is matched against', () => {
-  it('are taken in batches, each from where the last one ended, and a start skipped is said', async () => {
-    const { database, consumer, said } = await starting();
+  it('are taken in batches, each from where the last one ended, and a start skipped is said with its trigger and the kind of its failure', async () => {
+    const { database, consumer, refused } = await starting();
     await subscribed(database, 'a', { type: 'go' });
     await subscribed(database, 'b', { type: 'go' });
     await subscribed(database, 'c', { type: 'go' });
@@ -202,7 +202,9 @@ describe('the subscriptions an event is matched against', () => {
 
     const first = await Effect.runPromise(consumer.batchOf(followed, undefined, 2));
     const second = await Effect.runPromise(consumer.batchOf(followed, first.through, 2));
-    await Effect.runPromise(Effect.forEach(second.deliveries, ({ skipped }) => skipped('refused')));
+    await Effect.runPromise(
+      Effect.forEach(second.deliveries, ({ skipped }) => skipped({ detail: 'refused', kind: 'meter_unavailable' })),
+    );
 
     expect([first.deliveries.length, first.through, first.more, second.deliveries.length, second.more]).toEqual([
       2,
@@ -211,6 +213,14 @@ describe('the subscriptions an event is matched against', () => {
       1,
       false,
     ]);
-    expect(said()).toEqual(['c: The workflow could not be started by its event trigger: refused']);
+    expect(refused()).toEqual([
+      {
+        workflow: 'c',
+        version: 1,
+        trigger: { kind: 'event', reference: '/schedule/on' },
+        reason: 'The workflow could not be started by its event trigger: refused',
+        kind: 'meter_unavailable',
+      },
+    ]);
   });
 });

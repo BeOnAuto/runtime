@@ -1,4 +1,5 @@
 export { callResultOfEnding, definitionCalls } from './calls/function-calls.ts';
+export { admissionWaitsOf, type AdmissionWait, type StepRefusal } from './presenting/admission-waits.ts';
 export type { RunDefinition, DefinitionRunRequest, DefinitionRunResult } from './calls/function-run.ts';
 export { definitionRunResultOf } from './calls/function-results.ts';
 export { defineSendRunEvent } from './events/send-run-event.ts';

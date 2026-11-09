@@ -1,6 +1,7 @@
 {
   "src/events/0.46.0/event_published.json": "80b8e6828c44576a62e6bccec08d87e343f70e8fec8aac105be5ed43883fb717",
   "src/events/0.46.0/reaction_refused.json": "d66186d7052eefc19500d28ebdddf1ca8e12f545ef9c3ec67fc92de5aea3143d",
+  "src/events/0.57.0/reaction_refused.json": "361164bef2aca4427837f7139c335f5d23196c4cef89bb04ee67ab43be9203a8",
   "src/page/0.56.0/playbook_page_saved.json": "1aea429efa1739ccf84302c36148c16054643a7b840fb20c4581c31bb20b36c0",
   "src/registry/0.46.0/definition_created.json": "5787011264d9b18e0103319d14cff221da2e882a8173f34736d9c952db7e923e",
   "src/registry/0.46.0/definition_retired.json": "31e97928888310aaa8d777c816ce6c5149b817f4fb6d08c7bc8d2166e68e4fb8",

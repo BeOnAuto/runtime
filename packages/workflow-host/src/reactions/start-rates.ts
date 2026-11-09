@@ -7,7 +7,7 @@ import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-databas
 import { DeliveryFailed, deliverySweeps } from '../follower/consumers.ts';
 import { linksTo } from '../runs/run-spans.ts';
 import type { ReactionStart, StartReaction } from './reaction-options.ts';
-import type { Refusals } from './refusals.ts';
+import { codesOf, type FailureDetail, type Refusal, type Refusals, type RejectionCodes } from './refusals.ts';
 
 export const mostStartsAMinute = 60;
 
@@ -15,8 +15,16 @@ export const mostDeferredStarts = 1000;
 
 const aMinute = 60_000;
 
-function unstarted({ trigger }: ReactionStart, detail: string): string {
-  return `The workflow could not be started by its ${triggerNamed(trigger.kind)}: ${detail}`;
+function refusalOf({ workflow, version, trigger }: ReactionStart, reason: string, codes: RejectionCodes = {}): Refusal {
+  return { workflow, version, trigger, reason, ...codesOf(codes) };
+}
+
+function unstarted(start: ReactionStart, failure: FailureDetail): Refusal {
+  return refusalOf(
+    start,
+    `The workflow could not be started by its ${triggerNamed(start.trigger.kind)}: ${failure.detail}`,
+    failure,
+  );
 }
 
 export interface Starting {
@@ -90,10 +98,10 @@ function started(
   start: ReactionStart,
 ): Effect.Effect<void, DeliveryFailed> {
   return startReaction(start).pipe(
-    Effect.catchTag('start_rejected', ({ detail }: Readonly<{ detail: string }>) =>
-      refusals.refuse(playbookKey, start, unstarted(start, detail)),
+    Effect.catchTag('start_rejected', (rejected: FailureDetail) =>
+      refusals.refuse(playbookKey, unstarted(start, rejected)),
     ),
-    Effect.mapError(({ detail }: Readonly<{ detail: string }>) => new DeliveryFailed({ detail })),
+    Effect.mapError((refused: FailureDetail) => new DeliveryFailed({ detail: refused.detail, ...codesOf(refused) })),
   );
 }
 
@@ -107,8 +115,10 @@ function deferredStart(
     deferred >= mostDeferredStarts
       ? refusals.refuse(
           playbookKey,
-          start,
-          `The workflow was started by its ${triggerNamed(start.trigger.kind)} ${mostStartsAMinute} times a minute and ${mostDeferredStarts} starts already waited for a later minute, the most it keeps; this start was refused`,
+          refusalOf(
+            start,
+            `The workflow was started by its ${triggerNamed(start.trigger.kind)} ${mostStartsAMinute} times a minute and ${mostDeferredStarts} starts already waited for a later minute, the most it keeps; this start was refused`,
+          ),
         )
       : Effect.asVoid(
           Effect.orDie(
@@ -144,12 +154,12 @@ function deferredAgain({ database }: StartingParts, deferred: Deferred, minute: 
   );
 }
 
-function failedWhenDue(parts: StartingParts, deferred: Deferred, minute: number, detail: string) {
+function failedWhenDue(parts: StartingParts, deferred: Deferred, minute: number, failure: FailureDetail) {
   const attempts = deferred.attempts + 1;
   return attempts < deliverySweeps
     ? deferredAgain(parts, deferred, minute, attempts)
     : Effect.andThen(
-        parts.refusals.refuse(deferred.playbook_key, deferred.start, unstarted(deferred.start, detail)),
+        parts.refusals.refuse(deferred.playbook_key, unstarted(deferred.start, failure)),
         withoutDeferred(parts.database, deferred),
       );
 }
@@ -174,7 +184,7 @@ function startedWhenDue(parts: StartingParts, deferred: Deferred, minute: number
       ? started(parts, playbookKey, start).pipe(
           Effect.withSpan('deferred_start', deferredSpanOf(start)),
           Effect.andThen(withoutDeferred(parts.database, deferred)),
-          Effect.catch(({ detail }: Readonly<{ detail: string }>) => failedWhenDue(parts, deferred, minute, detail)),
+          Effect.catch((failure: FailureDetail) => failedWhenDue(parts, deferred, minute, failure)),
         )
       : deferredAgain(parts, deferred, minute, deferred.attempts),
   );

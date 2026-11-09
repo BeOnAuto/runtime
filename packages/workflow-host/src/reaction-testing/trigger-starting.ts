@@ -89,7 +89,7 @@ export function countingMatches(): CountingMatches {
 export async function starting() {
   const database = await openedOn(await onSQLite());
   const starts: ReactionStart[] = [];
-  const { refusals, said } = saidRefusals();
+  const { refusals, said, refused } = saidRefusals();
   const { match, stops, evaluated } = countingMatches();
   const consumer = subscriptionStarts({
     database,
@@ -120,5 +120,5 @@ export async function starting() {
         ),
       ),
     );
-  return { database, consumer, delivered, tried, starts: () => starts, said, evaluated };
+  return { database, consumer, delivered, tried, starts: () => starts, said, refused, evaluated };
 }

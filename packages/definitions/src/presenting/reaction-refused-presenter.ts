@@ -10,10 +10,17 @@ import { cutAtCodePoint, mostDetailBytes, mostNameBytes } from './event-data.ts'
 import { eventPresenter, type Account } from './event-presenter.ts';
 
 function accountOf({ data, context }: RecordedReactionRefused): Account {
-  const { count, reason, minute } = data;
+  const { count, reason, minute, kind, because, trigger } = data;
   return {
     summary: reactionsRefused(cutAtCodePoint(context.definitionName, mostNameBytes)),
-    data: { count, reason: cutAtCodePoint(reason, mostDetailBytes), minute },
+    data: {
+      count,
+      reason: cutAtCodePoint(reason, mostDetailBytes),
+      minute,
+      ...(kind === undefined ? {} : { kind }),
+      ...(because === undefined ? {} : { because }),
+      ...(trigger === undefined ? {} : { trigger }),
+    },
   };
 }
 

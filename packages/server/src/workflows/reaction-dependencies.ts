@@ -6,9 +6,8 @@ import {
   type PlaybookRequest,
   type Dispatcher,
   type DispatcherServices,
-  type Outcome,
 } from '@on.auto/operations';
-import { StartRefused, StartRejected, type ReactionOptions, type ReactionStart } from '@on.auto/workflow-host';
+import { startAnswered, type ReactionOptions, type ReactionStart } from '@on.auto/workflow-host';
 import { Effect } from 'effect';
 
 import { inRuntime } from './in-runtime.ts';
@@ -41,18 +40,6 @@ function requestOf({
     depth,
     trigger,
   };
-}
-
-function startAnswered(outcome: Outcome): Effect.Effect<void, StartRefused | StartRejected> {
-  if (outcome.status === 'succeeded') {
-    return Effect.void;
-  }
-  if (outcome.status === 'failed') {
-    return Effect.fail(new StartRefused({ detail: `The start failed with incident ${outcome.incident}` }));
-  }
-  return outcome.reason === 'unavailable'
-    ? Effect.fail(new StartRefused({ detail: outcome.detail }))
-    : Effect.fail(new StartRejected({ detail: outcome.detail }));
 }
 
 export function reactionsOf(

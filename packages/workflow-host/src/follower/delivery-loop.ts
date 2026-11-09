@@ -50,7 +50,7 @@ function deliveredOne(
     if (attempts < consumer.skippedAfterSweeps) {
       return { progress: { ...progress, attempts, waiting: true }, end: 'waiting' };
     }
-    yield* delivery.skipped(done.failure.detail);
+    yield* delivery.skipped(done.failure);
     return { progress: { ...progress, delivered: textOf(consumer.name, delivery.key), attempts: 0 } };
   });
 }

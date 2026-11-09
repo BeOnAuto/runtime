@@ -239,7 +239,7 @@ export { callSummaryOf, DirectoryListing, type PlaybookRequest, type OrgRequest 
 export { takesNoBody, type Method, type Route } from './definition/route.ts';
 export type { OperationKind, OperationScope } from './caller/operation-scope.ts';
 export { settle } from './dispatch/settle.ts';
-export { RejectionCauseSchema, type RejectionCause } from './outcome/rejection-cause.ts';
+export { RejectionCauseSchema, RejectionKindSchema, type RejectionCause } from './outcome/rejection-cause.ts';
 export { SettlementSchema, type SettledRejection, type Settlement } from './outcome/settlement.ts';
 export type {
   PlaybookRecordedReader,
