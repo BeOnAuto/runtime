@@ -41,10 +41,9 @@ function failedWith({ detail }: Readonly<{ detail: string }>): DeliveryFailed {
   return new DeliveryFailed({ detail });
 }
 
-function answeredWith(parts: EndingParts, playbook: PlaybookAddress, { ending, calledBy }: CalledEnding) {
+function answeredWith(parts: EndingParts, playbook: PlaybookAddress, calledBy: CalledBy, result: CallResult) {
   const runId = runKeyOf({ ...playbook, runId: calledBy.runId });
   const key = { runId, reference: calledBy.reference, run: calledBy.run };
-  const result = parts.resultOf(ending);
   const answered = parts
     .submitted({ kind: 'call_answered', runId, at: parts.now(), key, result })
     .pipe(
@@ -52,9 +51,23 @@ function answeredWith(parts: EndingParts, playbook: PlaybookAddress, { ending, c
       Effect.andThen(deliveredRow(parts.database, callKeyText(key))),
     );
   return callRowOf(parts.database, callKeyText(key)).pipe(
-    Effect.flatMap((row) => (row?.state === 'waiting' ? answered : Effect.void)),
+    Effect.flatMap((row) => (row?.state === 'waiting' ? Effect.as(answered, true) : Effect.succeed(false))),
     Effect.mapError(failedWith),
   );
+}
+
+function answeredByItsEnding(parts: EndingParts, playbook: PlaybookAddress, { ending, calledBy }: CalledEnding) {
+  return Effect.asVoid(answeredWith(parts, playbook, calledBy, parts.resultOf(ending)));
+}
+
+export type WaitingCallAnswered = (
+  playbook: PlaybookAddress,
+  calledBy: CalledBy,
+  result: CallResult,
+) => Effect.Effect<boolean, DeliveryFailed>;
+
+export function waitingCallAnsweredOn(parts: EndingParts): WaitingCallAnswered {
+  return (playbook, calledBy, result) => answeredWith(parts, playbook, calledBy, result);
 }
 
 export function childStreamOf(playbook: PlaybookAddress, child: string): string {
@@ -102,7 +115,7 @@ export function childEndings(parts: EndingParts): CallConsumer {
                   {
                     key: 'call',
                     workflow: called.calledBy.runId,
-                    deliver: answeredWith(parts, playbook, called),
+                    deliver: answeredByItsEnding(parts, playbook, called),
                     skipped: () => Effect.void,
                   },
                 ],
@@ -122,7 +135,7 @@ export function endedChildrenOn(parts: EndingParts): (runKey: string) => Effect.
       for (const { child } of waiting) {
         const called = yield* childEndingOf(database, { org, playbook }, child);
         if (called !== undefined) {
-          yield* answeredWith(parts, { org, playbook }, called);
+          yield* answeredByItsEnding(parts, { org, playbook }, called);
         }
       }
     });

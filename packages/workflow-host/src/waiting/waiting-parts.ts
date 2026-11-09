@@ -6,7 +6,14 @@ import type { HostDatabase } from '../database/host-database.ts';
 import type { CallConsumer, DeliveryFailed } from '../follower/consumers.ts';
 import { cancelRequests, type CancelParts } from './cancel-requests.ts';
 import { childCancelsOn } from './child-cancels.ts';
-import { childAnswersOn, childEndings, endedChildrenOn, type EndingParts } from './child-endings.ts';
+import {
+  childAnswersOn,
+  childEndings,
+  endedChildrenOn,
+  waitingCallAnsweredOn,
+  type EndingParts,
+  type WaitingCallAnswered,
+} from './child-endings.ts';
 import { pendingCancelsGivenOnce } from './pending-cancels.ts';
 import { mostOpenCallsOfATree, type WaitingOptions } from './waiting-options.ts';
 
@@ -40,6 +47,7 @@ export interface CallConsumerParts extends EndingParts, CancelParts {
 export interface ServedWaiting {
   readonly calls: readonly CallConsumer[];
   readonly endedChildren: (runKey: string) => Effect.Effect<void, DeliveryFailed>;
+  readonly waitingCallAnswered: WaitingCallAnswered;
   readonly cancelsAsked: Effect.Effect<void>;
 }
 
@@ -47,6 +55,7 @@ export function servedWaitingOf(parts: CallConsumerParts): ServedWaiting {
   return {
     calls: [childEndings(parts), cancelRequests(parts)],
     endedChildren: endedChildrenOn(parts),
+    waitingCallAnswered: waitingCallAnsweredOn(parts),
     cancelsAsked: pendingCancelsGivenOnce(parts, parts.trouble),
   };
 }
