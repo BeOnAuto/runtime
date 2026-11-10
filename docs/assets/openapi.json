@@ -24385,7 +24385,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: start, terminology, a definition format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), page (Page format), glance (Glance format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
+            "description": "The guide to read: start, terminology, a definition format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), triggers (Triggers), events (Events), page (Page format), glance (Glance format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
             "schema": {
               "type": "string",
               "enum": [
@@ -24399,6 +24399,8 @@
                 "generation-function",
                 "workflow",
                 "templates",
+                "triggers",
+                "events",
                 "page",
                 "glance",
                 "first-playbook",

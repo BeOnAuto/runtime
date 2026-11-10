@@ -17,7 +17,7 @@ import {
   servedWithLookupAndPages,
 } from '../testing/guide-shelves.ts';
 import { withLinksResolved } from './page-links.ts';
-import { guideShelfFrom } from './served-guides.ts';
+import { guideShelfFrom, type ServedType } from './served-guides.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
 
 function page(path: string): string {
@@ -37,12 +37,14 @@ const pages: Readonly<Record<string, string>> = {
   'computation-function': 'reference/computation-format.md',
   workflow: 'reference/workflow-format.md',
   templates: 'reference/template.md',
+  triggers: 'reference/triggers.md',
+  events: 'reference/events.md',
 };
 
 describe('the guides of a server that runs every type of definition', () => {
   const { definitionTypes, guides, recipes } = served;
 
-  it('are start, the terminology, a guide per type in the order of the product whatever order the types are given in, the templates and the four recipes it carries the format guides of', () => {
+  it('are start, the terminology, a guide per type in the order of the product whatever order the types are given in, the templates, the triggers, the events and the four recipes it carries the format guides of', () => {
     expect([...guides, ...recipes].map(({ name }) => name)).toEqual([
       'start',
       'terminology',
@@ -60,7 +62,7 @@ describe('the guides of a server that runs every type of definition', () => {
     ]);
   });
 
-  it('give each type the whole public page of its format and the templates guide the page of templates, without the markup of the documentation site, their links resolved, and the reasoning page what this server offers', () => {
+  it('give each type the whole public page of its format, and the templates, triggers and events guides the pages of templates, triggers and events, without the markup of the documentation site, their links resolved, and the reasoning page what this server offers', () => {
     const [reasoningGuide, ...otherGuides] = guides.slice(2);
     const [reasoningPage = '', ...otherPages] = Object.values(pages);
 
@@ -70,6 +72,37 @@ describe('the guides of a server that runs every type of definition', () => {
     expect(otherGuides.map(({ text }) => text)).toEqual(
       otherPages.map((path) => withLinksResolved(withoutSiteMarkup(page(path)), path)),
     );
+  });
+});
+
+const predictionType: ServedType = {
+  type: 'prediction',
+  noun: { one: 'prediction function', other: 'prediction functions' },
+  guide: { name: 'prediction-function' },
+};
+
+describe('the triggers guide of a server', () => {
+  it('is carried where workflows are served, and not where they are not', () => {
+    expect([servedForReasoningAndWorkflows.named('triggers')?.title, servedForReasoning.named('triggers')]).toEqual([
+      'Triggers',
+      undefined,
+    ]);
+  });
+});
+
+async function eventsCarriedFor(types: readonly ServedType[], keepsPages: boolean): Promise<boolean> {
+  return (await guideShelfFrom(guideFiles, types, { pages: keepsPages })).named('events') !== undefined;
+}
+
+describe('the events guide of a server', () => {
+  it('is carried where a workflow, a prediction function or a page takes the events, and not where nothing does', async () => {
+    expect([
+      servedForReasoningAndWorkflows.named('events')?.title,
+      await eventsCarriedFor([predictionType], false),
+      await eventsCarriedFor([], true),
+      await eventsCarriedFor([], false),
+      servedForReasoning.named('events'),
+    ]).toEqual(['Events', true, true, false, undefined]);
   });
 });
 
@@ -83,6 +116,8 @@ describe('the titles and links of the guides of a server that runs every type of
       'Computation function format',
       'Workflow format',
       'Templates',
+      'Triggers',
+      'Events',
     ]);
   });
 
@@ -128,6 +163,8 @@ describe('the size and the words of the guides of a server', () => {
       'How computation functions are written: their document, fields, examples and bounds.',
       'How workflows are written: their document, fields, examples and bounds.',
       'The filters a template may use, the same in every template of every definition.',
+      'How a workflow starts on its own: the triggers of its schedule, on an event, at set times or every so often, and their limits.',
+      "The playbook's events that a workflow's trigger, a page and a prediction function take, and how a filter names them.",
     ]);
   });
 });
@@ -181,7 +218,7 @@ describe('the recipes that give a playbook tools', () => {
       "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with query_connection, and never make a function to look.",
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      2716, 4111,
+      2716, 4120,
     ]);
   });
 });
@@ -200,8 +237,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4570, 3316, 3541],
-      [4111, 2716, 3541],
+      [4579, 3316, 3564],
+      [4120, 2716, 3564],
     ]);
   });
 });

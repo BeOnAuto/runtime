@@ -163,6 +163,14 @@
         "link": "/reference/template"
       },
       {
+        "text": "Triggers",
+        "link": "/reference/triggers"
+      },
+      {
+        "text": "Events",
+        "link": "/reference/events"
+      },
+      {
         "text": "Page format",
         "link": "/reference/page-format"
       },

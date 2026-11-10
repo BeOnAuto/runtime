@@ -44,7 +44,7 @@ What the playbook records can start work:
 
 The playbook matches events in the order it recorded them. So the history explains each reaction: first the event, then the run it started, which names that event as its cause. When a trigger does not start a run, as when it reaches one of its limits, the playbook records that too. [Triggers](workflows.md#triggers) describes triggers.
 
-Triggers, waiting runs and the folds of pages see a run only as the fact that it started and how it ended, with its result when it succeeded. They never see the run's input or its tool calls; those stay in the run's own history. [Event filters](../reference/workflow-format.md#event-filters) lists what each of these facts carries.
+Triggers, waiting runs and the folds of pages see a run only as the fact that it started and how it ended, with its result when it succeeded. They never see the run's input or its tool calls; those stay in the run's own history. [Events](../reference/events.md) lists what each of these facts carries.
 
 ## Using history in later runs
 

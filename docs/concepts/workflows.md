@@ -46,15 +46,15 @@ A trigger starts a run without anyone asking for it. A workflow can have two kin
 - An event trigger starts a run for each matching event in the playbook. The event can come from another system or another workflow. It can also be one of the playbook's own records, such as a review that succeeded.
 - A schedule trigger starts a run at set times, such as 09:00 UTC on working days, or once every fifteen minutes.
 
-A run that a trigger starts acts as the playbook, with permission to read and write that playbook. The run also records the person it works on behalf of: whoever saved or restored the workflow version, provided that person still belongs to the organization. This adds no permissions. [When a trigger applies](../reference/workflow-format.md#when-a-trigger-applies) gives the identity rules.
+A run that a trigger starts acts as the playbook, with permission to read and write that playbook. The run also records the person it works on behalf of: whoever saved or restored the workflow version, provided that person still belongs to the organization. This adds no permissions. [When a trigger applies](../reference/triggers.md#when-a-trigger-applies) gives the identity rules.
 
 A trigger applies from the moment it is saved; it never reacts to what the playbook recorded before. Limits stop triggers from starting runs without end. A workflow can also record an event of its own. Another workflow's trigger can react to it, and so can a run that waits for that event.
 
 Pausing a workflow stops its triggers until someone resumes it. While it is paused, the times its schedule names and the events its trigger matches start nothing, and it cannot be run by hand or from another workflow. Runs already under way finish. Resuming it makes up nothing it missed: its next run is at the first scheduled time or matching event after the resume. Pausing changes no version, and a version saved while it is paused stays paused. Every function pauses and resumes the same way, and the definition shows who paused it, when and why.
 
-[Run a workflow on a schedule or event](../guides/triggers.md) shows how to add a trigger, and [Triggers](../reference/workflow-format.md#triggers) in the workflow format gives the rules and limits.
+[Run a workflow on a schedule or event](../guides/triggers.md) shows how to add a trigger, and [Triggers](../reference/triggers.md) gives the rules and limits.
 
-Each function a workflow calls has a run of its own, and every run counts toward usage. If the runtime refuses a triggered run because it has reached a usage limit, that run does not start and is not retried. The playbook records a `reaction_refused` event. The [trigger reference](../reference/workflow-format.md#triggers) explains refusals; the limits of a [self-hosted runtime](../self-host.md) are in the [licensing reference](../self-host/licensing.md).
+Each function a workflow calls has a run of its own, and every run counts toward usage. If the runtime refuses a triggered run because it has reached a usage limit, that run does not start and is not retried. The playbook records a `reaction_refused` event. The [trigger reference](../reference/triggers.md) explains refusals; the limits of a [self-hosted runtime](../self-host.md) are in the [licensing reference](../self-host/licensing.md).
 
 ## How a run waits
 

@@ -40,6 +40,8 @@ const guideNames = [
   'generation-function',
   'workflow',
   'templates',
+  'triggers',
+  'events',
   'page',
   'glance',
   'first-playbook',

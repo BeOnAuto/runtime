@@ -147,23 +147,23 @@ An approval, or any other question for a person or a system, is an interaction f
 
 ## Document fields
 
-| Field                                       | Purpose                                                                         |
-| ------------------------------------------- | ------------------------------------------------------------------------------- |
-| `document.dsl`                              | Required DSL version, from `1.0.0` to `1.0.3`                                   |
-| `document.namespace`, `document.name`       | Required names of the document                                                  |
-| `document.version`                          | Required semantic version of the document, such as `1.0.0`                      |
-| `document.title`, `document.summary`        | Optional; the summary, or else the title, is the definition's `description`     |
-| `input.schema.document`                     | Optional inline JSON Schema, published as the definition's `input_schema`       |
-| `input.from`                                | Optional expression or template shaping the run's input before the first task   |
-| `evaluate.language`, `evaluate.mode`        | Optional; only `typescript` and `strict` ([Expressions](#expressions))          |
-| `schedule`                                  | Optional triggers that start it on its own; see [Triggers](#triggers)           |
-| `do`                                        | Required list of named tasks, run in order                                      |
-| `output.as`                                 | Optional expression or template that shapes the run's output                    |
-| `output.schema.document`                    | Optional inline JSON Schema, published as the definition's `output_schema`      |
-| `output.shape`                              | Optional [output shape](output-shapes.md), checked when the run ends; see below |
-| `timeout`                                   | Optional limit for the run: `after` and a duration, or a name in `use.timeouts` |
-| `use.errors`, `use.retries`, `use.timeouts` | Optional named errors, retry policies and timeouts that tasks name              |
-| `page`                                      | Optional [page](page-format.md) of its runs; write one for every workflow       |
+| Field                                       | Purpose                                                                                       |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `document.dsl`                              | Required DSL version, from `1.0.0` to `1.0.3`                                                 |
+| `document.namespace`, `document.name`       | Required names of the document                                                                |
+| `document.version`                          | Required semantic version of the document, such as `1.0.0`                                    |
+| `document.title`, `document.summary`        | Optional; the summary, or else the title, is the definition's `description`                   |
+| `input.schema.document`                     | Optional inline JSON Schema, published as the definition's `input_schema`                     |
+| `input.from`                                | Optional expression or template shaping the run's input before the first task                 |
+| `evaluate.language`, `evaluate.mode`        | Optional; only `typescript` and `strict` ([Expressions](#expressions))                        |
+| `schedule`                                  | Optional triggers that start it on its own; see [Triggers](triggers.md), the `triggers` guide |
+| `do`                                        | Required list of named tasks, run in order                                                    |
+| `output.as`                                 | Optional expression or template that shapes the run's output                                  |
+| `output.schema.document`                    | Optional inline JSON Schema, published as the definition's `output_schema`                    |
+| `output.shape`                              | Optional [output shape](output-shapes.md), checked when the run ends; see below               |
+| `timeout`                                   | Optional limit for the run: `after` and a duration, or a name in `use.timeouts`               |
+| `use.errors`, `use.retries`, `use.timeouts` | Optional named errors, retry policies and timeouts that tasks name                            |
+| `page`                                      | Optional [page](page-format.md) of its runs; write one for every workflow                     |
 
 - A run a caller starts is checked against `input.schema` before it starts, with its input as given, before `input.from` shapes it: an input it refuses is `invalid_input` of the kind `input_schema`, with a pointer under `/input` and a sentence for each issue. A triggered run is not, as it gets its trigger's input.
 - The input schema holds the rules of the fields the steps need; a field's `description` and `examples` are what a person is shown when it is refused. Output is not checked against `output.schema`.
@@ -173,87 +173,7 @@ An approval, or any other question for a person or a system, is an interaction f
 
 ## Triggers
 
-A workflow whose document has a `schedule` starts on its own, as well as when a caller runs it. The schedule names up to three triggers: an event trigger, `on`, and two kinds of schedule trigger, `cron` and `every`. Each trigger is kept and matched on its own, so a workflow can start on an event and at its times.
-
-| Trigger          | Starts a run                                                        | Input of the run                    |
-| ---------------- | ------------------------------------------------------------------- | ----------------------------------- |
-| `schedule.on`    | For each event of the playbook that one of its filters matches      | A list holding the event            |
-| `schedule.cron`  | At each time its five fields name, in its time zone                 | `{ "schedule": { "due": <time> } }` |
-| `schedule.every` | At each multiple of its period after the trigger was saved as it is | `{ "schedule": { "due": <time> } }` |
-
-This schedule starts a run for each high-priority brief submitted. It also starts one at 09:00 UTC on working days, and one every fifteen minutes:
-
-```yaml
-schedule:
-  on:
-    one:
-      with: { type: com.example.brief.submitted, data: '${ $data.priority === "high" }' }
-  cron: '0 9 * * 1-5'
-  every: PT15M
-```
-
-- A trigger is identified by its kind, `event`, `cron` or `every`, and its place in the document, `/schedule/on`, `/schedule/cron` or `/schedule/every`.
-- `get_definition` of an active workflow with triggers also shows `triggers_since`, the id of the record that saved its current version. From that record on, what its triggers start is a run of that version.
-- A run that a trigger started names its trigger on its `run_started` event, whose words say which kind started it, such as "was started by its cron schedule".
-- No trigger has an input of its own. A run's input is the list holding the event, or the due time, so a workflow with both kinds tells them apart with `input.from` or a `switch`:
-
-```yaml
-input:
-  from: '${ Array.isArray($data) ? { month: $data[0].data.month } : { due: $data.schedule.due } }'
-```
-
-### Event filters
-
-`on.one` takes one filter, and `on.any` a list of 1 to 64 filters; a run starts when any of them matches. A filter:
-
-- names the `type` of its events, written out;
-- may name any other attribute of the event, such as `source`, `subject` or `caller`, written out: text, or a whole number from 1 for `depth`, `calldepth` and `definitionversion`;
-- may name `data` as a value, or as an expression over the event's data alone, read as `$data`: `data: '${ $data.region === "eu" }'`.
-
-A filter matches the playbook's events:
-
-- events published with `publish_event`, and events workflows emit;
-- the playbook's facts about runs, `run_started`, `run_succeeded`, `run_rejected` and `run_failed`, and about definitions, `definition_created`, `definition_updated`, `definition_retired`, `definition_paused` and `definition_resumed`.
-
-The rest of the playbook's history, such as tool calls, steps, requests and answers, is not among them. A run's fact has:
-
-- the `source` `/runs/<run id>`, and a `subject` that names the definition, as `reasoning/summarize`;
-- as its data: the `output` on `run_succeeded` (`output_bytes` when it is too large), the `reason` and `kind` on `run_rejected`, and nothing on `run_started`. So a filter never sees a run's input;
-- the attributes `caller` (who acted), `definitionversion`, `triggerkind` and `triggerreference` (the trigger that started the run), `depth` (how many reactions are above a run a reaction started), `calldepth` (how many calls are above a run a workflow's call started), `calledby` (the id of the run whose call started it), `causationid` (the id of the record that caused the fact) and `correlationid` (the id the records of one tree of runs share), each where the run has it.
-
-A filter that names an attribute the event does not have does not match it. A run no reaction started carries no `depth`, and a run no call started no `calldepth`, so a filter for such runs leaves the attribute out.
-
-Each filter is held to its own bounds, and its failure affects no other workflow's filter. The bounds are 250 checkpoints of work for an expression, 500 for the filter, 200 milliseconds of the server's time and a sandbox of 64 MiB. An expression that raises on an event, or does more than its work, does not match that event. A filter stopped by its deadline or its memory leaves the event to be matched again later, and one stopped 3 times in a row is not evaluated again for that version. [When a filter goes past its bounds](../guides/triggers.md#when-a-filter-goes-past-its-bounds) says what the playbook records of each and what to do.
-
-### Schedules
-
-- `cron` has the five fields minute, hour, day of month, month and day of week, read in its time zone, and must name a time. When both day of month and day of week are restricted, a day that matches either is due.
-- `time_zone`, the runtime's own beside the DSL's keys, names the time zone of `cron` by its IANA name, such as `America/New_York`; without it, `cron` is read in UTC. The five fields are matched against the time the clocks show there, through daylight saving, so `cron: '0 9 * * *'` with `time_zone: Europe/London` is due at 09:00 in London each day, 09:00 UTC in winter and 08:00 UTC in summer. A time the clocks skip when they go forward is due once, at the first instant after the skip; a time they show twice when they go back is due once, at the first.
-- `every` is a [duration](#durations) of at least a minute, counted from when the trigger was saved as it is.
-- The due time a run gets, `schedule.due`, is an ISO 8601 instant in UTC, whatever the time zone of its schedule. It is all the run gets: the [`schedule` recipe](mcp.md#guides-and-prompts) shows how it finds what is new.
-
-### When a trigger applies
-
-- A trigger applies from the moment it is saved as it is: it matches what the playbook records from then on, whatever an event's `time` says.
-- The saving itself is the first thing it can match. So a trigger that names `definition_created` also starts on its own workflow's definition being saved. To leave that out, name the definition it waits for by its `source`, such as `source: /definitions/reasoning/summarize`.
-- A new version's triggers are compared with those of the version before, by kind and place. A trigger it leaves unchanged goes on as it was, with its times and its running run. From then on it starts the new version. A trigger it changes or adds applies from the new version's saving; a changed schedule counts its times from then. A trigger it removes stops.
-- Saving a version without a schedule, or retiring the workflow, stops every trigger.
-- A run that a trigger starts uses the version that was current when the event was recorded or the time came. Its `run_id` is derived from the workflow, that version, the trigger and the event or due time. So an event or a time starts it once. A run it started that is rejected or fails is not started again, and the same event published again records nothing; the [`schedule` recipe](mcp.md#guides-and-prompts) says how to catch up.
-- The playbook itself starts a triggered run, which acts as the playbook. Its `started_by` has the `id` `playbook:` and the playbook's id, and the playbook's id as its `name`. Each step may read and write that playbook and nothing else, and no person's or key's permissions or revocation affect it.
-- A triggered run names, as `acts_for`, the person it acts for, by id: whoever saved or restored the version it runs. It grants the run nothing. The runs its steps start carry it, and `get_run` and the run's events show it. A version a key saved or restored gives none, and so does one whose person has left the organization, where the runtime knows its members.
-
-### Trigger limits
-
-- A workflow does not start for what its own runs caused, whichever of its triggers started them. That covers a fact about one of its runs, a fact about a run that one of its runs started, and an event that one of its runs emitted.
-- A chain of runs started by events stops at a depth of 8. An event published from outside has depth 1. An event or fact about a run has one more than the run. A run that a trigger starts takes the depth of what it matched. A match deeper than 8 starts nothing.
-- A workflow's event trigger starts at most 60 runs of it a minute, across its filters. More wait for a later minute, up to 1,000 of them; one more is refused. The runs of its schedules are not counted.
-- A schedule trigger has one run at a time. A time that comes due while the schedule's previous run is still running, of this version or an earlier one, is skipped. After the runtime was stopped, only the latest of the times it missed runs.
-- An event and a due time in one moment start two runs, and so do a `cron` and an `every` due at the same time.
-- A start that the playbook refuses, for example once the playbook is retired, or once the organization's credits or a self-hosted runtime's free runs are spent, is not tried again. An event trigger's start the playbook cannot take at that moment is tried again at each sweep, about twenty times; a schedule records such a start as refused and moves on.
-
-When a trigger does not start a run, the playbook records a `reaction_refused` event of its workflow, at most once a minute. The event counts the runs not started and gives the last reason, which names the trigger by its kind. `list_playbook_events` shows it beside the runs triggers started.
-
-The runtime's meter counts every run, and each function or workflow a step calls is a run of its own. A step's call that the meter refuses waits and asks again; see [When the runtime will not start the run for now](#when-the-runtime-will-not-start-the-run-for-now). [Pricing](https://on.auto/pricing) explains an organization's credits, and the [Self-hosted licensing reference](../self-host/licensing.md) gives the rules of a runtime you host.
+A workflow whose document has a `schedule` starts on its own, as well as when a caller runs it: on an event of the playbook, `on`, at set times, `cron`, or every so often, `every`. [Triggers](triggers.md), the `triggers` guide, sets out each trigger, the input of a run it starts, when it applies and its limits.
 
 ## Tasks
 
@@ -436,7 +356,7 @@ A filter whose `type` is written out, such as `type: com.example.brief.revised`,
 - Such an event reaches the run only while the task listens. One recorded before the task began to listen, or after it ended, is not offered to it.
 - A filter that computes its `type` hears only events sent to the run.
 - A run never takes an event it emitted itself.
-- The playbook matches such an event without the run, under the bounds and rules of a trigger's [event filter](#event-filters). Its stops count for the task and the workflow's version, across every run listening there. After 3 stops in a row by its deadline or its memory, the playbook records that once and offers its events through that filter to none of those runs. An event sent to a run still reaches it.
+- The playbook matches such an event without the run, under the bounds and rules of a trigger's [event filter](triggers.md#event-filters). Its stops count for the task and the workflow's version, across every run listening there. After 3 stops in a row by its deadline or its memory, the playbook records that once and offers its events through that filter to none of those runs. An event sent to a run still reaches it.
 - A playbook has at most 4,096 tasks listening for its events at once. One more hears only events sent to its run.
 - Send an event to the run by its run id when the run must not miss it.
 
@@ -637,8 +557,8 @@ These are refused when a document is saved, each for the reason given:
 - `schedule.after`, `schedule.on.all`, `schedule.on.until`, or a schedule that names no trigger: a trigger starts one run for each event or time.
 - A trigger filter without a written `type`: a trigger is matched before any run exists.
 - A trigger or `listen` filter whose expression names anything but `$data`: the playbook matches it without the run.
-- A trigger filter written twice in `any`, or more than 64 filters in one trigger; see [Event filters](#event-filters).
-- `schedule.every` shorter than a minute, a `cron` that is not five fields or names no time, or a `time_zone` that is not an IANA time zone name the runtime knows or has no `cron` beside it; see [Schedules](#schedules).
+- A trigger filter written twice in `any`, or more than 64 filters in one trigger; see [Event filters](triggers.md#event-filters).
+- `schedule.every` shorter than a minute, a `cron` that is not five fields or names no time, or a `time_zone` that is not an IANA time zone name the runtime knows or has no `cron` beside it; see [Schedules](triggers.md#schedules).
 - An `emit` without `type` or `source`, with an `id`, or with a type or source the playbook keeps; see [Emitting an event](#emitting-an-event).
 - `use.catalogs`, `use.extensions`, `use.functions`, `use.secrets` and `use.authentications`, which are not supported.
 - `listen` with `until`, `foreach` or `correlate`, which are not supported.

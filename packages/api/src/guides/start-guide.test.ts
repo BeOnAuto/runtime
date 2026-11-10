@@ -50,6 +50,7 @@ describe('the guide start of a server that runs every type and keeps pages', () 
       '- To give a function the tools of a connected service: the recipe give-tools.',
       '- To start a workflow on its own, at set times or whenever an event arrives: the recipe schedule.',
       '- The filters a template may use: the guide templates. How a page is written: the guide page.',
+      "- What the playbook's events hold, and how a filter names them: the guide events.",
     ]);
     expect(text).toContain(
       '\n\nget_guide reads any of them, and its description names the recipes this connection can follow. A tool that cannot do what was asked says why and what to change.\n',
@@ -87,7 +88,7 @@ describe('what the guide start of that server says of workflows, of the agent an
     );
   });
 
-  it('has its seven sections in that order, takes 6,038 bytes, and uses no term of the internal vocabulary', () => {
+  it('has its seven sections in that order, takes 6,120 bytes, and uses no term of the internal vocabulary', () => {
     expect(headings(text)).toEqual([
       '## Where to go',
       '## What a playbook is made of',
@@ -96,7 +97,7 @@ describe('what the guide start of that server says of workflows, of the agent an
       '## Connecting a service',
       '## Asking a person',
     ]);
-    expect(byteLengthOf(text)).toBe(6038);
+    expect(byteLengthOf(text)).toBe(6120);
     expect(internalTermsIn(text)).toEqual([]);
   });
 });
@@ -118,14 +119,14 @@ describe('the guide start of a server that runs neither interaction functions no
   it('says nothing of asking a person, of pages or of the recipe keep', () => {
     expect(text).not.toMatch(/interaction function|takes a page|the guide page|the recipe keep|Asking a person/u);
     expect(headings(text)).not.toContain('## Asking a person');
-    expect(whereToGo(text)).toHaveLength(7);
+    expect(whereToGo(text)).toHaveLength(8);
   });
 });
 
 describe('the guide start of a server that runs reasoning functions alone', () => {
   const text = startOf(servedForReasoning);
 
-  it('says nothing of what a workflow owns, of the recipe schedule or of the types it does not run', () => {
+  it('says nothing of what a workflow owns, of the recipe schedule, of the events or of the types it does not run', () => {
     expect(headings(text)).toEqual([
       '## Where to go',
       '## What a playbook is made of',
@@ -136,7 +137,7 @@ describe('the guide start of a server that runs reasoning functions alone', () =
     expect(text).toContain(
       '\n\nIts function types: reasoning prompts a model. A reasoning function names a model that list_models lists.\n',
     );
-    expect(text).not.toMatch(/schedule|computation|prediction|lookup/u);
+    expect(text).not.toMatch(/schedule|computation|prediction|lookup|the guide events/u);
   });
 });
 
@@ -158,13 +159,14 @@ describe('the guide start of a server that runs no type of definition', () => {
     ]);
   });
 
-  it('is built from the types, the pages and the recipes it is given, and nothing is read from a page', () => {
-    const built = startGuideOf({ definitionTypes: [], pages: true, recipes: [] });
+  it('is built from the types, the pages, the events and the recipes it is given, and nothing is read from a page', () => {
+    const built = startGuideOf({ definitionTypes: [], pages: true, events: true, recipes: [] });
 
     expect(built.name).toBe('start');
     expect(whereToGo(built.text)).toEqual([
       '- What the words of a playbook mean: the guide terminology.',
       '- The filters a template may use: the guide templates. How a page is written: the guide page.',
+      "- What the playbook's events hold, and how a filter names them: the guide events.",
     ]);
   });
 });

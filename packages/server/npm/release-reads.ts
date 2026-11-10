@@ -27,6 +27,8 @@ deepStrictEqual(pages, [
   ['terminology', true],
   ['workflow', true],
   ['templates', true],
+  ['triggers', true],
+  ['events', true],
   ['page', true],
   ['glance', true],
   ['connect-a-service', true],

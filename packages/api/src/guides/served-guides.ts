@@ -26,6 +26,26 @@ const templatesAbout: Omit<Guide, 'text'> = {
   description: 'The filters a template may use, the same in every template of every definition.',
 };
 
+const triggersPage = 'reference/triggers.md';
+
+const triggersAbout: Omit<Guide, 'text'> = {
+  name: 'triggers',
+  title: 'Triggers',
+  description:
+    'How a workflow starts on its own: the triggers of its schedule, on an event, at set times or every so often, and their limits.',
+};
+
+const eventsPage = 'reference/events.md';
+
+const eventsAbout: Omit<Guide, 'text'> = {
+  name: 'events',
+  title: 'Events',
+  description:
+    "The playbook's events that a workflow's trigger, a page and a prediction function take, and how a filter names them.",
+};
+
+const typesTakingEvents: ReadonlySet<string> = new Set(['workflow', 'prediction']);
+
 const pagePage = 'reference/page-format.md';
 
 const pageAbout: Omit<Guide, 'text'> = {
@@ -83,6 +103,8 @@ export async function guideShelfFrom(
     noun: noun.one,
     guide: guide.name,
   }));
+  const workflows = types.some(({ type }) => type === 'workflow');
+  const events = pages || types.some(({ type }) => typesTakingEvents.has(type));
   const pageGuides = [
     terminologyGuideOf(
       await pageText(shippedFiles, terminologyPage),
@@ -90,11 +112,13 @@ export async function guideShelfFrom(
     ),
     ...(await Promise.all(types.map(({ noun, guide }) => typeGuideOf(shippedFiles, { noun, guide })))),
     await pageGuideOf(shippedFiles, templatesPage, templatesAbout),
+    ...(workflows ? [await pageGuideOf(shippedFiles, triggersPage, triggersAbout)] : []),
+    ...(events ? [await pageGuideOf(shippedFiles, eventsPage, eventsAbout)] : []),
     ...(pages
       ? [await pageGuideOf(shippedFiles, pagePage, pageAbout), await pageGuideOf(shippedFiles, glancePage, glanceAbout)]
       : []),
   ];
   const recipes = await recipesFor(shippedFiles, pageGuides);
-  const start = startGuideOf({ definitionTypes, pages, recipes: recipes.map(({ name }) => name) });
+  const start = startGuideOf({ definitionTypes, pages, events, recipes: recipes.map(({ name }) => name) });
   return guideShelfOf([start, ...pageGuides], recipes, definitionTypes);
 }

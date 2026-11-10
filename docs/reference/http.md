@@ -506,7 +506,7 @@ The `source` is a [workflow document](workflow-format.md). Names, document size,
 - A saved workflow has the `media_type` `application/yaml`.
 - A workflow takes no `diagram`, and one given is refused: Auto Studio draws a workflow from its steps, with the words [Describing steps](workflow-format.md#describing-steps) sets out.
 - Its `description`, `input_schema` and `output_schema` come from the document, the `output_schema` from its `output.shape` where it names one, with `details.shape`.
-- A workflow whose document has a `schedule` also has `triggers`, in `get_definition` and `list_definitions`. They are the [triggers](workflow-format.md#triggers) its schedule names, in the order it names them.
+- A workflow whose document has a `schedule` also has `triggers`, in `get_definition` and `list_definitions`. They are the [triggers](triggers.md) its schedule names, in the order it names them.
 
 | Trigger field  | Contents                                                                              |
 | -------------- | ------------------------------------------------------------------------------------- |
@@ -598,7 +598,7 @@ A cancelled run's rejection names the kind of its cancellation:
 
 ## Runs and results
 
-A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A run a trigger started, and each run its workflow's steps start, has `acts_for`, the id of the person it acts for, such as `person:user_7kLm2`: whoever saved or restored the version the trigger runs, where that was a person ([When a trigger applies](workflow-format.md#when-a-trigger-applies)). It grants the run nothing, and a run without it acts for its caller where that is a person. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
+A run records its `run_id`, `type`, `name`, `definition_version`, `status`, timestamps and `started_by`, the caller who started it, by `id` and `name`. A run a trigger started, and each run its workflow's steps start, has `acts_for`, the id of the person it acts for, such as `person:user_7kLm2`: whoever saved or restored the version the trigger runs, where that was a person ([When a trigger applies](triggers.md#when-a-trigger-applies)). It grants the run nothing, and a run without it acts for its caller where that is a person. A successful run includes `output`, and a rejected run includes a rejection. `get_run` also returns the detailed `record` and, where the run's definition has a page, `page.result`, the run as that page shows it ([Pages](#pages)). `run_definition` returns the run in Studio as `studio` ([Links to Studio](#links-to-studio)). A run that a workflow's step started has `within`, which names that step. Its `run_id` is the workflow's run, and its `step` is the step's reference without its leading `/`, such as `do/1/review`. The `called_by` of the run's events says which call of the step it answered ([Event fields](#event-fields)). A run that no step started has no `within`. A run whose output takes an [output shape](output-shapes.md#what-a-run-shows) says it as `output_shape`, such as `"output_shape": "series"` on a question to a prediction function; a run of a definition that declares no shape has none.
 
 The rejection of a workflow run that a step's uncaught error ended also has `cause`: the step and how its work ended, in codes, which the rejection's `detail` says in words.
 
@@ -721,7 +721,7 @@ It returns `200` with the event's `id` and `time`, and `recorded_at`, when the p
 { "id": "2026-09", "time": "2026-10-01T09:00:00.000Z", "recorded_at": "2026-10-01T09:00:00.000Z" }
 ```
 
-`list_playbook_events` shows each published event as an `event_published` event. A published event starts the workflows whose [event trigger](workflow-format.md#triggers) matches it, and reaches the runs listening for its type.
+`list_playbook_events` shows each published event as an `event_published` event. A published event starts the workflows whose [event trigger](triggers.md) matches it, and reaches the runs listening for its type.
 
 ### Publishing the same event again
 
@@ -749,7 +749,7 @@ The reserved types are `run_started`, `run_deferred`, `attempt_resumed`, `run_su
 
 A run of a reasoning function also records each call of its model: `model_call_started`, then `model_call_answered` with the tool calls the model asked for, or `model_call_failed` with `because`. [The run's model calls](reasoning-format.md#the-run-s-model-calls) gives their fields.
 
-The reserved attributes are the ones the playbook gives its own events; see [Event filters](workflow-format.md#event-filters). So a published event cannot claim a cause, a caller or a depth it does not have.
+The reserved attributes are the ones the playbook gives its own events; see [What an event holds](events.md#what-an-event-holds). So a published event cannot claim a cause, a caller or a depth it does not have.
 
 ## Run history and playbook events
 

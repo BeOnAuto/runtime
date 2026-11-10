@@ -319,63 +319,22 @@ Review this brief against the team's criteria: {{ input.brief }}
 
 ### What the fold sees
 
-The fold sees the events of its own playbook, in the order the playbook recorded them, from the first event of its history:
+The fold sees the events of its own playbook that its filters take, in the order the playbook recorded them, from the first event of its history:
 
-- the start and the end of every run of each function and workflow, with the output of each run that succeeded and fit its event, and the reason and kind of each run that was rejected;
+- the start and the end of every run, with the output of each run that succeeded, and the reason and kind of each run that was rejected;
 - the definitions saved, updated, paused, resumed and retired;
 - every event published to the playbook, or emitted by its workflows.
 
-These events are not the whole of the playbook's history:
+A tool call, a step or an answer is in the playbook's history alone, and a fold never sees it. [Events](events.md), the `events` guide, says what each event holds, with the attributes that say how it came about, such as `caller` and `calldepth`.
 
-| What                    | The events a fold sees                                                                                       | The playbook's history                                                                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Who reads them          | A page's fold, and also a workflow's event triggers and `listen` filters and a prediction function's dataset | A person or an agent, with `list_playbook_events` and `get_event`                                                                             |
-| What they hold          | The facts in the table below, and the events published to the playbook or emitted by its workflows           | Everything recorded: those facts and events, each run's input on its `run_started`, tool calls, workflow steps, requests, answers, deliveries |
-| The shape of each event | A CloudEvent, with the attributes below                                                                      | `id`, `type`, `summary`, `data` and `metadata`                                                                                                |
-
-So `run_started` is in both, with the run's input in the history and with no data for a fold. A tool call, a step or an answer is in the history alone, and a fold never sees it. The events a fold sees:
-
-| Events                                                                                                      | `source`                     | `subject`       | `data`                                                                                          |
-| ----------------------------------------------------------------------------------------------------------- | ---------------------------- | --------------- | ----------------------------------------------------------------------------------------------- |
-| `run_started`, `run_failed`                                                                                 | `/runs/<run id>`             | `<type>/<name>` | none                                                                                            |
-| `run_succeeded`                                                                                             | `/runs/<run id>`             | `<type>/<name>` | `output`; or `output_bytes`, its size, when the output would make the event larger than 240 KiB |
-| `run_rejected`                                                                                              | `/runs/<run id>`             | `<type>/<name>` | `reason`, and `kind` where the rejection has one                                                |
-| `definition_created`, `definition_updated`, `definition_retired`, `definition_paused`, `definition_resumed` | `/definitions/<type>/<name>` | none            | none                                                                                            |
-| An event published to the playbook, of any other type                                                       | as its publisher gave it     | as given        | as given; see [Publishing events](http.md#publishing-events)                                    |
-
-Each event is a CloudEvent with its `id`, `type`, `source`, `time` and `data`. Its `time` is when it happened, as the playbook recorded it. An event the playbook recorded as the effect of another names that one in `causationid`, and the run at the top of its chain in `correlationid`. The playbook's own events also carry extension attributes that say how they came about, each where the playbook has it:
-
-| Attribute           | Holds                                                                                                             |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `caller`            | Who acted: a caller's id; or `playbook:` and the playbook's id, for a run a trigger started and the runs it calls |
-| `definitionversion` | The version of the definition the run runs or the event is about, a whole number from 1                           |
-| `depth`             | On a run a reaction started, how many reactions are above it, a whole number from 1                               |
-| `calldepth`         | On a run a workflow's call started, how many calls are above it, a whole number from 1                            |
-| `calledby`          | The id of the run whose call started the run                                                                      |
-| `triggerkind`       | The kind of the trigger that started the run: `event`, `cron` or `every`                                          |
-| `triggerreference`  | Where that trigger is in its workflow's document                                                                  |
-
-- No published event carries one of these attributes, nor `causationid` or `correlationid`, since `publish_event` refuses them.
-- An event the runtime cannot read, such as one whose data nests deeper than 512 levels, is passed over and reported to the operator once.
+An event the runtime cannot read, such as one whose data nests deeper than 512 levels, is passed over and reported to the operator once.
 
 ### The filters of the events
 
-`data.source.events` names the events the fold takes, in 1 to 8 filters. Every value except `data` is written out, never computed:
-
-| Key                 | What an event must have                                                                                                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`              | Required; exactly this type                                                                                                                                                              |
-| `source`            | Optional; exactly this source                                                                                                                                                            |
-| `subject`           | Optional; exactly this subject, such as `workflow/morning-social-content` for the runs of one workflow                                                                                   |
-| Any other attribute | Optional; exactly this value, such as `triggerkind: event` or `caller: playbook:finance`: a whole number from 1 for `depth`, `calldepth` and `definitionversion`, and text for any other |
-| `data`              | Optional; data equal to this value, or data for which an expression such as `'${ $data.revenue > 100 }'` holds; the expression reads the event's data as `$data` and nothing else        |
+`data.source.events` names the events the fold takes, in 1 to 8 filters. Each is written as the `events` guide says: a `type`, and optionally a `source`, a `subject`, any other attribute and `data`. Every value but `data` is written out.
 
 - An event is folded when it matches any of the filters, and once only.
-- A filter that names an attribute the event does not have does not match it. A filter for runs that no reaction or no call started therefore leaves `depth` or `calldepth` out.
-- A filter that names `depth`, `calldepth` or `definitionversion` as 0 is refused when the page is saved.
-- An expression holds unless it returns `false` or `null`.
-- An attribute is named as CloudEvents names it, in at most 20 lowercase letters and digits. Any other key is rejected, and so is a computed attribute.
-- A `data` expression that names anything but `$data` is refused when the page is saved, with the compiler's `Cannot find name`.
+- A filter the `events` guide refuses is refused when the page is saved, with its line.
 
 ### The module
 

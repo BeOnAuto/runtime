@@ -13,6 +13,7 @@ const whatTheStartGuideIsFor =
 interface Carried {
   readonly definitionTypes: readonly DefinitionType[];
   readonly pages: boolean;
+  readonly events: boolean;
   readonly recipes: readonly string[];
 }
 
@@ -81,6 +82,7 @@ const whereToGo: Lines = (carried) => [
   ),
   ...where(follows(carried, 'keep'), '- To keep something for later, and read it back: the recipe keep.'),
   `- The filters a template may use: the guide templates.${carried.pages ? ' How a page is written: the guide page.' : ''}`,
+  ...where(carried.events, "- What the playbook's events hold, and how a filter names them: the guide events."),
   '',
   'get_guide reads any of them, and its description names the recipes this connection can follow. A tool that cannot do what was asked says why and what to change.',
 ];

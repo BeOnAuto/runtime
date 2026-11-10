@@ -215,7 +215,7 @@ const extras = [
   ...readdirSync(join(repository, 'docs', 'reference'))
     .filter((name) => name.endsWith('-format.md'))
     .map((name) => `docs/reference/${name}`),
-  'docs/reference/template.md',
+  ...['template.md', 'triggers.md', 'events.md'].map((name) => `docs/reference/${name}`),
   'packages/definitions/lib',
   'packages/server/auto-runtime.ts',
 ];

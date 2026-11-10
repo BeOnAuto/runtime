@@ -40,7 +40,7 @@ No trigger has an input of its own. A run that a schedule starts gets only `{ "s
 - A workflow started by an event takes its data from the event. `input.from` shapes the run's input before the first step.
 - A workflow that your agent also runs tells the two apart in `input.from`, as steps 1 and 6 show.
 
-A run that a trigger starts acts as the playbook. Its `started_by` names the playbook: the `id` is `playbook:` followed by the playbook's id, and the `name` is the playbook's id. The run's steps can read and write that playbook and nothing else. Its separate `acts_for` field identifies the person who saved or restored the workflow version, where that person still belongs to the organization; it adds no permissions. [When a trigger applies](../reference/workflow-format.md#when-a-trigger-applies) gives the identity rules. The run is kept in the playbook's history like any other run.
+A run that a trigger starts acts as the playbook. Its `started_by` names the playbook: the `id` is `playbook:` followed by the playbook's id, and the `name` is the playbook's id. The run's steps can read and write that playbook and nothing else. Its separate `acts_for` field identifies the person who saved or restored the workflow version, where that person still belongs to the organization; it adds no permissions. [When a trigger applies](../reference/triggers.md#when-a-trigger-applies) gives the identity rules. The run is kept in the playbook's history like any other run.
 
 ### Overlap and cost
 
@@ -48,7 +48,7 @@ A run that a trigger starts acts as the playbook. Its `started_by` names the pla
 - Each run counts toward usage, and so does each run of a function or workflow that one of its steps calls. On hosted Auto, runs use your organization's credits, and so do the model calls they make; [Pricing](https://on.auto/pricing) explains what each costs.
 - Each run may also send requests to people. Test with a short schedule, and replace it once it has started a run.
 - When a usage limit stops a run that a trigger would start, such as once the organization's credits or a self-hosted runtime's free runs are spent, that run never starts and is not tried again.
-- Event triggers have limits on how many runs they start, how many filters they take and how long a chain of runs may grow. [Trigger limits](../reference/workflow-format.md#trigger-limits) lists them.
+- Event triggers have limits on how many runs they start, how many filters they take and how long a chain of runs may grow. [Trigger limits](../reference/triggers.md#trigger-limits) lists them.
 
 What a trigger did not start is recorded as a `reaction_refused` event of the workflow, which `list_playbook_events` shows.
 
@@ -429,7 +429,7 @@ page:
 
 ### When a filter goes past its bounds
 
-Each event filter is held to the bounds the [workflow format](../reference/workflow-format.md#event-filters) gives, and its failure affects no other workflow's filter. When a filter goes past them:
+Each event filter is held to the bounds the [trigger reference](../reference/triggers.md#event-filters) gives, and its failure affects no other workflow's filter. When a filter goes past them:
 
 - An expression that raises on an event, or does more than its work, does not match that event, since the event's data can cause either. The playbook records that once for each version, and evaluates the filter again on the next event.
 - A filter stopped by its deadline or its memory does not match either, since the event cannot cause that. The event waits and is matched again on a later sweep (the server's regular pass over waiting work, every second by default).
@@ -439,6 +439,6 @@ Each event filter is held to the bounds the [workflow format](../reference/workf
 
 ## Next
 
-- [Workflow format](../reference/workflow-format.md#triggers) has the filters, the trigger limits and the rules for new versions.
+- [Triggers](../reference/triggers.md) has the filters, the trigger limits and the rules for new versions.
 - [Workflows and runs](../concepts/workflows.md) explains how runs start, wait and end.
 - [Lookup function format](../reference/lookup-format.md#reading-the-playbook-s-own-runs) shows how a step reads back what earlier runs kept, from the outputs of a definition's runs.
