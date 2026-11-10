@@ -77,10 +77,32 @@ const baseline: readonly (typeof InteractionRunFactSchema.Type)[] = [
   },
 ];
 
+const readingRecorded: readonly (typeof InteractionRunFactSchema.Type)[] = [
+  {
+    type: 'delivery_succeeded',
+    data: {
+      ...numbered,
+      result_bytes: 64,
+      result_sha256: 'd4e5f6',
+      duration_ms: 90,
+      jsonrpc_id: 3,
+      server_request_id: 'request-1',
+      delivered_as: { conversation: 'C0123', id: '1699.1' },
+      replies_in: {
+        server: 'chat',
+        tool: 'read_replies',
+        key: 'C0123',
+        reading: '9d5ed678fe57bcca610140957afab571d3c88d1b51d2c3ab4e7e2b1c5e6f3a90',
+      },
+    },
+    context: onTheRun,
+  },
+];
+
 describe('the facts an interaction function records on its run', () => {
   recordedFactsBehaviour({
     schema: InteractionRunFactSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.57.0': readingRecorded },
   });
 });

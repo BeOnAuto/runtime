@@ -142,7 +142,7 @@ describe('the end of a delivery', () => {
 });
 
 describe('the end of a delivery that answered', () => {
-  it('shows what the tool answered, what the message was delivered as and where replies are read', () => {
+  it('shows what the tool answered, what the message was delivered as, where replies are read and the reading of them', () => {
     expect(
       presented({
         type: 'delivery_succeeded',
@@ -154,7 +154,12 @@ describe('the end of a delivery that answered', () => {
           server_request_id: 'call-1',
           duration_ms: 5,
           delivered_as: { conversation: 'C0123', id: '1699.1' },
-          replies_in: { server: 'chat', tool: 'thread_replies', key: `C0123/${'k'.repeat(300)}` },
+          replies_in: {
+            server: 'chat',
+            tool: 'thread_replies',
+            key: `C0123/${'k'.repeat(300)}`,
+            reading: 'e'.repeat(64),
+          },
         },
       }),
     ).toMatchObject([
@@ -164,14 +169,21 @@ describe('the end of a delivery that answered', () => {
         data: {
           result_bytes: 52,
           delivered_as: { conversation: 'C0123', id: '1699.1' },
-          replies_in: { server: 'chat', tool: 'thread_replies', key: `C0123/${'k'.repeat(250)}` },
+          replies_in: {
+            server: 'chat',
+            tool: 'thread_replies',
+            key: `C0123/${'k'.repeat(250)}`,
+            reading: 'e'.repeat(64),
+          },
           result: { content: [], structuredContent: { ts: '1699.1' } },
           answer: { ts: '1699.1' },
         },
       },
     ]);
   });
+});
 
+describe('the end of a delivery that answered and kept less', () => {
   it('shows the size of what the tool answered alone, of a server that keeps no content and kept no conversation', () => {
     expect(
       presented({
@@ -179,6 +191,17 @@ describe('the end of a delivery that answered', () => {
         data: { number: 1, result_bytes: 52, jsonrpc_id: 3, duration_ms: 5 },
       })[0]?.data,
     ).toEqual({ number: 1, result_bytes: 52, jsonrpc_id: 3, duration_ms: 5 });
+  });
+
+  it('shows where replies are read with no reading, for a delivery recorded before readings were', () => {
+    const place = { server: 'chat', tool: 'thread_replies', key: 'C0123' };
+
+    expect(
+      presented({
+        type: 'delivery_succeeded',
+        data: { number: 1, result_bytes: 52, jsonrpc_id: 3, duration_ms: 5, replies_in: place },
+      })[0]?.data,
+    ).toEqual({ number: 1, result_bytes: 52, jsonrpc_id: 3, duration_ms: 5, replies_in: place });
   });
 });
 

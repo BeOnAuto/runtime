@@ -14,7 +14,7 @@ import {
 import { counted, plainNumber } from '@on.auto/phrasing';
 import { Effect, Option, Schema } from 'effect';
 
-import { readingKeyOf } from '../conversations/conversation-keys.ts';
+import { renderedKeyOf } from '../conversations/conversation-keys.ts';
 import { openRequestsName } from './open-requests.ts';
 import { StandingSchema, requestRowFrom, routeOfRow, type OpenRequestRow } from './request-rows.ts';
 
@@ -119,7 +119,7 @@ function shownOf({ key, row }: ProjectedKeyedRow) {
       requested_at: new Date(kept.requested_at).toISOString(),
       expires_at: new Date(kept.expires_at).toISOString(),
       attempts: kept.attempts,
-      conversation: kept.conversation === null ? null : readingKeyOf(kept.conversation),
+      conversation: kept.conversation === null ? null : renderedKeyOf(kept.conversation),
       answerer: kept.conversation === null ? null : kept.answerer,
       reply_refusals: kept.reply_refusals,
       standing: kept.standing,

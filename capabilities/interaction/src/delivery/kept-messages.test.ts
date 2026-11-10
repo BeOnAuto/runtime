@@ -1,3 +1,5 @@
+import { hash } from 'node:crypto';
+
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -9,11 +11,18 @@ import {
   chatDelivery,
   chatHarness,
   notificationDocument,
+  recordsOf,
+  threadDocument,
   type ChatHarness,
   type FakeAnswer,
 } from '../testing/index.ts';
+import { flatReplies, threadRepliesWith } from '../testing/reading-documents.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
+
+const first = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71';
+
+const second = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72';
 
 const takesNoReply = ', so the request takes no reply and waits for answer_interaction';
 
@@ -44,15 +53,34 @@ function textAnswer(text: string): FakeAnswer {
   return { outcome: 'result', answer: { content: [{ type: 'text', text }] }, detail: '', retryAfterMs: null };
 }
 
+function digestOf(input: object): string {
+  return hash('sha256', JSON.stringify(input), 'hex');
+}
+
+async function readingsOf(document: string): Promise<readonly unknown[]> {
+  const playbook = await chatHarness({ document });
+  await Promise.all([first, second].map((asked) => playbook.askInThread(asked)));
+  await playbook.performDue(Date.now());
+  const delivered = await recordsOf(playbook.ledger, 'delivery_succeeded');
+  return delivered
+    .map((record) => interactionFactOf(record))
+    .map((fact) => (fact?.type === 'delivery_succeeded' ? fact.data.replies_in?.reading : undefined));
+}
+
 describe('a delivery whose function reads replies', () => {
-  it('keeps the conversation and the message its tool sent, from the text of its answer, and where replies are read', async () => {
+  it('keeps the conversation and the message its tool sent, from the text of its answer, where replies are read, and the reading of its replies, the digest of the read rendered with no cursor', async () => {
     const { playbook, ended } = await deliveredWith();
 
     expect(ended).toMatchObject({
       type: 'delivery_succeeded',
       data: {
         delivered_as: { conversation: '#approvals-sales', id: '1699.000001' },
-        replies_in: { server: 'chat', tool: 'thread_replies', key: '#approvals-sales/1699.000001' },
+        replies_in: {
+          server: 'chat',
+          tool: 'thread_replies',
+          key: '#approvals-sales/1699.000001',
+          reading: digestOf({ channel: '#approvals-sales', ts: '1699.000001', oldest: '0', limit: 15 }),
+        },
       },
     });
     expect(await playbook.firstOpen()).toMatchObject({
@@ -77,6 +105,33 @@ describe('a delivery whose function reads replies', () => {
     expect(ended).toMatchObject({
       data: { delivered_as: { conversation: 'C0123', id: '1699000001' }, replies_in: { key: 'C0123/1699000001' } },
     });
+  });
+});
+
+describe('the reading a delivery records', () => {
+  it('is one for two requests whose reads are the same call, and one for each thread a read names', async () => {
+    const [flatOnce, flatAgain] = await readingsOf(threadDocument({ replies: flatReplies }));
+    const [thread, otherThread] = await readingsOf(threadDocument());
+
+    expect(flatOnce).toBe(digestOf({ channel: '#approvals-sales', oldest: '0' }));
+    expect(flatAgain).toBe(flatOnce);
+    expect([thread, otherThread]).toEqual([
+      digestOf({ channel: '#approvals-sales', ts: '1699.000001', oldest: '0', limit: 15 }),
+      digestOf({ channel: '#approvals-sales', ts: '1699.000002', oldest: '0', limit: 15 }),
+    ]);
+  });
+
+  it('is left out, where replies are read kept, when the read renders no arguments for the request', async () => {
+    const { ended } = await deliveredWith(
+      undefined,
+      threadRepliesWith("    ts: '{{ sent.id }}'", `    ts: '${'a'.repeat(16_240)}${'{{ to }}'.repeat(20)}'`),
+    );
+
+    expect(keptOf(ended)).toEqual([
+      { conversation: '#approvals-sales', id: '1699.000001' },
+      { server: 'chat', tool: 'thread_replies', key: '#approvals-sales/1699.000001' },
+      undefined,
+    ]);
   });
 });
 

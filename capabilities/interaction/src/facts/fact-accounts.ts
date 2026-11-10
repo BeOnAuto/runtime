@@ -18,9 +18,12 @@ function deliveredAsShown(deliveredAs: DeliveredAs | undefined) {
 }
 
 function repliesInShown(repliesIn: RepliesIn | undefined) {
-  return repliesIn === undefined
-    ? {}
-    : { replies_in: { server: named(repliesIn.server), tool: named(repliesIn.tool), key: named(repliesIn.key) } };
+  if (repliesIn === undefined) {
+    return {};
+  }
+  const { server, tool, key, reading } = repliesIn;
+  const place = { server: named(server), tool: named(tool), key: named(key) };
+  return { replies_in: reading === undefined ? place : { ...place, reading: named(reading) } };
 }
 
 export function startedAccount(event: RecordedFactNamed<'delivery_started'>, content: KeptContent): PresentedFact {

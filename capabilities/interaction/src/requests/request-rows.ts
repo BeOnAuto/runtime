@@ -36,6 +36,7 @@ const OpenRequestRowSchema = Schema.Struct({
   ending_due_at: Schema.NullOr(Schema.Int),
   ended: Schema.NullOr(Schema.String),
   conversation: Schema.NullOr(Schema.String),
+  reading: Schema.NullOr(Schema.String),
   sent_conversation: Schema.NullOr(Schema.String),
   sent_id: Schema.NullOr(Schema.String),
   answerer: Schema.NullOr(Schema.String),

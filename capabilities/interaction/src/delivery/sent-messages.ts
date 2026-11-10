@@ -6,6 +6,7 @@ import { renderedText, textAt, toolBlockEngine } from '@on.auto/definitions/tool
 import { answerDocument, type CallAnswer } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
+import { readingOf } from '../readings/request-readings.ts';
 import type { DeliveringRecord } from '../run/request-record.ts';
 import type { DeliveredAs, Replies, RepliesIn } from '../tool-blocks/tool-block-schemas.ts';
 
@@ -53,18 +54,35 @@ function keyOf(replies: Replies, party: string, sent: DeliveredAs, clock: Render
   return key === undefined ? Result.fail(unkeyed) : Result.succeed(key);
 }
 
-function readingOf(record: DeliveringRecord): Replies | undefined {
+function repliesReadFor(record: DeliveringRecord): Replies | undefined {
   return record.answer_schema === undefined || record.reply === undefined ? undefined : record.replies;
 }
 
+interface KeyedDelivery {
+  readonly record: DeliveringRecord;
+  readonly replies: Replies;
+  readonly sent: DeliveredAs;
+  readonly key: string;
+}
+
+function placeOf({ record, replies, sent, key }: KeyedDelivery, clock: RenderClock): RepliesIn {
+  const reading = readingOf(replies, { to: record.to, sent, key }, clock);
+  return {
+    server: record.deliver.server,
+    tool: replies.tool,
+    key,
+    ...(Result.isSuccess(reading) ? { reading: reading.success } : {}),
+  };
+}
+
 function keptAs(record: DeliveringRecord, deliveredAs: DeliveredAs, clock: RenderClock): Result.Result<Kept, string> {
-  const reading = readingOf(record);
-  if (reading === undefined) {
+  const replies = repliesReadFor(record);
+  if (replies === undefined) {
     return Result.succeed({ delivered_as: deliveredAs });
   }
-  return Result.map(keyOf(reading, record.to, deliveredAs, clock), (key) => ({
+  return Result.map(keyOf(replies, record.to, deliveredAs, clock), (key) => ({
     delivered_as: deliveredAs,
-    replies_in: { server: record.deliver.server, tool: reading.tool, key },
+    replies_in: placeOf({ record, replies, sent: deliveredAs, key }, clock),
   }));
 }
 
@@ -86,7 +104,7 @@ export function keptOf(record: DeliveringRecord, answer: CallAnswer, clock: Rend
         );
   return Result.getOrElse(kept, (what) => ({
     detail:
-      readingOf(record) === undefined
+      repliesReadFor(record) === undefined
         ? what
         : `${what}, so the request takes no reply and waits for answer_interaction`,
   }));

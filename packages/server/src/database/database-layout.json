@@ -150,36 +150,40 @@
       "sql": "CREATE INDEX ledger_messages_by_stream ON emt_messages (stream_id, global_position)"
     },
     {
-      "name": "open_requests_12",
-      "sql": "CREATE TABLE open_requests_12 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, sent_conversation TEXT, sent_id TEXT, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, PRIMARY KEY (playbook_key, row_key))"
+      "name": "open_requests_13",
+      "sql": "CREATE TABLE open_requests_13 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, reading TEXT, sent_conversation TEXT, sent_id TEXT, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "open_requests_12_attempts_due",
-      "sql": "CREATE INDEX open_requests_12_attempts_due ON open_requests_12 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
+      "name": "open_requests_13_attempts_due",
+      "sql": "CREATE INDEX open_requests_13_attempts_due ON open_requests_13 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
     },
     {
-      "name": "open_requests_12_by_conversation",
-      "sql": "CREATE INDEX open_requests_12_by_conversation ON open_requests_12 (playbook_key, open, conversation, requested_at, row_key)"
+      "name": "open_requests_13_by_conversation",
+      "sql": "CREATE INDEX open_requests_13_by_conversation ON open_requests_13 (playbook_key, open, conversation, requested_at, row_key)"
     },
     {
-      "name": "open_requests_12_by_function",
-      "sql": "CREATE INDEX open_requests_12_by_function ON open_requests_12 (playbook_key, open, function, requested_at, row_key)"
+      "name": "open_requests_13_by_function",
+      "sql": "CREATE INDEX open_requests_13_by_function ON open_requests_13 (playbook_key, open, function, requested_at, row_key)"
     },
     {
-      "name": "open_requests_12_by_open",
-      "sql": "CREATE INDEX open_requests_12_by_open ON open_requests_12 (playbook_key, open, requested_at, row_key)"
+      "name": "open_requests_13_by_open",
+      "sql": "CREATE INDEX open_requests_13_by_open ON open_requests_13 (playbook_key, open, requested_at, row_key)"
     },
     {
-      "name": "open_requests_12_by_party",
-      "sql": "CREATE INDEX open_requests_12_by_party ON open_requests_12 (playbook_key, open, party, requested_at, row_key)"
+      "name": "open_requests_13_by_party",
+      "sql": "CREATE INDEX open_requests_13_by_party ON open_requests_13 (playbook_key, open, party, requested_at, row_key)"
     },
     {
-      "name": "open_requests_12_by_type",
-      "sql": "CREATE INDEX open_requests_12_by_type ON open_requests_12 (playbook_key, open, type, requested_at, row_key)"
+      "name": "open_requests_13_by_sent_message",
+      "sql": "CREATE INDEX open_requests_13_by_sent_message ON open_requests_13 (playbook_key, open, sent_conversation, sent_id)"
     },
     {
-      "name": "open_requests_12_endings_due",
-      "sql": "CREATE INDEX open_requests_12_endings_due ON open_requests_12 (ending_due_at) WHERE ending_due_at IS NOT NULL"
+      "name": "open_requests_13_by_type",
+      "sql": "CREATE INDEX open_requests_13_by_type ON open_requests_13 (playbook_key, open, type, requested_at, row_key)"
+    },
+    {
+      "name": "open_requests_13_endings_due",
+      "sql": "CREATE INDEX open_requests_13_endings_due ON open_requests_13 (ending_due_at) WHERE ending_due_at IS NOT NULL"
     },
     {
       "name": "page_views",

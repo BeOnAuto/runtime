@@ -67,6 +67,7 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     open: true,
     ended: null,
     conversation: null,
+    reading: null,
     sent_conversation: null,
     sent_id: null,
     answerer: request.answerer ?? null,
@@ -106,7 +107,9 @@ function keptConversation({ data }: Delivery<'delivery_succeeded'>) {
   const { delivered_as: deliveredAs, replies_in: repliesIn } = data;
   return {
     ...(deliveredAs === undefined ? {} : { sent_conversation: deliveredAs.conversation, sent_id: deliveredAs.id }),
-    ...(repliesIn === undefined ? {} : { conversation: conversationKeyOf(repliesIn) }),
+    ...(repliesIn === undefined
+      ? {}
+      : { conversation: conversationKeyOf(repliesIn), reading: repliesIn.reading ?? null }),
   };
 }
 
@@ -191,7 +194,7 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 12,
+  version: 13,
   kinds: ['runs'],
   types: [
     'run_deferred',
@@ -227,6 +230,7 @@ export const openRequests: KeyedProjection = {
     { name: 'ending_due_at', kind: 'integer' },
     { name: 'ended', kind: 'text' },
     { name: 'conversation', kind: 'text' },
+    { name: 'reading', kind: 'text' },
     { name: 'sent_conversation', kind: 'text' },
     { name: 'sent_id', kind: 'text' },
     { name: 'answerer', kind: 'text' },
@@ -240,6 +244,7 @@ export const openRequests: KeyedProjection = {
     { name: 'by_function', columns: ['open', 'function', 'requested_at', 'row_key'] },
     { name: 'by_type', columns: ['open', 'type', 'requested_at', 'row_key'] },
     { name: 'by_conversation', columns: ['open', 'conversation', 'requested_at', 'row_key'] },
+    { name: 'by_sent_message', columns: ['open', 'sent_conversation', 'sent_id'] },
     { name: 'attempts_due', columns: ['attempt_due_at'], acrossPlaybooks: true, whereSet: 'attempt_due_at' },
     { name: 'endings_due', columns: ['ending_due_at'], acrossPlaybooks: true, whereSet: 'ending_due_at' },
   ],

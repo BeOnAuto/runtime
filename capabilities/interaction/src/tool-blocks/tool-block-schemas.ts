@@ -80,7 +80,12 @@ export const RepliesSchema = Schema.Struct({
 
 export const DeliveredAsSchema = Schema.Struct({ conversation: Schema.String, id: Schema.String });
 
-export const RepliesInSchema = Schema.Struct({ server: Schema.String, tool: Schema.String, key: Schema.String });
+export const RepliesInSchema = Schema.Struct({
+  server: Schema.String,
+  tool: Schema.String,
+  key: Schema.String,
+  reading: Schema.optionalKey(Schema.String),
+});
 
 export type DeliveredAs = typeof DeliveredAsSchema.Type;
 

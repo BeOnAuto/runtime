@@ -82,6 +82,7 @@ describe('the open request of a run', () => {
         ending_due_at: Date.parse(request.expires_at),
         ended: null,
         conversation: null,
+        reading: null,
         sent_conversation: null,
         sent_id: null,
         answerer: null,
