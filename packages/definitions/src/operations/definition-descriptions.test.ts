@@ -3,11 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
+import { runContentHolders } from '../testing/harness.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
 
-const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages).map(
-  ({ registration }) => registration,
-);
+const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages, {
+  holders: runContentHolders,
+}).map(({ registration }) => registration);
 
 const takingNoType = new Set([
   'render_playbook_page',

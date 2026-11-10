@@ -11,7 +11,7 @@ import type { TypedEvent } from '../ledger/decider.ts';
 import { addressedStreamOf } from '../projections/keyed-projection.ts';
 
 export interface MemoryReferences {
-  readonly project: (stream: string, facts: readonly TypedEvent[]) => void;
+  readonly staged: (stream: string, facts: readonly TypedEvent[]) => () => void;
   readonly refold: (stream: string, facts: readonly TypedEvent[]) => void;
   readonly heldIn: HeldIn;
   readonly removalOver: (outside: KeptOutside) => UnheldContentRemover['removeUnheld'];
@@ -30,17 +30,19 @@ function heldAmong(held: ReadonlyMap<string, HeldDigests>, playbook: PlaybookAdd
 
 function referencesBy(holders: ContentHolders): MemoryReferences {
   const held = new Map<string, HeldDigests>();
-  const folded = (stream: string, facts: readonly TypedEvent[], from?: HeldDigests) => {
-    if (ofAPlaybook(stream)) {
-      held.set(stream, heldOver(holders, facts, from));
+  const folded = (stream: string, facts: readonly TypedEvent[], from?: HeldDigests): (() => void) => {
+    if (!ofAPlaybook(stream)) {
+      return Function.constVoid;
     }
+    const after = heldOver(holders, facts, from);
+    return () => {
+      held.set(stream, after);
+    };
   };
   return {
-    project: (stream, facts) => {
-      folded(stream, facts, held.get(stream));
-    },
+    staged: (stream, facts) => folded(stream, facts, held.get(stream)),
     refold: (stream, facts) => {
-      folded(stream, facts);
+      folded(stream, facts)();
     },
     heldIn: (playbook, sha256) => heldAmong(held, playbook, sha256),
     removalOver:
@@ -51,7 +53,7 @@ function referencesBy(holders: ContentHolders): MemoryReferences {
 }
 
 const unknownHolders: MemoryReferences = {
-  project: Function.constVoid,
+  staged: () => Function.constVoid,
   refold: Function.constVoid,
   heldIn: Function.constFalse,
   removalOver: () => () => Effect.die(noHoldersKnown()),

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionOperations } from '../operations/definition-operations.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import { echo } from '../testing/capabilities/echo.ts';
+import { runContentHolders } from '../testing/harness.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
 import { shapeNamed } from '../testing/shapes.ts';
 import { runShownOf } from './page-reads.ts';
@@ -97,7 +98,9 @@ const rendering: ReadonlySet<string> = new Set(['render_page', 'render_playbook_
 
 describe('the routes that render a page', () => {
   it('are served beside the definitions, over HTTP alone', () => {
-    const served = makeDefinitionOperations([echo], uncheckedPages).map(({ registration }) => registration);
+    const served = makeDefinitionOperations([echo], uncheckedPages, { holders: runContentHolders }).map(
+      ({ registration }) => registration,
+    );
 
     expect(
       served

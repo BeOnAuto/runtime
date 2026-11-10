@@ -166,7 +166,9 @@ export function memoryContentHeads(heldIn: HeldIn = nothingHeld): ContentHeads {
     read: (playbook, sha256) =>
       Effect.sync(() => {
         const standing = heads.get(keyOf(playbook, sha256));
-        return standing?.markedAlone === true ? undefined : standing?.head;
+        return standing === undefined || standing.markedAlone === true
+          ? undefined
+          : { ...standing.head, keptAt: standing.keptAt };
       }),
   };
 }

@@ -11,6 +11,7 @@ import type { RouteRegistration } from '@on.auto/operations';
 import { defineGetEvent, defineListPlaybookChanges, defineListPlaybookEvents } from '@on.auto/playbooks';
 
 import { directoryFactsOf, type ComposedFacts } from './composed-facts.ts';
+import { factsKnownWith } from './known-holders.ts';
 
 export interface ServedPages {
   readonly pages: SubjectPages;
@@ -25,11 +26,12 @@ export function playbookOperationsServing(
   { facts, names, pages }: Pick<ComposedFacts, 'facts' | 'names'> & ServedPages,
 ): readonly PlaybookOperation[] {
   const presenters = makeDefinitionPresenters(capabilities, facts);
+  const { holders } = factsKnownWith(facts.onRuns);
   return [
-    ...makeDefinitionOperations(capabilities, pages, facts, presenters),
-    defineListPlaybookEvents(presenters),
+    ...makeDefinitionOperations(capabilities, pages, { facts, presenters, holders }),
+    defineListPlaybookEvents(presenters, holders),
     defineListPlaybookChanges(presenters, [commentChanges]),
-    defineGetEvent(presenters),
+    defineGetEvent(presenters, holders),
     definePublishEvent(names),
     ...commentOperations,
   ];

@@ -20,6 +20,14 @@ export {
   type InterleavedRemovalEntry,
 } from '../content-testing/interleaved-removal-behaviour.ts';
 export { heldNotes, noteHolders, type HeldNote, type UnheldContentEntry } from '../content-testing/held-notes.ts';
+export {
+  payloadReadsOf,
+  type KeptTables,
+  type PayloadRead,
+  type PayloadReadBecause,
+  type SampledFact,
+} from '../payload-testing/payload-reads.ts';
+export { recordedFactsUnder } from '../payload-testing/recorded-facts.ts';
 export type { FactScrubEntry } from '../scrub-testing/scrub-parts.ts';
 export { appendedFactsBehaviour, type AppendedFactsEntry } from '../changes-testing/appended-facts-behaviour.ts';
 export { internalTerms, internalTermsIn } from '../plain-language/internal-terms.ts';

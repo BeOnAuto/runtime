@@ -2,7 +2,7 @@ import { sha256Of, textToKeep } from '@on.auto/content';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { PlaybookReader, keptContentOf, type RecordedEvent } from '../index.ts';
+import { PlaybookReader, keptContentOf, type ContentHolders, type RecordedEvent } from '../index.ts';
 import {
   playbookBoundAppendedFactsReader,
   playbookBoundProjectionReader,
@@ -27,7 +27,7 @@ const texts = {
 
 const [a1, r1, r2, m1] = [sha256Of(texts.a1), sha256Of(texts.r1), sha256Of(texts.r2), sha256Of(texts.m1)];
 
-function recordOf(data: unknown): RecordedEvent {
+function recordOf(data: unknown, type = 'tool_call_answered'): RecordedEvent {
   return {
     id: 'm-1',
     cursor: 'c-1',
@@ -36,14 +36,19 @@ function recordOf(data: unknown): RecordedEvent {
     stream: 'runs/r-1',
     version: 1,
     globalPosition: 1,
-    type: 'tool_call_answered',
+    type,
     data,
     context: { at, by: 'playbook:alpha' },
     recordedAt: at,
   };
 }
 
-function keptOf(records: readonly RecordedEvent[], mostBytes: number, digests: readonly string[]) {
+function keptOf(
+  records: readonly RecordedEvent[],
+  mostBytes: number,
+  digests: readonly string[],
+  holders: ContentHolders = new Map(),
+) {
   const { service } = memoryLedger();
   return Effect.runPromise(
     Effect.gen(function* () {
@@ -51,7 +56,7 @@ function keptOf(records: readonly RecordedEvent[], mostBytes: number, digests: r
       yield* service.content.put(playbook, textToKeep(texts.r1, 'application/problem+json'));
       yield* service.content.put(playbook, textToKeep(texts.r2, 'text/plain; charset=utf-8'));
       yield* service.content.put(playbook, textToKeep(texts.m1, 'application/octet-stream'));
-      const content = yield* keptContentOf(records, mostBytes);
+      const content = yield* keptContentOf(records, mostBytes, holders);
       return digests.map((digest) => content(digest));
     }).pipe(
       Effect.provideService(
@@ -101,6 +106,18 @@ describe('the content kept for the events of a read', () => {
     ];
 
     await expect(keptOf(records, Infinity, [a1, r1, 'missing'])).resolves.toEqual([undefined, undefined, undefined]);
+  });
+
+  it('passes over a payload a fact keeps outside, which only a reader of payloads reads, and reads the content beside it', async () => {
+    const holders: ContentHolders = new Map([
+      ['run_succeeded', { payloads: [{ sha256: '/output_sha256', bytes: '/output_bytes' }] }],
+    ]);
+    const records = [
+      recordOf({ output_sha256: r2, output_bytes: 45, arguments_sha256: a1, arguments_bytes: 13 }, 'run_succeeded'),
+    ];
+
+    await expect(keptOf(records, 4096, [r2, a1], holders)).resolves.toEqual([undefined, texts.a1]);
+    await expect(keptOf(records, 4096, [r2, a1])).resolves.toEqual([texts.r2, texts.a1]);
   });
 
   it('is nothing for any digest when a read kept no content', () => {

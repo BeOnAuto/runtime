@@ -5,11 +5,14 @@ import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { relay } from '../testing/capabilities/relay.ts';
+import { runContentHolders } from '../testing/harness.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
 
 const relaying = relay().capability;
 
-const operations = makeDefinitionOperations([echo, probe().capability, relaying], uncheckedPages);
+const operations = makeDefinitionOperations([echo, probe().capability, relaying], uncheckedPages, {
+  holders: runContentHolders,
+});
 
 function registrationOf(name: string): RouteRegistration {
   const found = operations.find(({ registration }) => registration.name === name);

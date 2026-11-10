@@ -7,6 +7,7 @@ import {
   playbookFeed,
   playbookWithEvents,
   everyText,
+  feedHolders,
   listPlaybookEvents,
   presenterOf,
   textsIn,
@@ -41,7 +42,7 @@ describe('list_playbook_events', () => {
   });
 
   it('needs a presenter that shows at least one type of event', () => {
-    expect(() => defineListPlaybookEvents([presenterOf('notes', { added: null })])).toThrow(
+    expect(() => defineListPlaybookEvents([presenterOf('notes', { added: null })], feedHolders)).toThrow(
       'The events of a playbook need a presenter that shows at least one type of event',
     );
   });

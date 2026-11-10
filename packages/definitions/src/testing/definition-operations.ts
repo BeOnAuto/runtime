@@ -20,6 +20,7 @@ import {
 } from '../index.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { storedTypesByStatus } from '../reading/run-status.ts';
+import { runContentHolders } from './harness.ts';
 import { uncheckedPages } from './page-ports.ts';
 
 export function definitionOperationsFor(
@@ -40,6 +41,6 @@ export function definitionOperationsFor(
     getRun: defineGetRun(capabilities, pages),
     cancelRun: defineCancelRun(capabilities),
     listRuns: defineListRuns(capabilities, storedTypesByStatus(declaredFactsOf(capabilities))),
-    getRunHistory: defineGetRunHistory(presenters),
+    getRunHistory: defineGetRunHistory(presenters, runContentHolders),
   };
 }

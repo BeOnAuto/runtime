@@ -1,4 +1,4 @@
-import { Effect } from 'effect';
+import { Effect, Function } from 'effect';
 
 import type { Context } from '../ledger/context.ts';
 import { messageIdOf } from '../ledger/message-lineage.ts';
@@ -42,7 +42,7 @@ interface FactRewritten {
 }
 
 export interface MemoryProjections extends ProjectionReader, ProjectionAdvancer {
-  readonly project: (stream: string, facts: readonly AppendedFact[], firstPosition: number) => void;
+  readonly staged: (stream: string, facts: readonly AppendedFact[], firstPosition: number) => () => void;
   readonly refold: (log: readonly LoggedFact[], rewritten: FactRewritten) => void;
 }
 
@@ -134,17 +134,19 @@ export function projectedMessagesOf(
   });
 }
 
-function projectedOn(tables: readonly Table[]): MemoryProjections['project'] {
+function projectedOn(tables: readonly Table[]): MemoryProjections['staged'] {
   return (stream, facts, firstPosition) => {
     const named = addressedStreamOf(stream);
     if (named === undefined) {
-      return;
+      return Function.constVoid;
     }
     const messages = projectedMessagesOf(stream, facts, firstPosition);
     const changes = tables.flatMap((table) => staged(table, named, messages));
-    for (const { rows, stored, kept } of changes) {
-      rows.set(stored, kept);
-    }
+    return () => {
+      for (const { rows, stored, kept } of changes) {
+        rows.set(stored, kept);
+      }
+    };
   };
 }
 
@@ -264,7 +266,7 @@ export function memoryProjections(projections: readonly KeyedProjection[]): Memo
   const tableNamed = (name: string): Table | undefined => tables.find(({ projection }) => projection.name === name);
   const rowsOf = (name: string): ReadonlyMap<string, ProjectedKeyedRow> => tableNamed(name)?.rows ?? nothingKept;
   return {
-    project: projectedOn(tables),
+    staged: projectedOn(tables),
     refold: refoldedOn(tables),
     advanceRow: (projection, address, key, advance) => advancedIn(tableNamed(projection), { address, key, advance }),
     readProjectedRows: (projection, address, query) =>

@@ -10,6 +10,7 @@ import {
   presentationOf,
   stepIdSeparator,
   streamPrefixOfPlaybook,
+  type ContentHolders,
   type Presentation,
   type Presenter,
 } from '@on.auto/operations';
@@ -48,13 +49,13 @@ function recordIdOf(id: string): string {
   return end === -1 ? id : id.slice(0, end);
 }
 
-function eventReader(presentation: Presentation) {
+function eventReader(presentation: Presentation, holders: ContentHolders) {
   return Effect.fnUntraced(function* ({ event_id: id }: typeof GetEventInput.Type) {
     const record = yield* (yield* PlaybookReader).readRecordedEvent(recordIdOf(id));
     if (record === undefined) {
       return yield* Effect.fail(noEventCalled(id));
     }
-    const content = yield* keptContentOf([record], Number.POSITIVE_INFINITY);
+    const content = yield* keptContentOf([record], Number.POSITIVE_INFINITY, holders);
     const view = (yield* ServedAsTool) ? 'tool' : 'whole';
     const streamPrefix = streamPrefixOfPlaybook(yield* PlaybookContext);
     const event = presentation.present(record, { streamPrefix, content, view }).find((shown) => shown.id === id);
@@ -62,7 +63,7 @@ function eventReader(presentation: Presentation) {
   });
 }
 
-export function defineGetEvent(presenters: readonly Presenter[]) {
+export function defineGetEvent(presenters: readonly Presenter[], holders: ContentHolders) {
   return defineQuery('playbook', {
     name: 'get_event',
     title: 'Get event',
@@ -71,7 +72,7 @@ export function defineGetEvent(presenters: readonly Presenter[]) {
     inputSchema: GetEventInput,
     outputSchema: WholeEventSchema,
     reasons: ['not_found', 'invalid_input'],
-    handle: eventReader(presentationOf(presenters)),
+    handle: eventReader(presentationOf(presenters), holders),
     plainLanguage: {
       task: 'read one event of the playbook',
       attempt: ({ event_id: id }) => `read the event ${id}`,

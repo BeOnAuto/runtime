@@ -5,9 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { defineCapability, makeDefinitionOperations, type Capability } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
+import { runContentHolders } from '../testing/harness.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
 
-const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages);
+const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages, { holders: runContentHolders });
 
 function presenting(type: string, noun: string): Capability {
   return defineCapability({
@@ -26,6 +27,7 @@ function presenting(type: string, noun: string): Capability {
 const presentingOperations = makeDefinitionOperations(
   [presenting('reasoning', 'reasoning function'), presenting('workflow', 'workflow')],
   uncheckedPages,
+  { holders: runContentHolders },
 );
 
 function registrationOf(name: string, served = operations): RouteRegistration {

@@ -1,5 +1,5 @@
 import { makeDefinitionOperations } from '@on.auto/definitions';
-import { echo, uncheckedPages } from '@on.auto/definitions/testing';
+import { echo, runContentHolders, uncheckedPages } from '@on.auto/definitions/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
@@ -16,7 +16,7 @@ let listening: Listening;
 
 beforeAll(async () => {
   server = await operationServer({
-    operations: [...orgOperations, ...makeDefinitionOperations([echo], uncheckedPages)],
+    operations: [...orgOperations, ...makeDefinitionOperations([echo], uncheckedPages, { holders: runContentHolders })],
   });
   listening = await listenOnLoopback(server.handler);
 });

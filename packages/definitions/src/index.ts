@@ -254,6 +254,7 @@ export {
   type ListedDefinition,
   type Definition,
 } from './registry/definition.ts';
+export type { RunReading } from './reading/run-operations.ts';
 export { makeDefinitionOperations, type PlaybookOperation } from './operations/definition-operations.ts';
 export { defineGetPlaybookAnalytics } from './analytics/get-playbook-analytics.ts';
 export { runOutcomeMapping } from './analytics/run-outcome-mapping.ts';

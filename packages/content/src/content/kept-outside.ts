@@ -154,6 +154,7 @@ export function keptOutside(heads: ContentHeads, store: ContentStore): KeptOutsi
     content: {
       put: (playbook, content) => put(outside, playbook, content),
       get: (playbook, sha256) => readAsHeld(outside, playbook, sha256, store.read(playbook, sha256)),
+      getHead: (playbook, sha256) => heads.read(playbook, sha256),
       getPart: (playbook, sha256, asked) =>
         readAsHeld(outside, playbook, sha256, store.readPart(playbook, sha256, asked)),
     },

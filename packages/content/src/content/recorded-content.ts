@@ -22,6 +22,7 @@ export interface ContentKept extends Digested {
 export interface RecordedContent {
   readonly put: (playbook: ContentOwner, content: ContentToKeep) => Effect.Effect<ContentKept, ContentRefused>;
   readonly get: (playbook: ContentOwner, sha256: string) => Effect.Effect<StreamedContent | undefined>;
+  readonly getHead: (playbook: ContentOwner, sha256: string) => Effect.Effect<KeptContentHead | undefined>;
   readonly getPart: (
     playbook: ContentOwner,
     sha256: string,
@@ -55,6 +56,10 @@ export interface ContentHead {
   readonly mediaType: string;
 }
 
+export interface KeptContentHead extends ContentHead {
+  readonly keptAt: number;
+}
+
 export type HeadKept =
   | { readonly kept: 'new' | 'standing'; readonly head: ContentHead }
   | { readonly kept: 'removing'; readonly since: number };
@@ -75,5 +80,5 @@ export interface ContentHeads {
   readonly marked: (playbook: ContentOwner, sha256: string, times: RemovalTimes) => Effect.Effect<HeadMarked>;
   readonly cleared: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
   readonly unmarked: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
-  readonly read: (playbook: ContentOwner, sha256: string) => Effect.Effect<ContentHead | undefined>;
+  readonly read: (playbook: ContentOwner, sha256: string) => Effect.Effect<KeptContentHead | undefined>;
 }

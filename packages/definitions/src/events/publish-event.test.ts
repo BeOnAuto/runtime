@@ -6,11 +6,11 @@ import { makeDefinitionPresenters } from '../index.ts';
 import { publishEventToAskingPlaybook as publishEvent } from '../testing/asking.ts';
 import { acmeAdmin, acmeReader } from '../testing/callers.ts';
 import { echo } from '../testing/capabilities/echo.ts';
-import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { firstMoment, harness, runContentHolders, toPlaybook } from '../testing/harness.ts';
 import { mostPublishedEventBytes } from './cloud-event.ts';
 import { publishedEventDecider, publishedEventStreamOf } from './published-events.ts';
 
-const listPlaybookEvents = defineListPlaybookEvents(makeDefinitionPresenters([echo]));
+const listPlaybookEvents = defineListPlaybookEvents(makeDefinitionPresenters([echo]), runContentHolders);
 
 const toAlpha = toPlaybook('acme', 'alpha');
 

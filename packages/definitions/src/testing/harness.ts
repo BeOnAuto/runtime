@@ -1,7 +1,9 @@
 import {
   Ledger,
+  contentHoldersOf,
   makeDispatcher,
   settle,
+  type ContentHolders,
   type PlaybookRequest,
   type CallerIdentity,
   type DispatcherServices,
@@ -24,9 +26,12 @@ import { TestClock } from 'effect/testing';
 import { runOutcomeMapping } from '../analytics/run-outcome-mapping.ts';
 import type { RunMeter } from '../metering/run-meter.ts';
 import type { PlaybookOperation } from '../operations/definition-operations.ts';
+import { RunEventSchema } from '../runs/run-events.ts';
 import { admittingMeter } from './recording-meter.ts';
 
 export const firstMoment = '2026-10-01T09:00:00.000Z';
+
+export const runContentHolders: ContentHolders = contentHoldersOf([RunEventSchema]);
 
 export type LedgerRead =
   | { readonly loaded: string }

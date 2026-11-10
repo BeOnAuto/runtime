@@ -1,5 +1,6 @@
 import { Data } from 'effect';
 
+import { NotTheBytesKept } from './not-the-bytes-kept.ts';
 import type { Digested } from './recorded-content.ts';
 
 export type ContentRefusedBecause = 'not_its_digest' | 'not_its_size' | 'stream_failed' | 'unavailable';
@@ -38,10 +39,12 @@ export function beingRemoved(sha256: string): ContentRefused {
   });
 }
 
-export function notTheBytesOfItsDigest(sha256: string): Error {
-  return new Error(`The content kept under ${sha256} is not the bytes that digest names`);
+export function notTheBytesOfItsDigest(sha256: string): NotTheBytesKept {
+  return new NotTheBytesKept(`The content kept under ${sha256} is not the bytes that digest names`);
 }
 
-export function notTheBytesOfItsPart(sha256: string, bytes: number): Error {
-  return new Error(`A part of the content kept under ${sha256} was read back other than its ${String(bytes)} bytes`);
+export function notTheBytesOfItsPart(sha256: string, bytes: number): NotTheBytesKept {
+  return new NotTheBytesKept(
+    `A part of the content kept under ${sha256} was read back other than its ${String(bytes)} bytes`,
+  );
 }

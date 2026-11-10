@@ -11,6 +11,7 @@ import {
   mostPublicEventDataBytes,
   presentationOf,
   streamPrefixOfPlaybook,
+  type ContentHolders,
   type Presentation,
   type Presenter,
   type RecordedEvent,
@@ -63,7 +64,7 @@ function newestHeadOf(id: string) {
   });
 }
 
-function historyReader(presentation: Presentation) {
+function historyReader(presentation: Presentation, holders: ContentHolders) {
   return Effect.fnUntraced(function* ({
     run_id: id,
     order = 'asc',
@@ -75,14 +76,14 @@ function historyReader(presentation: Presentation) {
     if (page.records.every((record) => isACancel(record)) && holdsNoRun(yield* newestHeadOf(id))) {
       return yield* Effect.fail(noRunCalled(id));
     }
-    const content = yield* keptContentOf(page.records, mostPublicEventDataBytes);
+    const content = yield* keptContentOf(page.records, mostPublicEventDataBytes, holders);
     const showing = { streamPrefix: streamPrefixOfPlaybook(yield* PlaybookContext), content, view: 'page' } as const;
     const { events, hasMore, nextCursor } = eventsPageOf(presentation, page, { ...paging, showing });
     return { events, has_more: hasMore, next_cursor: nextCursor };
   });
 }
 
-export function defineGetRunHistory(presenters: readonly Presenter[]) {
+export function defineGetRunHistory(presenters: readonly Presenter[], holders: ContentHolders) {
   return defineHttpOperation('playbook', 'query', {
     name: 'get_run_history',
     title: 'Get run history',
@@ -92,6 +93,6 @@ export function defineGetRunHistory(presenters: readonly Presenter[]) {
     inputSchema: RunHistoryInput,
     outputSchema: EventsPage,
     reasons: ['not_found', 'invalid_input'],
-    handle: historyReader(presentationOf(presenters)),
+    handle: historyReader(presentationOf(presenters), holders),
   });
 }

@@ -20,6 +20,7 @@ import {
   headOf,
   headTouched,
   keptInTheLedger,
+  keptHeadOn,
   hexOf,
   keptRemovedWithin,
   readOn,
@@ -158,6 +159,7 @@ export function contentStoreOn(execute: StatementExecutor, dialect: ContentDiale
     content: {
       put: (playbook, content) => placedOn(keeping, playbookPlaceOf(playbook), content),
       get: (playbook, sha256) => readOn(keeping, playbookPlaceOf(playbook), sha256),
+      getHead: (playbook, sha256) => keptHeadOn(keeping, playbookPlaceOf(playbook), sha256),
       getPart: (playbook, sha256, asked) => readPartOn(keeping, playbookPlaceOf(playbook), sha256, asked),
     },
     removalWithin,

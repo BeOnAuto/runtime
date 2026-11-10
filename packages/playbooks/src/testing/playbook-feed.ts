@@ -1,6 +1,7 @@
 import {
   ActedContextSchema,
   changingNothing,
+  contentHoldersOf,
   factOf,
   type Decided,
   type Decider,
@@ -26,6 +27,8 @@ const FactSchema = Schema.Union([
 ]);
 
 export type Fact = Decided<typeof FactSchema.Type>;
+
+export const feedHolders = contentHoldersOf([FactSchema]);
 
 interface Recording {
   readonly fact: Fact;
@@ -75,7 +78,7 @@ const steps: Presenter = {
   changes: changingNothing(['moved']),
 };
 
-export const listPlaybookEvents = defineListPlaybookEvents([notes, shelves, steps]);
+export const listPlaybookEvents = defineListPlaybookEvents([notes, shelves, steps], feedHolders);
 
 const playbooks = memoryPlaybookRegistry(
   [

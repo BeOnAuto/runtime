@@ -1,5 +1,13 @@
 import { SQL } from '@event-driven-io/dumbo';
-import type { ContentHead, ContentHeads, ContentOwner, HeadKept, HeadMarked, RemovalTimes } from '@on.auto/content';
+import type {
+  ContentHead,
+  ContentHeads,
+  ContentOwner,
+  HeadKept,
+  HeadMarked,
+  KeptContentHead,
+  RemovalTimes,
+} from '@on.auto/content';
 import { randomUUIDv7, streamPrefixOfPlaybook } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
@@ -30,7 +38,9 @@ const OneHead = Schema.Tuple([HeadRow]);
 
 const HeadRows = Schema.Array(HeadRow);
 
-const StandingRows = Schema.Array(Schema.Struct({ bytes: Schema.Number, media_type: Schema.String }));
+const StandingRows = Schema.Array(
+  Schema.Struct({ bytes: Schema.Number, media_type: Schema.String, kept_at: Schema.Number }),
+);
 
 const RemovingRows = Schema.Array(Schema.Struct({ removing_since: Schema.NullOr(Schema.Number) }));
 
@@ -123,14 +133,14 @@ async function unmarkedBy(execute: StatementExecutor, digest: SQL, since: number
   await execute.command(SQL`UPDATE ${heads} SET removing_since = NULL WHERE ${digest} AND removing_since = ${since}`);
 }
 
-function readBy(execute: StatementExecutor, digest: SQL): Effect.Effect<ContentHead | undefined> {
+function readBy(execute: StatementExecutor, digest: SQL): Effect.Effect<KeptContentHead | undefined> {
   return Effect.promise(async () => {
     const { rows } = await execute.query(
-      SQL`SELECT CAST(bytes AS DOUBLE PRECISION) AS bytes, media_type FROM ${heads}
-        WHERE ${digest} AND upload_id <> ${markedAloneBy}`,
+      SQL`SELECT CAST(bytes AS DOUBLE PRECISION) AS bytes, media_type, CAST(kept_at AS DOUBLE PRECISION) AS kept_at
+        FROM ${heads} WHERE ${digest} AND upload_id <> ${markedAloneBy}`,
     );
     return Schema.decodeUnknownSync(StandingRows)(rows)
-      .map(({ bytes, media_type }) => ({ bytes, mediaType: media_type }))
+      .map(({ bytes, media_type, kept_at }) => ({ bytes, mediaType: media_type, keptAt: kept_at }))
       .at(0);
   });
 }

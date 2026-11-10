@@ -8,6 +8,7 @@ import type { ContentEntry } from './content-entry.ts';
 import {
   alpha,
   answerOfAbout,
+  at,
   generatedStream,
   beta,
   brokenAfter,
@@ -86,6 +87,26 @@ function keptOnce(entry: ContentEntry): void {
       { sha256: large.sha256, bytes: 2_500_000, mediaType: octets },
     ]);
     expect(await store.unnamedLeft()).toBe(0);
+  });
+}
+
+function headRead(entry: ContentEntry): void {
+  it('answers the head of a content its playbook keeps, with when a put last kept it, and none where the playbook keeps no such content', async () => {
+    const store = await entry.aStore();
+    const text = answerOfAbout(3000);
+    const sha256 = sha256Of(text);
+    await at(1_000_000, store.content.put(alpha, textToKeep(text, json)));
+    await at(2_000_000, store.content.put(alpha, { ...textToKeep(text, 'text/plain'), expected: { sha256 } }));
+
+    const heads = await Promise.all([
+      resultOf(store.content.getHead(alpha, sha256)),
+      resultOf(store.elsewhere.getHead(alpha, sha256)),
+      resultOf(store.content.getHead(beta, sha256)),
+      resultOf(store.content.getHead(alpha, sha256Of('another answer'))),
+    ]);
+
+    const head = { bytes: Buffer.byteLength(text), mediaType: json, keptAt: 2_000_000 };
+    expect(heads).toEqual([head, head, undefined, undefined]);
   });
 }
 
@@ -240,6 +261,7 @@ export function recordedContentBehaviour(entry: ContentEntry): void {
   describe('the content a playbook recorded', () => {
     keptWhole(entry);
     keptOnce(entry);
+    headRead(entry);
     keptInParts(entry);
   });
   describe('the content a playbook was given to keep, refused', () => {

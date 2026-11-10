@@ -18,6 +18,10 @@ import {
   notesOfTheOrg,
   removedAt,
   secondNotes,
+  firstWritings,
+  written,
+  writtenNotes,
+  wrote,
   type UnheldContentEntry,
 } from './held-notes.ts';
 import { removedContentBehaviour } from './removed-content-behaviour.ts';
@@ -126,6 +130,40 @@ function letGoByItsReleases(entry: UnheldContentEntry): void {
   });
 }
 
+function heldByThePayloadsKeptOutside(entry: UnheldContentEntry): void {
+  it('keeps the payloads a fact keeps outside by their digests, one alone and each of a list, past their hour, and holds nothing for a payload inline', async () => {
+    const ledger = await entry.aLedger(noteHolders);
+    const [body, part, inline] = [
+      await keptIn(ledger, alpha, note, keptAt),
+      await keptIn(ledger, alpha, another, keptAt),
+      await keptIn(ledger, alpha, '"inline"', keptAt),
+    ];
+
+    await wrote(
+      ledger,
+      firstWritings,
+      written({ body_sha256: body, body_bytes: note.length, parts: [{ sha256: part, bytes: another.length }] }),
+      written({ body: inline }),
+    );
+    const removed = await Promise.all(
+      [body, part, inline].map((sha256) => removedAt(ledger, keptAt + 2 * anHour, alpha, sha256)),
+    );
+
+    expect(removed).toEqual(['held', 'held', 'removed']);
+  });
+
+  it('refuses, and records nothing, a fact that names a payload by its digest with no whole number of bytes beside it', async () => {
+    const ledger = await entry.aLedger(noteHolders);
+    const sha256 = await keptIn(ledger, alpha, note, keptAt);
+
+    const refused = wrote(ledger, firstWritings, written({ body_sha256: sha256, body_bytes: -1 }));
+
+    await expect(refused).rejects.toThrow(`A payload of the fact is named by "${sha256}" at /body_sha256 beside -1`);
+    expect(await Effect.runPromise(ledger.load(firstWritings, writtenNotes))).toEqual({ state: null, version: 0 });
+    expect(await removedAt(ledger, keptAt + 2 * anHour, alpha, sha256)).toBe('removed');
+  });
+}
+
 function letGoByAScrub(entry: UnheldContentEntry): void {
   it('lets go of the hold of a fact a scrub takes its digest from, keeps the hold of one whose scrubbed data still names it, and holds nothing for a fact of the org it scrubs', async () => {
     const ledger = await entry.aLedger(noteHolders);
@@ -152,6 +190,7 @@ export function unheldContentBehaviour(entry: UnheldContentEntry): void {
     removedOnceItsHourPassed(entry);
     heldThroughTheRace(entry);
     heldByItsPlaybook(entry);
+    heldByThePayloadsKeptOutside(entry);
   });
   describe('the holds on a content, let go of', () => {
     letGoByItsReleases(entry);

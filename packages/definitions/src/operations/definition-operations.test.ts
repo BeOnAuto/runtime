@@ -6,9 +6,10 @@ import { describe, expect, it } from 'vitest';
 import { makeDefinitionOperations } from '../index.ts';
 import { echo } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
+import { runContentHolders } from '../testing/harness.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
 
-const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages);
+const operations = makeDefinitionOperations([echo, probe().capability], uncheckedPages, { holders: runContentHolders });
 
 const catalog = makeCatalog(operations);
 
@@ -90,14 +91,16 @@ describe('a catalog of the definition operations', () => {
 
 describe('the definition operations for a list of capabilities', () => {
   it('need at least one capability', () => {
-    expect(() => makeDefinitionOperations([], uncheckedPages)).toThrow(
+    expect(() => makeDefinitionOperations([], uncheckedPages, { holders: runContentHolders })).toThrow(
       'The definition operations need at least one capability',
     );
   });
 
   it('need capabilities of distinct names', () => {
     expect(() =>
-      makeDefinitionOperations([echo, probe().capability, { ...echo, title: 'Another echo' }], uncheckedPages),
+      makeDefinitionOperations([echo, probe().capability, { ...echo, title: 'Another echo' }], uncheckedPages, {
+        holders: runContentHolders,
+      }),
     ).toThrow('The type echo is used more than once');
   });
 });

@@ -88,9 +88,14 @@ function storedIn({ streams }: Pick<Kept, 'streams'>, stream: string): readonly 
 
 function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: number): void {
   const version = storedIn(kept, stream).length;
-  kept.outcomes.project(stream, stored, version + 1);
-  kept.projected.project(stream, stored, version + 1);
-  kept.references.project(stream, stored);
+  const commits = [
+    kept.references.staged(stream, stored),
+    kept.outcomes.staged(stream, stored, version + 1),
+    kept.projected.staged(stream, stored, version + 1),
+  ];
+  for (const commit of commits) {
+    commit();
+  }
   kept.logged(
     stored.map(({ type, data, context }, index) => ({
       position: kept.log.length + index + 1,

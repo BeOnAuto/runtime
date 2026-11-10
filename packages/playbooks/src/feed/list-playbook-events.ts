@@ -11,6 +11,7 @@ import {
   mostPublicEventDataBytes,
   presentationOf,
   streamPrefixOfPlaybook,
+  type ContentHolders,
   type Presentation,
   type Presenter,
   type RecordedSelection,
@@ -62,7 +63,7 @@ function selectionOf(run: string | undefined): RecordedSelection {
   return run === undefined ? { kind: 'everything' } : { kind: 'correlated', correlation: run };
 }
 
-function feedReader(presentation: Presentation) {
+function feedReader(presentation: Presentation, holders: ContentHolders) {
   return Effect.fnUntraced(function* (input: FeedInput) {
     const { cursor, since, type, run_id: run, order = 'desc', limit = defaultPageLimit } = input;
     const paging = { order, limit, ...(cursor === undefined ? {} : { cursor }) };
@@ -71,7 +72,7 @@ function feedReader(presentation: Presentation) {
       ...(since === undefined ? {} : { since }),
       ...(type === undefined ? {} : { types: presentation.storedTypesOf(type) }),
     });
-    const content = yield* keptContentOf(page.records, mostPublicEventDataBytes);
+    const content = yield* keptContentOf(page.records, mostPublicEventDataBytes, holders);
     const showing = { streamPrefix: streamPrefixOfPlaybook(yield* PlaybookContext), content, view: 'page' } as const;
     const { events, hasMore, nextCursor } = eventsPageOf(presentation, page, {
       ...paging,
@@ -82,7 +83,7 @@ function feedReader(presentation: Presentation) {
   });
 }
 
-export function defineListPlaybookEvents(presenters: readonly Presenter[]) {
+export function defineListPlaybookEvents(presenters: readonly Presenter[], holders: ContentHolders) {
   const presentation = presentationOf(presenters);
   requireSomePublicType(presentation.publicTypes);
   return defineQuery('playbook', {
@@ -93,7 +94,7 @@ export function defineListPlaybookEvents(presenters: readonly Presenter[]) {
     inputSchema: feedInput(presentation.publicTypes),
     outputSchema: EventsPage,
     reasons: ['invalid_input'],
-    handle: feedReader(presentation),
+    handle: feedReader(presentation, holders),
     plainLanguage: {
       task: 'read what happened in the playbook',
       attempt: () => 'read what happened in the playbook',

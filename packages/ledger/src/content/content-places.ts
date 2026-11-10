@@ -9,6 +9,7 @@ import {
   type ByteRange,
   type ContentKept,
   type ContentPart,
+  type KeptContentHead,
   type StreamedContent,
 } from '@on.auto/content';
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
@@ -34,6 +35,10 @@ export interface Shelved {
 
 const HeadRows = Schema.Array(
   Schema.Struct({ upload_id: Schema.String, bytes: Schema.Number, chunks: Schema.Number, media_type: Schema.String }),
+);
+
+const KeptHeadRows = Schema.Array(
+  Schema.Struct({ bytes: Schema.Number, media_type: Schema.String, kept_at: Schema.Number }),
 );
 
 const StoredBytes = Schema.Union([Schema.Uint8Array, Schema.instanceOf(ArrayBuffer)]);
@@ -98,6 +103,21 @@ export function headOf(shelved: Shelved, place: Key, sha256: string): Effect.Eff
         WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger}`,
     ),
     (rows) => headIn(rows, sha256),
+  );
+}
+
+export function keptHeadOn(shelved: Shelved, place: Key, sha256: string): Effect.Effect<KeptContentHead | undefined> {
+  return Effect.map(
+    queried(
+      shelved,
+      SQL`SELECT CAST(bytes AS DOUBLE PRECISION) AS bytes, media_type, CAST(kept_at AS DOUBLE PRECISION) AS kept_at
+        FROM ${SQL.identifier(shelved.shelf.heads)}
+        WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger}`,
+    ),
+    (rows) =>
+      Schema.decodeUnknownSync(KeptHeadRows)(rows)
+        .map(({ bytes, media_type, kept_at }) => ({ bytes, mediaType: media_type, keptAt: kept_at }))
+        .at(0),
   );
 }
 

@@ -7,6 +7,7 @@ export type {
   Digested,
   HeadKept,
   HeadMarked,
+  KeptContentHead,
   RecordedContent,
   RemovalTimes,
   StagedContent,
@@ -30,6 +31,7 @@ export {
   notTheBytesOfItsPart,
   type ContentRefusedBecause,
 } from './content/content-refusals.ts';
+export { NotTheBytesKept } from './content/not-the-bytes-kept.ts';
 export { measuredStream, verifiedStream } from './content/content-verification.ts';
 export { keptOutside, removalLastsMs, removalPollMs, removalWaitMs, type KeptOutside } from './content/kept-outside.ts';
 export {

@@ -1,4 +1,4 @@
-import type { Presenter } from '@on.auto/operations';
+import type { ContentHolders, Presenter } from '@on.auto/operations';
 
 import { defineGetPlaybookAnalytics } from '../analytics/get-playbook-analytics.ts';
 import { defineCancelRun } from '../cancellation/cancel-run.ts';
@@ -9,15 +9,19 @@ import { defineGetRunHistory } from './get-run-history.ts';
 import { defineListRuns } from './list-runs.ts';
 import { storedTypesByStatus } from './run-status.ts';
 
-export function runOperations(
-  capabilities: readonly Capability[],
-  facts: CapabilityFacts = composedFactsOf(capabilities),
-  presenters: readonly Presenter[] = makeDefinitionPresenters(capabilities, facts),
-) {
+export interface RunReading {
+  readonly holders: ContentHolders;
+  readonly facts?: CapabilityFacts;
+  readonly presenters?: readonly Presenter[];
+}
+
+export function runOperations(capabilities: readonly Capability[], { holders, ...composed }: RunReading) {
+  const { facts = composedFactsOf(capabilities) } = composed;
+  const { presenters = makeDefinitionPresenters(capabilities, facts) } = composed;
   return [
     defineCancelRun(capabilities),
     defineListRuns(capabilities, storedTypesByStatus(facts.onRuns)),
-    defineGetRunHistory(presenters),
+    defineGetRunHistory(presenters, holders),
     defineGetPlaybookAnalytics(capabilities),
   ];
 }

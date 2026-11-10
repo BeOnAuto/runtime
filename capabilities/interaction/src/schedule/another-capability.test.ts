@@ -1,4 +1,5 @@
 import { defineGetRunHistory, makeDefinitionPresenters } from '@on.auto/definitions';
+import { runContentHolders } from '@on.auto/definitions/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -30,7 +31,9 @@ describe('the due work of the open requests on a run of another capability', () 
     ).toEqual(['nudge_sent', 'delivery_started', 'delivery_succeeded']);
     expect(await playbook.runOf(runId)).toMatchObject({ output: { status: 'started' } });
     expect(
-      await playbook.call(defineGetRunHistory(makeDefinitionPresenters(playbook.capabilities)), { run_id: runId }),
+      await playbook.call(defineGetRunHistory(makeDefinitionPresenters(playbook.capabilities), runContentHolders), {
+        run_id: runId,
+      }),
     ).toMatchObject({
       output: {
         events: [

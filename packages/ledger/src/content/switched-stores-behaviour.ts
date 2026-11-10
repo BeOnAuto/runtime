@@ -70,9 +70,32 @@ function outToAStore(entry: LedgerEntry): void {
   });
 }
 
+function headsWhereKept(entry: LedgerEntry): void {
+  it('answers the head of a content where it is kept, with when a put last kept it, and none in its own tables for a content a store outside it keeps', async () => {
+    const database = await entry.aDatabase();
+    const outside = await aLedgerOutside(entry, noteHolders, memoryContentStore(), database);
+    await at(keptAt, outside.content.put(alpha, textToKeep(first, json)));
+    const own = await aLedgerHolding(entry, noteHolders, database);
+    await at(keptAt + anHourAndMore, own.content.put(alpha, textToKeep(second, json)));
+
+    const heads = [
+      await resultOf(outside.content.getHead(alpha, sha256Of(first))),
+      await resultOf(own.content.getHead(alpha, sha256Of(first))),
+      await resultOf(own.content.getHead(alpha, sha256Of(second))),
+    ];
+
+    expect(heads).toEqual([
+      { bytes: first.length, mediaType: json, keptAt },
+      undefined,
+      { bytes: second.length, mediaType: json, keptAt: keptAt + anHourAndMore },
+    ]);
+  });
+}
+
 export function switchedStoresBehaviour(entry: LedgerEntry): void {
   describe('a ledger whose content moves between its own tables and a store outside it', () => {
     backToItsOwnTables(entry);
     outToAStore(entry);
+    headsWhereKept(entry);
   });
 }

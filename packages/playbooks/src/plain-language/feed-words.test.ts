@@ -1,4 +1,4 @@
-import { changingNothing, type Presenter } from '@on.auto/operations';
+import { changingNothing, contentHoldersOf, type Presenter } from '@on.auto/operations';
 import { describe, expect, it } from 'vitest';
 
 import { defineListPlaybookEvents } from '../index.ts';
@@ -10,7 +10,7 @@ const notes: Presenter = {
   changes: changingNothing(['added']),
 };
 
-const { plainLanguage } = defineListPlaybookEvents([notes]).registration;
+const { plainLanguage } = defineListPlaybookEvents([notes], contentHoldersOf([])).registration;
 
 const event = {
   id: '0b1c2d3e-4f50-5a6b-8c7d-8e9fa0b1c2d3',

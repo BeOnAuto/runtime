@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { defineGetEvent } from '../index.ts';
 import { acmeAdmin, globexAdmin } from '../testing/callers.ts';
 import { toPlaybook } from '../testing/harness.ts';
-import { playbookFeed, presenterOf, toAlpha } from '../testing/playbook-feed.ts';
+import { feedHolders, playbookFeed, presenterOf, toAlpha } from '../testing/playbook-feed.ts';
 
 const decodeText = Schema.decodeUnknownSync(Schema.Struct({ text: Schema.String }));
 
@@ -33,7 +33,7 @@ const steps: Presenter = {
   changes: changingNothing(['moved']),
 };
 
-const getEvent = defineGetEvent([presenterOf('notes', { added: 'note_added' }), calls, steps]);
+const getEvent = defineGetEvent([presenterOf('notes', { added: 'note_added' }), calls, steps], feedHolders);
 
 const noteId = messageIdOf('playbook/acme/alpha/notes', 1);
 

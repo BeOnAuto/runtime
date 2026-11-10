@@ -13,4 +13,11 @@ describe('the entries of the package', () => {
     expect(main.files).toContain('dispatch/dispatcher.ts');
     expect(main.packages).toEqual(['@on.auto/content', '@on.auto/phrasing', 'effect']);
   });
+
+  it('keep the files of the payloads entry to the content model and effect, and away from the dispatcher', () => {
+    const payloads = modulesReachedFrom(source, 'payloads/index.ts');
+
+    expect(payloads.packages).toEqual(['@on.auto/content', 'effect']);
+    expect(payloads.files.filter((file) => file.startsWith('dispatch/'))).toEqual([]);
+  });
 });
