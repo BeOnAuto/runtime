@@ -74,18 +74,15 @@ export function payloadPointersOf(name: string, within: JsonPointer | '' = ''): 
   return { sha256: pointerTo(within, digestNameOf(name)), bytes: pointerTo(within, bytesNameOf(name)) };
 }
 
-interface Arms {
-  readonly inline: boolean;
-  readonly digest: boolean;
-  readonly bytes: boolean;
+interface ArmNames {
+  readonly name: string;
+  readonly digestName: string;
+  readonly bytesName: string;
+  readonly mayBeAbsent: boolean;
 }
 
-function armsOf(data: object, name: string): Arms {
-  return {
-    inline: Object.hasOwn(data, name),
-    digest: Object.hasOwn(data, digestNameOf(name)),
-    bytes: Object.hasOwn(data, bytesNameOf(name)),
-  };
+function armNamesOf(name: string, mayBeAbsent: boolean): ArmNames {
+  return { name, digestName: digestNameOf(name), bytesName: bytesNameOf(name), mayBeAbsent };
 }
 
 interface ArmIssue {
@@ -93,18 +90,18 @@ interface ArmIssue {
   readonly issue: string;
 }
 
-function armIssuesOf(data: object, name: string, mayBeAbsent: boolean): readonly ArmIssue[] {
-  const { inline, digest, bytes } = armsOf(data, name);
-  const [digestName, bytesName] = [digestNameOf(name), bytesNameOf(name)];
-  if (digest !== bytes) {
-    return [{ path: [digest ? bytesName : digestName], issue: `Expected ${digestName} and ${bytesName} together` }];
+function armIssueOf(data: object, { name, digestName, bytesName, mayBeAbsent }: ArmNames): ArmIssue | undefined {
+  const inline = Object.hasOwn(data, name);
+  const digest = Object.hasOwn(data, digestName);
+  if (digest !== Object.hasOwn(data, bytesName)) {
+    return { path: [digest ? bytesName : digestName], issue: `Expected ${digestName} and ${bytesName} together` };
   }
   if (inline && digest) {
-    return [{ path: [name], issue: `Expected ${name}, or ${digestName} and ${bytesName}, and not both` }];
+    return { path: [name], issue: `Expected ${name}, or ${digestName} and ${bytesName}, and not both` };
   }
   return inline || digest || mayBeAbsent
-    ? []
-    : [{ path: [name], issue: `Expected ${name}, or ${digestName} and ${bytesName}` }];
+    ? undefined
+    : { path: [name], issue: `Expected ${name}, or ${digestName} and ${bytesName}` };
 }
 
 type HeldValueOf<Data, Name extends keyof Data> = Exclude<Data[Name], undefined>;
@@ -123,13 +120,12 @@ export function withPayloads<Data extends OfObjects, const Held extends readonly
   held: Held,
   mayBeAbsent: readonly PayloadNameOf<Data['Type']>[] = [],
 ) {
-  const issuesOf = (value: object) => [
-    ...held.flatMap((name) => armIssuesOf(value, name, false)),
-    ...mayBeAbsent.flatMap((name) => armIssuesOf(value, name, true)),
-  ];
+  const arms = [...held.map((name) => armNamesOf(name, false)), ...mayBeAbsent.map((name) => armNamesOf(name, true))];
+  const holdsArmsAsNamed = (value: object) => arms.every((named) => armIssueOf(value, named) === undefined);
+  const issuesOf = (value: object) =>
+    holdsArmsAsNamed(value) ? undefined : arms.flatMap((named) => armIssueOf(value, named) ?? []);
   type Checked = Data['Rebuild']['Type'];
-  const holdsItsArms = (value: Checked): value is Checked & HeldArms<Data['Type'], Held> =>
-    issuesOf(value).length === 0;
+  const holdsItsArms = (value: Checked): value is Checked & HeldArms<Data['Type'], Held> => holdsArmsAsNamed(value);
   const checked = data.check(Schema.makeFilter(issuesOf, undefined, true));
   return Schema.refine<Data['Rebuild'], Checked & HeldArms<Data['Type'], Held>>(holdsItsArms)(checked);
 }

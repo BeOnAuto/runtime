@@ -8,7 +8,7 @@ import { acmeAdmin } from '../testing/callers.ts';
 import { echo, echoDeclaration } from '../testing/capabilities/echo.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
-import { definitionOf, mostSourcesKept } from './answered-definitions.ts';
+import { listedDefinitionOf, mostSourcesKept } from './answered-definitions.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -42,7 +42,7 @@ function storedWith(source: string): StoredDefinition {
     name: 'greeter',
     version: 1,
     status: 'active',
-    source,
+    source: { inline: source },
     warnings: ['A warning of the parser that saved it'],
     created_at: firstMoment,
     created_by: { id: 'acme-admin', name: 'acme-admin' },
@@ -105,7 +105,7 @@ describe('the warnings read from a document', () => {
     const stored = storedWith(warnedWhenSaved);
 
     const read = await Effect.runPromise(
-      Effect.all([definitionOf(capability, stored), definitionOf(capability, { ...stored, version: 2 })]),
+      Effect.all([listedDefinitionOf(capability, stored), listedDefinitionOf(capability, { ...stored, version: 2 })]),
     );
 
     expect(read.map(({ warnings }) => warnings)).toEqual([['Read once'], ['Read once']]);
@@ -120,7 +120,7 @@ describe('the warnings read from a document', () => {
 
     await Effect.runPromise(
       Effect.forEach([...documents, ...documents.slice(0, 1)], (source) =>
-        definitionOf(capability, storedWith(source)),
+        listedDefinitionOf(capability, storedWith(source)),
       ),
     );
 

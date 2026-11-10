@@ -23,7 +23,7 @@ const subject: StoredDefinition = {
   name: 'morning-social-content',
   version: 3,
   status: 'active',
-  source: '{}',
+  source: { inline: '{}' },
   created_at: '2026-10-01T09:00:00.000Z',
   created_by: { id: 'acme-admin', name: 'acme-admin' },
   updated_at: '2026-10-01T09:00:00.000Z',

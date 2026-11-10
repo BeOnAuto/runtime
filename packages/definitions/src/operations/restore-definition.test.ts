@@ -62,7 +62,7 @@ describe('restore_definition', () => {
       successStatus: 200,
       repeatable: true,
       irreversible: false,
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'conflict', 'unavailable'],
     });
   });
 

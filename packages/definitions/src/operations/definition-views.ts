@@ -5,6 +5,7 @@ import { Effect } from 'effect';
 import type { Capability, DefinitionSummary } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { withoutThePage, writtenInOf, type DocumentWrittenIn } from '../page/page-lines.ts';
+import { textMembersOf, textsAsWritten } from '../payloads/definition-texts.ts';
 import type { DefinitionContent } from '../registry/definition-events.ts';
 import { isPlaybookFunctionType } from '../registry/definition.ts';
 import { rejectionOfSource, type Rejection } from './issue-pointers.ts';
@@ -18,18 +19,6 @@ export interface WrittenDefinition {
   readonly source: string;
   readonly overview?: string;
   readonly diagram?: string;
-}
-
-function writtenContentOf({
-  source,
-  overview,
-  diagram,
-}: WrittenDefinition): Pick<DefinitionContent, 'source' | 'overview' | 'diagram'> {
-  return {
-    source,
-    ...(overview === undefined ? {} : { overview }),
-    ...(diagram === undefined ? {} : { diagram }),
-  };
 }
 
 function refusedAt(pointer: string, detail: string): InvalidInput {
@@ -70,7 +59,7 @@ function contentFrom(
   stripped: NonNullable<DefinitionContent['stripped']>,
 ): DefinitionContent {
   return {
-    ...writtenContentOf(written),
+    ...textMembersOf(textsAsWritten(written)),
     ...(description === undefined ? {} : { description }),
     ...(inputSchema === undefined ? {} : { input_schema: inputSchema }),
     ...(outputSchema === undefined ? {} : { output_schema: outputSchema }),

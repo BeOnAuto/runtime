@@ -34,6 +34,7 @@ const measuredIn = Effect.fnUntraced(function* (capability: Capability, name: st
 
 const calledDefinitionsIn = Effect.fnUntraced(function* (capabilities: readonly Capability[]) {
   const reader = yield* PlaybookReader;
+  const place = yield* PlaybookContext;
   return (type: string, name: string, measureOf: MeasureOf): Effect.Effect<number | undefined> => {
     const capability = capabilities.find((candidate) => candidate.type === type);
     return capability === undefined
@@ -42,6 +43,7 @@ const calledDefinitionsIn = Effect.fnUntraced(function* (capabilities: readonly 
           Effect.option,
           Effect.map(Option.getOrUndefined),
           Effect.provideService(PlaybookReader, reader),
+          Effect.provideService(PlaybookContext, place),
         );
   };
 });

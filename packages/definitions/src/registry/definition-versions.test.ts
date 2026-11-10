@@ -46,12 +46,12 @@ describe('a search for one version of a definition', () => {
 
     expect(history.reduce((found, event) => search.evolve(found, event), search.initialState)).toEqual({
       position: 6,
-      found: { source: 'two', stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ada' },
+      found: { source: { inline: 'two' }, stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ada' },
     });
     expect(Object.keys(search).toSorted()).toEqual(['eventSchema', 'evolve', 'initialState']);
     expect(history.reduce((found, event) => first.evolve(found, event), first.initialState)).toEqual({
       position: 6,
-      found: { source: 'one', position: 1, putInPlaceBy: 'acme-admin' },
+      found: { source: { inline: 'one' }, position: 1, putInPlaceBy: 'acme-admin' },
     });
   });
 
@@ -67,7 +67,7 @@ describe('a search for one version of a definition', () => {
 
     expect([...history, restored].reduce((found, event) => search.evolve(found, event), search.initialState)).toEqual({
       position: 7,
-      found: { source: 'two', stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ben' },
+      found: { source: { inline: 'two' }, stripped: { module: 'TWO' }, position: 3, putInPlaceBy: 'person:ben' },
     });
     expect(later.evolve(later.initialState, restoredBeforeAnySave)).toEqual({ position: 1, found: undefined });
   });
@@ -106,6 +106,10 @@ describe('a read of one version of a definition of a playbook', () => {
       ]),
     );
 
-    expect(found).toEqual([{ source: 'two', position: 2, putInPlaceBy: 'acme-admin' }, undefined, undefined]);
+    expect(found).toEqual([
+      { source: { inline: 'two' }, position: 2, putInPlaceBy: 'acme-admin' },
+      undefined,
+      undefined,
+    ]);
   });
 });

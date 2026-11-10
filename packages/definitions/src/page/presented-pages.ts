@@ -3,7 +3,7 @@ import { Effect } from 'effect';
 
 import { loadRegistry } from '../operations/registry-access.ts';
 import type { RegisteredDefinition } from '../registry/definition-registry.ts';
-import type { SubjectPage } from './page-facts.ts';
+import type { PageStanding, SubjectPage } from './page-facts.ts';
 import type { PageWritten } from './page-presenting.ts';
 import { pageViewNameOf } from './page-view-names.ts';
 import { carriedPageOf, type CarriedPage } from './pages-saved-as-definitions.ts';
@@ -25,22 +25,40 @@ function carriedOrNot(carried: CarriedPage | undefined): WrittenPage | undefined
   return { page: { version, source, details }, written: 'carried' };
 }
 
+interface PresentedPage extends PageStanding {
+  readonly document: RegisteredDefinition['source'];
+}
+
+interface DefinitionPage {
+  readonly page: PresentedPage;
+  readonly written: PageWritten;
+}
+
+function presentedPageOf({ version, source, details }: SubjectPage): PresentedPage {
+  return { version, details, document: { inline: source } };
+}
+
+function carriedPresented(carried: CarriedPage | undefined): DefinitionPage | undefined {
+  const written = carriedOrNot(carried);
+  return written === undefined ? undefined : { page: presentedPageOf(written.page), written: written.written };
+}
+
 function ownPageOf(type: string, stored: RegisteredDefinition, page: NonNullable<RegisteredDefinition['page']>) {
   const { version, source } = stored;
   const written: PageWritten = type === 'workflow' ? 'workflow' : 'function';
-  return { page: { version, source, details: page.details }, written };
+  return { page: { version, details: page.details, document: source }, written };
 }
 
-function writtenPageOf(type: string, stored: RegisteredDefinition | undefined): Read<WrittenPage | undefined> {
+function writtenPageOf(type: string, stored: RegisteredDefinition | undefined): Read<DefinitionPage | undefined> {
   if (stored === undefined || stored.status === 'retired' || stored.page === null) {
     return Effect.undefined;
   }
   return stored.page === undefined
-    ? Effect.map(carriedPageOf(pageViewNameOf({ type, name: stored.name })), carriedOrNot)
+    ? Effect.map(carriedPageOf(pageViewNameOf({ type, name: stored.name })), carriedPresented)
     : Effect.succeed(ownPageOf(type, stored, stored.page));
 }
 
-export interface Presented extends WrittenPage {
+export interface Presented extends DefinitionPage {
   readonly stored: RegisteredDefinition;
 }
 

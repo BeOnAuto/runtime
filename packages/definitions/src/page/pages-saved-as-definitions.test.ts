@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { recordedAdmin } from '../testing/callers.ts';
+import { textKeptIn } from '../testing/kept-documents.ts';
 import { playbookAsked } from '../testing/page-asking.ts';
 import { pageData, pageOf, resultOfTheDate, workflowWithPage } from '../testing/pages.ts';
 import { carriedPagesIn, sourceWithoutItsSubject } from './pages-saved-as-definitions.ts';
@@ -65,7 +66,9 @@ describe('a page saved as a definition of its own', () => {
       output: {
         answer: {
           version: 2,
-          source: `${pageData()}\nresult: |2\n  {{ output.date }}\nruns: |2\n  {{ views.by_day | json }}\n`,
+          document: {
+            inline: `${pageData()}\nresult: |2\n  {{ output.date }}\nruns: |2\n  {{ views.by_day | json }}\n`,
+          },
           details: { data: { foldLine: 10, views: { by_day: 'series' } } },
         },
       },
@@ -118,7 +121,7 @@ describe('a page saved as a definition of its own that gives way', () => {
     });
 
     expect(await asked.ask(pages.pageOf('workflow', 'morning'))).toMatchObject({
-      output: { answer: { version: 2, source: workflowWithPage() } },
+      output: { answer: { version: 2, document: { inline: workflowWithPage() } } },
     });
     expect(await asked.ask(pages.pageOf('workflow', 'evening'))).toMatchObject({ output: { answer: null } });
   });
@@ -148,6 +151,29 @@ describe('a page saved as a definition of its own that gives way', () => {
 
     expect(await asked.ask(Effect.map(carriedPagesIn, (carried) => [...carried.keys()]))).toMatchObject({
       output: { answer: ['playbook'] },
+    });
+  });
+});
+
+describe('a page saved as a definition of its own whose document a fact keeps outside it', () => {
+  it('is carried onto no subject, since no release writes that stream and so none keeps its document', async () => {
+    const asked = await withPagesOfTheirOwn();
+    const noon = savedAsADefinition(
+      'workflow/noon',
+      `${resultOfTheDate}\n\n${'{{ output.date }} at noon. '.repeat(90)}`,
+    );
+    const kept = await asked.playbook.run(
+      textKeptIn(asked.playbook.ledger.service.content, { org: 'acme', playbook: 'alpha' }, noon),
+    );
+    await asked.record('page', {
+      type: 'create',
+      name: 'noon-posts',
+      content: { source_sha256: kept.sha256, source_bytes: kept.bytes, details: details('workflow/noon') },
+      created_by: recordedAdmin,
+    });
+
+    expect(await asked.ask(Effect.map(carriedPagesIn, (carried) => [...carried.keys()]))).toMatchObject({
+      output: { answer: ['workflow/morning', 'playbook'] },
     });
   });
 });

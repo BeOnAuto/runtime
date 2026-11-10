@@ -1,0 +1,43 @@
+{
+  "type": "definition_updated",
+  "data": {
+    "content": {
+      "source_sha256": "760c76d9135605cc5c816b0445493e4b647796895ae4f9757f70868c0592c564",
+      "source_bytes": 16554,
+      "overview": "Greets each guest",
+      "diagram": "flowchart LR\n  guest[A guest and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more] --> greet[Greet them]\n  greet --> done[Done]",
+      "description": "Greets each guest",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "greeting": {
+            "const": "Hello"
+          },
+          "input": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "greeting",
+          "input"
+        ]
+      },
+      "warnings": [
+        "The greeting is never checked"
+      ],
+      "page": {
+        "details": {}
+      }
+    }
+  },
+  "context": {
+    "at": "2026-10-01T09:00:00.000Z",
+    "by": "acme-admin",
+    "definitionType": "reasoning",
+    "definitionName": "greet-reasoning",
+    "definitionVersion": 2
+  }
+}

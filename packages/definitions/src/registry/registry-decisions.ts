@@ -1,6 +1,6 @@
 import { Conflict, type Context, type Rejection } from '@on.auto/operations';
 import { plainNumber } from '@on.auto/phrasing';
-import { Result, Struct } from 'effect';
+import { Result } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import type {
@@ -13,8 +13,8 @@ import type {
   DefinitionRetirement,
   DefinitionUpdate,
 } from './definition-commands.ts';
-import type { DefinitionContent, DefinitionEvent } from './definition-events.ts';
-import type { DefinitionRegistry, RegisteredDefinition } from './definition-registry.ts';
+import type { DefinitionEvent } from './definition-events.ts';
+import { contentOf, isAsSaved, withTheSavedOverview, type DefinitionRegistry } from './definition-registry.ts';
 import { hasTriggers } from './definition-triggers.ts';
 import { isRetired, type StoredDefinition } from './definition.ts';
 import { definitionNotFound } from './registry-lookup.ts';
@@ -90,14 +90,6 @@ function decideCreation(
   return beyond === undefined
     ? recording({ type: 'definition_created', data: { content, created_by } })
     : Result.fail(beyond);
-}
-
-function withTheSavedOverview(content: DefinitionContent, { overview }: StoredDefinition): DefinitionContent {
-  return content.overview === undefined && overview !== undefined ? { ...content, overview } : content;
-}
-
-function isAsSaved({ source, overview, diagram }: DefinitionContent, saved: StoredDefinition): boolean {
-  return source === saved.source && overview === saved.overview && diagram === saved.diagram;
 }
 
 function decideUpdate(
@@ -177,24 +169,6 @@ function decideResumption(type: string, { name }: DefinitionResumption, registry
   return Result.flatMap(standingToChange(type, name, registry), ({ status }) =>
     status === 'paused' ? recording({ type: 'definition_resumed', data: {} }) : nothingToRecord,
   );
-}
-
-const contentKeys = [
-  'source',
-  'overview',
-  'diagram',
-  'description',
-  'input_schema',
-  'output_schema',
-  'warnings',
-  'triggers',
-  'details',
-  'stripped',
-  'page',
-] as const;
-
-function contentOf(definition: RegisteredDefinition): DefinitionContent {
-  return Struct.pick(definition, contentKeys);
 }
 
 function decideRestoration(

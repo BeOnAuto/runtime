@@ -8,7 +8,7 @@ export {
   type RecordingJournal,
 } from '../journal-testing/recording-journal.ts';
 export { recordedOnTheRun } from './run-facts.ts';
-export { runContentHolders } from './harness.ts';
+export { playbookContentHolders, runContentHolders } from './harness.ts';
 export {
   erasingReader,
   keptArmOf,

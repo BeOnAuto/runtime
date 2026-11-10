@@ -1,4 +1,5 @@
 import { streamPrefixOfPlaybook, type Fold, type PlaybookAddress, type StreamReader } from '@on.auto/operations';
+import { payloadOf, type Payload } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import type { StrippedForms } from '../capability/stripped-forms.ts';
@@ -6,7 +7,7 @@ import { DefinitionEventSchema, isDefinitionSaved, type RecordedDefinitionEvent 
 import { definitionTypeStreamOf } from './definitions-decider.ts';
 
 export interface RecordedVersion {
-  readonly source: string;
+  readonly source: Payload<string>;
   readonly stripped?: StrippedForms;
   readonly position: number;
   readonly putInPlaceBy: string;
@@ -28,8 +29,14 @@ function foundAfter(
   at: number,
 ): RecordedVersion | undefined {
   if (isDefinitionSaved(event)) {
-    const { source, stripped } = event.data.content;
-    return { source, ...(stripped === undefined ? {} : { stripped }), position: at, putInPlaceBy: event.context.by };
+    const { content } = event.data;
+    const { stripped } = content;
+    return {
+      source: payloadOf<'source', string>(content, 'source'),
+      ...(stripped === undefined ? {} : { stripped }),
+      position: at,
+      putInPlaceBy: event.context.by,
+    };
   }
   return found !== undefined && event.type === 'definition_restored'
     ? { ...found, putInPlaceBy: event.context.by }

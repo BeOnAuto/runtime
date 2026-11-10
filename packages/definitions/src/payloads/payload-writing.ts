@@ -5,13 +5,14 @@ import {
   jsonPayloadText,
   payloadChosen,
   payloadKept,
+  textPayloadText,
   type Payload,
   type PayloadText,
   type PayloadToKeep,
 } from '@on.auto/operations/payloads';
 import { Effect, type Schema } from 'effect';
 
-interface WrittenAs<Value> {
+export interface WrittenAs<Value> {
   readonly payload: Payload<Value>;
   readonly inHand: ReadonlyMap<string, Value>;
 }
@@ -78,4 +79,8 @@ export function payloadWrittenIn(
   { org, playbook }: ContentOwner,
 ): (payload: Payload<Schema.Json>) => Effect.Effect<PayloadWritten> {
   return (payload) => writtenWith(payload, (toKeep) => payloadKept(content, { org, playbook }, toKeep));
+}
+
+export function textWritten(text: string): Effect.Effect<WrittenAs<string>, never, PlaybookWriter | PlaybookContext> {
+  return writtenKeeping(text, textPayloadText, playbookPayloadKept);
 }

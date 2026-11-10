@@ -12,7 +12,7 @@ function saved(name: string, details?: Schema.JsonObject, status: 'active' | 're
     name,
     version: 1,
     status,
-    source: '',
+    source: { inline: '' },
     created_at: at,
     created_by: { id: 'acme-admin', name: 'acme-admin' },
     updated_at: at,

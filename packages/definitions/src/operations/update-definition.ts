@@ -44,7 +44,7 @@ export function defineUpdateDefinition(capabilities: readonly Capability[], page
           content,
         }));
         return yield* withDefinitionPageInStudio(
-          yield* answeredDefinition(capability, known.types, updated),
+          yield* answeredDefinition(capability, known.types, updated, { change: 'saved', inHand: updated.inHand }),
           updated.newVersion ? 'updated' : undefined,
         );
       }),

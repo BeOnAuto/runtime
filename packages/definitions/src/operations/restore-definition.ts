@@ -27,12 +27,12 @@ export function defineRestoreDefinition(capabilities: readonly Capability[]) {
       route: { method: 'POST', path: '/definitions/{type}/{name}/restore' },
       inputSchema: Schema.Struct({ type: known.field, name: DefinitionNameField }),
       outputSchema: DefinitionSchema,
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
         const restoredBy = recordedCallerOf(yield* Caller);
         const restored = yield* recordInRegistry(capability, { type: 'restore', name, restored_by: restoredBy });
-        return yield* answeredDefinition(capability, known.types, restored);
+        return yield* answeredDefinition(capability, known.types, restored, { change: 'restored' });
       }),
       plainLanguage: {
         task: `restore a ${words.kinds}`,

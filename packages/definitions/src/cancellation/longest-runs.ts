@@ -4,7 +4,7 @@ import { Effect, type Option, type Schema } from 'effect';
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { sourceToPrepare } from '../operations/definition-views.ts';
 import { payloadsKeptIn, payloadValueOf, type KeptContentReader } from '../payloads/run-payloads.ts';
-import { definitionVersionIn } from '../registry/definition-versions.ts';
+import { definitionVersionIn, type RecordedVersion } from '../registry/definition-versions.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import type { RecordedRunState } from '../runs/run-state.ts';
 
@@ -16,6 +16,10 @@ export interface RunOfItsCapability {
 
 function inputOfTheRun({ ledger, run }: RunOfItsCapability, { input }: RecordedRunState) {
   return payloadValueOf(input, payloadsKeptIn(ledger.content, run));
+}
+
+function sourceOfTheVersion({ ledger, run }: RunOfItsCapability, { source }: RecordedVersion) {
+  return 'inline' in source ? Effect.succeed(source.inline) : payloadsKeptIn(ledger.content, run).text(source.kept);
 }
 
 export function longestRunOf(of: RunOfItsCapability, state: RecordedRunState): Effect.Effect<Option.Option<number>> {
@@ -31,7 +35,9 @@ export function longestRunOf(of: RunOfItsCapability, state: RecordedRunState): E
       ? Effect.succeedNone
       : Effect.option(
           Effect.all([
-            capability.prepare(sourceToPrepare(capability.type, found.source), found.stripped),
+            Effect.flatMap(sourceOfTheVersion(of, found), (source) =>
+              capability.prepare(sourceToPrepare(capability.type, source), found.stripped),
+            ),
             inputOfTheRun(of, state),
           ]).pipe(
             Effect.map(([{ longestRunMsFor }, input]: readonly [PreparedDefinition, Schema.Json]) =>

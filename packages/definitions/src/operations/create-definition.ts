@@ -53,7 +53,7 @@ export function defineCreateDefinition(capabilities: readonly Capability[], page
           created_by: createdBy,
         }));
         return yield* withDefinitionPageInStudio(
-          yield* answeredDefinition(capability, known.types, created),
+          yield* answeredDefinition(capability, known.types, created, { change: 'created', inHand: created.inHand }),
           'created',
         );
       }),

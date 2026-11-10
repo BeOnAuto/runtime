@@ -33,7 +33,7 @@ export function definePauseDefinition(capabilities: readonly Capability[]) {
         reason: Schema.optionalKey(ReasonField),
       }),
       outputSchema: DefinitionSchema,
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name, reason }) {
         const capability = yield* known.capabilityOfType(type);
         const pausedBy = recordedCallerOf(yield* Caller);
@@ -43,7 +43,7 @@ export function definePauseDefinition(capabilities: readonly Capability[]) {
           paused_by: pausedBy,
           ...(reason === undefined ? {} : { reason }),
         });
-        return yield* answeredDefinition(capability, known.types, paused);
+        return yield* answeredDefinition(capability, known.types, paused, { change: 'paused' });
       }),
       plainLanguage: {
         task: `pause a ${words.kinds}`,

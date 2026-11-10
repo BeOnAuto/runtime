@@ -149,3 +149,26 @@ describe('the presenter of the standing of a definition', () => {
     ]);
   });
 });
+
+describe('a saved definition whose texts its playbook keeps outside its fact, presented', () => {
+  it('shows its document and its overview by the digest and the size its fact holds, which the content route reads', () => {
+    const source = { sha256: 'a'.repeat(64), bytes: 91_844 };
+    const overview = { sha256: 'b'.repeat(64), bytes: 3112 };
+    const content = {
+      source_sha256: source.sha256,
+      source_bytes: source.bytes,
+      overview_sha256: overview.sha256,
+      overview_bytes: overview.bytes,
+      diagram_sha256: 'c'.repeat(64),
+      diagram_bytes: 2400,
+    };
+
+    expect(presented({ type: 'definition_updated', data: { content } }, 2)?.data).toEqual({
+      source_sha256: source.sha256,
+      source_bytes: source.bytes,
+      overview_sha256: overview.sha256,
+      overview_bytes: overview.bytes,
+      warning_count: 0,
+    });
+  });
+});

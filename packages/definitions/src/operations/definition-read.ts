@@ -5,8 +5,8 @@ import type { Capability } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
-import { isRetired, type StoredDefinition } from '../registry/definition.ts';
-import { readDefinition } from './definition-reading.ts';
+import { isRetired, type Definition, type StoredDefinition } from '../registry/definition.ts';
+import { readDefinition, withTheTextsRead } from './definition-reading.ts';
 import { overOf, runOfThePage, runWithSample, viewsRead } from './page-runs.ts';
 import { triggersSince } from './registry-access.ts';
 
@@ -86,6 +86,38 @@ function askedRightly({ render = false, sample_output: sample, run_id: runId }: 
   return runId === undefined ? Effect.void : Effect.fail(runWithSample);
 }
 
+const readOn = Effect.fnUntraced(function* (
+  capability: Capability,
+  { stored, definition: read }: { readonly stored: StoredDefinition; readonly definition: Definition },
+  { pages, asked, refusedWithoutAPage }: Asking,
+) {
+  const { name, render = false, sample_output: sample, run_id: runId } = asked;
+  const reading = { pages, type: capability.type, stored };
+  const run = runId === undefined ? undefined : yield* runOfThePage(reading, runId);
+  const result = render ? yield* resultOfAPreview(reading, overOf(sample, run), refusedWithoutAPage) : undefined;
+  const definition =
+    (stored.triggers ?? []).length > 0 && stored.status === 'active'
+      ? { ...read, triggers_since: yield* triggersSince(capability.type, stored) }
+      : read;
+  const { org, playbook } = yield* PlaybookContext;
+  const standing = yield* capability.standing({
+    org,
+    playbook,
+    name,
+    version: definition.version,
+    status: isRetired(definition) ? 'retired' : 'active',
+    ...(stored.details === undefined ? {} : { details: stored.details }),
+  });
+  const page = yield* pageRead(reading, result, run);
+  return { ...definition, ...(standing === undefined ? {} : { standing }), ...page };
+});
+
+interface Asking {
+  readonly pages: SubjectPages;
+  readonly asked: DefinitionAsked;
+  readonly refusedWithoutAPage: MissingPageRefusal;
+}
+
 export function definitionRead(
   capabilities: readonly Capability[],
   pages: SubjectPages,
@@ -94,26 +126,8 @@ export function definitionRead(
   const known = knownCapabilities(capabilities);
   return Effect.fnUntraced(function* (asked: DefinitionAsked) {
     yield* askedRightly(asked);
-    const { type, name, render = false, sample_output: sample, run_id: runId } = asked;
-    const capability = yield* known.capabilityOfType(type);
-    const { stored, definition: read } = yield* readDefinition(capability, known.types, name);
-    const reading = { pages, type: capability.type, stored };
-    const run = runId === undefined ? undefined : yield* runOfThePage(reading, runId);
-    const result = render ? yield* resultOfAPreview(reading, overOf(sample, run), refusedWithoutAPage) : undefined;
-    const definition =
-      (stored.triggers ?? []).length > 0 && stored.status === 'active'
-        ? { ...read, triggers_since: yield* triggersSince(capability.type, stored) }
-        : read;
-    const { org, playbook } = yield* PlaybookContext;
-    const standing = yield* capability.standing({
-      org,
-      playbook,
-      name,
-      version: definition.version,
-      status: isRetired(definition) ? 'retired' : 'active',
-      ...(stored.details === undefined ? {} : { details: stored.details }),
-    });
-    const page = yield* pageRead(reading, result, run);
-    return { ...definition, ...(standing === undefined ? {} : { standing }), ...page };
+    const capability = yield* known.capabilityOfType(asked.type);
+    const read = yield* readDefinition(capability, known.types, asked.name);
+    return yield* withTheTextsRead(read, readOn(capability, read, { pages, asked, refusedWithoutAPage }));
   });
 }

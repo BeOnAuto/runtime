@@ -1,0 +1,47 @@
+{
+  "type": "definition_created",
+  "data": {
+    "content": {
+      "source_sha256": "d6f9b8fb1a15856e11e49e461cfe2c31843ab42744b97271da9bafca987cc29a",
+      "source_bytes": 16548,
+      "overview": "Greets and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more",
+      "diagram": "flowchart LR\n  guest[A guest and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more and more] --> greet[Greet them]",
+      "description": "Greets each guest",
+      "input_schema": {
+        "type": "object"
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {
+          "greeting": {
+            "const": "Hi"
+          },
+          "input": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "greeting",
+          "input"
+        ]
+      },
+      "warnings": [
+        "The greeting is never checked"
+      ],
+      "page": {
+        "details": {}
+      }
+    },
+    "created_by": {
+      "id": "acme-admin",
+      "name": "acme-admin"
+    }
+  },
+  "context": {
+    "at": "2026-10-01T09:00:00.000Z",
+    "by": "acme-admin",
+    "definitionType": "reasoning",
+    "definitionName": "greet-reasoning",
+    "definitionVersion": 1
+  }
+}

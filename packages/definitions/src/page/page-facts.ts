@@ -24,3 +24,5 @@ export interface SubjectPage {
   readonly source: string;
   readonly details: PageContent['details'];
 }
+
+export type PageStanding = Omit<SubjectPage, 'source'>;

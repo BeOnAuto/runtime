@@ -129,7 +129,9 @@ describe('the page of a definition', () => {
 
     expect(await asked.ask(pages.pageOf('workflow', 'morning'))).toMatchObject({
       status: 'succeeded',
-      output: { answer: { version: 1, source: workflowWithData(), details: { data: { foldLine: 12 } } } },
+      output: {
+        answer: { version: 1, document: { inline: workflowWithData() }, details: { data: { foldLine: 12 } } },
+      },
     });
     const others = await Promise.all(
       ['evening', 'night', 'noon'].map((name) => asked.ask(pages.pageOf('workflow', name))),

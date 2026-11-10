@@ -64,6 +64,15 @@ const notedHolders = contentHoldersOf([NotedSchema]);
 
 const getEvent = defineGetEvent([notes], notedHolders);
 
+const titlesOnly: Presenter = {
+  ...notes,
+  present: ({ data }) => [
+    { type: 'note_noted', summary: 'A note was noted.', data: { title: decodeNoted(data).title } },
+  ],
+};
+
+const getTitle = defineGetEvent([titlesOnly], contentHoldersOf([NotedSchema]));
+
 const toAlpha = toPlaybook('acme', 'alpha');
 
 const alphaKnown = memoryPlaybookRegistry([{ org: 'acme', playbook: 'alpha' }]);
@@ -166,5 +175,19 @@ describe('one event of a fact that keeps a payload outside it, read whole', () =
     );
 
     expect(await unreachable).toMatchObject({ status: 'rejected', reason: 'unavailable' });
+  });
+});
+
+describe('one event of a fact that keeps a payload outside it, read whole by a presenter that shows none', () => {
+  it('reads no payload, so it answers while the content cannot be reached', async () => {
+    const feed = aFeed();
+    await notedIn(feed, 1, 'n'.repeat(3000));
+    const unreachable = feed.run(
+      makeDispatcher([])
+        .dispatchToPlaybook(getTitle.registration, eventOf(1))
+        .pipe(Effect.provideService(Ledger, unreachableContent(feed.ledger.service))),
+    );
+
+    expect(await unreachable).toMatchObject({ status: 'succeeded', output: { data: { title: '1' } } });
   });
 });

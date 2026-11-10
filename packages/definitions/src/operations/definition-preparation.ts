@@ -8,6 +8,7 @@ import { findDefinition } from '../registry/registry-lookup.ts';
 import { sourceToPrepare } from './definition-views.ts';
 import type { Rejection } from './issue-pointers.ts';
 import { loadRegistry, versionOf } from './registry-access.ts';
+import { documentToRun } from './unread-texts.ts';
 
 const refusalsToRun = {
   retired: (label: string, name: string) =>
@@ -41,21 +42,25 @@ function unparseable(
 export interface VersionToRun {
   readonly name: string;
   readonly version: number;
-  readonly source: string;
 }
+
+type VersionAsRecorded = Parameters<typeof documentToRun>[1] & {
+  readonly stripped?: Parameters<Capability['prepare']>[1];
+};
+
+const preparedOf = Effect.fnUntraced(function* (capability: Capability, definition: VersionAsRecorded) {
+  const source = yield* documentToRun(capability.type, definition);
+  return yield* capability
+    .prepare(sourceToPrepare(capability.type, source), definition.stripped)
+    .pipe(Effect.mapError(unparseable(capability.type, definition)));
+});
 
 export const preparedDefinition = Effect.fnUntraced(function* (capability: Capability, name: string) {
   const definition = yield* runnableDefinition(capability.type, name);
-  const prepared = yield* capability
-    .prepare(sourceToPrepare(capability.type, definition.source), definition.stripped)
-    .pipe(Effect.mapError(unparseable(capability.type, definition)));
-  return { definition, prepared };
+  return { definition, prepared: yield* preparedOf(capability, definition) };
 });
 
 export const preparedVersion = Effect.fnUntraced(function* (capability: Capability, name: string, version: number) {
   const definition = yield* versionOf(capability.type, name, version);
-  const prepared = yield* capability
-    .prepare(sourceToPrepare(capability.type, definition.source), definition.stripped)
-    .pipe(Effect.mapError(unparseable(capability.type, definition)));
-  return { definition, prepared };
+  return { definition, prepared: yield* preparedOf(capability, definition) };
 });

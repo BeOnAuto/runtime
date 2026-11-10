@@ -1,6 +1,13 @@
-import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
-import { describe } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
+import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
+import { contentHoldersOf } from '@on.auto/operations';
+import { Schema } from 'effect';
+import { describe, expect, it } from 'vitest';
+
+import { definitionFactsWrittenKeepingTheirTexts } from '../testing/kept-documents.ts';
+import { definitionFactsStoredAtTheFloor } from '../testing/saved-at-the-floor.ts';
 import { DefinitionEventSchema } from './definition-events.ts';
 
 const ofTheDefinition = {
@@ -129,10 +136,93 @@ const restored: readonly (typeof DefinitionEventSchema.Type)[] = [
   },
 ];
 
+const keptOutsideTheFacts = await definitionFactsWrittenKeepingTheirTexts();
+
 describe('the facts of the definitions of a playbook', () => {
   recordedFactsBehaviour({
     schema: DefinitionEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.54.0': drawn, '0.56.0': [...paged, ...paused], '0.57.0': restored },
+    releases: {
+      '0.46.0': baseline,
+      '0.54.0': drawn,
+      '0.56.0': [...paged, ...paused],
+      '0.57.0': restored,
+      '0.58.0': keptOutsideTheFacts,
+    },
+  });
+});
+
+const fixturesFolder = import.meta.dirname;
+
+function fixturesAsRecorded(): readonly { readonly path: string; readonly text: string }[] {
+  return readdirSync(fixturesFolder, { recursive: true, encoding: 'utf8' })
+    .filter((path) => path.endsWith('.json'))
+    .toSorted()
+    .map((path) => {
+      const { type, data } = Schema.decodeUnknownSync(
+        Schema.fromJsonString(Schema.Struct({ type: Schema.String, data: Schema.Json })),
+      )(readFileSync(join(fixturesFolder, path), 'utf8'));
+      return { path, text: JSON.stringify({ type, data }) };
+    });
+}
+
+const json = Schema.toCodecJson(DefinitionEventSchema);
+
+const recordedFrom = Schema.decodeUnknownSync(
+  Schema.fromJsonString(Schema.Struct({ type: Schema.String, data: Schema.JsonObject })),
+);
+
+const encodedFrom = Schema.decodeUnknownSync(Schema.Struct({ type: Schema.String, data: Schema.JsonObject }));
+
+function writtenBack(text: string): string {
+  const recorded = Schema.decodeUnknownSync(json)({ ...recordedFrom(text), context: ofTheDefinition });
+  const { type, data } = encodedFrom(Schema.encodeUnknownSync(json)(recorded));
+  return JSON.stringify({ type, data });
+}
+
+describe('a definition fact as a release recorded it', () => {
+  it('is written back as the same text, member for member, so a schema that keeps a payload outside leaves the inline shape as it was', () => {
+    const recorded = fixturesAsRecorded();
+
+    expect(recorded.map(({ path, text }) => ({ path, text: writtenBack(text) }))).toEqual(recorded);
+    expect(recorded).toHaveLength(13);
+  });
+});
+
+const aDigest: unknown = expect.stringMatching(/^[0-9a-f]{64}$/u);
+
+describe('a version that keeps its overview and its diagram outside its fact, as a lower threshold writes it', () => {
+  it('is read through the schema and written back as the same text, though no write at 16,384 bytes keeps either', async () => {
+    const stored = await definitionFactsStoredAtTheFloor();
+
+    expect(stored.map((text) => writtenBack(text))).toEqual(stored);
+    expect(stored.map((text) => recordedFrom(text).type)).toEqual([
+      'definition_created',
+      'definition_updated',
+      'definition_retired',
+      'definition_restored',
+    ]);
+    expect(stored.map((text) => recordedFrom(text).data)).toMatchObject([
+      { content: { source_sha256: aDigest, overview_sha256: aDigest, diagram_sha256: aDigest } },
+      { content: { source_sha256: aDigest, overview: 'Greets each guest', diagram_sha256: aDigest } },
+      {},
+      { content: { source_sha256: aDigest, overview: 'Greets each guest', diagram_sha256: aDigest } },
+    ]);
+  });
+});
+
+describe('a saved version of a definition', () => {
+  it('declares its document, its overview and its diagram as payloads, so the ledger holds each one it keeps outside', () => {
+    const kept = [
+      { sha256: '/content/source_sha256', bytes: '/content/source_bytes' },
+      { sha256: '/content/overview_sha256', bytes: '/content/overview_bytes' },
+      { sha256: '/content/diagram_sha256', bytes: '/content/diagram_bytes' },
+    ];
+
+    expect(Object.fromEntries(contentHoldersOf([DefinitionEventSchema]))).toEqual({
+      definition_created: { payloads: kept },
+      definition_updated: { payloads: kept },
+      definition_restored: { payloads: kept },
+    });
   });
 });

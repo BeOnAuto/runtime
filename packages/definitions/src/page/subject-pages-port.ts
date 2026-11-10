@@ -11,7 +11,7 @@ import type { Effect, Schema } from 'effect';
 
 import type { PayloadAsRead } from '../payloads/run-payloads.ts';
 import type { RunDetailAsRecorded } from '../runs/run.ts';
-import type { PageContent, SubjectPage } from './page-facts.ts';
+import type { PageContent, PageStanding, SubjectPage } from './page-facts.ts';
 
 export const playbookSubject = 'playbook';
 
@@ -54,7 +54,7 @@ type ReadInPlace<A, E = never> = Effect.Effect<A, E, PlaybookReader | PlaybookCo
 export interface SubjectPages {
   readonly check: PageCheck;
   readonly withoutThePage: (source: string, writtenIn: Exclude<PageWrittenIn, 'playbook'>) => string;
-  readonly pageOf: (type: string, name: string) => Read<SubjectPage | undefined>;
+  readonly pageOf: (type: string, name: string) => Read<PageStanding | undefined>;
   readonly playbookPageOf: () => Read<SubjectPage | undefined>;
   readonly resultOf: (type: string, name: string, over: ResultOver) => ReadInPlace<string | undefined, InvalidInput>;
   readonly viewsOf: (subject: PageSubject) => ReadInPlace<PageViewsShown>;

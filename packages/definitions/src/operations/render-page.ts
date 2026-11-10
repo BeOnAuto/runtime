@@ -37,7 +37,7 @@ export function defineRenderPage(capabilities: readonly Capability[], pages: Sub
         run_id: Schema.optionalKey(RunIdInputField),
       }),
       outputSchema: DefinitionSchema,
-      reasons: ['not_found', 'invalid_input', 'conflict'],
+      reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
       handle: (asked) => read({ ...asked, render: true }),
     }),
   );

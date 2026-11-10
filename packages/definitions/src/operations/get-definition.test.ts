@@ -34,7 +34,7 @@ describe('get_definition', () => {
       route: { method: 'GET', path: '/definitions/{type}/{name}' },
       pathParameters: ['type', 'name'],
       successStatus: 200,
-      reasons: ['not_found', 'invalid_input', 'conflict'],
+      reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
     });
   });
 

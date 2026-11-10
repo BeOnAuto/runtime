@@ -3,7 +3,7 @@ import { Clock, Effect, Option, Result, type Schema } from 'effect';
 
 import { viewStandingOf, type KeptViewState, type KeptViews } from '../capability/view-standing.ts';
 import { renderClock } from '../template/render-clock.ts';
-import type { SubjectPage } from './page-facts.ts';
+import type { PageStanding } from './page-facts.ts';
 import { glanceShown } from './page-glance.ts';
 import { savedPageIn } from './page-key.ts';
 import {
@@ -13,7 +13,9 @@ import {
   resultShown,
   latestRunVariables,
   subjectVariables,
+  unreadDocumentWords,
   viewsOf,
+  type OutputUnreadShown,
   type ReadMoment,
   type RunShown,
   type SubjectShown,
@@ -24,8 +26,11 @@ import type { PageOf, PageWrittenIn } from './subject-pages-port.ts';
 
 export type PageWritten = PageWrittenIn | 'carried';
 
+type PageDocument = { readonly text: string } | { readonly unread: OutputUnreadShown };
+
 export interface PlacedPage {
-  readonly page: SubjectPage;
+  readonly page: PageStanding;
+  readonly document: PageDocument;
   readonly written: PageWritten;
   readonly of: PageOf;
   readonly view: string;
@@ -41,23 +46,30 @@ const readMoment: Effect.Effect<ReadMoment> = Effect.flatMap(Clock.currentTimeMi
   momentAt(new Date(millis).toISOString()),
 );
 
-function documentOf({ page, of, written }: Pick<PlacedPage, 'page' | 'of' | 'written'>) {
+type DocumentPlaced = Pick<PlacedPage, 'document' | 'of' | 'written'>;
+
+function documentOf({ document, of, written }: DocumentPlaced) {
   const readAs = written === 'carried' ? (of === 'playbook' ? 'playbook' : 'mapping') : written;
-  return Option.getOrUndefined(Result.getOrElse(savedPageIn(page.source, readAs), Option.none));
+  const saved = 'text' in document ? savedPageIn(document.text, readAs) : Result.succeed(Option.none());
+  return Option.getOrUndefined(Result.getOrElse(saved, Option.none));
 }
 
-type PlacedResult = Pick<PlacedPage, 'page' | 'of' | 'written' | 'subject'>;
+type PlacedResult = DocumentPlaced & Pick<PlacedPage, 'subject'>;
 
-export function resultNamesTheOutput(placed: Pick<PlacedPage, 'page' | 'of' | 'written'>): boolean {
+export function resultNamesTheOutput(placed: DocumentPlaced): boolean {
   const template = documentOf(placed)?.templates.result;
   return template !== undefined && namesTheOutput(template);
 }
 
 export function pageResultOf(placed: PlacedResult, run: RunShown): Effect.Effect<string | undefined> {
+  const { document, subject } = placed;
+  if ('unread' in document) {
+    return Effect.succeed(unreadDocumentWords(subject, document.unread));
+  }
   const template = documentOf(placed)?.templates.result;
   return template === undefined
     ? Effect.undefined
-    : Effect.map(readMoment, (moment) => resultShown(template, run, placed.subject, moment));
+    : Effect.map(readMoment, (moment) => resultShown(template, run, subject, moment));
 }
 
 function viewsShownOf(kept: KeptViewState | undefined): ViewsShown {
@@ -83,6 +95,9 @@ interface ViewsAsRead {
 }
 
 function runsOver(placed: PlacedPage, { kept, moment }: ViewsAsRead): PageViewsRead {
+  if ('unread' in placed.document) {
+    return { runs: unreadDocumentWords(placed.subject, placed.document.unread) };
+  }
   const document = documentOf(placed);
   const template = document?.templates.runs;
   if (document?.data === undefined || template === undefined) {
@@ -142,6 +157,9 @@ function momentOfTheRun(kept: KeptViewState | undefined): Effect.Effect<ReadMome
 }
 
 export const pageAsOfRun = Effect.fnUntraced(function* (views: KeptViews, placed: PlacedPage, run: string) {
+  if ('unread' in placed.document) {
+    return { runs: unreadDocumentWords(placed.subject, placed.document.unread) };
+  }
   const document = documentOf(placed);
   const template = document?.templates.runs;
   if (document?.data === undefined || template === undefined) {

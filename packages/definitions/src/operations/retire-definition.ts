@@ -25,11 +25,11 @@ export function defineRetireDefinition(capabilities: readonly Capability[]) {
       route: { method: 'POST', path: '/definitions/{type}/{name}/retire' },
       inputSchema: Schema.Struct({ type: known.field, name: DefinitionNameField }),
       outputSchema: DefinitionSchema,
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
         const retired = yield* recordInRegistry(capability, { type: 'retire', name });
-        return yield* answeredDefinition(capability, known.types, retired);
+        return yield* answeredDefinition(capability, known.types, retired, { change: 'retired' });
       }),
       plainLanguage: {
         task: `retire a ${words.kinds}`,

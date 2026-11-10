@@ -1,4 +1,3 @@
-import type { ContentStore } from '@on.auto/content';
 import {
   Ledger,
   contentHoldersOf,
@@ -27,12 +26,15 @@ import { TestClock } from 'effect/testing';
 import { runOutcomeMapping } from '../analytics/run-outcome-mapping.ts';
 import type { RunMeter } from '../metering/run-meter.ts';
 import type { PlaybookOperation } from '../operations/definition-operations.ts';
+import { DefinitionEventSchema } from '../registry/definition-events.ts';
 import { RunEventSchema } from '../runs/run-events.ts';
 import { admittingMeter } from './recording-meter.ts';
 
 export const firstMoment = '2026-10-01T09:00:00.000Z';
 
 export const runContentHolders: ContentHolders = contentHoldersOf([RunEventSchema]);
+
+export const playbookContentHolders: ContentHolders = contentHoldersOf([DefinitionEventSchema, RunEventSchema]);
 
 export type LedgerRead =
   | { readonly loaded: string }
@@ -96,9 +98,9 @@ function ledgerReadsOf(ledger: MemoryLedger) {
 
 export function harness(
   meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admittingMeter,
-  store?: ContentStore,
+  store?: Parameters<typeof memoryLedger>[3],
 ): Harness {
-  const ledger = memoryLedger(runOutcomeMapping, [], runContentHolders, store);
+  const ledger = memoryLedger(runOutcomeMapping, [], playbookContentHolders, store);
   const read = ledgerReadsOf(ledger);
   const recording = recordingReporter();
   const services = Layer.mergeAll(

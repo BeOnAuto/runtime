@@ -30,11 +30,11 @@ export function defineResumeDefinition(capabilities: readonly Capability[]) {
       route: { method: 'POST', path: '/definitions/{type}/{name}/resume' },
       inputSchema: Schema.Struct({ type: known.field, name: DefinitionNameField }),
       outputSchema: DefinitionSchema,
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'conflict', 'unavailable'],
       handle: Effect.fnUntraced(function* ({ type, name }) {
         const capability = yield* known.capabilityOfType(type);
         const resumed = yield* recordInRegistry(capability, { type: 'resume', name });
-        return yield* answeredDefinition(capability, known.types, resumed);
+        return yield* answeredDefinition(capability, known.types, resumed, { change: 'resumed' });
       }),
       plainLanguage: {
         task: `resume a ${words.kinds}`,

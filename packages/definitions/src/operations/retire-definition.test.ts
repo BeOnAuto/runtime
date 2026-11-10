@@ -45,7 +45,7 @@ describe('retire_definition', () => {
       route: { method: 'POST', path: '/definitions/{type}/{name}/retire' },
       pathParameters: ['type', 'name'],
       successStatus: 200,
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'conflict', 'unavailable'],
     });
   });
 

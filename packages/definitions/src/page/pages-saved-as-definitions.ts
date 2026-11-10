@@ -2,6 +2,7 @@ import { PlaybookReader, type Fold } from '@on.auto/operations';
 import { Effect, Option, Schema } from 'effect';
 
 import type { StrippedForms } from '../capability/stripped-forms.ts';
+import { textsOf } from '../payloads/definition-texts.ts';
 import { DefinitionEventSchema, carriesContent, type RecordedDefinitionEvent } from '../registry/definition-events.ts';
 import { definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { carriedPageSourceOf } from './old-page-sources.ts';
@@ -48,10 +49,16 @@ export function pagesSavedAsDefinitionsAfter(
   if (!carriesContent(event)) {
     return pages;
   }
-  const { source, details, stripped } = event.data.content;
+  const { content } = event.data;
+  const { details, stripped } = content;
+  const { source } = textsOf(content);
+  if (!('inline' in source)) {
+    return pages;
+  }
   return Option.match(subjectOf(details), {
     onNone: () => pages,
-    onSome: ({ of }) => kept.set(name, { version, source, of, ...(stripped === undefined ? {} : { stripped }), at }),
+    onSome: ({ of }) =>
+      kept.set(name, { version, source: source.inline, of, ...(stripped === undefined ? {} : { stripped }), at }),
   });
 }
 

@@ -3,6 +3,7 @@ import { Schema } from 'effect';
 
 import { functionTypeOrder } from '../capability/function-terminology.ts';
 import type { StrippedForms } from '../capability/stripped-forms.ts';
+import type { TextsAsRecorded } from '../payloads/definition-texts.ts';
 import { DefinitionUserSchema } from '../used-by/user-relations.ts';
 import { TriggerSchema } from './definition-triggers.ts';
 
@@ -194,8 +195,9 @@ export function isRetired({ status }: Pick<ListedDefinition, 'status'>): boolean
 
 export type StoredDefinition = Omit<
   Definition,
-  'type' | 'media_type' | 'triggers_since' | 'standing' | 'used_by' | 'details' | 'page'
-> & {
-  readonly details?: Schema.JsonObject;
-  readonly stripped?: StrippedForms;
-};
+  'type' | 'media_type' | 'triggers_since' | 'standing' | 'used_by' | 'details' | 'page' | keyof TextsAsRecorded
+> &
+  TextsAsRecorded & {
+    readonly details?: Schema.JsonObject;
+    readonly stripped?: StrippedForms;
+  };

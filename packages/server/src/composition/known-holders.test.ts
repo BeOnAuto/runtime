@@ -19,12 +19,21 @@ const resultHeld = { holds: ['/result_sha256'] };
 
 const bothHeld = { holds: ['/arguments_sha256', '/result_sha256'] };
 
+const documentKept = [
+  { sha256: '/content/source_sha256', bytes: '/content/source_bytes' },
+  { sha256: '/content/overview_sha256', bytes: '/content/overview_bytes' },
+  { sha256: '/content/diagram_sha256', bytes: '/content/diagram_bytes' },
+];
+
 describe('the facts the server tells the ledger hold content', () => {
-  it('are the facts of every call that keeps what it sent and what it was answered, the facts of a run that may keep its input, output or answer outside it, the assets of generation functions, held until they expire, the record of each input a workflow applies, which names the values it keeps outside, and each fact a capability declares on runs that holds content', () => {
+  it('are the saved versions of a definition that may keep its document, overview and diagram outside them, the facts of every call that keeps what it sent and what it was answered, the facts of a run that may keep its input, output or answer outside it, the assets of generation functions, held until they expire, the record of each input a workflow applies, which names the values it keeps outside, and each fact a capability declares on runs that holds content', () => {
     const { factSchemas, holders } = factsKnownWith([forecastChecked, bytesKept]);
 
     expect(factSchemas).toEqual(factSchemasKnownWith([forecastChecked, bytesKept]));
     expect(Object.fromEntries(holders)).toEqual({
+      definition_created: { payloads: documentKept },
+      definition_updated: { payloads: documentKept },
+      definition_restored: { payloads: documentKept },
       run_started: { payloads: [{ sha256: '/input_sha256', bytes: '/input_bytes' }] },
       run_succeeded: { payloads: [{ sha256: '/output_sha256', bytes: '/output_bytes' }] },
       request_answered: { payloads: [{ sha256: '/answer_sha256', bytes: '/answer_bytes' }] },

@@ -1,25 +1,34 @@
 import { DefinitionContextSchema, RecordedCallerSchema, factOf, type Decided } from '@on.auto/operations';
+import { payloadFields, payloadPointersOf, withPayloads } from '@on.auto/operations/payloads';
 import { Schema } from 'effect';
 
 import { StrippedFormsSchema } from '../capability/stripped-forms.ts';
 import { PageContentSchema } from '../page/page-facts.ts';
 import { TriggerSchema } from './definition-triggers.ts';
 
-const DefinitionContentSchema = Schema.Struct({
-  source: Schema.String,
-  overview: Schema.optionalKey(Schema.String),
-  diagram: Schema.optionalKey(Schema.String),
-  description: Schema.optionalKey(Schema.String),
-  input_schema: Schema.optionalKey(Schema.JsonObject),
-  output_schema: Schema.optionalKey(Schema.JsonObject),
-  warnings: Schema.optionalKey(Schema.Array(Schema.String)),
-  triggers: Schema.optionalKey(Schema.Array(TriggerSchema)),
-  details: Schema.optionalKey(Schema.JsonObject),
-  stripped: Schema.optionalKey(StrippedFormsSchema),
-  page: Schema.optionalKey(Schema.NullOr(PageContentSchema)),
-});
+const DefinitionContentSchema = withPayloads(
+  Schema.Struct({
+    ...payloadFields('source', Schema.String),
+    ...payloadFields('overview', Schema.String),
+    ...payloadFields('diagram', Schema.String),
+    description: Schema.optionalKey(Schema.String),
+    input_schema: Schema.optionalKey(Schema.JsonObject),
+    output_schema: Schema.optionalKey(Schema.JsonObject),
+    warnings: Schema.optionalKey(Schema.Array(Schema.String)),
+    triggers: Schema.optionalKey(Schema.Array(TriggerSchema)),
+    details: Schema.optionalKey(Schema.JsonObject),
+    stripped: Schema.optionalKey(StrippedFormsSchema),
+    page: Schema.optionalKey(Schema.NullOr(PageContentSchema)),
+  }),
+  ['source'],
+  ['overview', 'diagram'],
+);
 
 export type DefinitionContent = typeof DefinitionContentSchema.Type;
+
+const definitionContentPayloads = ['source', 'overview', 'diagram'].map((name) => payloadPointersOf(name, '/content'));
+
+const keepsItsTexts = { content: { payloads: definitionContentPayloads } };
 
 const SavedSchema = Schema.Struct({ content: DefinitionContentSchema });
 
@@ -28,8 +37,9 @@ export const DefinitionEventSchema = Schema.Union([
     'definition_created',
     Schema.Struct({ ...SavedSchema.fields, created_by: RecordedCallerSchema }),
     DefinitionContextSchema,
+    keepsItsTexts,
   ),
-  factOf('definition_updated', SavedSchema, DefinitionContextSchema),
+  factOf('definition_updated', SavedSchema, DefinitionContextSchema, keepsItsTexts),
   factOf('definition_retired', Schema.Struct({}), DefinitionContextSchema),
   factOf(
     'definition_paused',
@@ -41,6 +51,7 @@ export const DefinitionEventSchema = Schema.Union([
     'definition_restored',
     Schema.Struct({ ...SavedSchema.fields, restored_by: RecordedCallerSchema }),
     DefinitionContextSchema,
+    keepsItsTexts,
   ),
 ]);
 

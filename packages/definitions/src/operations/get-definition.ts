@@ -48,7 +48,7 @@ export function defineGetDefinition(capabilities: readonly Capability[], pages: 
         sample_output: Schema.optionalKey(SampleOutputField),
       }),
       outputSchema: DefinitionSchema,
-      reasons: ['not_found', 'invalid_input', 'conflict'],
+      reasons: ['not_found', 'invalid_input', 'conflict', 'unavailable'],
       handle: definitionRead(capabilities, pages, noPageToRender),
       plainLanguage: {
         task: `look up a ${words.kinds}`,

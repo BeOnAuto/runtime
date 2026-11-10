@@ -16,6 +16,7 @@ import {
   type Presentation,
   type Presenter,
   type RecordedFact,
+  type Showing,
 } from '@on.auto/operations';
 import { mostPayloadBytesReadAtOnce, payloadReadsAtOnce, payloadsNamed } from '@on.auto/operations/payloads';
 import { Effect, Schema, SchemaTransformation } from 'effect';
@@ -55,13 +56,31 @@ function recordIdOf(id: string): string {
 
 type TextsRead = readonly (readonly [string, string])[];
 
+type Digested = ReturnType<typeof payloadsNamed>[number];
+
 const shownAsItsFactHoldsIt = () => Effect.succeed<TextsRead>([]);
 
-const payloadTextsOf = Effect.fnUntraced(function* (record: RecordedFact, holders: ContentHolders, mostBytes: number) {
-  const kept = payloadsNamed(record.data, holders.get(record.type) ?? {}).filter(({ bytes }) => bytes <= mostBytes);
+function payloadsShownOf(
+  presentation: Presentation,
+  record: RecordedFact,
+  showing: Showing,
+  kept: readonly Digested[],
+) {
+  const asked = new Set<string>();
+  presentation.present(record, {
+    ...showing,
+    content: (sha256) => {
+      asked.add(sha256);
+      return showing.content(sha256);
+    },
+  });
+  return kept.filter(({ sha256 }) => asked.has(sha256));
+}
+
+const payloadTextsOf = Effect.fnUntraced(function* (shown: readonly Digested[]) {
   const payloads = yield* playbookPayloadReader;
   const texts = yield* Effect.forEach(
-    kept,
+    shown,
     ({ sha256, bytes }) =>
       payloads.text({ sha256, bytes }).pipe(
         Effect.map((text): TextsRead => [[sha256, text]]),
@@ -83,14 +102,17 @@ function eventReader(presentation: Presentation, holders: ContentHolders) {
       return yield* Effect.fail(noEventCalled(id));
     }
     const view = (yield* ServedAsTool) ? 'tool' : 'whole';
-    const payloadTexts = yield* payloadTextsOf(
-      record,
-      holders,
-      view === 'tool' ? mostToolFieldBytes : mostPayloadBytesReadAtOnce,
-    );
-    const content = joined(payloadTexts, yield* keptContentOf([record], Number.POSITIVE_INFINITY, holders));
-    const streamPrefix = streamPrefixOfPlaybook(yield* PlaybookContext);
-    const event = presentation.present(record, { streamPrefix, content, view }).find((shown) => shown.id === id);
+    const mostBytes = view === 'tool' ? mostToolFieldBytes : mostPayloadBytesReadAtOnce;
+    const kept = payloadsNamed(record.data, holders.get(record.type) ?? {}).filter(({ bytes }) => bytes <= mostBytes);
+    const showing: Showing = {
+      streamPrefix: streamPrefixOfPlaybook(yield* PlaybookContext),
+      content: yield* keptContentOf([record], Number.POSITIVE_INFINITY, holders),
+      view,
+    };
+    const payloadTexts = yield* payloadTextsOf(payloadsShownOf(presentation, record, showing, kept));
+    const event = presentation
+      .present(record, { ...showing, content: joined(payloadTexts, showing.content) })
+      .find((shown) => shown.id === id);
     return event ?? (yield* Effect.fail(noEventCalled(id)));
   });
 }

@@ -19,7 +19,7 @@ interface RunTimes {
   readonly version: number;
 }
 
-interface OutputUnreadShown {
+export interface OutputUnreadShown {
   readonly because: PayloadUnread;
   readonly bytes: number;
 }
@@ -77,6 +77,10 @@ const unreadWords: Readonly<Record<PayloadUnread, string>> = {
 
 function unreadOutputWords({ because, bytes }: OutputUnreadShown): string {
   return `The result of this run, ${sizeWords.format(bytes)} bytes, ${unreadWords[because]}.`;
+}
+
+export function unreadDocumentWords({ type, name }: SubjectShown, { because, bytes }: OutputUnreadShown): string {
+  return `The page of ${type}/${name} could not be shown: its document, ${sizeWords.format(bytes)} bytes, ${unreadWords[because]}.`;
 }
 
 export function namesTheOutput({ variables }: Pick<ParsedTemplate, 'variables'>): boolean {

@@ -2,7 +2,9 @@ import type { DefinitionContext } from '@on.auto/operations';
 import { Struct } from 'effect';
 
 import type { PageContent } from '../page/page-facts.ts';
+import { isTheSameText, textMemberNames, textMembersOf, textsOf } from '../payloads/definition-texts.ts';
 import type {
+  DefinitionContent,
   DefinitionCreated,
   DefinitionPaused,
   DefinitionRestored,
@@ -21,10 +23,26 @@ const whilePaused = ['paused_at', 'paused_by', 'reason'] as const;
 
 const keptAcrossVersions = ['status', 'created_at', 'created_by', ...whilePaused] as const;
 
+function storedContentOf(content: DefinitionContent) {
+  const {
+    source: _source,
+    source_sha256: _sourceDigest,
+    source_bytes: _sourceBytes,
+    overview: _overview,
+    overview_sha256: _overviewDigest,
+    overview_bytes: _overviewBytes,
+    diagram: _diagram,
+    diagram_sha256: _diagramDigest,
+    diagram_bytes: _diagramBytes,
+    ...apartFromItsTexts
+  } = content;
+  return { ...apartFromItsTexts, ...textsOf(content) };
+}
+
 function createdDefinition({ data, context }: DefinitionCreated): RegisteredDefinition {
   const { at, definitionName: name, definitionVersion: version } = context;
   const { content, created_by } = data;
-  return { name, version, status: 'active', ...content, created_at: at, created_by, updated_at: at };
+  return { name, version, status: 'active', ...storedContentOf(content), created_at: at, created_by, updated_at: at };
 }
 
 function updatedDefinition(
@@ -35,7 +53,7 @@ function updatedDefinition(
   return {
     name: definition.name,
     version,
-    ...data.content,
+    ...storedContentOf(data.content),
     ...Struct.pick(definition, keptAcrossVersions),
     updated_at: at,
   };
@@ -96,4 +114,35 @@ export function evolveRegistry(registry: DefinitionRegistry, event: RecordedDefi
   }
   const definition = registry.get(event.context.definitionName);
   return definition === undefined ? registry : withDefinition(registry, evolvedDefinition(definition, event));
+}
+
+export function withTheSavedOverview(content: DefinitionContent, saved: StoredDefinition): DefinitionContent {
+  const texts = textsOf(content);
+  return texts.overview === undefined && saved.overview !== undefined
+    ? { ...Struct.omit(content, textMemberNames), ...textMembersOf({ ...texts, overview: saved.overview }) }
+    : content;
+}
+
+export function isAsSaved(content: DefinitionContent, saved: StoredDefinition): boolean {
+  const { source, overview, diagram } = textsOf(content);
+  return (
+    isTheSameText(source, saved.source) &&
+    isTheSameText(overview, saved.overview) &&
+    isTheSameText(diagram, saved.diagram)
+  );
+}
+
+const contentKeys = [
+  'description',
+  'input_schema',
+  'output_schema',
+  'warnings',
+  'triggers',
+  'details',
+  'stripped',
+  'page',
+] as const;
+
+export function contentOf(definition: RegisteredDefinition): DefinitionContent {
+  return { ...textMembersOf(definition), ...Struct.pick(definition, contentKeys) };
 }
