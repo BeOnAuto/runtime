@@ -1,5 +1,5 @@
 import { Conflict, NotFound, type RecordedEvent } from '@on.auto/operations';
-import { Effect, Result, Schema } from 'effect';
+import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { Settlement } from '../index.ts';
@@ -26,9 +26,7 @@ describe('settling a deferred run', () => {
     const { running, reading, relayer, settling } = await withHandOn();
     await running();
 
-    expect(await settling(success)).toStrictEqual(
-      Result.succeed({ ...settled, status: 'succeeded', output: 'handed on' }),
-    );
+    expect(await settling(success)).toStrictEqual(Result.succeed({ ...settled, status: 'succeeded' }));
     expect(await reading()).toStrictEqual({
       status: 'succeeded',
       output: { ...settled, status: 'succeeded', output: 'handed on', record: { steps: 3 } },
@@ -132,28 +130,6 @@ describe('settling a run', () => {
     expect(await settling(success)).toEqual(
       Result.fail(new Conflict({ detail: 'The run already ended with another result' })),
     );
-  });
-});
-
-describe('a settlement whose output is too large or is not JSON', () => {
-  it('is a breakdown of the capability that fails the run', async () => {
-    const { breakingDown, running, reading } = await withHandOn();
-    await running();
-
-    expect(await breakingDown({ status: 'succeeded', output: 'x'.repeat(1_048_576), record: {} })).toEqual(
-      new Error('The capability answered with 1048580 bytes to record, more than the 1048576 allowed'),
-    );
-    expect(await reading()).toMatchObject({ output: { status: 'failed', finished_at: settledAt } });
-  });
-
-  it('is a breakdown as well when the output is not JSON', async () => {
-    const { breakingDown, running, reading } = await withHandOn();
-    await running();
-
-    expect(Schema.isSchemaError(await breakingDown({ status: 'succeeded', output: Number.NaN, record: {} }))).toBe(
-      true,
-    );
-    expect(await reading()).toMatchObject({ output: { status: 'failed' } });
   });
 });
 

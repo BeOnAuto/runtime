@@ -1,4 +1,5 @@
 import type { CalledBy, RecordedCaller, RunContext, StartingTrigger } from '@on.auto/operations';
+import { answerPayloadOf, inputPayloadOf, outputPayloadOf, type Payload } from '@on.auto/operations/payloads';
 import type { Schema } from 'effect';
 
 import { numberingAfter, numberingFrom, type CallNumbering } from '../journal/call-numbering.ts';
@@ -13,7 +14,7 @@ export interface AskedCancel {
 }
 
 export interface RecordedAnswer {
-  readonly answer: Schema.Json;
+  readonly answer: Payload<Schema.Json>;
   readonly claimedFor?: string;
   readonly reply?: ReplyIdentity;
   readonly by: RecordedCaller;
@@ -28,7 +29,7 @@ export interface RecordedWork {
 
 export interface RecordedRunState extends CallNumbering {
   readonly attempt: number;
-  readonly input: Schema.Json;
+  readonly input: Payload<Schema.Json>;
   readonly run: RunRecord;
   readonly finishesLater: boolean;
   readonly deferred: boolean;
@@ -81,12 +82,13 @@ function definitionOf({ definitionType, definitionName, definitionVersion }: Run
 
 type RecordedFinish = RecordedRunFact<'run_succeeded' | 'run_rejected' | 'run_failed'>;
 
-function startedRun({ data, context }: RecordedRunFact<'run_started'>, earlier: RunState): RecordedRunState {
-  const { input, started_by, calls_tools, finishes_later, resumes, output_shape } = data;
+function startedRun(started: RecordedRunFact<'run_started'>, earlier: RunState): RecordedRunState {
+  const { data, context } = started;
+  const { started_by, calls_tools, finishes_later, resumes, output_shape } = data;
   const { at, depth = 0, callDepth = 0, calledBy, trigger, actsFor } = context;
   return {
     attempt: firstAttempt,
-    input,
+    input: inputPayloadOf(started),
     run: {
       ...definitionOf(context),
       ...(output_shape === undefined ? {} : { output_shape }),
@@ -135,7 +137,7 @@ function finishedRecord(
     finished_at: at,
   };
   if (result.type === 'run_succeeded') {
-    return { ...attempt, status: 'succeeded', output: result.data.output };
+    return { ...attempt, status: 'succeeded', output: outputPayloadOf(result) };
   }
   if (result.type === 'run_rejected') {
     return { ...attempt, status: 'rejected', rejection: result.data.rejection };
@@ -159,10 +161,11 @@ export interface RecordedAnswerFact {
   readonly context: Pick<RunContext, 'at'>;
 }
 
-export function recordedAnswerOf({ data, context }: RecordedAnswerFact): RecordedAnswer {
-  const { answer, claimed_for: claimedFor, reply, answered_by: by } = data;
+export function recordedAnswerOf(fact: RecordedAnswerFact): RecordedAnswer {
+  const { data, context } = fact;
+  const { claimed_for: claimedFor, reply, answered_by: by } = data;
   return {
-    answer,
+    answer: answerPayloadOf(fact),
     ...(claimedFor === undefined ? {} : { claimedFor }),
     ...(reply === undefined ? {} : { reply }),
     by,

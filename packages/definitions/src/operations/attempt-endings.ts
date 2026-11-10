@@ -3,7 +3,7 @@ import { Cause, Effect, type Schema } from 'effect';
 import type { CapabilityAnswer, CapabilityRejection } from '../capability/capability.ts';
 import type { InterruptedAttempt, RunOutcome } from '../runs/run-commands.ts';
 import { isTaken } from '../runs/run-decisions.ts';
-import { answerOf } from '../runs/run-lookup.ts';
+import { runAnswered } from '../runs/run-lookup.ts';
 import { answerAfterAnother, loadCalls, loadRun, recordRun } from './run-access.ts';
 import { attempt, failedAttempt, interruptedAttempt, isTakenByAnother } from './run-attempt.ts';
 import type { JournalledRun, Prepared } from './run-contexts.ts';
@@ -18,7 +18,7 @@ export function answeredWith(
     const causationId = outcome.type === 'run_deferred' ? context.lineage.startId : yield* context.journal.latest;
     const lineage = { causationId, correlationId: context.lineage.correlationId };
     const { state } = yield* recordRun(id, { type: 'finish', result: outcome, attempt: number }, lineage);
-    return yield* answerOf(id, state);
+    return yield* runAnswered(id, state);
   });
 }
 

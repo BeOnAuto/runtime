@@ -188,7 +188,7 @@ describe('a run', () => {
   it('starts unknown and holds its input and how its latest attempt went', () => {
     expect(stateAfter()).toBeUndefined();
     expect(stateAfter(startedAt(started), finishedAt(unavailable))).toStrictEqual({
-      input: greeting.input,
+      input: { inline: greeting.input },
       run: {
         type: 'echo',
         name: 'greet',
@@ -210,13 +210,13 @@ describe('a run started again', () => {
     const again = recordedWith({ ...atTheStart, definitionVersion: 2 })(started);
 
     expect(stateAfter(startedAt(started), finishedAt(unavailable), again, finishedAt(succeeded))).toStrictEqual({
-      input: greeting.input,
+      input: { inline: greeting.input },
       run: {
         type: 'echo',
         name: 'greet',
         definition_version: 2,
         status: 'succeeded',
-        output: 'Hello Ada',
+        output: { inline: 'Hello Ada' },
         started_at: start.at,
         started_by: recordedAdmin,
         finished_at: finish.at,

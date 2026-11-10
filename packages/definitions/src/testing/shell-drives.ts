@@ -16,7 +16,7 @@ export function drivingAShell(capabilities: readonly Capability[], capability: C
     description: 'Drives the next attempt of a started run as a shell does, from its facts.',
     route: { method: 'POST', path: '/drive' },
     inputSchema: Schema.Struct({ run_id: Schema.String }),
-    outputSchema: Schema.Struct({ next: Schema.String, status: Schema.String }),
+    outputSchema: Schema.Struct({ next: Schema.String, status: Schema.String, input: Schema.optionalKey(Schema.Json) }),
     reasons: ['not_found', 'conflict', 'invalid_input', 'unavailable', 'cancelled', 'unanswered'],
     handle: ({ run_id: id }) =>
       Effect.gen(function* () {
@@ -29,7 +29,7 @@ export function drivingAShell(capabilities: readonly Capability[], capability: C
           next.attempt,
           Effect.as(journal.record(answeredFirstCall), { output: { driven: true }, record: {} }),
         );
-        return { next: next.type, status: ended.status };
+        return { next: next.type, status: ended.status, input: next.attempt.input };
       }),
   });
 }

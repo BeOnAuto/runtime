@@ -213,13 +213,22 @@ describe('runs, as the documented page shows it', () => {
 });
 
 describe('the latest ended run, as a glance reads it', () => {
-  it('is its output and its status and times, none before it ran, and its status alone where it did not succeed', () => {
+  it('is its output and its status and times, no output where it could not be read, none before it ran, and its status alone where it did not succeed', () => {
     const ended = { status: 'succeeded' as const, output: { done: 2 }, started: 's', ended: 'e', version: 3 };
     expect(latestRunVariables(ended)).toEqual({
       output: { done: 2 },
       run: { status: 'succeeded', started: 's', ended: 'e', version: 3 },
     });
     expect(latestRunVariables()).toEqual({ output: null, run: null });
+    expect(
+      latestRunVariables({
+        status: 'succeeded',
+        unread: { because: 'unavailable', bytes: 4096 },
+        started: 's',
+        ended: 'e',
+        version: 3,
+      }),
+    ).toEqual({ output: null, run: { status: 'succeeded', started: 's', ended: 'e', version: 3 } });
     expect(latestRunVariables({ status: 'failed' })).toEqual({ output: null, run: { status: 'failed' } });
     expect(latestRunVariables({ status: 'rejected', rejection: { reason: 'conflict' } })).toEqual({
       output: null,

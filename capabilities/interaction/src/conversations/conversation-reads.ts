@@ -43,7 +43,9 @@ function sentRead(reading: Reading, input: RenderedArguments['input']): Effect.E
       (kept, reply) => handledReply(reading, kept, reply),
     );
     if (answer.outcome !== 'result' || answer.considered > 0) {
-      const since = cursorOf(route.replies.read.order, answer.ids, place.row.since);
+      const since = state.leftToReadAgain
+        ? place.row.since
+        : cursorOf(route.replies.read.order, answer.ids, place.row.since);
       yield* recordedRead(parts.ledger, place, { start, called, answer, state, callId, since });
     }
     return { answer, state };

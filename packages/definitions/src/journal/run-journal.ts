@@ -79,7 +79,7 @@ export const runJournal = Effect.fnUntraced(function* (id: string, lineage: RunL
             { causationId: causeOf(fact, known), correlationId: lineage.correlationId },
           )
           .pipe(
-            Effect.catchTag('not_found', Effect.die),
+            Effect.catchTags({ not_found: Effect.die, unavailable: Effect.die }),
             Effect.catchIf(isChangedWhileRecorded, () => Effect.fail(changedMeanwhile)),
           );
         const number = numberOf(fact, startedRunOf(state));

@@ -1,5 +1,6 @@
 import type { CancelReceipt, CancelRequest, RunStreamAddress, RunEnding } from '@on.auto/definitions';
 import type { CallResult, Lineage } from '@on.auto/operations';
+import { outputPayloadOf } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import type { WaitingOptions } from '../waiting/waiting-options.ts';
@@ -18,7 +19,10 @@ export interface RecordedWaiting {
 
 export function resultOfEnding(ending: RunEnding): CallResult {
   if (ending.type === 'run_succeeded') {
-    return { status: 'succeeded', output: ending.data.output };
+    const output = outputPayloadOf(ending);
+    return 'inline' in output
+      ? { status: 'succeeded', output: output.inline }
+      : { status: 'failed', detail: 'The run succeeded with an output kept outside it' };
   }
   return ending.type === 'run_rejected'
     ? { status: 'rejected', reason: ending.data.rejection.reason, detail: ending.data.rejection.detail }

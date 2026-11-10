@@ -4,7 +4,6 @@ import {
   type Conflict,
   type Lineage,
   type NotFound,
-  type Settlement,
   type StreamReader,
   type StreamWriter,
 } from '@on.auto/operations';
@@ -13,7 +12,7 @@ import { Effect, Equal } from 'effect';
 import { cancelledAsAsked, type CancelledRun, type Capability } from '../capability/capability.ts';
 import { isChangedSinceRead, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
 import { endedWithAnotherResult } from '../runs/run-decisions.ts';
-import { runSettlerAsRead, type RunStreamAddress } from '../runs/run-settler.ts';
+import { runSettlerAsRead, type RunStreamAddress, type Settlement } from '../runs/run-settler.ts';
 import { startedRunOf, takesSettlement } from '../runs/run-state.ts';
 import type { CancelRequest } from './run-cancels.ts';
 
@@ -29,6 +28,10 @@ const readsAgainAtMost = 3;
 
 function endedOtherwise(error: unknown): boolean {
   return Equal.equals(error, endedWithAnotherResult);
+}
+
+function endedBefore(): Effect.Effect<void> {
+  return Effect.void;
 }
 
 function decided(capability: Capability | undefined, run: CancelledRun): Effect.Effect<Settlement> {
@@ -61,7 +64,8 @@ export function deferredCanceller(
       const actor = settlement.by ?? by ?? playbookCallerOf(run).id;
       yield* settle(run, { ...settlement, by: actor }, read.version, lineage).pipe(
         Effect.asVoid,
-        Effect.catchIf(endedOtherwise, () => Effect.void),
+        Effect.catchIf(endedOtherwise, endedBefore),
+        Effect.catchTag('unavailable', endedBefore),
       );
     });
   return (run, request, lineage) =>

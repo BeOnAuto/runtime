@@ -14,7 +14,7 @@ import type { RunAttempt } from '../capability/run-context.ts';
 import type { RunFinish, RunStart } from '../runs/run-commands.ts';
 import { isChangedSinceRead, runDecider, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
 import { stillRunning } from '../runs/run-decisions.ts';
-import { answerOf } from '../runs/run-lookup.ts';
+import { runAnswered } from '../runs/run-lookup.ts';
 import { lastModelCallOf, startedRunOf, type RunState, type RunStreamState } from '../runs/run-state.ts';
 import { commandMetadata } from './command-metadata.ts';
 
@@ -56,7 +56,7 @@ export const recordRun = Effect.fnUntraced(function* (id: string, command: RunSt
 });
 
 export const answerAfterAnother = Effect.fnUntraced(function* (id: string) {
-  const answer = yield* answerOf(id, yield* loadRunStream(id));
+  const answer = yield* runAnswered(id, yield* loadRunStream(id));
   return answer.status === 'started' ? yield* stillRunning : answer;
 });
 

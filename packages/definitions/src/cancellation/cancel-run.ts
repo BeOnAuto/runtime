@@ -6,6 +6,7 @@ import { commandMetadata } from '../operations/command-metadata.ts';
 import { reasonFieldOf, RunIdInputField } from '../operations/definition-fields.ts';
 import { cancellingWordsFor } from '../plain-language/run-words.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
+import { withItsOutputRead } from '../runs/run-payloads.ts';
 import { RunSchema } from '../runs/run.ts';
 import { runAfterItsAttemptHere } from './run-cancels.ts';
 
@@ -37,8 +38,8 @@ const cancelled = Effect.fnUntraced(function* (id: string, reason: string | unde
       { type: 'cancel', kind: 'requested', reason: reason ?? `Cancelled at the request of ${by}`, runId: id, by, at },
       { causationId: null, correlationId },
     )
-    .pipe(Effect.catchTag('cancelled', Effect.die));
-  return yield* runAfterItsAttemptHere(id);
+    .pipe(Effect.catchTags({ cancelled: Effect.die, unavailable: Effect.die }));
+  return yield* withItsOutputRead(yield* runAfterItsAttemptHere(id));
 });
 
 export function defineCancelRun(capabilities: readonly Capability[]) {
@@ -52,7 +53,7 @@ export function defineCancelRun(capabilities: readonly Capability[]) {
     repeatable: true,
     inputSchema: Schema.Struct({ run_id: RunIdInputField, reason: Schema.optionalKey(ReasonField) }),
     outputSchema: RunSchema,
-    reasons: ['not_found', 'conflict'],
+    reasons: ['not_found', 'conflict', 'unavailable'],
     handle: ({ run_id: id, reason }) => cancelled(id, reason),
     plainLanguage: {
       task: 'cancel a run',

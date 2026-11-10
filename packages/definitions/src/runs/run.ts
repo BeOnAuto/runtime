@@ -10,6 +10,7 @@ import {
   UnavailableKindSchema,
   type RejectionCause,
 } from '@on.auto/operations';
+import { PayloadBytesSchema, PayloadDigestSchema, type Payload } from '@on.auto/operations/payloads';
 import { Schema } from 'effect';
 
 import {
@@ -129,6 +130,16 @@ export const RunSchema = Schema.Struct({
       description: `The result, when the run succeeded: with the record, at most ${mostResultBytes} bytes as JSON in UTF-8`,
     }),
   ),
+  output_sha256: Schema.optionalKey(
+    PayloadDigestSchema.annotate({
+      description: 'In place of an output kept outside the run that is missing or erased: the SHA-256 it was kept by',
+    }),
+  ),
+  output_bytes: Schema.optionalKey(
+    PayloadBytesSchema.annotate({
+      description: 'In place of an output kept outside the run that is missing or erased: its size in bytes',
+    }),
+  ),
   rejection: Schema.optionalKey(RunRejectionSchema),
   started_at: Schema.String.annotate({ description: 'When the run started, in ISO 8601 UTC' }),
   started_by: RecordedCallerSchema.annotate({ description: 'The caller who started the run, by id and name' }),
@@ -144,19 +155,27 @@ export const RunSchema = Schema.Struct({
 
 export type Run = typeof RunSchema.Type;
 
-export type FunctionRun = Run & Pick<PlaybookFunctionDefinition, 'type'>;
+export type FunctionRun<Shown extends Pick<Run, 'type'> = Run> = Shown & Pick<PlaybookFunctionDefinition, 'type'>;
 
-export type WorkflowRun = Run & Pick<WorkflowDefinition, 'type'>;
+export type WorkflowRun<Shown extends Pick<Run, 'type'> = Run> = Shown & Pick<WorkflowDefinition, 'type'>;
 
-export function isFunctionRun(run: Run): run is FunctionRun {
+export function isFunctionRun<Shown extends Pick<Run, 'type'>>(run: Shown): run is FunctionRun<Shown> {
   return isPlaybookFunctionType(run.type);
 }
 
-export function isWorkflowRun(run: Run): run is WorkflowRun {
+export function isWorkflowRun<Shown extends Pick<Run, 'type'>>(run: Shown): run is WorkflowRun<Shown> {
   return run.type === 'workflow';
 }
 
-export type RunRecord = Omit<Run, 'run_id' | 'within'>;
+type OutputMembers = 'output' | 'output_sha256' | 'output_bytes';
+
+type WithItsOutputAsRecorded<Shown> = Omit<Shown, OutputMembers> & { readonly output?: Payload<Schema.Json> };
+
+export type RunAsRecorded = WithItsOutputAsRecorded<Run>;
+
+export type SettledRun = Omit<Run, OutputMembers>;
+
+export type RunRecord = WithItsOutputAsRecorded<Omit<Run, 'run_id' | 'within'>>;
 
 export const RunDetailSchema = Schema.Struct({
   ...RunSchema.fields,
@@ -172,3 +191,5 @@ export const RunDetailSchema = Schema.Struct({
 });
 
 export type RunDetail = typeof RunDetailSchema.Type;
+
+export type RunDetailAsRecorded = WithItsOutputAsRecorded<RunDetail>;

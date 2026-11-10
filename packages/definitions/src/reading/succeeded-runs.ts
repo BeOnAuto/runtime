@@ -1,14 +1,17 @@
 import {
   mostRecordsInAPage,
   RunContextSchema,
+  type ContentKeeper,
   type PlaybookAddress,
   type RecordedEvent,
   type RecordedPage,
   type RecordedPageRequest,
   type RecordedReader,
 } from '@on.auto/operations';
+import { outputPayloadOf, type Payload } from '@on.auto/operations/payloads';
 import { Effect, Schema } from 'effect';
 
+import { RunSucceededSchema } from '../runs/run-events.ts';
 import type { NamedDefinition } from '../used-by/called-definitions.ts';
 import { streamsOfRuns } from './list-runs.ts';
 import { runsOf } from './listed-run.ts';
@@ -19,7 +22,7 @@ export interface SucceededRun {
   readonly definition_version: number;
   readonly started_at: string;
   readonly finished_at: string;
-  readonly output: Schema.Json;
+  readonly output: Payload<Schema.Json>;
 }
 
 interface SucceededRunsPage {
@@ -35,17 +38,10 @@ interface SucceededRunsAsked {
   readonly since?: string;
 }
 
-export type SucceededRunsReader = Pick<RecordedReader, 'readRecorded'>;
+export type SucceededRunsReader = Pick<RecordedReader, 'readRecorded'> & ContentKeeper;
 
 const decodeHeads = Schema.decodeUnknownEffect(
-  Schema.Tuple([
-    Schema.Struct({ type: Schema.Literal('run_started'), context: RunContextSchema }),
-    Schema.Struct({
-      type: Schema.Literal('run_succeeded'),
-      data: Schema.Struct({ output: Schema.Json }),
-      context: RunContextSchema,
-    }),
-  ]),
+  Schema.Tuple([Schema.Struct({ type: Schema.Literal('run_started'), context: RunContextSchema }), RunSucceededSchema]),
 );
 
 function succeededRunOf(heads: readonly RecordedEvent[]): Effect.Effect<SucceededRun> {
@@ -54,7 +50,7 @@ function succeededRunOf(heads: readonly RecordedEvent[]): Effect.Effect<Succeede
     definition_version: started.context.definitionVersion,
     started_at: started.context.at,
     finished_at: succeeded.context.at,
-    output: succeeded.data.output,
+    output: outputPayloadOf(succeeded),
   }));
 }
 

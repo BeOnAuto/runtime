@@ -8,6 +8,7 @@ import {
   type RecordedReader,
   type StreamReader,
 } from '@on.auto/operations';
+import type { Payload } from '@on.auto/operations/payloads';
 import { Effect, Option, Schema } from 'effect';
 
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
@@ -21,11 +22,11 @@ import {
   type RecordedWork,
   type RunStreamState,
 } from '../runs/run-state.ts';
-import type { RunDetail } from '../runs/run.ts';
+import type { RunDetailAsRecorded } from '../runs/run.ts';
 
 export interface RecordedRun {
-  readonly run: RunDetail;
-  readonly input: Schema.Json;
+  readonly run: RunDetailAsRecorded;
+  readonly input: Payload<Schema.Json>;
   readonly awaitsSettlement: boolean;
   readonly work: readonly RecordedWork[];
   readonly answer: RecordedAnswer | null;

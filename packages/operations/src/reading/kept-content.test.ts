@@ -69,6 +69,7 @@ function keptOf(
           ...playbookBoundRunOutcomesReader(service, playbook),
           ...playbookBoundProjectionReader(service, playbook),
           readContent: (sha256) => service.content.get(playbook, sha256),
+          readContentHead: (sha256) => service.content.getHead(playbook, sha256),
         }),
       ),
     ),

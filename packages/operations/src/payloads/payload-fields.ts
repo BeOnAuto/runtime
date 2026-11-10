@@ -1,7 +1,7 @@
 import type { Digested } from '@on.auto/content';
 import { JsonPointer as Pointers, Record, Schema } from 'effect';
 
-import type { JsonPointer, PayloadPointers } from '../held-content/content-declaration.ts';
+import { keptPayloadAnnotation, type JsonPointer, type PayloadPointers } from '../held-content/content-declaration.ts';
 import { mostShownFieldBytes } from '../reading/public-event.ts';
 
 export const mostInlinePayloadBytes = mostShownFieldBytes;
@@ -58,9 +58,10 @@ export function payloadFields<const Name extends string, Value extends Schema.To
   name: Name,
   value: Value,
 ): PayloadFields<Name, Value> {
+  const digestOfThePayload = PayloadDigestSchema.annotate({ [keptPayloadAnnotation]: name });
   return {
     ...Record.singleton(name, Schema.optionalKey(value)),
-    ...Record.singleton(digestNameOf(name), Schema.optionalKey(PayloadDigestSchema)),
+    ...Record.singleton(digestNameOf(name), Schema.optionalKey(digestOfThePayload)),
     ...Record.singleton(bytesNameOf(name), Schema.optionalKey(PayloadBytesSchema)),
   };
 }
@@ -107,17 +108,31 @@ function armIssuesOf(data: object, name: string, mayBeAbsent: boolean): readonly
     : [{ path: [name], issue: `Expected ${name}, or ${digestName} and ${bytesName}` }];
 }
 
-export function withPayloads<Data extends Schema.Top & { readonly Type: object }>(
+type HeldValueOf<Data, Name extends keyof Data> = Exclude<Data[Name], undefined>;
+
+type HeldArms<Data, Held extends readonly (keyof Data & string)[]> = Held extends readonly [
+  infer Name extends keyof Data & string,
+  ...infer Rest extends readonly (keyof Data & string)[],
+]
+  ? PayloadArm<Name, HeldValueOf<Data, Name>> & HeldArms<Data, Rest>
+  : unknown;
+
+type OfObjects = Schema.Top & { readonly Type: object; readonly Rebuild: { readonly Type: object } };
+
+export function withPayloads<Data extends OfObjects, const Held extends readonly PayloadNameOf<Data['Type']>[]>(
   data: Data,
-  held: readonly PayloadNameOf<Data['Type']>[],
+  held: Held,
   mayBeAbsent: readonly PayloadNameOf<Data['Type']>[] = [],
 ) {
-  return data.check(
-    Schema.makeFilter((value: Data['Type']) => [
-      ...held.flatMap((name) => armIssuesOf(value, name, false)),
-      ...mayBeAbsent.flatMap((name) => armIssuesOf(value, name, true)),
-    ]),
-  );
+  const issuesOf = (value: object) => [
+    ...held.flatMap((name) => armIssuesOf(value, name, false)),
+    ...mayBeAbsent.flatMap((name) => armIssuesOf(value, name, true)),
+  ];
+  type Checked = Data['Rebuild']['Type'];
+  const holdsItsArms = (value: Checked): value is Checked & HeldArms<Data['Type'], Held> =>
+    issuesOf(value).length === 0;
+  const checked = data.check(Schema.makeFilter(issuesOf, undefined, true));
+  return Schema.refine<Data['Rebuild'], Checked & HeldArms<Data['Type'], Held>>(holdsItsArms)(checked);
 }
 
 function memberOf<const Name extends string, Value>(
@@ -153,15 +168,15 @@ export function payloadOf<const Name extends string, Value>(
   return payload;
 }
 
-export function inputPayloadOf<Value>({ data }: { readonly data: PayloadMembers<'input', Value> }): Payload<Value> {
+export function inputPayloadOf<Value>({ data }: { readonly data: PayloadArm<'input', Value> }): Payload<Value> {
   return payloadOf(data, 'input');
 }
 
-export function outputPayloadOf<Value>({ data }: { readonly data: PayloadMembers<'output', Value> }): Payload<Value> {
+export function outputPayloadOf<Value>({ data }: { readonly data: PayloadArm<'output', Value> }): Payload<Value> {
   return payloadOf(data, 'output');
 }
 
-export function answerPayloadOf<Value>({ data }: { readonly data: PayloadMembers<'answer', Value> }): Payload<Value> {
+export function answerPayloadOf<Value>({ data }: { readonly data: PayloadArm<'answer', Value> }): Payload<Value> {
   return payloadOf(data, 'answer');
 }
 

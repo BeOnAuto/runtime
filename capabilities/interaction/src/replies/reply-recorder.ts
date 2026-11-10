@@ -1,4 +1,5 @@
 import { runCorrelationIn, type RecordedWorkAt, type Work } from '@on.auto/definitions';
+import type { Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { ConversationParts, ConversationPlace } from '../conversations/conversation-parts.ts';
@@ -20,7 +21,7 @@ export function recordedReplyWork(
   request: KeptRequest,
   reply: Reply,
   work: Work,
-): Effect.Effect<RecordedReply | undefined> {
+): Effect.Effect<RecordedReply | undefined, Unavailable> {
   const address = { ...place.playbook, id: request.runId };
   const rule = replyRule(reply.id, work.type === 'work');
   return Effect.flatMap(runCorrelationIn(parts.ledger, address), (correlationId) =>

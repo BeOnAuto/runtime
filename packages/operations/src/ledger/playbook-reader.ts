@@ -1,6 +1,8 @@
-import type { StreamedContent } from '@on.auto/content';
-import { Context, type Effect } from 'effect';
+import type { KeptContentHead, StreamedContent } from '@on.auto/content';
+import { Context, Effect } from 'effect';
 
+import { PlaybookContext } from '../caller/playbook-context.ts';
+import { payloadReaderOf, type PayloadReader } from '../payloads/payload-reader.ts';
 import type { BoundProjectionReader } from '../projections/keyed-projection.ts';
 import type {
   PlaybookAppendedFactsReader,
@@ -12,6 +14,7 @@ import type {
 
 export interface PlaybookContentReader {
   readonly readContent: (sha256: string) => Effect.Effect<StreamedContent | undefined>;
+  readonly readContentHead: (sha256: string) => Effect.Effect<KeptContentHead | undefined>;
 }
 
 export class PlaybookReader extends Context.Service<
@@ -24,3 +27,14 @@ export class PlaybookReader extends Context.Service<
     BoundProjectionReader &
     PlaybookContentReader
 >()('@on.auto/operations/PlaybookReader') {}
+
+export const playbookPayloadReader: Effect.Effect<PayloadReader, never, PlaybookReader | PlaybookContext> = Effect.gen(
+  function* () {
+    const { org, playbook } = yield* PlaybookContext;
+    const { readContent, readContentHead } = yield* PlaybookReader;
+    return payloadReaderOf({
+      owner: { org, playbook },
+      content: { get: (_owner, sha256) => readContent(sha256), getHead: (_owner, sha256) => readContentHead(sha256) },
+    });
+  },
+);

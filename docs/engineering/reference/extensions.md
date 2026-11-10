@@ -10,13 +10,13 @@ A package exports `manifest` with its name, version and extension points. Each p
 export const manifest = {
   name: '@acme/forecasts',
   version: '1.0.0',
-  provides: [{ point: 'capability/prediction', contract: 3, implementation: makePredictionCapability }],
+  provides: [{ point: 'capability/prediction', contract: 4, implementation: makePredictionCapability }],
 };
 ```
 
-This release supports `capability/prediction` with contract versions `2` and `3`. The contract is the runtime's capability contract. Its version increases with every change to its members, and the runtime keeps serving the versions before whose implementations still work.
+This release supports `capability/prediction` with contract versions `2`, `3` and `4`. The contract is the runtime's capability contract. Its version increases with every change to its members, and the runtime keeps serving the versions before whose implementations still work.
 
-The contract passes the playbook where a definition is saved to the capability's `check` as `place`. Contract 2 changed the members of a folder a capability returns: its `name`, the `definitionTypes` it reads, `keptAfter` and `together`. Contract 3 gives the context of a run `actsFor`, the id of the person whose sign-ins it uses, where it names one. An implementation built against 2 reads nothing of it, so the runtime serves it as before.
+The contract passes the playbook where a definition is saved to the capability's `check` as `place`. Contract 2 changed the members of a folder a capability returns: its `name`, the `definitionTypes` it reads, `keptAfter` and `together`. Contract 3 gives the context of a run `actsFor`, the id of the person whose sign-ins it uses, where it names one. An implementation built against 2 reads nothing of it, so the runtime serves it as before. Contract 4 gives a capability's `cancel` the answer a run took as the runtime keeps it, inline or by its digest when the playbook keeps it outside the run, and lets it settle the run with an output kept so; only a run that takes an answer has one, which no prediction function does, so the runtime serves an implementation built against 2 or 3 as before.
 
 ## Initialization and ports
 
@@ -85,7 +85,7 @@ A package that does not declare `@on.auto/runtime` is linked like any other adja
 Startup stops and names the package if any of these conditions holds:
 
 - The package provides a point this release does not support, or provides one point twice.
-- Its contract version is one the runtime does not serve. The error names both, for example: `The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 3`.
+- Its contract version is one the runtime does not serve. The error names both, for example: `The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 4`.
 - Its implementation is not a function, or fails while constructing the capability.
 - A returned capability, folder or operation is missing a member or has a member of the wrong kind. The error names the member, for example `The extension @acme/forecasts is refused: its capability has no facts` or `its folders[0] has no fold`.
 - A run-fact schema accepts types other than its declared type, or declares a fact type owned by the runtime.

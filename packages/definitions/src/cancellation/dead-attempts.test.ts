@@ -11,9 +11,10 @@ import {
 } from '../index.ts';
 import type { RunCommand } from '../runs/run-commands.ts';
 import { runDecider } from '../runs/run-decider.ts';
-import { acmeAdmin } from '../testing/callers.ts';
+import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
 import { definitionOperationsFor } from '../testing/definition-operations.ts';
 import { firstMoment, harness, toPlaybook } from '../testing/harness.ts';
+import { keptArmOf, keptIn, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -100,24 +101,44 @@ const callAnswered: RunCommand = {
   ...acted,
 };
 
-async function leftByItsAttempt(facts: readonly RunCommand[], version?: number) {
+const keptInput = { brief: 'b'.repeat(4096) };
+
+function startedWithAKeptInput(service: Ledger['Service']) {
+  const { sha256, bytes } = keptArmOf(keptInput);
+  const context = { ...acted, definitionType: 'system-call', definitionName: 'post', definitionVersion: 1 };
+  const data = { input_sha256: sha256, input_bytes: bytes, started_by: recordedAdmin, calls_tools: true } as const;
+  return Effect.andThen(
+    keptIn(service.content, alpha, keptInput),
+    recordedAsGiven(service, stream, [{ type: 'run_started', data }], context),
+  );
+}
+
+async function leftByItsAttempt(facts: readonly RunCommand[], version?: number, inputKept = false) {
   const capability = systemCall();
   const operations = definitionOperationsFor([capability]);
-  const definitions = harness();
+  const watched = watchedStore();
+  const definitions = harness(undefined, watched.store);
   const { service } = definitions.ledger;
   await definitions.call(
     operations.createDefinition,
     toAlpha(acmeAdmin, { type: 'system-call', name: 'post', source: 'post' }),
   );
+  const starting = inputKept
+    ? startedWithAKeptInput(service)
+    : Effect.asVoid(service.execute(stream, runDecider, startOfTheRun(version)));
   await definitions.run(
     Effect.orDie(
-      Effect.forEach([startOfTheRun(version), ...facts], (command) => service.execute(stream, runDecider, command)),
+      Effect.andThen(
+        starting,
+        Effect.forEach(facts, (command) => service.execute(stream, runDecider, command)),
+      ),
     ),
   );
   const lookedAtAgain: CancelOfALiveAttempt[] = [];
   const lookAgain = (cancel: CancelOfALiveAttempt) => Effect.sync(() => lookedAtAgain.push(cancel));
   return {
     service,
+    watched,
     lookedAtAgain,
     cancelling: (
       request: CancelRequest,
@@ -253,5 +274,23 @@ describe('a cancel its caller makes of a run within its call whose definition ca
       started,
     ]);
     expect([unknownType.lookedAtAgain, unrecorded.lookedAtAgain, unparsed.lookedAtAgain]).toEqual([[], [], []]);
+  });
+});
+
+describe('a cancel its caller makes of a run within its call whose input its playbook keeps outside the run', () => {
+  it('judges the attempt with the input read, and ends the run whose attempt died as any', async () => {
+    const { cancelling, reading } = await leftByItsAttempt([callStarted(1)], undefined, true);
+
+    await cancelling(deadline, longestCallMs + 1);
+
+    expect(await reading()).toMatchObject(cancelledWith(deadline, `${deadline.reason}; ${effectUnknown}`));
+  });
+
+  it('records the cancel alone where the input cannot be read, judging no attempt by a bound it cannot know', async () => {
+    const { cancelling, reading, lookedAtAgain, watched } = await leftByItsAttempt([callStarted(1)], undefined, true);
+    watched.fail();
+
+    expect(await cancelling(deadline, longestCallMs + 1)).toBe('requested');
+    expect([await reading(), lookedAtAgain]).toMatchObject([started, []]);
   });
 });

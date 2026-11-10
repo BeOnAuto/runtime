@@ -5,7 +5,7 @@ import { Effect, Schema } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { aLedgerHolding, type LedgerEntry } from '../testing/ledger-entry.ts';
-import { recordedPayloadMetadata } from './payload-metadata.ts';
+import { recordedPayloadMetadataOf } from './payload-metadata.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -49,6 +49,20 @@ async function metadataOf(entry: LedgerEntry, database: string): Promise<readonl
   );
 }
 
+const StoredTextRows = Schema.Array(Schema.Struct({ metadata: Schema.String }));
+
+function withItsIdsNormalised(text: string): string {
+  return text.replaceAll(/("(?:messageId|traceId|spanId)": ?)"[^"]*"/gu, '$1"…"');
+}
+
+async function storedMetadataOf(entry: LedgerEntry, database: string): Promise<readonly string[]> {
+  const rows = await entry.queried(
+    database,
+    `SELECT CAST(message_metadata AS TEXT) AS metadata FROM emt_messages WHERE stream_id = '${firstWritings}' ORDER BY stream_position`,
+  );
+  return Schema.decodeUnknownSync(StoredTextRows)(rows).map(({ metadata }) => withItsIdsNormalised(metadata));
+}
+
 function erasing(position: number, data: Schema.JsonObject) {
   return {
     eventSchema: writtenNotes.eventSchema,
@@ -70,9 +84,10 @@ function measuredInItsMetadata(entry: LedgerEntry): void {
       written({ body_sha256: sha256, body_bytes: 4096, parts: [{ sha256, bytes: 3000 }] }),
       written({ body: 'inline' }),
       written({ parts: [] }),
+      { type: 'note_kept', data: { sha256 } },
     );
 
-    expect(await metadataOf(entry, database)).toEqual(recordedPayloadMetadata);
+    expect(await storedMetadataOf(entry, database)).toEqual(recordedPayloadMetadataOf(entry.layout.dialect));
   });
 
   it('rewrites the bytes a scrubbed fact keeps outside with its data, and takes them away when it keeps none', async () => {

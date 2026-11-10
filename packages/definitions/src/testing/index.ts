@@ -9,6 +9,15 @@ export {
 } from '../journal-testing/recording-journal.ts';
 export { recordedOnTheRun } from './run-facts.ts';
 export { runContentHolders } from './harness.ts';
+export {
+  erasingReader,
+  keptArmOf,
+  keptIn,
+  keptLongBeforeAndLost,
+  recordedAsGiven,
+  watchedStore,
+  type WatchedStore,
+} from './kept-payloads.ts';
 export { admittingMeter, recordingMeter, type MeterRefusal, type RecordingMeter } from './recording-meter.ts';
 export { noCalledDefinitions } from './called-definitions.ts';
 export { checkingWithin, checksAwaitedAtMostMs } from './time/patient-checks.ts';

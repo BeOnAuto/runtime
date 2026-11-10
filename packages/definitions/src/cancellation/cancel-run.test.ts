@@ -151,14 +151,14 @@ describe('cancel_run of a run the playbook does not have, or with a reason it ca
 describe('the operation of cancelling a run', () => {
   const { registration } = defineCancelRun([echo]);
 
-  it('is a playbook command at POST /runs/{run_id}/cancel that may be rejected as not found or a conflict', () => {
+  it('is a playbook command at POST /runs/{run_id}/cancel that may be rejected as not found or a conflict, or unavailable for an output kept outside the run', () => {
     expect(registration).toMatchObject({
       scope: 'playbook',
       kind: 'command',
       name: 'cancel_run',
       title: 'Cancel run',
       route: { method: 'POST', path: '/runs/{run_id}/cancel' },
-      reasons: ['not_found', 'conflict'],
+      reasons: ['not_found', 'conflict', 'unavailable'],
     });
   });
 

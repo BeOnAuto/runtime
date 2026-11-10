@@ -1,4 +1,5 @@
 import { onTheStandingClock } from '@on.auto/definitions/testing';
+import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -7,7 +8,7 @@ import { makeLookupFunctionAdapter } from './lookup-function.ts';
 
 const lookup = makeLookupFunctionAdapter({
   tools: { listServers: () => Effect.succeed([]), callOnce: () => Effect.die(new Error('No call is made here')) },
-  runs: { readRecorded: () => Effect.die(new Error('No run is read here')) },
+  runs: { readRecorded: () => Effect.die(new Error('No run is read here')), content: memoryLedger().service.content },
 });
 
 function prepared(source: string) {

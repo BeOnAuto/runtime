@@ -2,7 +2,7 @@ import { Effect, Struct, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { KeptViewState, KeptViews } from '../capability/view-standing.ts';
-import type { RunDetail } from '../runs/run.ts';
+import type { RunDetailAsRecorded } from '../runs/run.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import { playbookAsked } from '../testing/page-asking.ts';
 import {
@@ -75,14 +75,14 @@ function containing(text: string): unknown {
 
 const someText: unknown = expect.any(String);
 
-function ranWith(output: Schema.Json): RunDetail {
+function ranWith(output: Schema.Json): RunDetailAsRecorded {
   return {
     run_id: '0199a3c4-0000-7000-8000-000000000001',
     type: 'workflow',
     name: 'morning',
     definition_version: 1,
     status: 'succeeded',
-    output: { date: output },
+    output: { inline: { date: output } },
     started_at: '2026-11-01T08:00:00.000Z',
     started_by: recordedAdmin,
     finished_at: '2026-11-01T08:01:00.000Z',
@@ -175,18 +175,18 @@ describe('the result of a run on the page of a definition', () => {
 describe('a run that did not succeed, on the page of a definition', () => {
   it('renders a run that was rejected or failed in words of its own', async () => {
     const asked = await withTheMorning();
-    const rejected: RunDetail = {
+    const rejected: RunDetailAsRecorded = {
       ...ranWith('2026-11-01'),
       status: 'rejected',
       rejection: { reason: 'conflict', detail: 'The month is closed', kind: 'unworkable' },
     };
-    const unexplained: RunDetail = {
+    const unexplained: RunDetailAsRecorded = {
       ...ranWith('2026-11-01'),
       status: 'rejected',
       rejection: { reason: 'unavailable', detail: 'Down' },
     };
-    const failed: RunDetail = { ...ranWith(null), status: 'failed' };
-    const started: RunDetail = { ...Struct.omit(ranWith(null), ['finished_at']), status: 'started' };
+    const failed: RunDetailAsRecorded = { ...ranWith(null), status: 'failed' };
+    const started: RunDetailAsRecorded = { ...Struct.omit(ranWith(null), ['finished_at']), status: 'started' };
 
     expect(await asked.ask(pages.resultOf('workflow', 'morning', { run: rejected }))).toMatchObject({
       output: { answer: 'The run was rejected as conflict, unworkable. The month is closed' },

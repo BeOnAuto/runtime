@@ -31,22 +31,21 @@ interface Taking {
   readonly answer: Schema.Json;
 }
 
-function taken(reading: Reading, state: ReadingState, { request, reply, answer }: Taking) {
-  return Effect.gen(function* () {
-    const made = yield* recordedReplyWork(reading, request, reply, {
-      type: 'answer',
-      answer: { answer, reply: identityOf(reply) },
-    });
-    if (made === undefined) {
-      return state;
-    }
-    return {
-      ...state,
-      taken: state.taken + 1,
-      foundAnswerer: true,
-      answered: new Set([...state.answered, request.runId]),
-    };
-  });
+function taken(reading: Reading, state: ReadingState, { request, reply, answer }: Taking): Effect.Effect<ReadingState> {
+  const work = { type: 'answer', answer: { answer, reply: identityOf(reply) } } as const;
+  return recordedReplyWork(reading, request, reply, work).pipe(
+    Effect.map((made): ReadingState =>
+      made === undefined
+        ? state
+        : {
+            ...state,
+            taken: state.taken + 1,
+            foundAnswerer: true,
+            answered: new Set([...state.answered, request.runId]),
+          },
+    ),
+    Effect.catchTag('unavailable', () => Effect.succeed<ReadingState>({ ...state, leftToReadAgain: true })),
+  );
 }
 
 interface Refusal {
@@ -73,7 +72,9 @@ function refusedReply(reading: Reading, state: ReadingState, { request, reply, b
         told: input !== undefined,
       },
     };
-    const made = yield* recordedReplyWork(reading, request, reply, { type: 'work', fact });
+    const made = yield* recordedReplyWork(reading, request, reply, { type: 'work', fact }).pipe(
+      Effect.catchTag('unavailable', Effect.die),
+    );
     if (made === undefined) {
       return state;
     }

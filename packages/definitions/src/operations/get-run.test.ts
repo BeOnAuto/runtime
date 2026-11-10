@@ -22,7 +22,7 @@ async function withRun() {
 }
 
 describe('get_run', () => {
-  it('is a playbook query at GET /runs/{run_id} that may meet not_found', () => {
+  it('is a playbook query at GET /runs/{run_id} that may meet not_found, or unavailable for an output kept outside the run', () => {
     expect(getRun.registration).toMatchObject({
       scope: 'playbook',
       kind: 'query',
@@ -30,7 +30,7 @@ describe('get_run', () => {
       route: { method: 'GET', path: '/runs/{run_id}' },
       pathParameters: ['run_id'],
       successStatus: 200,
-      reasons: ['not_found'],
+      reasons: ['not_found', 'unavailable'],
     });
   });
 

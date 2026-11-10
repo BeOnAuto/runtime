@@ -1,3 +1,4 @@
+import type { ContentStore } from '@on.auto/content';
 import {
   defineCommand,
   type Caller,
@@ -15,6 +16,7 @@ import type { DefinitionContent } from '../registry/definition-events.ts';
 import { definitionsDecider, definitionTypeStreamOf } from '../registry/definitions-decider.ts';
 import { acmeAdmin, recordedAdmin } from './callers.ts';
 import { harness, toPlaybook } from './harness.ts';
+import { admittingMeter } from './recording-meter.ts';
 
 type Refused = InvalidInput | Conflict | Unavailable;
 
@@ -39,8 +41,8 @@ const toAlpha = toPlaybook('acme', 'alpha');
 
 const savedAt = { by: 'acme-admin', at: '2026-10-01T09:00:00.000Z' };
 
-export function playbookAsked() {
-  const playbook = harness();
+export function playbookAsked(store?: ContentStore) {
+  const playbook = harness(admittingMeter, store);
   const ask = (asked: Effect.Effect<unknown, Refused, Services>, at?: string) =>
     playbook.call(askingOf(asked), toAlpha(acmeAdmin, {}), at);
   const record = (type: string, command: DefinitionCommandData) =>

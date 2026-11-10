@@ -16,6 +16,7 @@ import {
   payloadPointersOf,
   withPayloads,
   type Payload,
+  type PayloadArm,
 } from './payload-fields.ts';
 
 const digest = 'a'.repeat(64);
@@ -76,6 +77,17 @@ describe('the schema of a fact that keeps a payload', () => {
     ]);
   });
 
+  it('names each refused payload by its own words alone, however many issues the decode is asked for', () => {
+    const decodeAll = Schema.decodeUnknownExit(StartedSchema, { errors: 'all' });
+    const refusals = [decodeAll({ started_by: 'k' }), decodeAll({ input_sha256: digest, started_by: 'k' })].map(String);
+
+    expect(refusals).toEqual([
+      expect.stringContaining('Expected input, or input_sha256 and input_bytes'),
+      expect.stringContaining('Expected input_sha256 and input_bytes together'),
+    ]);
+    expect(refusals.filter((refusal) => refusal.includes('<filter>'))).toEqual([]);
+  });
+
   it('may be absent where the fact may hold none, and holds one arm at most there too', () => {
     expect([
       refusalOf({ input: 1, started_by: 'k' }),
@@ -92,6 +104,20 @@ describe('the schema of a fact that keeps a payload', () => {
       expect.stringContaining('a SHA-256 in 64 lowercase hex digits'),
       expect.stringContaining('Expected a value greater than or equal to 0'),
       expect.stringContaining('Expected an integer'),
+    ]);
+  });
+});
+
+describe('a fact that keeps a payload, as its schema decodes it', () => {
+  it("is typed with one arm of each payload it holds, which a run's accessor reads as it is", () => {
+    const arms: readonly PayloadArm<'input', Schema.Json>[] = [
+      decodeStarted({ input: { lead: 'lead-1' }, started_by: 'key_7f3a' }),
+      decodeStarted({ input_sha256: digest, input_bytes: 91_844, started_by: 'key_7f3a' }),
+    ];
+
+    expect(arms.map((data) => inputPayloadOf({ data }))).toEqual([
+      { inline: { lead: 'lead-1' } },
+      { kept: { sha256: digest, bytes: 91_844 } },
     ]);
   });
 });

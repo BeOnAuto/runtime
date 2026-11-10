@@ -37,7 +37,7 @@ describe('the answer to a request a run waits on', () => {
       ['request_answered', { answer: { choice: 'approve' }, claimed_for: 'ada', answered_by: thePlaybook }],
     ]);
     expect((await state())?.answer).toEqual({
-      answer: { choice: 'approve' },
+      answer: { inline: { choice: 'approve' } },
       claimedFor: 'ada',
       by: thePlaybook,
       at: answered.at,
@@ -53,7 +53,7 @@ describe('the answer to a request a run waits on', () => {
     );
 
     expect((await state())?.answer).toEqual({
-      answer: { choice: 'reject' },
+      answer: { inline: { choice: 'reject' } },
       reply,
       by: thePlaybook,
       at: answered.at,
@@ -132,7 +132,7 @@ describe('the settlement of a run that took an answer', () => {
     ).toEqual(Result.fail(answeredFirst));
     expect(
       await Effect.runPromise(settle(run, { status: 'succeeded', output: { choice: 'approve' }, by: 'ada' })),
-    ).toMatchObject({ status: 'succeeded', output: { choice: 'approve' } });
+    ).toMatchObject({ status: 'succeeded' });
   });
 });
 

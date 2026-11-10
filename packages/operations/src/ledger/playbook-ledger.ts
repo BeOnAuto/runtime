@@ -25,6 +25,7 @@ export function playbookReaderOf(ledger: LedgerPorts, address: PlaybookAddress):
     ...playbookBoundRunOutcomesReader(ledger, address),
     ...playbookBoundProjectionReader(ledger, address),
     readContent: (sha256) => ledger.content.get(address, sha256),
+    readContentHead: (sha256) => ledger.content.getHead(address, sha256),
   };
 }
 

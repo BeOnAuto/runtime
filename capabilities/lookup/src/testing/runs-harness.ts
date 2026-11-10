@@ -80,6 +80,7 @@ export function runsHarness({ readingBegins, ...bounds }: RunsHarnessOptions = {
   const runs: SucceededRunsReader = {
     readRecorded: (place, selection, page) =>
       Effect.andThen(Effect.promise(begun), ledger.service.readRecorded(place, selection, page)),
+    content: ledger.service.content,
   };
   const capabilities = [answeringItsInput, makeLookupFunctionAdapter({ tools: access, runs, ...bounds })];
   const creating = defineCreateDefinition(capabilities, uncheckedPages);

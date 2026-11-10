@@ -47,7 +47,8 @@ export {
 export type { JournalRefusal, RunAttempt, RunContext, RunJournal, RunLineage } from './capability/run-context.ts';
 export { LiveAttempts, liveAttemptsClosed, liveAttemptsLayer } from './attempts/live-attempts.ts';
 export { RunMeter, type Meter, type MeteredRun } from './metering/run-meter.ts';
-export { nextAttemptOf, type NextAttempt } from './operations/next-attempts.ts';
+export { nextAttemptOf } from './operations/next-attempts.ts';
+export type { NextAttempt } from './operations/attempt-inputs.ts';
 export { attemptEnded, type AttemptOfARun } from './operations/attempt-endings.ts';
 export type { RecordedCall, RecordedCallFact } from './runs/run-events.ts';
 export { numberingAfter, numberingFrom, type CallEnd, type CallNumbering } from './journal/call-numbering.ts';
@@ -150,7 +151,9 @@ export {
   type WorkflowRun,
   type Run,
   type RunDetail,
+  type RunDetailAsRecorded,
 } from './runs/run.ts';
+export { payloadAsRead, payloadsKeptIn, type KeptContentReader, type PayloadAsRead } from './runs/run-payloads.ts';
 export {
   playbookBoundSettler,
   runSettler,
@@ -168,7 +171,7 @@ export { RunIdInputField, definitionNamePattern } from './operations/definition-
 export { makeDefinitionPresenters } from './presenting/definition-presenters.ts';
 export { runChanged, runChangedBy } from './presenting/changed-resources.ts';
 export { cutAtCodePoint, issuesShown, mostNameBytes } from './presenting/event-data.ts';
-export { playbookEventOf, playbookFactOf } from './events/playbook-facts.ts';
+export { playbookEventOf, playbookEventRead, playbookFactOf, playbookFactRead } from './events/playbook-facts.ts';
 export {
   DefinitionEventSchema,
   definitionFactTypes,

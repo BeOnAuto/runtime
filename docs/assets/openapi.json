@@ -16972,6 +16972,16 @@
                     "output": {
                       "description": "The result, when the run succeeded: with the record, at most 1048576 bytes as JSON in UTF-8"
                     },
+                    "output_sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$",
+                      "description": "In place of an output kept outside the run that is missing or erased: the SHA-256 it was kept by"
+                    },
+                    "output_bytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "In place of an output kept outside the run that is missing or erased: its size in bytes"
+                    },
                     "rejection": {
                       "anyOf": [
                         {
@@ -17575,6 +17585,16 @@
                     },
                     "output": {
                       "description": "The result, when the run succeeded: with the record, at most 1048576 bytes as JSON in UTF-8"
+                    },
+                    "output_sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$",
+                      "description": "In place of an output kept outside the run that is missing or erased: the SHA-256 it was kept by"
+                    },
+                    "output_bytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "In place of an output kept outside the run that is missing or erased: its size in bytes"
                     },
                     "rejection": {
                       "anyOf": [
@@ -18205,6 +18225,16 @@
                     },
                     "output": {
                       "description": "The result, when the run succeeded: with the record, at most 1048576 bytes as JSON in UTF-8"
+                    },
+                    "output_sha256": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$",
+                      "description": "In place of an output kept outside the run that is missing or erased: the SHA-256 it was kept by"
+                    },
+                    "output_bytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "description": "In place of an output kept outside the run that is missing or erased: its size in bytes"
                     },
                     "rejection": {
                       "anyOf": [

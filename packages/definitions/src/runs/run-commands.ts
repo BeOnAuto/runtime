@@ -1,4 +1,5 @@
 import type { CallLink, RecordedCaller, StartingTrigger } from '@on.auto/operations';
+import type { Payload } from '@on.auto/operations/payloads';
 import type { Schema } from 'effect';
 
 import type { OutputShapeName } from '../shapes/shape-names.ts';
@@ -17,6 +18,16 @@ export interface RunRequest {
   readonly definition_type: string;
   readonly name: string;
   readonly input: Schema.Json;
+}
+
+export interface RunAsked {
+  readonly definition_type: string;
+  readonly name: string;
+  readonly input: Payload<Schema.Json>;
+}
+
+export function askedOf({ definition_type, name, input }: RunRequest): RunAsked {
+  return { definition_type, name, input: { inline: input } };
 }
 
 export interface RunStart extends RunRequest {
@@ -54,7 +65,9 @@ export interface CapabilityFact {
   readonly data: Schema.JsonObject;
 }
 
-export type AnswerFact = RequestAnswered['data'];
+export type AnswerFact = Omit<RequestAnswered['data'], 'answer' | 'answer_sha256' | 'answer_bytes'> & {
+  readonly answer: Schema.Json;
+};
 
 export type GivenAnswer = Omit<AnswerFact, 'answered_by'>;
 

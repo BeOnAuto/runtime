@@ -3,12 +3,20 @@ import { Result } from 'effect';
 
 import { isCallStart, numberedCall } from '../journal/call-numbering.ts';
 import { takesAnAnswer } from '../requests/request-record.ts';
+import { comparedPayloads, comparedWithoutItsValue } from '../runs/payload-comparisons.ts';
 import type { CapabilityFact, RunAnswer, RunCall, RunWork } from '../runs/run-commands.ts';
 import type { RunEvent } from '../runs/run-events.ts';
-import { awaitsSettlement, isRunning, takesSettlement, type AskedCancel, type RunState } from '../runs/run-state.ts';
-import { digestOf } from '../runs/settlement-keys.ts';
+import {
+  awaitsSettlement,
+  isRunning,
+  takesSettlement,
+  type AskedCancel,
+  type RecordedAnswer,
+  type RunState,
+} from '../runs/run-state.ts';
+import { canonicallyEqual } from '../runs/settlement-keys.ts';
 
-type Decision = Result.Result<readonly RunEvent[], Rejection<'conflict' | 'cancelled'>>;
+type Decision = Result.Result<readonly RunEvent[], Rejection<'conflict' | 'cancelled' | 'unavailable'>>;
 
 export type AdmitsFact = (fact: CapabilityFact) => boolean;
 
@@ -55,10 +63,18 @@ export const cancelledUnanswered = new Conflict({
   detail: 'A cancel of the run was asked before it took an answer, so it takes none',
 });
 
+function answeredAgain(taken: RecordedAnswer, { answer }: RunAnswer['answer']): Decision {
+  const compared = comparedPayloads(taken.answer, { inline: answer }, canonicallyEqual);
+  if (compared === 'unknown') {
+    return Result.fail(comparedWithoutItsValue);
+  }
+  return compared === 'same' ? Result.succeed([]) : Result.fail(answeredAlready);
+}
+
 export function decideAnswer({ answer }: RunAnswer, state: RunState): Decision {
   const taken = state?.answer ?? null;
   if (taken !== null) {
-    return digestOf(taken.answer) === digestOf(answer.answer) ? Result.succeed([]) : Result.fail(answeredAlready);
+    return answeredAgain(taken, answer);
   }
   if (state === undefined || !awaitsSettlement(state)) {
     return Result.fail(endedUnanswered);

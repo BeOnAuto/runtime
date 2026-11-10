@@ -12,6 +12,7 @@ export interface ReadingState {
   readonly foundAnswerer: boolean;
   readonly answered: ReadonlySet<string>;
   readonly told: ReadonlyMap<string, number>;
+  readonly leftToReadAgain: boolean;
 }
 
 export const nothingRead: ReadingState = {
@@ -20,6 +21,7 @@ export const nothingRead: ReadingState = {
   foundAnswerer: false,
   answered: new Set(),
   told: new Map(),
+  leftToReadAgain: false,
 };
 
 export const replyBoundsOfAReading = { told: 3, issues: 16 } as const;

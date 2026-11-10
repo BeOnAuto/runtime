@@ -1,113 +1,17 @@
 import { Buffer } from 'node:buffer';
 
-import { mostResultBytes, type SucceededRun, type SucceededRunsReader } from '@on.auto/definitions';
-import type { RecordedEvent, RecordedPageRequest } from '@on.auto/operations';
-import { Effect, type Schema } from 'effect';
+import { mostResultBytes } from '@on.auto/definitions';
+import type { RecordedPageRequest } from '@on.auto/operations';
+import type { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { runsRead, type RunsAsked } from './runs-read.ts';
+import { pagedReader, read, runOf, theStart, type Page } from '../testing/succeeded-pages.ts';
 import { wordsIn } from './word-matching.ts';
-
-const definition = { type: 'computation', name: 'campaign-pace' };
-
-const theStart = 'the-start-of-the-run-that-reads';
-
-const asked: RunsAsked = {
-  place: { org: 'acme', playbook: 'alpha' },
-  definition,
-  start: theStart,
-  since: undefined,
-  words: [],
-};
-
-function runOf(day: number, output: Schema.Json, startedAt = `2026-10-${String(day).padStart(2, '0')}T09:00:00.000Z`) {
-  return {
-    run_id: `0199a3c4-0000-7000-8000-${String(day).padStart(12, '0')}`,
-    definition_version: 1,
-    started_at: startedAt,
-    finished_at: startedAt,
-    output,
-  };
-}
-
-function headsOf({ run_id: runId, definition_version: version, started_at, finished_at, output }: SucceededRun) {
-  const context = {
-    by: 'acme-admin',
-    runId,
-    definitionType: definition.type,
-    definitionName: definition.name,
-    definitionVersion: version,
-  };
-  const head = {
-    causationId: null,
-    correlationId: runId,
-    stream: `runs/${runId}`,
-    cursor: runId,
-    recordedAt: started_at,
-  };
-  const heads: readonly RecordedEvent[] = [
-    {
-      ...head,
-      id: `${runId}/1`,
-      version: 1,
-      globalPosition: 1,
-      type: 'run_started',
-      data: undefined,
-      context: { ...context, at: started_at },
-    },
-    {
-      ...head,
-      id: `${runId}/2`,
-      version: 2,
-      globalPosition: 2,
-      type: 'run_succeeded',
-      data: { output, record: {} },
-      context: { ...context, at: finished_at },
-    },
-  ];
-  return heads;
-}
-
-interface Page {
-  readonly runs: readonly SucceededRun[];
-  readonly reached?: string;
-}
-
-interface PagedReader {
-  readonly reader: SucceededRunsReader;
-  readonly asked: () => readonly RecordedPageRequest[];
-}
-
-function pagedReader(pages: readonly Page[]): PagedReader {
-  const requests: RecordedPageRequest[] = [];
-  return {
-    reader: {
-      readRecorded: (_, __, page) =>
-        Effect.sync(() => {
-          requests.push(page);
-          const index = page.cursor === theStart ? 0 : Number(page.cursor);
-          const { runs = [], reached } = pages[index] ?? {};
-          const later = index + 1 < pages.length;
-          return {
-            records: runs.flatMap((run) => headsOf(run)),
-            hasMore: later,
-            nextCursor: later ? String(index + 1) : null,
-            lastExamined: reached === undefined ? null : { cursor: 'the-place-it-reached', recordedAt: reached },
-          };
-        }),
-    },
-    asked: () => requests,
-  };
-}
 
 const cursorsOf = (pages: readonly RecordedPageRequest[]) => pages.map(({ cursor }) => cursor);
 
 function bytesOf(value: Schema.Json): number {
   return Buffer.byteLength(JSON.stringify(value), 'utf8');
-}
-
-function read(reader: SucceededRunsReader, mostPages: number, changed: Partial<RunsAsked> = {}) {
-  return Effect.runPromise(runsRead(reader, { ...asked, ...changed }, mostPages));
 }
 
 type ShownRun = Readonly<ReturnType<typeof runOf>>;

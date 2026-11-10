@@ -1,3 +1,4 @@
+import { memoryRecordedContent } from '@on.auto/content/testing';
 import type { RecordedPage, RecordedPageRequest, RecordedSelection } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -43,7 +44,7 @@ const linus = {
   definition_version: 1,
   started_at: '2026-10-01T09:04:00.000Z',
   finished_at: '2026-10-01T09:04:00.000Z',
-  output: { greeting: 'Hi', input: { who: 'Linus' } },
+  output: { inline: { greeting: 'Hi', input: { who: 'Linus' } } },
 };
 
 describe('a page of the runs of a definition that succeeded', () => {
@@ -60,7 +61,7 @@ describe('a page of the runs of a definition that succeeded', () => {
           definition_version: 1,
           started_at: '2026-10-01T09:01:00.000Z',
           finished_at: '2026-10-01T09:01:00.000Z',
-          output: { greeting: 'Hi', input: { who: 'Ada' } },
+          output: { inline: { greeting: 'Hi', input: { who: 'Ada' } } },
         },
       ],
       reached: '2026-10-01T09:01:00.000Z',
@@ -88,6 +89,7 @@ describe('the read of a page of the runs of a definition that succeeded', () => 
           asked.page = page;
           return nextPage;
         }),
+      content: memoryRecordedContent(),
     };
 
     expect(

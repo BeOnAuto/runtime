@@ -8,7 +8,7 @@ import { inRuntime } from '../workflows/in-runtime.ts';
 
 interface RuntimeLedger
   extends ConversationLedger, Pick<ProjectionReader, 'countProjectedRows'>, Pick<Ledger['Service'], 'removeUnheld'> {
-  readonly content: Pick<RecordedContent, 'put' | 'get' | 'getPart'>;
+  readonly content: Pick<RecordedContent, 'put' | 'get' | 'getHead' | 'getPart'>;
 }
 
 export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeLedger {
@@ -31,6 +31,7 @@ export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeL
     content: {
       put: (playbook, content) => viaLedger((ledger) => ledger.content.put(playbook, content)),
       get: (playbook, sha256) => viaLedger((ledger) => ledger.content.get(playbook, sha256)),
+      getHead: (playbook, sha256) => viaLedger((ledger) => ledger.content.getHead(playbook, sha256)),
       getPart: (playbook, sha256, asked) => viaLedger((ledger) => ledger.content.getPart(playbook, sha256, asked)),
     },
   };

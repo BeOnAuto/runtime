@@ -1,5 +1,5 @@
 import type { RecordedEvent, RecordedPage, StreamWriter } from '@on.auto/operations';
-import { Effect, Result } from 'effect';
+import { Effect, Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -12,6 +12,10 @@ import {
 } from '../index.ts';
 import { asked, askedRun as run, askedRunId, attempted, question } from '../testing/asked-runs.ts';
 import { askedRequest } from '../testing/asking.ts';
+import { recordedAdmin } from '../testing/callers.ts';
+import { harness } from '../testing/harness.ts';
+import { keptArmOf, keptIn, recordedAsGiven, watchedStore } from '../testing/kept-payloads.ts';
+import { admittingMeter } from '../testing/recording-meter.ts';
 
 describe('a run as it was recorded', () => {
   it('is read by its address or by its id in its playbook, and is nothing for a run there is not', async () => {
@@ -20,7 +24,7 @@ describe('a run as it was recorded', () => {
 
     expect(read).toMatchObject({
       run: { run_id: askedRunId, status: 'started', record: { ...askedRequest, message: question } },
-      input: { campaign: 'Spring' },
+      input: { inline: { campaign: 'Spring' } },
       awaitsSettlement: true,
       work: [],
       answer: null,
@@ -129,9 +133,74 @@ describe('a settlement made through the writer of a playbook', () => {
 
     expect(
       await Effect.runPromise(settle(run, { status: 'succeeded', output: { choice: 'approve' }, by: 'acme-admin' })),
-    ).toMatchObject({ status: 'succeeded', output: { choice: 'approve' } });
+    ).toMatchObject({ status: 'succeeded' });
     expect(await attempted(settle({ ...run, id: 'nope' }, { status: 'failed' }))).toMatchObject(
       Result.fail({ _tag: 'not_found' }),
     );
+  });
+});
+
+const inputValue = { i: 'i'.repeat(3000) };
+
+const outputValue = { o: 'o'.repeat(3000) };
+
+const answerValue = { a: 'a'.repeat(3000) };
+
+const keptInput = keptArmOf(inputValue);
+
+const keptOutput = keptArmOf(outputValue);
+
+const keptAnswer = keptArmOf(answerValue);
+
+const keptRunId = '0199a3c4-7d2e-7c1a-9b3f-0000000000b1';
+
+async function aRunKeptOutside() {
+  const watched = watchedStore();
+  const { ledger } = harness(admittingMeter, watched.store);
+  const context = {
+    runId: keptRunId,
+    by: 'acme-admin',
+    at: '2026-10-01T09:00:00.000Z',
+    definitionType: 'asking',
+    definitionName: 'ask',
+    definitionVersion: 1,
+  };
+  const started = { input_sha256: keptInput.sha256, input_bytes: keptInput.bytes, started_by: recordedAdmin };
+  const answered = { answer_sha256: keptAnswer.sha256, answer_bytes: keptAnswer.bytes, answered_by: recordedAdmin };
+  const succeeded = { output_sha256: keptOutput.sha256, output_bytes: keptOutput.bytes, record: {} };
+  const alpha = { org: 'acme', playbook: 'alpha' };
+  await Effect.runPromise(
+    Effect.andThen(
+      Effect.forEach([inputValue, outputValue, answerValue], (value: Schema.Json) =>
+        keptIn(ledger.service.content, alpha, value),
+      ),
+      recordedAsGiven(
+        ledger.service,
+        `playbook/acme/alpha/runs/${keptRunId}`,
+        [
+          { type: 'run_started', data: { ...started, finishes_later: true } },
+          { type: 'run_deferred', data: { record: { to: 'ada' } } },
+          { type: 'request_answered', data: answered },
+          { type: 'run_succeeded', data: succeeded },
+        ],
+        context,
+      ),
+    ),
+  );
+  return { ledger, watched };
+}
+
+describe('a run whose payloads its playbook keeps outside the run, as it was recorded', () => {
+  it('carries its input, output and answer by their digests and sizes, reading none of them', async () => {
+    const { ledger, watched } = await aRunKeptOutside();
+    const address = { org: 'acme', playbook: 'alpha', id: keptRunId };
+
+    expect(await Effect.runPromise(recordedRunIn(ledger.service, address))).toMatchObject({
+      run: { status: 'succeeded', output: { kept: keptOutput } },
+      input: { kept: keptInput },
+      answer: { answer: { kept: keptAnswer } },
+      awaitsSettlement: false,
+    });
+    expect(watched.reads()).toBe(0);
   });
 });

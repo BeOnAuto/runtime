@@ -1,6 +1,9 @@
 import { sha256Of } from '@on.auto/content';
-import type { Schema } from 'effect';
+import type { Unavailable } from '@on.auto/operations';
+import { outputPayloadOf } from '@on.auto/operations/payloads';
+import { Result, type Schema } from 'effect';
 
+import { comparedPayloads, comparedWithoutItsValue, type Compared } from './payload-comparisons.ts';
 import type { RunResult } from './run-commands.ts';
 
 function canonical(value: Schema.Json): Schema.Json {
@@ -19,18 +22,34 @@ function canonical(value: Schema.Json): Schema.Json {
   );
 }
 
-export function digestOf(value: Schema.Json): string {
+function digestOf(value: Schema.Json): string {
   return sha256Of(JSON.stringify(canonical(value)));
 }
 
-export function settlementKeyOf(result: RunResult): string {
-  if (result.type === 'run_succeeded') {
-    return JSON.stringify([result.type, digestOf(result.data.output)]);
-  }
+export function canonicallyEqual(recorded: Schema.Json, offered: Schema.Json): boolean {
+  return digestOf(recorded) === digestOf(offered);
+}
+
+function settlementKeyOf(result: RunResult): string {
   if (result.type === 'run_rejected') {
     const { rejection } = result.data;
     const kind = 'kind' in rejection ? rejection.kind : undefined;
     return JSON.stringify([result.type, rejection.reason, kind ?? null]);
   }
   return JSON.stringify([result.type]);
+}
+
+function settlementsCompared(recorded: RunResult | undefined, offered: RunResult): Compared {
+  if (recorded !== undefined && recorded.type === 'run_succeeded' && offered.type === 'run_succeeded') {
+    return comparedPayloads(outputPayloadOf(recorded), outputPayloadOf(offered), canonicallyEqual);
+  }
+  return recorded !== undefined && settlementKeyOf(recorded) === settlementKeyOf(offered) ? 'same' : 'different';
+}
+
+export function settledTheSame(
+  recorded: RunResult | undefined,
+  offered: RunResult,
+): Result.Result<boolean, Unavailable> {
+  const compared = settlementsCompared(recorded, offered);
+  return compared === 'unknown' ? Result.fail(comparedWithoutItsValue) : Result.succeed(compared === 'same');
 }

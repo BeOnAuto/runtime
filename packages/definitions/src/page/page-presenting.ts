@@ -7,6 +7,8 @@ import type { SubjectPage } from './page-facts.ts';
 import { glanceShown } from './page-glance.ts';
 import { savedPageIn } from './page-key.ts';
 import {
+  glanceNamesTheOutput,
+  namesTheOutput,
   runsShown,
   resultShown,
   latestRunVariables,
@@ -44,10 +46,14 @@ function documentOf({ page, of, written }: Pick<PlacedPage, 'page' | 'of' | 'wri
   return Option.getOrUndefined(Result.getOrElse(savedPageIn(page.source, readAs), Option.none));
 }
 
-export function pageResultOf(
-  placed: Pick<PlacedPage, 'page' | 'of' | 'written' | 'subject'>,
-  run: RunShown,
-): Effect.Effect<string | undefined> {
+type PlacedResult = Pick<PlacedPage, 'page' | 'of' | 'written' | 'subject'>;
+
+export function resultNamesTheOutput(placed: Pick<PlacedPage, 'page' | 'of' | 'written'>): boolean {
+  const template = documentOf(placed)?.templates.result;
+  return template !== undefined && namesTheOutput(template);
+}
+
+export function pageResultOf(placed: PlacedResult, run: RunShown): Effect.Effect<string | undefined> {
   const template = documentOf(placed)?.templates.result;
   return template === undefined
     ? Effect.undefined
@@ -100,7 +106,8 @@ const glanceOver = Effect.fnUntraced(function* (placed: PlacedPage, { kept, mome
   const shown = viewsShownOf(kept);
   const declared = document.data?.views ?? {};
   const views = shown.state === 'live' ? viewsOf(shown.views, declared) : viewsOf({}, declared);
-  const ended = yield* Effect.orDie(latestEndedRunOf(placed.subject.type, placed.subject.name));
+  const { type, name } = placed.subject;
+  const ended = yield* Effect.orDie(latestEndedRunOf(type, name, glanceNamesTheOutput(document.glance)));
   const last = latestRunVariables(ended);
   const glance = glanceShown(document.glance, {
     variables: {

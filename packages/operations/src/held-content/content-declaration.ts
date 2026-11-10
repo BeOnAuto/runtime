@@ -1,4 +1,4 @@
-import { Schema, SchemaAST } from 'effect';
+import { JsonPointer as Pointers, Schema, SchemaAST } from 'effect';
 
 export type JsonPointer = `/${string}`;
 
@@ -20,6 +20,8 @@ export interface FactDeclaration {
 export type ContentHolders = ReadonlyMap<string, ContentDeclaration>;
 
 export const heldContentAnnotation = 'heldContent';
+
+export const keptPayloadAnnotation = 'keptPayload';
 
 export const everyElement = '*';
 
@@ -54,6 +56,47 @@ function typeOf(ast: SchemaAST.Objects): string | undefined {
   return type !== undefined && SchemaAST.isLiteral(type) ? String(type.literal) : undefined;
 }
 
+function payloadNamedBy(member: SchemaAST.AST): readonly string[] {
+  const name: unknown = SchemaAST.resolve(member)?.[keptPayloadAnnotation];
+  return typeof name === 'string' ? [name] : [];
+}
+
+function pointersOf(name: string, within: JsonPointer | ''): PayloadPointers {
+  return {
+    sha256: `${within}/${Pointers.escapeToken(`${name}_sha256`)}`,
+    bytes: `${within}/${Pointers.escapeToken(`${name}_bytes`)}`,
+  };
+}
+
+function keptPointersIn(ast: SchemaAST.AST, within: JsonPointer | ''): readonly PayloadPointers[] {
+  if (SchemaAST.isUnion(ast)) {
+    return ast.types.flatMap((member) => keptPointersIn(member, within));
+  }
+  if (SchemaAST.isArrays(ast)) {
+    return ast.rest.flatMap((element) => keptPointersIn(element, `${within}/${everyElement}`));
+  }
+  if (!SchemaAST.isObjects(ast)) {
+    return [];
+  }
+  return ast.propertySignatures.flatMap(({ name, type }) => [
+    ...payloadNamedBy(type).map((payload) => pointersOf(payload, within)),
+    ...keptPointersIn(type, `${within}/${Pointers.escapeToken(String(name))}`),
+  ]);
+}
+
+function requireKeptDeclared(type: string, fact: SchemaAST.Objects, { payloads = [] }: ContentDeclaration): void {
+  const data = fact.propertySignatures.find(({ name }) => name === 'data')?.type;
+  const declared = new Set(payloads.map((pair) => JSON.stringify(pair)));
+  const undeclared = (data === undefined ? [] : keptPointersIn(data, '')).filter(
+    (pair) => !declared.has(JSON.stringify(pair)),
+  );
+  if (undeclared.length > 0) {
+    throw new Error(
+      `The fact ${type} may keep ${undeclared.map(({ sha256 }) => sha256).join(', ')} outside it but declares no payload there, so nothing would hold its content`,
+    );
+  }
+}
+
 function declaredIn(ast: SchemaAST.AST): readonly Declared[] {
   if (SchemaAST.isUnion(ast)) {
     return ast.types.flatMap((member) => declaredIn(member));
@@ -63,7 +106,12 @@ function declaredIn(ast: SchemaAST.AST): readonly Declared[] {
   }
   const type = typeOf(ast);
   const declared: unknown = SchemaAST.resolve(ast)?.[heldContentAnnotation];
-  return type === undefined || declared === undefined ? [] : [[type, declarationOf(declared)]];
+  if (type === undefined) {
+    return [];
+  }
+  const declaration = declared === undefined ? {} : declarationOf(declared);
+  requireKeptDeclared(type, ast, declaration);
+  return declared === undefined ? [] : [[type, declaration]];
 }
 
 function requireNoPayloadReleased(declared: readonly Declared[]): readonly Declared[] {

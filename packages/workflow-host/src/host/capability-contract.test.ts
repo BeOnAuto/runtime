@@ -9,11 +9,14 @@ import {
   type DefinitionSummary,
   type PlaybookOperation,
   type PreparedDefinition,
+  type RecordedWork,
+  type ReplyIdentity,
   type RunAccount,
   type RunAttempt,
   type RunContext,
   type RunJournal,
   type RunLineage,
+  type Settlement,
   type Standing,
   type StrippedForms,
 } from '@on.auto/definitions';
@@ -25,10 +28,12 @@ import type {
   InvalidInput,
   PlaybookAddress,
   Presenter,
+  RecordedCaller,
   Registration,
   TriggerLink,
   Unavailable,
 } from '@on.auto/operations';
+import type { Payload } from '@on.auto/operations/payloads';
 import type { JudgedEvent, MatchedFilter, PageVerdicts, ProgramPool } from '@on.auto/workflow-engine/dsl';
 import type { Effect, Schema } from 'effect';
 import { describe, expect, expectTypeOf, it } from 'vitest';
@@ -224,10 +229,51 @@ interface ContractThree extends Omit<ContractTwo, 'runContext'> {
   };
 }
 
+interface CancelledRunOfContractFour {
+  readonly run: { readonly org: string; readonly playbook: string; readonly id: string };
+  readonly record: Schema.JsonObject;
+  readonly kind: 'requested' | 'deadline' | 'parent_ended';
+  readonly reason: string;
+  readonly answer: {
+    readonly answer: Payload<Schema.Json>;
+    readonly claimedFor?: string;
+    readonly reply?: ReplyIdentity;
+    readonly by: RecordedCaller;
+    readonly at: string;
+  } | null;
+  readonly work: readonly RecordedWork[];
+}
+
+interface ContractFour extends Omit<ContractThree, 'capability'> {
+  readonly capability: {
+    readonly type: string;
+    readonly title: string;
+    readonly guide: { readonly name: string; readonly onThisServer?: string };
+    readonly noun: { readonly one: string; readonly other: string };
+    readonly describeOutput: (output: Schema.Json, record?: Schema.JsonObject) => string;
+    readonly mediaType: string;
+    readonly longestAnyRunMs: number;
+    readonly reachesOutside: boolean;
+    readonly mayChangeOutside: boolean;
+    readonly outsideTheDirectoryListing?: true;
+    readonly mostActive: number;
+    readonly standing: Standing;
+    readonly cancel: (run: CancelledRunOfContractFour) => Settlement;
+    readonly runWords: {
+      readonly deferralType: string;
+      readonly deferral: (record: Schema.JsonObject) => RunAccount | undefined;
+    };
+    readonly facts: { readonly onRuns: readonly DeclaredFact[]; readonly streams: readonly Presenter[] };
+    readonly resumes: boolean;
+    readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
+  };
+}
+
 interface TypesOfEachContract {
   readonly 1: ContractOne;
   readonly 2: ContractTwo;
   readonly 3: ContractThree;
+  readonly 4: ContractFour;
 }
 
 type ThisContract = TypesOfEachContract[typeof capabilityContract];
@@ -244,6 +290,6 @@ describe('the contract by which a capability is made and served', () => {
     expectTypeOf<DueWork>().toEqualTypeOf<ThisContract['dueWork']>();
     expectTypeOf<DueItem>().toEqualTypeOf<ThisContract['dueItem']>();
     expectTypeOf<PlaybookOperation>().toEqualTypeOf<ThisContract['playbookOperation']>();
-    expect(capabilityContract).toBe(3);
+    expect(capabilityContract).toBe(4);
   });
 });

@@ -114,7 +114,7 @@ describe('a question to a prediction function of a runtime an extension fills ca
 describe('a runtime an extension fills capability/prediction of', () => {
   it('does not start for an extension built against another contract, naming it, the point and both contracts', async () => {
     await expect(servingWith([forecastsFilling('@acme/forecasts', 1)])).rejects.toThrow(
-      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 3',
+      'The extension @acme/forecasts is refused: it provides capability/prediction built against contract 1, and this runtime accepts contracts 2 to 4',
     );
   });
 

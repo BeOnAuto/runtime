@@ -1,4 +1,5 @@
 import type { RecordedAnswer, Settlement } from '@on.auto/definitions';
+import { payloadMembers } from '@on.auto/operations/payloads';
 
 import type { DeliveredRecord } from '../run/request-record.ts';
 import { throughWords, type Route } from '../tool-blocks/routes.ts';
@@ -13,7 +14,7 @@ export function expiredSettlement({ expires_at: expiresAt }: { readonly expires_
 }
 
 export function answeredSettlement({ answer, by }: Pick<RecordedAnswer, 'answer' | 'by'>): Settlement {
-  return { status: 'succeeded', output: answer, record: {}, by: by.id };
+  return { status: 'succeeded', ...payloadMembers('output', answer), record: {}, by: by.id };
 }
 
 export function deliveredSettlement(at: string): Settlement {

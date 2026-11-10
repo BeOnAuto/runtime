@@ -224,6 +224,7 @@ function readerOf({ service }: MemoryLedger): PlaybookReader['Service'] {
     ...playbookBoundRunOutcomesReader(service, alpha),
     ...playbookBoundProjectionReader(service, alpha),
     readContent: (sha256) => service.content.get(alpha, sha256),
+    readContentHead: (sha256) => service.content.getHead(alpha, sha256),
   };
 }
 

@@ -4,7 +4,7 @@ import type { Schema } from 'effect';
 
 import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
-import type { RunDetail } from '../runs/run.ts';
+import type { RunDetailAsRecorded } from '../runs/run.ts';
 import { foundRun } from './get-run.ts';
 
 interface Reading {
@@ -21,7 +21,7 @@ export const runWithSample = refusedAtTheRun(
   'run_id renders the page as of a run; give run_id or sample_output, not both',
 );
 
-function runOfAnother(run: RunDetail, type: string, name: string): InvalidInput {
+function runOfAnother(run: RunDetailAsRecorded, type: string, name: string): InvalidInput {
   return refusedAtTheRun(`The run ${run.run_id} is a run of ${run.type}/${run.name}, not of ${type}/${name}`);
 }
 
@@ -33,12 +33,12 @@ export const runOfThePage = Effect.fnUntraced(function* ({ type, stored }: Readi
   return run;
 });
 
-export function viewsRead({ pages, type, stored }: Reading, run: RunDetail | undefined) {
+export function viewsRead({ pages, type, stored }: Reading, run: RunDetailAsRecorded | undefined) {
   const subject = { type, name: stored.name };
   return run === undefined || run.status === 'started' ? pages.viewsOf(subject) : pages.asOfRun(subject, run.run_id);
 }
 
-export function overOf(sample: Schema.Json | undefined, run: RunDetail | undefined): ResultOver {
+export function overOf(sample: Schema.Json | undefined, run: RunDetailAsRecorded | undefined): ResultOver {
   if (run !== undefined) {
     return { run };
   }

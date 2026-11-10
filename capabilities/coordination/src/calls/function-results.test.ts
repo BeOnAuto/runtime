@@ -1,6 +1,36 @@
+import type { RunEnding } from '@on.auto/definitions';
 import { describe, expect, it } from 'vitest';
 
-import { definitionRunResultOf } from './function-results.ts';
+import { definitionRunResultOf, endedRunResultOf } from './function-results.ts';
+
+const onTheRun = {
+  at: '2026-10-01T09:00:00.000Z',
+  by: 'acme-admin',
+  runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a',
+  definitionType: 'computation',
+  definitionName: 'score',
+  definitionVersion: 1,
+};
+
+describe('the result of a run a workflow called, from its ending', () => {
+  it('is the output of a success that holds it, and a failure naming why for one whose output its playbook keeps outside the run', () => {
+    const inline: RunEnding = { type: 'run_succeeded', data: { output: { a: 1 }, record: {} }, context: onTheRun };
+    const kept: RunEnding = {
+      type: 'run_succeeded',
+      data: { output_sha256: 'c'.repeat(64), output_bytes: 4096, record: {} },
+      context: onTheRun,
+    };
+
+    expect([endedRunResultOf(inline), endedRunResultOf(kept)]).toEqual([
+      { status: 'succeeded', output: { a: 1 } },
+      {
+        status: 'failed',
+        detail:
+          'The run succeeded with an output its playbook keeps outside the run, which a workflow is not yet handed',
+      },
+    ]);
+  });
+});
 
 describe('the result of running a definition through the operations', () => {
   it('is the output of the run that succeeded', () => {
@@ -11,6 +41,17 @@ describe('the result of running a definition through the operations', () => {
     expect(definitionRunResultOf({ status: 'succeeded', output: { status: 'succeeded' } })).toEqual({
       status: 'succeeded',
       output: null,
+    });
+  });
+});
+
+describe('the result of running a definition whose run kept its output outside it', () => {
+  it('is a failure naming the digest of a success whose kept output is missing or erased, as its ending is', () => {
+    const lost = { status: 'succeeded', output_sha256: 'a'.repeat(64), output_bytes: 91_844 };
+
+    expect(definitionRunResultOf({ status: 'succeeded', output: lost })).toEqual({
+      status: 'failed',
+      detail: `The run succeeded, but its output, kept outside the run under ${'a'.repeat(64)}, is missing from its playbook or was erased, so the workflow is not handed it`,
     });
   });
 

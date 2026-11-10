@@ -14,7 +14,7 @@ import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
 import { RunEventSchema, type RecordedRunEvent } from '../runs/run-events.ts';
 import { runOf } from '../runs/run-lookup.ts';
 import { evolveRun, startedRunOf, type RunStreamState } from '../runs/run-state.ts';
-import { causeOf, RunSchema, type Run, type RunRejection } from '../runs/run.ts';
+import { causeOf, RunSchema, type RunAsRecorded, type RunRejection } from '../runs/run.ts';
 
 const ListedRejectionSchema = Schema.Struct({
   reason: Schema.Literals(['invalid_input', 'unavailable', 'conflict', 'cancelled', 'unanswered']),
@@ -35,7 +35,7 @@ const ListedRejectionSchema = Schema.Struct({
 });
 
 export const ListedRunSchema = Schema.Struct({
-  ...Struct.omit(RunSchema.fields, ['output', 'rejection']),
+  ...Struct.omit(RunSchema.fields, ['output', 'output_sha256', 'output_bytes', 'rejection']),
   rejection: Schema.optionalKey(ListedRejectionSchema),
 }).annotate({
   identifier: 'ListedRun',
@@ -80,7 +80,7 @@ function listedRejectionOf(rejection: RunRejection): ListedRejection {
   };
 }
 
-function listedOf(run: Run): ListedRun {
+function listedOf(run: RunAsRecorded): ListedRun {
   const listed = Struct.omit(run, ['output', 'rejection']);
   return run.rejection === undefined ? listed : { ...listed, rejection: listedRejectionOf(run.rejection) };
 }

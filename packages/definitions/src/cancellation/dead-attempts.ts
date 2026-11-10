@@ -8,15 +8,15 @@ import {
 import { Effect, Option } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { sourceToPrepare } from '../operations/definition-views.ts';
-import { definitionVersionIn } from '../registry/definition-versions.ts';
 import type { RunCancel } from '../runs/run-commands.ts';
 import { isChangedSinceRead, runDecider, runDeciderAsRead, runStreamNameOf } from '../runs/run-decider.ts';
 import { attemptIsLive } from '../runs/run-decisions.ts';
+import type { KeptContentReader } from '../runs/run-payloads.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
-import { endsWithinItsCall, startedRunOf, type RecordedRunState, type RunStreamState } from '../runs/run-state.ts';
+import { endsWithinItsCall, startedRunOf, type RunStreamState } from '../runs/run-state.ts';
+import { longestRunOf } from './longest-runs.ts';
 
-export type CancelLedger = StreamReader & StreamAges & StreamWriter;
+export type CancelLedger = StreamReader & StreamAges & StreamWriter & KeptContentReader;
 
 interface CancellingParts {
   readonly ledger: CancelLedger;
@@ -32,27 +32,6 @@ interface Judged {
 interface Cancelling extends CancellingParts {
   readonly run: RunStreamAddress;
   readonly stream: string;
-}
-
-function longestRunOf(
-  { ledger, capabilities, run: address }: Cancelling,
-  { run, input }: RecordedRunState,
-): Effect.Effect<Option.Option<number>> {
-  const capability = capabilities.find(({ type }) => type === run.type);
-  if (capability === undefined) {
-    return Effect.succeedNone;
-  }
-  const version = { type: run.type, name: run.name, version: run.definition_version };
-  return Effect.flatMap(definitionVersionIn(ledger, address, version), (found) =>
-    found === undefined
-      ? Effect.succeedNone
-      : Effect.option(
-          Effect.map(
-            capability.prepare(sourceToPrepare(capability.type, found.source), found.stripped),
-            ({ longestRunMsFor }) => longestRunMsFor(input),
-          ),
-        ),
-  );
 }
 
 function judgedWithinItsCall(cancelling: Cancelling, state: RunStreamState): Effect.Effect<Option.Option<Judged>> {

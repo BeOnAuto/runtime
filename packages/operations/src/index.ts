@@ -14,7 +14,7 @@ export {
   type BoundedPage,
   type Examined,
 } from './reading/page-bounds.ts';
-export { PlaybookReader, type PlaybookContentReader } from './ledger/playbook-reader.ts';
+export { PlaybookReader, playbookPayloadReader, type PlaybookContentReader } from './ledger/playbook-reader.ts';
 export { isCalendarDay } from './reading/calendar-days.ts';
 export { PlaybookContext, type PlaybookAddress } from './caller/playbook-context.ts';
 export { PlaybookLifecycle } from './caller/playbook-lifecycle.ts';

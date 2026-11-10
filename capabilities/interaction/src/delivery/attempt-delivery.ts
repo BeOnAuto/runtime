@@ -15,16 +15,19 @@ export interface Delivered {
   readonly end: AttemptEnd;
 }
 
-export interface DeliveryPlan {
+export interface RefusalPlan {
   readonly request: DueRequest;
   readonly record: DeliveringRecord;
-  readonly input: Schema.Json;
   readonly attempting: Attempting;
+}
+
+export interface DeliveryPlan extends RefusalPlan {
+  readonly input: Schema.Json;
 }
 
 function recordedStart(
   parts: DeliveryParts,
-  { request, attempting }: DeliveryPlan,
+  { request, attempting }: RefusalPlan,
   call?: StartedFields,
 ): Effect.Effect<string | undefined> {
   return Effect.map(
@@ -54,16 +57,8 @@ function deliveredOn(
   const rendered = deliveryArgumentsOf(record.deliver.with, record, asking, clock);
   if (Result.isFailure(rendered)) {
     const { failure } = rendered;
-    const end: AttemptEnd = {
-      type: 'delivery_refused',
-      data: {
-        because: failure.reason === 'too_large' ? 'too_large' : 'unworkable',
-        detail: undeliverableWords(failure),
-      },
-    };
-    return Effect.map(recordedStart(parts, plan), (startedId): Delivered | undefined =>
-      startedId === undefined ? undefined : { startedId, end },
-    );
+    const because = failure.reason === 'too_large' ? 'too_large' : 'unworkable';
+    return refusedOnce(parts, plan, { because, detail: undeliverableWords(failure) });
   }
   return Effect.flatMap(parts.tools.preparedCall(callOf(plan, rendered.success.input)), ({ fields, called }) =>
     Effect.flatMap(recordedStart(parts, plan, fields), (startedId) =>
@@ -71,6 +66,19 @@ function deliveredOn(
         ? Effect.undefined
         : Effect.map(called, (once): Delivered => ({ startedId, end: endOf(once, record, clock) })),
     ),
+  );
+}
+
+type Refusal = Extract<AttemptEnd, { readonly type: 'delivery_refused' }>['data'];
+
+export function refusedOnce(
+  parts: DeliveryParts,
+  plan: RefusalPlan,
+  refusal: Refusal,
+): Effect.Effect<Delivered | undefined> {
+  const end: AttemptEnd = { type: 'delivery_refused', data: refusal };
+  return Effect.map(recordedStart(parts, plan), (startedId): Delivered | undefined =>
+    startedId === undefined ? undefined : { startedId, end },
   );
 }
 

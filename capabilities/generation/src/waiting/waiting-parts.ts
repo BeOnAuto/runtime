@@ -2,7 +2,7 @@ import {
   recordedRunIn,
   runCorrelationIn,
   runSettler,
-  type RunDetail,
+  type RunDetailAsRecorded,
   type RunStreamAddress,
   type Settlement,
 } from '@on.auto/definitions';
@@ -46,7 +46,7 @@ export interface WaitingPlace {
 
 export interface Waiting {
   readonly address: RunStreamAddress;
-  readonly run: RunDetail;
+  readonly run: RunDetailAsRecorded;
   readonly wait: GenerationWait;
   readonly madeBy: MadeByAGeneration;
   readonly lineage: Lineage;
@@ -101,10 +101,14 @@ export function waitingIn(
   });
 }
 
+function endedBefore(): Effect.Effect<void> {
+  return Effect.void;
+}
+
 export function settled(parts: WaitingParts, { address, lineage }: Waiting, settlement: Settlement) {
   return runSettler(parts.ledger)(address, settlement, lineage).pipe(
     Effect.asVoid,
-    Effect.catchTags({ conflict: () => Effect.void, not_found: Effect.die }),
+    Effect.catchTags({ conflict: endedBefore, unavailable: endedBefore, not_found: Effect.die }),
   );
 }
 

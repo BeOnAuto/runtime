@@ -1,7 +1,13 @@
-import { recordedRunIn, type Settlement } from '@on.auto/definitions';
+import {
+  payloadAsRead,
+  payloadsKeptIn,
+  recordedRunIn,
+  type PayloadAsRead,
+  type Settlement,
+} from '@on.auto/definitions';
 import { Clock, Effect } from 'effect';
 
-import { deliveredOnce } from '../delivery/attempt-delivery.ts';
+import { deliveredOnce, refusedOnce, type Delivered, type RefusalPlan } from '../delivery/attempt-delivery.ts';
 import type { AttemptEnd } from '../delivery/attempt-end.ts';
 import { endedFact, isLastAttempt, lostFact } from '../delivery/attempt-facts.ts';
 import { isInteractionNotification, routeOfRow } from '../requests/request-rows.ts';
@@ -35,6 +41,27 @@ export function lostAttempt(parts: DeliveryParts, { address, row, lineage }: Due
   return Effect.asVoid(recordedCall(parts.record, address, lostFact(row), lineage));
 }
 
+const lostWords: Readonly<Record<'missing' | 'erased', string>> = {
+  missing: "is missing from the playbook's content",
+  erased: 'was erased',
+};
+
+function attemptedWith(
+  parts: DeliveryParts,
+  plan: RefusalPlan,
+  input: PayloadAsRead,
+): Effect.Effect<Delivered | undefined> {
+  if ('read' in input) {
+    return deliveredOnce(parts, { ...plan, input: input.read });
+  }
+  return input.unread === 'unavailable'
+    ? Effect.undefined
+    : refusedOnce(parts, plan, {
+        because: 'unworkable',
+        detail: `The request's input, which its playbook kept outside its run, ${lostWords[input.unread]}, so its message cannot be written`,
+      });
+}
+
 export function nextAttempt(parts: DeliveryParts, request: DueRequest): Effect.Effect<void> {
   const { address, row, lineage } = request;
   return Effect.gen(function* () {
@@ -42,11 +69,12 @@ export function nextAttempt(parts: DeliveryParts, request: DueRequest): Effect.E
     if (recorded?.awaitsSettlement !== true) {
       return;
     }
+    const input = yield* payloadAsRead(recorded.input, payloadsKeptIn(parts.ledger.content, address));
     const record = deliveringRecordOf(recorded.run.record);
     const { server, tool } = record.deliver;
     const attempting = { number: row.attempts + 1, target: row.party, server, tool };
     const began = yield* Clock.currentTimeMillis;
-    const delivered = yield* deliveredOnce(parts, { request, record, input: recorded.input, attempting });
+    const delivered = yield* attemptedWith(parts, { request, record, attempting }, input);
     if (delivered === undefined) {
       return;
     }

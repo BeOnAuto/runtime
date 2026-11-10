@@ -51,8 +51,8 @@ export interface Harness {
 
 export function harness(
   playbookRegistry: Layer.Layer<PlaybookRegistry, never, Ledger> = memoryPlaybookRegistry([]),
+  ledger: MemoryLedger = memoryLedger(),
 ): Harness {
-  const ledger = memoryLedger();
   const services = Layer.mergeAll(
     ledger.layer,
     Layer.provide(playbookRegistry, ledger.layer),

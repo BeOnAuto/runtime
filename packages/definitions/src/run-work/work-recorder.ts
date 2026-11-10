@@ -1,6 +1,7 @@
 import {
   PlaybookIdSchema,
   Conflict,
+  type Unavailable,
   OrgIdSchema,
   playbookCallerOf,
   messageIdOf,
@@ -34,7 +35,7 @@ export type RecordWork = (
   work: Work,
   lineage: Lineage,
   rule?: WorkRule,
-) => Effect.Effect<RecordedWorkAt, Conflict>;
+) => Effect.Effect<RecordedWorkAt, Conflict | Unavailable>;
 
 const isWellFormed = Schema.is(
   Schema.Struct({ org: OrgIdSchema, playbook: PlaybookIdSchema, id: Schema.String.check(Schema.isUUID()) }),
@@ -91,7 +92,7 @@ export type AnswerRun = (
   answer: GivenAnswer,
   by: RecordedCaller,
   lineage: Lineage,
-) => Effect.Effect<void, Conflict>;
+) => Effect.Effect<void, Conflict | Unavailable>;
 
 export function playbookBoundAnswerer(writer: StreamWriter): AnswerRun {
   return (id, answer, by, lineage) =>

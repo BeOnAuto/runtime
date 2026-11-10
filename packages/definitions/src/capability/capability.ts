@@ -1,18 +1,11 @@
-import type {
-  Conflict,
-  InvalidInput,
-  PlaybookAddress,
-  RunCancelled,
-  Settlement,
-  Unavailable,
-} from '@on.auto/operations';
+import type { Conflict, InvalidInput, PlaybookAddress, RunCancelled, Unavailable } from '@on.auto/operations';
 import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
 import type { CallEnd } from '../journal/call-numbering.ts';
 import type { Trigger } from '../registry/definition-triggers.ts';
 import { noFacts, type CapabilityFacts } from '../run-work/declared-facts.ts';
-import type { CancelRequestKind } from '../runs/run-events.ts';
+import type { CancelRequestKind, Settlement } from '../runs/run-events.ts';
 import type { RecordedAnswer, RecordedWork } from '../runs/run-state.ts';
 import type { RunAttempt, RunContext } from './run-context.ts';
 import { noStrippedForms, type StrippedForms } from './stripped-forms.ts';
@@ -188,7 +181,7 @@ export interface Capability {
   readonly prepare: (source: string, stripped?: StrippedForms) => Effect.Effect<PreparedDefinition, InvalidInput>;
 }
 
-export const capabilityContract = 3;
+export const capabilityContract = 4;
 
 export const earliestCapabilityContractServed = 2;
 

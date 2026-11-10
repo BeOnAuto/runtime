@@ -1,9 +1,10 @@
 import type { Schema } from 'effect';
 
+import type { PayloadUnread } from '../runs/run-payloads.ts';
 import { recordOf } from '../shapes/shape-values.ts';
 import type { RenderClock } from '../template/render-clock.ts';
 import type { ParsedTemplate } from '../template/template-parsing.ts';
-import type { PageViews } from './page-document.ts';
+import type { PageViews, ParsedGlance } from './page-document.ts';
 import { shown } from './rendered-blocks.ts';
 
 interface RunRejectionShown {
@@ -12,14 +13,20 @@ interface RunRejectionShown {
   readonly detail?: string;
 }
 
+interface RunTimes {
+  readonly started: string;
+  readonly ended: string | null;
+  readonly version: number;
+}
+
+interface OutputUnreadShown {
+  readonly because: PayloadUnread;
+  readonly bytes: number;
+}
+
 export type RunShown =
-  | {
-      readonly status: 'started' | 'succeeded';
-      readonly output: Schema.Json;
-      readonly started: string;
-      readonly ended: string | null;
-      readonly version: number;
-    }
+  | ({ readonly status: 'started' | 'succeeded'; readonly output: Schema.Json } & RunTimes)
+  | ({ readonly status: 'succeeded'; readonly unread: OutputUnreadShown } & RunTimes)
   | { readonly status: 'rejected'; readonly rejection: RunRejectionShown }
   | { readonly status: 'failed' };
 
@@ -60,12 +67,41 @@ function rejectedWords({ reason, kind, detail }: RunRejectionShown): string {
   return detail === undefined ? sentence : `${sentence} ${detail}`;
 }
 
+const sizeWords = new Intl.NumberFormat('en-US');
+
+const unreadWords: Readonly<Record<PayloadUnread, string>> = {
+  unavailable: 'could not be read just now; it shows here once it can be read',
+  missing: "is missing from the playbook's content",
+  erased: 'was erased',
+};
+
+function unreadOutputWords({ because, bytes }: OutputUnreadShown): string {
+  return `The result of this run, ${sizeWords.format(bytes)} bytes, ${unreadWords[because]}.`;
+}
+
+export function namesTheOutput({ variables }: Pick<ParsedTemplate, 'variables'>): boolean {
+  return variables.some(({ path: [root] }) => root === 'output');
+}
+
+export function glanceNamesTheOutput(parsed: ParsedGlance): boolean {
+  if (parsed.kind === 'text') {
+    return namesTheOutput(parsed.template);
+  }
+  if (parsed.kind === 'list') {
+    return parsed.items.some((each) => glanceNamesTheOutput(each));
+  }
+  return parsed.kind === 'mapping' && parsed.entries.some(([, each]) => glanceNamesTheOutput(each));
+}
+
 export function resultShown(parsed: ParsedTemplate, run: RunShown, subject: SubjectShown, moment: ReadMoment): string {
   if (run.status === 'failed') {
     return runFailed;
   }
   if (run.status === 'rejected') {
     return rejectedWords(run.rejection);
+  }
+  if ('unread' in run) {
+    return unreadOutputWords(run.unread);
   }
   const variables = {
     output: run.output,
@@ -122,6 +158,6 @@ export function latestRunVariables(run?: RunShown): {
   if (run.status === 'failed' || run.status === 'rejected') {
     return { output: null, run: { status: run.status } };
   }
-  const { status, output, started, ended, version } = run;
-  return { output, run: { status, started, ended, version } };
+  const { status, started, ended, version } = run;
+  return { output: 'output' in run ? run.output : null, run: { status, started, ended, version } };
 }

@@ -8,7 +8,7 @@ import { decideOnRun } from './run-decisions.ts';
 import { RunEventSchema, runEventSchemaOf, type IsDeclared, type RecordedRunEvent } from './run-events.ts';
 import { evolveRun, type RunStreamState } from './run-state.ts';
 
-type RunReason = 'not_found' | 'conflict' | 'cancelled';
+type RunReason = 'not_found' | 'conflict' | 'cancelled' | 'unavailable';
 
 export type RunDecider = Decider<RunStreamState, RunCommand, RecordedRunEvent, RunReason>;
 

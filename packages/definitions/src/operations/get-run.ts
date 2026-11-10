@@ -6,7 +6,7 @@ import { RunReadSchema } from '../page/page-shown.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
 import { runWordsFor } from '../plain-language/run-words.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
-import type { RunDetail } from '../runs/run.ts';
+import { outputOf, withItsOutputShown } from '../runs/run-payloads.ts';
 import { RunIdInputField } from './definition-fields.ts';
 import { loadRun } from './run-access.ts';
 
@@ -14,11 +14,14 @@ export function foundRun(id: string) {
   return loadRun(id).pipe(Effect.flatMap((state) => runDetailOf(id, state)));
 }
 
-function withItsResult(pages: SubjectPages, detail: RunDetail) {
-  return Effect.orDie(pages.resultOf(detail.type, detail.name, { run: detail })).pipe(
-    Effect.map((result) => (result === undefined ? detail : { ...detail, page: { result } })),
-  );
-}
+const runRead = Effect.fnUntraced(function* (pages: SubjectPages, id: string) {
+  const detail = yield* foundRun(id);
+  const read = yield* outputOf(detail);
+  const shown = yield* withItsOutputShown(detail, read);
+  const over = { run: detail, ...(read === undefined ? {} : { read }) };
+  const result = yield* Effect.orDie(pages.resultOf(detail.type, detail.name, over));
+  return result === undefined ? shown : { ...shown, page: { result } };
+});
 
 export function defineGetRun(capabilities: readonly Capability[], pages: SubjectPages) {
   const runWords = runWordsFor(capabilities);
@@ -36,8 +39,8 @@ export function defineGetRun(capabilities: readonly Capability[], pages: Subject
     route: { method: 'GET', path: '/runs/{run_id}' },
     inputSchema: Schema.Struct({ run_id: RunIdInputField }),
     outputSchema: RunReadSchema,
-    reasons: ['not_found'],
-    handle: ({ run_id: id }) => Effect.flatMap(foundRun(id), (detail) => withItsResult(pages, detail)),
+    reasons: ['not_found', 'unavailable'],
+    handle: ({ run_id: id }) => runRead(pages, id),
     plainLanguage: {
       task: 'look up a run',
       attempt: () => 'look up the run',

@@ -1,3 +1,4 @@
+import type { ContentStore } from '@on.auto/content';
 import {
   Ledger,
   contentHoldersOf,
@@ -85,17 +86,23 @@ function readsRecordedIn(ledger: Ledger['Service'], recorded: (read: LedgerRead)
   });
 }
 
-export function harness(meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admittingMeter): Harness {
-  const ledger = memoryLedger(runOutcomeMapping);
+function ledgerReadsOf(ledger: MemoryLedger) {
   const reads: LedgerRead[] = [];
+  const service = readsRecordedIn(ledger.service, (read) => {
+    reads.push(read);
+  });
+  return { service, reads: () => reads };
+}
+
+export function harness(
+  meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admittingMeter,
+  store?: ContentStore,
+): Harness {
+  const ledger = memoryLedger(runOutcomeMapping, [], runContentHolders, store);
+  const read = ledgerReadsOf(ledger);
   const recording = recordingReporter();
   const services = Layer.mergeAll(
-    Layer.succeed(
-      Ledger,
-      readsRecordedIn(ledger.service, (read) => {
-        reads.push(read);
-      }),
-    ),
+    Layer.succeed(Ledger, read.service),
     memoryPlaybookRegistry(knownPlaybooks),
     recording.layer,
     TestClock.layer(),
@@ -118,7 +125,7 @@ export function harness(meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admi
   }
   return {
     ledger,
-    ledgerReads: () => reads,
+    ledgerReads: read.reads,
     reported: recording.reported,
     dispatch,
     run,

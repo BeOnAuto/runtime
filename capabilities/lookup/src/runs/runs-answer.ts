@@ -57,12 +57,15 @@ export const runsAnswerSchema: Schema.JsonObject = {
 
 export const nothingAnswered: Answering = { entries: [], entriesBytes: 0, record: { examined: 0, through: null } };
 
-export function wholeEntryOf({ run_id, definition_version, started_at, finished_at, output }: SucceededRun) {
+export function wholeEntryOf(
+  { run_id, definition_version, started_at, finished_at }: SucceededRun,
+  output: Schema.Json,
+) {
   return { run_id, definition_version, started_at, finished_at, output };
 }
 
-export function sizedEntryOf({ run_id, definition_version, started_at, finished_at, output }: SucceededRun) {
-  return { run_id, definition_version, started_at, finished_at, bytes: jsonBytesOf(output) };
+export function sizedEntryOf({ run_id, definition_version, started_at, finished_at }: SucceededRun, bytes: number) {
+  return { run_id, definition_version, started_at, finished_at, bytes };
 }
 
 export function withEntry(answering: Answering, entry: Schema.JsonObject, record: ReadRecord): Answering {

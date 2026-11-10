@@ -29,20 +29,34 @@ const subject: StoredDefinition = {
   updated_at: '2026-10-01T09:00:00.000Z',
 };
 
+const kept = { sha256: 'c'.repeat(64), bytes: 91_844 };
+
+const succeeded = { ...ran, status: 'succeeded', output: { kept }, finished_at: '2026-11-01T07:02:00.000Z' } as const;
+
+const times = { started: ran.started_at, ended: '2026-11-01T07:02:00.000Z', version: 2 };
+
 describe('a run as a page reads it', () => {
-  it('is going with no output yet, or succeeded with its output, its times and its version', () => {
+  it('is going with no output yet, or succeeded with its output as it was read, its times and its version', () => {
     expect([
       runShownOf({ ...ran, status: 'started' }),
-      runShownOf({ ...ran, status: 'succeeded', output: { posts: [] }, finished_at: '2026-11-01T07:02:00.000Z' }),
+      runShownOf(succeeded, { read: { posts: [] } }),
+      runShownOf(succeeded),
     ]).toEqual([
       { status: 'started', output: null, started: ran.started_at, ended: null, version: 2 },
-      {
-        status: 'succeeded',
-        output: { posts: [] },
-        started: ran.started_at,
-        ended: '2026-11-01T07:02:00.000Z',
-        version: 2,
-      },
+      { status: 'succeeded', output: { posts: [] }, ...times },
+      { status: 'succeeded', output: null, ...times },
+    ]);
+  });
+
+  it('is succeeded with the size of an output that could not be read, and why', () => {
+    expect(
+      (['unavailable', 'missing', 'erased'] as const).map((because) =>
+        runShownOf(succeeded, { unread: because, kept }),
+      ),
+    ).toEqual([
+      { status: 'succeeded', unread: { because: 'unavailable', bytes: 91_844 }, ...times },
+      { status: 'succeeded', unread: { because: 'missing', bytes: 91_844 }, ...times },
+      { status: 'succeeded', unread: { because: 'erased', bytes: 91_844 }, ...times },
     ]);
   });
 

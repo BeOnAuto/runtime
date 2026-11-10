@@ -77,11 +77,11 @@ function checkedFor(run: RecordedRun, answer: Schema.Json): Effect.Effect<Schema
     : Effect.succeed(answer);
 }
 
-function shownOf(id: string, { id: answerId, answer, claimedFor, reply, by, at }: AnswerTaken) {
+function shownOf(id: string, { id: answerId, answer, claimedFor, reply, by, at }: AnswerTaken, given: Schema.Json) {
   return {
     run_id: id,
     answer_id: answerId,
-    answer,
+    answer: 'inline' in answer ? answer.inline : given,
     ...(claimedFor === undefined ? {} : { claimed_for: claimedFor }),
     ...(reply === undefined ? {} : { reply }),
     answered_by: by,
@@ -109,7 +109,7 @@ const answered = Effect.fnUntraced(function* ({ id, answer, claimedFor }: Answer
     answeredBy,
     { causationId: row.request_id, correlationId: yield* correlationOfRun(id) },
   );
-  return shownOf(id, yield* answerTakenBy(id));
+  return shownOf(id, yield* answerTakenBy(id), checked);
 });
 
 export const answerInteraction = defineCommand('playbook', {
@@ -125,7 +125,7 @@ export const answerInteraction = defineCommand('playbook', {
     claimed_for: Schema.optionalKey(ClaimedForField),
   }),
   outputSchema: AnsweredRequestSchema,
-  reasons: ['invalid_input', 'not_found', 'conflict'],
+  reasons: ['invalid_input', 'not_found', 'conflict', 'unavailable'],
   handle: ({ run_id: id, answer, claimed_for: claimedFor }) => answered({ id, answer, claimedFor }),
   plainLanguage: {
     task: 'answer a request',

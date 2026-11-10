@@ -5,7 +5,8 @@ import {
   type RecordedFact,
   type RunContext,
 } from '@on.auto/operations';
-import { Option, type Schema } from 'effect';
+import { outputPayloadOf, type Payload, type PayloadNotRead, type PayloadReader } from '@on.auto/operations/payloads';
+import { Effect, Option, type Schema } from 'effect';
 
 import { DefinitionEventSchema, type RecordedDefinitionEvent } from '../registry/definition-events.ts';
 import { jsonBytesOf, nestsWithin } from '../runs/recorded-size.ts';
@@ -62,26 +63,60 @@ function withOutput(fact: CloudEvent, output: Schema.Json): CloudEvent {
     : { ...fact, data: { output_bytes: jsonBytesOf(output) } };
 }
 
+const bytesOfNull = jsonBytesOf(null);
+
+function mayCarryItsOutput(fact: CloudEvent, bytes: number): boolean {
+  return jsonBytesOf({ ...fact, data: { output: null } }) - bytesOfNull + bytes <= mostPublishedEventBytes;
+}
+
+function withItsSize(fact: CloudEvent, bytes: number): CloudEvent {
+  return { ...fact, data: { output_bytes: bytes } };
+}
+
+function withOutputAsRecorded(fact: CloudEvent, output: Payload<Schema.Json>): CloudEvent {
+  return 'inline' in output ? withOutput(fact, output.inline) : withItsSize(fact, output.kept.bytes);
+}
+
+function withOutputRead(
+  fact: CloudEvent,
+  output: Payload<Schema.Json>,
+  payloads: PayloadReader,
+): Effect.Effect<CloudEvent, PayloadNotRead> {
+  if ('inline' in output || !mayCarryItsOutput(fact, output.kept.bytes)) {
+    return Effect.succeed(withOutputAsRecorded(fact, output));
+  }
+  return Effect.map(payloads.json(output.kept), (value) => withOutput(fact, value));
+}
+
 function rejectionOf(rejection: RunRejection): Schema.JsonObject {
   const kind = 'kind' in rejection ? rejection.kind : undefined;
   return kind === undefined ? { reason: rejection.reason } : { reason: rejection.reason, kind };
 }
 
-function runFactOf(id: string, run: string, event: RunFact): CloudEvent {
-  const { context } = event;
-  const fact: CloudEvent = {
+function bareRunFactOf(id: string, run: string, { type, context }: RunFact): CloudEvent {
+  return {
     specversion: '1.0',
     id,
     source: `${runSourcePrefix}${run}`,
-    type: event.type,
+    type,
     subject: `${context.definitionType}/${context.definitionName}`,
     time: context.at,
     ...extensionsOf(context),
   };
+}
+
+function runFactOf(id: string, run: string, event: RunFact): CloudEvent {
+  const fact = bareRunFactOf(id, run, event);
   if (event.type === 'run_succeeded') {
-    return withOutput(fact, event.data.output);
+    return withOutputAsRecorded(fact, outputPayloadOf(event));
   }
   return event.type === 'run_rejected' ? { ...fact, data: rejectionOf(event.data.rejection) } : fact;
+}
+
+function runFactRead(id: string, run: string, event: RunFact, payloads: PayloadReader) {
+  return event.type === 'run_succeeded'
+    ? withOutputRead(bareRunFactOf(id, run, event), outputPayloadOf(event), payloads)
+    : Effect.succeed(runFactOf(id, run, event));
 }
 
 function definitionFactOf(id: string, definitionType: string, { type, context }: RecordedDefinitionEvent): CloudEvent {
@@ -95,17 +130,35 @@ function definitionFactOf(id: string, definitionType: string, { type, context }:
   };
 }
 
-function cloudEventOf(record: RecordedFact): CloudEvent | undefined {
-  const { id, stream } = record;
-  const kind = streamKindOf(stream);
-  const named = stream.slice(kind.length + 1);
+type RecordedFactRead =
+  | { readonly definition: RecordedDefinitionEvent; readonly named: string }
+  | { readonly run: RunFact; readonly named: string };
+
+function factReadOf(record: RecordedFact): RecordedFactRead | undefined {
+  const kind = streamKindOf(record.stream);
+  const named = record.stream.slice(kind.length + 1);
   if (kind === 'definitions') {
-    return Option.getOrUndefined(
-      Option.map(decodeDefinitionEvent(record), (event) => definitionFactOf(id, named, event)),
-    );
+    return Option.getOrUndefined(Option.map(decodeDefinitionEvent(record), (definition) => ({ definition, named })));
   }
   const runFact = kind === 'runs' ? Option.filter(decodeRunEvent(record), isRunFact) : Option.none();
-  return Option.getOrUndefined(Option.map(runFact, (event) => runFactOf(id, named, event)));
+  return Option.getOrUndefined(Option.map(runFact, (run) => ({ run, named })));
+}
+
+function cloudEventOf(record: RecordedFact): CloudEvent | undefined {
+  const read = factReadOf(record);
+  if (read === undefined) {
+    return undefined;
+  }
+  return 'definition' in read
+    ? definitionFactOf(record.id, read.named, read.definition)
+    : runFactOf(record.id, read.named, read.run);
+}
+
+function cloudEventRead(record: RecordedFact, payloads: PayloadReader) {
+  const read = factReadOf(record);
+  return read === undefined || 'definition' in read
+    ? Effect.succeed(cloudEventOf(record))
+    : runFactRead(record.id, read.named, read.run, payloads);
 }
 
 function lineageOf({ causationId, correlationId }: RecordedFact): Readonly<Record<string, string>> {
@@ -115,14 +168,36 @@ function lineageOf({ causationId, correlationId }: RecordedFact): Readonly<Recor
   };
 }
 
-export function playbookFactOf(record: RecordedFact): CloudEvent | undefined {
-  const fact = cloudEventOf(record);
+function withLineage(record: RecordedFact, fact: CloudEvent | undefined): CloudEvent | undefined {
   return fact === undefined ? undefined : { ...fact, ...lineageOf(record) };
 }
 
-export function playbookEventOf(record: RecordedFact): CloudEvent | undefined {
-  if (streamKindOf(record.stream) !== publishedEventsKind || record.type !== 'event_published') {
-    return playbookFactOf(record);
-  }
+export function playbookFactOf(record: RecordedFact): CloudEvent | undefined {
+  return withLineage(record, cloudEventOf(record));
+}
+
+export function playbookFactRead(
+  record: RecordedFact,
+  payloads: PayloadReader,
+): Effect.Effect<CloudEvent | undefined, PayloadNotRead> {
+  return Effect.map(cloudEventRead(record, payloads), (fact) => withLineage(record, fact));
+}
+
+function isPublishedEvent(record: RecordedFact): boolean {
+  return streamKindOf(record.stream) === publishedEventsKind && record.type === 'event_published';
+}
+
+function publishedEventIn(record: RecordedFact): CloudEvent | undefined {
   return Option.getOrUndefined(Option.map(decodePublished(record), ({ data }) => data.event));
+}
+
+export function playbookEventOf(record: RecordedFact): CloudEvent | undefined {
+  return isPublishedEvent(record) ? publishedEventIn(record) : playbookFactOf(record);
+}
+
+export function playbookEventRead(
+  record: RecordedFact,
+  payloads: PayloadReader,
+): Effect.Effect<CloudEvent | undefined, PayloadNotRead> {
+  return isPublishedEvent(record) ? Effect.succeed(publishedEventIn(record)) : playbookFactRead(record, payloads);
 }

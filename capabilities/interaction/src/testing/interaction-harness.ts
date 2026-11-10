@@ -10,17 +10,23 @@ import {
   type Capability,
   type RecordWork,
 } from '@on.auto/definitions';
-import { admittingMeter, standingClock, uncheckedPages } from '@on.auto/definitions/testing';
+import { admittingMeter, runContentHolders, standingClock, uncheckedPages } from '@on.auto/definitions/testing';
 import {
   allPermissions,
   makeDispatcher,
   type CallerIdentity,
   type DispatcherServices,
+  type KeyedProjection,
   type Ledger,
   type Outcome,
   type Runnable,
 } from '@on.auto/operations';
-import { memoryPlaybookRegistry, memoryLedger, recordingReporter } from '@on.auto/operations/testing';
+import {
+  memoryPlaybookRegistry,
+  memoryLedger,
+  recordingReporter,
+  type MemoryLedger,
+} from '@on.auto/operations/testing';
 import { Clock, Effect, Layer } from 'effect';
 
 import { makeInteractionFunctionAdapter } from '../capability/interaction-function.ts';
@@ -115,8 +121,12 @@ function savingAnInteraction(call: Calling, capabilities: readonly Capability[])
     call(defineCreateDefinition(capabilities, uncheckedPages), { type: 'interaction', name, source, diagram: 'none' });
 }
 
+export function ledgerHoldingRuns(projections: readonly KeyedProjection[]): MemoryLedger {
+  return memoryLedger(undefined, projections, runContentHolders);
+}
+
 export function interactionHarness(options: HarnessOptions = {}): InteractionHarness {
-  const ledger: HarnessLedger = options.ledger ?? memoryLedger(undefined, [openRequests]);
+  const ledger: HarnessLedger = options.ledger ?? ledgerHoldingRuns([openRequests]);
   const tools = options.tools ?? noTools;
   const capability = makeInteractionFunctionAdapter({
     tools,

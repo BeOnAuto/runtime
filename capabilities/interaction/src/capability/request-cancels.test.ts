@@ -35,7 +35,9 @@ const asked = { run: address, kind: 'requested', reason: 'Not needed any more' }
 
 const cancelledAsAsked = { status: 'rejected', reason: 'cancelled', kind: 'requested', detail: asked.reason };
 
-const taken = { answer: 'yes', reply: takenReply, by: { id: 'playbook:alpha', name: 'alpha' }, at };
+const taken = { answer: { inline: 'yes' }, reply: takenReply, by: { id: 'playbook:alpha', name: 'alpha' }, at };
+
+const keptAnswer = { sha256: 'a'.repeat(64), bytes: 4096 };
 
 const delivered = {
   type: 'delivery_succeeded',
@@ -53,7 +55,7 @@ const delivered = {
 const answeredByThePlaybook = { status: 'succeeded', output: 'yes', record: {}, by: 'playbook:alpha' };
 
 describe('the cancel of a request', () => {
-  it('settles with the answer the run took, or as delivered for a notification, and else as asked', () => {
+  it('settles with the answer the run took, passed on by its digest where its playbook keeps it outside the run, or as delivered for a notification, and else as asked', () => {
     expect([
       cancelledRequest({ ...asked, record: question, answer: taken, work: [delivered] }),
       cancelledRequest({ ...asked, record: notification, answer: null, work: [delivered] }),
@@ -61,6 +63,7 @@ describe('the cancel of a request', () => {
       cancelledRequest({ ...asked, record: notification, answer: null, work: [] }),
       cancelledRequest({ ...asked, record: question, answer: null, work: [] }),
       cancelledRequest({ ...asked, record: { run: 'x' }, answer: taken, work: [delivered] }),
+      cancelledRequest({ ...asked, record: question, answer: { ...taken, answer: { kept: keptAnswer } }, work: [] }),
     ]).toEqual([
       answeredByThePlaybook,
       { status: 'succeeded', output: {}, record: { delivered_at: at } },
@@ -68,6 +71,13 @@ describe('the cancel of a request', () => {
       cancelledAsAsked,
       cancelledAsAsked,
       cancelledAsAsked,
+      {
+        status: 'succeeded',
+        output_sha256: keptAnswer.sha256,
+        output_bytes: keptAnswer.bytes,
+        record: {},
+        by: 'playbook:alpha',
+      },
     ]);
   });
 });

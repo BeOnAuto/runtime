@@ -1,5 +1,6 @@
 import {
   runSettler,
+  type KeptContentReader,
   type RecordWork,
   type RecordedWorkAt,
   type Settlement,
@@ -13,6 +14,7 @@ import type {
   RecordedReader,
   StreamReader,
   StreamWriter,
+  Unavailable,
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
@@ -28,7 +30,12 @@ export interface RequestLedger
     StreamWriter,
     StreamReader,
     Pick<RecordedReader, 'readRecorded'>,
-    Pick<ProjectionReader, 'readDueRows' | 'nextDueOf'> {}
+    Pick<ProjectionReader, 'readDueRows' | 'nextDueOf'>,
+    KeptContentReader {}
+
+function endedBefore(): Effect.Effect<void> {
+  return Effect.void;
+}
 
 export function settled(
   ledger: StreamWriter,
@@ -38,7 +45,7 @@ export function settled(
 ): Effect.Effect<void> {
   return runSettler(ledger)(address, settlement, lineage).pipe(
     Effect.asVoid,
-    Effect.catchTags({ conflict: () => Effect.void, not_found: Effect.die }),
+    Effect.catchTags({ conflict: endedBefore, unavailable: endedBefore, not_found: Effect.die }),
   );
 }
 
@@ -47,13 +54,17 @@ export interface RuledWork {
   readonly rule: WorkRule;
 }
 
+function notTaken(): Effect.Effect<undefined> {
+  return Effect.undefined;
+}
+
 export function recordedWork(
   record: RecordWork,
   address: RequestAddress,
   { work, rule }: RuledWork,
   lineage: Lineage,
-): Effect.Effect<RecordedWorkAt | undefined> {
-  return record(address, work, lineage, rule).pipe(Effect.catchTag('conflict', () => Effect.undefined));
+): Effect.Effect<RecordedWorkAt | undefined, Unavailable> {
+  return record(address, work, lineage, rule).pipe(Effect.catchTag('conflict', notTaken));
 }
 
 export function recordedCall(
@@ -62,7 +73,9 @@ export function recordedCall(
   fact: DeliveryEvent,
   lineage: Lineage,
 ): Effect.Effect<RecordedWorkAt | undefined> {
-  return recordedWork(record, address, { work: { type: 'work', fact }, rule: deliveryRule(fact) }, lineage);
+  return recordedWork(record, address, { work: { type: 'work', fact }, rule: deliveryRule(fact) }, lineage).pipe(
+    Effect.catchTag('unavailable', Effect.die),
+  );
 }
 
 const lastDelivered: RecordedPageRequest = { order: 'desc', limit: 1, types: ['delivery_succeeded'], dataOf: [] };

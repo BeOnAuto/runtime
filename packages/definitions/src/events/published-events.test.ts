@@ -1,5 +1,5 @@
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
-import { Conflict, recordingOf, type Context } from '@on.auto/operations';
+import { Conflict, contentHoldersOf, recordingOf, type Context } from '@on.auto/operations';
 import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -49,6 +49,12 @@ const anotherEvent = Result.fail(
 function spelled(time: string) {
   return decidedAfter({ ...first, event: { ...monthClosed, time }, ...again });
 }
+
+describe('the fact of a published event', () => {
+  it('keeps no payload outside it, since the event is delivered whole to every trigger, listener and view that takes it', () => {
+    expect(contentHoldersOf([EventPublishedSchema]).has('event_published')).toBe(false);
+  });
+});
 
 describe('the stream of a published event', () => {
   it('is named by a name-based UUID of its source and id, the same for the same pair', () => {

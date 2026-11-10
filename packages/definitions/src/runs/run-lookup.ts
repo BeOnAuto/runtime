@@ -1,8 +1,18 @@
-import { Conflict, InvalidInput, NotFound, RunCancelled, RunUnanswered, Unavailable } from '@on.auto/operations';
+import {
+  Conflict,
+  InvalidInput,
+  NotFound,
+  RunCancelled,
+  RunUnanswered,
+  Unavailable,
+  type PlaybookContext,
+  type PlaybookReader,
+} from '@on.auto/operations';
 import { Effect } from 'effect';
 
+import { withItsOutputRead } from './run-payloads.ts';
 import { startedRunOf, type RunStreamState, type RecordedRunState } from './run-state.ts';
-import type { Run, RunDetail, RunRejection, RunWithin } from './run.ts';
+import type { RunAsRecorded, RunDetail, RunDetailAsRecorded, RunRejection, RunWithin } from './run.ts';
 
 export function noRunCalled(id: string): NotFound {
   return new NotFound({ detail: `There is no run ${id} in this playbook` });
@@ -21,21 +31,21 @@ function withinOf({ calledBy }: RecordedRunState): { readonly within?: RunWithin
     : { within: { run_id: calledBy.runId, step: calledBy.reference.replace(leadingSlash, '') } };
 }
 
-function shownRunOf(id: string, recordedRun: RecordedRunState): Run {
+function shownRunOf(id: string, recordedRun: RecordedRunState): RunAsRecorded {
   return { run_id: id, ...recordedRun.run, ...withinOf(recordedRun) };
 }
 
-export function runOf(id: string, state: RunStreamState): Effect.Effect<Run, NotFound> {
+export function runOf(id: string, state: RunStreamState): Effect.Effect<RunAsRecorded, NotFound> {
   return recorded(id, state).pipe(Effect.map((recordedRun) => shownRunOf(id, recordedRun)));
 }
 
-function detailOf(id: string, recordedRun: RecordedRunState): RunDetail {
+function detailOf(id: string, recordedRun: RecordedRunState): RunDetailAsRecorded {
   const { record } = recordedRun;
   const run = shownRunOf(id, recordedRun);
   return record === undefined ? run : { ...run, record };
 }
 
-export function runDetailOf(id: string, state: RunStreamState): Effect.Effect<RunDetail, NotFound> {
+export function runDetailOf(id: string, state: RunStreamState): Effect.Effect<RunDetailAsRecorded, NotFound> {
   return recorded(id, state).pipe(Effect.map((run) => detailOf(id, run)));
 }
 
@@ -68,10 +78,15 @@ function replayed(rejection: RunRejection): ReplayedRejection {
   });
 }
 
-function answerWith(run: RunDetail): Effect.Effect<RunDetail, ReplayedRejection> {
-  return run.rejection === undefined ? Effect.succeed(run) : Effect.fail(replayed(run.rejection));
+function answerWith(
+  run: RunDetailAsRecorded,
+): Effect.Effect<RunDetail, ReplayedRejection, PlaybookReader | PlaybookContext> {
+  return run.rejection === undefined ? withItsOutputRead(run) : Effect.fail(replayed(run.rejection));
 }
 
-export function answerOf(id: string, state: RunStreamState): Effect.Effect<RunDetail, NotFound | ReplayedRejection> {
+export function runAnswered(
+  id: string,
+  state: RunStreamState,
+): Effect.Effect<RunDetail, NotFound | ReplayedRejection, PlaybookReader | PlaybookContext> {
   return runDetailOf(id, state).pipe(Effect.flatMap(answerWith));
 }

@@ -1,4 +1,3 @@
-import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 
 import { conversations, conversationsName } from '../conversations/conversation-rows.ts';
@@ -11,6 +10,7 @@ import { dueInBothLanes, performedAll } from './harness-parts.ts';
 import {
   alpha,
   interactionHarness,
+  ledgerHoldingRuns,
   type HarnessLedger,
   type HarnessOptions,
   type InteractionHarness,
@@ -28,6 +28,7 @@ export interface ChatHarnessOptions {
   readonly document?: string;
   readonly duringCall?: Parameters<typeof fakeTools>[0];
   readonly others?: HarnessOptions['others'];
+  readonly recording?: (record: InteractionHarness['record']) => InteractionHarness['record'];
 }
 
 export const answererId = 'U024BE7LH';
@@ -36,9 +37,10 @@ export const farAhead = 3_600_000;
 
 export async function chatHarness(options: ChatHarnessOptions = {}): Promise<ChatHarness> {
   const chat = fakeTools(options.duringCall);
-  const ledger = options.ledger ?? memoryLedger(undefined, [openRequests, conversations]);
+  const ledger = options.ledger ?? ledgerHoldingRuns([openRequests, conversations]);
   const playbook = interactionHarness({ ledger, tools: chat, others: options.others ?? [] });
-  const reads = conversationsDue({ ledger: ledger.service, tools: chat, record: playbook.record });
+  const record = options.recording?.(playbook.record) ?? playbook.record;
+  const reads = conversationsDue({ ledger: ledger.service, tools: chat, record });
   await playbook.define('approve-brief', options.document ?? threadDocument());
   return {
     ...playbook,

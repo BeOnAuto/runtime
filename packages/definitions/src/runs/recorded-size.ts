@@ -1,5 +1,6 @@
 import { Buffer } from 'node:buffer';
 
+import type { Payload } from '@on.auto/operations/payloads';
 import { Effect, type Schema } from 'effect';
 
 export const mostInputBytes = 262_144;
@@ -19,8 +20,15 @@ export function jsonBytesOf(value: Schema.Json): number {
   return Buffer.byteLength(JSON.stringify(value), 'utf8');
 }
 
+export function payloadBytesOf(payload: Payload<Schema.Json>): number {
+  return 'inline' in payload ? jsonBytesOf(payload.inline) : payload.kept.bytes;
+}
+
 export function withinResultLimit(...values: readonly Schema.Json[]): Effect.Effect<void> {
-  const bytes = values.reduce((total: number, value) => total + jsonBytesOf(value), 0);
+  return withinResultBytes(values.reduce((total: number, value) => total + jsonBytesOf(value), 0));
+}
+
+export function withinResultBytes(bytes: number): Effect.Effect<void> {
   return bytes <= mostResultBytes
     ? Effect.void
     : Effect.die(

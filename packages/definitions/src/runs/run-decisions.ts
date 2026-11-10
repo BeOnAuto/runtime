@@ -1,14 +1,15 @@
-import { Conflict, NotFound, type RunCancelled, type Rejection } from '@on.auto/operations';
-import { Equal, Result } from 'effect';
+import { Conflict, NotFound, type Rejection } from '@on.auto/operations';
+import { Result } from 'effect';
 
 import { endingOfADeadAttempt } from '../cancellation/dead-attempt-endings.ts';
-import { cancelledAsAsked, decideAnswer, decideCall, decideWork, type AdmitsFact } from '../run-work/work-decisions.ts';
+import { decideAnswer, decideCall, decideWork, type AdmitsFact } from '../run-work/work-decisions.ts';
+import { cancelledBeforeItsStart, claimOf, needsNoRun, takesAStartOnce } from './run-claims.ts';
+import { askedOf } from './run-commands.ts';
 import type {
   RunCancel,
   RunCommand,
   RunFinish,
   RunOutcome,
-  RunRequest,
   RunResume,
   RunSettlement,
   RunStart,
@@ -16,32 +17,19 @@ import type {
 } from './run-commands.ts';
 import type { RunEvent } from './run-events.ts';
 import {
-  awaitsSettlement,
   cancelBeforeStartOf,
-  changedNothing,
   endsWithinItsCall,
-  hasFinalResult,
   isRunning,
-  mayHaveChangedSomething,
   startedRunOf,
   takesSettlement,
   type RunState,
   type RunStreamState,
   type RecordedRunState,
 } from './run-state.ts';
-import { settlementKeyOf } from './settlement-keys.ts';
-import { startedCallingTools, toolsOnlyRead, toolsWereCalled } from './tool-refusals.ts';
+import { settledTheSame } from './settlement-keys.ts';
+import { startedCallingTools } from './tool-refusals.ts';
 
-type Decision = Result.Result<readonly RunEvent[], Rejection<'not_found' | 'conflict' | 'cancelled'>>;
-
-export type Claim =
-  | { readonly type: 'run' }
-  | { readonly type: 'answer' }
-  | { readonly type: 'resume'; readonly run: RecordedRunState };
-
-const runClaimed: Claim = { type: 'run' };
-
-const answerClaimed: Claim = { type: 'answer' };
+type Decision = Result.Result<readonly RunEvent[], Rejection<'not_found' | 'conflict' | 'cancelled' | 'unavailable'>>;
 
 const nothingToRecord: Decision = Result.succeed([]);
 
@@ -75,53 +63,6 @@ const runsWithinItsCall = new Conflict({
     'The run takes place within the call that started it, which no server can interrupt from outside, so it cannot be cancelled; it ends when that call does',
 });
 
-function isSameRequest({ input, run }: RecordedRunState, request: RunRequest): boolean {
-  return run.type === request.definition_type && run.name === request.name && Equal.equals(input, request.input);
-}
-
-function needsNoRun(state: RecordedRunState): boolean {
-  return hasFinalResult(state) || awaitsSettlement(state);
-}
-
-function claimOfRecorded(state: RecordedRunState, resumes: boolean): Result.Result<Claim, Conflict> {
-  if (needsNoRun(state)) {
-    return Result.succeed(answerClaimed);
-  }
-  if (resumes && isRunning(state)) {
-    return Result.succeed({ type: 'resume', run: state });
-  }
-  if (changedNothing(state)) {
-    return Result.fail(toolsOnlyRead);
-  }
-  return mayHaveChangedSomething(state) ? Result.fail(toolsWereCalled) : Result.succeed(runClaimed);
-}
-
-function cancelledBeforeItsStart(state: RunStreamState): RunCancelled | undefined {
-  const cancel = cancelBeforeStartOf(state);
-  return cancel === undefined ? undefined : cancelledAsAsked(cancel);
-}
-
-export function claimOf(
-  state: RunStreamState,
-  request: RunRequest,
-  resumes = false,
-): Result.Result<Claim, Conflict | RunCancelled> {
-  const cancelled = cancelledBeforeItsStart(state);
-  if (cancelled !== undefined) {
-    return Result.fail(cancelled);
-  }
-  const run = startedRunOf(state);
-  if (run === undefined) {
-    return Result.succeed(runClaimed);
-  }
-  if (!isSameRequest(run, request)) {
-    return Result.fail(
-      new Conflict({ detail: 'The run id belongs to a run of another definition or with another input' }),
-    );
-  }
-  return claimOfRecorded(run, resumes);
-}
-
 function startedCallingToolsBefore(start: RunStart, state: RunState): boolean {
   return state !== undefined && isRunning(state) && (state.callsTools || start.calls_tools);
 }
@@ -140,16 +81,10 @@ function startedEvent({ input, started_by, calls_tools, finishes_later, resumes,
   };
 }
 
-function startsAgain(request: RunRequest, state: RecordedRunState): boolean {
-  return !isRunning(state) && !needsNoRun(state) && !mayHaveChangedSomething(state) && isSameRequest(state, request);
-}
-
-export function takesAStartOnce(state: RunState, request: RunRequest): boolean {
-  return state !== undefined && !startsAgain(request, state);
-}
-
 function decideCreateOnly(start: RunStart, state: RunState): Decision {
-  return takesAStartOnce(state, start) ? Result.fail(runTaken) : Result.succeed([startedEvent(start)]);
+  return Result.flatMap(takesAStartOnce(state, start), (taken): Decision =>
+    taken ? Result.fail(runTaken) : Result.succeed([startedEvent(start)]),
+  );
 }
 
 function decideStart(start: RunStart, state: RunStreamState): Decision {
@@ -160,7 +95,7 @@ function decideStart(start: RunStart, state: RunStreamState): Decision {
   if (start.createOnly === true) {
     return decideCreateOnly(start, startedRunOf(state));
   }
-  return Result.flatMap(claimOf(state, start, start.resumes === true), (claim): Decision => {
+  return Result.flatMap(claimOf(state, askedOf(start), start.resumes === true), (claim): Decision => {
     if (claim.type === 'answer') {
       return nothingToRecord;
     }
@@ -219,10 +154,10 @@ function unansweredThoughAnswered({ answer }: RecordedRunState, { result }: RunS
   return answer !== null && result.type === 'run_rejected' && result.data.rejection.reason === 'unanswered';
 }
 
-function settledAlready(state: RecordedRunState, settlement: RunSettlement): Decision {
-  return state.result !== undefined && settlementKeyOf(state.result) === settlementKeyOf(settlement.result)
-    ? nothingToRecord
-    : Result.fail(endedWithAnotherResult);
+function settledAlready({ result }: RecordedRunState, settlement: RunSettlement): Decision {
+  return Result.flatMap(settledTheSame(result, settlement.result), (same): Decision =>
+    same ? nothingToRecord : Result.fail(endedWithAnotherResult),
+  );
 }
 
 function decideSettlement(settlement: RunSettlement, state: RunState): Decision {

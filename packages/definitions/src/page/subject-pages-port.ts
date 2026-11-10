@@ -9,7 +9,8 @@ import type {
 } from '@on.auto/operations';
 import type { Effect, Schema } from 'effect';
 
-import type { RunDetail } from '../runs/run.ts';
+import type { PayloadAsRead } from '../runs/run-payloads.ts';
+import type { RunDetailAsRecorded } from '../runs/run.ts';
 import type { PageContent, SubjectPage } from './page-facts.ts';
 
 export const playbookSubject = 'playbook';
@@ -25,7 +26,10 @@ export interface DefinitionSubject {
 
 export type PageSubject = DefinitionSubject | typeof playbookSubject;
 
-export type ResultOver = { readonly run: RunDetail } | { readonly sample: Schema.Json } | { readonly latest: true };
+export type ResultOver =
+  | { readonly run: RunDetailAsRecorded; readonly read?: PayloadAsRead }
+  | { readonly sample: Schema.Json }
+  | { readonly latest: true };
 
 export type PageCheck = (
   text: string,
@@ -45,14 +49,14 @@ export interface PlaybookPageSave {
 
 type Read<A, E = never> = Effect.Effect<A, E, PlaybookReader>;
 
-type ReadInPlace<A> = Effect.Effect<A, never, PlaybookReader | PlaybookContext>;
+type ReadInPlace<A, E = never> = Effect.Effect<A, E, PlaybookReader | PlaybookContext>;
 
 export interface SubjectPages {
   readonly check: PageCheck;
   readonly withoutThePage: (source: string, writtenIn: Exclude<PageWrittenIn, 'playbook'>) => string;
   readonly pageOf: (type: string, name: string) => Read<SubjectPage | undefined>;
   readonly playbookPageOf: () => Read<SubjectPage | undefined>;
-  readonly resultOf: (type: string, name: string, over: ResultOver) => Read<string | undefined, InvalidInput>;
+  readonly resultOf: (type: string, name: string, over: ResultOver) => ReadInPlace<string | undefined, InvalidInput>;
   readonly viewsOf: (subject: PageSubject) => ReadInPlace<PageViewsShown>;
   readonly asOfRun: (subject: DefinitionSubject, run: string) => ReadInPlace<PageViewsShown>;
   readonly savePlaybookPage: (

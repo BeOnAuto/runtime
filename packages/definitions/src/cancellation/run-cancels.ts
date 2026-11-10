@@ -82,7 +82,7 @@ export function runCanceller(
       ).pipe(
         Effect.andThen(attemptHereStopped(attemptKeyOf(run, runId))),
         Effect.as<CancelReceipt>('requested'),
-        Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }),
+        Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die, unavailable: Effect.die }),
         Effect.catchIf(endedFirst, () => Effect.succeed<CancelReceipt>('ended')),
       );
     });

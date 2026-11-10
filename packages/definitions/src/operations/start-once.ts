@@ -2,16 +2,18 @@ import { CallLineage, PlaybookContext, personOfTheOrg } from '@on.auto/operation
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
+import { takesAStartOnce } from '../runs/run-claims.ts';
 import type { RunRequest } from '../runs/run-commands.ts';
-import { isTaken, takesAStartOnce } from '../runs/run-decisions.ts';
-import { answerOf } from '../runs/run-lookup.ts';
+import { isTaken } from '../runs/run-decisions.ts';
+import { runAnswered } from '../runs/run-lookup.ts';
 import { pausedRefusalOf, preparedVersion } from './definition-preparation.ts';
 import { runPrepared } from './prepared-run.ts';
 import { loadRun, loadStartedRun } from './run-access.ts';
 
 const answeredWhilePaused = Effect.fnUntraced(function* (id: string, request: RunRequest) {
   const { recorded, run } = yield* loadStartedRun(id);
-  return takesAStartOnce(run, request) ? yield* answerOf(id, recorded) : undefined;
+  const taken = yield* Effect.fromResult(takesAStartOnce(run, request));
+  return taken ? yield* runAnswered(id, recorded) : undefined;
 });
 
 const lineageActingFor = Effect.fnUntraced(function* (putInPlaceBy: string) {
@@ -36,6 +38,6 @@ export const startVersionOnce = Effect.fnUntraced(function* (
   const lineage = yield* lineageActingFor(run.definition.putInPlaceBy);
   return yield* runPrepared(capabilities, id, asked, { ...run, createOnly: true }).pipe(
     Effect.provideService(CallLineage, lineage),
-    Effect.catchIf(isTaken, () => Effect.flatMap(loadRun(id), (recorded) => answerOf(id, recorded))),
+    Effect.catchIf(isTaken, () => Effect.flatMap(loadRun(id), (recorded) => runAnswered(id, recorded))),
   );
 });

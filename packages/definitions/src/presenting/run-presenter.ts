@@ -32,7 +32,15 @@ import {
   type RunEvent,
 } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
-import { cutAtCodePoint, issuesShown, mostDetailBytes, mostNameBytes } from './event-data.ts';
+import {
+  answerShownOf,
+  cutAtCodePoint,
+  inputShownOf,
+  issuesShown,
+  mostDetailBytes,
+  mostNameBytes,
+  outputShownOf,
+} from './event-data.ts';
 import { modelCallFact, type ModelCallShown } from './model-call-facts.ts';
 
 type Shown<Type extends RunEvent['type']> = RecordedRunFact<Type>;
@@ -110,9 +118,14 @@ function toolCallFact(event: ToolCallShown, content: KeptContent): PresentedFact
   return { type: event.type, summary: toolFailed(data.number, data.because), data: callFieldsShown(data) };
 }
 
-function startFact(words: DefinitionWords, { type, data, context }: Shown<'run_started'>): PresentedFact {
+function startFact(
+  words: DefinitionWords,
+  { type, data, context }: Shown<'run_started'>,
+  content: KeptContent,
+): PresentedFact {
   const { definitionType, definitionName, trigger } = context;
-  return { type, summary: runStarted(words, definitionType, definitionName, trigger), data };
+  const summary = runStarted(words, definitionType, definitionName, trigger);
+  return { type, summary, data: { ...data, ...inputShownOf({ data }, content) } };
 }
 
 function cancelFact({ type, data }: Shown<'run_cancel_requested'>): PresentedFact {
@@ -127,13 +140,13 @@ function resumedFact({ type, data }: Shown<'attempt_resumed'>): PresentedFact {
   return { type, summary: attemptResumed(data.attempt), data };
 }
 
-function answerFact({ type, data }: Shown<'request_answered'>): PresentedFact {
-  const { answer, claimed_for: claimedFor, reply, answered_by: answeredBy } = data;
+function answerFact({ type, data }: Shown<'request_answered'>, content: KeptContent): PresentedFact {
+  const { claimed_for: claimedFor, reply, answered_by: answeredBy } = data;
   return {
     type,
     summary: requestAnswered(reply !== undefined),
     data: {
-      answer,
+      ...answerShownOf({ data }, content),
       ...(claimedFor === undefined ? {} : { claimed_for: named(claimedFor) }),
       ...(reply === undefined ? {} : { reply: { id: named(reply.id), sender: named(reply.sender) } }),
       answered_by: answeredBy,
@@ -141,9 +154,14 @@ function answerFact({ type, data }: Shown<'request_answered'>): PresentedFact {
   };
 }
 
-function endingFact(event: Shown<'run_succeeded' | 'run_rejected' | 'run_failed'>): PresentedFact {
+function endingFact(
+  event: Shown<'run_succeeded' | 'run_rejected' | 'run_failed'>,
+  content: KeptContent,
+): PresentedFact {
   if (event.type === 'run_succeeded') {
-    return { type: event.type, summary: runFinished, data: event.data };
+    const { data } = event;
+    const shown = { ...data, ...outputShownOf(event, content) };
+    return { type: event.type, summary: runFinished, data: shown };
   }
   if (event.type === 'run_rejected') {
     const { rejection, record } = event.data;
@@ -183,7 +201,7 @@ function coreFactOf(words: DefinitionWords, event: CoreShown, content: KeptConte
     return modelCallFact(event, content);
   }
   if (event.type === 'run_started') {
-    return startFact(words, event);
+    return startFact(words, event, content);
   }
   if (event.type === 'run_cancel_requested') {
     return cancelFact(event);
@@ -191,7 +209,7 @@ function coreFactOf(words: DefinitionWords, event: CoreShown, content: KeptConte
   if (event.type === 'attempt_resumed') {
     return resumedFact(event);
   }
-  return isEnding(event) ? endingFact(event) : answerFact(event);
+  return isEnding(event) ? endingFact(event, content) : answerFact(event, content);
 }
 
 const decodeRunEvent = strictRecordedDecoder(RunEventSchema);

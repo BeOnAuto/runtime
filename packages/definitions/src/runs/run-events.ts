@@ -4,7 +4,9 @@ import {
   RunContextSchema,
   factOf,
   type Decided,
+  type Settlement as SettlementOfAnOperation,
 } from '@on.auto/operations';
+import { payloadFields, payloadPointersOf, withPayloads, type PayloadArm } from '@on.auto/operations/payloads';
 import {
   argumentsHeld,
   CallAnsweredSchema,
@@ -30,30 +32,38 @@ export const CancelRequestKindSchema = Schema.Literals(['requested', 'deadline',
 
 const ReplyIdentitySchema = Schema.Struct({ id: Schema.String, sender: Schema.String });
 
-export const RequestAnsweredSchema = Schema.Struct({
-  answer: Schema.Json,
-  claimed_for: Schema.optionalKey(Schema.String),
-  reply: Schema.optionalKey(ReplyIdentitySchema),
-  answered_by: RecordedCallerSchema,
-});
+export const RequestAnsweredSchema = withPayloads(
+  Schema.Struct({
+    ...payloadFields('answer', Schema.Json),
+    claimed_for: Schema.optionalKey(Schema.String),
+    reply: Schema.optionalKey(ReplyIdentitySchema),
+    answered_by: RecordedCallerSchema,
+  }),
+  ['answer'],
+);
 
 export const RunStartedSchema = factOf(
   'run_started',
-  Schema.Struct({
-    input: Schema.Json,
-    started_by: RecordedCallerSchema,
-    calls_tools: Schema.optionalKey(Schema.Literal(true)),
-    finishes_later: Schema.optionalKey(Schema.Literal(true)),
-    resumes: Schema.optionalKey(Schema.Literal(true)),
-    output_shape: Schema.optionalKey(OutputShapeNameSchema),
-  }),
+  withPayloads(
+    Schema.Struct({
+      ...payloadFields('input', Schema.Json),
+      started_by: RecordedCallerSchema,
+      calls_tools: Schema.optionalKey(Schema.Literal(true)),
+      finishes_later: Schema.optionalKey(Schema.Literal(true)),
+      resumes: Schema.optionalKey(Schema.Literal(true)),
+      output_shape: Schema.optionalKey(OutputShapeNameSchema),
+    }),
+    ['input'],
+  ),
   RunContextSchema,
+  { content: { payloads: [payloadPointersOf('input')] } },
 );
 
 export const RunSucceededSchema = factOf(
   'run_succeeded',
-  Schema.Struct({ output: Schema.Json, record: Schema.JsonObject }),
+  withPayloads(Schema.Struct({ ...payloadFields('output', Schema.Json), record: Schema.JsonObject }), ['output']),
   RunContextSchema,
+  { content: { payloads: [payloadPointersOf('output')] } },
 );
 
 export const RunRejectedSchema = factOf(
@@ -106,7 +116,9 @@ const coreFactSchemas = [
     responseHeld,
   ),
   factOf('model_call_failed', Schema.Struct({ ...numbered, ...ModelCallFailedSchema.fields }), RunContextSchema),
-  factOf('request_answered', RequestAnsweredSchema, RunContextSchema),
+  factOf('request_answered', RequestAnsweredSchema, RunContextSchema, {
+    content: { payloads: [payloadPointersOf('answer')] },
+  }),
 ];
 
 type CoreRunFact = (typeof coreFactSchemas)[number]['Type'];
@@ -208,6 +220,12 @@ export type RequestAnswered = FactNamed<'request_answered'>;
 export type ReplyIdentity = typeof ReplyIdentitySchema.Type;
 
 export type RunFinished = FactNamed<'run_succeeded' | 'run_rejected' | 'run_failed'>;
+
+type SucceededOfAnOperation = Extract<SettlementOfAnOperation, { readonly status: 'succeeded' }>;
+
+export type Settlement =
+  | Exclude<SettlementOfAnOperation, SucceededOfAnOperation>
+  | (Omit<SucceededOfAnOperation, 'output'> & PayloadArm<'output', Schema.Json>);
 
 type CallFactType =
   | 'tool_call_started'

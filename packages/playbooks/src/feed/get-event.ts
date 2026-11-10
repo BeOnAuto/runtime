@@ -7,13 +7,17 @@ import {
   defineQuery,
   keptContentOf,
   mostToolFieldBytes,
+  playbookPayloadReader,
   presentationOf,
   stepIdSeparator,
   streamPrefixOfPlaybook,
   type ContentHolders,
+  type KeptContent,
   type Presentation,
   type Presenter,
+  type RecordedFact,
 } from '@on.auto/operations';
+import { mostPayloadBytesReadAtOnce, payloadReadsAtOnce, payloadsNamed } from '@on.auto/operations/payloads';
 import { Effect, Schema, SchemaTransformation } from 'effect';
 
 import { eventFound } from '../plain-language/feed-words.ts';
@@ -49,14 +53,42 @@ function recordIdOf(id: string): string {
   return end === -1 ? id : id.slice(0, end);
 }
 
+type TextsRead = readonly (readonly [string, string])[];
+
+const shownAsItsFactHoldsIt = () => Effect.succeed<TextsRead>([]);
+
+const payloadTextsOf = Effect.fnUntraced(function* (record: RecordedFact, holders: ContentHolders, mostBytes: number) {
+  const kept = payloadsNamed(record.data, holders.get(record.type) ?? {}).filter(({ bytes }) => bytes <= mostBytes);
+  const payloads = yield* playbookPayloadReader;
+  const texts = yield* Effect.forEach(
+    kept,
+    ({ sha256, bytes }) =>
+      payloads.text({ sha256, bytes }).pipe(
+        Effect.map((text): TextsRead => [[sha256, text]]),
+        Effect.catchTags({ payload_missing: shownAsItsFactHoldsIt, payload_erased: shownAsItsFactHoldsIt }),
+      ),
+    { concurrency: payloadReadsAtOnce },
+  );
+  return new Map(texts.flat());
+});
+
+function joined(payloadTexts: ReadonlyMap<string, string>, content: KeptContent): KeptContent {
+  return (sha256) => payloadTexts.get(sha256) ?? content(sha256);
+}
+
 function eventReader(presentation: Presentation, holders: ContentHolders) {
   return Effect.fnUntraced(function* ({ event_id: id }: typeof GetEventInput.Type) {
     const record = yield* (yield* PlaybookReader).readRecordedEvent(recordIdOf(id));
     if (record === undefined) {
       return yield* Effect.fail(noEventCalled(id));
     }
-    const content = yield* keptContentOf([record], Number.POSITIVE_INFINITY, holders);
     const view = (yield* ServedAsTool) ? 'tool' : 'whole';
+    const payloadTexts = yield* payloadTextsOf(
+      record,
+      holders,
+      view === 'tool' ? mostToolFieldBytes : mostPayloadBytesReadAtOnce,
+    );
+    const content = joined(payloadTexts, yield* keptContentOf([record], Number.POSITIVE_INFINITY, holders));
     const streamPrefix = streamPrefixOfPlaybook(yield* PlaybookContext);
     const event = presentation.present(record, { streamPrefix, content, view }).find((shown) => shown.id === id);
     return event ?? (yield* Effect.fail(noEventCalled(id)));
@@ -71,7 +103,7 @@ export function defineGetEvent(presenters: readonly Presenter[], holders: Conten
     route: { method: 'GET', path: '/events/{event_id}' },
     inputSchema: GetEventInput,
     outputSchema: WholeEventSchema,
-    reasons: ['not_found', 'invalid_input'],
+    reasons: ['not_found', 'invalid_input', 'unavailable'],
     handle: eventReader(presentationOf(presenters), holders),
     plainLanguage: {
       task: 'read one event of the playbook',

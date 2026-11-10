@@ -1,6 +1,8 @@
 import type { RunEnding } from '@on.auto/definitions';
 import type { Outcome, Rejected } from '@on.auto/operations';
+import { outputPayloadOf } from '@on.auto/operations/payloads';
 import { field, textField } from '@on.auto/workflow-engine';
+import type { Schema } from 'effect';
 
 import type { DefinitionRunResult, EndedRunResult } from './function-run.ts';
 
@@ -28,14 +30,28 @@ export function definitionRunResultOf(outcome: Outcome): DefinitionRunResult {
   if (outcome.status === 'failed') {
     return { status: 'failed', detail: `The run failed with incident ${outcome.incident}` };
   }
-  return textField(outcome.output, 'status') === 'succeeded'
-    ? { status: 'succeeded', output: field(outcome.output, 'output') ?? null }
-    : { status: 'waiting' };
+  return textField(outcome.output, 'status') === 'succeeded' ? succeededOf(outcome.output) : { status: 'waiting' };
 }
+
+function succeededOf(run: Schema.JsonObject): DefinitionRunResult {
+  const lost = textField(run, 'output_sha256');
+  return lost === undefined
+    ? { status: 'succeeded', output: field(run, 'output') ?? null }
+    : {
+        status: 'failed',
+        detail: `The run succeeded, but its output, kept outside the run under ${lost}, is missing from its playbook or was erased, so the workflow is not handed it`,
+      };
+}
+
+const outputNotCarried =
+  'The run succeeded with an output its playbook keeps outside the run, which a workflow is not yet handed';
 
 export function endedRunResultOf(ending: RunEnding): EndedRunResult {
   if (ending.type === 'run_succeeded') {
-    return { status: 'succeeded', output: ending.data.output };
+    const output = outputPayloadOf(ending);
+    return 'inline' in output
+      ? { status: 'succeeded', output: output.inline }
+      : { status: 'failed', detail: outputNotCarried };
   }
   if (ending.type === 'run_failed') {
     const { incident } = ending.data;
