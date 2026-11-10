@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 
 import { callsDueAgainOf } from '../calls/calls-due-again.ts';
+import { closingWorkOf } from '../closing/closing-work.ts';
 import type { DueWork } from '../due-work/due-work.ts';
 import type { WakeUpParts } from '../loop/host-wake-up.ts';
 import type { WaitingOptions } from '../waiting/waiting-options.ts';
@@ -13,6 +14,7 @@ export interface PartsOptions extends EngineOptions {
   readonly waiting: WaitingOptions;
   readonly mostOpenCalls?: number;
   readonly dueWork?: readonly DueWork[];
+  readonly closesEndedRuns?: boolean;
 }
 
 export interface HostParts extends WakeUpParts, Pick<HostEngine, 'submitted' | 'reacting' | 'executor'> {
@@ -40,7 +42,11 @@ export function openHostParts(
   return {
     clock,
     timers: engine.timers,
-    dueWork: [...(options.dueWork ?? []), callsDueAgainOf(database, engine.executor)],
+    dueWork: [
+      ...(options.dueWork ?? []),
+      callsDueAgainOf(database, engine.executor),
+      ...(options.closesEndedRuns === false ? [] : [closingWorkOf(database)]),
+    ],
     engine: engine.engine,
     fire: ({ runKey, timerId }, at) =>
       Effect.andThen(

@@ -12,7 +12,7 @@ import { Effect } from 'effect';
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
 import { correlationOfRun } from '../runs/run-lineage.ts';
 import { currentSpanIdentity, type SpanIdentity } from '../runs/run-spans.ts';
-import { existingRowOf, openCallsUnder, refusedRow, startedRow, type CallRow } from './call-rows.ts';
+import { callRowOf, openCallsUnder, refusedRow, startedRow, type CallRow } from './call-rows.ts';
 
 export interface CallAttempt {
   readonly attemptDied: boolean;
@@ -82,6 +82,9 @@ function startedAgain(
 ): StartReceipt {
   const { call } = starting;
   const key = callKeyText(call.key);
+  if (state === 'closed') {
+    return 'refused_after_close';
+  }
   if (state === 'cancelled') {
     return 'refused_after_cancel';
   }
@@ -105,7 +108,7 @@ export function started(
     if (yield* startedOnce(parts, calls, starting)) {
       return 'started';
     }
-    const row = yield* existingRowOf(parts.database, callKeyText(starting.call.key));
-    return startedAgain(calls, starting, row, yield* currentSpanIdentity);
+    const row = yield* callRowOf(parts.database, callKeyText(starting.call.key));
+    return row === undefined ? 'refused_after_close' : startedAgain(calls, starting, row, yield* currentSpanIdentity);
   });
 }

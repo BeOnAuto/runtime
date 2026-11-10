@@ -1,14 +1,14 @@
-import { statement } from '@on.auto/ledger';
+import { statement, VersionConflict } from '@on.auto/ledger';
 import { ledgerLayer } from '@on.auto/ledger/sqlite3';
 import { Ledger } from '@on.auto/operations';
-import { Effect, ManagedRuntime } from 'effect';
+import { Effect, ManagedRuntime, Result } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
 import { ledgerRunLogStore } from './ledger-run-store.ts';
-import { runKeyOf } from './run-address.ts';
+import { runKeyOf, runLogStreamOf } from './run-address.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -39,6 +39,46 @@ describe('the run store of the host, ending a run', () => {
     const left = await Effect.runPromise(database.read(statement`SELECT run_key FROM workflow_passed_runs`));
 
     expect([(await Effect.runPromise(hosted.host.stateOf(run))).status, left]).toEqual(['ended', []]);
+  });
+});
+
+function onlyOf<A>(items: readonly A[]): A {
+  const [only] = items;
+  if (only === undefined || items.length > 1) {
+    throw new Error(`Expected one, and there were ${items.length}`);
+  }
+  return only;
+}
+
+describe('the run store of the host, recording the end of a run', () => {
+  it('records nothing of the end when the append that ends the run meets a conflict, since both are one transaction', async () => {
+    const file = aSQLiteFile();
+    const hosted = await hostedOn({ store: 'sqlite', file });
+    await Effect.runPromise(hosted.host.start(run, startOf(workflow('do:\n  - done: { set: { done: true } }'))));
+    const database = await openedOn({ store: 'sqlite', file });
+    const store = ledgerRunLogStore(database);
+    const ends = () => Effect.runPromise(database.read(statement`SELECT ended_at, ended_time FROM workflow_runs`));
+    const ending = onlyOf(await Effect.runPromise(store.eventsAfter(runKeyOf(run), 0)));
+    const logged = onlyOf((await database.store.read(runLogStreamOf(runKeyOf(run)))).messages);
+    const recorded = await ends();
+    await Effect.runPromise(database.write(statement`UPDATE workflow_runs SET ended_at = NULL, ended_time = NULL`));
+
+    const appendedAgain = await Effect.runPromise(
+      Effect.result(
+        store.append(
+          runKeyOf(run),
+          ending.event,
+          { expectedVersion: 0, context: logged.context },
+          { cause: { kind: 'none' }, attributes: {} },
+        ),
+      ),
+    );
+
+    expect(recorded).toEqual([{ ended_at: 1, ended_time: ending.event.receipt.at }]);
+    expect([appendedAgain, await ends()]).toEqual([
+      Result.fail(new VersionConflict()),
+      [{ ended_at: null, ended_time: null }],
+    ]);
   });
 });
 

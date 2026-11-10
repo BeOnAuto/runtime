@@ -1,10 +1,11 @@
 import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { StreamsCarrying } from '../connection/appends-with.ts';
 import type { ConnectionPorts } from '../connection/ledger-connection.ts';
 import type { StatementAnswer } from '../connection/statement-answers.ts';
 import { statement, textOnPostgreSQL, type StatementValue } from '../connection/statement.ts';
-import type { LedgerStreams, StoredRecord } from '../event-store.ts';
+import type { StoredRecord } from '../event-store.ts';
 import { postgresqlConnectionOn, type Connection } from './postgresql-connection.ts';
 
 interface Asked {
@@ -18,11 +19,12 @@ interface Telling {
   readonly said: () => readonly string[];
 }
 
-const streams: LedgerStreams = {
+const streams: StreamsCarrying = {
   mostEventsInOneAppend: 64,
   pointLength: 2,
   read: () => Promise.resolve({ version: 0, messages: [] }),
   append: () => Promise.resolve(),
+  appendWithin: () => Promise.resolve(),
   readRecorded: () => Promise.resolve({ records: [] }),
   readRecordedEvent: (_, id) => Promise.resolve(new Map<string, StoredRecord>().get(id)),
   readAppended: () => Promise.resolve({ streams: [], through: ['0', '0'], more: false }),

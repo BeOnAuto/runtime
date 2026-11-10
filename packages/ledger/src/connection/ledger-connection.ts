@@ -1,6 +1,6 @@
 import { Context } from 'effect';
 
-import type { LedgerStreams } from '../event-store.ts';
+import type { AppendPlace, EncodedEvent, LedgerStreams } from '../event-store.ts';
 import type { Statement } from './statement.ts';
 
 type Rows = readonly unknown[];
@@ -17,6 +17,12 @@ export interface LedgerReads {
 export interface ConnectionPorts {
   readonly dialect: Dialect;
   readonly streams: LedgerStreams;
+  readonly appendWith: (
+    stream: string,
+    events: readonly EncodedEvent[],
+    place: AppendPlace,
+    statements: readonly Statement[],
+  ) => Promise<void>;
   readonly read: ReadRows;
   readonly write: (statement: Statement) => Promise<Rows>;
   readonly transaction: (statements: readonly Statement[]) => Promise<Rows>;

@@ -9,6 +9,7 @@ import { ledgerLayer, sqliteSecretRows } from './sqlite3.ts';
 import { databaseStructureBehaviour } from './structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  appendsWithStatementsOnStoresBehaviour,
   factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
@@ -66,6 +67,7 @@ describe('The ledger on SQLite', () => {
   logBehaviour(onSQLite);
   appendedFactsOnStoresBehaviour(onSQLite);
   factScrubOnStoresBehaviour(onSQLite);
+  appendsWithStatementsOnStoresBehaviour(onSQLite);
   earlierShapesBehaviour(onSQLite);
   databaseStructureBehaviour(onSQLite);
   knownFactsBehaviour(onSQLite);

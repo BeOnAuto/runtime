@@ -1,7 +1,7 @@
 import { dumbo, type SQL } from '@event-driven-io/dumbo';
 import { getSQLiteEventStore } from '@event-driven-io/emmett-sqlite';
 
-import { dataAsWritten, emmettEventStore } from './emmett/emmett-event-store.ts';
+import { dataAsWritten, emmettEventStore, type RiddenAppends } from './emmett/emmett-event-store.ts';
 import { inTransactionOf, type AppendListeners, type LedgerStore } from './event-store.ts';
 import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts';
 import { sqliteLogOn } from './log/sqlite-log.ts';
@@ -27,7 +27,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
   optionsOf: () => SQLiteStoreOptions<Driver>,
   kept: KeptTables = {},
   listeners: AppendListeners = {},
-): LedgerStore {
+): LedgerStore & RiddenAppends {
   const options = pooledOptionsOf(optionsOf);
   const { pool } = options;
   const projections = sqliteProjectionsOf(kept);

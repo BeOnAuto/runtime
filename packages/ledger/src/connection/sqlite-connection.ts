@@ -1,7 +1,7 @@
 import type { SQL } from '@event-driven-io/dumbo';
 
-import type { LedgerStreams } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
+import { appendsWithOn, type StreamsCarrying } from './appends-with.ts';
 import type { ConnectionPorts, ReadRows } from './ledger-connection.ts';
 import { lastAnswerOf, wroteARow, type StatementAnswer } from './statement-answers.ts';
 import { sqlOf } from './statement.ts';
@@ -40,7 +40,7 @@ export interface SQLitePool {
 
 export interface SQLiteConnecting {
   readonly inMemory: boolean;
-  readonly streams: LedgerStreams;
+  readonly streams: StreamsCarrying;
   readonly mostBoundValues: number;
 }
 
@@ -71,6 +71,7 @@ export function sqliteConnectionOn(
   return {
     dialect: 'sqlite',
     streams,
+    appendWith: appendsWithOn(streams),
     read: async (asked) => (await pool.execute.query(sqlOf(asked))).rows,
     write,
     transaction: (statements) =>

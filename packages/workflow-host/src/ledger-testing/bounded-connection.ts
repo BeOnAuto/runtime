@@ -18,6 +18,8 @@ export function boundedConnection(connection: ConnectionPorts, mostBoundValues: 
   return {
     ...connection,
     mostBoundValues,
+    appendWith: (stream, events, place, statements) =>
+      refusedPast(mostBoundValues, statements, () => connection.appendWith(stream, events, place, statements)),
     read: boundedReads(connection.read, mostBoundValues),
     write: (statement) => refusedPast(mostBoundValues, [statement], () => connection.write(statement)),
     transaction: (statements) => refusedPast(mostBoundValues, statements, () => connection.transaction(statements)),

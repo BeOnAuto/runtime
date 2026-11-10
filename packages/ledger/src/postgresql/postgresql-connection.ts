@@ -1,10 +1,10 @@
 import { Schema } from 'effect';
 
+import { appendsWithOn, type StreamsCarrying } from '../connection/appends-with.ts';
 import { postgresqlMostBoundValues } from '../connection/bound-values.ts';
 import type { ConnectionPorts, ReadRows } from '../connection/ledger-connection.ts';
 import { lastAnswerOf, wroteARow, type StatementAnswer } from '../connection/statement-answers.ts';
 import { statement, textOnPostgreSQL, type Statement, type StatementValue } from '../connection/statement.ts';
-import type { LedgerStreams } from '../event-store.ts';
 
 export interface Connection {
   query(text: string, values?: readonly StatementValue[]): Promise<StatementAnswer>;
@@ -80,11 +80,12 @@ function snapshotsOn(connections: Connections): ConnectionPorts['readConsistentl
   return read;
 }
 
-export function postgresqlConnectionOn(connections: Connections, streams: LedgerStreams): ConnectionPorts {
+export function postgresqlConnectionOn(connections: Connections, streams: StreamsCarrying): ConnectionPorts {
   const query = async (asked: Statement) => (await connections.query(textOnPostgreSQL(asked), asked.values)).rows;
   return {
     dialect: 'postgresql',
     streams,
+    appendWith: appendsWithOn(streams),
     read: query,
     write: query,
     transaction: async (statements) => (await inTransaction(connections, statements, wroteARow)).rows,

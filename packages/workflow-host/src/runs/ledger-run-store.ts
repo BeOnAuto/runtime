@@ -1,4 +1,4 @@
-import { eventAppenderOf, eventCodecOf, statement } from '@on.auto/ledger';
+import { eventAppenderWithOf, eventCodecOf, statement, type Statement } from '@on.auto/ledger';
 import {
   RunLogRecordSchema,
   runLogRecordOf,
@@ -10,7 +10,7 @@ import {
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
-import { runForgotten } from '../listeners/listener-rows.ts';
+import { runForgottenBy } from '../listeners/listener-rows.ts';
 import { runLogStreamOf } from './run-address.ts';
 import { lineageOfRecord } from './run-lineage.ts';
 import { latestSnapshotOf, savedSnapshot } from './snapshot-chunks.ts';
@@ -34,14 +34,17 @@ function knownRun(database: HostDatabase, runKey: string): Effect.Effect<void> {
   );
 }
 
-function endedAt(database: HostDatabase, runKey: string, version: number): Effect.Effect<void> {
-  return Effect.orDie(
-    database.write(statement`UPDATE workflow_runs SET ended_at = ${version} WHERE run_key = ${runKey}`),
-  ).pipe(Effect.andThen(runForgotten(database, runKey)));
+function endedBy(runKey: string, version: number, event: RunLogEvent): readonly Statement[] {
+  return [
+    statement`INSERT INTO workflow_runs (run_key, stream_id, ended_at, ended_time)
+      VALUES (${runKey}, ${runLogStreamOf(runKey)}, ${version}, ${event.receipt.at})
+      ON CONFLICT (run_key) DO UPDATE SET ended_at = excluded.ended_at, ended_time = excluded.ended_time`,
+    runForgottenBy(runKey),
+  ];
 }
 
 export function ledgerRunLogStore(database: HostDatabase): RunLogStore {
-  const append = eventAppenderOf(database.store, RunLogRecordSchema);
+  const append = eventAppenderWithOf({ streams: database.store, appendWith: database.appendWith }, RunLogRecordSchema);
   const streamAfter = (runKey: string, version: number) =>
     Effect.promise(() => database.store.read(runLogStreamOf(runKey), version));
   const eventsAfter = (runKey: string, version: number): Effect.Effect<readonly PositionedEvent[]> =>
@@ -66,14 +69,12 @@ export function ledgerRunLogStore(database: HostDatabase): RunLogStore {
         if (expectedVersion === 0) {
           yield* knownRun(database, runKey);
         }
-        yield* append(runLogStreamOf(runKey), [runLogRecordOf(event)], {
-          expectedVersion,
-          context,
-          lineage: yield* lineageOfRecord(database, runKey, lineage),
-        });
-        if (endsTheRun(event)) {
-          yield* endedAt(database, runKey, expectedVersion + 1);
-        }
+        yield* append(
+          runLogStreamOf(runKey),
+          [runLogRecordOf(event)],
+          { expectedVersion, context, lineage: yield* lineageOfRecord(database, runKey, lineage) },
+          endsTheRun(event) ? endedBy(runKey, expectedVersion + 1, event) : [],
+        );
       }),
     eventsAfter,
     saveSnapshot: (snapshot) =>

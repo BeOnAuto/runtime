@@ -36,7 +36,12 @@ export interface EmmettEventStoreOptions<Stored extends Record<string, unknown>>
 }
 
 export interface RiddenAppends {
-  readonly appendWithin: (stream: string, event: EncodedEvent, place: AppendPlace, rider: Rider) => Promise<void>;
+  readonly appendWithin: (
+    stream: string,
+    events: readonly EncodedEvent[],
+    place: AppendPlace,
+    rider: Rider,
+  ) => Promise<void>;
 }
 
 export const rodeNowhere = 'The store appended the fact without running the work that rides on it before its commit';
@@ -130,7 +135,7 @@ async function appendedCarrying<Stored extends Record<string, unknown>>(
   rider: Rider,
 ): Promise<void> {
   const unridden = riders.ridden(
-    messages.map(({ data }) => data),
+    messages.slice(-1).map(({ data }) => data),
     rider,
   );
   try {
@@ -176,10 +181,10 @@ export function emmettEventStore<Stored extends Record<string, unknown>>(
       await appendedTo(store, stream, messagesOf(data, stream, events, place), place);
       announced(stream, events, place);
     },
-    appendWithin: async (stream, event, place, rider) => {
-      const messages = messagesOf(data, stream, [event], place);
+    appendWithin: async (stream, events, place, rider) => {
+      const messages = messagesOf(data, stream, events, place);
       await appendedCarrying(() => appendedTo(store, stream, messages, place), messages, riders, rider);
-      announced(stream, [event], place);
+      announced(stream, events, place);
     },
     migrate: async () => {
       await store.schema.migrate();

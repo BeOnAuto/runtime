@@ -105,7 +105,7 @@ describe('an append that carries work to do inside its transaction', () => {
 
     const appended = store.appendWithin(
       run,
-      { type: 'counted', data: { n: 1 } },
+      [{ type: 'counted', data: { n: 1 } }],
       { expectedVersion: 0, context: stamped },
       () => {
         done.push('the work');

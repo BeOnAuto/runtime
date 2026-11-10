@@ -2,6 +2,7 @@ import { defaultLimits } from '@on.auto/workflow-engine/testing';
 import { Effect, Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { closingBounds } from '../closing/closed-runs.ts';
 import {
   closeHostParts,
   hostWakeUp,
@@ -66,7 +67,7 @@ async function ownClocked(clock: HostClock): Promise<OwnClocked> {
 }
 
 describe('the parts of a host, woken by a clock of its own', () => {
-  it('fire the timers due at each wake-up and answer when they are next due, with no loop and no claim', async () => {
+  it('fire the timers due at each wake-up and answer when they are next due, with no loop and no claim, a day after the first run ended once both have, to close their calls', async () => {
     const start = Date.now();
     const stepped = steppedClock(start);
     const clock = watchedClock(stepped);
@@ -83,7 +84,7 @@ describe('the parts of a host, woken by a clock of its own', () => {
 
     const deadline = start + defaultLimits.mostDurationMs;
     expect(own.armed()).toEqual([deadline, start + 1000, deadline, start + 2000]);
-    expect([first, second]).toEqual([{ nextDueAt: start + 2000 }, { nextDueAt: null }]);
+    expect([first, second]).toEqual([{ nextDueAt: start + 2000 }, { nextDueAt: start + 1000 + closingBounds.quietMs }]);
     expect([settledAtFirst, own.settled()]).toEqual([[sooner], [sooner, later]]);
     expect([clock.asked(), await leaseHoldersOn(own.store.database), own.troubles()]).toEqual([[], [], []]);
   });

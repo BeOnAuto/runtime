@@ -1,5 +1,7 @@
 export type { CallAnswer, Perform, Trouble } from './calls/host-executor.ts';
 export type { CallAttempt } from './calls/call-starts.ts';
+export { closingBounds } from './closing/closed-runs.ts';
+export { endedRunsClosed, type ClosingPass, type ClosingPassAsked } from './closing/closing-pass.ts';
 export { choreWork, type Chore } from './due-work/due-chores.ts';
 export { dueInOneWakeUp, duePerformedAtOnce, type DueItem, type DueWork } from './due-work/due-work.ts';
 export { rowWaitBounds } from './due-work/row-waits.ts';

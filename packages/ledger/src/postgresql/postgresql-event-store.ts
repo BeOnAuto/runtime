@@ -1,7 +1,7 @@
 import { getPostgreSQLEventStore } from '@event-driven-io/emmett-postgresql';
 import { pgEventStoreDriver } from '@event-driven-io/emmett-postgresql/pg';
 
-import { emmettEventStore } from '../emmett/emmett-event-store.ts';
+import { emmettEventStore, type RiddenAppends } from '../emmett/emmett-event-store.ts';
 import { listenersOf, type AppendListeners, type LedgerStore } from '../event-store.ts';
 import { formattedFor, postgresqlRecordedStoreOn, type Query } from '../postgresql-reads/postgresql-recorded.ts';
 import { dataAsJsonText } from './json-text.ts';
@@ -29,7 +29,7 @@ export function postgresqlStoreOn(
   pooled: () => PostgreSQLPool,
   kept: StoreKept,
   listeners: AppendListeners = {},
-): LedgerStore {
+): LedgerStore & RiddenAppends {
   const pool = pooled();
   const projections = postgresqlProjectionsOf(kept);
   const { riders } = projections.scrubs;

@@ -1,5 +1,5 @@
 {
-  "layout": 16,
+  "layout": 17,
   "catalog": [
     {
       "name": "activity_1",
@@ -226,6 +226,10 @@
       "sql": "CREATE INDEX workflow_calls_open_by_root ON workflow_calls (root_id) WHERE state IN ('running', 'waiting')"
     },
     {
+      "name": "workflow_calls_unclosed_by_run",
+      "sql": "CREATE INDEX workflow_calls_unclosed_by_run ON workflow_calls (run_key) WHERE state <> 'closed'"
+    },
+    {
       "name": "workflow_calls_unfinished",
       "sql": "CREATE INDEX workflow_calls_unfinished ON workflow_calls (call_key) WHERE state = 'running' OR (state = 'answered' AND delivered = 0)"
     },
@@ -307,7 +311,11 @@
     },
     {
       "name": "workflow_runs",
-      "sql": "CREATE TABLE workflow_runs (run_key TEXT NOT NULL PRIMARY KEY, stream_id TEXT NOT NULL, dispatched_through BIGINT NOT NULL DEFAULT 0, ended_at BIGINT, taken BIGINT NOT NULL DEFAULT 0)"
+      "sql": "CREATE TABLE workflow_runs (run_key TEXT NOT NULL PRIMARY KEY, stream_id TEXT NOT NULL, dispatched_through BIGINT NOT NULL DEFAULT 0, ended_at BIGINT, taken BIGINT NOT NULL DEFAULT 0, ended_time BIGINT, closed_at BIGINT)"
+    },
+    {
+      "name": "workflow_runs_closing",
+      "sql": "CREATE INDEX workflow_runs_closing ON workflow_runs (ended_time) WHERE closed_at IS NULL AND ended_time IS NOT NULL"
     },
     {
       "name": "workflow_runs_live",

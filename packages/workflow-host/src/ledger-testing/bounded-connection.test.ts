@@ -65,3 +65,26 @@ describe('a testing database whose engine allows fewer bound values', () => {
     expect(database.mostBoundValues).toBe(sqliteMostBoundValues);
   });
 });
+
+const counted = { type: 'counted', data: { by: 1 } };
+
+function placeAt(expectedVersion: number) {
+  return { expectedVersion, context: { at: '2026-11-09T09:00:00.000Z', by: 'tester' } };
+}
+
+describe('the appends of a testing database whose engine allows fewer bound values', () => {
+  it('carry the statements of an append within its bound, and refuse an append whose statements bind more', async () => {
+    const database = await opened(3);
+
+    await database.appendWith('org/acme/counts', [counted], placeAt(0), [inserted(3)]);
+    const refused = await database
+      .appendWith('org/acme/counts', [counted], placeAt(1), [inserted(4)])
+      .then(() => 'appended', String);
+
+    expect(refused).toBe('Error: too many SQL variables: a statement binds more than 3 values');
+    expect([
+      await Effect.runPromise(database.read(summed(3))),
+      (await database.store.read('org/acme/counts')).version,
+    ]).toEqual([[{ counted: 3 }], 1]);
+  });
+});

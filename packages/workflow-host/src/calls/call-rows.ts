@@ -26,7 +26,7 @@ const encodeAttributes = Schema.encodeSync(AttributesText);
 const encodeResult = Schema.encodeSync(ResultText);
 
 const CallRowSchema = Schema.Struct({
-  state: Schema.Literals(['running', 'waiting', 'answered', 'cancelled']),
+  state: Schema.Literals(['running', 'waiting', 'answered', 'cancelled', 'closed']),
   result: Schema.NullOr(ResultText),
   child: Schema.NullOr(Schema.String),
 });
@@ -91,8 +91,9 @@ export function startedRow(
   return database
     .write(
       statement`INSERT INTO workflow_calls (call_key, run_key, state, call, attributes, child, root_id, started_by)
-        VALUES (${key}, ${run.runId}, 'running', ${encodeCall(call)}, ${encodeAttributes(run.attributes)},
-          ${child}, ${root}, ${origin.version})
+        SELECT ${key}, ${run.runId}, 'running', ${encodeCall(call)}, ${encodeAttributes(run.attributes)},
+          ${child}, ${root}, CAST(${origin.version} AS BIGINT)
+        WHERE NOT EXISTS (SELECT 1 FROM workflow_runs WHERE run_key = ${run.runId} AND closed_at IS NOT NULL)
         ON CONFLICT (call_key) DO NOTHING RETURNING state`,
     )
     .pipe(Effect.map((rows) => rows.length > 0));
@@ -113,8 +114,9 @@ export function refusedRow(
 ): Effect.Effect<boolean, DatabaseFailed> {
   return database
     .write(
-      statement`INSERT INTO workflow_calls (call_key, run_key, state, result) VALUES (${key}, ${run.runId},
-        'answered', ${encodeResult(refusal)})
+      statement`INSERT INTO workflow_calls (call_key, run_key, state, result)
+        SELECT ${key}, ${run.runId}, 'answered', ${encodeResult(refusal)}
+        WHERE NOT EXISTS (SELECT 1 FROM workflow_runs WHERE run_key = ${run.runId} AND closed_at IS NOT NULL)
         ON CONFLICT (call_key) DO NOTHING RETURNING state`,
     )
     .pipe(Effect.map((rows) => rows.length > 0));
@@ -165,7 +167,9 @@ export function tombstonedRow(
 ): Effect.Effect<boolean, DatabaseFailed> {
   return database
     .write(
-      statement`INSERT INTO workflow_calls (call_key, run_key, state) VALUES (${key}, ${runKey}, 'cancelled')
+      statement`INSERT INTO workflow_calls (call_key, run_key, state)
+        SELECT ${key}, ${runKey}, 'cancelled'
+        WHERE NOT EXISTS (SELECT 1 FROM workflow_runs WHERE run_key = ${runKey} AND closed_at IS NOT NULL)
         ON CONFLICT (call_key) DO NOTHING RETURNING state`,
     )
     .pipe(Effect.map((rows) => rows.length > 0));
@@ -193,13 +197,6 @@ export function callRowOf(database: HostDatabase, key: string): Effect.Effect<Ca
     CallRowSchema,
     database.read(statement`SELECT state, result, child FROM workflow_calls WHERE call_key = ${key}`),
   ).pipe(Effect.map((rows) => rows.at(0)));
-}
-
-export function existingRowOf(database: HostDatabase, key: string): Effect.Effect<CallRow, DatabaseFailed> {
-  return oneRowOf(
-    CallRowSchema,
-    database.read(statement`SELECT state, result, child FROM workflow_calls WHERE call_key = ${key}`),
-  );
 }
 
 export function openCallsUnder(database: HostDatabase, root: string): Effect.Effect<number, DatabaseFailed> {

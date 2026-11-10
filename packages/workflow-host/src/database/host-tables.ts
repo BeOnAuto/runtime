@@ -107,10 +107,14 @@ const hostTables: readonly Statement[] = [
     stream_id TEXT NOT NULL,
     dispatched_through BIGINT NOT NULL DEFAULT 0,
     ended_at BIGINT,
-    taken BIGINT NOT NULL DEFAULT 0
+    taken BIGINT NOT NULL DEFAULT 0,
+    ended_time BIGINT,
+    closed_at BIGINT
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_runs_live ON workflow_runs (taken, run_key)
     WHERE ended_at IS NULL OR dispatched_through < ended_at`,
+  statement`CREATE INDEX IF NOT EXISTS workflow_runs_closing ON workflow_runs (ended_time)
+    WHERE closed_at IS NULL AND ended_time IS NOT NULL`,
   statement`CREATE TABLE IF NOT EXISTS workflow_snapshot_chunks (
     run_key TEXT NOT NULL,
     version BIGINT NOT NULL,
@@ -150,6 +154,8 @@ const hostTables: readonly Statement[] = [
   statement`CREATE INDEX IF NOT EXISTS workflow_calls_waiting_by_run ON workflow_calls (run_key) WHERE state = 'waiting'`,
   statement`CREATE INDEX IF NOT EXISTS workflow_calls_due_again ON workflow_calls (due_again_at)
     WHERE state = 'waiting'`,
+  statement`CREATE INDEX IF NOT EXISTS workflow_calls_unclosed_by_run ON workflow_calls (run_key)
+    WHERE state <> 'closed'`,
   statement`CREATE TABLE IF NOT EXISTS workflow_pending_cancels (
     run_key TEXT NOT NULL PRIMARY KEY,
     cause TEXT NOT NULL,
@@ -188,6 +194,13 @@ export const hostLayoutSteps: readonly LayoutStep[] = [
       statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN because TEXT`,
       statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN trigger_kind TEXT`,
       statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN trigger_reference TEXT`,
+    ],
+  },
+  {
+    layout: 17,
+    statements: [
+      statement`ALTER TABLE workflow_runs ADD COLUMN ended_time BIGINT`,
+      statement`ALTER TABLE workflow_runs ADD COLUMN closed_at BIGINT`,
     ],
   },
 ];

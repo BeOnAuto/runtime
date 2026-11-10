@@ -68,6 +68,9 @@ function cancelledAs(
 ): Effect.Effect<CallCancelReceipt, DatabaseFailed | ChildNotCancelled> {
   const key = callKeyText(cancelling.call.key);
   return Effect.gen(function* () {
+    if (row.state === 'closed') {
+      return 'already_closed';
+    }
     if (row.state === 'answered') {
       return 'already_answered';
     }
@@ -92,7 +95,12 @@ export function cancelledCall(
     if (row !== undefined) {
       return yield* cancelledAs(parts, row, cancelling);
     }
-    yield* tombstonedRow(parts.database, key, cancelling.run.runId);
-    return 'tombstoned';
+    if (yield* tombstonedRow(parts.database, key, cancelling.run.runId)) {
+      return 'tombstoned';
+    }
+    const recordedMeanwhile = yield* callRowOf(parts.database, key);
+    return recordedMeanwhile === undefined
+      ? 'already_closed'
+      : yield* cancelledAs(parts, recordedMeanwhile, cancelling);
   });
 }

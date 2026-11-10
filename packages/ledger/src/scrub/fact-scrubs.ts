@@ -29,7 +29,7 @@ export function factScrubsOf(
         scrub: (stream, scrubbed, erasure, place) =>
           streams.appendWithin(
             stream,
-            erasure,
+            [erasure],
             place,
             scrubWithin({ dialect, keepings, references }, stream, scrubbed),
           ),

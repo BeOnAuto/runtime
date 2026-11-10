@@ -1,4 +1,4 @@
-import { statement } from '@on.auto/ledger';
+import { statement, type Statement } from '@on.auto/ledger';
 import { CallKeySchema, type CallKey } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
@@ -181,10 +181,8 @@ export function runCaughtUp(database: HostDatabase, runKey: string, through: num
   );
 }
 
-export function runForgotten(database: HostDatabase, runKey: string) {
-  return Effect.asVoid(
-    Effect.orDie(database.write(statement`DELETE FROM workflow_passed_runs WHERE run_key = ${runKey}`)),
-  );
+export function runForgottenBy(runKey: string): Statement {
+  return statement`DELETE FROM workflow_passed_runs WHERE run_key = ${runKey}`;
 }
 
 export function passedListeners(database: HostDatabase, streamId: string, version: number) {
