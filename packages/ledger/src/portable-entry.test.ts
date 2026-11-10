@@ -5,12 +5,16 @@ function packagesReachableFrom(entry: string): readonly string[] {
   return modulesReachedFrom(import.meta.dirname, entry).packages;
 }
 
+function entriesOfPg(packages: readonly string[]): readonly string[] {
+  return packages.filter((name) => name === 'pg' || name.endsWith('/pg'));
+}
+
 describe('the ledger entry points', () => {
   it('keep the drivers out of the main entry', () => {
     const packages = packagesReachableFrom('index.ts');
 
     expect(packages.filter((name) => name.includes('sqlite3'))).toEqual([]);
-    expect(packages).not.toContain('pg');
+    expect(entriesOfPg(packages)).toEqual([]);
     expect(packages.filter((name) => name.includes('postgresql'))).toEqual([]);
     expect(packages).toContain('@event-driven-io/emmett-sqlite');
   });
@@ -20,7 +24,7 @@ describe('the ledger entry points', () => {
 
     expect(packages.filter((name) => name.includes('sqlite3'))).toEqual([]);
     expect(packages.filter((name) => name.includes('postgresql'))).toEqual([]);
-    expect(packages).not.toContain('pg');
+    expect(entriesOfPg(packages)).toEqual([]);
     expect(packages).toContain('vitest');
   });
 

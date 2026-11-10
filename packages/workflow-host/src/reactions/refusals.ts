@@ -79,8 +79,8 @@ function refusalLoopOn(database: HostDatabase) {
   return decisionLoop(
     (stream: string) =>
       Effect.map(
-        Effect.promise(() => database.store.read(stream)),
-        ({ version }) => ({ state: null, version }),
+        Effect.promise(() => database.store.versionOf(stream)),
+        (version) => ({ state: null, version }),
       ),
     (stream, events, place) => append(stream, events, place),
     reactionRefusalDecider,

@@ -220,6 +220,7 @@ export {
   isTroubling,
   type RecordStore,
   type RunDue,
+  type ReloadedReport,
   type RunReporter,
   type SettleReceipt,
   type SettleRequest,

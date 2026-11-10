@@ -183,6 +183,18 @@ export interface StreamAgesStore {
   readonly ageOfLastAppend: (stream: string) => Promise<number>;
 }
 
+export interface StreamVersionsStore {
+  readonly versionOf: (stream: string) => Promise<number>;
+}
+
+export interface StreamMessagesStore {
+  readonly messageAt: (stream: string, version: number) => Promise<RecordedMessage | undefined>;
+}
+
+export interface LastMessagesStore {
+  readonly lastMessageOf: (stream: string) => Promise<RecordedMessage | undefined>;
+}
+
 export type AppendWaited = 'appended' | 'ended';
 
 export interface AppendWaitsStore {
@@ -191,7 +203,15 @@ export interface AppendWaitsStore {
 }
 
 export interface LedgerStreams
-  extends Streams, RecordedStore, DefinitionStreamsStore, StreamAgesStore, AppendWaitsStore {}
+  extends
+    Streams,
+    StreamMessagesStore,
+    LastMessagesStore,
+    RecordedStore,
+    DefinitionStreamsStore,
+    StreamAgesStore,
+    StreamVersionsStore,
+    AppendWaitsStore {}
 
 export interface EventStore extends StreamStore, LedgerStreams {}
 

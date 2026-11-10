@@ -8,9 +8,13 @@ import type {
   ReadLatestAppends,
   RecordedStore,
   StreamAgesStore,
+  StreamVersionsStore,
+  LastMessagesStore,
 } from '../event-store.ts';
 import { kindKeyOfStream } from '../recorded/sqlite-indexes.ts';
+import { sqliteLastMessages } from '../recorded/sqlite-last-messages.ts';
 import { sqliteStreamAges } from '../stream-ages/sqlite-stream-ages.ts';
+import { sqliteStreamVersions } from '../stream-versions/sqlite-stream-versions.ts';
 import { appendWatchOf } from './append-watch.ts';
 
 const defaultPartition = 'emt:default';
@@ -30,9 +34,15 @@ async function newestPoint(execute: SQLExecutor): Promise<LatestAppends> {
 export function sqliteAppended(
   execute: SQLExecutor,
   listeners: AppendListeners = {},
-): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & AppendWaitsStore {
+): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & StreamVersionsStore & LastMessagesStore & AppendWaitsStore {
   const readAppended = appendedAfter(execute);
-  return { readAppended, ...appendWatchOf(readAppended, listeners), ...sqliteStreamAges(execute) };
+  return {
+    readAppended,
+    ...appendWatchOf(readAppended, listeners),
+    ...sqliteStreamAges(execute),
+    ...sqliteStreamVersions(execute),
+    ...sqliteLastMessages(execute),
+  };
 }
 
 function appendedAfter(execute: SQLExecutor): ReadLatestAppends {

@@ -18,6 +18,7 @@ import {
   orderedMessagesIn,
   rowIn,
   rowsWrite,
+  sizedPointsIn,
   streamsIn,
   tableAnalysis,
   tableDrop,
@@ -31,6 +32,10 @@ const streamsInABatch = 100;
 export const messagesInABatch = 256;
 
 export const mostBytesInABatch = 16 * 1024 * 1024;
+
+interface FillKeeping extends ProjectionKeeping {
+  readonly mostBytes: number;
+}
 
 export type NamedProjection = Pick<KeyedProjection, 'name'>;
 
@@ -67,17 +72,35 @@ function replayedRows(
   });
 }
 
-function withinBytes(listed: readonly SizedStream[]): readonly string[] {
-  const taken: string[] = [];
+export function withinBytes<Sized extends { readonly size: number }>(
+  listed: readonly Sized[],
+  mostBytes: number,
+): readonly Sized[] {
+  const taken: Sized[] = [];
   let loaded = 0;
-  for (const { stream, size } of listed) {
-    if (taken.length > 0 && loaded + size > mostBytesInABatch) {
+  for (const sized of listed) {
+    if (taken.length > 0 && loaded + sized.size > mostBytes) {
       return taken;
     }
-    taken.push(stream);
-    loaded += size;
+    taken.push(sized);
+    loaded += sized.size;
   }
   return taken;
+}
+
+export interface Listing {
+  readonly listing: number;
+  readonly most: number;
+  readonly mostBytes: number;
+}
+
+export function listingAfter(
+  { listing, most, mostBytes }: Listing,
+  taken: readonly { readonly size: number }[],
+): number {
+  const takenBytes = taken.reduce((total, { size }) => total + size, 0);
+  const fitting = Math.floor((mostBytes * taken.length) / takenBytes);
+  return Math.max(1, Math.min(most, 2 * listing, fitting));
 }
 
 interface Batch {
@@ -85,33 +108,35 @@ interface Batch {
   readonly listing: number;
 }
 
-function batchAfter({ listing }: Batch, listed: readonly SizedStream[], taken: readonly string[]): Batch | undefined {
+function batchAfter(
+  { listing }: Batch,
+  listed: readonly SizedStream[],
+  taken: readonly string[],
+  mostBytes: number,
+): Batch | undefined {
   const last = taken.at(-1);
   if (last === undefined || (taken.length === listed.length && listed.length < listing)) {
     return undefined;
   }
-  const takenBytes = listed.slice(0, taken.length).reduce((total, { size }) => total + size, 0);
-  const fitting = Math.floor((mostBytesInABatch * taken.length) / takenBytes);
-  return { after: last, listing: Math.max(1, Math.min(streamsInABatch, 2 * listing, fitting)) };
+  return {
+    after: last,
+    listing: listingAfter({ listing, most: streamsInABatch, mostBytes }, listed.slice(0, taken.length)),
+  };
 }
 
-async function batchFilled(
-  keeping: ProjectionKeeping,
-  execute: StatementExecutor,
-  batch: Batch,
-): Promise<Batch | undefined> {
+async function batchFilled(keeping: FillKeeping, execute: StatementExecutor, batch: Batch): Promise<Batch | undefined> {
   const { dialect, projection } = keeping;
   const listed = await streamsIn(
     execute,
     dialect.streamsAfter(batch.after, batch.listing, foldedStreamsOf(projection), projection.types),
   );
-  const streams = withinBytes(listed);
+  const streams = withinBytes(listed, keeping.mostBytes).map(({ stream }) => stream);
   const messages = streams.length === 0 ? [] : await messagesIn(execute, dialect.messagesOf(streams, projection.types));
   await writtenInChunks(keeping, execute, replayedRows(keeping, streams, messages));
-  return batchAfter(batch, listed, streams);
+  return batchAfter(batch, listed, streams, keeping.mostBytes);
 }
 
-async function filledByStream(keeping: ProjectionKeeping, execute: StatementExecutor, batch: Batch): Promise<void> {
+async function filledByStream(keeping: FillKeeping, execute: StatementExecutor, batch: Batch): Promise<void> {
   const next = await batchFilled(keeping, execute, batch);
   if (next !== undefined) {
     await filledByStream(keeping, execute, next);
@@ -167,35 +192,40 @@ async function keyedRowsAfter(
   return [...changed.values()];
 }
 
-async function filledInOrder(keeping: ProjectionKeeping, execute: StatementExecutor, after?: string): Promise<void> {
+interface OrderBatch {
+  readonly after?: string;
+  readonly listing: number;
+}
+
+async function filledInOrder(keeping: FillKeeping, execute: StatementExecutor, batch: OrderBatch): Promise<void> {
   const { dialect, projection } = keeping;
-  const messages = await orderedMessagesIn(
-    execute,
-    dialect.messagesInOrderAfter(
-      after,
-      messagesInABatch,
-      { of: 'folded', folded: foldedStreamsOf(projection) },
-      projection.types,
-    ),
-  );
+  const { after, listing } = batch;
+  const streams = { of: 'folded', folded: foldedStreamsOf(projection) } as const;
+  const listed = await sizedPointsIn(execute, dialect.sizesInOrderAfter(after, listing, streams, projection.types));
+  const taken = withinBytes(listed, keeping.mostBytes);
+  const through = taken.at(-1);
+  const messages =
+    through === undefined
+      ? []
+      : await orderedMessagesIn(
+          execute,
+          dialect.messagesInOrderThrough(after, through.point, streams, projection.types),
+        );
   await writtenInChunks(keeping, execute, await keyedRowsAfter(keeping, execute, messages));
   const last = messages.at(-1);
-  if (last !== undefined && messages.length === messagesInABatch) {
-    await filledInOrder(keeping, execute, last.point);
+  if (last !== undefined && (taken.length < listed.length || listed.length === listing)) {
+    const next = listingAfter({ listing, most: messagesInABatch, mostBytes: keeping.mostBytes }, taken);
+    await filledInOrder(keeping, execute, { after: last.point, listing: next });
   }
 }
 
-function filled(keeping: ProjectionKeeping, execute: StatementExecutor): Promise<void> {
+function filled(keeping: FillKeeping, execute: StatementExecutor): Promise<void> {
   return keeping.projection.keyOf === undefined
     ? filledByStream(keeping, execute, { after: '', listing: 1 })
-    : filledInOrder(keeping, execute);
+    : filledInOrder(keeping, execute, { listing: 1 });
 }
 
-async function created(
-  keeping: ProjectionKeeping,
-  execute: StatementExecutor,
-  tables: readonly string[],
-): Promise<void> {
+async function created(keeping: FillKeeping, execute: StatementExecutor, tables: readonly string[]): Promise<void> {
   const { dialect, projection } = keeping;
   await inTurn(createdTable(dialect, projection), (statement) => execute.command(statement));
   await filled(keeping, execute);
@@ -207,7 +237,7 @@ async function created(
 }
 
 async function preparedProjection(
-  keeping: ProjectionKeeping,
+  keeping: FillKeeping,
   execute: StatementExecutor,
   inTransaction: InTransaction,
 ): Promise<void> {
@@ -221,6 +251,7 @@ export async function preparedProjections(
   keepings: readonly ProjectionKeeping[],
   execute: StatementExecutor,
   inTransaction: InTransaction,
+  mostBytes: number = mostBytesInABatch,
 ): Promise<void> {
-  await inTurn(keepings, (keeping) => preparedProjection(keeping, execute, inTransaction));
+  await inTurn(keepings, (keeping) => preparedProjection({ ...keeping, mostBytes }, execute, inTransaction));
 }

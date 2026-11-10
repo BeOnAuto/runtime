@@ -2,15 +2,11 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { stopsInARowBeforeTheVersion } from '../filtering/filter-matching.ts';
+import { subscribed, subscribedAt } from '../reaction-testing/event-subscriptions.ts';
 import { followedRecordOf } from '../reaction-testing/followed-records.ts';
-import { eventTrigger, type TriggerFilter } from '../reaction-testing/playbook-writes.ts';
 import { starting, stopsByItsMemory, stopsByItsWork } from '../reaction-testing/trigger-starting.ts';
-import { zoneClockOf } from '../schedules/zone-clock.ts';
-import { triggersActivated } from '../triggers/trigger-rows.ts';
 import { reactionRunIdOf } from './reaction-ids.ts';
 import { mostReactionDepth } from './subscription-starts.ts';
-
-const playbookKey = 'playbook/acme/alpha/';
 
 const at = '2026-10-01T09:00:00.000Z';
 
@@ -18,20 +14,7 @@ const working = { type: 'go', data: stopsByItsWork };
 
 const filling = { type: 'go', data: stopsByItsMemory };
 
-type Database = Parameters<typeof triggersActivated>[0];
-
 const european = { type: 'go', data: { region: 'eu' } };
-
-async function subscribedAt(database: Database, version: number, name: string, ...filters: readonly TriggerFilter[]) {
-  const activation = { workflow: name, version, activatedBy: `definition-${version}`, activatedAt: Date.parse(at) };
-  await Effect.runPromise(
-    triggersActivated(database, playbookKey, { ...activation, triggers: [eventTrigger(...filters)] }, zoneClockOf),
-  );
-}
-
-function subscribed(database: Database, name: string, ...filters: readonly TriggerFilter[]) {
-  return subscribedAt(database, 1, name, ...filters);
-}
 
 describe('the starts of the workflows whose trigger an event matches', () => {
   it('start each workflow whose filter takes the event, with the event as input, one deeper, under an id of the record', async () => {

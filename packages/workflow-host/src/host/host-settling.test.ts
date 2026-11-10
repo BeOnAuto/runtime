@@ -17,7 +17,7 @@ const ending = workflow('do:\n  - done: { set: { done: true } }');
 const outageMs = 2 * 60_000;
 
 describe('the host asked to start a run whose settlement is pending', () => {
-  it('settles it again at once, and answers settled once it is', async () => {
+  it('settles it again at once, and answers settled once it is, whatever a sweep of the host tried meanwhile', async () => {
     const ledger = { down: true };
     const hosted = await hostedOn(
       { store: 'sqlite', file: aSQLiteFile() },
@@ -29,12 +29,14 @@ describe('the host asked to start a run whose settlement is pending', () => {
     hosted.know(runId);
 
     const first = await Effect.runPromise(hosted.host.start(run, startOf(ending)));
+    const attemptsBeforeTheStart = hosted.settleAttempts();
     const whileDown = await Effect.runPromise(hosted.host.start(run, startOf(ending)));
+    const attemptsOfTheStart = hosted.settleAttempts() - attemptsBeforeTheStart;
     ledger.down = false;
     const once = await Effect.runPromise(hosted.host.start(run, startOf(ending)));
 
     expect([first, whileDown, once]).toEqual(['started', 'going', 'settled']);
-    expect(hosted.settleAttempts()).toBe(3);
+    expect(attemptsOfTheStart).toBeGreaterThan(0);
     expect([...hosted.settlements().keys()]).toEqual([runId]);
   });
 

@@ -4,7 +4,7 @@ import { noHoldersKnown, streamPrefixOfPlaybook, type ContentHolders } from '@on
 import type { InTransaction, StatementExecutor, UnlessHeld } from '../event-store.ts';
 import { inlineRegistrationOf, inTurn, type InlineRegistration } from '../projections/inline-projection.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
-import { versionOfTable, type NamedProjection } from '../projections/projection-fill.ts';
+import { mostBytesInABatch, versionOfTable, type NamedProjection } from '../projections/projection-fill.ts';
 import { namesIn, tableDrop } from '../projections/projection-statements.ts';
 import { keepingReferences, referencesFilled, referencesRefolded, type ReferencesKeeping } from './references-folds.ts';
 import { contentReferences, digestsLocked, isHeldIn, referencesCreated, referencesTable } from './references-table.ts';
@@ -73,6 +73,7 @@ const noReferences: ContentReferences = {
 export function contentReferencesOf(
   dialect: ProjectionDialect,
   holders: ContentHolders | undefined,
+  mostBytes: number = mostBytesInABatch,
 ): ContentReferences {
-  return holders === undefined ? noReferences : referencesKept({ dialect, holders });
+  return holders === undefined ? noReferences : referencesKept({ dialect, holders, mostBytes });
 }

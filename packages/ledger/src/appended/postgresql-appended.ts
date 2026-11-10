@@ -8,8 +8,11 @@ import type {
   RecordedPoint,
   RecordedStore,
   StreamAgesStore,
+  StreamVersionsStore,
+  LastMessagesStore,
 } from '../event-store.ts';
 import { kindKeyOfStream } from '../postgresql-reads/playbook-indexes.ts';
+import { postgresqlLastMessages } from '../postgresql-reads/postgresql-last-messages.ts';
 import {
   binding,
   defaultPartition,
@@ -18,6 +21,7 @@ import {
   type Query,
 } from '../postgresql-reads/recorded-parts.ts';
 import { postgresqlStreamAges } from '../stream-ages/postgresql-stream-ages.ts';
+import { postgresqlStreamVersions } from '../stream-versions/postgresql-stream-versions.ts';
 import { appendWatchOf } from './append-watch.ts';
 
 const AppendedRows = Schema.NonEmptyArray(
@@ -75,9 +79,15 @@ function appendedOf(horizon: string, groups: readonly Group[], most: number): La
 export function postgresqlAppended(
   query: Query,
   listeners: AppendListeners = {},
-): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & AppendWaitsStore {
+): Pick<RecordedStore, 'readAppended'> & StreamAgesStore & StreamVersionsStore & LastMessagesStore & AppendWaitsStore {
   const readAppended = appendedAfter(query);
-  return { readAppended, ...appendWatchOf(readAppended, listeners), ...postgresqlStreamAges(query) };
+  return {
+    readAppended,
+    ...appendWatchOf(readAppended, listeners),
+    ...postgresqlStreamAges(query),
+    ...postgresqlStreamVersions(query),
+    ...postgresqlLastMessages(query),
+  };
 }
 
 function appendedAfter(query: Query): ReadLatestAppends {

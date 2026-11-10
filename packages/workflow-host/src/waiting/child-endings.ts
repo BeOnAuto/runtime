@@ -1,4 +1,4 @@
-import { lastEndingOf, runEndingOf, type RunEnding } from '@on.auto/definitions';
+import { runEndingOf, type RunEnding } from '@on.auto/definitions';
 import {
   streamPrefixOfPlaybook,
   type PlaybookAddress,
@@ -76,8 +76,8 @@ export function childStreamOf(playbook: PlaybookAddress, child: string): string 
 
 function childEndingOf(database: HostDatabase, playbook: PlaybookAddress, child: string) {
   return Effect.map(
-    Effect.promise(() => database.store.read(childStreamOf(playbook, child), 0)),
-    ({ messages }) => calledEndingOf(lastEndingOf(messages)),
+    Effect.promise(() => database.store.lastMessageOf(childStreamOf(playbook, child))),
+    (last) => calledEndingOf(runEndingOf(last)),
   );
 }
 

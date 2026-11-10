@@ -3,7 +3,14 @@ import { Effect } from 'effect';
 
 import { DispatchFailed, type DispatchWatermark } from '../dispatch/dispatch-watermark.ts';
 import { sameJson } from '../machine/same-json.ts';
-import type { RecordStore, RunDue, RunReporter, SettleReceipt, UnsettledReport } from '../settlement/record-store.ts';
+import type {
+  RecordStore,
+  ReloadedReport,
+  RunDue,
+  RunReporter,
+  SettleReceipt,
+  UnsettledReport,
+} from '../settlement/record-store.ts';
 import type { Faults } from './memory-timers.ts';
 import type { MemoryRunStore } from './run-store.ts';
 
@@ -14,6 +21,7 @@ export interface MemoryRecordStore extends RecordStore {
 
 export interface MemoryReporter extends RunReporter {
   readonly reports: () => readonly UnsettledReport[];
+  readonly reloads: () => readonly ReloadedReport[];
 }
 
 export function memoryRecordStore(faults: Faults): MemoryRecordStore {
@@ -63,12 +71,18 @@ export function memoryRecordStore(faults: Faults): MemoryRecordStore {
 
 export function memoryReporter(): MemoryReporter {
   const reports: UnsettledReport[] = [];
+  const reloads: ReloadedReport[] = [];
   return {
     unsettled: (report) =>
       Effect.sync(() => {
         reports.push(report);
       }),
+    reloaded: (report) =>
+      Effect.sync(() => {
+        reloads.push(report);
+      }),
     reports: () => reports,
+    reloads: () => reloads,
   };
 }
 

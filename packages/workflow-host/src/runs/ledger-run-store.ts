@@ -47,6 +47,7 @@ export function ledgerRunLogStore(database: HostDatabase): RunLogStore {
   const append = eventAppenderWithOf({ streams: database.store, appendWith: database.appendWith }, RunLogRecordSchema);
   const streamAfter = (runKey: string, version: number) =>
     Effect.promise(() => database.store.read(runLogStreamOf(runKey), version));
+  const versionOfTheLog = (runKey: string) => Effect.promise(() => database.store.versionOf(runLogStreamOf(runKey)));
   const eventsAfter = (runKey: string, version: number): Effect.Effect<readonly PositionedEvent[]> =>
     streamAfter(runKey, version).pipe(
       Effect.flatMap(({ messages }) => Effect.forEach(messages, codec.decode)),
@@ -78,8 +79,8 @@ export function ledgerRunLogStore(database: HostDatabase): RunLogStore {
       }),
     eventsAfter,
     saveSnapshot: (snapshot) =>
-      Effect.flatMap(streamAfter(snapshot.runId, snapshot.version - 1), ({ messages, version }) =>
-        messages.length > 0
+      Effect.flatMap(versionOfTheLog(snapshot.runId), (version) =>
+        version >= snapshot.version
           ? savedSnapshot(database, snapshot)
           : Effect.die(
               new RangeError(`A snapshot at version ${snapshot.version} of a run whose log holds ${version} events`),

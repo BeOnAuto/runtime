@@ -54,6 +54,24 @@ describe('the host given an event', () => {
   });
 });
 
+describe('the host keeping no run loaded', () => {
+  it('notes each run it loads from the ledger again, with what the run holds, and not the run it starts', async () => {
+    const hosted = await hostedOn(
+      { store: 'sqlite', file: aSQLiteFile() },
+      { cacheBounds: { mostRuns: 0, mostBytes: 0 } },
+    );
+
+    await Effect.runPromise(hosted.host.start(run, startOf(pausing)));
+    const atStart = hosted.notes().length;
+    await Effect.runPromise(hosted.host.deliver(run, approved));
+
+    expect(atStart).toBe(0);
+    expect(hosted.notes()).toMatchObject([
+      { kind: 'run_reloaded', run: { org: 'acme', playbook: 'alpha', runId }, snapshot: false, events: 1 },
+    ]);
+  });
+});
+
 describe('the host reporting to its operator', () => {
   it('reports a run whose run the playbook does not know, once it ends', async () => {
     const hosted = await hostedOn({ store: 'sqlite', file: aSQLiteFile() });

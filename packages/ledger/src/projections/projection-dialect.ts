@@ -49,7 +49,19 @@ export interface ProjectionDialect {
     streams: StreamsInOrder,
     types: readonly string[],
   ) => SQL;
-  readonly heldMessagesInOrderAfter: (read: HeldRead) => SQL;
+  readonly sizesInOrderAfter: (
+    after: string | undefined,
+    count: number,
+    streams: StreamsInOrder,
+    types: readonly string[],
+  ) => SQL;
+  readonly messagesInOrderThrough: (
+    after: string | undefined,
+    through: string,
+    streams: StreamsInOrder,
+    types: readonly string[],
+  ) => SQL;
+  readonly heldMessagesThrough: (read: HeldRead, through: string) => SQL;
   readonly heldSizesInOrderAfter: (read: HeldRead) => SQL;
   readonly messageAt: (stream: string, position: number) => SQL;
   readonly keyLocks: (table: string, prefix: string, key: string) => readonly SQL[];

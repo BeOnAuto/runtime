@@ -39,6 +39,7 @@ export interface HostedOptions {
   readonly dueWork?: HostOptions['dueWork'];
   readonly context?: HostOptions['context'];
   readonly reactions?: HostOptions['reactions'];
+  readonly cacheBounds?: HostOptions['cacheBounds'];
 }
 
 const answeredWithNull = (): ReturnType<HostOptions['perform']> =>
@@ -46,15 +47,16 @@ const answeredWithNull = (): ReturnType<HostOptions['perform']> =>
 
 const ledgerUp = (): boolean => false;
 
-type PassedThrough = Pick<HostOptions, 'clock' | 'holder' | 'projector' | 'dueWork' | 'context'>;
+type PassedThrough = Pick<HostOptions, 'clock' | 'holder' | 'projector' | 'dueWork' | 'context' | 'cacheBounds'>;
 
-function passedThrough({ clock, holder, projector, dueWork, context }: HostedOptions): PassedThrough {
+function passedThrough({ clock, holder, projector, dueWork, context, cacheBounds }: HostedOptions): PassedThrough {
   return {
     ...(clock === undefined ? {} : { clock }),
     ...(holder === undefined ? {} : { holder }),
     ...(projector === undefined ? {} : { projector }),
     ...(dueWork === undefined ? {} : { dueWork }),
     ...(context === undefined ? {} : { context }),
+    ...(cacheBounds === undefined ? {} : { cacheBounds }),
   };
 }
 

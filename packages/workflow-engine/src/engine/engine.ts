@@ -5,7 +5,7 @@ import { workflowMachine } from '../decider/workflow-machine.ts';
 import type { MachineOptions } from '../runner/run-descriptors.ts';
 import type { EnginePorts } from './engine-ports.ts';
 import { dispatchRun } from './output-dispatch.ts';
-import { runLoopOf } from './run-loop.ts';
+import { runLoopOf, type RunLoopUpkeep } from './run-loop.ts';
 import { armedTimersOf, loadedFrom, snapshotIfDue } from './run-upkeep.ts';
 import { submissionWithDeclined } from './submission.ts';
 import type { Wake, WorkflowEngine } from './workflow-engine.ts';
@@ -20,12 +20,16 @@ function dueRunsOf(ports: EnginePorts, before: number): Effect.Effect<readonly s
   );
 }
 
+function upkeepOf(ports: EnginePorts, options: MachineOptions): RunLoopUpkeep {
+  return { reserve: options.sandbox.reserve, report: (reloaded) => ports.reporter.reloaded(reloaded) };
+}
+
 export function workflowEngineOf(
   ports: EnginePorts,
   options: MachineOptions,
   cache: RunCache = runCacheOf(),
 ): WorkflowEngine {
-  const loop = runLoopOf(ports.runStore, workflowMachine(options), cache, options.sandbox.reserve);
+  const loop = runLoopOf(ports.runStore, workflowMachine(options), cache, upkeepOf(ports, options));
   const loaded = (runId: string) => loadedFrom(ports, runId);
   const wake = (runId: string): Effect.Effect<Wake> =>
     ports.serialiser.serialise(

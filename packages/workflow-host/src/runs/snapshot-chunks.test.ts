@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
+import { readingMeasured } from '../waiting-testing/measured-reads.ts';
 import { ledgerRunLogStore } from './ledger-run-store.ts';
 import { runKeyOf } from './run-address.ts';
 
@@ -47,5 +48,21 @@ describe('the run store of the host, refusing', () => {
     const defect = await defectOf(runStore.saveSnapshot(snapshotOf(state, 2)));
 
     expect(defect).toEqual(new RangeError('A snapshot at version 2 of a run whose log holds 1 events'));
+  });
+});
+
+describe('the run store of the host, saving a snapshot', () => {
+  it('learns that its log holds the event from the version of the log, reading nothing of the event', async () => {
+    const file = aSQLiteFile();
+    const hosted = await hostedOn({ store: 'sqlite', file });
+    await Effect.runPromise(hosted.host.start(run, startOf(waiting, { text: 'x'.repeat(100 * 1024) })));
+    const state = await Effect.runPromise(hosted.host.stateOf(run));
+    const measured = readingMeasured(await openedOn({ store: 'sqlite', file }));
+
+    await Effect.runPromise(ledgerRunLogStore(measured.database).saveSnapshot(snapshotOf(state, 1)));
+    const read = measured.bytesRead();
+    const { snapshot } = await Effect.runPromise(ledgerRunLogStore(measured.database).load(runKeyOf(run)));
+
+    expect([read, snapshot?.snapshot.version]).toEqual([0, 1]);
   });
 });

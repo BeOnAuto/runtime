@@ -28,7 +28,7 @@ const notesOfAHostAnHourAhead: Readonly<Record<ClaimClock, readonly Readonly<Rec
 };
 
 export function leaseSuite(databases: ProcessDatabasesOf): void {
-  it('lets one host serve the workflows of a database, and a second take them over only once the first is gone', async () => {
+  it('lets one host serve the workflows of a database, and a second take them over only once the first is gone, loading the run the first left from the ledger', async () => {
     const database = await databases();
     const first = hostIn(database, 'hang-on-call', join(aSQLiteFile(), '..', 'settlements.jsonl'), sweepEveryMs);
     await first.said('calling');
@@ -45,7 +45,7 @@ export function leaseSuite(databases: ProcessDatabasesOf): void {
 
     expect(refused).toBeInstanceOf(HostElsewhere);
     expect(performedWhileBothRan).toBe(0);
-    expect(second.notes().map(({ kind }) => kind)).toEqual(['standing_by', 'took_over']);
+    expect(second.notes().map(({ kind }) => kind)).toEqual(['standing_by', 'took_over', 'run_reloaded']);
     expect(second.calls()).toHaveLength(1);
     expect([...settled.keys()]).toEqual([runId]);
   });

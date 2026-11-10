@@ -1,16 +1,21 @@
 import { runStartedOf } from '@on.auto/definitions';
+import type { LedgerStreams } from '@on.auto/ledger';
 import { Effect } from 'effect';
 
 export type WorkflowOfRun = (playbookKey: string, runId: string) => Effect.Effect<string | undefined>;
 
-export type ReadStream = (stream: string) => Promise<{ readonly messages: readonly unknown[] }>;
-
 const mostRunsRemembered = 4096;
 
-export function workflowsOfRuns(read: ReadStream, type: string, mostRemembered = mostRunsRemembered): WorkflowOfRun {
+const firstVersion = 1;
+
+export function workflowsOfRuns(
+  store: Pick<LedgerStreams, 'messageAt'>,
+  type: string,
+  mostRemembered = mostRunsRemembered,
+): WorkflowOfRun {
   const remembered = new Map<string, string | undefined>();
-  const workflowOf = (messages: readonly unknown[]): string | undefined => {
-    const started = runStartedOf(messages[0]);
+  const workflowOf = (first: unknown): string | undefined => {
+    const started = runStartedOf(first);
     return started?.definitionType === type ? started.definitionName : undefined;
   };
   return (playbookKey, runId) => {
@@ -18,9 +23,9 @@ export function workflowsOfRuns(read: ReadStream, type: string, mostRemembered =
     if (remembered.has(stream)) {
       return Effect.succeed(remembered.get(stream));
     }
-    return Effect.promise(() => read(stream)).pipe(
-      Effect.map(({ messages }) => {
-        const workflow = workflowOf(messages);
+    return Effect.promise(() => store.messageAt(stream, firstVersion)).pipe(
+      Effect.map((first) => {
+        const workflow = workflowOf(first);
         if (remembered.size >= mostRemembered) {
           remembered.clear();
         }

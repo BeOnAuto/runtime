@@ -75,6 +75,21 @@ function runRecordPassed({ run, version, sweeps }: NoteOf<'run_record_passed'>):
   ).pipe(Effect.annotateLogs({ org: run.org, playbook: run.playbook, run_id: run.runId, version }));
 }
 
+function runReloaded({ run, snapshot, events, keptBytes }: NoteOf<'run_reloaded'>): Effect.Effect<void> {
+  return Effect.logDebug(
+    'A run was loaded from the ledger again, since the runs the workflows keep in memory no longer held it',
+  ).pipe(
+    Effect.annotateLogs({
+      org: run.org,
+      playbook: run.playbook,
+      run_id: run.runId,
+      from_snapshot: snapshot,
+      events,
+      kept_bytes: keptBytes,
+    }),
+  );
+}
+
 const loggers: { readonly [Kind in HostNote['kind']]: (note: NoteOf<Kind>) => Effect.Effect<void> } = {
   standing_by: standingBy,
   took_over: tookOver,
@@ -87,6 +102,7 @@ const loggers: { readonly [Kind in HostNote['kind']]: (note: NoteOf<Kind>) => Ef
   offer_declined: offerDeclined,
   record_unreadable: recordUnreadable,
   run_record_passed: runRecordPassed,
+  run_reloaded: runReloaded,
 };
 
 function loggedBy<Kind extends HostNote['kind']>(note: NoteOf<Kind>): Effect.Effect<void> {

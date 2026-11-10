@@ -46,6 +46,8 @@ const columnsOfAMessage = SQL`${SQL.plain(`m.transaction_id::text || '/' || m.gl
 const columnsOfASize = SQL`${SQL.plain(`m.transaction_id::text || '/' || m.global_position::text AS point,
   ${dataBytesOf(columnsOfTheTable('m'))}::float8 AS size`)}`;
 
+const columnsToSize = SQL.plain('m.transaction_id, m.global_position, m.stream_id, m.message_data, m.message_metadata');
+
 function typesIn(types: readonly string[]): SQL {
   return SQL`m.message_type IN (SELECT jsonb_array_elements_text(${JSON.stringify(types)}::jsonb))`;
 }
@@ -70,51 +72,55 @@ interface LaneRead {
   readonly count: number;
   readonly types: readonly string[] | HeldTypes;
   readonly sized?: boolean;
+  readonly through?: string;
+}
+
+function upTo({ through }: LaneRead): SQL {
+  return through === undefined
+    ? SQL.EMPTY
+    : SQL` AND (m.transaction_id, m.global_position)
+      <= (split_part(${through}, '/', 1)::xid8, split_part(${through}, '/', 2)::bigint)`;
+}
+
+function limitOf({ count, through }: LaneRead): SQL {
+  return through === undefined ? SQL`LIMIT ${count}` : SQL.EMPTY;
 }
 
 function selectedOf({ types }: LaneRead): SQL {
   return 'holding' in types ? heldTypesIn(types) : typesIn(types);
 }
 
-function columnsOf({ sized }: LaneRead): SQL {
-  return sized === true ? columnsOfASize : columnsOfAMessage;
-}
-
-function laneAfter({ by, key }: MessageLane, read: LaneRead): SQL {
-  const ofTheLane = keyOfALane[by];
-  return SQL`SELECT ${columnsOf(read)}
-    FROM emt_messages AS m
-    WHERE ${ofTheLane} = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify([key])}::jsonb)))
-      AND ${pointsAfter(read.after)} AND ${selectedOf(read)}
-      AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
-    ORDER BY ${ofTheLane}, m.transaction_id, m.global_position
-    LIMIT ${read.count}`;
-}
-
-function inOrderAfter(read: LaneRead, folded?: FoldedStreams): SQL {
-  const ofTheStreams = folded === undefined ? SQL.EMPTY : SQL`${foldedBy('m.stream_id', folded)} AND `;
-  return SQL`SELECT ${columnsOf(read)}
-    FROM emt_messages AS m
-    WHERE ${ofTheStreams}${pointsAfter(read.after)}
-      AND ${selectedOf(read)}
-      AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
-    ORDER BY m.transaction_id, m.global_position
-    LIMIT ${read.count}`;
-}
-
 function keyLocked(table: string, prefix: string, key: string): readonly SQL[] {
   return [SQL`SELECT pg_advisory_xact_lock(hashtextextended(${`${table}:${prefix}${key}`}, 0))`];
 }
 
-function streamsInOrder(read: LaneRead, streams: StreamsInOrder): SQL {
+function whichOf(streams: StreamsInOrder): SQL {
   if (streams.of === 'lane') {
-    return laneAfter(streams.lane, read);
+    const { by, key } = streams.lane;
+    return SQL`${keyOfALane[by]} = ANY(ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify([key])}::jsonb))) AND `;
   }
-  return inOrderAfter(read, streams.of === 'folded' ? streams.folded : undefined);
+  return streams.of === 'folded' ? SQL`${foldedBy('m.stream_id', streams.folded)} AND ` : SQL.EMPTY;
 }
 
-function heldInOrder({ after, count, streams, types }: HeldRead, sized: boolean): SQL {
-  return streamsInOrder({ after, count, types, sized }, streams);
+function orderOf(streams: StreamsInOrder): SQL {
+  return streams.of === 'lane'
+    ? SQL`${keyOfALane[streams.lane.by]}, m.transaction_id, m.global_position`
+    : SQL`m.transaction_id, m.global_position`;
+}
+
+function streamsInOrder(read: LaneRead, streams: StreamsInOrder): SQL {
+  const order = orderOf(streams);
+  const rows = SQL`SELECT ${read.sized === true ? columnsToSize : columnsOfAMessage}
+    FROM emt_messages AS m
+    WHERE ${whichOf(streams)}${pointsAfter(read.after)}${upTo(read)} AND ${selectedOf(read)}
+      AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
+    ORDER BY ${order}
+    ${limitOf(read)}`;
+  return read.sized === true ? SQL`SELECT ${columnsOfASize} FROM (${rows}) AS m ORDER BY ${order}` : rows;
+}
+
+function heldInOrder({ after, count, streams, types }: HeldRead, sized: boolean, through?: string): SQL {
+  return streamsInOrder({ after, count, types, sized, ...(through === undefined ? {} : { through }) }, streams);
 }
 
 export const postgresqlProjectionDialect: ProjectionDialect = {
@@ -144,7 +150,10 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
         AND partition = ${defaultPartition} AND is_archived = FALSE
       ORDER BY stream_id, stream_position`,
   messagesInOrderAfter: (after, count, streams, types) => streamsInOrder({ after, count, types }, streams),
-  heldMessagesInOrderAfter: (read) => heldInOrder(read, false),
+  sizesInOrderAfter: (after, count, streams, types) => streamsInOrder({ after, count, types, sized: true }, streams),
+  messagesInOrderThrough: (after, through, streams, types) =>
+    streamsInOrder({ after, count: 0, types, through }, streams),
+  heldMessagesThrough: (read, through) => heldInOrder(read, false, through),
   heldSizesInOrderAfter: (read) => heldInOrder(read, true),
   messageAt: (stream, position) =>
     SQL`SELECT stream_id AS stream, message_type AS type, message_data AS data, message_metadata AS metadata,

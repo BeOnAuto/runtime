@@ -1,7 +1,9 @@
+import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { linesLoggedBy } from '../testing/records/logged-lines.ts';
 import { logHostNote } from './host-notes.ts';
+import { logsFrom } from './log-formats.ts';
 
 const run = { org: 'acme', playbook: 'alpha', runId: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a' };
 
@@ -175,6 +177,22 @@ describe('the notes of the reactions of the workflow host', () => {
     );
     expect(line).toContain(
       '"annotations":{"org":"acme","playbook":"alpha","workflow":"morning","version":3,"trigger":"/schedule/cron","error":"Invalid time zone specified: America/New_York"}',
+    );
+  });
+});
+
+describe('the note of a run loaded again', () => {
+  it('is logged at the debug level alone, with the run, whether it began at a snapshot, its events and the bytes it is kept as', async () => {
+    const reloaded = logHostNote({ kind: 'run_reloaded', run, snapshot: true, events: 12, keptBytes: 524_288 });
+    const atInfo = await linesLoggedBy(reloaded);
+    const [line] = await linesLoggedBy(reloaded.pipe(Effect.provide(logsFrom('debug'))));
+
+    expect(atInfo).toEqual([]);
+    expect(line).toContain(
+      '"message":"A run was loaded from the ledger again, since the runs the workflows keep in memory no longer held it","level":"DEBUG"',
+    );
+    expect(line).toContain(
+      '"annotations":{"org":"acme","playbook":"alpha","run_id":"0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a","from_snapshot":true,"events":12,"kept_bytes":524288}',
     );
   });
 });

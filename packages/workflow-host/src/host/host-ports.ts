@@ -31,7 +31,11 @@ export function hostPortsOn(
     listeners,
     emitter,
     recordStore: ledgerRecordStore(database, { settle, note: reports.note, now }),
-    reporter: { unsettled: ({ run, receipt }) => reports.unsettled({ ...addressOfRun(run.runId), receipt }) },
+    reporter: {
+      unsettled: ({ run, receipt }) => reports.unsettled({ ...addressOfRun(run.runId), receipt }),
+      reloaded: ({ runId, ...reloaded }) =>
+        reports.note({ kind: 'run_reloaded', run: addressOfRun(runId), ...reloaded }),
+    },
     serialiser: runSerialiser(),
   };
 }

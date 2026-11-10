@@ -22,6 +22,7 @@ import type {
   EncodedEvent,
   MessageLineage,
   RecordedMessage,
+  StreamMessagesStore,
   StreamStore,
   Streams,
 } from '../event-store.ts';
@@ -214,7 +215,7 @@ function readsOf<Stored extends Record<string, unknown>>(
   store: EmmettStore,
   data: StoredData<Stored>,
   sizesAfter: SizesAfter,
-): Pick<Streams, 'read' | 'readPage'> {
+): Pick<Streams, 'read' | 'readPage'> & StreamMessagesStore {
   const recorded = recordedMessageOf(data);
   return {
     read: async (stream, after = 0) => {
@@ -238,6 +239,13 @@ function readsOf<Stored extends Record<string, unknown>>(
       });
       return { messages: events.map((event: ReadEvent<Stored>) => recorded(event)), through, more };
     },
+    messageAt: async (stream, version) => {
+      const { events } = await store.readStream<Event<string, Stored, StoredMetadata>>(stream, {
+        from: BigInt(version),
+        to: BigInt(version),
+      });
+      return events.map((event: ReadEvent<Stored>) => recorded(event)).at(0);
+    },
   };
 }
 
@@ -252,7 +260,7 @@ export function emmettEventStore<Stored extends Record<string, unknown>>(
     riders = appendRiders(),
     ...listeners
   }: EmmettEventStoreOptions<Stored>,
-): StreamStore & RiddenAppends {
+): StreamStore & RiddenAppends & StreamMessagesStore {
   const signal = signalOf(listeners);
   const announced = (
     stream: string,

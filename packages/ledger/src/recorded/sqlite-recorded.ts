@@ -9,9 +9,11 @@ import {
   type AppendListeners,
   type AppendWaitsStore,
   type DefinitionStreamsStore,
+  type LastMessagesStore,
   type OwnContentStore,
   type RecordedStore,
   type StreamAgesStore,
+  type StreamVersionsStore,
   type TransactionalPool,
 } from '../event-store.ts';
 import {
@@ -141,7 +143,12 @@ function recordWithId(execute: SQLExecutor): RecordedStore['readRecordedEvent'] 
 export function sqliteRecordedStore(
   execute: SQLExecutor,
   listeners: AppendListeners = {},
-): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore {
+): RecordedStore &
+  DefinitionStreamsStore &
+  StreamAgesStore &
+  StreamVersionsStore &
+  LastMessagesStore &
+  AppendWaitsStore {
   const appended = sqliteAppended(execute, listeners);
   const statements: RecordedStatements = {
     firstPointSince: firstPointSince(execute),
@@ -162,6 +169,12 @@ export function sqliteRecordedStore(
 export function sqliteRecordedStoreOn(
   pool: TransactionalPool<SQLExecutor>,
   listeners: AppendListeners,
-): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore & OwnContentStore {
+): RecordedStore &
+  DefinitionStreamsStore &
+  StreamAgesStore &
+  StreamVersionsStore &
+  LastMessagesStore &
+  AppendWaitsStore &
+  OwnContentStore {
   return { ...sqliteRecordedStore(pool.execute, listeners), ...sqliteContentOn(pool) };
 }

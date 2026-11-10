@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { storeSignalsBehaviour } from '../signal/store-signals-behaviour.ts';
 import { streamAgesBehaviour } from '../stream-ages/stream-ages-behaviour.ts';
+import { streamVersionsBehaviour } from '../stream-versions/stream-versions-behaviour.ts';
 import { aLedger, changedWhileDeciding, tallies, type LedgerEntry } from './ledger-entry.ts';
 import { outcomeOf } from './open-ledger.ts';
 import { tally, tallyInterruptedBy } from './tally.ts';
@@ -172,5 +173,6 @@ export function commandsBehaviour(entry: LedgerEntry): void {
   writersRacing(entry);
   aWriterAnotherGotAheadOf(entry);
   streamAgesBehaviour(entry);
+  streamVersionsBehaviour(entry);
   storeSignalsBehaviour(entry);
 }

@@ -20,6 +20,7 @@ export interface KeptTables extends CarriedTables {
   readonly runOutcomes?: RunOutcomeMapping | undefined;
   readonly projections?: readonly KeyedProjection[] | undefined;
   readonly holders?: ContentHolders | undefined;
+  readonly mostBytesFilledAtOnce?: number | undefined;
 }
 
 type ProjectionDialect = ProjectionKeeping['dialect'];
@@ -38,11 +39,11 @@ export interface ProjectionParts {
 
 export function projectionPartsOf(
   dialect: ProjectionDialect,
-  { runOutcomes, projections = [], holders }: KeptTables,
+  { runOutcomes, projections = [], holders, mostBytesFilledAtOnce }: KeptTables,
 ): ProjectionParts {
   const kept = keptProjections(runOutcomes, projections);
   const keepings = kept.map((projection) => ({ dialect, projection }));
-  const references = contentReferencesOf(dialect, holders);
+  const references = contentReferencesOf(dialect, holders, mostBytesFilledAtOnce);
   return {
     dialect,
     projections: kept,
@@ -51,7 +52,7 @@ export function projectionPartsOf(
     scrubs: factScrubsOf(dialect, keepings, references),
     registrations: [...projectionRegistrations(dialect, kept), ...references.registrations],
     prepare: async (execute, inTransaction) => {
-      await preparedProjections(keepings, execute, inTransaction);
+      await preparedProjections(keepings, execute, inTransaction, mostBytesFilledAtOnce);
       await references.prepare(execute, inTransaction);
     },
     readerOn: (statements) => projectionReader(dialect, kept, statements),

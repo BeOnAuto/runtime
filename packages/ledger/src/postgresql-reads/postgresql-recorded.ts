@@ -7,9 +7,11 @@ import {
   type AppendListeners,
   type AppendWaitsStore,
   type DefinitionStreamsStore,
+  type LastMessagesStore,
   type OwnContentStore,
   type RecordedStore,
   type StreamAgesStore,
+  type StreamVersionsStore,
 } from '../event-store.ts';
 import { dataAsJsonText } from '../postgresql/json-text.ts';
 import {
@@ -204,7 +206,12 @@ function recordWithId(query: Query): RecordedStore['readRecordedEvent'] {
 export function postgresqlRecordedStore(
   query: Query,
   listeners: AppendListeners = {},
-): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore {
+): RecordedStore &
+  DefinitionStreamsStore &
+  StreamAgesStore &
+  StreamVersionsStore &
+  LastMessagesStore &
+  AppendWaitsStore {
   const appended = postgresqlAppended(query, listeners);
   const statements: RecordedStatements = {
     firstPointSince: firstPointSince(query),
@@ -226,6 +233,12 @@ export function postgresqlRecordedStoreOn(
   query: Query,
   connections: ContentConnections,
   listeners: AppendListeners,
-): RecordedStore & DefinitionStreamsStore & StreamAgesStore & AppendWaitsStore & OwnContentStore {
+): RecordedStore &
+  DefinitionStreamsStore &
+  StreamAgesStore &
+  StreamVersionsStore &
+  LastMessagesStore &
+  AppendWaitsStore &
+  OwnContentStore {
   return { ...postgresqlRecordedStore(query, listeners), ...postgresqlContentOn(connections) };
 }

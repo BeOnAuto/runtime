@@ -5,7 +5,7 @@ import type { StreamsCarrying } from '../connection/appends-with.ts';
 import type { ConnectionPorts } from '../connection/ledger-connection.ts';
 import type { StatementAnswer } from '../connection/statement-answers.ts';
 import { statement, textOnPostgreSQL, type StatementValue } from '../connection/statement.ts';
-import type { StoredRecord } from '../event-store.ts';
+import type { RecordedMessage, StoredRecord } from '../event-store.ts';
 import { postgresqlConnectionOn, type Connection } from './postgresql-connection.ts';
 
 interface Asked {
@@ -24,6 +24,9 @@ const streams: StreamsCarrying = {
   pointLength: 2,
   read: () => Promise.resolve({ version: 0, messages: [] }),
   readPage: () => Promise.resolve({ messages: [], through: 0, more: false }),
+  messageAt: (stream) => Promise.resolve(new Map<string, RecordedMessage>().get(stream)),
+  lastMessageOf: (stream) => Promise.resolve(new Map<string, RecordedMessage>().get(stream)),
+  versionOf: () => Promise.resolve(0),
   append: () => Promise.resolve(),
   appendWithin: () => Promise.resolve(),
   readRecorded: () => Promise.resolve({ records: [] }),

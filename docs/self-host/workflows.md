@@ -156,5 +156,6 @@ The [engine's README](https://github.com/BeOnAuto/runtime/blob/main/packages/wor
 | `A run could not be settled in <n> attempts; it is tried again once a minute until it is`                                                                        | warning | The end of the run is retried once a minute; see [Settling a run](#settling-a-run) |
 | `A run that could not be settled was settled at attempt <n>`                                                                                                     | warning | The end of the run was recorded                                                    |
 | `A run stays started because settling it failed`                                                                                                                 | error   | `reason` is `The ledger has no such run` or `The run was settled otherwise before` |
+| `A run was loaded from the ledger again, since the runs the workflows keep in memory no longer held it`                                                          | debug   | With `LOG_LEVEL=debug`; `events` and `kept_bytes` say what it cost                 |
 
 Other warnings, about triggers, listeners, the views of pages and the datasets of prediction functions, follow the same form: what failed, then what the server does next.

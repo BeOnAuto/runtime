@@ -1,7 +1,14 @@
 import { decisionLoop, type Decision, type DecisionLoop, type StreamAppend } from '@on.auto/ledger';
 import { Data, Effect } from 'effect';
 
-import { cachedLoadOf, keptAfter, runCacheOf, type RunCache } from '../cache/run-cache.ts';
+import {
+  cachedLoadOf,
+  keptAfter,
+  runCacheOf,
+  unreported,
+  type ReportReloaded,
+  type RunCache,
+} from '../cache/run-cache.ts';
 import { runLogDeciderOf, type RunDecider, type RunLogRecord } from '../machine/run-decider.ts';
 import type { RunInput } from '../machine/run-input.ts';
 import type { RunState } from '../machine/run-state.ts';
@@ -34,13 +41,20 @@ function appendOf(runStore: RunLogStore, cache: RunCache, input: RunInput): Stre
         );
 }
 
+export interface RunLoopUpkeep {
+  readonly reserve: Effect.Effect<void>;
+  readonly report: ReportReloaded;
+}
+
+const unattended: RunLoopUpkeep = { reserve: Effect.void, report: unreported };
+
 export function runLoopOf(
   runStore: RunLogStore,
   decider: RunDecider,
   cache: RunCache = runCacheOf(),
-  reserve: Effect.Effect<void> = Effect.void,
+  { reserve, report }: RunLoopUpkeep = unattended,
 ): DecisionLoop<LoadedRun, RunState, RunInput, RunLogEvent, never> {
-  const cached = cachedLoadOf(runStore, cache);
+  const cached = cachedLoadOf({ runStore, cache, report });
   const load = (runId: string): Effect.Effect<LoadedRun> => Effect.tap(cached(runId), () => reserve);
   const runLog = runLogDeciderOf(decider);
   return (runId, input) =>

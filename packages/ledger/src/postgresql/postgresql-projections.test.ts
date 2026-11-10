@@ -195,26 +195,81 @@ function noted(point: number, topic: string) {
   };
 }
 
-const firstBatch = Array.from({ length: 256 }, (_, index) => noted(index + 1, `t${index % 2}`));
+const appendedCount = 258;
 
-const secondBatch = [noted(257, 't2'), { ...noted(258, 't2'), stream: 'x' }];
+function topicOf(index: number): string {
+  return index < 256 ? `t${index % 2}` : 't2';
+}
 
-const batchesAfter: readonly (readonly [string, readonly unknown[]])[] = [
-  ['split_part("0/0"', firstBatch],
-  ['split_part("7/256"', secondBatch],
-];
+const appended = Array.from({ length: appendedCount }, (_, index) => ({
+  ...noted(index + 1, topicOf(index)),
+  ...(index === appendedCount - 1 ? { stream: 'x' } : {}),
+}));
 
-function batchAnswering(statement: string): readonly unknown[] {
-  return batchesAfter.find(([after]) => statement.includes(after))?.[1] ?? [];
+const sized = Array.from({ length: appendedCount }, (_, index) => ({
+  point: `7/${index + 1}`,
+  size: JSON.stringify({ topic: topicOf(index), at: index + 1 }).length,
+}));
+
+function positionAfter(statement: string, comparison: string): number | undefined {
+  const found = new RegExp(`${comparison} \\(split_part\\("\\d+/(\\d+)"`, 'u').exec(statement);
+  return found === null ? undefined : Number(found[1]);
+}
+
+function listsSizes(statement: string): boolean {
+  return statement.includes(' AS size');
+}
+
+function limitOf(statement: string): number {
+  return Number(/LIMIT (\d+)/u.exec(statement)?.[1] ?? appendedCount);
+}
+
+function tableAnswering(statement: string): readonly unknown[] {
+  const after = positionAfter(statement, '>') ?? 0;
+  const through = positionAfter(statement, '<=') ?? appendedCount;
+  const table: readonly unknown[] = listsSizes(statement) ? sized : appended;
+  return statement.includes('ORDER BY m.transaction_id')
+    ? table.slice(after, through).slice(0, limitOf(statement))
+    : [];
+}
+
+function sizesListedInOrder(statement: string): boolean {
+  return statement.includes('ORDER BY m.transaction_id') && listsSizes(statement);
+}
+
+function messagesReadInOrder(statement: string): boolean {
+  return statement.includes('ORDER BY m.transaction_id') && statement.includes(' AS data');
+}
+
+function readThroughTheLastListed(statement: string): boolean {
+  return statement.includes('<= (split_part(') && !statement.includes('LIMIT');
+}
+
+function sizedAfterItsLimit(statement: string): boolean {
+  return /^SELECT [^()]*\(octet_length[^]*AS size FROM \(SELECT m\.transaction_id, [^]* LIMIT \d+\) AS m ORDER BY m\.transaction_id, m\.global_position$/u.test(
+    statement,
+  );
 }
 
 describe('the fill of a projection keyed by its mapping on PostgreSQL', () => {
-  it('reads the messages of its kinds and types in the order they were appended, a batch after another', async () => {
-    const fill = recordedAnswering(batchAnswering);
+  it('lists as many as the batch before showed fit, sizing those alone, reads through the last it listed, and folds every message in order', async () => {
+    const fill = recordedAnswering(tableAnswering);
 
     await keyed.afterTheSchema({ execute: fill.execute });
 
-    expect(fill.queries.filter((statement) => statement.includes('ORDER BY m.transaction_id'))).toHaveLength(2);
+    expect(
+      fill.queries.filter((statement) => sizesListedInOrder(statement)).map((statement) => limitOf(statement)),
+    ).toEqual([1, 2, 4, 8, 16, 32, 64, 128, 256]);
+    expect(
+      fill.queries
+        .filter((statement) => sizesListedInOrder(statement))
+        .every((statement) => sizedAfterItsLimit(statement)),
+    ).toBe(true);
+    expect(
+      fill.queries
+        .filter((statement) => messagesReadInOrder(statement))
+        .every((statement) => readThroughTheLastListed(statement)),
+    ).toBe(true);
     expect(fill.queries.find((statement) => statement.includes('split_part("0/0"'))).toContain(
       `split_part(m.stream_id, '/', 4) IN (SELECT jsonb_array_elements_text("[\\"runs\\",\\"notes\\"]"::jsonb))`,
     );

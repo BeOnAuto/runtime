@@ -13,8 +13,8 @@ import { payloadDigestsNamed } from '@on.auto/operations/payloads';
 import type { StatementExecutor } from '../event-store.ts';
 import { inTurn, type InlineProjection } from '../projections/inline-projection.ts';
 import type { HeldTypes, ProjectionDialect, StreamsInOrder } from '../projections/projection-dialect.ts';
-import { messagesInABatch, mostBytesInABatch } from '../projections/projection-fill.ts';
-import { orderedMessagesIn, sizedPointsIn, type SizedPoint } from '../projections/projection-statements.ts';
+import { listingAfter, messagesInABatch, withinBytes } from '../projections/projection-fill.ts';
+import { orderedMessagesIn, sizedPointsIn } from '../projections/projection-statements.ts';
 import {
   digestsLocked,
   digestsWithoutAHead,
@@ -28,6 +28,7 @@ import {
 export interface ReferencesKeeping {
   readonly dialect: ProjectionDialect;
   readonly holders: ContentHolders;
+  readonly mostBytes: number;
 }
 
 type Locking = 'locked' | 'unlocked';
@@ -174,29 +175,32 @@ function heldTypesOf(holders: ContentHolders): HeldTypes {
   return { holding, measured };
 }
 
-function countWithinBytes(sized: readonly SizedPoint[]): number {
-  let loaded = 0;
-  const taken = sized.findIndex(({ size }, index) => {
-    loaded += size;
-    return index > 0 && loaded > mostBytesInABatch;
-  });
-  return taken === -1 ? sized.length : taken;
+interface HeldBatch {
+  readonly after?: string;
+  readonly listing: number;
 }
+
+const firstHeldBatch: HeldBatch = { listing: 1 };
 
 async function foldedInBatches(
   keeping: ReferencesKeeping,
   execute: StatementExecutor,
   { streams, fold }: BatchFolding,
-  after?: string,
+  { after, listing }: HeldBatch,
 ): Promise<void> {
-  const read = { after, count: messagesInABatch, streams, types: heldTypesOf(keeping.holders) };
+  const read = { after, count: listing, streams, types: heldTypesOf(keeping.holders) };
   const sized = await sizedPointsIn(execute, keeping.dialect.heldSizesInOrderAfter(read));
-  const count = countWithinBytes(sized);
-  const messages = await orderedMessagesIn(execute, keeping.dialect.heldMessagesInOrderAfter({ ...read, count }));
+  const taken = withinBytes(sized, keeping.mostBytes);
+  const through = taken.at(-1);
+  const messages =
+    through === undefined
+      ? []
+      : await orderedMessagesIn(execute, keeping.dialect.heldMessagesThrough(read, through.point));
   await fold(messages);
   const last = messages.at(-1);
-  if (last !== undefined && (count < sized.length || sized.length === messagesInABatch)) {
-    await foldedInBatches(keeping, execute, { streams, fold }, last.point);
+  if (last !== undefined && (taken.length < sized.length || sized.length === listing)) {
+    const next = listingAfter({ listing, most: messagesInABatch, mostBytes: keeping.mostBytes }, taken);
+    await foldedInBatches(keeping, execute, { streams, fold }, { after: last.point, listing: next });
   }
 }
 
@@ -205,16 +209,21 @@ function factOf({ dialect }: ReferencesKeeping, { type, data }: OrderedMessage):
 }
 
 export function referencesFilled(keeping: ReferencesKeeping, execute: StatementExecutor): Promise<void> {
-  return foldedInBatches(keeping, execute, {
-    streams: { of: 'every' },
-    fold: (messages) =>
-      placedFolded(
-        keeping,
-        execute,
-        messages.flatMap((message) => placedOf(message.stream, factOf(keeping, message))),
-        'unlocked',
-      ),
-  });
+  return foldedInBatches(
+    keeping,
+    execute,
+    {
+      streams: { of: 'every' },
+      fold: (messages) =>
+        placedFolded(
+          keeping,
+          execute,
+          messages.flatMap((message) => placedOf(message.stream, factOf(keeping, message))),
+          'unlocked',
+        ),
+    },
+    firstHeldBatch,
+  );
 }
 
 export async function referencesRefolded(
@@ -227,13 +236,18 @@ export async function referencesRefolded(
     return;
   }
   const facts: TypedEvent[] = [];
-  await foldedInBatches(keeping, execute, {
-    streams: { of: 'lane', lane: { by: 'stream', key: stream } },
-    fold: (messages) => {
-      facts.push(...messages.map((message) => factOf(keeping, message)));
-      return Promise.resolve();
+  await foldedInBatches(
+    keeping,
+    execute,
+    {
+      streams: { of: 'lane', lane: { by: 'stream', key: stream } },
+      fold: (messages) => {
+        facts.push(...messages.map((message) => factOf(keeping, message)));
+        return Promise.resolve();
+      },
     },
-  });
+    firstHeldBatch,
+  );
   const before = await heldInTheStream(execute, keeping.dialect, place);
   await changesWritten(keeping, execute, place, [before, heldOver(keeping.holders, facts), 'locked']);
 }

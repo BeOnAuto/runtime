@@ -55,6 +55,7 @@ interface LaneRead {
   readonly count: number;
   readonly types: readonly string[] | HeldTypes;
   readonly sized?: boolean;
+  readonly through?: number;
 }
 
 function selectedOf({ types }: LaneRead): SQL {
@@ -65,24 +66,32 @@ function columnsOf({ sized }: LaneRead): SQL {
   return sized === true ? columnsOfASize : columnsOfAMessage;
 }
 
+function upTo({ through }: LaneRead): SQL {
+  return through === undefined ? SQL.EMPTY : SQL` AND global_position <= ${through}`;
+}
+
+function limitOf({ count, through }: LaneRead): SQL {
+  return through === undefined ? SQL`LIMIT ${count}` : SQL.EMPTY;
+}
+
 function laneAfter({ by, key }: MessageLane, read: LaneRead): SQL {
   return SQL`SELECT ${columnsOf(read)}
     FROM emt_messages
-    WHERE ${keyOfALane[by]} = ${key} AND global_position > ${read.after} AND ${selectedOf(read)}
+    WHERE ${keyOfALane[by]} = ${key} AND global_position > ${read.after}${upTo(read)} AND ${selectedOf(read)}
       AND partition = ${defaultPartition} AND is_archived = FALSE
     ORDER BY global_position
-    LIMIT ${read.count}`;
+    ${limitOf(read)}`;
 }
 
 function inOrderAfter(read: LaneRead, folded?: FoldedStreams): SQL {
   const ofTheStreams = folded === undefined ? SQL.EMPTY : SQL`${foldedBy('stream_id', folded)} AND `;
   return SQL`SELECT ${columnsOf(read)}
     FROM emt_messages
-    WHERE ${ofTheStreams}global_position > ${read.after}
+    WHERE ${ofTheStreams}global_position > ${read.after}${upTo(read)}
       AND ${selectedOf(read)}
       AND partition = ${defaultPartition} AND is_archived = FALSE
     ORDER BY global_position
-    LIMIT ${read.count}`;
+    ${limitOf(read)}`;
 }
 
 function streamsInOrder(read: LaneRead, streams: StreamsInOrder): SQL {
@@ -92,8 +101,17 @@ function streamsInOrder(read: LaneRead, streams: StreamsInOrder): SQL {
   return inOrderAfter(read, streams.of === 'folded' ? streams.folded : undefined);
 }
 
-function heldInOrder({ after, count, streams, types }: HeldRead, sized: boolean): SQL {
-  return streamsInOrder({ after: Number(after ?? '0'), count, types, sized }, streams);
+function heldInOrder({ after, count, streams, types }: HeldRead, sized: boolean, through?: string): SQL {
+  return streamsInOrder(
+    {
+      after: Number(after ?? '0'),
+      count,
+      types,
+      sized,
+      ...(through === undefined ? {} : { through: Number(through) }),
+    },
+    streams,
+  );
 }
 
 const sqliteProjectionDialect: ProjectionDialect = {
@@ -123,7 +141,11 @@ const sqliteProjectionDialect: ProjectionDialect = {
       ORDER BY stream_id, stream_position`,
   messagesInOrderAfter: (after, count, streams, types) =>
     streamsInOrder({ after: Number(after ?? '0'), count, types }, streams),
-  heldMessagesInOrderAfter: (read) => heldInOrder(read, false),
+  sizesInOrderAfter: (after, count, streams, types) =>
+    streamsInOrder({ after: Number(after ?? '0'), count, types, sized: true }, streams),
+  messagesInOrderThrough: (after, through, streams, types) =>
+    streamsInOrder({ after: Number(after ?? '0'), count: 0, types, through: Number(through) }, streams),
+  heldMessagesThrough: (read, through) => heldInOrder(read, false, through),
   heldSizesInOrderAfter: (read) => heldInOrder(read, true),
   messageAt: (stream, position) =>
     SQL`SELECT stream_id AS stream, message_type AS type, message_data AS data, message_metadata AS metadata,

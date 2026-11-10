@@ -33,8 +33,16 @@ export interface UnsettledReport {
   readonly receipt: TroublingReceipt;
 }
 
+export interface ReloadedReport {
+  readonly runId: string;
+  readonly snapshot: boolean;
+  readonly events: number;
+  readonly keptBytes: number;
+}
+
 export interface RunReporter {
   readonly unsettled: (report: UnsettledReport) => Effect.Effect<void>;
+  readonly reloaded: (report: ReloadedReport) => Effect.Effect<void>;
 }
 
 export function isTroubling(receipt: SettleReceipt): receipt is TroublingReceipt {
