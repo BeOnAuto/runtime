@@ -16,8 +16,11 @@ export interface Accounts {
   readonly account: AccountFake;
   readonly origin: string;
   readonly key: string;
+  readonly signedAt: number;
   readonly reportsAsked: () => number;
 }
+
+const aDay = 86_400_000;
 
 function withItsReportsCounted(account: AccountFake, counted: () => void): AccountFake {
   return {
@@ -33,8 +36,14 @@ function withItsReportsCounted(account: AccountFake, counted: () => void): Accou
   };
 }
 
+export function daysAfterSigning({ signedAt }: Pick<Accounts, 'signedAt'>, days: number): string {
+  return new Date(signedAt + days * aDay).toISOString();
+}
+
 export async function accountsServed(): Promise<Accounts> {
   const account = accountFake();
+  const signedAt = Date.now();
+  account.at(new Date(signedAt).toISOString());
   const asked = { reports: 0 };
   const served = await accountServerOver(
     withItsReportsCounted(account, () => {
@@ -42,7 +51,13 @@ export async function accountsServed(): Promise<Accounts> {
     }),
   );
   onTestFinished(() => served.close());
-  return { account, origin: served.origin, key: account.keyFor(installation), reportsAsked: () => asked.reports };
+  return {
+    account,
+    origin: served.origin,
+    key: account.keyFor(installation),
+    signedAt,
+    reportsAsked: () => asked.reports,
+  };
 }
 
 export async function servedBy(

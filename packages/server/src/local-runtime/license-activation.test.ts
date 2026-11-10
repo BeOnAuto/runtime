@@ -6,7 +6,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { runCommandLine, type CommandLineHost } from '../command-line/command-line.ts';
 import { controlledLicensedServer } from '../testing/accounts/controlled-server.ts';
-import { installation } from '../testing/accounts/licensed-server.ts';
+import { daysAfterSigning, installation } from '../testing/accounts/licensed-server.ts';
 import { overTheNetwork } from './runtime-probe.ts';
 
 function aHome(): string {
@@ -62,7 +62,9 @@ describe('auto-runtime license, against the runtime running on this computer', (
     expect(await runCommandLine(['license', 'report'], host)).toBe(1);
     expect(await runCommandLine(['license', 'activate', accounts.key], host)).toBe(0);
     expect(await runCommandLine(['license', 'report'], host)).toBe(0);
-    expect(said[0]).toBe('This runtime uses offline credits: 0 of 3 used, usable until 2026-11-26.');
+    expect(said[0]).toBe(
+      `This runtime uses offline credits: 0 of 3 used, usable until ${daysAfterSigning(accounts, 30).slice(0, 10)}.`,
+    );
     expect(said[1]).toContain('Auto Runtime made no report: This runtime holds no license key to sign its report with');
     expect(said.at(-1)).toMatch(
       /^\{"report":\{"allocation":"[0-9a-f-]+","installation":"[0-9a-f-]+","sequence":1,"spent":0,/u,

@@ -7,6 +7,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 
 import {
   accountsServed,
+  daysAfterSigning,
   installation,
   licensedServedBy,
   runtimeIdOf,
@@ -116,9 +117,9 @@ describe('the license a licensed runtime holds', () => {
       licensed: 1,
       runs_left: 999,
       credits: { available: 1000, owed: 0, overage_cap: 0 },
-      issued_at: '2026-10-27T12:00:00.000Z',
-      warn_at: '2026-11-10T12:00:00.000Z',
-      limit_at: '2026-11-24T12:00:00.000Z',
+      issued_at: daysAfterSigning(accounts, 0),
+      warn_at: daysAfterSigning(accounts, 14),
+      limit_at: daysAfterSigning(accounts, 28),
       fallback: null,
       key_source: 'environment',
       offline: null,
@@ -196,14 +197,15 @@ describe('the license an offline installation holds', () => {
     accounts.account.goDown();
     const server = await servedBy(accounts, { AUTO_RUNTIME_ALLOCATION: JSON.stringify(allocation) });
     await tallied(server);
+    const usableUntil = daysAfterSigning(accounts, 30);
 
     expect((await server.call('GET', license)).body).toMatchObject({
       state: 'offline',
       runtime_id: installation,
-      offline: { credits: 5, spent: 1, usable_until: '2026-11-26T12:00:00.000Z' },
+      offline: { credits: 5, spent: 1, usable_until: usableUntil },
     });
     expect(await pageOf(server)).toContain(
-      '<p class="license">This runtime uses offline credits: 1 of 5 used, usable until 2026-11-26.</p>',
+      `<p class="license">This runtime uses offline credits: 1 of 5 used, usable until ${usableUntil.slice(0, 10)}.</p>`,
     );
   });
 });
