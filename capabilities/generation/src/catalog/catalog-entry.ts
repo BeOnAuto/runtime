@@ -46,10 +46,14 @@ const ReferenceLimitsSchema = Schema.Struct({
 
 export type ReferenceLimits = typeof ReferenceLimitsSchema.Type;
 
+const QualitiesSchema = ChoicesSchema.annotate({
+  description: 'The qualities the model takes, the first of them sent where a definition names none',
+});
+
 const ImageLimitsSchema = Schema.Struct({
   sizes: Schema.optionalKey(ChoicesSchema),
   aspects: Schema.optionalKey(ChoicesSchema),
-  qualities: Schema.optionalKey(ChoicesSchema),
+  qualities: Schema.optionalKey(QualitiesSchema),
   prompt_characters: PromptCharactersSchema,
   references: Schema.optionalKey(ReferenceLimitsSchema),
 });
@@ -93,7 +97,7 @@ export const entrySchemas = {
   video: entryOfKind('video', VideoLimitsSchema),
 } as const;
 
-type ImageEntry = typeof entrySchemas.image.Type;
+export type ImageEntry = typeof entrySchemas.image.Type;
 
 export type AudioEntry = typeof entrySchemas.audio.Type;
 

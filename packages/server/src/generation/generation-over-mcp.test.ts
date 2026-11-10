@@ -114,7 +114,7 @@ describe('a generation function over MCP that names a model of no catalogue', ()
         errors: [
           {
             detail:
-              "Line 4, /model: openai/gpt-9-image is no model of the catalogue of generation models; the catalogue's models that produce image are openai/gpt-image-1-mini or openai/gpt-image-2",
+              "Line 4, /model: openai/gpt-9-image is no model of the catalogue of generation models; the catalogue's models that produce image are openai/gpt-image-2 or openai/gpt-image-2.6-flare",
           },
         ],
       },

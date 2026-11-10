@@ -1,9 +1,11 @@
 import { makeDispatcher, type CallerIdentity, type Outcome } from '@on.auto/operations';
 import { memoryLedger, memoryPlaybookRegistry, recordingReporter } from '@on.auto/operations/testing';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Effect, Layer, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { CatalogEntry } from '../catalog/catalog-entry.ts';
+import { generationShippedRoots, readGenerationCatalog } from '../catalog/catalog-reading.ts';
 import { catalogOf, type GenerationCatalog } from '../catalog/generation-catalog.ts';
 import { testCatalog, testEntries } from '../testing/test-catalog.ts';
 import { defineListGenerationModels } from './list-generation-models.ts';
@@ -122,6 +124,14 @@ describe('the plain words of list_generation_models', () => {
     const { registration, outcome } = await listGenerationModels({}, { catalog: twins });
     expect(registration.plainLanguage?.outcome(outputOf(outcome), {})).toBe(
       'A generation function can name 2 models through auto: it makes an image with square of example or square of other.',
+    );
+  });
+
+  it('say, of the catalogue the runtime ships and one gateway, what the MCP reference gives', async () => {
+    const shipped = Result.getOrThrow(await readGenerationCatalog(shippedFilesOnDisk(generationShippedRoots())));
+    const { registration, outcome } = await listGenerationModels({}, { catalog: shipped, gateways: ['gateway'] });
+    expect(registration.plainLanguage?.outcome(outputOf(outcome), {})).toBe(
+      'A generation function can name 5 models through gateway: it makes an image with gpt-image-2 or gpt-image-2.6-flare and audio with gpt-4o-mini-tts, tts-1, or tts-1-hd.',
     );
   });
 

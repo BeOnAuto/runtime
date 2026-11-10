@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto';
 
 import { contentAddressesUnder } from '@on.auto/identity';
-import { Redacted } from 'effect';
+import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
+import { Redacted, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { generationBounds } from '../capability/generation-ports.ts';
+import { generationShippedRoots, readGenerationCatalog } from '../index.ts';
 import {
   assetIdIn,
   assetIdOf,
@@ -31,6 +33,8 @@ import {
 const pngDigest = createHash('sha256').update(onePixelPng).digest('hex');
 
 const teapot = 'A studio photograph of a teapot on a white table.';
+
+const shipped = Result.getOrThrow(await readGenerationCatalog(shippedFilesOnDisk(generationShippedRoots())));
 
 function ownOrigin(): string {
   return 'http://127.0.0.1:5555';
@@ -63,6 +67,36 @@ describe('a run of a generation function that makes an image', () => {
     });
     expect(playbook.gateway.asked().map(({ body }) => body)).toEqual([
       { model: 'openai/gpt-image-2', prompt: teapot, n: 1, size: '1024x1024', quality: 'high' },
+    ]);
+  });
+
+  it('asks for the first quality of the model where the document names none, and for none of a model that names none', async () => {
+    const playbook = numberedHarness();
+    await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-2']));
+    await playbook.define('square', sourceWith(['produces: image', 'model: gateway/example/square-image']));
+
+    await ran(playbook, 'picture', {}, 1);
+    await ran(playbook, 'square', {}, 2);
+
+    expect(playbook.gateway.asked().map(({ body }) => body)).toEqual([
+      { model: 'openai/gpt-image-2', prompt: 'A lighthouse at dawn.', n: 1, quality: 'auto' },
+      { model: 'example/square-image', prompt: 'A lighthouse at dawn.', n: 1 },
+    ]);
+    expect(await playbook.factsOf(assetIdOf(1))).toMatchObject([
+      { data: { made_by: { generation: { parameters: { quality: 'auto' } } } } },
+    ]);
+  });
+});
+
+describe('a run of a generation function over the catalogue the runtime ships', () => {
+  it('asks for a low image of gpt-image-2.6-flare where the document names no quality, the first its entry names', async () => {
+    const playbook = numberedHarness({ catalog: shipped });
+    await playbook.define('picture', sourceWith(['produces: image', 'model: gateway/openai/gpt-image-2.6-flare']));
+
+    await ran(playbook, 'picture', {});
+
+    expect(playbook.gateway.asked().map(({ body }) => body)).toEqual([
+      { model: 'openai/gpt-image-2.6-flare', prompt: 'A lighthouse at dawn.', n: 1, quality: 'low' },
     ]);
   });
 });

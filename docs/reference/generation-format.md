@@ -99,28 +99,28 @@ Quote a text that holds ` #`, or a comma inside `{ }`, such as `description: 'Po
 
 The runtime keeps a catalogue of the models a generation function may name, each with the kind it produces and the limits of what it takes. A model is named as the gateway names it, after the gateway's own name: a gateway named `gateway` that serves `openai/gpt-image-2` is named `gateway/openai/gpt-image-2`. `list_generation_models` answers the catalogue a server holds, with the names of its gateways; see [Generation models](mcp.md#generation-models).
 
-| Model                     | Produces | Takes                                                                                                                                                                                                 |
-| ------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `openai/gpt-image-2`      | image    | `size` `auto`, `1024x1024`, `1536x1024` or `1024x1536`; `quality` `auto`, `low`, `medium` or `high`; a prompt of up to 32,000 characters; up to 16 references of PNG, JPEG or WebP, each up to 50 MiB |
-| `openai/gpt-image-1-mini` | image    | The same as `openai/gpt-image-2`                                                                                                                                                                      |
-| `openai/tts-1`            | audio    | `voice` `alloy`, `echo`, `fable`, `onyx`, `nova` or `shimmer`; `format` `mp3`, `opus`, `aac`, `flac` or `wav`; a prompt of up to 4,096 characters                                                     |
-| `openai/tts-1-hd`         | audio    | The same as `openai/tts-1`                                                                                                                                                                            |
-| `openai/gpt-4o-mini-tts`  | audio    | `voice` `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer` or `verse`; the formats of `openai/tts-1`; a prompt of up to 4,096 characters                           |
+| Model                        | Produces | Takes                                                                                                                                                                                                 |
+| ---------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `openai/gpt-image-2`         | image    | `size` `auto`, `1024x1024`, `1536x1024` or `1024x1536`; `quality` `auto`, `low`, `medium` or `high`; a prompt of up to 32,000 characters; up to 16 references of PNG, JPEG or WebP, each up to 50 MiB |
+| `openai/gpt-image-2.6-flare` | image    | The sizes, prompt and references of `openai/gpt-image-2`; `quality` `low`, `medium`, `high`, `xhigh`, `max` or `auto`                                                                                 |
+| `openai/tts-1`               | audio    | `voice` `alloy`, `echo`, `fable`, `onyx`, `nova` or `shimmer`; `format` `mp3`, `opus`, `aac`, `flac` or `wav`; a prompt of up to 4,096 characters                                                     |
+| `openai/tts-1-hd`            | audio    | The same as `openai/tts-1`                                                                                                                                                                            |
+| `openai/gpt-4o-mini-tts`     | audio    | `voice` `alloy`, `ash`, `ballad`, `coral`, `echo`, `fable`, `nova`, `onyx`, `sage`, `shimmer` or `verse`; the formats of `openai/tts-1`; a prompt of up to 4,096 characters                           |
 
 A gateway may not serve every model of the catalogue. A model it does not serve is answered by the gateway as not found when the function runs. The catalogue names no model that produces video, so a function that produces video is refused as it is saved.
 
 ### Parameters
 
-| Kind  | Parameter  | Value                                                                                                  |
-| ----- | ---------- | ------------------------------------------------------------------------------------------------------ |
-| image | `size`     | One of the sizes of the model, such as `1024x1024`                                                     |
-| image | `aspect`   | One of the aspects of the model, such as `16:9`, for a model that takes an aspect rather than a size   |
-| image | `quality`  | One of the qualities of the model, such as `high`                                                      |
-| audio | `voice`    | One of the voices of the model. Without it, the first voice the catalogue names for the model          |
-| audio | `format`   | One of the formats of the model: `mp3`, `opus`, `aac`, `flac` or `wav`. Without it, the first it names |
-| audio | `duration` | A whole number of seconds within the model's, for a model that takes a duration                        |
-| video | `size`     | One of the sizes of the model, such as `1280x720`, which also sets its aspect                          |
-| video | `duration` | A whole number of seconds within the model's. Without it, the fewest seconds the model makes           |
+| Kind  | Parameter  | Value                                                                                                              |
+| ----- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| image | `size`     | One of the sizes of the model, such as `1024x1024`                                                                 |
+| image | `aspect`   | One of the aspects of the model, such as `16:9`, for a model that takes an aspect rather than a size               |
+| image | `quality`  | One of the qualities of the model, such as `high`. Without it, the first quality the catalogue names for the model |
+| audio | `voice`    | One of the voices of the model. Without it, the first voice the catalogue names for the model                      |
+| audio | `format`   | One of the formats of the model: `mp3`, `opus`, `aac`, `flac` or `wav`. Without it, the first it names             |
+| audio | `duration` | A whole number of seconds within the model's, for a model that takes a duration                                    |
+| video | `size`     | One of the sizes of the model, such as `1280x720`, which also sets its aspect                                      |
+| video | `duration` | A whole number of seconds within the model's. Without it, the fewest seconds the model makes                       |
 
 A parameter the model has no values for is refused, such as an `aspect` for `openai/gpt-image-2`, and an `aspect` for any video, whose size sets it.
 

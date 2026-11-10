@@ -2,7 +2,7 @@ import type { ContentOwner } from '@on.auto/content';
 import type { InvalidInput } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
-import type { AudioEntry, VideoEntry } from '../catalog/catalog-entry.ts';
+import type { AudioEntry, ImageEntry, VideoEntry } from '../catalog/catalog-entry.ts';
 import type { GenerationFunctionDefinitionDocument, GenerationParameters } from '../document/generation-document.ts';
 import type { GenerationRequest } from '../gateway/generation-gateway.ts';
 import { preparedInput } from './prepared-input.ts';
@@ -32,11 +32,16 @@ function videoDefaults(parameters: GenerationParameters, { limits }: VideoEntry)
   return { ...parameters, duration: parameters.duration ?? limits.seconds.least };
 }
 
+function imageDefaults(parameters: GenerationParameters, { limits }: ImageEntry): GenerationParameters {
+  const [quality] = limits.qualities ?? [];
+  return quality === undefined ? parameters : { ...parameters, quality: parameters.quality ?? quality };
+}
+
 function parametersSent({ entry }: RunnableModel, parameters: GenerationParameters): GenerationParameters {
   if (entry.kind === 'audio') {
     return audioDefaults(parameters, entry);
   }
-  return entry.kind === 'video' ? videoDefaults(parameters, entry) : parameters;
+  return entry.kind === 'video' ? videoDefaults(parameters, entry) : imageDefaults(parameters, entry);
 }
 
 export function preparedRequest(

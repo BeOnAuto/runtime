@@ -27,8 +27,8 @@ describe('the catalogue of generation models the runtime ships', () => {
       'audio openai/gpt-4o-mini-tts',
       'audio openai/tts-1',
       'audio openai/tts-1-hd',
-      'image openai/gpt-image-1-mini',
       'image openai/gpt-image-2',
+      'image openai/gpt-image-2.6-flare',
     ]);
     expect(shipped.entries.filter(({ retired }) => retired !== undefined)).toEqual([]);
   });
@@ -40,9 +40,16 @@ describe('the catalogue of generation models the runtime ships', () => {
         .filter((entry) => referenceLimitsOf(entry) !== undefined)
         .map(({ model, media_types: mediaTypes }) => [model, mediaTypes]),
     ).toEqual([
-      ['openai/gpt-image-1-mini', ['image/png', 'image/jpeg', 'image/webp']],
       ['openai/gpt-image-2', ['image/png', 'image/jpeg', 'image/webp']],
+      ['openai/gpt-image-2.6-flare', ['image/png', 'image/jpeg', 'image/webp']],
     ]);
+  });
+
+  it('names every quality OpenAI gives gpt-image-2.6-flare, low first, so a run whose document names none asks for low', () => {
+    expect(shipped.entryOf('openai/gpt-image-2.6-flare')).toMatchObject({
+      kind: 'image',
+      limits: { qualities: ['low', 'medium', 'high', 'xhigh', 'max', 'auto'] },
+    });
   });
 
   it('finds each model by its name, and none it does not name', () => {
