@@ -16,7 +16,9 @@ const source = fileURLToPath(new URL('..', import.meta.url));
 
 const importedEverywhere: ReadonlySet<string> = new Set([
   'effect',
+  '@on.auto/content',
   '@on.auto/operations',
+  '@on.auto/operations/payloads',
   '@on.auto/ledger',
   '@on.auto/phrasing',
   '@on.auto/shipped-files',

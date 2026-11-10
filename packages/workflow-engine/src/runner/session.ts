@@ -92,7 +92,7 @@ export function sessionOf(state: RunState, now: number, options: DecidingOptions
   const cell = runCellOf(state);
   const journal = journalOf();
   const steps = stepJournalOf();
-  const values = valueTableOf(state.machine);
+  const values = valueTableOf(state.machine, options.atHand.contents);
   const descriptors = descriptorsOf(cell, values);
   const ending = endingOf(state, now, descriptors, journal);
   const { timers, calls, listeners, inbox } = ending;

@@ -2,9 +2,8 @@ import type { RejectedCall } from '@on.auto/operations';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { snapshotChunks, snapshotFromChunks, snapshotOf, stateFormat, stateInCurrentFormat } from '../index.ts';
 import { testSandbox } from '../pool-testing/test-sandbox.ts';
-import { stateInCurrentFormat } from '../run-log/run-fold.ts';
-import { snapshotChunks, snapshotFromChunks, snapshotOf } from '../run-log/snapshot.ts';
 import { testFunctions, testSettings } from '../testing/driver-inputs.ts';
 import { memoryDriver } from '../testing/memory-driver.ts';
 import {
@@ -54,7 +53,7 @@ describe('a call that waits for admission', () => {
 
   it('is kept through a snapshot of its run, and reads back in the current format', () => {
     const waiting = waitingOnASecondRefusal().state(drivenRunId);
-    const snapshot = Result.getOrThrow(snapshotFromChunks(snapshotChunks(snapshotOf(waiting, 3))));
+    const snapshot = Result.getOrThrow(snapshotFromChunks(snapshotChunks(snapshotOf(waiting, 3, stateFormat))));
 
     expect(stateInCurrentFormat(snapshot.format, snapshot.state)).toEqual(waiting);
     expect(JSON.stringify(waiting.machine.root)).toContain(

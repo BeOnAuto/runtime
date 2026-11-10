@@ -1,8 +1,9 @@
 import { Data } from 'effect';
 
 import { jsonBytesOf } from '../dsl/json.ts';
+import type { HeldValue } from './held-value.ts';
 import { taskFrameBytes } from './limits.ts';
-import type { Branch, FrameBody, HeldValue, ListCursor, RunState, TaskFrame, ValueId } from './run-state.ts';
+import type { Branch, FrameBody, ListCursor, RunState, TaskFrame, ValueId } from './run-state.ts';
 
 interface Reach {
   readonly values: readonly ValueId[];

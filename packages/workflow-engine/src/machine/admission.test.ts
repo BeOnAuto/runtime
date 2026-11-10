@@ -1,8 +1,25 @@
+import { sha256Of } from '@on.auto/content';
 import { describe, expect, it } from 'vitest';
 
-import { newRun, outcomeOf, RunMismatch, staleReasonOf, type RunInput } from '../index.ts';
+import { newRun, outcomeOf, RunMismatch, staleReasonOf, type RunInput, type RunState } from '../index.ts';
 import { testCancel } from '../testing/driver-inputs.ts';
 import { armedTimer, at, document, runId, openCall, runningState, started } from '../testing/runs.ts';
+import type { HeldContent, HeldContents } from './held-contents.ts';
+
+const nothing: HeldContents = new Map();
+
+const inputText = JSON.stringify(started.input);
+
+const keptInput = { sha256: sha256Of(inputText), bytes: inputText.length };
+
+const keepingItsInput: RunState = {
+  ...runningState,
+  machine: { ...runningState.machine, values: { ...runningState.machine.values, 1: keptInput } },
+};
+
+function contentOfTheInput(content: HeldContent): HeldContents {
+  return new Map([[keptInput.sha256, content]]);
+}
 
 const fired = (timerId: string): RunInput => ({ kind: 'timer_fired', runId, at, timerId });
 
@@ -26,11 +43,11 @@ const cancelled: RunInput = { kind: 'cancel_requested', runId, at, cancel: testC
 describe('an input that can still change a run', () => {
   it('is a start of a new run, the fire of an armed timer, the answer of an open call, a new event or a first cancel', () => {
     const reasons = [
-      staleReasonOf(newRun, started),
-      staleReasonOf(runningState, fired(armedTimer)),
-      staleReasonOf(runningState, answered(1)),
-      staleReasonOf(runningState, received('event-3')),
-      staleReasonOf(runningState, cancelled),
+      staleReasonOf(newRun, started, nothing),
+      staleReasonOf(runningState, fired(armedTimer), nothing),
+      staleReasonOf(runningState, answered(1), nothing),
+      staleReasonOf(runningState, received('event-3'), nothing),
+      staleReasonOf(runningState, cancelled, nothing),
     ];
 
     expect(reasons).toEqual([undefined, undefined, undefined, undefined, undefined]);
@@ -41,7 +58,9 @@ describe('an input that can still change a run', () => {
 describe('an input to a run that has not started', () => {
   it('is not stale but too early, so the adapter answers not_found and the caller tries again', () => {
     expect(
-      [fired(armedTimer), answered(1), received('event-3'), cancelled].map((input) => staleReasonOf(newRun, input)),
+      [fired(armedTimer), answered(1), received('event-3'), cancelled].map((input) =>
+        staleReasonOf(newRun, input, nothing),
+      ),
     ).toEqual(['not_started', 'not_started', 'not_started', 'not_started']);
     expect(outcomeOf('not_started')).toBe('not_started');
   });
@@ -52,12 +71,12 @@ describe('a stale input', () => {
     const reordered = { do: document.do, document: document.document };
 
     expect([
-      staleReasonOf(runningState, { ...started, document: reordered }),
-      staleReasonOf({ ...runningState, status: 'ended' }, answered(1)),
-      staleReasonOf(runningState, fired('9')),
-      staleReasonOf(runningState, answered(2)),
-      staleReasonOf(runningState, received('event-1')),
-      staleReasonOf({ ...runningState, cancelRequested: true }, cancelled),
+      staleReasonOf(runningState, { ...started, document: reordered }, nothing),
+      staleReasonOf({ ...runningState, status: 'ended' }, answered(1), nothing),
+      staleReasonOf(runningState, fired('9'), nothing),
+      staleReasonOf(runningState, answered(2), nothing),
+      staleReasonOf(runningState, received('event-1'), nothing),
+      staleReasonOf({ ...runningState, cancelRequested: true }, cancelled, nothing),
     ]).toEqual([
       'started_before',
       'run_ended',
@@ -72,14 +91,32 @@ describe('a stale input', () => {
 
 describe('an input that belongs to no run like this one', () => {
   it('dies instead of being taken as stale: another run, or a start with another document or input', () => {
-    expect(() => staleReasonOf(runningState, { ...fired(armedTimer), runId: 'another' })).toThrow(RunMismatch);
-    expect(() => staleReasonOf(runningState, { ...started, runId: 'another' })).toThrow(RunMismatch);
-    expect(() => staleReasonOf(runningState, { ...started, document: { do: [{ other: {} }] } })).toThrow(
+    expect(() => staleReasonOf(runningState, { ...fired(armedTimer), runId: 'another' }, nothing)).toThrow(RunMismatch);
+    expect(() => staleReasonOf(runningState, { ...started, runId: 'another' }, nothing)).toThrow(RunMismatch);
+    expect(() => staleReasonOf(runningState, { ...started, document: { do: [{ other: {} }] } }, nothing)).toThrow(
       new RunMismatch({ detail: `The run of ${runId} was started again with another document` }),
     );
-    expect(() => staleReasonOf(runningState, { ...started, input: { ticket: 8 } })).toThrow(
+    expect(() => staleReasonOf(runningState, { ...started, input: { ticket: 8 } }, nothing)).toThrow(
       new RunMismatch({ detail: `The run of ${runId} was started again with another input` }),
     );
-    expect(() => staleReasonOf({ ...runningState, workflow: null }, started)).toThrow(RunMismatch);
+    expect(() => staleReasonOf({ ...runningState, workflow: null }, started, nothing)).toThrow(RunMismatch);
+  });
+});
+
+describe('a second start of a run that keeps its input outside', () => {
+  const read = contentOfTheInput({ kind: 'read', text: inputText });
+
+  it('is compared with the input read back from its text', () => {
+    expect(staleReasonOf(keepingItsInput, started, read)).toBe('started_before');
+    expect(() => staleReasonOf(keepingItsInput, { ...started, input: { ticket: 8 } }, read)).toThrow(
+      new RunMismatch({ detail: `The run of ${runId} was started again with another input` }),
+    );
+  });
+
+  it('is taken as a start made before when the input is missing or erased, since nothing is left to compare', () => {
+    expect([
+      staleReasonOf(keepingItsInput, { ...started, input: { ticket: 8 } }, contentOfTheInput({ kind: 'missing' })),
+      staleReasonOf(keepingItsInput, { ...started, input: { ticket: 8 } }, contentOfTheInput({ kind: 'erased' })),
+    ]).toEqual(['started_before', 'started_before']);
   });
 });

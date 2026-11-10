@@ -34,6 +34,8 @@ export {
   type MemoryListeners,
 } from '../memory/memory-reactions.ts';
 export { memoryRunStore, type MemoryRunStore } from '../memory/run-store.ts';
+export { memoryPayloads, type MemoryPayloads } from '../memory/memory-payloads.ts';
+export { formatElevenRefusalsOf } from '../frozen-testing/format-eleven-refusals.ts';
 export { runWatchOf, type RunWatch } from './run-watch.ts';
 export type { PoolOutcome } from '../jobs/pool-contract.ts';
 export { scriptedPool } from '../pool-testing/scripted-pool.ts';

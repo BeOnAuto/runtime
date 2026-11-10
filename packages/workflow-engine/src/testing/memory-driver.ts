@@ -1,9 +1,9 @@
 import { Effect } from 'effect';
 
-import type { Submission, WorkflowEngine } from '../engine/workflow-engine.ts';
+import type { Submission } from '../engine/workflow-engine.ts';
 import type { CancelOrder, EventOffered, EventReceived, RunInput } from '../machine/run-input.ts';
 import type { Responder } from '../memory/memory-executor.ts';
-import { memoryPorts, type MemoryPorts } from '../memory/memory-ports.ts';
+import { memoryPorts, type MemoryEngine, type MemoryPorts } from '../memory/memory-ports.ts';
 import { virtualClock, type VirtualClock } from '../memory/virtual-clock.ts';
 import type { MachineOptions, MachineSettings } from '../runner/run-descriptors.ts';
 import { startedOf, testCancel, testMachineOf, type StartRequest } from './driver-inputs.ts';
@@ -16,11 +16,12 @@ export interface DriverOptions {
   readonly respond?: Responder;
   readonly startedAt?: number;
   readonly mostSteps?: number;
+  readonly keepsPayloadsOutside?: boolean;
 }
 
 export interface MemoryDriver extends RunWatch {
   readonly ports: MemoryPorts;
-  readonly engine: WorkflowEngine;
+  readonly engine: MemoryEngine;
   readonly clock: VirtualClock;
   readonly start: (request: StartRequest) => Submission;
   readonly submit: (input: RunInput) => Submission;
@@ -41,6 +42,7 @@ export function memoryDriver(options: DriverOptions): MemoryDriver {
       submit(input);
     },
     options.respond ?? succeedWithNull,
+    options.keepsPayloadsOutside,
   );
   const engine = engineOfFrozenRuns(ports, testMachineOf(options.sandbox, options.machine));
   const given: RunInput[] = [];

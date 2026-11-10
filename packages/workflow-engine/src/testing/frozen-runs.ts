@@ -24,6 +24,9 @@ export function frozenRuns(cache: RunCache): RunCache {
   };
 }
 
-export function engineOfFrozenRuns(ports: EnginePorts, options: MachineOptions): WorkflowEngine {
+export function engineOfFrozenRuns<Unavailable>(
+  ports: EnginePorts<Unavailable>,
+  options: MachineOptions,
+): WorkflowEngine<Unavailable> {
   return workflowEngineOf(ports, options, frozenRuns(runCacheOf()));
 }

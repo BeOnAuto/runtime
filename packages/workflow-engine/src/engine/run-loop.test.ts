@@ -1,25 +1,54 @@
 import { Conflict } from '@on.auto/operations';
-import { Effect, Exit, Result } from 'effect';
+import { Cause, Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import {
   eventBytesOf,
+  newRun,
   runLoopOf,
   snapshotOf,
   SplitDecision,
+  stateFormat,
   submissionOf,
   type RunDecider,
   type RunInput,
+  type RunLogEvent,
 } from '../index.ts';
+import { memoryPayloads } from '../memory/memory-payloads.ts';
 import { memoryRunStore } from '../memory/run-store.ts';
+import { UnreadableWrite } from '../run-log/written-events.ts';
 import { countingDecider } from '../testing/counting-decider.ts';
 import { testCancel } from '../testing/driver-inputs.ts';
-import { at, runId, runningState, started } from '../testing/runs.ts';
+import { at, openCall, runId, runningState, started } from '../testing/runs.ts';
 
 const cancelled: RunInput = { kind: 'cancel_requested', runId, at: at + 1, cancel: testCancel };
 
+const digest = 'a'.repeat(64);
+
+interface EventChange {
+  readonly outputs?: RunLogEvent['outputs'];
+  readonly patch?: RunLogEvent['patch'];
+}
+
+function writingAtEleven(change: EventChange): RunDecider {
+  return {
+    ...countingDecider,
+    decision: (input, state, atHand) => {
+      const [event] = countingDecider.decision(input, state, atHand).events;
+      return { events: event === undefined ? [] : [{ ...event, ...change }], payloads: [] };
+    },
+  };
+}
+
+async function defectOf(store: ReturnType<typeof memoryRunStore>, decider: RunDecider): Promise<unknown> {
+  const exit = await Effect.runPromise(
+    Effect.exit(runLoopOf({ runStore: store, payloads: memoryPayloads() }, decider)(runId, started)),
+  );
+  return Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined;
+}
+
 function submitted(store: ReturnType<typeof memoryRunStore>, input: RunInput) {
-  return runLoopOf(store, countingDecider)(input.runId, input).pipe(
+  return runLoopOf({ runStore: store, payloads: memoryPayloads() }, countingDecider)(input.runId, input).pipe(
     Effect.map((decided) => submissionOf(decided, input)),
   );
 }
@@ -71,7 +100,9 @@ describe('the engine on the ledger loop, as it appends', () => {
   it('counts the bytes of every event it appends in the state it folds', async () => {
     const store = memoryRunStore();
 
-    const { state } = await Effect.runPromise(runLoopOf(store, countingDecider)(runId, started));
+    const { state } = await Effect.runPromise(
+      runLoopOf({ runStore: store, payloads: memoryPayloads() }, countingDecider)(runId, started),
+    );
 
     expect(state.historyBytes).toBe(store.events(runId).reduce((sum, { event }) => sum + eventBytesOf(event), 0));
   });
@@ -94,13 +125,47 @@ describe('a decision', () => {
     const store = memoryRunStore();
     const twice: RunDecider = {
       ...countingDecider,
-      decide: (input, state) => Result.map(countingDecider.decide(input, state), (events) => [...events, ...events]),
+      decision: (input, state, atHand) => {
+        const { events } = countingDecider.decision(input, state, atHand);
+        return { events: [...events, ...events], payloads: [] };
+      },
     };
 
-    const exit = await Effect.runPromise(Effect.exit(runLoopOf(store, twice)(runId, started)));
+    const exit = await Effect.runPromise(
+      Effect.exit(runLoopOf({ runStore: store, payloads: memoryPayloads() }, twice)(runId, started)),
+    );
 
     expect(exit).toEqual(Exit.die(new SplitDecision({ runId, events: 2 })));
     expect(store.events(runId)).toEqual([]);
+  });
+
+  it('dies before the append on an event of format 11 that the reader of format 11 would refuse, or that leaves a value kept outside, and appends nothing', async () => {
+    const store = memoryRunStore();
+    const start = { kind: 'start_call', key: openCall, function: 'notify', longestMs: 1000 } as const;
+    const digestStart = writingAtEleven({
+      outputs: [{ ...start, arguments_sha256: digest, arguments_bytes: 20_000 }],
+    });
+    const keptValue = writingAtEleven({
+      patch: [{ op: 'add', path: '/machine/values/7', value: { sha256: digest, bytes: 20_000 } }],
+    });
+
+    const [refused, kept] = await Promise.all([defectOf(store, digestStart), defectOf(store, keptValue)]);
+
+    expect(String(refused)).toMatch(/arguments/u);
+    expect(kept).toEqual(
+      new UnreadableWrite({ detail: 'An event of format 11 leaves value 7 kept outside, which only format 12 holds' }),
+    );
+    expect(store.events(runId)).toEqual([]);
+  });
+});
+
+describe('the decider the loop tests use', () => {
+  it('decides an input alone as it decides it with nothing at hand, keeping nothing outside', () => {
+    const atHand = { contents: new Map(), format: null, keepsPayloadsOutside: false };
+
+    expect(Result.getOrThrow(countingDecider.decide(started, newRun))).toEqual(
+      countingDecider.decision(started, newRun, atHand).events,
+    );
   });
 });
 
@@ -112,6 +177,6 @@ describe('the run store the tests use', () => {
     const after = await Effect.runPromise(store.eventsAfter(runId, 1));
 
     expect(after.map(({ version }) => version)).toEqual([2]);
-    await Effect.runPromise(store.saveSnapshot(snapshotOf(runningState, 2)));
+    await Effect.runPromise(store.saveSnapshot(snapshotOf(runningState, 2, stateFormat)));
   });
 });

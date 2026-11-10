@@ -8,6 +8,7 @@ import {
   type Step,
   type StepCause,
 } from '@on.auto/workflow-engine';
+import { formatElevenRefusalsOf } from '@on.auto/workflow-engine/testing';
 import { Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -65,6 +66,13 @@ describe('the recorded input logs of workflows', () => {
 
     expect(log).toEqual(committed.get(name));
   });
+
+  it.each(recordedInputLogs())(
+    '$name decides events of format 11, each event and each state they make read strictly by the frozen schemas of format 11, those of the release before',
+    (log) => {
+      expect(formatElevenRefusalsOf(replayed(log))).toEqual([]);
+    },
+  );
 
   it.each(recordedInputLogs())('$name ends as its path was recorded to end', ({ name, events }) => {
     expect(endedFrom(events).outcome).toEqual(endings.get(name));

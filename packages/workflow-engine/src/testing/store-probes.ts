@@ -2,13 +2,10 @@ import type { Settlement } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { DispatchWatermark, OutputOrigin, RunContext } from '../dispatch/dispatch-watermark.ts';
-import { newRun, type RunState } from '../machine/run-state.ts';
-import { evolveRun } from '../run-log/run-fold.ts';
 import type { RecordLineage, RunLogStore, StoredRun } from '../run-log/run-store.ts';
-import { snapshotOf } from '../run-log/snapshot.ts';
 import type { RecordStore } from '../settlement/record-store.ts';
 import type { Probe } from './port-probes.ts';
-import { exampleStream } from './streams.ts';
+import { exampleSnapshotAt, exampleStream } from './streams.ts';
 
 export interface RecordStoreSubject {
   readonly recordStore: RecordStore;
@@ -111,10 +108,6 @@ function appendedTo(runStore: RunLogStore, runId: string, events: typeof example
   );
 }
 
-function stateAt(version: number): RunState {
-  return exampleStream.slice(0, version).reduce((state, { event }) => evolveRun(state, event), newRun);
-}
-
 export const watermarkProbes: readonly Probe<WatermarkSubject>[] = [
   {
     title: 'starts at nothing dispatched and never goes down',
@@ -206,7 +199,7 @@ export const runStoreProbes: readonly Probe<RunStoreSubject>[] = [
         );
         const loaded = yield* runStore.load(runId);
         const after = yield* runStore.eventsAfter(runId, 1);
-        yield* runStore.saveSnapshot({ ...snapshotOf(stateAt(1), 1), runId });
+        yield* runStore.saveSnapshot({ ...exampleSnapshotAt(1), runId });
         const fromSnapshot = yield* runStore.load(runId);
         return [
           ...appended,
@@ -223,9 +216,9 @@ export const runStoreProbes: readonly Probe<RunStoreSubject>[] = [
     run: ({ runStore, runId }) =>
       Effect.gen(function* () {
         yield* appendedTo(runStore, runId, firstTwo);
-        yield* runStore.saveSnapshot({ ...snapshotOf(stateAt(2), 2), runId });
+        yield* runStore.saveSnapshot({ ...exampleSnapshotAt(2), runId });
         const fromNewer = yield* runStore.load(runId);
-        yield* runStore.saveSnapshot({ ...snapshotOf(stateAt(1), 1), runId });
+        yield* runStore.saveSnapshot({ ...exampleSnapshotAt(1), runId });
         const afterOlder = yield* runStore.load(runId);
         return [loadedOf(fromNewer), loadedOf(afterOlder)];
       }),

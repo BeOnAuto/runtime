@@ -1374,6 +1374,9 @@ importers:
       '@jitl/quickjs-wasmfile-release-sync':
         specifier: 0.32.0
         version: 0.32.0
+      '@on.auto/content':
+        specifier: workspace:*
+        version: link:../content
       '@on.auto/ledger':
         specifier: workspace:*
         version: link:../ledger

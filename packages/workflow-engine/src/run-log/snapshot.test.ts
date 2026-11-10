@@ -21,7 +21,7 @@ const utf8 = new TextEncoder();
 
 function snapshotHolding(text: string): Snapshot {
   const values = { ...runningState.machine.values, 0: { value: text, bytes: text.length } };
-  return snapshotOf({ ...runningState, machine: { ...runningState.machine, values } }, 4000);
+  return snapshotOf({ ...runningState, machine: { ...runningState.machine, values } }, 4000, stateFormat);
 }
 
 describe('a snapshot', () => {
@@ -35,7 +35,7 @@ describe('a snapshot', () => {
   });
 
   it('names its state format and the bytes of history it covers, and round-trips through its chunks', () => {
-    const snapshot = snapshotOf(runningState, 1000);
+    const snapshot = snapshotOf(runningState, 1000, stateFormat);
 
     expect(snapshot).toMatchObject({
       format: stateFormat,
@@ -62,7 +62,9 @@ describe('a snapshot', () => {
   });
 
   it('is refused when its chunks do not make a snapshot', () => {
-    const text = snapshotChunks(snapshotOf(runningState, 1)).join('').replace(`"format":${stateFormat}`, '"format":0');
+    const text = snapshotChunks(snapshotOf(runningState, 1, stateFormat))
+      .join('')
+      .replace(`"format":${stateFormat}`, '"format":0');
 
     expect(Result.isFailure(snapshotFromChunks([text]))).toBe(true);
   });

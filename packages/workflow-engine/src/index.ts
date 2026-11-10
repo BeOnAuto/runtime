@@ -17,12 +17,15 @@ export {
   type CancelReason,
   type CancelTimer,
   type EmitEvent,
+  type PerformedOutput,
+  type RecordedStartCall,
   type RunOutput,
   type Settle,
   type StartCall,
 } from './dispatch/run-output.ts';
 export { changesTimers, nextDueAtOf, runDueOf } from './dispatch/run-due.ts';
 export { workflowMachine } from './decider/workflow-machine.ts';
+export { fitsInOneEvent } from './decider/run-bounds.ts';
 export type { CallFunctions, ChildCall } from './dsl/call-functions.ts';
 export { durationLimitRejections } from './dsl/duration-limits.ts';
 export { readDuration } from './dsl/durations.ts';
@@ -60,7 +63,8 @@ export {
 } from './dsl/tasks.ts';
 export { runCacheBounds, runCacheOf, type RunCache, type RunCacheBounds } from './cache/run-cache.ts';
 export { workflowEngineOf } from './engine/engine.ts';
-export { SplitDecision, runLoopOf, type RunDecision } from './engine/run-loop.ts';
+export { SplitDecision, type RunDecision } from './engine/decided-append.ts';
+export { runLoopOf } from './engine/run-loop.ts';
 export { submissionOf } from './engine/submission.ts';
 export type { EnginePorts } from './engine/engine-ports.ts';
 export type { Submission, SweepReport, Wake, WorkflowEngine } from './engine/workflow-engine.ts';
@@ -117,6 +121,7 @@ export {
   mostExpressionWork,
   mostHeldBytes,
   mostHistoryBytes,
+  mostInlineHeldValueBytes,
   mostInputs,
   mostReceivedEventBytes,
   mostReceivedEvents,
@@ -128,7 +133,21 @@ export {
   mostWorkPerInput,
   taskFrameBytes,
 } from './machine/limits.ts';
-export { RunLogRecordSchema, runLogRecordOf, type RunDecider, type RunLogRecord } from './machine/run-decider.ts';
+export {
+  RunLogRecordSchema,
+  runLogRecordOf,
+  type InputDecision,
+  type RunDecider,
+  type RunLogRecord,
+} from './machine/run-decider.ts';
+export {
+  HeldContentNotGiven,
+  isKept,
+  keptValuesReached,
+  type HeldContent,
+  type HeldContents,
+  type RunAtHand,
+} from './machine/held-contents.ts';
 export {
   CancelOrderSchema,
   RunInputSchema,
@@ -151,7 +170,6 @@ export {
   type CursorCurrent,
   type EmittedEvents,
   type FrameBody,
-  type HeldValue,
   type ListCursor,
   type MachineState,
   type RunOutcome,
@@ -161,11 +179,11 @@ export {
   type ValueId,
   type Variables,
 } from './machine/run-state.ts';
+export type { HeldValue, InlineValue, KeptValue } from './machine/held-value.ts';
 export type { InboxState, WaitingEvent } from './inbox/inbox-state.ts';
 export {
   RunLogEventSchema,
   eventBytesOf,
-  fitsInOneEvent,
   withHistoryBytes,
   type PositionedEvent,
   type RunLogEvent,
@@ -183,6 +201,8 @@ export {
   type WaitsFor,
 } from './steps/step-entry.ts';
 export { UnreadableRun, evolveRun, loadedRunOf, stateInCurrentFormat, type LoadedRun } from './run-log/run-fold.ts';
+export { ContentUnavailable } from './run-log/content-unavailable.ts';
+export { NoPayloadStore, type RunPayloads } from './run-log/run-payloads.ts';
 export type { RecordCause, RecordLineage, RunLogStore, StoredRun, StoredSnapshot } from './run-log/run-store.ts';
 export {
   SnapshotSchema,
@@ -196,7 +216,13 @@ export {
   type Snapshot,
 } from './run-log/snapshot.ts';
 export { stateFormats } from './run-log/known-formats.ts';
-export { StateFormatSchema, stateFormat, type OlderFormat, type StateFormats } from './run-log/state-format.ts';
+export {
+  StateFormatSchema,
+  stateFormat,
+  stateFormatKeepingPayloads,
+  type OlderFormat,
+  type StateFormats,
+} from './run-log/state-format.ts';
 export {
   PatchFailed,
   PatchOperationSchema,

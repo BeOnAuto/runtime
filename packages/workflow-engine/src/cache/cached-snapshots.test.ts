@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { testDriverOf } from '../pool-testing/test-sandbox.ts';
 import { eventBytesOf, type PositionedEvent } from '../run-log/run-event.ts';
 import { isSnapshotDue, snapshotChunks, snapshotOf } from '../run-log/snapshot.ts';
+import { stateFormat } from '../run-log/state-format.ts';
 import type { MemoryDriver } from '../testing/memory-driver.ts';
 import { drivenRunId, statesAlong } from '../testing/run-history.ts';
 import { workflow } from '../testing/workflows.ts';
@@ -26,7 +27,7 @@ function snapshotsDueAlong(events: readonly PositionedEvent[]): readonly number[
     if (state === undefined || !isSnapshotDue(since)) {
       return [];
     }
-    const chunks = snapshotChunks(snapshotOf(state, version));
+    const chunks = snapshotChunks(snapshotOf(state, version, stateFormat));
     since.snapshotBytes = chunks.reduce((sum, chunk) => sum + utf8.encode(chunk).byteLength, 0);
     since.bytes = 0;
     return [version];

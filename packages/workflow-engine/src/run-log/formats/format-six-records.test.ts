@@ -284,6 +284,6 @@ describe('a log of format 6 of a call', () => {
     expect(state.workflow?.document).toMatchObject({
       do: [{ summarize: { call: 'execute_spec', with: { primitive: 'inference', name: 'summarize' } } }, {}],
     });
-    expect(state.machine.values[2]?.value).toEqual(heldArguments);
+    expect(state.machine.values[2]).toMatchObject({ value: heldArguments });
   });
 });

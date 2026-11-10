@@ -20,7 +20,7 @@ const resultHeld = { holds: ['/result_sha256'] };
 const bothHeld = { holds: ['/arguments_sha256', '/result_sha256'] };
 
 describe('the facts the server tells the ledger hold content', () => {
-  it('are the facts of every call that keeps what it sent and what it was answered, the facts of a run that may keep its input, output or answer outside it, the assets of generation functions, held until they expire, and each fact a capability declares on runs that holds content', () => {
+  it('are the facts of every call that keeps what it sent and what it was answered, the facts of a run that may keep its input, output or answer outside it, the assets of generation functions, held until they expire, the record of each input a workflow applies, which names the values it keeps outside, and each fact a capability declares on runs that holds content', () => {
     const { factSchemas, holders } = factsKnownWith([forecastChecked, bytesKept]);
 
     expect(factSchemas).toEqual(factSchemasKnownWith([forecastChecked, bytesKept]));
@@ -42,6 +42,12 @@ describe('the facts the server tells the ledger hold content', () => {
       reading_failed: bothHeld,
       asset_kept: { holds: ['/sha256'] },
       asset_expired: { releases: 'all' },
+      input_applied: {
+        payloads: [
+          { sha256: '/kept/*/sha256', bytes: '/kept/*/bytes' },
+          { sha256: '/outputs/*/arguments_sha256', bytes: '/outputs/*/arguments_bytes' },
+        ],
+      },
       bytes_kept: { holds: ['/sha256'] },
     });
   });

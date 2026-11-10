@@ -8,6 +8,7 @@ import {
   newRun,
   snapshotOf,
   stateFormat,
+  stateFormats,
   stateInCurrentFormat,
   UnreadableRun,
   withHistoryBytes,
@@ -33,6 +34,7 @@ function eventIn(format: number, patch: StatePatch, before: number): RunLogEvent
       steps: [],
       patch,
       outputs: [],
+      kept: [],
     },
     before,
   );
@@ -98,7 +100,10 @@ describe('a run loaded from a snapshot', () => {
     const atTwo = loadedRunOf({ snapshot: null, tail: exampleStream.slice(0, 2) });
     const tail = exampleStream.slice(2);
 
-    const fromSnapshot = loadedRunOf({ snapshot: { snapshot: snapshotOf(atTwo.state, 2), bytes: 5000 }, tail });
+    const fromSnapshot = loadedRunOf({
+      snapshot: { snapshot: snapshotOf(atTwo.state, 2, stateFormat), bytes: 5000 },
+      tail,
+    });
 
     expect(fromSnapshot).toEqual({
       ...loadedRunOf({ snapshot: null, tail: exampleStream }),
@@ -184,7 +189,12 @@ describe('a state format this code does not read', () => {
     expect(() => loadedRunOf({ snapshot: null, tail: unknown }, { current: 2, older: [] })).toThrow(
       new UnreadableRun({ detail: 'This code reads no state of format 1' }),
     );
-    expect(() => evolveRun(newRun, eventIn(stateFormat + 1, [], 0))).toThrow(UnreadableRun);
+    expect(() => evolveRun(newRun, eventIn(stateFormats.current + 1, [], 0))).toThrow(UnreadableRun);
+    expect(() => evolveRun(newRun, eventIn(stateFormat - 1, [], 0))).toThrow(
+      new UnreadableRun({
+        detail: `An event of state format ${stateFormat - 1} follows a decision of this code, which writes formats ${stateFormat} to ${stateFormats.current}`,
+      }),
+    );
   });
 
   it('read a state of an older format strictly before upcasting it', () => {

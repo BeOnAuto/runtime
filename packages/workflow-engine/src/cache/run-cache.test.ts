@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import { heldBytesOf } from '../machine/held-values.ts';
 import type { RunState } from '../machine/run-state.ts';
-import type { LoadedRun } from '../run-log/run-fold.ts';
+import { stateFormat } from '../run-log/state-format.ts';
 import { runningState } from '../testing/runs.ts';
-import { heapBytesPerJsonByte, runCacheOf } from './run-cache.ts';
+import { heapBytesPerJsonByte, runCacheOf, type CachedRun } from './run-cache.ts';
 
-function loadedRun(version: number, state: RunState = runningState): LoadedRun {
-  return { state, version, sinceSnapshot: { bytes: 0, snapshotBytes: 0 } };
+function loadedRun(version: number, state: RunState = runningState): CachedRun {
+  const sinceSnapshot = { bytes: 0, snapshotBytes: 0 };
+  return { state, version, sinceSnapshot, format: stateFormat, contents: new Map() };
 }
 
 const oneRunAsJson = runningState.heldBytes + runningState.inbox.waitingBytes;

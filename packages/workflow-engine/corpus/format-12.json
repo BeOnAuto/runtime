@@ -1,0 +1,1100 @@
+{
+  "format": 12,
+  "stream": [
+    {
+      "version": 1,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "started",
+          "key": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+          "at": 1790845200000
+        },
+        "steps": [
+          {
+            "reference": "/do/0/shape",
+            "run": 1,
+            "outcome": "completed",
+            "name": "shape",
+            "times": 1,
+            "caused_by": "input"
+          },
+          {
+            "reference": "/do/1/pause",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "pause",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/0/shape",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            },
+            "waits_for": "timer"
+          }
+        ],
+        "resumed": null,
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/runId",
+            "value": "0199a3c4-7d2e-7c1a-9b3f-000000000400"
+          },
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "running"
+          },
+          {
+            "op": "replace",
+            "path": "/workflow",
+            "value": {
+              "document": {
+                "document": {
+                  "dsl": "1.0.3",
+                  "namespace": "acme",
+                  "name": "test",
+                  "version": "1.0.0"
+                },
+                "do": [
+                  {
+                    "shape": {
+                      "set": {
+                        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                        "bytes": 12
+                      }
+                    }
+                  },
+                  {
+                    "pause": {
+                      "wait": "PT1M"
+                    }
+                  },
+                  {
+                    "big": {
+                      "call": "notify",
+                      "with": {
+                        "text": "${ \"x\".repeat(20000) }"
+                      }
+                    }
+                  },
+                  {
+                    "small": {
+                      "call": "notify",
+                      "with": {
+                        "n": 1
+                      }
+                    }
+                  },
+                  {
+                    "done": {
+                      "set": {
+                        "summary": "${ $data.summary }"
+                      }
+                    }
+                  }
+                ]
+              },
+              "input": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/attributes/corpus",
+            "value": "format-12"
+          },
+          {
+            "op": "replace",
+            "path": "/limits/mostDurationMs",
+            "value": 2592000000
+          },
+          {
+            "op": "replace",
+            "path": "/limits/longestCallMs",
+            "value": 600000
+          },
+          {
+            "op": "replace",
+            "path": "/startedAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845200000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/random/seed",
+            "value": 7
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~10~1shape",
+            "value": 1
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~11~1pause",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/1",
+            "value": {
+              "purpose": "deadline",
+              "reference": "/",
+              "armedAt": 1790845200000,
+              "dueAt": 1793437200000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/2",
+            "value": {
+              "purpose": "wait",
+              "reference": "/do/1/pause",
+              "armedAt": 1790845200000,
+              "dueAt": 1790845260000
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 8665
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/1",
+            "value": {
+              "value": {},
+              "bytes": 2
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/2",
+            "value": {
+              "value": {
+                "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                "bytes": 12
+              },
+              "bytes": 88
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": {
+              "reference": "/",
+              "run": 1,
+              "startedAt": 1790845200000,
+              "context": 0,
+              "rawInput": 1,
+              "input": 1,
+              "variables": {},
+              "timeout": null,
+              "body": {
+                "kind": "list",
+                "list": {
+                  "pointer": "/do",
+                  "position": 1,
+                  "data": 2,
+                  "variables": {},
+                  "current": {
+                    "kind": "running",
+                    "task": {
+                      "reference": "/do/1/pause",
+                      "run": 1,
+                      "startedAt": 1790845200000,
+                      "context": 0,
+                      "rawInput": 2,
+                      "input": 2,
+                      "variables": {},
+                      "timeout": null,
+                      "body": {
+                        "kind": "wait",
+                        "timer": "2"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 3022
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "timerId": "1",
+            "dueAt": 1793437200000,
+            "purpose": "deadline",
+            "label": "the most the workflow may run"
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "timerId": "2",
+            "dueAt": 1790845260000,
+            "purpose": "wait",
+            "label": "/do/1/pause"
+          }
+        ],
+        "kept": []
+      }
+    },
+    {
+      "version": 2,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "timer_fired",
+          "key": "2",
+          "at": 1790845260000
+        },
+        "steps": [
+          {
+            "reference": "/do/1/pause",
+            "run": 1,
+            "outcome": "completed",
+            "name": "pause",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/1/pause",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/2/big",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "big",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/1/pause",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "notify at /do/2/big #1"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/1/pause",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845260000
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 2
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~12~1big",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 4
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/2"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/3",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/2/big",
+              "armedAt": 1790845260000,
+              "dueAt": 1790845860000
+            }
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"~1do~12~1big\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "reference": "/do/2/big",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 28676
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/3",
+            "value": {
+              "sha256": "cdf2f2c69126e8e2bc716e8661fd595b257feef6c48cced72ad86f2922591a69",
+              "bytes": 20011
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/position",
+            "value": 2
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/reference",
+            "value": "/do/2/big"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/startedAt",
+            "value": 1790845260000
+          },
+          {
+            "op": "remove",
+            "path": "/machine/root/body/list/current/task/body/timer"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/kind",
+            "value": "call"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/key",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "reference": "/do/2/big",
+              "run": 1
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/function",
+            "value": "notify"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/arguments",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/label",
+            "value": "the function notify"
+          },
+          {
+            "op": "add",
+            "path": "/machine/root/body/list/current/task/body/deadline",
+            "value": "3"
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 45922
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "reference": "/do/2/big",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments_sha256": "cdf2f2c69126e8e2bc716e8661fd595b257feef6c48cced72ad86f2922591a69",
+            "arguments_bytes": 20011,
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "timerId": "3",
+            "dueAt": 1790845860000,
+            "purpose": "call_deadline",
+            "label": "/do/2/big deadline"
+          }
+        ],
+        "kept": [
+          {
+            "sha256": "cdf2f2c69126e8e2bc716e8661fd595b257feef6c48cced72ad86f2922591a69",
+            "bytes": 20011
+          }
+        ]
+      }
+    },
+    {
+      "version": 3,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"/do/2/big\",1]",
+          "at": 1790845260050,
+          "status": "succeeded"
+        },
+        "steps": [
+          {
+            "reference": "/do/2/big",
+            "run": 1,
+            "outcome": "completed",
+            "name": "big",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/big",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/3/small",
+            "run": 1,
+            "outcome": "waiting",
+            "name": "small",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/2/big",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            },
+            "waits_for": "call",
+            "child": "notify at /do/3/small #1"
+          }
+        ],
+        "resumed": {
+          "reference": "/do/2/big",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845260050
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 3
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~13~1small",
+            "value": 1
+          },
+          {
+            "op": "replace",
+            "path": "/timers/next",
+            "value": 5
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/3"
+          },
+          {
+            "op": "add",
+            "path": "/timers/armed/4",
+            "value": {
+              "purpose": "call_deadline",
+              "reference": "/do/3/small",
+              "armedAt": 1790845260050,
+              "dueAt": 1790845860050
+            }
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"~1do~12~1big\",1]"
+          },
+          {
+            "op": "add",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"~1do~13~1small\",1]",
+            "value": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "reference": "/do/3/small",
+              "run": 1
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 28625
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/2"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/3"
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/4",
+            "value": {
+              "sha256": "33140bc4acd14d1fc78e57271000b8b84c2c056ac97e96a8ce3ef04aabd18aef",
+              "bytes": 20041
+            }
+          },
+          {
+            "op": "add",
+            "path": "/machine/values/5",
+            "value": {
+              "value": {
+                "n": 1
+              },
+              "bytes": 7
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 6
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/position",
+            "value": 3
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/data",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/reference",
+            "value": "/do/3/small"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/startedAt",
+            "value": 1790845260050
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/rawInput",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/input",
+            "value": 4
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/key/reference",
+            "value": "/do/3/small"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/arguments",
+            "value": 5
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root/body/list/current/task/body/deadline",
+            "value": "4"
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 69012
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "timerId": "3"
+          },
+          {
+            "kind": "start_call",
+            "key": {
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "reference": "/do/3/small",
+              "run": 1
+            },
+            "function": "notify",
+            "arguments": {
+              "n": 1
+            },
+            "longestMs": 600000
+          },
+          {
+            "kind": "arm_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "timerId": "4",
+            "dueAt": 1790845860050,
+            "purpose": "call_deadline",
+            "label": "/do/3/small deadline"
+          }
+        ],
+        "kept": [
+          {
+            "sha256": "33140bc4acd14d1fc78e57271000b8b84c2c056ac97e96a8ce3ef04aabd18aef",
+            "bytes": 20041
+          }
+        ]
+      }
+    },
+    {
+      "version": 4,
+      "event": {
+        "type": "input_applied",
+        "format": 12,
+        "receipt": {
+          "kind": "call_answered",
+          "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"/do/3/small\",1]",
+          "at": 1790845260100,
+          "status": "succeeded"
+        },
+        "steps": [
+          {
+            "reference": "/do/3/small",
+            "run": 1,
+            "outcome": "completed",
+            "name": "small",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/3/small",
+              "run": 1,
+              "outcome": "waiting",
+              "times": 1
+            }
+          },
+          {
+            "reference": "/do/4/done",
+            "run": 1,
+            "outcome": "completed",
+            "name": "done",
+            "times": 1,
+            "caused_by": {
+              "reference": "/do/3/small",
+              "run": 1,
+              "outcome": "completed",
+              "times": 1
+            }
+          }
+        ],
+        "resumed": {
+          "reference": "/do/3/small",
+          "run": 1,
+          "times": 1
+        },
+        "patch": [
+          {
+            "op": "replace",
+            "path": "/status",
+            "value": "ended"
+          },
+          {
+            "op": "replace",
+            "path": "/lastInputAt",
+            "value": 1790845260100
+          },
+          {
+            "op": "replace",
+            "path": "/inputs",
+            "value": 4
+          },
+          {
+            "op": "add",
+            "path": "/runs/~1do~14~1done",
+            "value": 1
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/1"
+          },
+          {
+            "op": "remove",
+            "path": "/timers/armed/4"
+          },
+          {
+            "op": "remove",
+            "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"~1do~13~1small\",1]"
+          },
+          {
+            "op": "replace",
+            "path": "/heldBytes",
+            "value": 385
+          },
+          {
+            "op": "replace",
+            "path": "/stepsWithoutWaiting",
+            "value": 1
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/4"
+          },
+          {
+            "op": "remove",
+            "path": "/machine/values/5"
+          },
+          {
+            "op": "replace",
+            "path": "/machine/nextValue",
+            "value": 8
+          },
+          {
+            "op": "replace",
+            "path": "/machine/root",
+            "value": null
+          },
+          {
+            "op": "replace",
+            "path": "/outcome",
+            "value": {
+              "kind": "completed",
+              "output": {
+                "summary": "notified of {\"n\":1}"
+              }
+            }
+          },
+          {
+            "op": "replace",
+            "path": "/historyBytes",
+            "value": 70776
+          }
+        ],
+        "outputs": [
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "timerId": "4"
+          },
+          {
+            "kind": "cancel_timer",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "timerId": "1"
+          },
+          {
+            "kind": "settle",
+            "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+            "settlement": {
+              "status": "succeeded",
+              "output": {
+                "summary": "notified of {\"n\":1}"
+              }
+            }
+          }
+        ],
+        "kept": []
+      }
+    }
+  ],
+  "snapshot": {
+    "chunks": [
+      "{\"format\":12,\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"version\":3,\"historyBytes\":69012,\"state\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"status\":\"running\",\"workflow\":{\"document\":{\"document\":{\"dsl\":\"1.0.3\",\"namespace\":\"acme\",\"name\":\"test\",\"version\":\"1.0.0\"},\"do\":[{\"shape\":{\"set\":{\"sha256\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"bytes\":12}}},{\"pause\":{\"wait\":\"PT1M\"}},{\"big\":{\"call\":\"notify\",\"with\":{\"text\":\"${ \\\"x\\\".repeat(20000) }\"}}},{\"small\":{\"call\":\"notify\",\"with\":{\"n\":1}}},{\"done\":{\"set\":{\"summary\":\"${ $data.summary }\"}}}]},\"input\":1},\"attributes\":{\"corpus\":\"format-12\"},\"limits\":{\"mostDurationMs\":2592000000,\"longestCallMs\":600000},\"startedAt\":1790845200000,\"lastInputAt\":1790845260050,\"inputs\":3,\"random\":{\"seed\":7,\"draws\":0},\"runs\":{\"/do/0/shape\":1,\"/do/1/pause\":1,\"/do/2/big\":1,\"/do/3/small\":1},\"timers\":{\"next\":5,\"armed\":{\"1\":{\"purpose\":\"deadline\",\"reference\":\"/\",\"armedAt\":1790845200000,\"dueAt\":1793437200000},\"4\":{\"purpose\":\"call_deadline\",\"reference\":\"/do/3/small\",\"armedAt\":1790845260050,\"dueAt\":1790845860050}}},\"calls\":{\"[\\\"0199a3c4-7d2e-7c1a-9b3f-000000000400\\\",\\\"/do/3/small\\\",1]\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"reference\":\"/do/3/small\",\"run\":1}},\"listeners\":{},\"emitted\":{\"count\":0,\"bytes\":0},\"inbox\":{\"waiting\":[],\"waitingBytes\":0,\"receivedIds\":[],\"offeredIds\":[],\"received\":0,\"receivedBytes\":0},\"heldBytes\":28625,\"historyBytes\":69012,\"stepsWithoutWaiting\":0,\"cancelRequested\":false,\"machine\":{\"values\":{\"0\":{\"value\":{},\"bytes\":2},\"1\":{\"value\":{},\"bytes\":2},\"4\":{\"sha256\":\"33140bc4acd14d1fc78e57271000b8b84c2c056ac97e96a8ce3ef04aabd18aef\",\"bytes\":20041},\"5\":{\"value\":{\"n\":1},\"bytes\":7}},\"nextValue\":6,\"context\":0,\"root\":{\"reference\":\"/\",\"run\":1,\"startedAt\":1790845200000,\"context\":0,\"rawInput\":1,\"input\":1,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"list\",\"list\":{\"pointer\":\"/do\",\"position\":3,\"data\":4,\"variables\":{},\"current\":{\"kind\":\"running\",\"task\":{\"reference\":\"/do/3/small\",\"run\":1,\"startedAt\":1790845260050,\"context\":0,\"rawInput\":4,\"input\":4,\"variables\":{},\"timeout\":null,\"body\":{\"kind\":\"call\",\"key\":{\"runId\":\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"reference\":\"/do/3/small\",\"run\":1},\"function\":\"notify\",\"arguments\":5,\"label\":\"the function notify\",\"deadline\":\"4\"}}}}}}},\"outcome\":null}}"
+    ],
+    "bytes": 2275,
+    "tail": [
+      {
+        "version": 4,
+        "event": {
+          "type": "input_applied",
+          "format": 12,
+          "receipt": {
+            "kind": "call_answered",
+            "key": "[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"/do/3/small\",1]",
+            "at": 1790845260100,
+            "status": "succeeded"
+          },
+          "steps": [
+            {
+              "reference": "/do/3/small",
+              "run": 1,
+              "outcome": "completed",
+              "name": "small",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/3/small",
+                "run": 1,
+                "outcome": "waiting",
+                "times": 1
+              }
+            },
+            {
+              "reference": "/do/4/done",
+              "run": 1,
+              "outcome": "completed",
+              "name": "done",
+              "times": 1,
+              "caused_by": {
+                "reference": "/do/3/small",
+                "run": 1,
+                "outcome": "completed",
+                "times": 1
+              }
+            }
+          ],
+          "resumed": {
+            "reference": "/do/3/small",
+            "run": 1,
+            "times": 1
+          },
+          "patch": [
+            {
+              "op": "replace",
+              "path": "/status",
+              "value": "ended"
+            },
+            {
+              "op": "replace",
+              "path": "/lastInputAt",
+              "value": 1790845260100
+            },
+            {
+              "op": "replace",
+              "path": "/inputs",
+              "value": 4
+            },
+            {
+              "op": "add",
+              "path": "/runs/~1do~14~1done",
+              "value": 1
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/1"
+            },
+            {
+              "op": "remove",
+              "path": "/timers/armed/4"
+            },
+            {
+              "op": "remove",
+              "path": "/calls/[\"0199a3c4-7d2e-7c1a-9b3f-000000000400\",\"~1do~13~1small\",1]"
+            },
+            {
+              "op": "replace",
+              "path": "/heldBytes",
+              "value": 385
+            },
+            {
+              "op": "replace",
+              "path": "/stepsWithoutWaiting",
+              "value": 1
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/4"
+            },
+            {
+              "op": "remove",
+              "path": "/machine/values/5"
+            },
+            {
+              "op": "replace",
+              "path": "/machine/nextValue",
+              "value": 8
+            },
+            {
+              "op": "replace",
+              "path": "/machine/root",
+              "value": null
+            },
+            {
+              "op": "replace",
+              "path": "/outcome",
+              "value": {
+                "kind": "completed",
+                "output": {
+                  "summary": "notified of {\"n\":1}"
+                }
+              }
+            },
+            {
+              "op": "replace",
+              "path": "/historyBytes",
+              "value": 70776
+            }
+          ],
+          "outputs": [
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "timerId": "4"
+            },
+            {
+              "kind": "cancel_timer",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "timerId": "1"
+            },
+            {
+              "kind": "settle",
+              "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+              "settlement": {
+                "status": "succeeded",
+                "output": {
+                  "summary": "notified of {\"n\":1}"
+                }
+              }
+            }
+          ],
+          "kept": []
+        }
+      }
+    ]
+  },
+  "state": {
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-000000000400",
+    "status": "ended",
+    "workflow": {
+      "document": {
+        "document": {
+          "dsl": "1.0.3",
+          "namespace": "acme",
+          "name": "test",
+          "version": "1.0.0"
+        },
+        "do": [
+          {
+            "shape": {
+              "set": {
+                "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+                "bytes": 12
+              }
+            }
+          },
+          {
+            "pause": {
+              "wait": "PT1M"
+            }
+          },
+          {
+            "big": {
+              "call": "notify",
+              "with": {
+                "text": "${ \"x\".repeat(20000) }"
+              }
+            }
+          },
+          {
+            "small": {
+              "call": "notify",
+              "with": {
+                "n": 1
+              }
+            }
+          },
+          {
+            "done": {
+              "set": {
+                "summary": "${ $data.summary }"
+              }
+            }
+          }
+        ]
+      },
+      "input": 1
+    },
+    "attributes": {
+      "corpus": "format-12"
+    },
+    "limits": {
+      "mostDurationMs": 2592000000,
+      "longestCallMs": 600000
+    },
+    "startedAt": 1790845200000,
+    "lastInputAt": 1790845260100,
+    "inputs": 4,
+    "random": {
+      "seed": 7,
+      "draws": 0
+    },
+    "runs": {
+      "/do/0/shape": 1,
+      "/do/1/pause": 1,
+      "/do/2/big": 1,
+      "/do/3/small": 1,
+      "/do/4/done": 1
+    },
+    "timers": {
+      "next": 5,
+      "armed": {}
+    },
+    "calls": {},
+    "listeners": {},
+    "emitted": {
+      "count": 0,
+      "bytes": 0
+    },
+    "inbox": {
+      "waiting": [],
+      "waitingBytes": 0,
+      "receivedIds": [],
+      "offeredIds": [],
+      "received": 0,
+      "receivedBytes": 0
+    },
+    "heldBytes": 385,
+    "historyBytes": 70776,
+    "stepsWithoutWaiting": 1,
+    "cancelRequested": false,
+    "machine": {
+      "values": {
+        "0": {
+          "value": {},
+          "bytes": 2
+        },
+        "1": {
+          "value": {},
+          "bytes": 2
+        }
+      },
+      "nextValue": 8,
+      "context": 0,
+      "root": null
+    },
+    "outcome": {
+      "kind": "completed",
+      "output": {
+        "summary": "notified of {\"n\":1}"
+      }
+    }
+  }
+}

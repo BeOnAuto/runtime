@@ -3,25 +3,25 @@ import { describe, expect, it } from 'vitest';
 
 import { runLoopOf } from '../engine/run-loop.ts';
 import type { RunDecider } from '../machine/run-decider.ts';
-import type { RunInput } from '../machine/run-input.ts';
+import { memoryPayloads } from '../memory/memory-payloads.ts';
 import { memoryRunStore } from '../memory/run-store.ts';
 import { countingDecider } from '../testing/counting-decider.ts';
 import { deeplyFrozen, frozenRuns } from '../testing/frozen-runs.ts';
 import { at, runId, runningState, started } from '../testing/runs.ts';
 import { runCacheOf } from './run-cache.ts';
 
-const cancelled: RunInput = {
+const cancelled = {
   kind: 'cancel_requested',
   runId,
   at: at + 1,
   cancel: { by: 'tester', kind: 'requested', reason: 'The test cancelled the run' },
-};
+} as const;
 
 const writing: RunDecider = {
   ...countingDecider,
-  decide: (input, state) => {
+  decision: (input, state, atHand) => {
     Object.assign(state, { inputs: state.inputs + 1 });
-    return countingDecider.decide(input, state);
+    return countingDecider.decision(input, state, atHand);
   },
 };
 
@@ -29,7 +29,7 @@ describe('a run the cache keeps', () => {
   it('is let go of when its append ends without saying whether it wrote, and loaded from the store again', () => {
     const store = memoryRunStore();
     const cache = runCacheOf();
-    const loop = runLoopOf(store, countingDecider, cache);
+    const loop = runLoopOf({ runStore: store, payloads: memoryPayloads() }, countingDecider, cache);
     Effect.runSync(loop(runId, started));
     store.failNextAppend('unknown_outcome');
 
@@ -46,7 +46,7 @@ describe('a run the cache keeps', () => {
   it('is let go of when its append meets a conflict, so the retry loads the run from the store', () => {
     const store = memoryRunStore();
     const cache = runCacheOf();
-    const loop = runLoopOf(store, countingDecider, cache);
+    const loop = runLoopOf({ runStore: store, payloads: memoryPayloads() }, countingDecider, cache);
     Effect.runSync(loop(runId, started));
     store.failNextAppend('conflict');
 
@@ -55,10 +55,20 @@ describe('a run the cache keeps', () => {
     expect([decided.version, cache.get(runId)?.version]).toEqual([2, 2]);
     expect(store.loads(runId)).toBe(2);
   });
+});
 
+describe('a run the memory driver keeps', () => {
   it('is frozen to its leaves under the memory driver, so a machine that wrote to a state in place would fail', () => {
-    const unfrozen = Effect.runSyncExit(runLoopOf(memoryRunStore(), writing, runCacheOf())(runId, started));
-    const frozen = Effect.runSyncExit(runLoopOf(memoryRunStore(), writing, frozenRuns(runCacheOf()))(runId, started));
+    const unfrozen = Effect.runSyncExit(
+      runLoopOf({ runStore: memoryRunStore(), payloads: memoryPayloads() }, writing, runCacheOf())(runId, started),
+    );
+    const frozen = Effect.runSyncExit(
+      runLoopOf(
+        { runStore: memoryRunStore(), payloads: memoryPayloads() },
+        writing,
+        frozenRuns(runCacheOf()),
+      )(runId, started),
+    );
     const state = deeplyFrozen(structuredClone(runningState));
 
     expect([Exit.isSuccess(unfrozen), Exit.isFailure(frozen)]).toEqual([true, true]);

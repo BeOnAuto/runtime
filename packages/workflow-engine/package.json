@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@jitl/quickjs-wasmfile-release-sync": "0.32.0",
+    "@on.auto/content": "workspace:*",
     "@on.auto/ledger": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "@on.auto/phrasing": "workspace:*",

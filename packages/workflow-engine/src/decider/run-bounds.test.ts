@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { addsAKeptValue } from '../kept-testing/kept-events.ts';
 import { mostEventBytes, mostHeldBytes, mostHistoryBytes, mostInputs } from '../machine/limits.ts';
 import type { RunOutcome } from '../machine/run-state.ts';
 import { eventBytesOf } from '../run-log/run-event.ts';
@@ -38,7 +39,7 @@ describe('a run ends, raised, in one small event, when an input would make an ev
   });
 });
 
-function holdingAcross(pause: string, length: number): DrivenRun {
+function holdingAcross(pause: string, length: number, keepsPayloadsOutside = false): DrivenRun {
   return drivenRun(
     workflow(`
 do:
@@ -46,12 +47,13 @@ do:
   - pause: ${pause}
   - measure: { set: '\${ ({ length: $data.s.length }) }' }
 `),
+    { keepsPayloadsOutside },
   );
 }
 
-function longestHeldAcross(pause: string): number {
+function longestHeldAcross(pause: string, keepsPayloadsOutside = false): number {
   const near = mostEventBytes - 4096;
-  const [first = 0] = holdingAcross(pause, near).events.map(({ event }) => eventBytesOf(event));
+  const [first = 0] = holdingAcross(pause, near, keepsPayloadsOutside).events.map(({ event }) => eventBytesOf(event));
   return near + mostEventBytes - first;
 }
 
@@ -67,6 +69,24 @@ describe('a value a run holds across a wait or a yield', () => {
       expect(longest).toBeGreaterThan(mostEventBytes - 4096);
       expect(holdingAcross(pause, longest).outcome).toEqual({ kind: 'completed', output: { length: longest } });
       expect(titleOf(holdingAcross(pause, longest + 1).outcome)).toBe(
+        `An input changed the run by ${mostEventBytes + 1} bytes, more than the ${mostEventBytes} one event holds`,
+      );
+    },
+  );
+
+  it.each([
+    ['a wait', '{ wait: PT1S }'],
+    ['a yield', "{ for: { in: '${ Array.from({ length: 120 }, (_, index) => index) }' }, do: [] }"],
+  ])(
+    'is bounded by one event as much when it is kept outside, its event counting its bytes, less the bytes that name it: across %s',
+    (_across, pause) => {
+      const longest = longestHeldAcross(pause, true);
+      const kept = holdingAcross(pause, longest, true);
+
+      expect(longestHeldAcross(pause) - longest).toBeLessThan(256);
+      expect(kept.events.map(({ event }) => addsAKeptValue(event)).at(0)).toBe(true);
+      expect(kept.outcome).toEqual({ kind: 'completed', output: { length: longest } });
+      expect(titleOf(holdingAcross(pause, longest + 1, true).outcome)).toBe(
         `An input changed the run by ${mostEventBytes + 1} bytes, more than the ${mostEventBytes} one event holds`,
       );
     },

@@ -2,6 +2,7 @@ import type { RunInput } from '../src/machine/run-input.ts';
 import { newRun, type RunState } from '../src/machine/run-state.ts';
 import { testDriverOf, testWorkflowMachine } from '../src/pool-testing/test-sandbox.ts';
 import { snapshotChunks, snapshotOf } from '../src/run-log/snapshot.ts';
+import { stateFormat } from '../src/run-log/state-format.ts';
 import { startedOf, testCancel } from '../src/testing/driver-inputs.ts';
 import { workflow } from '../src/testing/workflows.ts';
 import { runId, looping, medianMillisecondsOf, nextTick, startedAt, textBytesOf } from './common.ts';
@@ -52,6 +53,6 @@ export function decideMeasured(): readonly string[] {
 
 export function snapshotMeasured(): readonly string[] {
   const holding = waitingState(holdingAMegabyte);
-  const bytes = snapshotChunks(snapshotOf(holding, 1)).reduce((sum, chunk) => sum + textBytesOf(chunk), 0);
+  const bytes = snapshotChunks(snapshotOf(holding, 1, stateFormat)).reduce((sum, chunk) => sum + textBytesOf(chunk), 0);
   return [`a snapshot of a run holding 1,000,000 characters across a wait: ${bytes} bytes`];
 }

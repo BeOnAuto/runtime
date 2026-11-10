@@ -17,6 +17,7 @@ export interface DriveOptions {
   readonly limits?: Partial<RunLimits>;
   readonly seed?: number;
   readonly stepsWithoutWaiting?: number;
+  readonly keepsPayloadsOutside?: boolean;
   readonly meanwhile?: (driver: MemoryDriver, runId: string) => void;
 }
 
@@ -28,10 +29,11 @@ export interface DrivenRun {
 }
 
 export function drivenRun(document: JsonObject, options: DriveOptions = {}): DrivenRun {
-  const { input, respond, limits, seed, stepsWithoutWaiting, meanwhile } = options;
+  const { input, respond, limits, seed, stepsWithoutWaiting, keepsPayloadsOutside, meanwhile } = options;
   const driver = memoryDriver({
     sandbox: stepsWithoutWaiting === undefined ? testSandbox : testSandboxStoppingAfter(stepsWithoutWaiting),
     ...(respond === undefined ? {} : { respond }),
+    ...(keepsPayloadsOutside === undefined ? {} : { keepsPayloadsOutside }),
   });
   const runId = drivenRunId;
   driver.start({

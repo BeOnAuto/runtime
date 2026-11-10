@@ -5,13 +5,14 @@ import { stateFormats } from './known-formats.ts';
 import { eventBytesOf, type PositionedEvent, type RunLogEvent } from './run-event.ts';
 import type { StoredRun } from './run-store.ts';
 import type { SinceSnapshot } from './snapshot.ts';
-import type { OlderFormat, StateFormats } from './state-format.ts';
+import { stateFormat, type OlderFormat, type StateFormats } from './state-format.ts';
 import { applyStatePatch } from './state-patch.ts';
 
 export interface LoadedRun {
   readonly state: RunState;
   readonly version: number;
   readonly sinceSnapshot: SinceSnapshot;
+  readonly format: number | null;
 }
 
 export class UnreadableRun extends Data.TaggedError('unreadable_run')<{ readonly detail: string }> {}
@@ -88,8 +89,12 @@ export function stateInCurrentFormat(format: number, state: unknown, formats: St
 }
 
 export function evolveRun(state: RunState, event: RunLogEvent): RunState {
-  const { state: patched } = upcastTo(stateFormats, { format: stateFormats.current, state }, event.format);
-  return decodeState(applyStatePatch(patched, event.patch));
+  if (event.format < stateFormat || event.format > stateFormats.current) {
+    throw new UnreadableRun({
+      detail: `An event of state format ${event.format} follows a decision of this code, which writes formats ${stateFormat} to ${stateFormats.current}`,
+    });
+  }
+  return decodeState(applyStatePatch(state, event.patch));
 }
 
 export function loadedRunOf(stored: StoredRun, formats: StateFormats = stateFormats): LoadedRun {
@@ -106,5 +111,6 @@ export function loadedRunOf(stored: StoredRun, formats: StateFormats = stateForm
     state,
     version: start.version + stored.tail.length,
     sinceSnapshot: { bytes: tailBytes, snapshotBytes: start.snapshotBytes },
+    format: stored.tail.at(-1)?.event.format ?? stored.snapshot?.snapshot.format ?? null,
   };
 }

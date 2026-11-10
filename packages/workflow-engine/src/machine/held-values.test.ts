@@ -117,7 +117,10 @@ function frameOf(choose: Choose, depth: number): TaskFrame {
 function stateOf(seed: number): RunState {
   const choose = chooserOf(seed);
   const values: Record<string, HeldValue> = Object.fromEntries(
-    Array.from({ length: valueCount }, (_, id) => [id, { value: `v${id}`, bytes: 10 + choose(1000) }]),
+    Array.from({ length: valueCount }, (_, id): readonly [number, HeldValue] => {
+      const bytes = 10 + choose(100_000);
+      return [id, choose(2) === 0 ? { value: `v${id}`, bytes } : { sha256: String(id % 10).repeat(64), bytes }];
+    }),
   );
   return {
     ...newRun,
@@ -171,10 +174,14 @@ function expectedHeldBytes(state: RunState): number {
 const seeds = Array.from({ length: 400 }, (_, index) => index + 1);
 
 describe('the data a run holds', () => {
-  it('is, for any state, the bytes of the values its frames, context and input reach, 4 KiB a frame, and the document', () => {
+  it('is, for any state, the bytes of the values its frames, context and input reach, inline or kept outside, 4 KiB a frame, and the document', () => {
     const states = seeds.map((seed) => stateOf(seed));
+    const arms = new Set(
+      states.flatMap((state) => Object.values(state.machine.values).map((held) => 'sha256' in held)),
+    );
 
     expect(states.map((state) => heldBytesOf(state))).toEqual(states.map((state) => expectedHeldBytes(state)));
+    expect([arms.has(true), arms.has(false)]).toEqual([true, true]);
   });
 
   it('keeps, after the sweep that follows each decision, exactly the values that are reached, and the same bytes', () => {

@@ -1,5 +1,5 @@
 import { statement } from '@on.auto/ledger';
-import { snapshotOf } from '@on.auto/workflow-engine';
+import { snapshotOf, stateFormat } from '@on.auto/workflow-engine';
 import { Cause, Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -45,7 +45,7 @@ describe('the run store of the host, refusing', () => {
     const state = await Effect.runPromise(hosted.host.stateOf(run));
     const runStore = ledgerRunLogStore(await openedOn({ store: 'sqlite', file }));
 
-    const defect = await defectOf(runStore.saveSnapshot(snapshotOf(state, 2)));
+    const defect = await defectOf(runStore.saveSnapshot(snapshotOf(state, 2, stateFormat)));
 
     expect(defect).toEqual(new RangeError('A snapshot at version 2 of a run whose log holds 1 events'));
   });
@@ -59,7 +59,7 @@ describe('the run store of the host, saving a snapshot', () => {
     const state = await Effect.runPromise(hosted.host.stateOf(run));
     const measured = readingMeasured(await openedOn({ store: 'sqlite', file }));
 
-    await Effect.runPromise(ledgerRunLogStore(measured.database).saveSnapshot(snapshotOf(state, 1)));
+    await Effect.runPromise(ledgerRunLogStore(measured.database).saveSnapshot(snapshotOf(state, 1, stateFormat)));
     const read = measured.bytesRead();
     const { snapshot } = await Effect.runPromise(ledgerRunLogStore(measured.database).load(runKeyOf(run)));
 

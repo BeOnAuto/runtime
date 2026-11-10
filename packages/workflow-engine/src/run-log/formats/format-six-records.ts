@@ -1,7 +1,7 @@
 import type { RejectionBecause, Settlement, UnavailableKind } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import type { RunOutput } from '../../dispatch/run-output.ts';
+import type { RunOutputSchema } from '../../dispatch/run-output.ts';
 import type { InputReceipt } from '../../machine/input-receipt.ts';
 import {
   currentWordOf,
@@ -13,6 +13,8 @@ import {
 } from './format-seven.ts';
 import { RunCountSchema, StepCauseSchema, StepOutcomeSchema, withExecutionId, withRunId } from './format-six.ts';
 import { CallKeySchema, InstantSchema, TimerPurposeSchema } from './format-two.ts';
+
+type RunOutput = typeof RunOutputSchema.Encoded;
 
 export const FormatsOneToSixSchema = Schema.Literals([1, 2, 3, 4, 5, 6]);
 

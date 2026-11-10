@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 
 import { DispatchFailed } from '../dispatch/dispatch-watermark.ts';
-import type { ArmTimer, RunOutput } from '../dispatch/run-output.ts';
+import type { ArmTimer, PerformedOutput } from '../dispatch/run-output.ts';
 import type { RunInput } from '../machine/run-input.ts';
 import type { ArmReceipt, TimerCancelReceipt, Timers } from '../timers/timers.ts';
 import type { VirtualClock } from './virtual-clock.ts';
@@ -10,15 +10,15 @@ export type Submit = (input: RunInput) => void;
 
 export interface Dispatched {
   readonly at: number;
-  readonly output: RunOutput;
+  readonly output: PerformedOutput;
 }
 
-type FaultKind = RunOutput['kind'] | 'note_due';
+type FaultKind = PerformedOutput['kind'] | 'note_due';
 
 export interface Faults {
   readonly failNext: (kind: FaultKind) => void;
   readonly fails: (kind: FaultKind) => boolean;
-  readonly attempt: <A>(output: RunOutput, work: () => A) => Effect.Effect<A, DispatchFailed>;
+  readonly attempt: <A>(output: PerformedOutput, work: () => A) => Effect.Effect<A, DispatchFailed>;
   readonly dispatched: () => readonly Dispatched[];
 }
 

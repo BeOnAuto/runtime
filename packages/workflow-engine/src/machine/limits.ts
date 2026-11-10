@@ -2,6 +2,8 @@ export const mostHeldBytes = 4_194_304;
 
 export const taskFrameBytes = 4096;
 
+export const mostInlineHeldValueBytes = 16_384;
+
 export const mostEventBytes = 1_572_864;
 
 export const mostOutputBytes = 1_048_574;

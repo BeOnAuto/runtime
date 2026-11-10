@@ -1,6 +1,7 @@
 import { Data } from 'effect';
 
 import { callKeyText } from '../executor/call-key.ts';
+import { heldJsonOf, type HeldContents } from './held-contents.ts';
 import { heldValueOf } from './held-values.ts';
 import type { RunInput } from './run-input.ts';
 import type { RunState } from './run-state.ts';
@@ -31,6 +32,7 @@ function requireSameRun(state: RunState, input: RunInput): void {
 function startedReason(
   state: RunState,
   input: Extract<RunInput, { readonly kind: 'started' }>,
+  contents: HeldContents,
 ): StaleReason | undefined {
   if (state.status === 'new') {
     return undefined;
@@ -39,7 +41,8 @@ function startedReason(
   if (state.workflow === null || !sameJson(state.workflow.document, input.document)) {
     throw new RunMismatch({ detail: `The run of ${state.runId} was started again with another document` });
   }
-  if (!sameJson(heldValueOf(state, state.workflow.input).value, input.input)) {
+  const held = heldJsonOf(heldValueOf(state, state.workflow.input), contents);
+  if (held !== undefined && !sameJson(held, input.input)) {
     throw new RunMismatch({ detail: `The run of ${state.runId} was started again with another input` });
   }
   return 'started_before';
@@ -71,9 +74,9 @@ function spentReason(state: RunState, input: Exclude<RunInput, { readonly kind: 
   return state.cancelRequested ? 'cancel_requested_before' : undefined;
 }
 
-export function staleReasonOf(state: RunState, input: RunInput): StaleReason | undefined {
+export function staleReasonOf(state: RunState, input: RunInput, contents: HeldContents): StaleReason | undefined {
   if (input.kind === 'started') {
-    return startedReason(state, input);
+    return startedReason(state, input, contents);
   }
   if (state.status === 'new') {
     return 'not_started';

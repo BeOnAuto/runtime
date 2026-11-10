@@ -1,7 +1,7 @@
 import type { RejectionBecause, Settlement, UnavailableKind } from '@on.auto/operations';
 import { Schema } from 'effect';
 
-import type { RunOutput } from '../../dispatch/run-output.ts';
+import type { RunOutputSchema } from '../../dispatch/run-output.ts';
 import type { InputReceipt } from '../../machine/input-receipt.ts';
 import {
   CallKeySchema,
@@ -21,6 +21,8 @@ import {
   StepSchema,
 } from './format-six-records.ts';
 import { InstantSchema, TimerPurposeSchema } from './format-two.ts';
+
+type RunOutput = typeof RunOutputSchema.Encoded;
 
 const UnavailableKindSchema = Schema.Literals([
   'model_not_offered',

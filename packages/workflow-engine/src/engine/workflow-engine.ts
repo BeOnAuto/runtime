@@ -20,8 +20,8 @@ export interface SweepReport {
   readonly timersArmedAgain: number;
 }
 
-export interface WorkflowEngine {
-  readonly submit: (input: RunInput) => Effect.Effect<Submission, Conflict>;
+export interface WorkflowEngine<Unavailable = never> {
+  readonly submit: (input: RunInput) => Effect.Effect<Submission, Conflict | Unavailable>;
   readonly wake: (runId: string) => Effect.Effect<Wake>;
   readonly sweep: (before: number) => Effect.Effect<SweepReport>;
 }

@@ -1,14 +1,14 @@
 import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { snapshotOf, stateFormats, stateInCurrentFormat } from '../../index.ts';
+import { snapshotOf, stateFormat, stateFormats, stateInCurrentFormat } from '../../index.ts';
 import { runningState } from '../../testing/runs.ts';
 
 const toJson = Schema.decodeUnknownSync(Schema.Json);
 
 const [, , , , , , , , , formatTen] = stateFormats.older;
 
-const stateOfFormatTen = toJson(snapshotOf(runningState, 1).state);
+const stateOfFormatTen = toJson(snapshotOf(runningState, 1, stateFormat).state);
 
 const failedBranch = '{"type":"runtime","status":500,"instance":"/do/1/fork/branches/2"}';
 

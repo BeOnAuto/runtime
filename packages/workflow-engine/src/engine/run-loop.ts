@@ -1,45 +1,15 @@
-import { decisionLoop, type Decision, type DecisionLoop, type StreamAppend } from '@on.auto/ledger';
-import { Data, Effect } from 'effect';
+import { retriedOnVersionConflict } from '@on.auto/ledger';
+import type { Conflict } from '@on.auto/operations';
+import { Effect, Result } from 'effect';
 
-import {
-  cachedLoadOf,
-  keptAfter,
-  runCacheOf,
-  unreported,
-  type ReportReloaded,
-  type RunCache,
-} from '../cache/run-cache.ts';
-import { runLogDeciderOf, type RunDecider, type RunLogRecord } from '../machine/run-decider.ts';
+import { cachedLoadOf, runCacheOf, unreported, type ReportReloaded, type RunCache } from '../cache/run-cache.ts';
+import { keptAfter, resolvedIn } from '../cache/run-contents.ts';
+import type { RunDecider } from '../machine/run-decider.ts';
 import type { RunInput } from '../machine/run-input.ts';
-import type { RunState } from '../machine/run-state.ts';
-import type { RunLogEvent } from '../run-log/run-event.ts';
-import type { LoadedRun } from '../run-log/run-fold.ts';
-import type { RunLogStore } from '../run-log/run-store.ts';
-import { recordLineageOf } from './record-lineage.ts';
+import { appendedDecision, type Attempt, type RunDecision } from './decided-append.ts';
+import type { RunStores } from './engine-ports.ts';
 
-export type RunDecision = Decision<LoadedRun, RunState, RunLogEvent>;
-
-export class SplitDecision extends Data.TaggedError('split_decision')<{
-  readonly runId: string;
-  readonly events: number;
-}> {}
-
-function appendOf(runStore: RunLogStore, cache: RunCache, input: RunInput): StreamAppend<RunLogRecord, LoadedRun> {
-  return (runId, records, place, loaded) =>
-    records.length > 1
-      ? Effect.die(new SplitDecision({ runId, events: records.length }))
-      : Effect.forEach(
-          records,
-          ({ data }) => runStore.append(runId, data, place, recordLineageOf(input, loaded.state, data)),
-          { discard: true },
-        ).pipe(
-          Effect.onError(() =>
-            Effect.sync(() => {
-              cache.drop(runId);
-            }),
-          ),
-        );
-}
+type RunLoop<Unavailable> = (runId: string, input: RunInput) => Effect.Effect<RunDecision, Conflict | Unavailable>;
 
 export interface RunLoopUpkeep {
   readonly reserve: Effect.Effect<void>;
@@ -48,22 +18,32 @@ export interface RunLoopUpkeep {
 
 const unattended: RunLoopUpkeep = { reserve: Effect.void, report: unreported };
 
-export function runLoopOf(
-  runStore: RunLogStore,
+export function runLoopOf<Unavailable>(
+  stores: RunStores<Unavailable>,
   decider: RunDecider,
   cache: RunCache = runCacheOf(),
   { reserve, report }: RunLoopUpkeep = unattended,
-): DecisionLoop<LoadedRun, RunState, RunInput, RunLogEvent, never> {
-  const cached = cachedLoadOf({ runStore, cache, report });
-  const load = (runId: string): Effect.Effect<LoadedRun> => Effect.tap(cached(runId), () => reserve);
-  const runLog = runLogDeciderOf(decider);
+): RunLoop<Unavailable> {
+  const load = cachedLoadOf({ runStore: stores.runStore, cache, report });
+  const dropped = (runId: string) =>
+    Effect.sync(() => {
+      cache.drop(runId);
+    });
+  const attempt = (runId: string, input: RunInput): Attempt<Unavailable> =>
+    Effect.gen(function* () {
+      const loaded = yield* load(runId);
+      const run = yield* Effect.result(resolvedIn(cache, stores.payloads, [runId, loaded]));
+      const outcome = Result.isFailure(run)
+        ? Result.fail(run.failure)
+        : yield* Effect.andThen(reserve, appendedDecision(stores, [runId, input], [run.success, decider]));
+      if (Result.isFailure(outcome)) {
+        yield* dropped(runId);
+      }
+      return outcome;
+    }).pipe(Effect.onError(() => dropped(runId)));
   return (runId, input) =>
-    decisionLoop(
-      load,
-      appendOf(runStore, cache, input),
-      runLog,
-    )(runId, input).pipe(
-      Effect.map((decided): RunDecision => ({ ...decided, events: decided.events.map(({ data }) => data) })),
+    retriedOnVersionConflict(attempt(runId, input)).pipe(
+      Effect.flatMap(Effect.fromResult),
       Effect.tap((decision) =>
         Effect.sync(() => {
           keptAfter(cache, runId, decision);

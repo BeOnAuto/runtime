@@ -1,6 +1,9 @@
 import type { RunOutput } from '../dispatch/run-output.ts';
 import type { InputReceipt } from '../machine/input-receipt.ts';
+import { newRun } from '../machine/run-state.ts';
 import { eventBytesOf, withHistoryBytes, type PositionedEvent } from '../run-log/run-event.ts';
+import { evolveRun } from '../run-log/run-fold.ts';
+import { snapshotOf, type Snapshot } from '../run-log/snapshot.ts';
 import { stateFormat } from '../run-log/state-format.ts';
 import type { StatePatch } from '../run-log/state-patch.ts';
 import { at, document, runId } from './runs.ts';
@@ -63,3 +66,8 @@ export const exampleStream = streamOf([
     ],
   },
 ]);
+
+export function exampleSnapshotAt(version: number): Snapshot {
+  const state = exampleStream.slice(0, version).reduce((folded, { event }) => evolveRun(folded, event), newRun);
+  return snapshotOf(state, version, stateFormat);
+}

@@ -1,8 +1,12 @@
-import type { RunOutput } from '../dispatch/run-output.ts';
+import { Data } from 'effect';
+
+import type { PerformedOutput } from '../dispatch/run-output.ts';
 import { jsonBytesOf, type Json } from '../dsl/json.ts';
+import { heldJsonOf, type HeldContents } from '../machine/held-contents.ts';
+import type { HeldValue } from '../machine/held-value.ts';
 import { heldIn } from '../machine/held-values.ts';
 import { mostExpressionWork, mostTasksPerInput, mostWorkPerInput } from '../machine/limits.ts';
-import type { HeldValue, MachineState, ValueId } from '../machine/run-state.ts';
+import type { MachineState, ValueId } from '../machine/run-state.ts';
 
 export interface Meter {
   readonly allowance: () => number;
@@ -12,9 +16,11 @@ export interface Meter {
 }
 
 export interface Journal {
-  readonly emit: (output: RunOutput) => void;
-  readonly outputs: () => readonly RunOutput[];
+  readonly emit: (output: PerformedOutput) => void;
+  readonly outputs: () => readonly PerformedOutput[];
 }
+
+export class HeldContentLost extends Data.TaggedError('held_content_lost')<{ readonly value: ValueId }> {}
 
 export interface ValueTable {
   readonly hold: (value: Json) => ValueId;
@@ -38,7 +44,7 @@ export function meterOf(): Meter {
 }
 
 export function journalOf(): Journal {
-  const outputs: RunOutput[] = [];
+  const outputs: PerformedOutput[] = [];
   return {
     emit: (output) => {
       outputs.push(output);
@@ -47,10 +53,28 @@ export function journalOf(): Journal {
   };
 }
 
-export function valueTableOf(machine: MachineState): ValueTable {
+function keptValuesReadOf(values: Readonly<Record<string, HeldValue>>, contents: HeldContents): (id: ValueId) => Json {
+  const read = new Map<ValueId, Json>();
+  return (id) => {
+    const seen = read.get(id);
+    if (seen !== undefined) {
+      return seen;
+    }
+    const held = heldIn(values, id);
+    const json = heldJsonOf(held, contents);
+    if (json === undefined) {
+      throw new HeldContentLost({ value: id });
+    }
+    read.set(id, json);
+    return json;
+  };
+}
+
+export function valueTableOf(machine: MachineState, contents: HeldContents): ValueTable {
   const values: Record<string, HeldValue> = { ...machine.values };
   const counter = { next: machine.nextValue };
   const known = new Map<object, ValueId>();
+  const valueOf = keptValuesReadOf(values, contents);
   return {
     hold: (value) => {
       const seen = typeof value === 'object' && value !== null ? known.get(value) : undefined;
@@ -65,7 +89,7 @@ export function valueTableOf(machine: MachineState): ValueTable {
       }
       return id;
     },
-    valueOf: (id) => heldIn(values, id).value,
+    valueOf,
     values: () => values,
     nextValue: () => counter.next,
   };

@@ -3,29 +3,20 @@ import { Result } from 'effect';
 import { staleReasonOf } from '../machine/admission.ts';
 import { inputTimeOf, receiptOf } from '../machine/input-receipt.ts';
 import type { RunDecider } from '../machine/run-decider.ts';
-import { newRun } from '../machine/run-state.ts';
+import type { RunInput } from '../machine/run-input.ts';
+import { newRun, type RunState } from '../machine/run-state.ts';
 import { isoInstantOf } from '../machine/utc-time.ts';
-import { withHistoryBytes } from '../run-log/run-event.ts';
+import { withHistoryBytes, type RunLogEvent } from '../run-log/run-event.ts';
 import { evolveRun } from '../run-log/run-fold.ts';
 import { stateFormat } from '../run-log/state-format.ts';
 
-export const countingDecider: RunDecider = {
-  initialState: newRun,
-  evolve: evolveRun,
-  context: (input, state) => ({
-    at: isoInstantOf(inputTimeOf(state, input)),
-    by: 'counter',
-    runId: input.runId,
-    definitionType: 'workflow',
-    definitionName: 'counted',
-    definitionVersion: 1,
-  }),
-  decide: (input, state) => {
-    if (staleReasonOf(state, input) !== undefined) {
-      return Result.succeed([]);
-    }
-    const at = inputTimeOf(state, input);
-    const counted = withHistoryBytes(
+function counted(input: RunInput, state: RunState): readonly RunLogEvent[] {
+  if (staleReasonOf(state, input, new Map()) !== undefined) {
+    return [];
+  }
+  const at = inputTimeOf(state, input);
+  return [
+    withHistoryBytes(
       {
         type: 'input_applied',
         format: stateFormat,
@@ -41,7 +32,21 @@ export const countingDecider: RunDecider = {
         outputs: [],
       },
       state.historyBytes,
-    );
-    return Result.succeed([counted]);
-  },
+    ),
+  ];
+}
+
+export const countingDecider: RunDecider = {
+  initialState: newRun,
+  evolve: evolveRun,
+  context: (input, state) => ({
+    at: isoInstantOf(inputTimeOf(state, input)),
+    by: 'counter',
+    runId: input.runId,
+    definitionType: 'workflow',
+    definitionName: 'counted',
+    definitionVersion: 1,
+  }),
+  decide: (input, state) => Result.succeed(counted(input, state)),
+  decision: (input, state) => ({ events: counted(input, state), payloads: [] }),
 };

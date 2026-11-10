@@ -1,5 +1,6 @@
 import { raised } from '../dsl/raised-error.ts';
 import type { DslError } from '../machine/dsl-error.ts';
+import { lostContentOf, type HeldContents } from '../machine/held-contents.ts';
 import { mostEventBytes, mostHeldBytes, mostHistoryBytes, mostInputs } from '../machine/limits.ts';
 import type { RunState } from '../machine/run-state.ts';
 import { eventBytesOf, type RunLogEvent } from '../run-log/run-event.ts';
@@ -25,6 +26,19 @@ export function brokenBound(state: RunState, event: RunLogEvent, result: Session
         `The workflow would hold about ${held} bytes of data at once, more than the ${mostHeldBytes} a workflow may hold`,
       )
     : undefined;
+}
+
+export function fitsInOneEvent(event: RunLogEvent): boolean {
+  return eventBytesOf(event) <= mostEventBytes;
+}
+
+export function lostContentBound(state: RunState, contents: HeldContents): DslError | undefined {
+  const lost = lostContentOf(state, contents);
+  if (lost === undefined) {
+    return undefined;
+  }
+  const how = lost.kind === 'missing' ? 'is missing from the content it was kept in' : 'was erased';
+  return boundError(`A value the workflow holds, kept under ${lost.sha256}, ${how}`);
 }
 
 export function inputsBound(state: RunState): DslError | undefined {

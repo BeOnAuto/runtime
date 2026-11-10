@@ -2,9 +2,19 @@ import { Effect, Schema, SchemaGetter, type SchemaIssue } from 'effect';
 
 export const stateFormat = 11;
 
+export const stateFormatKeepingPayloads = 12;
+
 export const StateFormatSchema = Schema.Int.check(Schema.isGreaterThanOrEqualTo(1));
 
-export const ThisFormatOrNewerSchema = StateFormatSchema.check(Schema.isGreaterThanOrEqualTo(stateFormat));
+export const ThisFormatOrNewerSchema = StateFormatSchema.check(
+  Schema.isGreaterThanOrEqualTo(stateFormatKeepingPayloads),
+);
+
+export const FormatsEightToElevenSchema = Schema.Literals([8, 9, 10, 11]);
+
+export function formatWritten(reached: number | null, keepsPayloadsOutside: boolean): number {
+  return Math.max(reached ?? stateFormat, keepsPayloadsOutside ? stateFormatKeepingPayloads : stateFormat);
+}
 
 export interface OlderFormat {
   readonly format: number;

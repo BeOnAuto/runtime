@@ -62,7 +62,7 @@ function storedAlong(events: readonly PositionedEvent[]): Stored {
     kept.bytes += eventBytesOf(positioned.event);
     if (isSnapshotDue({ bytes: kept.bytes, snapshotBytes: kept.snapshot?.bytes ?? 0 })) {
       before.fullest = { snapshot: kept.snapshot, tail: kept.tail.slice(0, -1) };
-      const snapshot = snapshotOf(kept.state, positioned.version);
+      const snapshot = snapshotOf(kept.state, positioned.version, positioned.event.format);
       kept.snapshot = { snapshot, bytes: snapshotChunks(snapshot).reduce((sum, chunk) => sum + textBytesOf(chunk), 0) };
       kept.tail = [];
       kept.bytes = 0;

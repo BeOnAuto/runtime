@@ -9,7 +9,7 @@ import {
   snapshotNamesOfFormatsOneToSix,
 } from './formats/format-six-records.ts';
 import { eventBytesOf, type RunLogEvent } from './run-event.ts';
-import { stateFormat, ThisFormatOrNewerSchema, writtenInAnOlderFormat } from './state-format.ts';
+import { FormatsEightToElevenSchema, ThisFormatOrNewerSchema, writtenInAnOlderFormat } from './state-format.ts';
 
 export const snapshotEveryBytes = 1_048_576;
 
@@ -26,6 +26,7 @@ function snapshotInFormat<Format extends Schema.Top>(format: Format) {
 }
 
 export const SnapshotSchema = Schema.Union([
+  snapshotInFormat(FormatsEightToElevenSchema),
   snapshotInFormat(ThisFormatOrNewerSchema),
   writtenInAnOlderFormat(
     SnapshotOfFormatsOneToSixSchema,
@@ -33,7 +34,6 @@ export const SnapshotSchema = Schema.Union([
     snapshotNamesOfFormatsOneToSix,
   ),
   writtenInAnOlderFormat(SnapshotOfFormatSevenSchema, snapshotInFormat(Schema.Literal(7)), snapshotNamesOfFormatSeven),
-  snapshotInFormat(Schema.Literals([8, 9, 10])),
 ]);
 
 export type Snapshot = typeof SnapshotSchema.Type;
@@ -51,9 +51,9 @@ const decodeSnapshot = Schema.decodeUnknownResult(SnapshotTextSchema);
 
 const encodeState = Schema.encodeSync(Schema.toCodecJson(RunStateSchema));
 
-export function snapshotOf(state: RunState, version: number): Snapshot {
+export function snapshotOf(state: RunState, version: number, format: number): Snapshot {
   return {
-    format: stateFormat,
+    format,
     runId: state.runId,
     version,
     historyBytes: state.historyBytes,

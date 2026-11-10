@@ -6,15 +6,11 @@ import { InboxStateSchema, type InboxState } from '../inbox/inbox-state.ts';
 import { StepCauseSchema, type StepCause } from '../steps/step-entry.ts';
 import { TimerPurposeSchema, type TimerPurpose } from '../timers/timer-id.ts';
 import { DslErrorSchema, type DslError } from './dsl-error.ts';
+import { HeldValueSchema, type HeldValue } from './held-value.ts';
 import { InstantSchema } from './instant.ts';
 import { CancelOrderSchema, RunLimitsSchema, type CancelOrder, type RunLimits } from './run-input.ts';
 
 export type ValueId = number;
-
-export interface HeldValue {
-  readonly value: Schema.Json;
-  readonly bytes: number;
-}
 
 export type Variables = Readonly<Record<string, ValueId>>;
 
@@ -263,7 +259,7 @@ export const RunStateSchema: Schema.Codec<RunState> = Schema.Struct({
   stepsWithoutWaiting: IntSchema,
   cancelRequested: Schema.Boolean,
   machine: Schema.Struct({
-    values: Schema.Record(Schema.String, Schema.Struct({ value: Schema.Json, bytes: IntSchema })),
+    values: Schema.Record(Schema.String, HeldValueSchema),
     nextValue: ValueIdSchema,
     context: ValueIdSchema,
     root: Schema.NullOr(TaskFrameSchema),

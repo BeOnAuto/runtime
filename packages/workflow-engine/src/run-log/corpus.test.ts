@@ -43,6 +43,12 @@ const committed: readonly unknown[] = readdirSync(directory)
 
 const corpora: readonly Corpus[] = committed.map((file) => decodeCorpus(file));
 
+const withFiles = corpora.map((corpus, index): readonly [Corpus, unknown] => [corpus, committed[index]]);
+
+const sinceFormatEight = withFiles.filter(([{ format }]) => format >= 8);
+
+const beforeFormatEight = withFiles.filter(([{ format }]) => format < 8);
+
 function snapshotIn({ snapshot }: Corpus) {
   return Result.getOrThrow(snapshotFromChunks(snapshot.chunks));
 }
@@ -74,10 +80,19 @@ describe('the committed corpus of past state formats', () => {
     expect(corpora.map((corpus) => formatsNamed(corpus))).toEqual(corpora.map(({ format }) => [format]));
   });
 
-  it('reads each event and snapshot with the schemas of the format it names, and writes it back as it was committed', () => {
-    expect(corpora.map((corpus) => writeCorpus(corpus))).toEqual(committed);
-    expect(corpora.map((corpus) => writeSnapshot(snapshotIn(corpus)))).toEqual(
-      corpora.map(({ snapshot }) => readJson(snapshot.chunks.join(''))),
+  it('reads each event and snapshot of formats 8 on with the schemas of the format it names, and writes it back text for text as it was committed, so a member written in another order is refused', () => {
+    expect(sinceFormatEight.map(([corpus]) => JSON.stringify(writeCorpus(corpus)))).toEqual(
+      sinceFormatEight.map(([, file]) => JSON.stringify(file)),
+    );
+    expect(sinceFormatEight.map(([corpus]) => JSON.stringify(writeSnapshot(snapshotIn(corpus))))).toEqual(
+      sinceFormatEight.map(([{ snapshot }]) => snapshot.chunks.join('')),
+    );
+  });
+
+  it('reads each event and snapshot of formats 1 to 7, whose records it renames as it reads them and never writes, and writes back the same values', () => {
+    expect(beforeFormatEight.map(([corpus]) => writeCorpus(corpus))).toEqual(beforeFormatEight.map(([, file]) => file));
+    expect(beforeFormatEight.map(([corpus]) => writeSnapshot(snapshotIn(corpus)))).toEqual(
+      beforeFormatEight.map(([{ snapshot }]) => readJson(snapshot.chunks.join(''))),
     );
   });
 

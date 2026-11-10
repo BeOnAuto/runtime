@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { runLoopOf } from '../engine/run-loop.ts';
 import type { RunInput } from '../machine/run-input.ts';
+import { memoryPayloads } from '../memory/memory-payloads.ts';
 import { memoryReporter } from '../memory/memory-records.ts';
 import { memoryRunStore } from '../memory/run-store.ts';
 import { countingDecider } from '../testing/counting-decider.ts';
@@ -20,7 +21,8 @@ describe('a run loaded from its store again', () => {
   it('is reported with the events read and the bytes the cache counts it as, and a run with nothing stored is not', () => {
     const reporter = memoryReporter();
     const keepingNone = runCacheOf({ mostRuns: 0, mostBytes: 0 });
-    const loop = runLoopOf(memoryRunStore(), countingDecider, keepingNone, {
+    const stores = { runStore: memoryRunStore(), payloads: memoryPayloads() };
+    const loop = runLoopOf(stores, countingDecider, keepingNone, {
       reserve: Effect.void,
       report: (reloaded) => reporter.reloaded(reloaded),
     });
@@ -37,7 +39,8 @@ describe('a run loaded from its store again', () => {
 
   it('is not reported while the cache keeps the run', () => {
     const reporter = memoryReporter();
-    const loop = runLoopOf(memoryRunStore(), countingDecider, runCacheOf(), {
+    const stores = { runStore: memoryRunStore(), payloads: memoryPayloads() };
+    const loop = runLoopOf(stores, countingDecider, runCacheOf(), {
       reserve: Effect.void,
       report: (reloaded) => reporter.reloaded(reloaded),
     });
