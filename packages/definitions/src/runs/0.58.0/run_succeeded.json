@@ -1,8 +1,8 @@
 {
   "type": "run_succeeded",
   "data": {
-    "output_sha256": "ab3149083e968cc3a3cc1c93724ba49bc0d944f5ea8a6899b95c1fba6b6b842f",
-    "output_bytes": 3038,
+    "output_sha256": "a681418dafb3a7eddd05e1fb656e4845189a89f179caf10686e9a7189e233925",
+    "output_bytes": 17038,
     "record": {
       "greeting": "Hi"
     }

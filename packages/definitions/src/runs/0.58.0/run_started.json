@@ -1,8 +1,8 @@
 {
   "type": "run_started",
   "data": {
-    "input_sha256": "425e9cd394320f4491490a32c8cfc91e5e5d58e19229fa5b1c67d7cc7287276f",
-    "input_bytes": 3012,
+    "input_sha256": "4a3d43f1a68d73c6619129b9061784a18678bb4091d2fcf104ced5acb8613902",
+    "input_bytes": 17012,
     "started_by": {
       "id": "acme-admin",
       "name": "acme-admin"

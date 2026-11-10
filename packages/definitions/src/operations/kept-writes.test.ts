@@ -10,7 +10,7 @@ import { harness, toPlaybook, type Harness } from '../testing/harness.ts';
 import { keptArmOf, watchedStore } from '../testing/kept-payloads.ts';
 import { admittingMeter, recordingMeter } from '../testing/recording-meter.ts';
 
-const { createDefinition, runDefinition } = definitionOperationsFor([echo]);
+const { createDefinition, runDefinition, getRunHistory } = definitionOperationsFor([echo]);
 
 const toAlpha = toPlaybook('acme', 'alpha');
 
@@ -18,9 +18,11 @@ const alpha = { org: 'acme', playbook: 'alpha' };
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const input = { who: 'Ada', notes: 'n'.repeat(3000) };
+const input = { who: 'Ada', notes: 'n'.repeat(17_000) };
 
 const output = { greeting: 'Hi', input };
+
+const tenKiB = { who: 'Ada', notes: 'n'.repeat(10_240) };
 
 async function greeting() {
   const watched = watchedStore();
@@ -54,6 +56,10 @@ async function recordsOf(definitions: Harness) {
 
 async function factsOf(definitions: Harness) {
   return (await recordsOf(definitions)).map(({ type, data }) => ({ type, data }));
+}
+
+function historyOf(definitions: Harness) {
+  return definitions.call(getRunHistory, toAlpha(acmeAdmin, { run_id: runId }));
 }
 
 async function dataOf(definitions: Harness) {
@@ -135,6 +141,31 @@ describe('a run that keeps nothing outside its record: a small input, the switch
       { input, started_by: recordedAdmin },
       { output, record: { greeting: 'Hi' } },
     ]);
+  });
+});
+
+describe('a run whose input and output are past what a page shows whole and within 16,384 bytes', () => {
+  it('keeps them in its facts where its playbook keeps large values outside, and its history shows them as their sizes, as with the switch off', async () => {
+    const [outside, inline] = [await greeting(), await greeting()];
+    await keepingOutside(outside.definitions, ranWith(tenKiB));
+    await inline.definitions.call(runDefinition, ranWith(tenKiB));
+
+    expect(await dataOf(outside.definitions)).toEqual([
+      { input: tenKiB, started_by: recordedAdmin },
+      { output: { greeting: 'Hi', input: tenKiB }, record: { greeting: 'Hi' } },
+    ]);
+    expect(await dataOf(outside.definitions)).toEqual(await dataOf(inline.definitions));
+    expect(await historyOf(outside.definitions)).toMatchObject({
+      status: 'succeeded',
+      output: {
+        events: [
+          { type: 'run_started', data: { input_bytes: 10_264, started_by: recordedAdmin } },
+          { type: 'run_succeeded', data: { output_bytes: 10_290, record: { greeting: 'Hi' } } },
+        ],
+      },
+    });
+    expect(await historyOf(outside.definitions)).toEqual(await historyOf(inline.definitions));
+    expect(outside.watched.reads()).toBe(0);
   });
 });
 

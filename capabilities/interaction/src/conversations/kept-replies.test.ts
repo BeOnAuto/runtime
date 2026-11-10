@@ -18,9 +18,16 @@ function keepingOutside(record: RecordWork): RecordWork {
 }
 
 describe('a long reply, where its playbook keeps large values outside its runs', () => {
-  it('is taken at its first read, recorded inline, while the store of its content takes no value', async () => {
+  it('is taken at its first read and recorded inline, its store never asked, as an answer of 3 KiB is within what a fact keeps', async () => {
     const kept = memoryLedger(undefined, [openRequests, conversations]);
-    const failingPut = { ...kept.service.content, put: () => Effect.die(new Error('The bucket did not answer')) };
+    const puts: string[] = [];
+    const failingPut = {
+      ...kept.service.content,
+      put: () => {
+        puts.push('put');
+        return Effect.die(new Error('The bucket did not answer'));
+      },
+    };
     const ledger = { ...kept, service: { ...kept.service, content: failingPut } };
     const playbook = await chatHarness({ ledger, recording: keepingOutside });
     await playbook.askInThread(runId);
@@ -33,5 +40,6 @@ describe('a long reply, where its playbook keeps large values outside its runs',
     expect(await recordsOf(playbook.ledger, 'request_answered')).toMatchObject([
       { data: { answer: { choice: 'reject', note }, reply: { sender: answererId } } },
     ]);
+    expect(puts).toEqual([]);
   });
 });

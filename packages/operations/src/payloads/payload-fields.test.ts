@@ -43,8 +43,13 @@ function refusalOf(data: unknown): string {
 }
 
 describe('a payload of a fact, kept inline or outside by its digest', () => {
-  it('is kept outside past 2,048 bytes, the size past which a page of events shows a field as its size', () => {
-    expect([mostInlinePayloadBytes, mostShownFieldBytes]).toEqual([2048, 2048]);
+  it('is kept outside past 16,384 bytes, the payload size threshold', () => {
+    expect(mostInlinePayloadBytes).toBe(16_384);
+  });
+
+  it('is never kept outside within the 2,048 bytes a page of events shows a field whole, so no page reads a payload', () => {
+    expect(mostShownFieldBytes).toBe(2048);
+    expect(mostInlinePayloadBytes).toBeGreaterThanOrEqual(mostShownFieldBytes);
   });
 
   it('decodes as its value, or as its digest and size with no value, and names its members after it', () => {

@@ -29,7 +29,7 @@ async function startedAndSucceeded(): Promise<readonly RecordedRunFact[]> {
   const request = toAlpha(acmeAdmin, {
     type: 'echo',
     name: 'greet',
-    input: { notes: 'n'.repeat(3000) },
+    input: { notes: 'n'.repeat(17_000) },
     run_id: runId,
   });
   await definitions.run(
@@ -45,7 +45,11 @@ async function startedAndSucceeded(): Promise<readonly RecordedRunFact[]> {
 
 export async function keptFactsWritten(): Promise<readonly RecordedRunFact[]> {
   const { record, recorded, run } = await asked();
-  const answered = record(askedRun, answering({ approved: true, notes: 'a'.repeat(3000) }, 'request-1'), askedLineage);
+  const answered = record(
+    askedRun,
+    answering({ approved: true, notes: 'a'.repeat(17_000) }, 'request-1'),
+    askedLineage,
+  );
   await run(Effect.orDie(answered.pipe(Effect.provideService(PayloadsOutside, true))));
   const answers = (await recorded())
     .filter(({ type }) => type === 'request_answered')

@@ -2,9 +2,8 @@ import type { Digested } from '@on.auto/content';
 import { JsonPointer as Pointers, Record, Schema } from 'effect';
 
 import { keptPayloadAnnotation, type JsonPointer, type PayloadPointers } from '../held-content/content-declaration.ts';
-import { mostShownFieldBytes } from '../reading/public-event.ts';
 
-export const mostInlinePayloadBytes = mostShownFieldBytes;
+export const mostInlinePayloadBytes = 16_384;
 
 export const PayloadDigestSchema = Schema.String.check(
   Schema.isPattern(/^[0-9a-f]{64}$/u, { expected: 'a SHA-256 in 64 lowercase hex digits' }),

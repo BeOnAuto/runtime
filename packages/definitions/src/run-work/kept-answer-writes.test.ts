@@ -10,7 +10,7 @@ import { keptArmOf } from '../testing/kept-payloads.ts';
 
 const thePlaybook = { id: 'playbook:alpha', name: 'alpha' };
 
-const answer = { choice: 'approve', reason: 'r'.repeat(3000) };
+const answer = { choice: 'approve', reason: 'r'.repeat(17_000) };
 
 const kept = keptArmOf(answer);
 

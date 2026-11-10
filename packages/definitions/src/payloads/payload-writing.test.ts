@@ -9,7 +9,7 @@ import { payloadWritten, payloadWrittenIn } from './payload-writing.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
-const large = { leads: ['lead-1'], notes: 'n'.repeat(3000) };
+const large = { leads: ['lead-1'], notes: 'n'.repeat(17_000) };
 
 const kept = keptArmOf(large);
 
@@ -26,7 +26,7 @@ describe('a value written as a payload', () => {
     expect(await Effect.runPromise(service.content.getHead(alpha, kept.sha256))).toBeUndefined();
   });
 
-  it('is kept outside once past 2,048 bytes, put before any fact names it, with its value in hand', async () => {
+  it('is kept outside once past 16,384 bytes, put before any fact names it, with its value in hand', async () => {
     const { service } = memoryLedger();
     const written = payloadWrittenIn(service.content, alpha);
 
