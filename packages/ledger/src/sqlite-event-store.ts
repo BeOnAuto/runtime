@@ -7,7 +7,7 @@ import { sqliteLayoutKept, sqliteSchemaCreated } from './layout/sqlite-schema.ts
 import { sqliteLogOn } from './log/sqlite-log.ts';
 import { sqliteRunOutcomesOf } from './outcomes/sqlite-run-outcomes.ts';
 import type { KeptTables } from './projections/projection-parts.ts';
-import { preparedOn, sqliteProjectionsOf } from './projections/sqlite-projections.ts';
+import { preparedOn, sqliteProjectionsOf, sqliteSizesAfter } from './projections/sqlite-projections.ts';
 import { sqliteRecordedStoreOn } from './recorded/sqlite-recorded.ts';
 
 export type AnyDriver = Parameters<typeof getSQLiteEventStore>[0]['driver'];
@@ -44,6 +44,8 @@ export function sqliteEventStore<Driver extends AnyDriver>(
   const streams = emmettEventStore(store, {
     data: dataAsWritten,
     mostEventsInOneAppend: eventsWithinAHundredParameters,
+    sizesAfter: sqliteSizesAfter(pool.execute),
+    holders: kept.holders,
     riders,
     ...listeners,
   });

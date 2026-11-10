@@ -4,6 +4,7 @@ import { Schema } from 'effect';
 
 import type { RecordedPoint } from '../event-store.ts';
 import { readMetadataOf, type ExaminationScope, type RecordHead } from '../recorded/recorded-statements.ts';
+import { dataBytesOf, type MessageColumns } from './playbook-indexes.ts';
 
 export type Query = (text: string, values: readonly unknown[]) => Promise<readonly unknown[]>;
 
@@ -129,13 +130,18 @@ export function sizedTypesOf(bind: Bind, { sized }: ExaminationScope): string | 
   return sized === undefined || sized.length === 0 ? undefined : bind(sized);
 }
 
-export function sizeOf({ wanted, types }: Sized, { sized }: ExaminationScope, message: string, type: string): string {
+export function sizeOf(
+  { wanted, types }: Sized,
+  { sized }: ExaminationScope,
+  message: MessageColumns,
+  type: string,
+): string {
   if (sized === undefined) {
-    return `CASE WHEN ${wanted} THEN octet_length(${message}.message_data ->> 'json') ELSE 0 END`;
+    return `CASE WHEN ${wanted} THEN ${dataBytesOf(message)} ELSE 0 END`;
   }
   return types === undefined
     ? '0'
-    : `CASE WHEN ${wanted} AND ${type} = ANY(${types}::text[]) THEN octet_length(${message}.message_data ->> 'json') ELSE 0 END`;
+    : `CASE WHEN ${wanted} AND ${type} = ANY(${types}::text[]) THEN ${dataBytesOf(message)} ELSE 0 END`;
 }
 
 interface HeadRow {

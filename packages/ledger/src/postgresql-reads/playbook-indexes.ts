@@ -9,6 +9,19 @@ export const kindKeyOfStream = "substring(stream_id FROM '^(?:[^/]*/){4}')";
 
 export const correlationOfMessage = "(message_metadata ->> 'correlationId')";
 
+export interface MessageColumns {
+  readonly data: string;
+  readonly metadata: string;
+}
+
+export function columnsOfTheTable(alias: string): MessageColumns {
+  return { data: `${alias}.message_data`, metadata: `${alias}.message_metadata` };
+}
+
+export function dataBytesOf({ data, metadata }: MessageColumns): string {
+  return `(octet_length(${data} ->> 'json') + coalesce((${metadata} ->> 'payloadBytes')::integer, 0))`;
+}
+
 export const definitionTypeOfStream = "substring(stream_id FROM '^(?:[^/]*/){3}definitions/([^/]+)$')";
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));

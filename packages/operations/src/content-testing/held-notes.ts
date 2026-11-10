@@ -52,7 +52,7 @@ const NoteWrittenSchema = factOf(
 
 const HeldNoteFactSchema = Schema.Union([NoteKeptSchema, NoteLetGoSchema, NotesClosedSchema, NoteErasedSchema]);
 
-const WrittenNoteFactSchema = Schema.Union([NoteWrittenSchema]);
+const WrittenNoteFactSchema = Schema.Union([NoteKeptSchema, NoteErasedSchema, NoteWrittenSchema]);
 
 type RecordedHeldNote = typeof HeldNoteFactSchema.Type;
 
@@ -112,13 +112,22 @@ export function letGo(sha256: string): HeldNote {
 
 export const closed: HeldNote = { type: 'notes_closed', data: {} };
 
-export function written(data: WrittenNote['data']): WrittenNote {
+export function written(data: Extract<WrittenNote, { readonly type: 'note_written' }>['data']): WrittenNote {
   return { type: 'note_written', data };
 }
 
 export function erasing(position: number, data: Schema.JsonObject): FactScrub<RecordedHeldNote> {
   return {
     eventSchema: HeldNoteFactSchema,
+    data,
+    erasure: { type: 'note_erased', data: { position } },
+    context: notedContext,
+  };
+}
+
+export function erasingWritten(position: number, data: Schema.JsonObject): FactScrub<RecordedWrittenNote> {
+  return {
+    eventSchema: WrittenNoteFactSchema,
     data,
     erasure: { type: 'note_erased', data: { position } },
     context: notedContext,

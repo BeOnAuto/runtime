@@ -7,7 +7,7 @@ import { formattedFor, postgresqlRecordedStoreOn, type Query } from '../postgres
 import { dataAsJsonText } from './json-text.ts';
 import { migrationLockTaken, postgresqlLayoutKept } from './postgresql-layout.ts';
 import type { PostgreSQLOptions, PostgreSQLPools } from './postgresql-options.ts';
-import { postgresqlProjectionsOf } from './postgresql-projections.ts';
+import { postgresqlProjectionsOf, postgresqlSizesAfter } from './postgresql-projections.ts';
 import { postgresqlReadsOn } from './postgresql-reads.ts';
 
 export interface PostgreSQLStoreOptions extends PostgreSQLOptions {
@@ -33,6 +33,8 @@ export function postgresqlStoreOn(
   const pool = pooled();
   const projections = postgresqlProjectionsOf(kept);
   const { riders } = projections.scrubs;
+  const query: Query = async (text, values) =>
+    (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows;
   const store = emmettEventStore(
     getPostgreSQLEventStore({
       driver: pgEventStoreDriver,
@@ -45,10 +47,15 @@ export function postgresqlStoreOn(
         onBeforeCommit: riders.beforeCommit,
       },
     }),
-    { data: dataAsJsonText, mostEventsInOneAppend: eventsInOneBoundedAppend, riders, ...listeners },
+    {
+      data: dataAsJsonText,
+      mostEventsInOneAppend: eventsInOneBoundedAppend,
+      sizesAfter: postgresqlSizesAfter(query),
+      holders: kept.holders,
+      riders,
+      ...listeners,
+    },
   );
-  const query: Query = async (text, values) =>
-    (await pool.query<Readonly<Record<string, unknown>>>(text, [...values])).rows;
   const recorded = postgresqlRecordedStoreOn(query, pool, listeners);
   return {
     ...store,

@@ -8,14 +8,16 @@ import {
   type HeldDigests,
   type TypedEvent,
 } from '@on.auto/operations';
+import { payloadDigestsNamed } from '@on.auto/operations/payloads';
 
 import type { StatementExecutor } from '../event-store.ts';
 import { inTurn, type InlineProjection } from '../projections/inline-projection.ts';
-import type { ProjectionDialect, StreamsInOrder } from '../projections/projection-dialect.ts';
-import { messagesInABatch } from '../projections/projection-fill.ts';
-import { orderedMessagesIn } from '../projections/projection-statements.ts';
+import type { HeldTypes, ProjectionDialect, StreamsInOrder } from '../projections/projection-dialect.ts';
+import { messagesInABatch, mostBytesInABatch } from '../projections/projection-fill.ts';
+import { orderedMessagesIn, sizedPointsIn, type SizedPoint } from '../projections/projection-statements.ts';
 import {
   digestsLocked,
+  digestsWithoutAHead,
   heldDeleted,
   heldInTheStream,
   heldOfTheDigests,
@@ -113,18 +115,45 @@ function placedFolded(
   return inTurn(byStream(placed), ({ place, facts }) => streamFolded(keeping, execute, place, [facts, locking]));
 }
 
+function payloadDigestsOf(
+  { holders }: ReferencesKeeping,
+  placed: readonly PlacedFact[],
+): ReadonlyMap<string, readonly string[]> {
+  const byPlaybook = new Map<string, readonly string[]>();
+  for (const { place, fact } of placed) {
+    byPlaybook.set(place.prefix, [...(byPlaybook.get(place.prefix) ?? []), ...payloadDigestsNamed(holders, fact)]);
+  }
+  return byPlaybook;
+}
+
+async function requirePayloadsHeaded(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  placed: readonly PlacedFact[],
+): Promise<void> {
+  await inTurn(
+    [...payloadDigestsOf(keeping, placed)],
+    async ([prefix, digests]: readonly [string, readonly string[]]) => {
+      const [unheaded] = digests.length === 0 ? [] : await digestsWithoutAHead(execute, prefix, digests);
+      if (unheaded !== undefined) {
+        throw new Error(
+          `A fact names the payload ${unheaded} of ${prefix}, which the playbook's content does not keep; a payload is put before the fact that names it is appended`,
+        );
+      }
+    },
+  );
+}
+
 export function keepingReferences(keeping: ReferencesKeeping): InlineProjection {
   return {
     types: [...keeping.holders.keys()],
-    handle: (messages, execute) =>
-      placedFolded(
-        keeping,
-        execute,
-        messages.flatMap(({ stream, type, data }) =>
-          placedOf(stream, { type, data: keeping.dialect.appendedData(data) }),
-        ),
-        'locked',
-      ),
+    handle: async (messages, execute) => {
+      const placed = messages.flatMap(({ stream, type, data }) =>
+        placedOf(stream, { type, data: keeping.dialect.appendedData(data) }),
+      );
+      await requirePayloadsHeaded(keeping, execute, placed);
+      await placedFolded(keeping, execute, placed, 'locked');
+    },
   };
 }
 
@@ -135,19 +164,38 @@ interface BatchFolding {
   readonly fold: (messages: readonly OrderedMessage[]) => Promise<void>;
 }
 
+function heldTypesOf(holders: ContentHolders): HeldTypes {
+  const holding: string[] = [];
+  const measured: string[] = [];
+  for (const [type, { holds, releases, payloads = [] }] of holders) {
+    const keepsPayloadsAlone = holds === undefined && releases === undefined && payloads.length > 0;
+    (keepsPayloadsAlone ? measured : holding).push(type);
+  }
+  return { holding, measured };
+}
+
+function countWithinBytes(sized: readonly SizedPoint[]): number {
+  let loaded = 0;
+  const taken = sized.findIndex(({ size }, index) => {
+    loaded += size;
+    return index > 0 && loaded > mostBytesInABatch;
+  });
+  return taken === -1 ? sized.length : taken;
+}
+
 async function foldedInBatches(
   keeping: ReferencesKeeping,
   execute: StatementExecutor,
   { streams, fold }: BatchFolding,
   after?: string,
 ): Promise<void> {
-  const messages = await orderedMessagesIn(
-    execute,
-    keeping.dialect.messagesInOrderAfter(after, messagesInABatch, streams, [...keeping.holders.keys()]),
-  );
+  const read = { after, count: messagesInABatch, streams, types: heldTypesOf(keeping.holders) };
+  const sized = await sizedPointsIn(execute, keeping.dialect.heldSizesInOrderAfter(read));
+  const count = countWithinBytes(sized);
+  const messages = await orderedMessagesIn(execute, keeping.dialect.heldMessagesInOrderAfter({ ...read, count }));
   await fold(messages);
   const last = messages.at(-1);
-  if (last !== undefined && messages.length === messagesInABatch) {
+  if (last !== undefined && (count < sized.length || sized.length === messagesInABatch)) {
     await foldedInBatches(keeping, execute, { streams, fold }, last.point);
   }
 }

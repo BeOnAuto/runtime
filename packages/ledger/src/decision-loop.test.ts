@@ -166,7 +166,12 @@ async function lentStreams(): Promise<Streams> {
   onTestFinished(() => emmett.close());
   const store = emmettEventStore(emmett, { data: dataAsWritten, mostEventsInOneAppend: 8 });
   await store.migrate();
-  return { mostEventsInOneAppend: store.mostEventsInOneAppend, read: store.read, append: store.append };
+  return {
+    mostEventsInOneAppend: store.mostEventsInOneAppend,
+    read: store.read,
+    readPage: store.readPage,
+    append: store.append,
+  };
 }
 
 function aheadOnce(streams: Streams): Streams {

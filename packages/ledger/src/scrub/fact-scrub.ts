@@ -13,6 +13,7 @@ import {
 } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 
+import { measuredWhole, payloadsDeclaredBy } from '../appends/payloads-declared.ts';
 import { eventCodecOf } from '../event-codec.ts';
 import type { FactScrubStore } from '../event-store.ts';
 import { isVersionConflict, retriedOnVersionConflict, VersionConflict } from '../version-conflict.ts';
@@ -41,13 +42,15 @@ function scrubbedOnce<Event extends Recorded>(
       return Result.fail(notTheShapeOf(at.type));
     }
     const { encode } = eventCodecOf(eventSchema);
-    const scrubbed = yield* encode(decoded.success);
+    const declared = payloadsDeclaredBy(eventSchema);
+    const { data: scrubbedData, payloadBytes } = measuredWhole(declared, yield* encode(decoded.success));
     const checked = yield* Effect.sync(() => checkedContext(context));
     const recorded = yield* Effect.sync(() => recordingOf(eventSchema)(erasure, checked));
-    const encoded = yield* encode(recorded);
+    const encoded = measuredWhole(declared, yield* encode(recorded));
     const place = { expectedVersion: at.version, context: checked, lineage };
+    const scrubbed = { position, data: scrubbedData, ...(payloadBytes === undefined ? {} : { payloadBytes }) };
     yield* Effect.tryPromise({
-      try: () => store.scrub(stream, { position, data: scrubbed.data }, encoded, place),
+      try: () => store.scrub(stream, scrubbed, encoded, place),
       catch: (error) => error,
     }).pipe(Effect.catch(conflictOrDefect));
     return Result.succeed({ version: at.version + 1 });

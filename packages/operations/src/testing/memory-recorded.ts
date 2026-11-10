@@ -27,6 +27,7 @@ export interface MemoryRecord {
   readonly type: string;
   readonly data: unknown;
   readonly context: Context;
+  readonly payloadBytes: number | undefined;
   readonly recordedAt: string;
 }
 
@@ -79,8 +80,8 @@ function resumedFrom({ cursor, order }: RecordedPageRequest, key: string): Effec
   });
 }
 
-function sizeOf({ data }: MemoryRecord): number {
-  return utf8.encode(JSON.stringify(data)).byteLength;
+function sizeOf({ data, payloadBytes = 0 }: MemoryRecord): number {
+  return utf8.encode(JSON.stringify(data)).byteLength + payloadBytes;
 }
 
 function loads({ dataOf }: RecordedPageRequest, { type }: MemoryRecord): boolean {

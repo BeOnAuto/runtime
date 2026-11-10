@@ -1,5 +1,5 @@
 export type { JsonPointer, PayloadPointers } from '../held-content/content-declaration.ts';
-export { payloadBytesOf, payloadsNamed } from '../held-content/held-digests.ts';
+export { payloadBytesOf, payloadDigestsNamed, payloadsNamed } from '../held-content/held-digests.ts';
 export {
   PayloadBytesSchema,
   PayloadDigestSchema,

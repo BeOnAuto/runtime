@@ -24,6 +24,7 @@ import {
   wrote,
   type UnheldContentEntry,
 } from './held-notes.ts';
+import { payloadHoldsBehaviour } from './payload-holds-behaviour.ts';
 import { removedContentBehaviour } from './removed-content-behaviour.ts';
 
 const note = '{"note":"the first"}';
@@ -197,4 +198,5 @@ export function unheldContentBehaviour(entry: UnheldContentEntry): void {
     letGoByAScrub(entry);
   });
   removedContentBehaviour(entry);
+  payloadHoldsBehaviour(entry);
 }

@@ -229,3 +229,12 @@ export async function orderedMessagesIn(execute: StatementExecutor, query: SQL) 
   const { rows } = await execute.query(query);
   return Schema.decodeUnknownSync(OrderedMessageRows)(rows);
 }
+
+const SizedPointRows = Schema.Array(Schema.Struct({ point: Schema.String, size: Schema.Number }));
+
+export type SizedPoint = (typeof SizedPointRows.Type)[number];
+
+export async function sizedPointsIn(execute: StatementExecutor, query: SQL): Promise<readonly SizedPoint[]> {
+  const { rows } = await execute.query(query);
+  return Schema.decodeUnknownSync(SizedPointRows)(rows);
+}

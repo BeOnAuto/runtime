@@ -120,16 +120,16 @@ describe('the size a read on PostgreSQL measures', () => {
     await store.readRecorded(alpha, { kind: 'runs' }, { order: 'desc', limit: 5, dataOf: [] });
 
     expect(asked[1]?.text).toContain(
-      "CASE WHEN wanted AND type = ANY($4::text[]) THEN octet_length(numbered.message_data ->> 'json') ELSE 0 END AS size",
+      "CASE WHEN wanted AND type = ANY($4::text[]) THEN (octet_length(numbered.message_data ->> 'json') + coalesce((numbered.metadata ->> 'payloadBytes')::integer, 0)) ELSE 0 END AS size",
     );
     expect(asked[1]?.values[3]).toEqual(['noted']);
     expect(asked[3]?.text).toContain('examined::int AS examined, 0 AS size');
     expect(asked[3]?.text).not.toContain('octet_length');
     expect(asked[4]?.text).toContain(
-      "CASE WHEN TRUE AND f.of_the_definition AND f.type = ANY($1::text[]) THEN octet_length(f.message_data ->> 'json') ELSE 0 END AS size",
+      "CASE WHEN TRUE AND f.of_the_definition AND f.type = ANY($1::text[]) THEN (octet_length(f.message_data ->> 'json') + coalesce((f.metadata ->> 'payloadBytes')::integer, 0)) ELSE 0 END AS size",
     );
     expect(asked[4]?.text).toContain(
-      "THEN CASE WHEN TRUE AND f.of_the_definition AND latest.message_type = ANY($1::text[]) THEN octet_length(latest.message_data ->> 'json')",
+      "THEN CASE WHEN TRUE AND f.of_the_definition AND latest.message_type = ANY($1::text[]) THEN (octet_length(latest.message_data ->> 'json') + coalesce((latest.message_metadata ->> 'payloadBytes')::integer, 0))",
     );
     expect(asked[5]?.text).not.toContain('octet_length');
   });

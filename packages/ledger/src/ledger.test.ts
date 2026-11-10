@@ -10,6 +10,7 @@ import { databaseStructureBehaviour } from './structure/database-structure-behav
 import {
   appendedFactsOnStoresBehaviour,
   appendsWithStatementsOnStoresBehaviour,
+  measuredRiddenAppendsBehaviour,
   factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
@@ -68,6 +69,7 @@ describe('The ledger on SQLite', () => {
   appendedFactsOnStoresBehaviour(onSQLite);
   factScrubOnStoresBehaviour(onSQLite);
   appendsWithStatementsOnStoresBehaviour(onSQLite);
+  measuredRiddenAppendsBehaviour(onSQLite);
   earlierShapesBehaviour(onSQLite);
   databaseStructureBehaviour(onSQLite);
   knownFactsBehaviour(onSQLite);

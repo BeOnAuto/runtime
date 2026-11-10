@@ -25,7 +25,7 @@ import {
   type RecordedStatements,
   type RecordsSelected,
 } from './recorded-statements.ts';
-import { playbookKeyOfStream, correlationOfMessage } from './sqlite-indexes.ts';
+import { playbookKeyOfStream, correlationOfMessage, dataBytesOfMessage } from './sqlite-indexes.ts';
 import {
   bounds,
   DataRows,
@@ -46,7 +46,7 @@ function recordsWhere(where: SQL, scope: ExaminationScope): SQL {
   return SQL`SELECT global_position AS position, stream_id AS stream, stream_position AS version,
       message_type AS type, created AS recorded, message_id AS id, message_metadata AS metadata,
       ${correlationOfMessage} AS correlation,
-      ${ofTypes('message_type', scope.types)} AS wanted, octet_length(message_data) AS size
+      ${ofTypes('message_type', scope.types)} AS wanted, ${dataBytesOfMessage} AS size
     FROM emt_messages
     WHERE ${where} AND partition = ${defaultPartition} AND is_archived = FALSE${bounds(scope)}
     ORDER BY global_position ${direction(scope)}

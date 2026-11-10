@@ -20,6 +20,7 @@ import type { StreamSignal } from './signal/append-signal.ts';
 export interface EncodedEvent {
   readonly type: string;
   readonly data: Schema.JsonObject;
+  readonly payloadBytes?: number;
 }
 
 export interface MessageLineage extends Lineage {
@@ -98,9 +99,16 @@ export interface StoredPage {
   readonly lastExamined?: StoredPlace;
 }
 
+export interface StreamPage {
+  readonly messages: readonly RecordedMessage[];
+  readonly through: number;
+  readonly more: boolean;
+}
+
 export interface Streams {
   readonly mostEventsInOneAppend: number;
   readonly read: (stream: string, after?: number) => Promise<RecordedStream>;
+  readonly readPage: (stream: string, after: number, mostBytes: number) => Promise<StreamPage>;
   readonly append: (stream: string, events: readonly EncodedEvent[], place: AppendPlace) => Promise<void>;
 }
 
@@ -198,6 +206,7 @@ export interface RunOutcomesStore {
 export interface ScrubbedData {
   readonly position: number;
   readonly data: Schema.JsonObject;
+  readonly payloadBytes?: number;
 }
 
 type FactAt =

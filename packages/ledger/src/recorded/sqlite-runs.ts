@@ -2,7 +2,7 @@ import { SQL, type SQLExecutor } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
 import type { ExaminationScope, ExaminedItem, RecordedStatements, RunsSelected } from './recorded-statements.ts';
-import { correlationOfMessage, kindKeyOfStream } from './sqlite-indexes.ts';
+import { correlationOfMessage, dataBytesOf, dataBytesOfMessage, kindKeyOfStream } from './sqlite-indexes.ts';
 import { bounds, defaultPartition, direction, HeadFields, headOf, ofTypes, sizeOf } from './sqlite-parts.ts';
 
 const ExaminedRunRow = Schema.Struct({
@@ -41,7 +41,7 @@ function firstMessagesOfRuns(scope: ExaminationScope, runs: RunsSelected): SQL {
     FROM (
       SELECT global_position AS position, stream_id AS stream, stream_position AS version,
         message_type AS type, created AS recorded, message_id AS id, message_metadata AS metadata,
-        ${correlationOfMessage} AS correlation, octet_length(message_data) AS size,
+        ${correlationOfMessage} AS correlation, ${dataBytesOfMessage} AS size,
         ${ofTheDefinitionAsked(runs)} AS of_the_definition
       FROM emt_messages
       WHERE ${kindKeyOfStream} = ${`${runs.playbookKey}runs/`} AND stream_position = 1
@@ -83,7 +83,7 @@ export function examineRuns(execute: SQLExecutor): RecordedStatements['examineRu
           ${sizeOf(scope, wanted, 'f.type', 'f.size')} AS size,
           latest.global_position AS latest_position, latest.stream_position AS latest_version,
           latest.message_type AS latest_type, latest.created AS latest_recorded,
-          ${sizeOf(scope, wanted, 'latest.message_type', 'octet_length(latest.message_data)')} AS latest_size,
+          ${sizeOf(scope, wanted, 'latest.message_type', dataBytesOf('latest'))} AS latest_size,
           latest.message_id AS latest_id, latest.message_metadata AS latest_metadata,
           json_extract(latest.message_metadata, '$.correlationId') AS latest_correlation, ${wanted} AS wanted
         FROM (${firstMessagesOfRuns(scope, runs)}) AS f

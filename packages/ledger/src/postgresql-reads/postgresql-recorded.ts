@@ -115,7 +115,12 @@ function examineRecords(query: Query): RecordedStatements['examineRecords'] {
       bounded: bounds(bind, scope),
       limit: bind(scope.examineAtMost + 1),
     };
-    const size = sizeOf({ wanted: 'wanted', types: sizedTypesOf(bind, scope) }, scope, 'numbered', 'type');
+    const size = sizeOf(
+      { wanted: 'wanted', types: sizedTypesOf(bind, scope) },
+      scope,
+      { data: 'numbered.message_data', metadata: 'numbered.metadata' },
+      'type',
+    );
     const rows = await query(
       `SELECT transaction, position, stream, version, type, recorded, id, metadata, correlation, wanted,
           examined::int AS examined, ${size} AS size

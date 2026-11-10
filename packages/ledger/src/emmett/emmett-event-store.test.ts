@@ -56,6 +56,35 @@ describe('an event store over an Emmett event store', () => {
   });
 });
 
+describe('a stream read a page at a time from an event store over an Emmett event store', () => {
+  it('measures each fact as it reads it back, with the payloads it keeps outside, and answers at least one a page', async () => {
+    const holders = new Map([
+      ['note_written', { payloads: [{ sha256: '/body_sha256', bytes: '/body_bytes' } as const] }],
+    ]);
+    const store = emmettEventStore(anEmmettStore(), { data: dataAsWritten, mostEventsInOneAppend: 8, holders });
+    await store.migrate();
+    const kept = { body_sha256: 'a'.repeat(64), body_bytes: 100 };
+    await store.append(run, [...firstThree, { type: 'note_written', data: kept, payloadBytes: 100 }], {
+      expectedVersion: 0,
+      context: stamped,
+    });
+
+    const pages = [
+      await store.readPage(run, 0, 14),
+      await store.readPage(run, 2, 150),
+      await store.readPage(run, 3, 1),
+      await store.readPage(run, 4, 100),
+    ];
+
+    expect(pages.map(({ messages, through, more }) => [messages.length, through, more])).toEqual([
+      [2, 2, true],
+      [1, 3, true],
+      [1, 4, false],
+      [0, 4, false],
+    ]);
+  });
+});
+
 describe('an append to an event store over an Emmett event store', () => {
   it.each([0, 2, 4])(
     'meets a version conflict and appends nothing when it expects %i of a stream at version 3',

@@ -19,7 +19,14 @@ export {
   interleavedRemovalBehaviour,
   type InterleavedRemovalEntry,
 } from '../content-testing/interleaved-removal-behaviour.ts';
-export { heldNotes, noteHolders, type HeldNote, type UnheldContentEntry } from '../content-testing/held-notes.ts';
+export {
+  heldNotes,
+  noteHolders,
+  writtenNotes,
+  type HeldNote,
+  type UnheldContentEntry,
+  type WrittenNote,
+} from '../content-testing/held-notes.ts';
 export {
   payloadReadsOf,
   type KeptTables,

@@ -1,6 +1,7 @@
 import { checkedContext, recordingOf, type Context, type Decided, type Recorded } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
+import { measuredWhole, payloadsDeclaredBy } from './appends/payloads-declared.ts';
 import type { ConnectionPorts } from './connection/ledger-connection.ts';
 import type { Statement } from './connection/statement.ts';
 import { eventCodecOf } from './event-codec.ts';
@@ -36,7 +37,12 @@ function eventAsAppendedOf<Event extends Recorded>(
 ): EventAsAppended<Event> {
   const { encode } = eventCodecOf(eventSchema);
   const recorded = recordingOf(eventSchema);
-  return (event, context) => Effect.sync(() => recorded(event, context)).pipe(Effect.flatMap(encode));
+  const declared = payloadsDeclaredBy(eventSchema);
+  return (event, context) =>
+    Effect.sync(() => recorded(event, context)).pipe(
+      Effect.flatMap(encode),
+      Effect.map((encoded) => measuredWhole(declared, encoded)),
+    );
 }
 
 function appendingOf<Event extends Recorded>(

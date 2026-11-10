@@ -6,7 +6,7 @@ import type {
   RecordedStatements,
   RunsSelected,
 } from '../recorded/recorded-statements.ts';
-import { kindKeyOfStream } from './playbook-indexes.ts';
+import { columnsOfTheTable, kindKeyOfStream } from './playbook-indexes.ts';
 import {
   binding,
   bounds,
@@ -121,8 +121,8 @@ export function examineRuns(query: Query): RecordedStatements['examineRuns'] {
           latest.message_type AS latest_type, ${timeOf('latest.created')} AS latest_recorded,
           latest.message_id AS latest_id, latest.message_metadata AS latest_metadata,
           latest.message_metadata ->> 'correlationId' AS latest_correlation, ${wanted} AS wanted,
-          ${sizeOf(sized, scope, 'f', 'f.type')} AS size,
-          CASE WHEN latest.stream_position <> 1 THEN ${sizeOf(sized, scope, 'latest', 'latest.message_type')}
+          ${sizeOf(sized, scope, { data: 'f.message_data', metadata: 'f.metadata' }, 'f.type')} AS size,
+          CASE WHEN latest.stream_position <> 1 THEN ${sizeOf(sized, scope, columnsOfTheTable('latest'), 'latest.message_type')}
           ELSE 0 END AS latest_size
         FROM (${firstMessagesOfRuns({ bind, partition, horizon: horizon(bind) }, scope, runs)}) AS f
         CROSS JOIN LATERAL (

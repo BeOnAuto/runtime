@@ -173,6 +173,7 @@ describe('the in-memory read of the runs of one definition, over a first record 
         type: 'run_started',
         data: 'workflow',
         context: { at: '2026-10-07T09:00:00.000Z', by: 'tester' },
+        payloadBytes: undefined,
         recordedAt: '2026-10-07T09:00:00.000Z',
       },
     ]);
@@ -206,6 +207,7 @@ describe('the in-memory read of the runs no step started', () => {
       type: 'run_started',
       data: run,
       context,
+      payloadBytes: undefined,
       recordedAt: at,
     });
     const readTwoRuns = memoryRecordedReader([

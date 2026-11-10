@@ -69,11 +69,12 @@ export function scrubWithin(
   stream: string,
   scrubbed: ScrubbedData,
 ): Rider {
-  const { position, data } = scrubbed;
+  const { position, data, payloadBytes } = scrubbed;
   return async (execute) => {
     const [fact] = decodeTheFact((await execute.query(dialect.messageAt(stream, position))).rows);
     await execute.command(
-      SQL`UPDATE emt_messages SET message_data = ${dialect.storedData(data)}
+      SQL`UPDATE emt_messages SET message_data = ${dialect.storedData(data)},
+          message_metadata = ${dialect.metadataMeasured(payloadBytes)}
         WHERE stream_id = ${stream} AND stream_position = ${position}
           AND partition = ${defaultPartition} AND is_archived = FALSE`,
     );

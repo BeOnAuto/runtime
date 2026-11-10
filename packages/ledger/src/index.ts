@@ -35,6 +35,7 @@ export type {
   EventStore,
   LedgerStore,
   LedgerStreams,
+  RecordedMessage,
   RecordedPoint,
   RecordedStore,
   RecordedStream,
@@ -42,6 +43,7 @@ export type {
   StoredPage,
   StoredPlace,
   StoredRecord,
+  StreamPage,
   Streams,
 } from './event-store.ts';
 export { sqliteLayout, type LayoutDialect } from './layout/layout-dialects.ts';

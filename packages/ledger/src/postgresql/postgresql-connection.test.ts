@@ -23,6 +23,7 @@ const streams: StreamsCarrying = {
   mostEventsInOneAppend: 64,
   pointLength: 2,
   read: () => Promise.resolve({ version: 0, messages: [] }),
+  readPage: () => Promise.resolve({ messages: [], through: 0, more: false }),
   append: () => Promise.resolve(),
   appendWithin: () => Promise.resolve(),
   readRecorded: () => Promise.resolve({ records: [] }),

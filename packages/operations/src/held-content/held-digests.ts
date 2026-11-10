@@ -94,6 +94,11 @@ export function payloadsNamed(data: unknown, { payloads = [] }: ContentDeclarati
   return payloads.flatMap((pointers) => namedBy(pointers, data));
 }
 
+export function payloadDigestsNamed(holders: ContentHolders, { type, data }: TypedEvent): readonly string[] {
+  const declaration = holders.get(type);
+  return declaration === undefined ? [] : payloadsNamed(data, declaration).map(({ sha256 }) => sha256);
+}
+
 export function payloadBytesOf(holders: ContentHolders, { type, data }: TypedEvent): number {
   const declaration = holders.get(type);
   return declaration === undefined

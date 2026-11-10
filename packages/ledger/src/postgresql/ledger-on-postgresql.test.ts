@@ -9,6 +9,7 @@ import { databaseStructureBehaviour } from '../structure/database-structure-beha
 import {
   appendedFactsOnStoresBehaviour,
   appendsWithStatementsOnStoresBehaviour,
+  measuredRiddenAppendsBehaviour,
   factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
@@ -159,6 +160,7 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   appendedFactsOnStoresBehaviour(onPostgreSQL);
   factScrubOnStoresBehaviour(onPostgreSQL);
   appendsWithStatementsOnStoresBehaviour(onPostgreSQL);
+  measuredRiddenAppendsBehaviour(onPostgreSQL);
   earlierShapesBehaviour(onPostgreSQL);
   databaseStructureBehaviour(onPostgreSQL);
   knownFactsBehaviour(onPostgreSQL);

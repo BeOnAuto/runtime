@@ -4,6 +4,7 @@ import { heldNotes, noteHolders, type HeldNote } from '@on.auto/operations/testi
 import { Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { payloadBytesBehaviour } from '../appends/payload-bytes-behaviour.ts';
 import { chunksOf } from '../connection/bound-values.ts';
 import { namesFound } from '../content/content-tables.ts';
 import { inTurn } from '../projections/inline-projection.ts';
@@ -109,4 +110,5 @@ export function referencesBehaviour(entry: LedgerEntry): void {
     filledAsItOpens(entry);
     keptWithoutHolders(entry);
   });
+  payloadBytesBehaviour(entry);
 }

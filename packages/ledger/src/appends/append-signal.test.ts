@@ -11,6 +11,7 @@ function failingStore(): StreamStore {
   return {
     mostEventsInOneAppend: 8,
     read: () => Promise.resolve({ version: 0, messages: [] }),
+    readPage: () => Promise.resolve({ messages: [], through: 0, more: false }),
     append: () => Promise.reject(new Error('The database is gone')),
     migrate: () => Promise.resolve(),
     close: () => Promise.resolve(),

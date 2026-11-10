@@ -24,6 +24,18 @@ export type StreamsInOrder =
   | { readonly of: 'lane'; readonly lane: MessageLane }
   | { readonly of: 'every' };
 
+export interface HeldTypes {
+  readonly holding: readonly string[];
+  readonly measured: readonly string[];
+}
+
+export interface HeldRead {
+  readonly after: string | undefined;
+  readonly count: number;
+  readonly streams: StreamsInOrder;
+  readonly types: HeldTypes;
+}
+
 export interface ProjectionDialect {
   readonly tableVersions: (name: string) => SQL;
   readonly columnTypes: Readonly<Record<ProjectedColumnKind, string>>;
@@ -37,6 +49,8 @@ export interface ProjectionDialect {
     streams: StreamsInOrder,
     types: readonly string[],
   ) => SQL;
+  readonly heldMessagesInOrderAfter: (read: HeldRead) => SQL;
+  readonly heldSizesInOrderAfter: (read: HeldRead) => SQL;
   readonly messageAt: (stream: string, position: number) => SQL;
   readonly keyLocks: (table: string, prefix: string, key: string) => readonly SQL[];
   readonly rowLocks: (table: string, prefix: string, key: string) => readonly SQL[];
@@ -45,6 +59,7 @@ export interface ProjectionDialect {
   readonly filledMetadata: (column: unknown) => unknown;
   readonly appendedData: (stored: unknown) => unknown;
   readonly storedData: (data: Schema.JsonObject) => Readonly<Record<string, unknown>>;
+  readonly metadataMeasured: (payloadBytes: number | undefined) => SQL;
   readonly booleanOf: (value: boolean) => boolean | number;
 }
 

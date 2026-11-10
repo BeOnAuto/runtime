@@ -28,6 +28,7 @@ export interface AppendedFact {
   readonly type: string;
   readonly data: unknown;
   readonly context: Context;
+  readonly payloadBytes?: number;
 }
 
 export interface LoggedFact extends AppendedFact {

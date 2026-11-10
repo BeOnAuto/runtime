@@ -30,7 +30,7 @@ const streamsInABatch = 100;
 
 export const messagesInABatch = 256;
 
-const mostBytesInABatch = 16 * 1024 * 1024;
+export const mostBytesInABatch = 16 * 1024 * 1024;
 
 export type NamedProjection = Pick<KeyedProjection, 'name'>;
 

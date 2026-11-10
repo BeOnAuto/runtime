@@ -25,6 +25,13 @@ export const definitionTypeOfStream = SQL.plain(
 
 export const correlationOfMessage = SQL.plain("json_extract(message_metadata, '$.correlationId')");
 
+export function dataBytesOf(message?: string): string {
+  const column = (name: string) => (message === undefined ? name : `${message}.${name}`);
+  return `(octet_length(${column('message_data')}) + coalesce(json_extract(${column('message_metadata')}, '$.payloadBytes'), 0))`;
+}
+
+export const dataBytesOfMessage = SQL.plain(dataBytesOf());
+
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 
 const playbookIndexes: readonly PlaybookIndex[] = [

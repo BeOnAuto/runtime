@@ -3,6 +3,7 @@ import { projectedTableOf, type HeldDigests } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { chunksOf } from '../connection/bound-values.ts';
+import { keptShelf } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
@@ -116,6 +117,34 @@ export async function digestsLocked(
     digests.flatMap((sha256) => dialect.keyLocks(referencesTable, prefix, sha256)),
     (lock) => execute.query(lock),
   );
+}
+
+const headsTable = SQL.identifier(keptShelf.heads);
+
+const digestsInAStatement = 500;
+
+const HeadedRows = Schema.Array(Schema.Struct({ sha256: Schema.String }));
+
+export async function digestsWithoutAHead(
+  execute: StatementExecutor,
+  prefix: string,
+  digests: readonly string[],
+): Promise<readonly string[]> {
+  const headed = new Set<string>();
+  await inTurn(chunksOf([...new Set(digests)], digestsInAStatement), async (chunk) => {
+    const { rows } = await execute.query(
+      SQL`SELECT sha256 FROM ${headsTable}
+        WHERE playbook_key = ${prefix} AND removing_since IS NULL
+          AND sha256 IN (${SQL.merge(
+            chunk.map((sha256) => SQL`${sha256}`),
+            ', ',
+          )})`,
+    );
+    for (const { sha256 } of Schema.decodeUnknownSync(HeadedRows)(rows)) {
+      headed.add(sha256);
+    }
+  });
+  return digests.filter((sha256) => !headed.has(sha256));
 }
 
 export async function isHeldIn(execute: StatementExecutor, prefix: string, sha256: string): Promise<boolean> {

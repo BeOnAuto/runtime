@@ -1,4 +1,4 @@
-import { keptOutside, type ContentStore } from '@on.auto/content';
+import { keptOutside, type ContentHeads, type ContentStore } from '@on.auto/content';
 import { memoryContentHeads, memoryContentStore } from '@on.auto/content/testing';
 import { Clock, Effect, Layer, Result, Schema } from 'effect';
 
@@ -8,6 +8,9 @@ import {
   checkedContext,
   messageIdOf,
   noLineage,
+  noStreamToScrub,
+  notAPositionOfTheStream,
+  notTheShapeOf,
   recordingOf,
   type ContentHolders,
   type Context,
@@ -18,7 +21,6 @@ import {
   type KeyedProjection,
   type StreamState,
 } from '../index.ts';
-import { noStreamToScrub, notAPositionOfTheStream, notTheShapeOf } from '../ledger/fact-scrub.ts';
 import {
   memoryProjections,
   type AppendedFact,
@@ -27,6 +29,7 @@ import {
 } from '../projections/memory-projections.ts';
 import { memoryRunOutcomes, type MemoryRunOutcomes } from '../run-outcomes/memory-run-outcomes.ts';
 import { memoryAppendedReader, type MemoryAppends } from './memory-appended.ts';
+import { measuredBy, payloadsHeaded, requireHeldAsMeasured } from './memory-payloads.ts';
 import { memoryRecordedReader, type MemoryRecord } from './memory-recorded.ts';
 import { memoryReferences, type MemoryReferences } from './memory-references.ts';
 
@@ -51,6 +54,8 @@ interface Kept {
   readonly outcomes: MemoryRunOutcomes;
   readonly projected: MemoryProjections;
   readonly references: MemoryReferences;
+  readonly holders: ContentHolders;
+  readonly heads: ContentHeads;
 }
 
 const EncodedFactSchema = Schema.Struct({ type: Schema.String, data: Schema.Unknown });
@@ -97,7 +102,7 @@ function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: numbe
     commit();
   }
   kept.logged(
-    stored.map(({ type, data, context }, index) => ({
+    stored.map(({ type, data, context, payloadBytes }, index) => ({
       position: kept.log.length + index + 1,
       id: messageIdOf(stream, version + index + 1),
       ...lineage,
@@ -106,6 +111,7 @@ function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: numbe
       type,
       data,
       context,
+      payloadBytes,
       recordedAt: new Date(at).toISOString(),
     })),
   );
@@ -123,11 +129,12 @@ function encodedWith<Event extends Recorded>(
   context: Context,
 ): (event: Event) => Effect.Effect<AppendedFact> {
   const encodeEvent = Schema.encodeUnknownEffect(Schema.toCodecJson(eventSchema));
+  const measured = measuredBy(eventSchema);
   return (event) =>
     Effect.orDie(encodeEvent(event)).pipe(
       Effect.map((encoded) => {
         const { type, data } = encodedFactOf(encoded);
-        return { type, data, context };
+        return measured({ type, data, context });
       }),
     );
 }
@@ -153,6 +160,10 @@ function executedOn(kept: Kept): Ledger['Service']['execute'] {
       const recorded = recordingOf(decider.eventSchema);
       const events = yield* Effect.sync(() => decided.success.map((event) => recorded(event, context)));
       const stored = yield* Effect.forEach(events, encodedWith(decider.eventSchema, context));
+      yield* Effect.sync(() => {
+        requireHeldAsMeasured(kept.holders, stream, stored);
+      });
+      yield* payloadsHeaded(kept.heads, kept.holders, stream, stored);
       appendedTo(kept, { stream, stored, lineage }, yield* Clock.currentTimeMillis);
       return { state: foldedOver(decider, state, events), version: version + events.length, decidedOn: state };
     });
@@ -192,7 +203,7 @@ function scrubbedOn(kept: Kept): Ledger['Service']['scrubFact'] {
       const recorded = yield* Effect.sync(() => recordingOf(eventSchema)(erasure, checked));
       const stored = yield* encodedWith(eventSchema, checked)(recorded);
       appendedTo(kept, { stream, stored: [stored], lineage }, yield* Clock.currentTimeMillis);
-      const after = { ...fact, data: scrubbed.data };
+      const after = scrubbed;
       kept.rewritten(stream, position, after);
       kept.projected.refold(loggedFactsOf(kept), {
         stream,
@@ -220,6 +231,7 @@ function keptLedgerOf({ runOutcomes, projections, holders }: MemoryTables): Kept
   const log: MemoryRecord[] = [];
   const streams = new Map<string, readonly AppendedFact[]>();
   const appends = memoryAppendedReader(log);
+  const references = memoryReferences(holders);
   const kept: Kept = {
     streams,
     appendedAt: new Map(),
@@ -232,13 +244,15 @@ function keptLedgerOf({ runOutcomes, projections, holders }: MemoryTables): Kept
       streams.set(stream, storedIn({ streams }, stream).with(position - 1, fact));
       for (const [index, record] of log.entries()) {
         if (record.stream === stream && record.streamPosition === position) {
-          log[index] = { ...record, data: fact.data };
+          log[index] = { ...record, data: fact.data, payloadBytes: fact.payloadBytes };
         }
       }
     },
     outcomes: memoryRunOutcomes(runOutcomes),
     projected: memoryProjections(projections),
-    references: memoryReferences(holders),
+    references,
+    holders: holders ?? new Map(),
+    heads: memoryContentHeads(references.heldIn),
   };
   return { kept, appends };
 }
@@ -251,7 +265,7 @@ export function memoryLedger(
 ): MemoryLedger {
   const { kept, appends } = keptLedgerOf({ runOutcomes, projections, holders });
   const { projected, references } = kept;
-  const outside = keptOutside(memoryContentHeads(references.heldIn), store);
+  const outside = keptOutside(kept.heads, store);
   const recordedReader = memoryRecordedReader(kept.log);
   const service = Ledger.of({
     load: (stream, fold) => Effect.suspend(() => folded(fold, storedIn(kept, stream))),

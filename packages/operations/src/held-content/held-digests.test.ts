@@ -8,6 +8,7 @@ import {
   heldAfter,
   heldOver,
   payloadBytesOf,
+  payloadDigestsNamed,
   payloadsNamed,
   releasesEverything,
 } from './held-digests.ts';
@@ -73,6 +74,10 @@ describe('the payloads a fact names', () => {
       { sha256: third, bytes: 2049 },
     ]);
     expect(payloadBytesOf(holders, { type: 'listed', data })).toBe(9145);
+    expect([
+      payloadDigestsNamed(holders, { type: 'listed', data }),
+      payloadDigestsNamed(holders, { type: 'noted', data }),
+    ]).toEqual([[first, second, third], []]);
   });
 
   it('are none where the payload is inline, the fact declares none or its type holds nothing', () => {
