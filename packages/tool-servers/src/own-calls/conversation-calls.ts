@@ -81,6 +81,7 @@ interface ReadPlace {
   readonly callId: string;
   readonly start: StartedFields | ToolReference;
   readonly conversation: string;
+  readonly reading?: string;
   readonly since: string | null;
 }
 
@@ -110,13 +111,14 @@ function connectionOf(start: StartedFields | ToolReference) {
   return 'connection_id' in start && start.connection_id !== undefined ? { connection_id: start.connection_id } : {};
 }
 
-function ofTheRead({ callId, start, conversation, since }: ReadPlace) {
+function ofTheRead({ callId, start, conversation, reading, since }: ReadPlace) {
   return {
     call_id: callId,
     server: start.server,
     ...connectionOf(start),
     tool: start.tool,
     conversation,
+    ...(reading === undefined ? {} : { reading }),
     since,
     ...argumentsOf(start),
   };

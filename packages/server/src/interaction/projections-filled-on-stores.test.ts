@@ -4,6 +4,8 @@ import {
   listInteractions,
   openRequests,
   openRequestsName,
+  readings,
+  readingsName,
 } from '@on.auto/interaction';
 import {
   alpha,
@@ -12,6 +14,7 @@ import {
   conversationRows,
   farAhead,
   nudging,
+  threadDocument,
   type HarnessLedger,
 } from '@on.auto/interaction/testing';
 import { plainPoolsOn, postgresqlLedgerLayer } from '@on.auto/ledger/postgresql';
@@ -29,7 +32,7 @@ const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 const notice =
   postgresql === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
-const projections = [openRequests, conversations];
+const projections = [openRequests, conversations, readings];
 
 const tables = projections.map((projection) => projectedTableOf(projection));
 
@@ -123,9 +126,13 @@ async function threadOfRun(ledger: HarnessLedger, run: string): Promise<string> 
 async function rowsOf(ledger: HarnessLedger) {
   const requests = await requestRowsOf(ledger);
   const conversationsRead = await conversationRows(ledger);
+  const readingsKept = await Effect.runPromise(
+    ledger.service.readProjectedRows(readingsName, alpha, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+  );
   return {
     requests: requests.map(({ row }) => row),
     conversations: conversationsRead.map(({ row }) => foldedColumnsOf(row)),
+    readings: readingsKept.map(({ row }) => row),
   };
 }
 
@@ -162,6 +169,41 @@ describe.each(stores)('the projections of the requests and the conversations on 
       expect(filled).toEqual(kept);
     },
   );
+});
+
+const inOneChannel = threadDocument({
+  replies: [
+    'replies:',
+    '  tool: thread_replies',
+    '  with:',
+    "    channel: '{{ sent.conversation }}'",
+    "    ts: '{{ sent.id }}'",
+    `    oldest: '{{ since | default: "0" }}'`,
+    '  read:',
+    '    list: /messages',
+    '    order: oldest_first',
+    '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }',
+  ],
+});
+
+describe.each(stores)('the cursors of the readings of a conversation on $store', ({ skipped, aPlace }) => {
+  it.skipIf(skipped)('are filled from its reads when their table is new, as the appends folded them', async () => {
+    const place = await aPlace();
+    const playbook = await chatHarness({ ledger: await place.open(), document: inOneChannel });
+    await playbook.askInThread(runId);
+    await playbook.askInThread(answeredId);
+    await playbook.performDue(Date.now());
+    const thread = await threadOfRun(playbook.ledger, answeredId);
+    playbook.chat.reply({ channel: '#approvals-sales', thread, user: answererId, text: 'maybe later' });
+    await playbook.performReads(Date.now() + farAhead);
+    const kept = await rowsOf(playbook.ledger);
+
+    await place.dropTables();
+    const filled = await rowsOf(await place.open());
+
+    expect(kept.readings).toMatchObject([{ conversation: '#approvals-sales', since: '1699.000003' }]);
+    expect(filled).toEqual(kept);
+  });
 });
 
 describe.each(stores)('the open requests listed on $store', ({ skipped, aPlace }) => {

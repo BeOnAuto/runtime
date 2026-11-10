@@ -35,3 +35,14 @@ export {
   type Recorded,
 } from './chat-harness.ts';
 export { flatReplies } from './reading-documents.ts';
+export {
+  beforeReadings,
+  flatReadsNamingReplies,
+  keptAsRecorded,
+  recordedBeforeReadings,
+  recordedFlatReadsNamingReplies,
+  recordedReadsPastTheBound,
+  readsPastTheBound,
+  type KeptFact,
+  type RecordedBeforeReadings,
+} from './before-readings.ts';

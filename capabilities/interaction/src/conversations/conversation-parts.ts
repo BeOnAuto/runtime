@@ -4,7 +4,6 @@ import type { ToolAccess } from '@on.auto/tool-servers';
 import type { Effect } from 'effect';
 
 import type { RequestLedger } from '../schedule/request-ledger.ts';
-import type { Replies } from '../tool-blocks/tool-block-schemas.ts';
 import { advancedOf, conversationsName, type Cadence, type ConversationRow } from './conversation-rows.ts';
 
 export interface ConversationLedger
@@ -22,12 +21,6 @@ export interface ConversationPlace {
   readonly row: ConversationRow;
 }
 
-export interface ReadingRoute {
-  readonly server: string;
-  readonly delivering: string;
-  readonly replies: Replies;
-}
-
 export function advanced(
   parts: ConversationParts,
   { playbook, key, row }: ConversationPlace,
@@ -40,9 +33,16 @@ export function advanced(
 }
 
 export function cadenceOf({ row }: ConversationPlace): Cadence {
-  return { open: row.open, active_at: row.active_at, reads: row.reads, next_read_at: row.next_read_at };
+  return {
+    open: row.open,
+    active_at: row.active_at,
+    reads: row.reads,
+    next_read_at: row.next_read_at,
+    next_reading: row.next_reading,
+    waited_after: row.waited_after,
+  };
 }
 
-export function resting({ row }: ConversationPlace): Cadence {
-  return { open: false, active_at: row.active_at, reads: row.reads, next_read_at: null };
+export function resting(place: ConversationPlace): Cadence {
+  return { ...cadenceOf(place), open: false, next_read_at: null };
 }

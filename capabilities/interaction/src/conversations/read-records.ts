@@ -1,4 +1,5 @@
-import { playbookCallerOf, streamPrefixOfPlaybook, type StreamWriter } from '@on.auto/operations';
+import { argumentsFailureWords, type ArgumentsFailure } from '@on.auto/definitions/tool-blocks';
+import { playbookCallerOf, randomUUIDv7, streamPrefixOfPlaybook, type StreamWriter } from '@on.auto/operations';
 import {
   conversationCallDecider,
   conversationCallStreamOf,
@@ -12,26 +13,24 @@ import {
 import type { ToolReference } from '@on.auto/tool-servers/policy';
 import { DateTime, Effect } from 'effect';
 
-import type { ReadingState } from '../replies/reply-recording.ts';
-import type { ConversationPlace } from './conversation-parts.ts';
-import type { ReadAnswer } from './read-answers.ts';
+import { routeOfRequest } from '../replies/request-routes.ts';
+import { failedRead, type ReadAnswer } from './read-answers.ts';
+import type { ConversationTurn, OneRead, ReadDone } from './turn-parts.ts';
 
 export interface ReadRecord {
   readonly start: StartedFields | ToolReference;
   readonly called?: CalledOnce;
   readonly detail?: string;
   readonly answer: ReadAnswer;
-  readonly state: ReadingState;
+  readonly state: ReadDone['state'];
   readonly callId: string;
+  readonly reading: string | undefined;
   readonly since: string | null;
 }
 
-function readFactOf(
-  { start, called, detail, answer, state, callId, since }: ReadRecord,
-  conversation: string,
-  recorded: Recorded,
-): ConversationCall {
-  const read = { callId, start, conversation, since };
+function readFactOf(record: ReadRecord, conversation: string, recorded: Recorded): ConversationCall {
+  const { start, called, detail, answer, state, callId, reading, since } = record;
+  const read = { callId, start, conversation, ...(reading === undefined ? {} : { reading }), since };
   if (answer.outcome === 'result') {
     const { taken, refused } = state;
     return repliesReadOf({ ...read, answered: answer.answered, replies: answer.considered, taken, refused }, recorded);
@@ -50,7 +49,7 @@ function readFactOf(
 
 export function recordedRead(
   ledger: StreamWriter,
-  { playbook, row }: ConversationPlace,
+  { playbook, row }: ConversationTurn['place'],
   record: ReadRecord,
 ): Effect.Effect<void> {
   const stream = `${streamPrefixOfPlaybook(playbook)}${conversationCallStreamOf(record.callId)}`;
@@ -61,4 +60,23 @@ export function recordedRead(
       .execute(stream, conversationCallDecider, fact, { causationId: row.last_fact, correlationId: null })
       .pipe(Effect.orDie);
   });
+}
+
+export function unsentRead(
+  { parts, place }: ConversationTurn,
+  read: OneRead,
+  failure: ArgumentsFailure,
+  carried: ReadDone['state'],
+): Effect.Effect<ReadDone> {
+  const route = routeOfRequest(read.request);
+  const unsent = { answer: failedRead('not_sent'), state: carried };
+  const record = {
+    start: { server: route.server, tool: route.replies.tool },
+    detail: argumentsFailureWords(failure, 'the read'),
+    ...unsent,
+    callId: randomUUIDv7(),
+    reading: read.reading,
+    since: read.since,
+  };
+  return Effect.as(recordedRead(parts.ledger, place, record), unsent);
 }

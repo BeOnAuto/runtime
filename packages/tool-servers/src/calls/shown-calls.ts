@@ -50,6 +50,7 @@ const mostTextBytes: Readonly<Record<string, number>> = {
   server: 256,
   tool: 256,
   conversation: 256,
+  reading: 128,
   since: 256,
   arguments_sha256: 128,
   result_sha256: 128,

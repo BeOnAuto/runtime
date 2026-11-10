@@ -20,14 +20,20 @@ interface ReadOf {
   readonly ids: readonly string[];
   readonly considered: number;
   readonly retryAfterMs: number | null;
+  readonly failure: string | null;
 }
 
 export type ReadAnswer =
   | (ReadOf & { readonly outcome: 'result'; readonly answered: CallAnswered })
   | (ReadOf & { readonly outcome: ReadingFailedBecause });
 
-export function failedRead(outcome: ReadingFailedBecause, retryAfterMs: number | null = null): ReadAnswer {
-  return { outcome, replies: [], ids: [], considered: 0, retryAfterMs };
+export function cursorOf(order: Replies['read']['order'], ids: readonly string[], prior: string | null): string | null {
+  return (order === 'oldest_first' ? ids.at(-1) : ids.at(0)) ?? prior;
+}
+
+export function failedRead(outcome: ReadingFailedBecause, detail = '', retryAfterMs: number | null = null): ReadAnswer {
+  const failure = detail === '' ? outcome : `${outcome}: ${detail}`;
+  return { outcome, replies: [], ids: [], considered: 0, retryAfterMs, failure };
 }
 
 function idOf(item: unknown, each: ReplyPointers): readonly string[] {
@@ -62,15 +68,16 @@ function listed(replies: Replies, document: unknown, answered: CallAnswered, sen
     ids: list.flatMap((item: unknown) => idOf(item, each)),
     considered: others.length,
     retryAfterMs: null,
+    failure: null,
   };
 }
 
 export function readAnswerOf(replies: Replies, called: CalledOnce, sent: ReadonlySet<string>): ReadAnswer {
   if (called.kind === 'unopened') {
-    return failedRead(called.refused === 'tool_not_offered' ? 'tool_not_offered' : 'server_failure');
+    return failedRead(called.refused === 'tool_not_offered' ? 'tool_not_offered' : 'server_failure', called.detail);
   }
   if (called.outcome !== 'result') {
-    return failedRead(called.outcome, called.retryAfterMs);
+    return failedRead(called.outcome, called.detail, called.retryAfterMs);
   }
   const document = answerDocument(called.answer);
   if (document === undefined) {

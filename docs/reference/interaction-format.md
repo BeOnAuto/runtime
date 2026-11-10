@@ -365,18 +365,18 @@ The answer is the tool's structured content, else its first text block parsed as
 
 ### `replies`
 
-| Key            | Required                                      | What it holds                                                                                                                                                                           |
-| -------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `conversation` | No; `'{{ sent.conversation }}'` when left out | A template over `to`, `sent.conversation` and `sent.id` that renders the key the playbook reads the conversation by. Open requests with the same reading tool and key share one reading |
-| `tool`         | Yes                                           | The tool of `deliver.server` that lists the messages of a conversation since a point                                                                                                    |
-| `with`         | Yes                                           | The reading tool's arguments. Their templates read `to`, `sent.conversation`, `sent.id`, `conversation` and `since`                                                                     |
-| `read`         | Yes                                           | Where the replies are in the reading tool's answer; see [`replies.read`](#replies-read)                                                                                                 |
-| `wait`         | No; `PT5S` when left out                      | The shortest time between two reads, from `PT5S` to `PT1H`                                                                                                                              |
-| `tell`         | No; nobody is told when left out              | How the party is told that a reply was not an answer; see [`replies.tell`](#replies-tell)                                                                                               |
+| Key            | Required                                      | What it holds                                                                                                                                                              |
+| -------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `conversation` | No; `'{{ sent.conversation }}'` when left out | A template over `to`, `sent.conversation` and `sent.id` that renders the key of the conversation. Open requests with the same reading tool and key are in one conversation |
+| `tool`         | Yes                                           | The tool of `deliver.server` that lists the messages of a conversation since a point                                                                                       |
+| `with`         | Yes                                           | The reading tool's arguments. Their templates read `to`, `sent.conversation`, `sent.id`, `conversation` and `since`                                                        |
+| `read`         | Yes                                           | Where the replies are in the reading tool's answer; see [`replies.read`](#replies-read)                                                                                    |
+| `wait`         | No; `PT5S` when left out                      | The shortest time between two reads, from `PT5S` to `PT1H`                                                                                                                 |
+| `tell`         | No; nobody is told when left out              | How the party is told that a reply was not an answer; see [`replies.tell`](#replies-tell)                                                                                  |
 
-- A key that renders empty, past 256 bytes or with a control character leaves the request to `answer_interaction`.
+- A key that renders empty, past 256 bytes or with a control character, or arguments of `with` that do not render for the request, leave it to `answer_interaction`.
 - In `with`, `conversation` is the rendered key. `since` is the id of the newest message an earlier read listed, and empty text before any. Write `'{{ since | default: "0" }}'` where the tool needs a value.
-- A conversation that several open requests share is read with the `to` and `sent` of the oldest of them.
+- Each open request is read by its own read. Open requests whose read is the same call share it. A read whose arguments name the request's own message, as a thread's do with `sent.id`, has its own `since`, empty until it has read, so it starts where its tool starts, at the first message of the thread. The other reads of a conversation go on from where its reads left off, whether or not their replies name a message in `read.each.to`. A conversation makes at most ten reads each time it is read, and the next time goes on from the first it left.
 
 ### `replies.read`
 

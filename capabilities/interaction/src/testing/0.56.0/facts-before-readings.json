@@ -1,0 +1,1544 @@
+{
+  "facts": [
+    {
+      "stream": "playbook/acme/alpha/definitions/interaction",
+      "type": "definition_created",
+      "data": {
+        "content": {
+          "source": "---\ndescription: Ask the campaign's owner to approve a brief\nto: '#approvals-{{ input.team }}'\nfrom: '{{ input.owner }}'\nexpires: P2D\ndeliver:\n  server: chat\n  tool: post_message\n  with:\n    channel: '{{ to }}'\n    text: '{{ message }}'\n  sent:\n    conversation: /channel\n    id: /ts\nreplies:\n  tool: thread_replies\n  with:\n    channel: '{{ sent.conversation }}'\n    ts: '{{ sent.id }}'\n    oldest: '{{ since | default: \"0\" }}'\n    limit: 15\n  read:\n    list: /messages\n    order: oldest_first\n    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }\n  wait: PT1M\n  tell:\n    with:\n      channel: '{{ sent.conversation }}'\n      thread_ts: '{{ sent.id }}'\n      text: '{{ message }}'\ninput:\n  schema:\n    type: object\n    required: [team, owner, campaign]\n    properties:\n      team: { type: string }\n      owner: { type: string }\n      campaign: { type: string }\noutput:\n  schema:\n    type: object\n    required: [choice]\n    properties:\n      choice: { type: string, enum: [approve, reject] }\n      note: { type: string, maxLength: 2000 }\nreply:\n  choice:\n    from: word\n    words:\n      approve: [approved, yes, ok]\n      reject: [rejected, no]\n  note: rest\n---\nPlease review the brief for {{ input.campaign }}.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "diagram": "none",
+          "description": "Ask the campaign's owner to approve a brief",
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "team",
+              "owner",
+              "campaign"
+            ],
+            "properties": {
+              "team": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "campaign": {
+                "type": "string"
+              }
+            }
+          },
+          "output_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "details": {
+            "expires": "P2D",
+            "deliver": {
+              "server": "chat",
+              "tool": "post_message"
+            }
+          }
+        },
+        "created_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.530Z",
+        "by": "acme-admin",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/definitions/interaction",
+      "type": "definition_created",
+      "data": {
+        "content": {
+          "source": "---\ndescription: Ask the campaign's owner to approve a brief\nto: '#approvals-{{ input.team }}'\nfrom: '{{ input.owner }}'\nexpires: P2D\ndeliver:\n  server: chat\n  tool: post_message\n  with:\n    channel: '{{ to }}'\n    text: '{{ message }}'\n  sent:\n    conversation: /channel\n    id: /ts\nreplies:\n  tool: thread_replies\n  with:\n    channel: '{{ sent.conversation }}'\n    oldest: '{{ since | default: \"0\" }}'\n  read:\n    list: /messages\n    order: oldest_first\n    each: { id: /ts, sender: /user, text: /text }\n  tell:\n    with:\n      channel: '{{ sent.conversation }}'\n      text: '{{ message }}'\ninput:\n  schema:\n    type: object\n    required: [team, owner, campaign]\n    properties:\n      team: { type: string }\n      owner: { type: string }\n      campaign: { type: string }\noutput:\n  schema:\n    type: object\n    required: [choice]\n    properties:\n      choice: { type: string, enum: [approve, reject] }\n      note: { type: string, maxLength: 2000 }\nreply:\n  choice:\n    from: word\n    words:\n      approve: [approved, yes, ok]\n      reject: [rejected, no]\n  note: rest\n---\nPlease review the brief for {{ input.campaign }}.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "diagram": "none",
+          "description": "Ask the campaign's owner to approve a brief",
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "team",
+              "owner",
+              "campaign"
+            ],
+            "properties": {
+              "team": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "campaign": {
+                "type": "string"
+              }
+            }
+          },
+          "output_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "details": {
+            "expires": "P2D",
+            "deliver": {
+              "server": "chat",
+              "tool": "post_message"
+            }
+          }
+        },
+        "created_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.544Z",
+        "by": "acme-admin",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/definitions/interaction",
+      "type": "definition_created",
+      "data": {
+        "content": {
+          "source": "---\ndescription: Ask the campaign's owner to approve a brief\nto: '#approvals-{{ input.team }}'\nfrom: '{{ input.owner }}'\nexpires: P2D\ndeliver:\n  server: chat\n  tool: post_message\n  with:\n    channel: '{{ to }}'\n    text: '{{ message }}'\n  sent:\n    conversation: /channel\n    id: /ts\nreplies:\n  tool: thread_replies\n  with:\n    channel: '{{ sent.conversation }}'\n    ts: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}'\n    oldest: '{{ since | default: \"0\" }}'\n    limit: 15\n  read:\n    list: /messages\n    order: oldest_first\n    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }\n  wait: PT1M\n  tell:\n    with:\n      channel: '{{ sent.conversation }}'\n      thread_ts: '{{ sent.id }}'\n      text: '{{ message }}'\ninput:\n  schema:\n    type: object\n    required: [team, owner, campaign]\n    properties:\n      team: { type: string }\n      owner: { type: string }\n      campaign: { type: string }\noutput:\n  schema:\n    type: object\n    required: [choice]\n    properties:\n      choice: { type: string, enum: [approve, reject] }\n      note: { type: string, maxLength: 2000 }\nreply:\n  choice:\n    from: word\n    words:\n      approve: [approved, yes, ok]\n      reject: [rejected, no]\n  note: rest\n---\nPlease review the brief for {{ input.campaign }}.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "diagram": "none",
+          "description": "Ask the campaign's owner to approve a brief",
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "team",
+              "owner",
+              "campaign"
+            ],
+            "properties": {
+              "team": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "campaign": {
+                "type": "string"
+              }
+            }
+          },
+          "output_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "details": {
+            "expires": "P2D",
+            "deliver": {
+              "server": "chat",
+              "tool": "post_message"
+            }
+          }
+        },
+        "created_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.553Z",
+        "by": "acme-admin",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "sales",
+          "owner": "U024BE7LH",
+          "campaign": "Spring"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.564Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-sales",
+          "message": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T16:25:07.566Z",
+          "requested_at": "2026-11-10T16:25:07.566Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "ts": "{{ sent.id }}",
+              "oldest": "{{ since | default: \"0\" }}",
+              "limit": 15
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text",
+                "to": "/thread_ts"
+              }
+            },
+            "wait": "PT1M",
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "thread_ts": "{{ sent.id }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.567Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "dcf850c3-6c9e-58ef-b8e7-b234f5a3f16c",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "sales",
+          "owner": "U024BE7LH",
+          "campaign": "Spring"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.571Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-sales",
+          "message": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T16:25:07.572Z",
+          "requested_at": "2026-11-10T16:25:07.572Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "ts": "{{ sent.id }}",
+              "oldest": "{{ since | default: \"0\" }}",
+              "limit": 15
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text",
+                "to": "/thread_ts"
+              }
+            },
+            "wait": "PT1M",
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "thread_ts": "{{ sent.id }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.572Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "c160d02c-d1d2-5080-aa49-ab1ef7e9473d",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "sales",
+          "owner": "U024BE7LH",
+          "campaign": "Terms"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.579Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-sales",
+          "message": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T16:25:07.580Z",
+          "requested_at": "2026-11-10T16:25:07.580Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "ts": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}",
+              "oldest": "{{ since | default: \"0\" }}",
+              "limit": 15
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text",
+                "to": "/thread_ts"
+              }
+            },
+            "wait": "PT1M",
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "thread_ts": "{{ sent.id }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.580Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "4f81a656-670d-5541-a95c-b99ae5646c3f",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "ops",
+          "owner": "U024BE7LH",
+          "campaign": "Spring"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.583Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-ops",
+          "message": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T16:25:07.584Z",
+          "requested_at": "2026-11-10T16:25:07.584Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "oldest": "{{ since | default: \"0\" }}"
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text"
+              }
+            },
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.585Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "2f12e5ec-9e9b-50e8-8b88-843c3053fd3d",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "legal",
+          "owner": "U024BE7LH",
+          "campaign": "Terms"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.590Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-legal",
+          "message": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T16:25:07.591Z",
+          "requested_at": "2026-11-10T16:25:07.591Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "ts": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}",
+              "oldest": "{{ since | default: \"0\" }}",
+              "limit": 15
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text",
+                "to": "/thread_ts"
+              }
+            },
+            "wait": "PT1M",
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "thread_ts": "{{ sent.id }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.592Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "94a2e8fa-e188-5c32-a1fe-8cf9a666a8e2",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-sales",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 138,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.595Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "23a9a24b-6e5c-51cd-8ed0-369e17e371a9",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-sales",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 138,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.595Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "bf049957-7d87-56fa-9ac7-6d1604dab6be",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-sales",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 137,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.595Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "909806ba-e883-56e4-b575-279da50c98bc",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-ops",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 136,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.596Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "00e7bd91-6dc2-5032-a5ac-49b123a64c06",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-legal",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 137,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.596Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "55dc67d7-3989-5802-afea-f93159a9f7eb",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 4,
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 1,
+        "delivered_as": {
+          "conversation": "#approvals-sales",
+          "id": "1699.000001"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-sales"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.598Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "0744f008-d317-5861-a801-7c7b3151b0fa",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 3,
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 2,
+        "delivered_as": {
+          "conversation": "#approvals-sales",
+          "id": "1699.000002"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-sales"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.598Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "3d3ec8f0-d1d9-5b5c-a61f-f6e6dce5a17b",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 4,
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 3,
+        "delivered_as": {
+          "conversation": "#approvals-sales",
+          "id": "1699.000003"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-sales"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.599Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "1355ceb7-5001-59ca-8ab9-e2de9a6bcc3e",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b75"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 4,
+        "result_bytes": 106,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 4,
+        "delivered_as": {
+          "conversation": "#approvals-ops",
+          "id": "1699.000004"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-ops"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.600Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "313fa1e7-bcc8-57d5-9bb3-650019fa1147",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 4,
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 5,
+        "delivered_as": {
+          "conversation": "#approvals-legal",
+          "id": "1699.000005"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-legal"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.600Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "9d45b96a-29e7-5436-8a9b-83a454939bc0",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b76"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+      "type": "reply_refused",
+      "data": {
+        "server": "chat",
+        "tool": "thread_replies",
+        "reply": {
+          "id": "1699.000006",
+          "sender": "U024BE7LH"
+        },
+        "because": "not_an_answer",
+        "told": true
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.607Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "8b77b030-a2fc-5d7f-bcff-2c13cade621e",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71"
+    },
+    {
+      "stream": "playbook/acme/alpha/conversation-calls/01a1c647-0d1a-731e-82e9-0dbc7f010b80",
+      "type": "reading_failed",
+      "data": {
+        "call_id": "01a1c647-0d1a-731e-82e9-0dbc7f010b80",
+        "server": "chat",
+        "tool": "thread_replies",
+        "conversation": "#approvals-legal",
+        "since": null,
+        "detail": "The argument ts of the read renders more than the 16384 bytes a call may send",
+        "because": "not_sent"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.610Z",
+        "by": "playbook:alpha"
+      },
+      "causationId": "8611c1c2-e9f2-5078-80bc-17fe9df2da03",
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+      "type": "request_answered",
+      "data": {
+        "answer": {
+          "choice": "approve"
+        },
+        "reply": {
+          "id": "1699.000008",
+          "sender": "U024BE7LH"
+        },
+        "answered_by": {
+          "id": "playbook:alpha",
+          "name": "alpha"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.611Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "681df554-94eb-5130-8796-385f92ae2e30",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73"
+    },
+    {
+      "stream": "playbook/acme/alpha/conversation-calls/01a1c647-0d1d-742d-b841-6002879fc629",
+      "type": "telling_started",
+      "data": {
+        "call_id": "01a1c647-0d1d-742d-b841-6002879fc629",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 145,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.613Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "9f71bbc7-1533-5d02-9804-5461623c64d8",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71"
+    },
+    {
+      "stream": "playbook/acme/alpha/conversation-calls/01a1c647-0d1a-731f-b314-115e6177843b",
+      "type": "replies_read",
+      "data": {
+        "call_id": "01a1c647-0d1a-731f-b314-115e6177843b",
+        "server": "chat",
+        "tool": "thread_replies",
+        "conversation": "#approvals-ops",
+        "since": "1699.000008",
+        "arguments_bytes": 41,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "result_bytes": 347,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "duration_ms": 3,
+        "jsonrpc_id": 7,
+        "replies": 1,
+        "taken": 1,
+        "refused": 0
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.614Z",
+        "by": "playbook:alpha"
+      },
+      "causationId": "681df554-94eb-5130-8796-385f92ae2e30",
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/conversation-calls/01a1c647-0d1d-742d-b841-6002879fc629",
+      "type": "telling_succeeded",
+      "data": {
+        "call_id": "01a1c647-0d1d-742d-b841-6002879fc629",
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "duration_ms": 3,
+        "jsonrpc_id": 8
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.614Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "872dd7d8-8d8f-5172-9d52-342d78fba221",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b71"
+    },
+    {
+      "stream": "playbook/acme/alpha/conversation-calls/01a1c647-0d14-7137-af26-88b273c6f21f",
+      "type": "replies_read",
+      "data": {
+        "call_id": "01a1c647-0d14-7137-af26-88b273c6f21f",
+        "server": "chat",
+        "tool": "thread_replies",
+        "conversation": "#approvals-sales",
+        "since": "1699.000006",
+        "arguments_bytes": 73,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "result_bytes": 379,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "duration_ms": 3,
+        "jsonrpc_id": 6,
+        "replies": 1,
+        "taken": 0,
+        "refused": 1
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.615Z",
+        "by": "playbook:alpha"
+      },
+      "causationId": "8b77b030-a2fc-5d7f-bcff-2c13cade621e",
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+      "type": "run_succeeded",
+      "data": {
+        "output": {
+          "choice": "approve"
+        },
+        "record": {}
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.616Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "2296b939-2140-55d0-911a-5eaa99f79827",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b73"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "ops",
+          "owner": "U024BE7LH",
+          "campaign": "Autumn"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.619Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-ops",
+          "message": "Please review the brief for Autumn.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T16:25:07.620Z",
+          "requested_at": "2026-11-10T16:25:07.620Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "oldest": "{{ since | default: \"0\" }}"
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text"
+              }
+            },
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.620Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "14dd97d1-ee91-57db-b179-ed036d6dd0c7",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-ops",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 136,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.622Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "b01436e1-3392-5031-8e03-307b9fd828c2",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 2,
+        "result_bytes": 106,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 9,
+        "delivered_as": {
+          "conversation": "#approvals-ops",
+          "id": "1699.000010"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-ops"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.623Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74",
+        "definitionType": "interaction",
+        "definitionName": "approve-plan",
+        "definitionVersion": 1
+      },
+      "causationId": "2fa69d9b-4221-58c4-ba5c-981af8662789",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b74"
+    },
+    {
+      "stream": "playbook/acme/alpha/conversation-calls/01a1c647-0d28-7403-88bd-b485b8de14c9",
+      "type": "replies_read",
+      "data": {
+        "call_id": "01a1c647-0d28-7403-88bd-b485b8de14c9",
+        "server": "chat",
+        "tool": "thread_replies",
+        "conversation": "#approvals-sales",
+        "since": "1699.000009",
+        "arguments_bytes": 83,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "result_bytes": 258,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "duration_ms": 3,
+        "jsonrpc_id": 11,
+        "replies": 1,
+        "taken": 0,
+        "refused": 0
+      },
+      "context": {
+        "at": "2026-11-10T16:25:07.624Z",
+        "by": "playbook:alpha"
+      },
+      "causationId": "bd32b316-2e71-58de-88a0-02e6ee5f003a",
+      "correlationId": null
+    }
+  ],
+  "messages": [
+    {
+      "ts": "1699.000001",
+      "channel": "#approvals-sales",
+      "user": "playbook",
+      "text": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject."
+    },
+    {
+      "ts": "1699.000002",
+      "channel": "#approvals-sales",
+      "user": "playbook",
+      "text": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject."
+    },
+    {
+      "ts": "1699.000003",
+      "channel": "#approvals-sales",
+      "user": "playbook",
+      "text": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject."
+    },
+    {
+      "ts": "1699.000006",
+      "channel": "#approvals-sales",
+      "user": "U024BE7LH",
+      "text": "maybe",
+      "thread_ts": "1699.000001"
+    },
+    {
+      "ts": "1699.000007",
+      "channel": "#approvals-sales",
+      "user": "U024BE7LH",
+      "text": "approve",
+      "thread_ts": "1699.000002"
+    },
+    {
+      "ts": "1699.000009",
+      "channel": "#approvals-sales",
+      "user": "playbook",
+      "text": "To answer, reply with one of approve, reject; what follows is kept as the note.",
+      "thread_ts": "1699.000001"
+    },
+    {
+      "ts": "1699.000004",
+      "channel": "#approvals-ops",
+      "user": "playbook",
+      "text": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject."
+    },
+    {
+      "ts": "1699.000008",
+      "channel": "#approvals-ops",
+      "user": "U024BE7LH",
+      "text": "approve"
+    },
+    {
+      "ts": "1699.000010",
+      "channel": "#approvals-ops",
+      "user": "playbook",
+      "text": "Please review the brief for Autumn.\n\nReply **approve** or **reject**, with a note if you reject."
+    },
+    {
+      "ts": "1699.000005",
+      "channel": "#approvals-legal",
+      "user": "playbook",
+      "text": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject."
+    }
+  ]
+}

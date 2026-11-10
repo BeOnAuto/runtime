@@ -16,6 +16,22 @@ export const flatReplies: readonly string[] = [
   "      text: '{{ message }}'",
 ];
 
+const namingTheirMessage = '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }';
+
+const namingNoMessage = '    each: { id: /ts, sender: /user, text: /text }';
+
+export const flatNamingReplies: readonly string[] = flatReplies.map((line) =>
+  line === namingNoMessage ? namingTheirMessage : line,
+);
+
+export const threadOfTheChannelReplies: readonly string[] = threadReplies.filter(
+  (line) => !line.startsWith('  conversation:'),
+);
+
+export const threadNamingNoMessageReplies: readonly string[] = threadOfTheChannelReplies.map((line) =>
+  line === namingTheirMessage ? namingNoMessage : line,
+);
+
 export const newestFirstReplies: readonly string[] = [
   'replies:',
   '  tool: thread_replies',

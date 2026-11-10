@@ -4,8 +4,7 @@ import { ReplyRuleSchema } from '../replies/reply-rule.ts';
 import type { KeptRequest } from '../replies/reply-taking.ts';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { requestRowFrom, type OpenRequestRow } from '../requests/request-rows.ts';
-import { RepliesSchema } from '../tool-blocks/tool-block-schemas.ts';
-import type { ConversationParts, ConversationPlace, ReadingRoute } from './conversation-parts.ts';
+import type { ConversationParts, ConversationPlace } from './conversation-parts.ts';
 
 const conversationBounds = { requestsRead: 100 } as const;
 
@@ -19,18 +18,6 @@ const keptRowFrom = Schema.decodeUnknownSync(
     answer_schema: Schema.fromJsonString(Schema.JsonObject),
   }),
 );
-
-const readingRowFrom = Schema.decodeUnknownSync(
-  Schema.Struct({
-    delivery: Schema.fromJsonString(Schema.Struct({ server: Schema.String, tool: Schema.String })),
-    replies: Schema.fromJsonString(RepliesSchema),
-  }),
-);
-
-export function readingOf({ row }: KeptRequest): ReadingRoute {
-  const { delivery, replies } = readingRowFrom(row);
-  return { server: delivery.server, delivering: delivery.tool, replies };
-}
 
 function keptOf(runId: string, stored: OpenRequestRow): readonly KeptRequest[] {
   if (!takingReplies.has(stored.standing)) {

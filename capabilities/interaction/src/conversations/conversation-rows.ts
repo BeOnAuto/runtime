@@ -1,11 +1,12 @@
-import { factReaderOf, type KeyedProjection, type ProjectedMessage, type ProjectedRow } from '@on.auto/operations';
-import { ConversationCallEventSchema, conversationCallsKind, type ReadingRecorded } from '@on.auto/tool-servers';
+import type { KeyedProjection, ProjectedMessage, ProjectedRow } from '@on.auto/operations';
+import { conversationCallsKind, type ReadingRecorded } from '@on.auto/tool-servers';
 import { Option, Schema } from 'effect';
 
 import { interactionFactOf } from '../facts/run-facts.ts';
 import type { RepliesIn } from '../tool-blocks/tool-block-schemas.ts';
 import { firstReadWaitMs } from './cadence.ts';
 import { conversationKeyOf } from './conversation-keys.ts';
+import { readingRecordedOf } from './read-facts.ts';
 
 export const conversationsName = 'conversations';
 
@@ -21,6 +22,8 @@ const ConversationRowSchema = Schema.Struct({
   reads: Schema.Int,
   next_read_at: Schema.NullOr(Schema.Int),
   due_at: Schema.NullOr(Schema.Int),
+  next_reading: Schema.Int,
+  waited_after: Schema.NullOr(Schema.String),
 });
 
 export type ConversationRow = typeof ConversationRowSchema.Type;
@@ -30,18 +33,26 @@ export const conversationRowFrom: (row: ProjectedRow) => ConversationRow =
 
 const decodeRow = Schema.decodeUnknownOption(ConversationRowSchema);
 
-const readCall = factReaderOf(ConversationCallEventSchema);
-
 export interface Cadence {
   readonly open: boolean;
   readonly active_at: number;
   readonly reads: number;
   readonly next_read_at: number | null;
+  readonly next_reading: number;
+  readonly waited_after: string | null;
 }
 
 export function advancedOf(cadence: Cadence): ProjectedRow {
-  const { open, active_at: activeAt, reads, next_read_at: next } = cadence;
-  return { open, active_at: activeAt, reads, next_read_at: next, due_at: open ? next : null };
+  const { open, active_at: activeAt, reads, next_read_at: next, next_reading: nextReading } = cadence;
+  return {
+    open,
+    active_at: activeAt,
+    reads,
+    next_read_at: next,
+    due_at: open ? next : null,
+    next_reading: nextReading,
+    waited_after: cadence.waited_after,
+  };
 }
 
 interface Join {
@@ -58,13 +69,10 @@ interface Read {
 
 type ConversationFact = Join | Read;
 
-function isReading(event: { readonly type: string }): event is ReadingRecorded {
-  return event.type === 'replies_read' || event.type === 'reading_failed';
-}
-
 function readOf({ data }: ReadingRecorded): Read {
-  const { server, tool, conversation, since } = data;
-  return { kind: 'read', place: { server, tool, key: conversation }, since };
+  const { server, tool, conversation, reading, since } = data;
+  const place = { server, tool, key: conversation };
+  return { kind: 'read', place: reading === undefined ? place : { ...place, reading }, since };
 }
 
 function conversationFactOf(message: ProjectedMessage): ConversationFact | undefined {
@@ -73,8 +81,8 @@ function conversationFactOf(message: ProjectedMessage): ConversationFact | undef
     const place = fact.data.replies_in;
     return place === undefined ? undefined : { kind: 'join', place, at: Date.parse(fact.context.at) };
   }
-  const call = readCall(message);
-  return call !== undefined && isReading(call) ? readOf(call) : undefined;
+  const read = readingRecordedOf(message);
+  return read === undefined ? undefined : readOf(read);
 }
 
 function joined(row: ConversationRow | undefined, { place, at }: Join, { id }: ProjectedMessage): ProjectedRow {
@@ -87,8 +95,12 @@ function joined(row: ConversationRow | undefined, { place, at }: Join, { id }: P
     since: row?.since ?? null,
     last_fact: id,
     joined_by: id,
-    ...advancedOf({ open: true, active_at: at, reads: 0, next_read_at: nextRead }),
+    ...advancedOf({ open: true, active_at: at, reads: 0, next_read_at: nextRead, next_reading: 0, waited_after: null }),
   };
+}
+
+function afterRead(row: ConversationRow, { place, since }: Read, { id }: ProjectedMessage): ProjectedRow {
+  return place.reading === undefined ? { ...row, since, last_fact: id } : { ...row, last_fact: id };
 }
 
 function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): ProjectedRow | undefined {
@@ -97,12 +109,14 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
   if (fact?.kind === 'join') {
     return joined(kept, fact, message);
   }
-  return fact === undefined || kept === undefined ? undefined : { ...kept, since: fact.since, last_fact: message.id };
+  return fact === undefined || kept === undefined ? undefined : afterRead(kept, fact, message);
 }
+
+const cadenceColumns: readonly string[] = ['open', 'active_at', 'reads', 'next_read_at', 'due_at'];
 
 export const conversations: KeyedProjection = {
   name: conversationsName,
-  version: 3,
+  version: 4,
   kinds: ['runs', conversationCallsKind],
   types: ['delivery_succeeded', 'replies_read', 'reading_failed'],
   columns: [
@@ -117,15 +131,18 @@ export const conversations: KeyedProjection = {
     { name: 'reads', kind: 'integer' },
     { name: 'next_read_at', kind: 'integer' },
     { name: 'due_at', kind: 'integer' },
+    { name: 'next_reading', kind: 'integer' },
+    { name: 'waited_after', kind: 'text' },
   ],
   indexes: [{ name: 'due', columns: ['due_at'], acrossPlaybooks: true, whereSet: 'due_at' }],
   keyOf: (message) => {
     const fact = conversationFactOf(message);
     return fact === undefined ? undefined : conversationKeyOf(fact.place);
   },
-  advanced: ['open', 'active_at', 'reads', 'next_read_at', 'due_at'].map((column) => ({
-    column,
-    setBy: ['delivery_succeeded'],
-  })),
+  advanced: [
+    ...cadenceColumns.map((column) => ({ column, setBy: ['delivery_succeeded'] })),
+    { column: 'next_reading', setBy: [] },
+    { column: 'waited_after', setBy: [] },
+  ],
   rowAfter,
 };

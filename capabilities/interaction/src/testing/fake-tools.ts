@@ -13,7 +13,7 @@ import type {
 import { ToolNotOffered } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
-import { chatBoard, type BoardAnswer, type ChatBoard } from './chat-board.ts';
+import { chatBoard, type BoardAnswer, type ChatBoard, type ChatMessage } from './chat-board.ts';
 
 export type FakeAnswer =
   | BoardAnswer
@@ -104,7 +104,8 @@ function answeredWith(answer: BoardAnswer, number: number): AnsweredOnce {
   if (outcome === 'tool_error') {
     return { ...answering, outcome, answered: answeredOf(0, true, number) };
   }
-  return { ...answering, outcome, failed: { because: outcome, duration_ms: 3, jsonrpc_id: number } };
+  const failed = { because: outcome, ...(detail === '' ? {} : { detail }), duration_ms: 3, jsonrpc_id: number };
+  return { ...answering, outcome, failed };
 }
 
 function chatTool(name: string, description: string, readOnly: boolean): ServerTool {
@@ -136,8 +137,11 @@ function namedBy(refusals: readonly (Refusal | undefined)[]): Effect.Effect<void
   return refusal === undefined ? Effect.void : Effect.fail(new ToolNotOffered(refusal));
 }
 
-export function fakeTools(duringCall: (call: OneCall) => Effect.Effect<unknown> = () => Effect.void): FakeTools {
-  const board = chatBoard();
+export function fakeTools(
+  duringCall: (call: OneCall) => Effect.Effect<unknown> = () => Effect.void,
+  inTheChat: readonly ChatMessage[] = [],
+): FakeTools {
+  const board = chatBoard(inTheChat);
   const calls: OneCall[] = [];
   const queued: FakeAnswer[] = [];
   const offering = { disallowed: new Set<string>() };

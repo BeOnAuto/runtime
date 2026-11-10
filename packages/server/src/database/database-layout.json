@@ -94,12 +94,12 @@
       "sql": "CREATE INDEX content_references_1_by_digest ON content_references_1 (playbook_key, sha256)"
     },
     {
-      "name": "conversations_3",
-      "sql": "CREATE TABLE conversations_3 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, server TEXT, tool TEXT, conversation TEXT, since TEXT, last_fact TEXT, joined_by TEXT, open INTEGER, active_at INTEGER, reads INTEGER, next_read_at INTEGER, due_at INTEGER, PRIMARY KEY (playbook_key, row_key))"
+      "name": "conversations_4",
+      "sql": "CREATE TABLE conversations_4 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, server TEXT, tool TEXT, conversation TEXT, since TEXT, last_fact TEXT, joined_by TEXT, open INTEGER, active_at INTEGER, reads INTEGER, next_read_at INTEGER, due_at INTEGER, next_reading INTEGER, waited_after TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "conversations_3_due",
-      "sql": "CREATE INDEX conversations_3_due ON conversations_3 (due_at) WHERE due_at IS NOT NULL"
+      "name": "conversations_4_due",
+      "sql": "CREATE INDEX conversations_4_due ON conversations_4 (due_at) WHERE due_at IS NOT NULL"
     },
     {
       "name": "generations_due_1",
@@ -196,6 +196,10 @@
     {
       "name": "prediction_rows",
       "sql": "CREATE TABLE prediction_rows (playbook_key TEXT NOT NULL, data_sha256 TEXT NOT NULL, series TEXT NOT NULL, period_index BIGINT NOT NULL, period TEXT NOT NULL, target DOUBLE PRECISION, target_count BIGINT NOT NULL, target_at BIGINT, events BIGINT NOT NULL, PRIMARY KEY (playbook_key, data_sha256, series, period_index))"
+    },
+    {
+      "name": "readings_1",
+      "sql": "CREATE TABLE readings_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, server TEXT, tool TEXT, conversation TEXT, reading TEXT, since TEXT, last_fact TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
       "name": "recorded_content_chunks",

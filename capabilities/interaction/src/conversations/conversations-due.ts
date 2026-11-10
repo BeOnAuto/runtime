@@ -1,7 +1,7 @@
 import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { attemptInFlightMs } from '../requests/open-requests.ts';
+import { turnBounds } from '../readings/turn-readings.ts';
 import type { DueRequestItem, RequestsDue } from '../schedule/due-requests.ts';
 import { advanced, cadenceOf, type ConversationParts, type ConversationPlace } from './conversation-parts.ts';
 import { conversationRowFrom, conversationsName } from './conversation-rows.ts';
@@ -9,7 +9,7 @@ import { readNow } from './reading-turns.ts';
 
 function conversationRead(parts: ConversationParts, place: ConversationPlace, now: number): Effect.Effect<void> {
   return Effect.andThen(
-    advanced(parts, place, { ...cadenceOf(place), open: true, next_read_at: now + attemptInFlightMs }),
+    advanced(parts, place, { ...cadenceOf(place), open: true, next_read_at: now + turnBounds.holdMs }),
     readNow(parts, place, now),
   );
 }

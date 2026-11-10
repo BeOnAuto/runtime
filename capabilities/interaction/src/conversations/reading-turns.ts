@@ -1,10 +1,13 @@
+import { renderClock } from '@on.auto/definitions/template';
 import { Clock, Effect } from 'effect';
 
+import { readingsOfTheTurn, roomForACall } from '../readings/turn-readings.ts';
+import { turnRead, type TurnDone } from '../readings/turn-reads.ts';
+import { routeOfRequest } from '../replies/request-routes.ts';
 import { replyWaitMsOf } from './cadence.ts';
 import { advanced, cadenceOf, resting, type ConversationParts, type ConversationPlace } from './conversation-parts.ts';
-import { readReplies, type ReadDone } from './conversation-reads.ts';
 import type { Cadence } from './conversation-rows.ts';
-import { openInConversation, readingOf, type OpenInConversation } from './open-in-conversation.ts';
+import { openInConversation, type OpenInConversation } from './open-in-conversation.ts';
 import { cadenceAfter } from './read-cadence.ts';
 
 interface ReadEnd {
@@ -12,21 +15,23 @@ interface ReadEnd {
   readonly now: number;
 }
 
-function cadenceAfterRead(
+function cadenceAfterTurn(
   place: ConversationPlace,
   { kept, more }: OpenInConversation,
-  { state, answer }: ReadDone,
+  done: TurnDone,
   { floorMs, now }: ReadEnd,
 ): Cadence {
-  if (answer.outcome === 'not_sent') {
-    return resting(place);
+  if (done.nothingSent) {
+    return { ...resting(place), next_reading: done.nextReading };
   }
   return cadenceAfter(place.row, {
     now,
     floorMs,
-    open: more || kept.some(({ runId }) => !state.answered.has(runId)),
-    foundAnswerer: state.foundAnswerer,
-    retryAfterMs: answer.retryAfterMs,
+    open: more || kept.some(({ runId }) => !done.state.answered.has(runId)),
+    foundAnswerer: done.state.foundAnswerer,
+    retryAfterMs: done.retryAfterMs,
+    waitedAfter: done.waitedAfter,
+    nextReading: done.nextReading,
   });
 }
 
@@ -37,14 +42,15 @@ export function readNow(parts: ConversationParts, place: ConversationPlace, now:
     if (oldest === undefined) {
       return yield* advanced(parts, place, resting(place));
     }
-    const route = readingOf(oldest);
-    const floorMs = replyWaitMsOf(route.replies);
+    const floorMs = replyWaitMsOf(routeOfRequest(oldest).replies);
     const firstRead = place.row.active_at + floorMs;
     if (place.row.reads === 0 && now < firstRead) {
       return yield* advanced(parts, place, { ...cadenceOf(place), open: true, next_read_at: firstRead });
     }
-    const read = yield* readReplies({ parts, place, route, kept: open.kept }, oldest);
+    const readings = readingsOfTheTurn(open.kept, place.row.conversation, yield* renderClock);
+    const turn = { parts, place, candidates: open.kept, roomForACall: roomForACall(now) };
+    const done = yield* turnRead(turn, readings, oldest);
     const end = { floorMs, now: yield* Clock.currentTimeMillis };
-    return yield* advanced(parts, place, cadenceAfterRead(place, open, read, end));
+    return yield* advanced(parts, place, cadenceAfterTurn(place, open, done, end));
   });
 }

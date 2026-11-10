@@ -1,47 +1,40 @@
-import { renderClock, type RenderClock } from '@on.auto/definitions/template';
+import type { RenderClock } from '@on.auto/definitions/template';
 import { renderedArguments } from '@on.auto/definitions/tool-blocks';
-import { Effect, Result } from 'effect';
+import { Result } from 'effect';
 
-import type { ReadingRoute } from '../conversations/conversation-parts.ts';
-import type { ConversationRow } from '../conversations/conversation-rows.ts';
 import type { KeptRequest } from './reply-taking.ts';
+import type { RepliesRoute } from './request-routes.ts';
 
-export interface ReadingState {
+export interface IntakeState {
   readonly taken: number;
   readonly refused: number;
   readonly foundAnswerer: boolean;
   readonly answered: ReadonlySet<string>;
   readonly told: ReadonlyMap<string, number>;
-  readonly leftToReadAgain: boolean;
+  readonly unrecorded: boolean;
 }
 
-export const nothingRead: ReadingState = {
+export const nothingTaken: IntakeState = {
   taken: 0,
   refused: 0,
   foundAnswerer: false,
   answered: new Set(),
   told: new Map(),
-  leftToReadAgain: false,
+  unrecorded: false,
 };
+
+export function carriedOn(state: IntakeState): IntakeState {
+  return { ...state, taken: 0, refused: 0, unrecorded: false };
+}
 
 export const replyBoundsOfAReading = { told: 3, issues: 16 } as const;
 
-export function tellingInput({ replies }: ReadingRoute, request: KeptRequest, message: string, clock: RenderClock) {
+export function tellingInput({ replies }: RepliesRoute, request: KeptRequest, message: string, clock: RenderClock) {
   const variables = { to: request.row.party, sent: { ...request.sent }, message };
   const rendered = replies.tell === undefined ? undefined : renderedArguments(replies.tell.with, variables, clock);
   return rendered !== undefined && Result.isSuccess(rendered) ? rendered.success.input : undefined;
 }
 
-export function mayTell(state: ReadingState, request: KeptRequest): boolean {
+export function mayTell(state: IntakeState, request: KeptRequest): boolean {
   return request.row.refusals_told + (state.told.get(request.runId) ?? 0) < replyBoundsOfAReading.told;
-}
-
-export function readArguments({ replies }: ReadingRoute, row: ConversationRow, oldest: KeptRequest) {
-  const variables = {
-    to: oldest.row.party,
-    sent: { ...oldest.sent },
-    conversation: row.conversation,
-    since: row.since ?? '',
-  };
-  return Effect.map(renderClock, (clock) => renderedArguments(replies.with, variables, clock));
 }

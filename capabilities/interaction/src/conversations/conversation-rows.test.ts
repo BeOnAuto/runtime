@@ -32,8 +32,8 @@ function deliveryEnded(at: string, keeping = true, id = 'fact-1'): ProjectedMess
   return messageOf('delivery_succeeded', data, ofTheRun(at), id);
 }
 
-function read(since: string | null, type = 'replies_read', id = 'fact-1'): ProjectedMessage {
-  const data = {
+function readData(since: string | null) {
+  return {
     call_id: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b70',
     server: 'chat',
     tool: 'thread_replies',
@@ -47,7 +47,10 @@ function read(since: string | null, type = 'replies_read', id = 'fact-1'): Proje
     taken: 0,
     refused: 0,
   };
-  return messageOf(type, data, { by: 'playbook:alpha', at: '2026-10-01T09:00:10.000Z' }, id);
+}
+
+function read(since: string | null, type = 'replies_read', id = 'fact-1'): ProjectedMessage {
+  return messageOf(type, readData(since), { by: 'playbook:alpha', at: '2026-10-01T09:00:10.000Z' }, id);
 }
 
 function readingFailed(since: string | null, id = 'fact-1'): ProjectedMessage {
@@ -120,6 +123,8 @@ describe('a conversation the projection opens', () => {
       reads: 0,
       next_read_at: joinedAt + 5000,
       due_at: joinedAt + 5000,
+      next_reading: 0,
+      waited_after: null,
     });
   });
 });
@@ -148,6 +153,20 @@ describe('a row of the conversations projection', () => {
       active_at: joinedAt + 3_600_000,
       next_read_at: joinedAt + 5000,
     });
+  });
+
+  it('keeps the cursor of the reads recorded before readings were, which a read of one reading leaves as it was', () => {
+    const joined = conversations.rowAfter(undefined, deliveryEnded('2026-10-01T09:00:00.000Z'));
+    const readBefore = conversations.rowAfter(joined, read('1699.4', 'replies_read', 'fact-2'));
+    const ofOneReading = {
+      ...read('1699.9', 'replies_read', 'fact-3'),
+      data: { ...readData('1699.9'), reading: 'r'.repeat(64) },
+    };
+
+    expect([
+      conversations.keyOf?.(ofOneReading, stream),
+      conversations.rowAfter(readBefore, ofOneReading),
+    ]).toMatchObject(['chat/thread_replies/C0123/1699.1', { since: '1699.4', last_fact: 'fact-3' }]);
   });
 
   it('writes no row for a read of a conversation it never opened', () => {

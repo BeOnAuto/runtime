@@ -1,15 +1,22 @@
-import { runCorrelationIn, type RecordedWorkAt, type Work } from '@on.auto/definitions';
-import type { Unavailable } from '@on.auto/operations';
+import { runCorrelationIn, type RecordWork, type RecordedWorkAt, type Work } from '@on.auto/definitions';
+import type { PlaybookAddress, RecordedReader, StreamWriter, Unavailable } from '@on.auto/operations';
+import type { ToolAccess } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
-import type { ConversationParts, ConversationPlace } from '../conversations/conversation-parts.ts';
 import { replyRule } from '../facts/work-rules.ts';
 import { recordedWork } from '../schedule/request-ledger.ts';
 import type { KeptRequest, Reply } from './reply-taking.ts';
 
+export interface IntakeParts {
+  readonly ledger: StreamWriter & Pick<RecordedReader, 'readRecorded'>;
+  readonly tools: Pick<ToolAccess, 'preparedCall'>;
+  readonly record: RecordWork;
+}
+
 export interface ReplyPlace {
-  readonly parts: ConversationParts;
-  readonly place: ConversationPlace;
+  readonly parts: IntakeParts;
+  readonly playbook: PlaybookAddress;
+  readonly causationId: string;
 }
 
 export interface RecordedReply extends RecordedWorkAt {
@@ -17,15 +24,15 @@ export interface RecordedReply extends RecordedWorkAt {
 }
 
 export function recordedReplyWork(
-  { parts, place }: ReplyPlace,
+  { parts, playbook, causationId }: ReplyPlace,
   request: KeptRequest,
   reply: Reply,
   work: Work,
 ): Effect.Effect<RecordedReply | undefined, Unavailable> {
-  const address = { ...place.playbook, id: request.runId };
+  const address = { ...playbook, id: request.runId };
   const rule = replyRule(reply.id, work.type === 'work');
   return Effect.flatMap(runCorrelationIn(parts.ledger, address), (correlationId) =>
-    recordedWork(parts.record, address, { work, rule }, { causationId: place.row.last_fact, correlationId }).pipe(
+    recordedWork(parts.record, address, { work, rule }, { causationId, correlationId }).pipe(
       Effect.map((made) => (made === undefined ? undefined : { id: made.id, at: made.at, correlationId })),
     ),
   );

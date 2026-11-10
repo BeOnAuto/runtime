@@ -2,7 +2,7 @@ import { Buffer } from 'node:buffer';
 
 import { refusingForbiddenCharacters } from '@on.auto/definitions';
 import { parsedTemplate, type RenderClock } from '@on.auto/definitions/template';
-import { renderedText, textAt, toolBlockEngine } from '@on.auto/definitions/tool-blocks';
+import { argumentsFailureWords, renderedText, textAt, toolBlockEngine } from '@on.auto/definitions/tool-blocks';
 import { answerDocument, type CallAnswer } from '@on.auto/tool-servers';
 import { Result, Schema } from 'effect';
 
@@ -65,14 +65,11 @@ interface KeyedDelivery {
   readonly key: string;
 }
 
-function placeOf({ record, replies, sent, key }: KeyedDelivery, clock: RenderClock): RepliesIn {
-  const reading = readingOf(replies, { to: record.to, sent, key }, clock);
-  return {
-    server: record.deliver.server,
-    tool: replies.tool,
-    key,
-    ...(Result.isSuccess(reading) ? { reading: reading.success } : {}),
-  };
+function placeOf({ record, replies, sent, key }: KeyedDelivery, clock: RenderClock): Result.Result<RepliesIn, string> {
+  return Result.mapBoth(readingOf(replies, { to: record.to, sent, key }, clock), {
+    onFailure: (failure) => argumentsFailureWords(failure, 'the read'),
+    onSuccess: (reading) => ({ server: record.deliver.server, tool: replies.tool, key, reading }),
+  });
 }
 
 function keptAs(record: DeliveringRecord, deliveredAs: DeliveredAs, clock: RenderClock): Result.Result<Kept, string> {
@@ -80,10 +77,12 @@ function keptAs(record: DeliveringRecord, deliveredAs: DeliveredAs, clock: Rende
   if (replies === undefined) {
     return Result.succeed({ delivered_as: deliveredAs });
   }
-  return Result.map(keyOf(replies, record.to, deliveredAs, clock), (key) => ({
-    delivered_as: deliveredAs,
-    replies_in: placeOf({ record, replies, sent: deliveredAs, key }, clock),
-  }));
+  return Result.flatMap(keyOf(replies, record.to, deliveredAs, clock), (key) =>
+    Result.map(placeOf({ record, replies, sent: deliveredAs, key }, clock), (place) => ({
+      delivered_as: deliveredAs,
+      replies_in: place,
+    })),
+  );
 }
 
 export function keptOf(record: DeliveringRecord, answer: CallAnswer, clock: RenderClock): Kept {

@@ -6,5 +6,7 @@
   "src/own-calls/0.46.0/replies_read.json": "ac8d91ac5851f324b867d8cf5061fff256a64f839530100b722cd87856c4741c",
   "src/own-calls/0.46.0/telling_failed.json": "28cefaa933d512661840d06ba3df52212bee8d648c2431d61d740ca463a3abe4",
   "src/own-calls/0.46.0/telling_started.json": "5b8c0d0b1ed3b2f19824737c87c1e5e3c6c0be9fd7008a3a252c6d145431a0c4",
-  "src/own-calls/0.46.0/telling_succeeded.json": "2200334d17ee74c843070035f875c03de19ad4637661821039f2dcdd3803892b"
+  "src/own-calls/0.46.0/telling_succeeded.json": "2200334d17ee74c843070035f875c03de19ad4637661821039f2dcdd3803892b",
+  "src/own-calls/0.57.0/reading_failed.json": "de789161d9de902c4c96ea1a26b1744b7f1adff9acc2490994f3fcb2624fd591",
+  "src/own-calls/0.57.0/replies_read.json": "270bb1272b9fc1432d561bcb2c2331fc4040e76b6a3cde93fc59b067542bcad0"
 }

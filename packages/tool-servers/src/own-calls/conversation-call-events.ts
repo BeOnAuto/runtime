@@ -61,6 +61,7 @@ const theConversation = {
   connection_id: sentFields.connection_id,
   tool: Schema.String,
   conversation: Schema.String,
+  reading: Schema.optionalKey(Schema.String),
   since: Schema.NullOr(Schema.String),
 };
 

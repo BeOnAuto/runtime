@@ -16,6 +16,8 @@ const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
 const fitsForTheSampleNotForTheRequest = `{% for i in (1..262) %}${'a'.repeat(1000)}{% endfor %}${'{{ to }}'.repeat(20)}`;
 
+const pastTheBoundOnceItHasACursor = '{% for i in (1..1100) %}{{ since }}{% endfor %}';
+
 async function deliveredInThread(document?: string) {
   const playbook = await chatHarness(document === undefined ? {} : { document });
   await playbook.askInThread(runId);
@@ -24,23 +26,35 @@ async function deliveredInThread(document?: string) {
 }
 
 describe('a conversation read later', () => {
-  it('sends no read whose arguments do not fit its request, records why, and rests the conversation', async () => {
+  it('is never joined by a request whose read renders no arguments for it, which waits for answer_interaction', async () => {
     const playbook = await deliveredInThread(
       threadRepliesWith("    ts: '{{ sent.id }}'", `    ts: '${fitsForTheSampleNotForTheRequest}'`),
     );
 
     await playbook.performReads(Date.now() + farAhead);
-    const [row] = await conversationRows(playbook.ledger);
 
     expect(playbook.chat.calls()).toHaveLength(1);
-    expect(await recordsOf(playbook.ledger, 'reading_failed')).toMatchObject([
+    expect(await conversationRows(playbook.ledger)).toEqual([]);
+    expect(await playbook.firstOpen()).toMatchObject({ standing: 'delivered', conversation: null });
+  });
+
+  it('sends no read whose arguments do not fit the cursor it reads from, records why, and rests the conversation', async () => {
+    const playbook = await deliveredInThread(
+      threadRepliesWith(`    oldest: '{{ since | default: "0" }}'`, `    oldest: '${pastTheBoundOnceItHasACursor}'`),
+    );
+    playbook.chat.answerNext(answered({ messages: [{ ts: 'x'.repeat(250), user: 'U1', text: 'hi' }] }));
+    await playbook.performReads(Date.now() + farAhead);
+
+    await playbook.performReads(Date.now() + 2 * farAhead);
+    const [row] = await conversationRows(playbook.ledger);
+
+    expect(playbook.chat.calls()).toHaveLength(2);
+    expect((await recordsOf(playbook.ledger, 'reading_failed')).map(({ data }) => data)).toMatchObject([
       {
-        data: {
-          server: 'chat',
-          tool: 'thread_replies',
-          because: 'not_sent',
-          detail: 'The argument ts of the read renders more than the 262144 bytes a call may send',
-        },
+        server: 'chat',
+        tool: 'thread_replies',
+        because: 'not_sent',
+        detail: 'The argument oldest of the read renders more than the 262144 bytes a call may send',
       },
     ]);
     expect(row?.row).toMatchObject({ open: false, due_at: null });

@@ -50,8 +50,8 @@ function threadOf(thread: string) {
   return thread === '' ? {} : { thread_ts: thread };
 }
 
-export function chatBoard(): ChatBoard {
-  const messages: ChatMessage[] = [];
+export function chatBoard(already: readonly ChatMessage[] = []): ChatBoard {
+  const messages: ChatMessage[] = [...already];
   const nextTs = () => `1699.${String(messages.length + 1).padStart(6, '0')}`;
   const post = (call: OneCall): BoardAnswer => {
     const ts = nextTs();

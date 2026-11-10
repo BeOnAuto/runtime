@@ -69,9 +69,9 @@ function answeredBy(request: KeptRequest, words: string): ReplyDecision {
   return issues.length === 0 ? { kind: 'take', request, answer } : refused(request, 'invalid', issues);
 }
 
-export function decisionOf(reply: Reply, kept: readonly KeptRequest[], answered: ReadonlySet<string>): ReplyDecision {
+export function decisionOf(reply: Reply, kept: readonly KeptRequest[]): ReplyDecision {
   const { request, ambiguous } = belongingOf(reply, kept);
-  if (request === undefined || request.row.answerer !== reply.sender || answered.has(request.runId)) {
+  if (request === undefined || request.row.answerer !== reply.sender) {
     return nothing;
   }
   if (ambiguous) {

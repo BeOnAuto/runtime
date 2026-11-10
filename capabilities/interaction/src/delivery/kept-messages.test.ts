@@ -121,7 +121,7 @@ describe('the reading a delivery records', () => {
     ]);
   });
 
-  it('is left out, where replies are read kept, when the read renders no arguments for the request', async () => {
+  it('cannot be rendered for a request whose read renders no arguments, so it takes no reply, and says why', async () => {
     const { ended } = await deliveredWith(
       undefined,
       threadRepliesWith(
@@ -131,9 +131,9 @@ describe('the reading a delivery records', () => {
     );
 
     expect(keptOf(ended)).toEqual([
-      { conversation: '#approvals-sales', id: '1699.000001' },
-      { server: 'chat', tool: 'thread_replies', key: '#approvals-sales/1699.000001' },
       undefined,
+      undefined,
+      `The argument ts of the read renders more than the 262144 bytes a call may send${takesNoReply}`,
     ]);
   });
 });

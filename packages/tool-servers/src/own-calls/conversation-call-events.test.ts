@@ -100,10 +100,54 @@ const baseline: readonly (typeof ConversationCallEventSchema.Type)[] = [
   },
 ];
 
+const ofOneReading = {
+  ...theConversation,
+  reading: '3f1c9a7be2d04c6e8a5b7d9f1e3c5a7b9d1f3e5c7a9b1d3f5e7c9a1b3d5f7e9c',
+};
+
+const readingRecorded: readonly (typeof ConversationCallEventSchema.Type)[] = [
+  {
+    type: 'replies_read',
+    data: {
+      ...ofTheCall,
+      ...ofOneReading,
+      arguments_bytes: 40,
+      arguments_sha256: 'b1c2d3',
+      result_bytes: 900,
+      result_sha256: 'e4f5a6',
+      duration_ms: 70,
+      jsonrpc_id: 5,
+      server_request_id: 'request-2',
+      replies: 3,
+      taken: 1,
+      refused: 1,
+    },
+    context: acted,
+  },
+  {
+    type: 'reading_failed',
+    data: {
+      ...ofTheCall,
+      ...ofOneReading,
+      arguments_bytes: 40,
+      arguments_sha256: 'b1c2d3',
+      detail: 'The server asked the runtime to wait',
+      duration_ms: 50,
+      jsonrpc_id: 6,
+      server_request_id: 'request-3',
+      because: 'server_failure',
+      retry_after_ms: 60_000,
+      result_bytes: 16,
+      result_sha256: 'c7d8e9',
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the calls the runtime makes to tell a conversation and read its replies', () => {
   recordedFactsBehaviour({
     schema: ConversationCallEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.57.0': readingRecorded },
   });
 });

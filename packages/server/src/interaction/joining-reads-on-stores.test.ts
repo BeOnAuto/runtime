@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { conversations, openRequests } from '@on.auto/interaction';
+import { conversations, openRequests, readings } from '@on.auto/interaction';
 import {
   answererId,
   chatHarness,
@@ -24,7 +24,7 @@ const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 const notice =
   postgresql === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
-const projections = [openRequests, conversations];
+const projections = [openRequests, conversations, readings];
 
 async function administer(statement: string): Promise<void> {
   const client = new Client({ connectionString: postgresql });

@@ -1,0 +1,716 @@
+{
+  "facts": [
+    {
+      "stream": "playbook/acme/alpha/definitions/interaction",
+      "type": "definition_created",
+      "data": {
+        "content": {
+          "source": "---\ndescription: Ask the campaign's owner to approve a brief\nto: '#approvals-{{ input.team }}'\nfrom: '{{ input.owner }}'\nexpires: P2D\ndeliver:\n  server: chat\n  tool: post_message\n  with:\n    channel: '{{ to }}'\n    text: '{{ message }}'\n  sent:\n    conversation: /channel\n    id: /ts\nreplies:\n  tool: thread_replies\n  with:\n    channel: '{{ sent.conversation }}'\n    ts: '{{ sent.id }}'\n    oldest: '{{ since | default: \"0\" }}'\n    limit: 15\n  read:\n    list: /messages\n    order: oldest_first\n    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }\n  wait: PT1M\n  tell:\n    with:\n      channel: '{{ sent.conversation }}'\n      thread_ts: '{{ sent.id }}'\n      text: '{{ message }}'\ninput:\n  schema:\n    type: object\n    required: [team, owner, campaign]\n    properties:\n      team: { type: string }\n      owner: { type: string }\n      campaign: { type: string }\noutput:\n  schema:\n    type: object\n    required: [choice]\n    properties:\n      choice: { type: string, enum: [approve, reject] }\n      note: { type: string, maxLength: 2000 }\nreply:\n  choice:\n    from: word\n    words:\n      approve: [approved, yes, ok]\n      reject: [rejected, no]\n  note: rest\n---\nPlease review the brief for {{ input.campaign }}.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "diagram": "none",
+          "description": "Ask the campaign's owner to approve a brief",
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "team",
+              "owner",
+              "campaign"
+            ],
+            "properties": {
+              "team": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "campaign": {
+                "type": "string"
+              }
+            }
+          },
+          "output_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "details": {
+            "expires": "P2D",
+            "deliver": {
+              "server": "chat",
+              "tool": "post_message"
+            }
+          }
+        },
+        "created_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.254Z",
+        "by": "acme-admin",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/definitions/interaction",
+      "type": "definition_created",
+      "data": {
+        "content": {
+          "source": "---\ndescription: Ask the campaign's owner to approve a brief\nto: '#approvals-{{ input.team }}'\nfrom: '{{ input.owner }}'\nexpires: P2D\ndeliver:\n  server: chat\n  tool: post_message\n  with:\n    channel: '{{ to }}'\n    text: '{{ message }}'\n  sent:\n    conversation: /channel\n    id: /ts\nreplies:\n  tool: thread_replies\n  with:\n    channel: '{{ sent.conversation }}'\n    ts: '{% for i in (1..262) %}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa{% endfor %}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}'\n    oldest: '{{ since | default: \"0\" }}'\n    limit: 15\n  read:\n    list: /messages\n    order: oldest_first\n    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }\n  wait: PT1M\n  tell:\n    with:\n      channel: '{{ sent.conversation }}'\n      thread_ts: '{{ sent.id }}'\n      text: '{{ message }}'\ninput:\n  schema:\n    type: object\n    required: [team, owner, campaign]\n    properties:\n      team: { type: string }\n      owner: { type: string }\n      campaign: { type: string }\noutput:\n  schema:\n    type: object\n    required: [choice]\n    properties:\n      choice: { type: string, enum: [approve, reject] }\n      note: { type: string, maxLength: 2000 }\nreply:\n  choice:\n    from: word\n    words:\n      approve: [approved, yes, ok]\n      reject: [rejected, no]\n  note: rest\n---\nPlease review the brief for {{ input.campaign }}.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "diagram": "none",
+          "description": "Ask the campaign's owner to approve a brief",
+          "input_schema": {
+            "type": "object",
+            "required": [
+              "team",
+              "owner",
+              "campaign"
+            ],
+            "properties": {
+              "team": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "campaign": {
+                "type": "string"
+              }
+            }
+          },
+          "output_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "details": {
+            "expires": "P2D",
+            "deliver": {
+              "server": "chat",
+              "tool": "post_message"
+            }
+          }
+        },
+        "created_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.265Z",
+        "by": "acme-admin",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": null
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "sales",
+          "owner": "U024BE7LH",
+          "campaign": "Spring"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.271Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-sales",
+          "message": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T21:16:03.273Z",
+          "requested_at": "2026-11-10T21:16:03.273Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "ts": "{{ sent.id }}",
+              "oldest": "{{ since | default: \"0\" }}",
+              "limit": 15
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text",
+                "to": "/thread_ts"
+              }
+            },
+            "wait": "PT1M",
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "thread_ts": "{{ sent.id }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.274Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "fa3fdb6b-3eea-5acf-9045-a5e4c320e5b4",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "sales",
+          "owner": "U024BE7LH",
+          "campaign": "Terms"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.278Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-sales",
+          "message": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T21:16:03.279Z",
+          "requested_at": "2026-11-10T21:16:03.279Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "ts": "{% for i in (1..262) %}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa{% endfor %}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}",
+              "oldest": "{{ since | default: \"0\" }}",
+              "limit": 15
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text",
+                "to": "/thread_ts"
+              }
+            },
+            "wait": "PT1M",
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "thread_ts": "{{ sent.id }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.279Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "8026f691-f417-5645-973c-144ef7c27d3a",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+      "type": "run_started",
+      "data": {
+        "input": {
+          "team": "legal",
+          "owner": "U024BE7LH",
+          "campaign": "Terms"
+        },
+        "started_by": {
+          "id": "acme-admin",
+          "name": "acme-admin"
+        },
+        "finishes_later": true
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.282Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": null,
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+      "type": "run_deferred",
+      "data": {
+        "record": {
+          "to": "#approvals-legal",
+          "message": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject.",
+          "answer_schema": {
+            "type": "object",
+            "required": [
+              "choice"
+            ],
+            "properties": {
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "approve",
+                  "reject"
+                ]
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            }
+          },
+          "answerer": "U024BE7LH",
+          "reply": {
+            "choice": {
+              "from": "word",
+              "words": {
+                "approve": [
+                  "approved",
+                  "yes",
+                  "ok"
+                ],
+                "reject": [
+                  "rejected",
+                  "no"
+                ]
+              }
+            },
+            "note": {
+              "from": "rest"
+            }
+          },
+          "expires_at": "2026-11-12T21:16:03.283Z",
+          "requested_at": "2026-11-10T21:16:03.283Z",
+          "deliver": {
+            "server": "chat",
+            "tool": "post_message",
+            "with": {
+              "channel": "{{ to }}",
+              "text": "{{ message }}"
+            },
+            "sent": {
+              "conversation": "/channel",
+              "id": "/ts"
+            }
+          },
+          "replies": {
+            "tool": "thread_replies",
+            "with": {
+              "channel": "{{ sent.conversation }}",
+              "ts": "{% for i in (1..262) %}aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa{% endfor %}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}{{ to }}",
+              "oldest": "{{ since | default: \"0\" }}",
+              "limit": 15
+            },
+            "read": {
+              "list": "/messages",
+              "order": "oldest_first",
+              "each": {
+                "id": "/ts",
+                "sender": "/user",
+                "text": "/text",
+                "to": "/thread_ts"
+              }
+            },
+            "wait": "PT1M",
+            "tell": {
+              "with": {
+                "channel": "{{ sent.conversation }}",
+                "thread_ts": "{{ sent.id }}",
+                "text": "{{ message }}"
+              }
+            }
+          }
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.283Z",
+        "by": "acme-admin",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "43713baf-04e2-5198-b8e5-cde4c8ac4aaf",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-sales",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 138,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.285Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "906a53b3-7f88-572c-b8da-1682499f3246",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-sales",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 137,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.286Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "6f875f93-081b-51ba-be95-2fb1af1d990f",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+      "type": "delivery_started",
+      "data": {
+        "number": 1,
+        "target": "#approvals-legal",
+        "server": "chat",
+        "tool": "post_message",
+        "arguments_bytes": 137,
+        "arguments_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.286Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "8d7e71bb-4685-5064-a916-27d2a67c19c6",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 2,
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 1,
+        "delivered_as": {
+          "conversation": "#approvals-sales",
+          "id": "1699.000001"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-sales",
+          "reading": "13148a1a3b4e4fd52904119d315e0d10bf39a6e4e6f2e801d250d3fa37938dde"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.287Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91",
+        "definitionType": "interaction",
+        "definitionName": "approve-brief",
+        "definitionVersion": 1
+      },
+      "causationId": "897e45c4-eece-5fc8-80ed-b952994d13ad",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 3,
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 2,
+        "delivered_as": {
+          "conversation": "#approvals-sales",
+          "id": "1699.000002"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-sales"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.289Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "ae5f0b96-4b0c-506a-9efe-81b9783c8747",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92"
+    },
+    {
+      "stream": "playbook/acme/alpha/runs/0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+      "type": "delivery_succeeded",
+      "data": {
+        "number": 1,
+        "duration_ms": 4,
+        "result_bytes": 108,
+        "result_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "jsonrpc_id": 3,
+        "delivered_as": {
+          "conversation": "#approvals-legal",
+          "id": "1699.000003"
+        },
+        "replies_in": {
+          "server": "chat",
+          "tool": "thread_replies",
+          "key": "#approvals-legal"
+        }
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.290Z",
+        "by": "playbook:alpha",
+        "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93",
+        "definitionType": "interaction",
+        "definitionName": "approve-terms",
+        "definitionVersion": 1
+      },
+      "causationId": "a0c0a0b0-2dae-560d-bd9e-6e906c61b52e",
+      "correlationId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b93"
+    },
+    {
+      "stream": "playbook/acme/alpha/conversation-calls/01a1c751-675e-71b8-9267-17ead52dbcbf",
+      "type": "reading_failed",
+      "data": {
+        "call_id": "01a1c751-675e-71b8-9267-17ead52dbcbf",
+        "server": "chat",
+        "tool": "thread_replies",
+        "conversation": "#approvals-legal",
+        "since": null,
+        "detail": "The argument ts of the read renders more than the 262144 bytes a call may send",
+        "because": "not_sent"
+      },
+      "context": {
+        "at": "2026-11-10T21:16:03.294Z",
+        "by": "playbook:alpha"
+      },
+      "causationId": "85917d86-16ea-52f2-9749-8622a094318c",
+      "correlationId": null
+    }
+  ],
+  "messages": [
+    {
+      "ts": "1699.000001",
+      "channel": "#approvals-sales",
+      "user": "playbook",
+      "text": "Please review the brief for Spring.\n\nReply **approve** or **reject**, with a note if you reject."
+    },
+    {
+      "ts": "1699.000002",
+      "channel": "#approvals-sales",
+      "user": "playbook",
+      "text": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject."
+    },
+    {
+      "ts": "1699.000003",
+      "channel": "#approvals-legal",
+      "user": "playbook",
+      "text": "Please review the brief for Terms.\n\nReply **approve** or **reject**, with a note if you reject."
+    }
+  ]
+}
