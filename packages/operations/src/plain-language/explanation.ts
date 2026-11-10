@@ -152,6 +152,10 @@ const explanationByKind: Readonly<Record<RejectionKind, Explanation>> = {
     why: 'the provider did not finish what it was asked to make within the time a run waits for it',
     remedy: 'A new run asks the provider again, which may cost again; a shorter or simpler request may finish in time.',
   },
+  content_unavailable: {
+    why: 'something it needs, which its playbook keeps in its stored content, could not be read just now',
+    remedy: 'Nothing needs to change; it can be tried again shortly.',
+  },
   tools_unfinished: {
     why: 'it called tools but could not finish',
     remedy:
@@ -179,6 +183,10 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   no_answer: 'because the model kept calling tools instead of answering',
   restarted_without_content:
     'because the server restarted before it finished, and the playbook keeps no content of its calls to go on from',
+  input_missing: "because the input it was given can't be found in the playbook's stored content",
+  answer_missing: "because the answer it was given can't be found in the playbook's stored content",
+  workflow_document_missing: "because the document of its workflow can't be found in the playbook's stored content",
+  function_document_missing: "because the document of its function can't be found in the playbook's stored content",
   call_outcome_unknown:
     'because the server restarted while it called a tool that may change something, so whether that call did is not known',
   only_read: 'because every tool it called is marked reads',

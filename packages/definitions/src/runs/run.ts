@@ -42,7 +42,7 @@ export const RunRejectionSchema = Schema.Union([
     kind: Schema.optionalKey(
       UnavailableKindSchema.annotate({
         description:
-          'What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, and generation_timed_out for a generation function whose provider had not finished when the run had waited as long as it may',
+          'What the run could not use, when known: model_not_offered for a model this server does not offer, tool_not_offered for a tool it does not offer, tool_server_failed for a tool server that failed before any tool was called, tools_unfinished for a run that called tools and could not finish, every one of which is marked reads, so running it again is safe, generation_timed_out for a generation function whose provider had not finished when the run had waited as long as it may, and content_unavailable for something the playbook keeps in its stored content that could not be read just now, so trying again shortly may work',
       }),
     ),
     because: Schema.optionalKey(
@@ -65,7 +65,7 @@ export const RunRejectionSchema = Schema.Union([
     because: Schema.optionalKey(
       RejectionBecauseSchema.annotate({
         description:
-          'Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown',
+          "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on",
       }),
     ),
     ...endedByAStep,

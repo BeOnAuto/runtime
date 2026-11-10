@@ -262,6 +262,7 @@ const becauseOfKind = {
   dataset_not_ready: {},
   generation_timed_out: {},
   meter_unavailable: {},
+  content_unavailable: {},
 } as const;
 
 const sendNotes = defineCommand('playbook', {
