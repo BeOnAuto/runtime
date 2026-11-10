@@ -22699,7 +22699,7 @@
                 "properties": {
                   "arguments": {
                     "type": "object",
-                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 16 KiB as JSON"
+                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 256 KiB as JSON"
                   }
                 },
                 "required": [
@@ -22853,7 +22853,7 @@
                 "properties": {
                   "arguments": {
                     "type": "object",
-                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 16 KiB as JSON"
+                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 256 KiB as JSON"
                   }
                 }
               }
@@ -23100,7 +23100,7 @@
                 "properties": {
                   "arguments": {
                     "type": "object",
-                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 16 KiB as JSON"
+                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 256 KiB as JSON"
                   }
                 }
               }
@@ -23280,7 +23280,7 @@
                 "properties": {
                   "arguments": {
                     "type": "object",
-                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 16 KiB as JSON"
+                    "description": "The arguments of the call, an object in the shape of the tool's input_schema, at most 256 KiB as JSON"
                   }
                 }
               }

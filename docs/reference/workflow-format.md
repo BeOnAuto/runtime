@@ -647,6 +647,7 @@ The rejection gives a `reason`, and a `kind` where it has one:
 | Output of a run               | 1,048,574 bytes as JSON, which with the run's record makes 1 MiB          |
 | Data a run holds at once      | 4 MiB: its values as JSON, the document, and 4 KiB a task under way       |
 | One value kept across a wait  | 1,572,864 bytes (1.5 MiB) as JSON, less the rest of its recorded change   |
+| Calls started at once         | Their inputs, each counted twice, within that same 1.5 MiB                |
 | Tasks without waiting         | 10,000                                                                    |
 | Inputs a run takes            | 100,000: its start, each answer of a function, each timer and each event  |
 | Recorded history of a run     | 512 MiB as JSON                                                           |
@@ -666,6 +667,7 @@ The rejection gives a `reason`, and a `kind` where it has one:
 What happens at a limit:
 
 - Some limits end the run at once, rejected as `unavailable` with a `runtime` error of status 500. They are the limits on held data, on a value kept across a wait, on tasks without waiting, on inputs and on history.
+- Calls a step starts at once, such as the branches of a `fork`, record each call's input twice in the one change that starts them, beside the workflow's input when they start the run. Three calls with inputs near 250 KiB started together pass the 1.5 MiB that change may hold, and the run is rejected before any of them is made; the same calls in steps one after another succeed. Start calls with large inputs one after another.
 - One event more than the event limits allow ends the run at once, rejected, and later events to it are refused with `not_found`.
 - An emit beyond the limit on emitted events fails its task with a `runtime` error of status 500, which the workflow's `try` can catch. An emitted event larger than 240 KiB fails it with a `validation` error of status 400.
 

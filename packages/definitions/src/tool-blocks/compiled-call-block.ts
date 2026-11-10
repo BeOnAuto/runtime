@@ -6,12 +6,7 @@ import type { RenderClock } from '../template/render-clock.ts';
 import { templatesIssues, type TemplatePlace } from './block-templates.ts';
 import type { CallBlock } from './call-block-schemas.ts';
 import { isJsonPointer } from './json-pointers.ts';
-import {
-  argumentsFailureWords,
-  renderedArguments,
-  type ArgumentsFailure,
-  type Templates,
-} from './rendered-arguments.ts';
+import { argumentsFailureWords, isOversized, renderedArguments, type Templates } from './rendered-arguments.ts';
 import { callTemplates } from './template-sets.ts';
 
 export interface DocumentReading {
@@ -47,10 +42,6 @@ export function pointerIssues(lines: SourceLines, pointers: WrittenNames): reado
   return pointers
     .filter(([, pointer]) => pointer !== undefined && !isPointerIntoAnswer(pointer))
     .map(([place]) => issueAt(lines, place, pointerWords));
-}
-
-function isOversized(failure: ArgumentsFailure): boolean {
-  return failure.reason === 'too_large' || failure.failure.reason === 'too_long';
 }
 
 function callArgumentIssues(written: Templates, place: TemplatePlace): readonly DocumentIssue[] {

@@ -108,7 +108,7 @@ The arguments in `with` are the tool's own, named as its `input_schema` names th
 - A text is a Liquid template that reads `input`, `today` and `now`, and is sent as the text it renders.
 - A text that is one `{{ }}` and nothing else sends the value it reads, as that value is. So `'{{ input.limit }}'` sends a number when the input's `limit` is a number.
 
-A template may use the filters listed in [Templates](template.md#filters), the `templates` guide. `read` names a place in the answer and nothing more. To reshape what a lookup returns, use the workflow's `output.as`, a reasoning function, or a computation function.
+A template may use the filters listed in [Templates](template.md#filters), the `templates` guide, and must render within 200 ms: one that builds a large text in a long loop or through a long chain of filters can be refused for its time, whatever its size, so send a large value as one `{{ }}`, which sends it as it is. `read` names a place in the answer and nothing more. To reshape what a lookup returns, use the workflow's `output.as`, a reasoning function, or a computation function.
 
 ## Fields
 
@@ -235,7 +235,7 @@ When a lookup function runs, the runtime reads the mark again, as it lists the s
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `succeeded`                              | The tool returned a result and the part `read` points at matched `output.schema`; that part is the output. For `runs`, the runs it read, which may be none                                                                                             |
 | `invalid_input`                          | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads                                                                                                                              |
-| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass 16 KiB                                                                                                                                                                               |
+| `conflict`, kind `unworkable`            | An argument renders a structure among text, or the arguments pass 256 KiB                                                                                                                                                                              |
 | `conflict`, kind `unworkable`            | `runs.words` renders more than 1,000 characters, `runs.since` renders neither a day nor a date and time, or either renders a structure                                                                                                                 |
 | `conflict`, kind `unworkable`            | The tool refused the arguments, the answer has nothing to read or nothing where `read` points, the part at `read` is more than a run may record, or `output.schema` refuses it                                                                         |
 | `unavailable`, kind `tool_not_read_only` | The tool is no longer marked `reads`. Nothing was sent                                                                                                                                                                                                 |
@@ -258,14 +258,16 @@ The playbook keeps the arguments and the tool's whole result, scrubbed of secret
 
 | Bound                                         | Value                                                   | When it is reached                                              |
 | --------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------- |
-| The arguments of the call                     | 16 KiB as JSON                                          | `conflict`, `unworkable`                                        |
-| The arguments of a call that reads no `input` | 16 KiB as JSON                                          | Refused when saved                                              |
+| The arguments of the call                     | 256 KiB as JSON                                         | `conflict`, `unworkable`                                        |
+| The arguments of a call that reads no `input` | 256 KiB as JSON                                         | Refused when saved                                              |
 | The call of its tool                          | 10 seconds to open, 10 to list the tools, 30 to respond | `tool_server_failed` before sending; then `tools_unfinished`    |
 | What `read` takes                             | 1 MiB as JSON with the run's record, 512 levels         | `conflict`, `unworkable`                                        |
 | Calls in one run                              | 1, within 70 seconds                                    | Not applicable                                                  |
 | `runs.words`                                  | 1,000 characters                                        | Refused when saved; `conflict`, `unworkable` when rendered      |
 | The runs one run reads                        | 10 pages: 10,000 runs of the playbook, 1,000 answered   | `more: true`                                                    |
 | What a read of runs answers                   | 1 MiB as JSON with the run's record                     | The output that does not fit is given by its size; `more: true` |
+
+A tool server may take less than a call may send: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413, which the run reads as `The tool server answered HTTP 413: the request was larger than the server takes`.
 
 A tool that pages returns one page for each run. Point `read` at the part that holds both the items and the cursor, and have the workflow call again with the cursor while there is one.
 

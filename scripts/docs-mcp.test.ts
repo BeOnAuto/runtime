@@ -33,7 +33,7 @@ await test('reasoning guides retain tool-use limits and side-effect-aware retrie
     assert.ok(guide.includes('tools_called'));
     assert.ok(guide.includes('25'));
     assert.ok(guide.includes('REASONING_MAX_INPUT_TOKENS'));
-    assert.ok(guide.includes('16 KiB'));
+    assert.ok(guide.includes('256 KiB'));
   }
   assert.ok(publicGuide.includes('Inspect its history and any external effects'));
   assert.ok(publicGuide.includes('Retrying a successful run returns its recorded result'));

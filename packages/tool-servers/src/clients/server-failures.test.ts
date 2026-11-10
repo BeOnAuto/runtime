@@ -22,6 +22,22 @@ function caused(...codes: readonly unknown[]): Error {
   return Object.assign(new Error('fetch failed', { cause }), { code });
 }
 
+describe('a server that refuses a request as too large', () => {
+  it('fails in words that say what its 413, 414 or 431 means', () => {
+    expect([413, 414, 431].map((status) => failureOf(answered(status)))).toEqual([
+      { kind: 'failing', message: 'The tool server answered HTTP 413: the request was larger than the server takes' },
+      {
+        kind: 'failing',
+        message: 'The tool server answered HTTP 414: the address of the request was longer than the server takes',
+      },
+      {
+        kind: 'failing',
+        message: 'The tool server answered HTTP 431: the headers of the request were larger than the server takes',
+      },
+    ]);
+  });
+});
+
 describe('what a server failure is', () => {
   it('reads an HTTP answer by its status', () => {
     expect(failureOf(answered(401))).toEqual({ kind: 'key_refused', message: 'The tool server answered HTTP 401' });

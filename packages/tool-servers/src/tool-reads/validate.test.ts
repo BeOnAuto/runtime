@@ -170,13 +170,13 @@ describe('validate against a schema this server cannot check', () => {
 });
 
 describe('the arguments validate takes', () => {
-  it('are required, and may take 16 KiB as JSON, one byte more refused at /arguments before anything is asked', async () => {
+  it('are required, and may take 256 KiB as JSON, one byte more refused at /arguments before anything is asked', async () => {
     const { fake, call } = await validatingOn();
     const asked = { server: 'graph', tool: 'search' };
 
-    const admitted = await call('validate', { ...asked, arguments: filling(16_384) });
+    const admitted = await call('validate', { ...asked, arguments: filling(262_144) });
     const before = fake.seen().length;
-    const refused = await call('validate', { ...asked, arguments: filling(16_385) });
+    const refused = await call('validate', { ...asked, arguments: filling(262_145) });
     const missing = await call('validate', asked);
 
     expect(admitted).toMatchObject({ status: 'succeeded', output: { valid: true } });
@@ -186,7 +186,7 @@ describe('the arguments validate takes', () => {
         issues: [
           {
             pointer: '/arguments',
-            detail: 'The arguments take 16385 bytes as JSON, more than the 16384 a call may send',
+            detail: 'The arguments take 262145 bytes as JSON, more than the 262144 a call may send',
           },
         ],
       },

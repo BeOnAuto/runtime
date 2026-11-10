@@ -272,10 +272,14 @@ A run checks its tools after it confirms that its model is offered, and before i
 The runtime checks each call before it sends it:
 
 - A run makes at most 25 calls; any further call is refused.
-- A call that sends more than 16 KiB of arguments is refused.
+- A call that sends more than 256 KiB of arguments as JSON is refused, the most a run may take as its input. The model reads how large its arguments were, and is told to send less in one call, in parts where the tool takes them.
 - A third call of the same tool with the same arguments is refused, and the model is pointed to the result of the earlier call.
 
-A refused call is not sent and not recorded, and the model is told why.
+A refused call is not sent and not recorded, and the model is told why. A tool server may take less than a call may send: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413, which the model reads as `The tool server answered HTTP 413: the request was larger than the server takes`.
+
+A model writes a call's arguments as output tokens, so `config.max_output_tokens` limits them first. A token is about 3 to 4 bytes of English prose, and fewer of code or of text full of quotes and line breaks. At the default of 1,024 tokens, a model writes about 3 to 4 KiB of arguments. To let it write a large argument, such as a whole document, raise `config.max_output_tokens` to about one token for every 3 bytes: about 22,000 for a document of 64 KiB. At the most it allows, 64,000, a model writes roughly 200 KiB.
+
+When the model reaches `config.max_output_tokens` while it writes a call, a call whose arguments were cut so that they no longer parse is not sent: the model reads that they did not parse, as any call it cannot make, and the run goes on. A call whose arguments still parse is sent as written, though the model may have been cut off before it finished them. In a function that answers in JSON, the run ends as `conflict`, kind `unworkable`, as a JSON answer cut off at `max_output_tokens` does. Set `config.max_output_tokens` above what the largest argument needs. Every later step of the run reads those arguments again as input, so a run that writes several large documents uses its input tokens quickly; [Write a large document to a service](../guides/tools.md#write-a-large-document-to-a-service) shows a workflow that writes one document a run.
 
 The model reads each tool result in full. A result is cut, with a note of how much was left out, only when it would not fit in the room left for the step that called it:
 

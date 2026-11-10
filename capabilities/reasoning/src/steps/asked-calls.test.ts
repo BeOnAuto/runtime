@@ -123,4 +123,30 @@ describe('the calls a run may make', () => {
     expect(JSON.stringify(tooMany.requests().at(-1))).toContain('This run has made all the 25 tool calls it may');
     expect(JSON.stringify(again.requests().at(-1))).toContain('use the answer to the call call-2 instead');
   });
+
+  it('send 256 KiB of arguments as JSON, and refuse one byte more in words that say to send less in one call', async () => {
+    const fits = { query: 'x'.repeat(262_144 - JSON.stringify({ query: '' }).length) };
+    const steps = stepsOf({
+      tools: [search],
+      replies: [
+        answers(toolCallsResult([['graph__search', fits]])),
+        answers(toolCallsResult([['graph__search', { query: `${fits.query}x` }]])),
+        answers(textResult('Done.')),
+      ],
+    });
+    await Effect.runPromise(steps.stepping);
+
+    expect(steps.sends().map(({ input }) => input)).toEqual([fits]);
+    expect(steps.requests()[2]?.conversation?.at(-1)).toMatchObject({
+      content: [
+        {
+          output: {
+            type: 'error-text',
+            value:
+              'The arguments of this call take 262145 bytes, more than the 262144 a call may send; send less in one call, in parts where the tool takes them.',
+          },
+        },
+      ],
+    });
+  });
 });

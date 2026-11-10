@@ -89,24 +89,24 @@ describe('a run that asks a system with arguments it cannot render', () => {
     expect(fake.received()).toEqual([]);
   });
 
-  it('is unworkable when an argument renders a structure among text, or the arguments take more than 16 KiB', async () => {
+  it('is unworkable when an argument renders a structure among text, or the arguments take more than 256 KiB', async () => {
     const { run } = await callRuns();
     const open = ['input:', '  schema: { type: object }'];
     const among = callDocument({ with: ["    channel: 'In {{ input.channel }}'"], input: open });
-    const whole = callDocument({ with: ["    a: '{{ input.a }}'", "    b: '{{ input.b }}'"], input: open });
-    const text = callDocument({ with: ["    channel: 'In {{ input.channel }}'"], input: open });
+    const whole = callDocument({ with: ["    a: '{{ input.a }}'", "    b: '{{ input.a }}'"], input: open });
+    const text = callDocument({ with: ["    channel: 'In {{ input.channel }} and {{ input.channel }}'"], input: open });
 
     expect([
       await run(among, { channel: ['C0123'] }),
-      await run(whole, { a: 'x'.repeat(8200), b: 'x'.repeat(8200) }),
-      await run(text, { channel: 'x'.repeat(16_400) }),
+      await run(whole, { a: 'x'.repeat(131_100) }),
+      await run(text, { channel: 'x'.repeat(131_100) }),
     ]).toEqual([
       rejectedWith({
         kind: 'unworkable',
         detail: expect.stringContaining('renders a value that is not text among text'),
       }),
-      rejectedWith({ kind: 'unworkable', detail: expect.stringContaining('take 16415 bytes, more than the 16384') }),
-      rejectedWith({ kind: 'unworkable', detail: expect.stringContaining('renders more than the 16384 bytes') }),
+      rejectedWith({ kind: 'unworkable', detail: expect.stringContaining('take 262215 bytes, more than the 262144') }),
+      rejectedWith({ kind: 'unworkable', detail: expect.stringContaining('renders more than the 262144 bytes') }),
     ]);
   });
 });

@@ -8,7 +8,7 @@ import {
 } from '@modelcontextprotocol/client';
 import { causesOf, codesOf, HostRefused, HostUnresolved, isUntrustedCertificate } from '@on.auto/outbound';
 
-import { AnsweredStatus } from '../openapi/answered-status.ts';
+import { AnsweredStatus, answeredHttpWords } from '../openapi/answered-status.ts';
 import { ArgumentsRefused } from '../openapi/arguments-refused.ts';
 import { AnsweredCode } from '../openapi/failure-codes.ts';
 import { ScopeLacking, scopeLackingIn, scopeLackingWords } from '../openapi/scope-lacking.ts';
@@ -74,7 +74,7 @@ export const untrustedCertificate =
   'The TLS certificate of the tool server is not trusted by this server; its operator must add the certificate authority with NODE_EXTRA_CA_CERTS';
 
 function httpFailure(status: number): ServerFailure {
-  return { kind: httpKinds.get(status) ?? 'failing', message: `The tool server answered HTTP ${status}` };
+  return { kind: httpKinds.get(status) ?? 'failing', message: answeredHttpWords(status) };
 }
 
 function sdkFailure(code: SdkErrorCode, message: string): ServerFailure {

@@ -164,10 +164,10 @@ describe('the calls a run may make', () => {
 });
 
 describe('the arguments of a call', () => {
-  it('refuses arguments over 16 KiB, and the third call with the same arguments', async () => {
+  it('refuses arguments over 256 KiB, and the third call with the same arguments', async () => {
     const { call, fake } = await runWith(['echo']);
     const inputs: readonly Readonly<Record<string, string>>[] = [
-      { text: 'x'.repeat(16_384) },
+      { text: 'x'.repeat(262_144) },
       { text: 'once' },
       { text: 'once' },
       { text: 'once' },
@@ -176,7 +176,7 @@ describe('the arguments of a call', () => {
     const replies = await inTurn(inputs, (input) => call('echo', input));
 
     expect(replies[0]).toMatchObject({
-      text: 'The arguments of this call take 16395 bytes, more than the 16384 a call may send; send less.',
+      text: 'The arguments of this call take 262155 bytes, more than the 262144 a call may send; send less in one call, in parts where the tool takes them.',
       isError: true,
     });
     expect(replies[3]).toMatchObject({
@@ -229,6 +229,27 @@ describe('a server that fails a call', () => {
       isError: true,
     });
     expect(journal.facts().at(-1)).toMatchObject({ type: 'tool_call_failed', data: { because: 'timed_out' } });
+  });
+});
+
+describe('a server that refuses the body of a call as too large', () => {
+  it('fails the call in words that say so', async () => {
+    const { call, fake, journal } = await runWith(['echo']);
+
+    fake.answerNextOf('tools/call', 413);
+    const reply = await call('echo', { text: 'x'.repeat(200_000) });
+
+    expect(reply).toMatchObject({
+      text: 'The tool server graph failed: The tool server answered HTTP 413: the request was larger than the server takes',
+      isError: true,
+    });
+    expect(journal.facts().at(-1)).toMatchObject({
+      type: 'tool_call_failed',
+      data: {
+        because: 'server_failure',
+        detail: 'The tool server answered HTTP 413: the request was larger than the server takes',
+      },
+    });
   });
 });
 

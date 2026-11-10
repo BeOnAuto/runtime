@@ -104,10 +104,21 @@ const failureWords: Readonly<Record<TextFailure['reason'], string>> = {
   failed: 'cannot be rendered',
 };
 
-export function argumentsFailureWords(failure: ArgumentsFailure, call: string): string {
+export const smallerInputRemedy = 'give the function a smaller input';
+
+export function isOversized(failure: ArgumentsFailure): boolean {
+  return failure.reason === 'too_large' || failure.failure.reason === 'too_long';
+}
+
+function wordsOf(failure: ArgumentsFailure, call: string): string {
   return failure.reason === 'too_large'
     ? `The arguments of ${call} take ${failure.bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send`
     : `The argument ${failure.argument} of ${call} ${failureWords[failure.failure.reason]}`;
+}
+
+export function argumentsFailureWords(failure: ArgumentsFailure, call: string, remedy?: string): string {
+  const words = wordsOf(failure, call);
+  return remedy !== undefined && isOversized(failure) ? `${words}; ${remedy}` : words;
 }
 
 export function momentVariables(input: Schema.Json, at: string): TemplateVariables {

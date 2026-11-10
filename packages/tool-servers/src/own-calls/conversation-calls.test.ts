@@ -244,7 +244,7 @@ describe('a read the playbook could not make in a conversation', () => {
           start: reference,
           since: null,
           because: 'not_sent',
-          detail: 'The arguments of the read take 18015 bytes, more than the 16384 a call may send',
+          detail: 'The arguments of the read take 300000 bytes, more than the 262144 a call may send',
           retryAfterMs: null,
         },
         recorded,
@@ -258,7 +258,7 @@ describe('a read the playbook could not make in a conversation', () => {
         conversation: 'C0123/1699.1',
         since: null,
         because: 'not_sent',
-        detail: 'The arguments of the read take 18015 bytes, more than the 16384 a call may send',
+        detail: 'The arguments of the read take 300000 bytes, more than the 262144 a call may send',
       },
     });
   });

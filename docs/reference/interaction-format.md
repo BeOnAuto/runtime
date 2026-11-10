@@ -249,7 +249,7 @@ A request sent through a tool is attempted at once. After a failed attempt it is
 - A server that responds with `Retry-After` is waited for as long as it asks, up to 8 minutes.
 - Each attempt is one call of the tool. It is recorded in the run's history before it is sent, with the size and digest of its arguments. So two servers never make the same attempt. Its end records what the tool returned.
 - These are failed attempts, tried again: a tool error, a server failure, no response within 30 seconds, and a connection not opened within 10 seconds.
-- Arguments past 16 KiB are refused and not tried again.
+- Arguments past 256 KiB as JSON are refused and not tried again.
 - A tool the server no longer offers to the playbook fails the attempt. The request stays open, and `answer_interaction` answers it.
 - An attempt cut off by a restart counts as failed a minute after it started, and the next one follows. So a tool may be called twice for one request.
 - A question whose attempts are spent stays open until someone answers it or it expires. A notification whose attempts are spent ends `unanswered` as `undelivered`.
@@ -294,6 +294,8 @@ A function that reads replies needs a reply rule: the one `reply` writes, or one
 ### Templates and pointers
 
 `to`, `from` and the message are Liquid templates that read `input`, `today` and `now` and nothing else. A rendered value is text and is never read again as a template.
+
+A template must render within 200 ms. One that builds a large text in a long loop or through a long chain of filters can be refused for its time, whatever its size, so send a large value as one `{{ }}`, which sends it as it is.
 
 A template may use the filters listed in [Templates](template.md#filters), the `templates` guide, the same in every template.
 
@@ -491,8 +493,8 @@ How replies are taken:
 | `succeeded`                                    | A function with `call`: the tool returned a result and the part `read` points at matched `output.schema`; that part is the output                                                                                                 |
 | `invalid_input`                                | The input does not match the input schema, a template names a value the input lacks, or a filter refuses a value it reads, as `money` refuses text that is not a decimal number: `The message cannot be rendered with this input` |
 | `conflict`, kind `unworkable`                  | `to` or `from` rendered empty, as something that is not text, with a control character, or longer than 256 bytes                                                                                                                  |
-| `conflict`, kind `unworkable`                  | The message is longer than 8 KiB, or the arguments of `deliver` pass 16 KiB or one renders no text                                                                                                                                |
-| `conflict`, kind `unworkable`                  | A function with `call`: an argument renders a structure among text, or the arguments pass 16 KiB                                                                                                                                  |
+| `conflict`, kind `unworkable`                  | The message is longer than 8 KiB, or the arguments of `deliver` pass 256 KiB or one renders no text                                                                                                                               |
+| `conflict`, kind `unworkable`                  | A function with `call`: an argument renders a structure among text, or the arguments pass 256 KiB                                                                                                                                 |
 | `conflict`, kind `unworkable`                  | A function with `call`: the tool refused the arguments                                                                                                                                                                            |
 | `conflict`, kind `unworkable`                  | A function with `call`: the answer has nothing to read, or nothing where `read` points                                                                                                                                            |
 | `conflict`, kind `unworkable`                  | A function with `call`: the part at `read` is more than a run may record (1 MiB with its record), or holds a value `output.schema` refuses                                                                                        |
@@ -540,8 +542,8 @@ What is kept and shown:
 | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | The rendered party, and the answerer          | 256 bytes, no control character                                                                                            | `conflict`, `unworkable`                                                         |
 | The rendered message                          | 8 KiB                                                                                                                      | `conflict`, `unworkable`                                                         |
-| The arguments of a call                       | 16 KiB as JSON                                                                                                             | `conflict`, `unworkable` at the start; a read or telling is not sent             |
-| The arguments of a call that reads no `input` | 16 KiB as JSON                                                                                                             | Refused when saved                                                               |
+| The arguments of a call                       | 256 KiB as JSON                                                                                                            | `conflict`, `unworkable` at the start; a read or telling is not sent             |
+| The arguments of a call that reads no `input` | 256 KiB as JSON                                                                                                            | Refused when saved                                                               |
 | A call of the tool                            | 10 seconds to open, 30 seconds to respond                                                                                  | A failed attempt or read                                                         |
 | A function's call of its tool                 | 10 seconds to open, 10 to list the tools, 30 to respond                                                                    | `tool_server_failed` before sending; then `tools_unfinished` or `effect_unknown` |
 | What a function's `read` takes                | 1 MiB as JSON with the run's record, 512 levels                                                                            | `conflict`, `unworkable`                                                         |
@@ -557,6 +559,8 @@ What is kept and shown:
 | `claimed_for`                                 | 256 bytes                                                                                                                  | `invalid_input`                                                                  |
 | Attempts                                      | 5: at once, then after 1, 2, 4 and 8 minutes                                                                               | A question stays open; a notification ends `unanswered` as `undelivered`         |
 | Open requests of a playbook                   | 10,000 unless the operator sets another number                                                                             | `unavailable`, `requests_full`                                                   |
+
+A tool server may take less than a call may send: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413, which the run reads as `The tool server answered HTTP 413: the request was larger than the server takes`.
 
 Reads of a conversation never come sooner than the function's `wait`. A server that responds to a read with `Retry-After` is waited for as long as it asks, up to an hour.
 

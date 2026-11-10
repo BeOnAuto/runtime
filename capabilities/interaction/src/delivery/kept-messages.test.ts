@@ -124,7 +124,10 @@ describe('the reading a delivery records', () => {
   it('is left out, where replies are read kept, when the read renders no arguments for the request', async () => {
     const { ended } = await deliveredWith(
       undefined,
-      threadRepliesWith("    ts: '{{ sent.id }}'", `    ts: '${'a'.repeat(16_240)}${'{{ to }}'.repeat(20)}'`),
+      threadRepliesWith(
+        "    ts: '{{ sent.id }}'",
+        `    ts: '{% for i in (1..262) %}${'a'.repeat(1000)}{% endfor %}${'{{ to }}'.repeat(20)}'`,
+      ),
     );
 
     expect(keptOf(ended)).toEqual([

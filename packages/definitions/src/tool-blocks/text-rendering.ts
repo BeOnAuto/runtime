@@ -28,19 +28,46 @@ class TextRefused extends Error {
 
 interface TextEmitter {
   buffer: string;
+  bytes: number;
+  lastCodeUnit: number | undefined;
   readonly write: (html: unknown) => void;
+}
+
+interface CodeUnits {
+  readonly first: number;
+  readonly last: number;
+}
+
+const highSurrogates: CodeUnits = { first: 0xd8_00, last: 0xdb_ff };
+
+const lowSurrogates: CodeUnits = { first: 0xdc_00, last: 0xdf_ff };
+
+const bytesSavedByAJoinedPair = 2;
+
+function isWithin(code: number | undefined, { first, last }: CodeUnits): boolean {
+  return code !== undefined && code >= first && code <= last;
+}
+
+function bytesAdded(lastCodeUnit: number | undefined, text: string): number {
+  const joinsAPair = isWithin(lastCodeUnit, highSurrogates) && isWithin(text.codePointAt(0), lowSurrogates);
+  return Buffer.byteLength(text, 'utf8') - (joinsAPair ? bytesSavedByAJoinedPair : 0);
 }
 
 function textEmitter(mostBytes: number): TextEmitter {
   const emitter: TextEmitter = {
     buffer: '',
+    bytes: 0,
+    lastCodeUnit: undefined,
     write: (html) => {
       const value: unknown = toValue(html);
       if (Predicate.isObjectOrArray(value)) {
         throw new TextRefused('not_text');
       }
-      emitter.buffer += outputText(value);
-      if (Buffer.byteLength(emitter.buffer, 'utf8') > mostBytes) {
+      const text = outputText(value);
+      emitter.bytes += bytesAdded(emitter.lastCodeUnit, text);
+      emitter.buffer += text;
+      emitter.lastCodeUnit = text.codePointAt(text.length - 1) ?? emitter.lastCodeUnit;
+      if (emitter.bytes > mostBytes) {
         throw new TextRefused('too_long');
       }
     },

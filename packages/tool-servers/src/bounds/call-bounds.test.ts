@@ -48,10 +48,12 @@ describe('admitting a call', () => {
 });
 
 describe('admitting the arguments of a call', () => {
-  it('refuses arguments over 16 KiB', () => {
-    expect(admission(noCalls, asked('call-1', { query: 'x'.repeat(16_384) }))).toMatchObject({
+  it('admits arguments of 256 KiB as JSON, and refuses one byte more', () => {
+    expect(admission(noCalls, asked('call-1', { query: 'x'.repeat(262_144 - 12) }))).toMatchObject({ admitted: true });
+    expect(admission(noCalls, asked('call-1', { query: 'x'.repeat(262_144 - 11) }))).toMatchObject({
       admitted: false,
-      refusal: 'The arguments of this call take 16396 bytes, more than the 16384 a call may send; send less.',
+      refusal:
+        'The arguments of this call take 262145 bytes, more than the 262144 a call may send; send less in one call, in parts where the tool takes them.',
     });
   });
 
@@ -65,6 +67,15 @@ describe('admitting the arguments of a call', () => {
         'This call repeats, with the same arguments, a call this run already made 2 times; use the answer to the call call-2 instead.',
     });
     expect(admission(twice, asked('call-3', { a: 2 }))).toMatchObject({ admitted: true });
+    expect(
+      admission(twice, { ...asked('call-3', { a: 1, b: [2, { c: 3, d: 4 }] }), tool: 'graph__other' }),
+    ).toMatchObject({ admitted: true });
+  });
+
+  it('keeps a digest of each call it admits, never its arguments, so a run holds little whatever they take', () => {
+    const tally = admittedTally(noCalls, 'call-1', { page: 'x'.repeat(10_000) });
+
+    expect([...tally.sameCalls.keys()]).toEqual([expect.stringMatching(/^[\da-f]{64}$/u)]);
   });
 });
 

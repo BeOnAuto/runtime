@@ -3,6 +3,7 @@ import {
   argumentsFailureWords,
   momentVariables,
   renderedArguments,
+  smallerInputRemedy,
   type ArgumentsFailure,
   type RenderedArguments,
   type Templates,
@@ -39,5 +40,5 @@ export function deliveryArgumentsOf(
 }
 
 export function undeliverableWords(failure: ArgumentsFailure): string {
-  return argumentsFailureWords(failure, 'the call that delivers the request');
+  return argumentsFailureWords(failure, 'the call that delivers the request', smallerInputRemedy);
 }

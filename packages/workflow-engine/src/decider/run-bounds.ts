@@ -13,7 +13,9 @@ function boundError(title: string): DslError {
 export function brokenBound(state: RunState, event: RunLogEvent, result: SessionResult): DslError | undefined {
   const bytes = eventBytesOf(event);
   if (bytes > mostEventBytes) {
-    return boundError(`An input changed the run by ${bytes} bytes, more than the ${mostEventBytes} one event holds`);
+    return boundError(
+      `The run would record ${bytes} bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another`,
+    );
   }
   if (state.historyBytes + bytes > mostHistoryBytes) {
     return boundError(

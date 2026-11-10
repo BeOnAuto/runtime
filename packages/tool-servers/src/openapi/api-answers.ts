@@ -4,7 +4,7 @@ import { decodeToolResult } from '../bounds/tool-results.ts';
 import { retryAfterMsOf, type Observed } from '../clients/observed-requests.ts';
 import type { CallSettled } from '../clients/server-client.ts';
 import { fileBytesOf, fileTextOf, shownTextIn, shownTextOf, unreadFiles, type AnsweredFile } from './answer-bodies.ts';
-import { AnsweredStatus } from './answered-status.ts';
+import { AnsweredStatus, answeredHttpWords } from './answered-status.ts';
 import { headersCarriedBy, unschemedAnswers, type AnswerSchemas } from './api-parameters.ts';
 import { decodedAnswer } from './byte-strings.ts';
 import { DocumentTooLarge } from './document-too-large.ts';
@@ -102,7 +102,7 @@ function jsonOf(text: string, mediaType: string | undefined, failureCodes: Failu
 
 function shownAnswer(status: number, text: string, json: Parsed, answers: AnswerSchemas): Answer {
   if (status >= 300) {
-    return errorAnswer(text === '' ? `The tool server answered HTTP ${status}` : text);
+    return errorAnswer(text === '' ? answeredHttpWords(status) : text);
   }
   return json === undefined ? textAnswer(text) : jsonAnswer(text, json.parsed, answers);
 }

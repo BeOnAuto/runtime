@@ -19,8 +19,10 @@ export const ToolField = Schema.String.annotate({
   description: 'The tool of that server, as search lists it and a function writes it after the slash',
 }).check(Schema.isPattern(toolNamePattern));
 
+const kibibyte = 1024;
+
 export const ArgumentsField = Schema.JsonObject.annotate({
-  description: "The arguments of the call, an object in the shape of the tool's input_schema, at most 16 KiB as JSON",
+  description: `The arguments of the call, an object in the shape of the tool's input_schema, at most ${toolBounds.argumentBytes / kibibyte} KiB as JSON`,
 }).check(Schema.makeFilter(argumentsWithinTheirBound));
 
 export const NamedToolSchema = Schema.Struct({ server: ServerField, tool: ToolField });

@@ -24,7 +24,9 @@ const Deferring = Schema.Struct({
 
 const isDeferring = Schema.is(Deferring);
 
-const grownArguments = Object.fromEntries(Array.from({ length: 600 }, (_, index) => [`a${index}`, '{{ message }}']));
+const grownArguments = Object.fromEntries(
+  Array.from({ length: 400 }, (_, index) => [`a${index}`, '{% for i in (1..30) %}{{ message }}{% endfor %}']),
+);
 
 function recordedWith(ledger: HarnessLedger, arguments_: Readonly<Record<string, string>>): HarnessLedger {
   const service: Ledger['Service'] = {
@@ -47,7 +49,7 @@ function recordedWith(ledger: HarnessLedger, arguments_: Readonly<Record<string,
 }
 
 const largeWords: unknown = expect.stringMatching(
-  /^The arguments of the call that delivers the request take \d+ bytes, more than the 16384 a call may send$/u,
+  /^The arguments of the call that delivers the request take \d+ bytes, more than the 262144 a call may send; give the function a smaller input$/u,
 );
 
 async function endedOf(playbook: InteractionHarness): Promise<readonly unknown[]> {

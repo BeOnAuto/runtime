@@ -104,12 +104,12 @@ describe('a call whose tool answers more than a reply shows', () => {
 });
 
 describe('the arguments of a call', () => {
-  it('may take 16 KiB as JSON, and one byte more is refused at /arguments before anything is opened', async () => {
+  it('may take 256 KiB as JSON, and one byte more is refused at /arguments before anything is opened', async () => {
     const { fake, execute } = await executingWith();
 
-    const admitted = await execute({ server: 'graph', tool: 'search', arguments: filling(16_384) });
+    const admitted = await execute({ server: 'graph', tool: 'search', arguments: filling(262_144) });
     const sessionsBefore = fake.seen().length;
-    const refused = await execute({ server: 'graph', tool: 'search', arguments: filling(16_385) });
+    const refused = await execute({ server: 'graph', tool: 'search', arguments: filling(262_145) });
 
     expect(admitted).toMatchObject({ status: 'succeeded', output: { outcome: 'result' } });
     expect(refused).toMatchObject({
@@ -118,7 +118,7 @@ describe('the arguments of a call', () => {
       issues: [
         {
           pointer: '/arguments',
-          detail: 'The arguments take 16385 bytes as JSON, more than the 16384 a call may send',
+          detail: 'The arguments take 262145 bytes as JSON, more than the 262144 a call may send',
         },
       ],
     });

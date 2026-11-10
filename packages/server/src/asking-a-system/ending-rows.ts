@@ -51,12 +51,14 @@ export const beforeAnything: Rows = [
     ),
   ],
   [
-    'arguments past 16 KiB',
+    'arguments past 256 KiB',
     {
-      document: { with: ["    a: '{{ input.a }}'", "    b: '{{ input.b }}'"], input: openInput },
-      input: { a: 'x'.repeat(8200), b: 'x'.repeat(8200) },
+      document: { with: ["    a: '{{ input.a }}'", "    b: '{{ input.a }}'"], input: openInput },
+      input: { a: 'x'.repeat(131_100) },
     },
-    unworkable('The arguments of the call take 16415 bytes, more than the 16384 a call may send'),
+    unworkable(
+      'The arguments of the call take 262215 bytes, more than the 262144 a call may send; give the function a smaller input',
+    ),
   ],
   [
     'a server that does not serve the playbook',

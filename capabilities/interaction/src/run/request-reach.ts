@@ -1,5 +1,5 @@
 import { renderClock } from '@on.auto/definitions/template';
-import { unworkable, type ArgumentsFailure } from '@on.auto/definitions/tool-blocks';
+import { smallerInputRemedy, unworkable, type ArgumentsFailure } from '@on.auto/definitions/tool-blocks';
 import { Unavailable, type PlaybookAddress, type Conflict } from '@on.auto/operations';
 import { toolBounds, type ToolAccess, type ToolNotOffered } from '@on.auto/tool-servers';
 import type { ToolReference } from '@on.auto/tool-servers/policy';
@@ -41,7 +41,7 @@ export function roomFor(ports: InteractionPorts, playbook: PlaybookAddress): Eff
 
 const argumentWords = {
   not_text: 'renders a value that is not text for this request',
-  too_long: `renders more than the ${toolBounds.argumentBytes} bytes a call may send for this request`,
+  too_long: `renders more than the ${toolBounds.argumentBytes} bytes a call may send for this request; ${smallerInputRemedy}`,
   missing_variable: 'reads what this request does not have',
   limit_exceeded: 'cannot be rendered for this request',
   failed: 'cannot be rendered for this request',
@@ -51,7 +51,7 @@ function argumentsRefusal(failure: ArgumentsFailure): Conflict {
   return failure.reason === 'too_large'
     ? unworkable(
         '/deliver/with',
-        `The arguments of the call that delivers the request take ${failure.bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send`,
+        `The arguments of the call that delivers the request take ${failure.bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send; ${smallerInputRemedy}`,
       )
     : unworkable(
         `/deliver/with/${failure.argument}`,

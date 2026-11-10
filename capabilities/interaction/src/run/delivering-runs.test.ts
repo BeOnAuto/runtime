@@ -58,19 +58,20 @@ function text(template: string): readonly string[] {
   return replacing(delivering, "    text: '{{ message }}'", `    text: '${template}'`);
 }
 
-function inputOf(length: number) {
-  return { ...brief, text: 'x'.repeat(length) };
+function inputOf(more: number) {
+  return { ...brief, text: 'x'.repeat(131_000), more: 'y'.repeat(more) };
 }
 
 const anyText: unknown = expect.any(String);
 
 describe('the arguments of a delivery, at the start of its run', () => {
-  it('take 16 KiB as JSON, and end the run as unworkable one byte past it', async () => {
-    const source = documentOf(replacing(text('{{ input.text }}'), "    channel: '{{ to }}'", ''), answering);
+  it('take 256 KiB as JSON, and end the run as unworkable one byte past it', async () => {
+    const twiceAndMore = text('{{ input.text }}{{ input.text }}{{ input.more }}');
+    const source = documentOf(replacing(twiceAndMore, "    channel: '{{ to }}'", ''), answering);
 
     expect([
-      (await askedThrough(source, fakeTools(), inputOf(16_373))).asked,
-      (await askedThrough(source, fakeTools(), inputOf(16_374))).asked,
+      (await askedThrough(source, fakeTools(), inputOf(133))).asked,
+      (await askedThrough(source, fakeTools(), inputOf(134))).asked,
     ]).toMatchObject([
       { status: 'succeeded', output: { status: 'started' } },
       {
@@ -78,7 +79,7 @@ describe('the arguments of a delivery, at the start of its run', () => {
         reason: 'conflict',
         kind: 'unworkable',
         detail:
-          'The arguments of the call that delivers the request take 16385 bytes, more than the 16384 a call may send',
+          'The arguments of the call that delivers the request take 262145 bytes, more than the 262144 a call may send; give the function a smaller input',
       },
     ]);
   });

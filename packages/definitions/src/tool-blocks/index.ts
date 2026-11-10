@@ -9,6 +9,7 @@ export {
   argumentsFailureWords,
   momentVariables,
   renderedArguments,
+  smallerInputRemedy,
   type ArgumentsFailure,
   type RenderedArguments,
   type Templates,

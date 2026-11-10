@@ -1738,7 +1738,7 @@ Authorization: Bearer <key>
 }
 ```
 
-`validate` checks `arguments`, at most 16 KiB as JSON, against the tool's input schema. It returns `valid` (`true` or `false`) and `issues`. Each issue has the JSON Pointer of the argument at fault as `path`, and what is wrong there as `message`. It lists at most 20 issues, then one saying how many more there are. For a schema the runtime's checker cannot handle, such as one with a regular expression, it returns `valid: null` with one issue saying why; the arguments may still be right. An argument out of a `format` the runtime checks, `date`, `date-time`, `time`, `email`, `uri` or `uuid`, is an issue at its pointer, such as `Expected a string in the format date, such as 2026-04-01`, and a `format` other than those, such as `int64`, is left unchecked while the rest of the schema is checked, so `valid` can be `true`.
+`validate` checks `arguments`, at most 256 KiB as JSON, against the tool's input schema. It returns `valid` (`true` or `false`) and `issues`. Each issue has the JSON Pointer of the argument at fault as `path`, and what is wrong there as `message`. It lists at most 20 issues, then one saying how many more there are. For a schema the runtime's checker cannot handle, such as one with a regular expression, it returns `valid: null` with one issue saying why; the arguments may still be right. An argument out of a `format` the runtime checks, `date`, `date-time`, `time`, `email`, `uri` or `uuid`, is an issue at its pointer, such as `Expected a string in the format date, such as 2026-04-01`, and a `format` other than those, such as `int64`, is left unchecked while the rest of the schema is checked, so `valid` can be `true`.
 
 ```http
 POST /v1/orgs/acme/playbooks/sales/tool-servers/billing/tools/getInvoice/validate
@@ -1784,7 +1784,7 @@ When a server or a tool cannot be used, the reads respond as below. Each refusal
 - `query_connection` calls only a tool marked `reads`. Use it to see what a tool returns before a function names it, or to find an id a prompt needs. It refuses a tool with any other mark as `unavailable` of the kind `tool_not_read_only`, before anything is sent, in words that say `execute_connection` calls it.
 - `execute_connection` calls a tool whatever its mark. Use it to do what the person asked of a tool that may change something, such as sending, creating or deleting, without first creating a function.
 
-`arguments` is the object the tool's `input_schema` takes, `{}` when left out. It may be at most 16 KiB as JSON; larger arguments return `invalid_input` at `/arguments` before anything is called.
+`arguments` is the object the tool's `input_schema` takes, `{}` when left out. It may be at most 256 KiB as JSON, the most a run may take as its input; larger arguments return `invalid_input` at `/arguments` before anything is called. A tool server may take less: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413.
 
 ```http
 POST /v1/orgs/acme/playbooks/sales/tool-servers/billing/tools/getInvoice/execute

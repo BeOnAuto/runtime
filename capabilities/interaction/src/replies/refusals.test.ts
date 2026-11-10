@@ -80,7 +80,7 @@ describe('a refusal whose telling does not fit the arguments of the tool', () =>
     const playbook = await chatHarness({
       document: threadRepliesWith(
         "      text: '{{ message }}'",
-        "      text: '{% for i in (1..300) %}{{ message }}{% endfor %}'",
+        "      text: '{% for i in (1..4000) %}{{ message }}{% endfor %}'",
       ),
     });
     const thread = await askedAndDelivered(playbook);

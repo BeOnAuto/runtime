@@ -81,11 +81,28 @@ describe('an answer of an HTTP API that is not shown as it is', () => {
         new Response('{"title":"Not Found"}', { status: 404, headers: { 'content-type': 'application/problem+json' } }),
         new Response('<p>Gone</p>', { status: 410, headers: { 'content-type': 'text/html' } }),
         new Response(null, { status: 409 }),
+        new Response(null, { status: 413 }),
+        new Response(null, { status: 414 }),
       ),
     ).toEqual([
       { content: [{ type: 'text', text: '{"title":"Not Found"}' }], isError: true },
       { content: [{ type: 'text', text: '<p>Gone</p>' }], isError: true },
       { content: [{ type: 'text', text: 'The tool server answered HTTP 409' }], isError: true },
+      {
+        content: [
+          { type: 'text', text: 'The tool server answered HTTP 413: the request was larger than the server takes' },
+        ],
+        isError: true,
+      },
+      {
+        content: [
+          {
+            type: 'text',
+            text: 'The tool server answered HTTP 414: the address of the request was longer than the server takes',
+          },
+        ],
+        isError: true,
+      },
     ]);
   });
 });

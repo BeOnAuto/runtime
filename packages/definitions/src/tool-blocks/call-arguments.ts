@@ -7,17 +7,18 @@ import { unrenderableFor, unworkable } from './render-refusals.ts';
 import {
   argumentsFailureWords,
   renderedArguments,
+  smallerInputRemedy,
   type ArgumentsFailure,
   type TemplateVariables,
 } from './rendered-arguments.ts';
 
 function argumentsRejection(failure: ArgumentsFailure): Conflict | InvalidInput {
   if (failure.reason === 'too_large') {
-    return unworkable('/call/with', argumentsFailureWords(failure, 'the call'));
+    return unworkable('/call/with', argumentsFailureWords(failure, 'the call', smallerInputRemedy));
   }
   const { argument, failure: rendering } = failure;
   return rendering.reason === 'not_text' || rendering.reason === 'too_long'
-    ? unworkable(`/call/with/${argument}`, argumentsFailureWords(failure, 'the call'))
+    ? unworkable(`/call/with/${argument}`, argumentsFailureWords(failure, 'the call', smallerInputRemedy))
     : unrenderableFor(`The argument ${argument} of the call`, rendering);
 }
 

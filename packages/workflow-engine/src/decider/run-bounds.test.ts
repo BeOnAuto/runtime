@@ -16,14 +16,17 @@ function titleOf(outcome: RunOutcome | null): string {
   return outcome?.kind === 'raised' ? (outcome.error.title ?? '') : JSON.stringify(outcome);
 }
 
-describe('a run ends, raised, in one small event, when an input would make an event larger than one event holds', () => {
+describe('a run ends, raised, in one small event, when an input would make an event larger than one event holds, in words that say what to do', () => {
   it('at its start, and keeps no part of it', () => {
     const run = drivenRun(workflow('do:\n  - greet: { set: { done: true } }'), {
       input: { text: 'x'.repeat(mostEventBytes) },
     });
 
     expect(titleOf(run.outcome)).toMatch(
-      new RegExp(`^An input changed the run by \\d+ bytes, more than the ${mostEventBytes} one event holds$`, 'u'),
+      new RegExp(
+        `^The run would record \\d+ bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another$`,
+        'u',
+      ),
     );
     expect(run.ended.workflow?.document).toEqual({});
     expect(run.events.map(({ event }) => eventBytesOf(event) < 4096)).toEqual([true]);
@@ -34,7 +37,7 @@ describe('a run ends, raised, in one small event, when an input would make an ev
       respond: () => ({ result: { status: 'succeeded', output: 'x'.repeat(2 * megabyte) } }),
     });
 
-    expect(titleOf(run.outcome)).toContain('one event holds');
+    expect(titleOf(run.outcome)).toContain(`more than the ${mostEventBytes} it may record at once`);
     expect(run.events.every(({ event }) => eventBytesOf(event) <= mostEventBytes)).toBe(true);
   });
 });
@@ -69,7 +72,7 @@ describe('a value a run holds across a wait or a yield', () => {
       expect(longest).toBeGreaterThan(mostEventBytes - 4096);
       expect(holdingAcross(pause, longest).outcome).toEqual({ kind: 'completed', output: { length: longest } });
       expect(titleOf(holdingAcross(pause, longest + 1).outcome)).toBe(
-        `An input changed the run by ${mostEventBytes + 1} bytes, more than the ${mostEventBytes} one event holds`,
+        `The run would record ${mostEventBytes + 1} bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another`,
       );
     },
   );
@@ -87,7 +90,7 @@ describe('a value a run holds across a wait or a yield', () => {
       expect(kept.events.map(({ event }) => addsAKeptValue(event)).at(0)).toBe(true);
       expect(kept.outcome).toEqual({ kind: 'completed', output: { length: longest } });
       expect(titleOf(holdingAcross(pause, longest + 1, true).outcome)).toBe(
-        `An input changed the run by ${mostEventBytes + 1} bytes, more than the ${mostEventBytes} one event holds`,
+        `The run would record ${mostEventBytes + 1} bytes at once, more than the ${mostEventBytes} it may record at once; keep less across a wait, and start calls with large inputs one after another`,
       );
     },
   );

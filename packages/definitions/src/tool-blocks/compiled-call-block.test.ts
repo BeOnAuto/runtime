@@ -40,6 +40,10 @@ function withChannel(channel: Schema.Json, inputSchema?: Schema.JsonObject): rea
   return problemsOf({ ...thread, with: { channel } }, inputSchema);
 }
 
+function timesAThousand(times: number): string {
+  return `{% for i in (1..${times}) %}${'x'.repeat(1000)}{% endfor %}`;
+}
+
 const pointerWords =
   'Expected a JSON Pointer such as /messages: it starts with a slash, writes ~ as ~0 and a slash within a name as ~1';
 
@@ -105,17 +109,15 @@ describe('the values the arguments of a call block hold', () => {
     ]);
   });
 
-  it('refuse arguments that take more than 16 KiB as JSON, or one that does alone, and leave what only an input renders to the run', () => {
-    const half = 'x'.repeat(8200);
-
+  it('refuse arguments that take more than 256 KiB as JSON, or one that does alone, and leave what only an input renders to the run', () => {
     expect([
-      problemsOf({ ...thread, with: { a: half, b: half } }),
-      problemsOf({ ...thread, with: { channel: `${half}${half}` } }),
+      problemsOf({ ...thread, with: { a: timesAThousand(140), b: timesAThousand(140) } }),
+      problemsOf({ ...thread, with: { channel: timesAThousand(270) } }),
       withChannel('{{ input.channel | divided_by: 0 }}'),
     ]).toEqual([
-      ['Line 7, /call/with: The arguments of the call take 16415 bytes, more than the 16384 a call may send'],
+      ['Line 7, /call/with: The arguments of the call take 280015 bytes, more than the 262144 a call may send'],
       [
-        'Line 8, /call/with/channel: The argument channel of the call renders more than the 16384 bytes a call may send',
+        'Line 8, /call/with/channel: The argument channel of the call renders more than the 262144 bytes a call may send',
       ],
       [],
     ]);

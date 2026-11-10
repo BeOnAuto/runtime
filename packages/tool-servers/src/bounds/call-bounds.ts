@@ -1,10 +1,12 @@
+import { sha256Of } from '@on.auto/content';
+
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
 import { cutWhereValid } from './structural-cut.ts';
 import { bytesOf, canonicalJson, cutAtCodePoint } from './text-bytes.ts';
 
 export const toolBounds = {
   callsInRun: 25,
-  argumentBytes: 16_384,
+  argumentBytes: 262_144,
   sameCallsInRun: 2,
   failuresInRun: 5,
   longestRetryWaitMs: 10_000,
@@ -69,7 +71,7 @@ export const noCalls: CallTally = { calls: 0, failures: 0, sameCalls: new Map() 
 const allCallsMade = `This run has made all the ${toolBounds.callsInRun} tool calls it may; answer from what you have.`;
 
 function argumentsTooLarge(bytes: number): string {
-  return `The arguments of this call take ${bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send; send less.`;
+  return `The arguments of this call take ${bytes} bytes, more than the ${toolBounds.argumentBytes} a call may send; send less in one call, in parts where the tool takes them.`;
 }
 
 function repeated(earlier: readonly string[]): string {
@@ -88,7 +90,7 @@ function refusalOf(tally: CallTally, argumentBytes: number, earlier: readonly st
 
 export function admission(tally: CallTally, { tool, callId, input }: CallAsked): Admission {
   const counted = { ...tally, calls: tally.calls + 1 };
-  const key = `${tool}\u0000${canonicalJson(input)}`;
+  const key = sha256Of(`${tool}\u0000${canonicalJson(input)}`);
   const earlier = tally.sameCalls.get(key) ?? [];
   const refusal = refusalOf(counted, bytesOf(JSON.stringify(input)), earlier);
   return refusal === undefined

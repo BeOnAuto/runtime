@@ -37,6 +37,8 @@ const answered: CalledOnce = {
   answered: { is_error: false, result_bytes: 12, duration_ms: 3, jsonrpc_id: 1 },
 };
 
+const twiceTheChannel = 'In {{ input.channel }} and {{ input.channel }}';
+
 const anything = Result.getOrThrow(compileJsonSchema({}, { what: 'output', nesting: 512 }));
 
 const openInput = Result.getOrThrow(compileJsonSchema({ type: 'object' }, { what: 'input', nesting: 512 }));
@@ -146,8 +148,8 @@ describe('a run of a call refused before it calls', () => {
 
   it('is unworkable at the argument that renders a structure among text, or one past what a call may send, and at all of them past it together', async () => {
     const among = ranWith(interaction, calling({ channel: 'In {{ input.channel }}' }), { channel: ['C0123'] });
-    const long = ranWith(interaction, calling({ channel: 'In {{ input.channel }}' }), { channel: 'x'.repeat(16_400) });
-    const large = ranWith(interaction, calling({ a: '{{ input.a }}', b: '{{ input.a }}' }), { a: 'x'.repeat(8200) });
+    const long = ranWith(interaction, calling({ channel: twiceTheChannel }), { channel: 'x'.repeat(131_100) });
+    const large = ranWith(interaction, calling({ a: '{{ input.a }}', b: '{{ input.a }}' }), { a: 'x'.repeat(131_100) });
 
     expect([await among.ended, await long.ended, await large.ended]).toEqual([
       Exit.fail(expect.objectContaining({ kind: 'unworkable', record: { pointer: '/call/with/channel' } })),
@@ -155,7 +157,8 @@ describe('a run of a call refused before it calls', () => {
       Exit.fail(
         expect.objectContaining({
           kind: 'unworkable',
-          detail: 'The arguments of the call take 16415 bytes, more than the 16384 a call may send',
+          detail:
+            'The arguments of the call take 262215 bytes, more than the 262144 a call may send; give the function a smaller input',
           record: { pointer: '/call/with' },
         }),
       ),
