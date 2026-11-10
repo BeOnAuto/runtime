@@ -47,15 +47,21 @@ runtime_start() {
   fi
 }
 
+stop_signal=TERM
+
 runtime_stop() {
+  stopped_runtime=$1
+  stopped_status=''
   if [ "$smoke_backend" = docker ]; then
     docker stop "$1"
-    test "$(docker inspect "$1" --format '{{.State.ExitCode}}')" = 0
+    stopped_status="$(docker inspect "$1" --format '{{.State.ExitCode}}')"
+    test "$stopped_status" = 0
   else
     local pid status=0
     pid="$(cat "$SMOKE_STATE/processes/$1/pid")"
-    kill -TERM "$pid"
+    kill -"$stop_signal" "$pid"
     wait "$pid" || status=$?
+    stopped_status=$status
     local index
     for index in "${!smoke_pids[@]}"; do
       if [ "${smoke_pids[$index]}" = "$pid" ]; then unset 'smoke_pids[index]'; fi

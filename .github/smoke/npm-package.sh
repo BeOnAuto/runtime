@@ -2,6 +2,47 @@
 set -e
 repository="${1:?the repository the package was packed in}"
 port="${2:?the port the packed runtime listens on}"
+stop_signal=TERM
+kept_on_failure=(runtime.log playbook.json created.json totalled.json greeting.json greeted.json)
+redacted() {
+  sed -E -e 's/abk_[A-Za-z0-9_-]+/abk_[redacted]/g' \
+    -e 's/alk\.[^.[:space:]"]+\.[^.[:space:]"]+\.[^.[:space:]"]+/alk.[redacted]/g' \
+    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/[redacted token]/g' \
+    -e 's/(Bearer )[^[:space:]"]+/\1[redacted]/g'
+}
+how_the_runtime_ended() {
+  case "$2" in
+    wait*)
+      printf 'The runtime, sent SIG%s, ended with status %s' "$stop_signal" "$1"
+      if [ "$1" -gt 128 ]; then printf ', which means it was ended by SIG%s' "$(kill -l $(($1 - 128)))"; fi
+      printf '\n'
+      ;;
+    pkill*) printf 'No runtime was running to be sent SIG%s: it had ended already\n' "$stop_signal" ;;
+  esac
+}
+show_what_failed() {
+  local status=$1 line=$2 command=$3 kept failure
+  set +e
+  failure="$(printf 'The npm package smoke failed at line %s, status %s: %s\n' "$line" "$status" "$command"
+    how_the_runtime_ended "$status" "$command")"
+  echo "::group::$failure"
+  for kept in "${kept_on_failure[@]}"; do
+    [ -f "$kept" ] || continue
+    echo "--- $kept"
+    redacted < "$kept" | tail --lines 400
+    echo
+  done
+  echo '::endgroup::'
+  if [ -n "${SMOKE_EVIDENCE:-}" ]; then
+    mkdir -p "$SMOKE_EVIDENCE"
+    printf '%s\n' "$failure" > "$SMOKE_EVIDENCE/failure.txt"
+    for kept in "${kept_on_failure[@]}"; do
+      [ -f "$kept" ] && redacted < "$kept" > "$SMOKE_EVIDENCE/$kept"
+    done
+  fi
+  exit "$status"
+}
+trap 'show_what_failed "$?" "$LINENO" "$BASH_COMMAND"' ERR
 tarball="$(ls "$repository"/dist/on.auto-runtime-*.tgz)"
 export XDG_CACHE_HOME="$RUNNER_TEMP/cache" LEDGER_FILE="$RUNNER_TEMP/ledger.db" DO_NOT_TRACK=1 PORT="$port"
 runtime() {
@@ -43,6 +84,6 @@ for attempt in $(seq 1 30); do
   sleep 1
 done
 test "$(jq --compact-output '[.status, .output]' greeted.json)" = '["succeeded",{"greeting":"Hello, npx"}]'
-pkill -TERM -f "$XDG_CACHE_HOME/auto-runtime/.*/packages/server/auto-runtime.ts"
+pkill -"$stop_signal" -f "$XDG_CACHE_HOME/auto-runtime/.*/packages/server/auto-runtime.ts"
 wait "$started"
 cat runtime.log

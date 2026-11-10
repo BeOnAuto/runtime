@@ -20,8 +20,32 @@ show_logs_on_failure() {
   containers_shown_on_failure=("$@")
 }
 
+failed_where=''
+failed_command=''
+
+noted_failure() {
+  failed_command=$1
+  failed_where="${BASH_SOURCE[1]##*/} line $2"
+  if [ "${#FUNCNAME[@]}" -gt 2 ]; then
+    failed_where+=", in ${FUNCNAME[1]}, called from ${BASH_SOURCE[-1]##*/} line ${BASH_LINENO[-2]}"
+  fi
+}
+
+say_what_failed() {
+  local status=$1
+  echo "::error::The smoke failed at ${failed_where:-a line its shell did not name}, status $status: ${failed_command:-unknown}"
+  if [[ "$failed_where" == *", in runtime_stop,"* ]] && [ -n "${stopped_status:-}" ]; then
+    printf 'The runtime %s, sent SIG%s, ended with status %s' "$stopped_runtime" "$stop_signal" "$stopped_status"
+    if [ "$stopped_status" -gt 128 ]; then printf ', which means it was ended by SIG%s' "$(kill -l $((stopped_status - 128)))"; fi
+    printf '\n'
+  fi
+}
+
 show_what_failed() {
   local status=$?
+  if [ "$status" -ne 0 ]; then
+    say_what_failed "$status"
+  fi
   if [ "$status" -ne 0 ] && [ -f last-response ]; then
     read -r answered_status body < last-response
     echo "::group::The last response, $answered_status, kept in $body"
@@ -40,4 +64,6 @@ show_what_failed() {
   exit "$status"
 }
 
+set -E
+trap 'noted_failure "$BASH_COMMAND" "$LINENO"' ERR
 trap show_what_failed EXIT
