@@ -1,33 +1,40 @@
+import type { Digested } from '@on.auto/content';
 import type { CallLink, RecordedCaller, StartingTrigger } from '@on.auto/operations';
-import type { Payload } from '@on.auto/operations/payloads';
+import { payloadMembers, type Payload, type PayloadArm } from '@on.auto/operations/payloads';
 import type { Schema } from 'effect';
 
+import type { ValuesRead } from '../payloads/payload-comparisons.ts';
 import type { OutputShapeName } from '../shapes/shape-names.ts';
 import type {
+  AnswerBeside,
   CancelRequestKind,
   ModelCallEndedFact,
   ModelCallStarted,
-  RequestAnswered,
   RunDeferred,
+  RunEvent,
   RunFinished,
   ToolCallEnded,
   ToolCallStarted,
 } from './run-events.ts';
 
-export interface RunRequest {
+interface ComparedWithWhatWasRead {
+  readonly valuesRead?: ValuesRead;
+}
+
+export interface RunRequest extends ComparedWithWhatWasRead {
   readonly definition_type: string;
   readonly name: string;
   readonly input: Schema.Json;
 }
 
-export interface RunAsked {
+export interface RunAsked extends ComparedWithWhatWasRead {
   readonly definition_type: string;
   readonly name: string;
   readonly input: Payload<Schema.Json>;
 }
 
-export function askedOf({ definition_type, name, input }: RunRequest): RunAsked {
-  return { definition_type, name, input: { inline: input } };
+export function askedOf({ definition_type, name, input, valuesRead }: RunRequest): RunAsked {
+  return { definition_type, name, input: { inline: input }, ...(valuesRead === undefined ? {} : { valuesRead }) };
 }
 
 export interface RunStart extends RunRequest {
@@ -44,6 +51,26 @@ export interface RunStart extends RunRequest {
   readonly acts_for?: string;
   readonly createOnly?: true;
   readonly resumes?: true;
+  readonly inputKept?: Digested;
+}
+
+function inputAsWritten({ input, inputKept }: RunStart): Payload<Schema.Json> {
+  return inputKept === undefined ? { inline: input } : { kept: inputKept };
+}
+
+export function startedEvent(start: RunStart): RunEvent {
+  const { started_by, calls_tools, finishes_later, resumes, output_shape } = start;
+  return {
+    type: 'run_started',
+    data: {
+      ...payloadMembers('input', inputAsWritten(start)),
+      started_by,
+      ...(calls_tools ? { calls_tools } : {}),
+      ...(finishes_later === true ? { finishes_later } : {}),
+      ...(resumes === true ? { resumes } : {}),
+      ...(output_shape === undefined ? {} : { output_shape }),
+    },
+  };
 }
 
 export type RunResult = RunFinished;
@@ -65,11 +92,9 @@ export interface CapabilityFact {
   readonly data: Schema.JsonObject;
 }
 
-export type AnswerFact = Omit<RequestAnswered['data'], 'answer' | 'answer_sha256' | 'answer_bytes'> & {
-  readonly answer: Schema.Json;
-};
+export type AnswerFact = AnswerBeside & PayloadArm<'answer', Schema.Json>;
 
-export type GivenAnswer = Omit<AnswerFact, 'answered_by'>;
+export type GivenAnswer = Omit<AnswerBeside, 'answered_by'> & { readonly answer: Schema.Json };
 
 export interface InterruptedAttempt {
   readonly type: 'run_interrupted';
@@ -100,7 +125,7 @@ export interface RunWork {
   readonly fact: CapabilityFact;
 }
 
-export interface RunAnswer {
+export interface RunAnswer extends ComparedWithWhatWasRead {
   readonly type: 'answer';
   readonly answer: AnswerFact;
 }
@@ -111,7 +136,7 @@ interface CommandMetadata {
   readonly at: string;
 }
 
-export interface RunSettlement extends CommandMetadata {
+export interface RunSettlement extends CommandMetadata, ComparedWithWhatWasRead {
   readonly type: 'settle';
   readonly result: RunResult;
 }

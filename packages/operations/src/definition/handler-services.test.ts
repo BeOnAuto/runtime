@@ -3,6 +3,7 @@ import { describe, expectTypeOf, it } from 'vitest';
 import type {
   BoundProjectionReader,
   PlaybookContentReader,
+  PlaybookContentWriter,
   PlaybookAddress,
   PlaybookRecordedReader,
   PlaybookRunOutcomesReader,
@@ -69,6 +70,6 @@ describe('the services a handler may ask for', () => {
         BoundProjectionReader &
         PlaybookContentReader
     >();
-    expectTypeOf<PlaybookWriter['Service']>().toEqualTypeOf<StreamWriter>();
+    expectTypeOf<PlaybookWriter['Service']>().toEqualTypeOf<StreamWriter & PlaybookContentWriter>();
   });
 });

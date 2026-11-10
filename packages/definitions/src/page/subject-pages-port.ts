@@ -9,7 +9,7 @@ import type {
 } from '@on.auto/operations';
 import type { Effect, Schema } from 'effect';
 
-import type { PayloadAsRead } from '../runs/run-payloads.ts';
+import type { PayloadAsRead } from '../payloads/run-payloads.ts';
 import type { RunDetailAsRecorded } from '../runs/run.ts';
 import type { PageContent, SubjectPage } from './page-facts.ts';
 

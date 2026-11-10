@@ -9,6 +9,7 @@ import {
   type PlaybookOperation,
   type Capability,
   type RecordWork,
+  type WorkLedger,
 } from '@on.auto/definitions';
 import { admittingMeter, runContentHolders, standingClock, uncheckedPages } from '@on.auto/definitions/testing';
 import {
@@ -45,7 +46,7 @@ export const acmeAdmin: CallerIdentity = {
 
 export const alpha = { org: 'acme', playbook: 'alpha' };
 
-type RequestLedger = Parameters<typeof requestsDue>[0]['ledger'];
+type RequestLedger = Parameters<typeof requestsDue>[0]['ledger'] & WorkLedger;
 
 export interface HarnessLedger {
   readonly service: Ledger['Service'];

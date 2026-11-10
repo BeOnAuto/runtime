@@ -3,8 +3,8 @@ import { Effect, type Option, type Schema } from 'effect';
 
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { sourceToPrepare } from '../operations/definition-views.ts';
+import { payloadsKeptIn, payloadValueOf, type KeptContentReader } from '../payloads/run-payloads.ts';
 import { definitionVersionIn } from '../registry/definition-versions.ts';
-import { payloadsKeptIn, payloadValueOf, type KeptContentReader } from '../runs/run-payloads.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import type { RecordedRunState } from '../runs/run-state.ts';
 

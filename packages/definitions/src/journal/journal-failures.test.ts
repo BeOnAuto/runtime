@@ -6,6 +6,8 @@ import { modelCallSent } from '../journal-testing/model-calls.ts';
 import { acmeAdmin } from '../testing/callers.ts';
 import { runJournal } from './run-journal.ts';
 
+const diskFull = () => Effect.die(new Error('The disk is full'));
+
 describe('a fact the ledger cannot write', () => {
   it('fails the step that writes it as a defect, never as a call another attempt took', async () => {
     const failing = Effect.gen(function* () {
@@ -16,7 +18,7 @@ describe('a fact the ledger cannot write', () => {
       );
       return yield* journal.record({ type: 'model_call_started', data: { number: 1, ...modelCallSent() } });
     }).pipe(
-      Effect.provideService(PlaybookWriter, { execute: () => Effect.die(new Error('The disk is full')) }),
+      Effect.provideService(PlaybookWriter, { execute: diskFull, keepContent: diskFull }),
       Effect.provideService(Caller, acmeAdmin),
       Effect.provideService(PlaybookContext, { org: 'acme', playbook: 'alpha' }),
     );

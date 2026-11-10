@@ -1,7 +1,7 @@
 import { Unavailable, randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { inputOf, type PayloadAsRead } from '../runs/run-payloads.ts';
+import { inputOf, type PayloadAsRead } from '../payloads/run-payloads.ts';
 import type { RecordedRunState } from '../runs/run-state.ts';
 import type { RunDetail } from '../runs/run.ts';
 import { answeredWith, type AttemptOfARun } from './attempt-endings.ts';

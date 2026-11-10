@@ -1,4 +1,4 @@
-import { Conflict, streamPrefixOfPlaybook, type StreamWriter } from '@on.auto/operations';
+import { Conflict, PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -139,11 +139,12 @@ describe('the settlement of a run that took an answer', () => {
 describe('the answer a caller gives to a request a run waits on', () => {
   it('is recorded on the run of the playbook as the caller that gave it, and another answer after it is a conflict', async () => {
     const { ledger, recorded } = await asked();
-    const inAlpha: StreamWriter = {
-      execute: (stream, decider, command, given) =>
-        ledger.service.execute(`${streamPrefixOfPlaybook(run)}${stream}`, decider, command, given),
-    };
-    const answer = playbookBoundAnswerer(inAlpha);
+    const inAlpha = playbookLedgerOf(ledger.service, run);
+    const answer = (...given: Readonly<Parameters<typeof playbookBoundAnswerer>>) =>
+      playbookBoundAnswerer(...given).pipe(
+        Effect.provideContext(inAlpha),
+        Effect.provideService(PlaybookContext, { org: run.org, playbook: run.playbook }),
+      );
 
     const ada = { id: 'person:ada', name: 'Ada Lovelace' };
     await Effect.runPromise(answer(run.id.toUpperCase(), { answer: { choice: 'approve' } }, ada, lineage));

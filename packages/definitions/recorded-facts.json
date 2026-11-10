@@ -31,5 +31,8 @@
   "src/runs/0.57.0/model_call_failed.json": "44b78b0c44b0031d7260dbf31a856d2247e775a34632c7fc33a02cdc43c03689",
   "src/runs/0.57.0/run_deferred.json": "2bf4ea3e5e060ba0eda0ecd5aca90e3b1f1100e5cb12bb07fd3d20912b8c4311",
   "src/runs/0.57.0/run_rejected.json": "841ff7238db3110cac9f388edd4da1bc1e727cd39b33ef5acf113f3bf77dff0d",
-  "src/runs/0.57.0/run_started.json": "c39887fc256b984d8aebc0db44c7f566cd8e48aa8a34fd28f44e7680169beb9e"
+  "src/runs/0.57.0/run_started.json": "c39887fc256b984d8aebc0db44c7f566cd8e48aa8a34fd28f44e7680169beb9e",
+  "src/runs/0.58.0/request_answered.json": "04386e24dc1ae048503732f00192865417f44b8440db1e88ae2019446138c4d6",
+  "src/runs/0.58.0/run_started.json": "4e840989f15e46513bd534ff1c0b5d70300e929d9fb5cefe7c56605ed272b814",
+  "src/runs/0.58.0/run_succeeded.json": "354b9634f5bff16dc6ffbd03c0beb67cba100ffa4676bc2c40fd95aaecc4add9"
 }

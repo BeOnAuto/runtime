@@ -19,7 +19,7 @@ export { isCalendarDay } from './reading/calendar-days.ts';
 export { PlaybookContext, type PlaybookAddress } from './caller/playbook-context.ts';
 export { PlaybookLifecycle } from './caller/playbook-lifecycle.ts';
 export { CallLineage, type CallLink, type GivenLineage, type TriggerLink } from './caller/call-lineage.ts';
-export { PlaybookWriter } from './ledger/playbook-writer.ts';
+export { PlaybookWriter, playbookPayloadKept, type PlaybookContentWriter } from './ledger/playbook-writer.ts';
 export { playbookLedgerOf } from './ledger/playbook-ledger.ts';
 export { Caller, CallerIdentitySchema, playbookCallerOf, type CallerIdentity } from './caller/caller.ts';
 export { localDeveloperId, OrgMembership, personOfTheOrg, signedInPersonPrefix } from './caller/caller.ts';

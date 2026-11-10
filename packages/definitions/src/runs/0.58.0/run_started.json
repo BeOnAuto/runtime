@@ -1,0 +1,19 @@
+{
+  "type": "run_started",
+  "data": {
+    "input_sha256": "425e9cd394320f4491490a32c8cfc91e5e5d58e19229fa5b1c67d7cc7287276f",
+    "input_bytes": 3012,
+    "started_by": {
+      "id": "acme-admin",
+      "name": "acme-admin"
+    }
+  },
+  "context": {
+    "at": "2026-10-01T09:00:00.000Z",
+    "by": "acme-admin",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "echo",
+    "definitionName": "greet",
+    "definitionVersion": 1
+  }
+}

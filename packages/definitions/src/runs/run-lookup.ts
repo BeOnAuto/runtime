@@ -10,7 +10,8 @@ import {
 } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { withItsOutputRead } from './run-payloads.ts';
+import type { ValuesRead } from '../payloads/payload-comparisons.ts';
+import { withItsOutputRead } from '../payloads/run-payloads.ts';
 import { startedRunOf, type RunStreamState, type RecordedRunState } from './run-state.ts';
 import type { RunAsRecorded, RunDetail, RunDetailAsRecorded, RunRejection, RunWithin } from './run.ts';
 
@@ -80,13 +81,15 @@ function replayed(rejection: RunRejection): ReplayedRejection {
 
 function answerWith(
   run: RunDetailAsRecorded,
+  written?: ValuesRead,
 ): Effect.Effect<RunDetail, ReplayedRejection, PlaybookReader | PlaybookContext> {
-  return run.rejection === undefined ? withItsOutputRead(run) : Effect.fail(replayed(run.rejection));
+  return run.rejection === undefined ? withItsOutputRead(run, written) : Effect.fail(replayed(run.rejection));
 }
 
 export function runAnswered(
   id: string,
   state: RunStreamState,
+  written?: ValuesRead,
 ): Effect.Effect<RunDetail, NotFound | ReplayedRejection, PlaybookReader | PlaybookContext> {
-  return runDetailOf(id, state).pipe(Effect.flatMap(answerWith));
+  return runDetailOf(id, state).pipe(Effect.flatMap((run) => answerWith(run, written)));
 }

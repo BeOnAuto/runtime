@@ -1,0 +1,18 @@
+{
+  "type": "run_succeeded",
+  "data": {
+    "output_sha256": "ab3149083e968cc3a3cc1c93724ba49bc0d944f5ea8a6899b95c1fba6b6b842f",
+    "output_bytes": 3038,
+    "record": {
+      "greeting": "Hi"
+    }
+  },
+  "context": {
+    "at": "2026-10-01T09:00:00.000Z",
+    "by": "acme-admin",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "echo",
+    "definitionName": "greet",
+    "definitionVersion": 1
+  }
+}

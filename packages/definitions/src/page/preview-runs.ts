@@ -2,10 +2,10 @@ import { PlaybookReader, type PlaybookContext } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { loadRun } from '../operations/run-access.ts';
+import { outputOf } from '../payloads/run-payloads.ts';
 import { streamsOfRuns } from '../reading/list-runs.ts';
 import { listedRunsOf } from '../reading/listed-run.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
-import { outputOf } from '../runs/run-payloads.ts';
 import { runShownOf } from './page-reads.ts';
 import type { RunShown } from './page-rendering.ts';
 import type { ResultOver } from './subject-pages-port.ts';

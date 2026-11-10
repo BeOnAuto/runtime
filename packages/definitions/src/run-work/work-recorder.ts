@@ -1,3 +1,4 @@
+import type { RecordedContent } from '@on.auto/content';
 import {
   PlaybookIdSchema,
   Conflict,
@@ -14,10 +15,13 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect, Schema } from 'effect';
 
+import { payloadWrittenIn } from '../payloads/payload-writing.ts';
+import { payloadsKeptIn } from '../payloads/run-payloads.ts';
 import type { CapabilityFact, GivenAnswer, RunAnswer, RunWork } from '../runs/run-commands.ts';
-import { isChangedSinceRead, runDecider, runStreamNameOf, type RunDeciders } from '../runs/run-decider.ts';
+import { isChangedSinceRead, runStreamNameOf, type RunDeciders } from '../runs/run-decider.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import { startedRunOf, type RecordedRunState } from '../runs/run-state.ts';
+import { answerCommandOf, type AnswerPayloads } from './answer-commands.ts';
 
 export interface RecordedWorkAt {
   readonly id: string;
@@ -37,6 +41,10 @@ export type RecordWork = (
   rule?: WorkRule,
 ) => Effect.Effect<RecordedWorkAt, Conflict | Unavailable>;
 
+export interface WorkLedger extends StreamReader, StreamWriter {
+  readonly content: Pick<RecordedContent, 'put' | 'get' | 'getHead'>;
+}
+
 const isWellFormed = Schema.is(
   Schema.Struct({ org: OrgIdSchema, playbook: PlaybookIdSchema, id: Schema.String.check(Schema.isUUID()) }),
 );
@@ -49,15 +57,20 @@ function admitted(): undefined {
   return undefined;
 }
 
-function answeredBy(answer: GivenAnswer, by: RecordedCaller): RunAnswer {
-  return { type: 'answer', answer: { ...answer, answered_by: by } };
+function commandOf<Services>(
+  work: Work,
+  by: RecordedCaller,
+  recorded: RecordedRunState | undefined,
+  payloads: AnswerPayloads<Services>,
+): Effect.Effect<RunWork | RunAnswer, Conflict | Unavailable, Services> {
+  return work.type === 'answer' ? answerCommandOf(work.answer, by, recorded, payloads) : Effect.succeed(work);
 }
 
-function recordedAs(work: Work, by: RecordedCaller): RunWork | RunAnswer {
-  return work.type === 'answer' ? answeredBy(work.answer, by) : work;
+function payloadsIn({ content }: WorkLedger, run: RunStreamAddress): AnswerPayloads<never> {
+  return { written: payloadWrittenIn(content, run), reader: Effect.succeed(payloadsKeptIn(content, run)) };
 }
 
-export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunDeciders): RecordWork {
+export function workRecorder(ledger: WorkLedger, deciders: RunDeciders): RecordWork {
   const recordedAsRead = Effect.fnUntraced(function* (
     run: RunStreamAddress,
     work: Work,
@@ -77,7 +90,8 @@ export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunD
     }
     const at = DateTime.formatIso(yield* DateTime.now);
     const thePlaybook = recordedCallerOf(playbookCallerOf(run));
-    const command = { ...recordedAs(work, thePlaybook), runId, by: thePlaybook.id, at };
+    const recordedWork = yield* commandOf(work, thePlaybook, recorded, payloadsIn(ledger, run));
+    const command = { ...recordedWork, runId, by: thePlaybook.id, at };
     const { version } = yield* ledger
       .execute(stream, deciders.asRead, { readAt: read.version, command }, lineage)
       .pipe(Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }));
@@ -85,22 +99,4 @@ export function workRecorder(ledger: StreamReader & StreamWriter, deciders: RunD
   });
   return (run, work, lineage, rule = admitted) =>
     recordedAsRead(run, work, lineage, rule).pipe(Effect.retry({ times: readsAgainAtMost, while: isChangedSinceRead }));
-}
-
-export type AnswerRun = (
-  id: string,
-  answer: GivenAnswer,
-  by: RecordedCaller,
-  lineage: Lineage,
-) => Effect.Effect<void, Conflict | Unavailable>;
-
-export function playbookBoundAnswerer(writer: StreamWriter): AnswerRun {
-  return (id, answer, by, lineage) =>
-    Effect.gen(function* () {
-      const runId = id.toLowerCase();
-      const at = DateTime.formatIso(yield* DateTime.now);
-      yield* writer
-        .execute(runStreamNameOf(runId), runDecider, { ...answeredBy(answer, by), runId, by: by.id, at }, lineage)
-        .pipe(Effect.catchTags({ not_found: Effect.die, cancelled: Effect.die }));
-    });
 }

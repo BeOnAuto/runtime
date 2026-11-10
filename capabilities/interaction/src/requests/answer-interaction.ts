@@ -11,7 +11,6 @@ import {
 import type { InvalidInput } from '@on.auto/operations';
 import {
   PlaybookReader,
-  PlaybookWriter,
   Caller,
   Conflict,
   NotFound,
@@ -103,7 +102,7 @@ const answered = Effect.fnUntraced(function* ({ id, answer, claimedFor }: Answer
     return yield* takesNoAnswer;
   }
   const checked = yield* checkedFor(run, answer);
-  yield* playbookBoundAnswerer(yield* PlaybookWriter)(
+  yield* playbookBoundAnswerer(
     id,
     { answer: checked, ...(claimedFor === undefined ? {} : { claimed_for: claimedFor }) },
     answeredBy,

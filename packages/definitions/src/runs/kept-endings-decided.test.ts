@@ -1,10 +1,10 @@
 import { Result, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { comparedWithoutItsValue, type ValuesRead } from '../payloads/payload-comparisons.ts';
 import { recordedAdmin } from '../testing/callers.ts';
 import { keptArmOf } from '../testing/kept-payloads.ts';
 import { recordedWith, runStateAfter, testRunId } from '../testing/run-facts.ts';
-import { comparedWithoutItsValue } from './payload-comparisons.ts';
 import type { RunCommand, RunResult } from './run-commands.ts';
 import { runDecider } from './run-decider.ts';
 import { endedWithAnotherResult } from './run-decisions.ts';
@@ -52,6 +52,14 @@ function answering(given: Schema.Json): RunCommand {
   return { type: 'answer', answer: { answer: given, answered_by: recordedAdmin }, ...at };
 }
 
+function settlingWith(result: RunResult, valuesRead: ValuesRead): RunCommand {
+  return { type: 'settle', result, valuesRead, ...at };
+}
+
+function answeringWith(given: Schema.Json, valuesRead: ValuesRead): RunCommand {
+  return { type: 'answer', answer: { answer: given, answered_by: recordedAdmin }, valuesRead, ...at };
+}
+
 describe('a run that ended with an output its playbook keeps outside the run', () => {
   it('records nothing for a settlement again with the same text, answers unavailable for other text, and is a conflict for another ending', () => {
     const ended = stateAfter(started, succeededKept);
@@ -72,5 +80,36 @@ describe('a run that took an answer its playbook keeps outside the run', () => {
       runDecider.decide(answering(answer), answered),
       runDecider.decide(answering({ notes: answer.notes, approved: true }), answered),
     ]).toEqual([Result.succeed([]), Result.fail(comparedWithoutItsValue)]);
+  });
+});
+
+describe('a repeated ending or answer, given the values its operation read of what the run keeps outside', () => {
+  const ended = stateAfter(started, succeededKept);
+  const answered = stateAfter(started, deferred, answeredKept);
+  const outputRead = new Map([[keptOutput.sha256, { scores }]]);
+  const answerRead = new Map([[keptAnswer.sha256, answer]]);
+
+  it('records nothing for the same value in another order, and refuses another value', () => {
+    const tookAnother: unknown = expect.stringContaining('already took another answer');
+
+    expect([
+      runDecider.decide(settlingWith(succeededWith({ scores }), outputRead), ended),
+      runDecider.decide(settlingWith(succeededWith({ scores: [] }), outputRead), ended),
+      runDecider.decide(answeringWith({ notes: answer.notes, approved: true }, answerRead), answered),
+      runDecider.decide(answeringWith({ ...answer, approved: false }, answerRead), answered),
+    ]).toMatchObject([
+      Result.succeed([]),
+      Result.fail(endedWithAnotherResult),
+      Result.succeed([]),
+      { failure: { _tag: 'conflict', detail: tookAnother } },
+    ]);
+  });
+
+  it('answers unavailable where the run moved on to a value its operation did not read', () => {
+    const readBefore = new Map([[keptArmOf({ scores: [] }).sha256, { scores: [] }]]);
+
+    expect(runDecider.decide(settlingWith(succeededWith({ scores: scores.toReversed() }), readBefore), ended)).toEqual(
+      Result.fail(comparedWithoutItsValue),
+    );
   });
 });

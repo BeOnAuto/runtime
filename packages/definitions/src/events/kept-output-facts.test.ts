@@ -3,7 +3,7 @@ import type { Context, RecordedEvent } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { payloadsKeptIn } from '../runs/run-payloads.ts';
+import { payloadsKeptIn } from '../payloads/run-payloads.ts';
 import { erasingReader, keptArmOf, keptIn } from '../testing/kept-payloads.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 import { mostPublishedEventBytes } from './cloud-event.ts';

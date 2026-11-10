@@ -228,12 +228,16 @@ function readerOf({ service }: MemoryLedger): PlaybookReader['Service'] {
   };
 }
 
+function writerOf({ service }: MemoryLedger): PlaybookWriter['Service'] {
+  return { ...service, keepContent: (content) => service.content.put({ org: 'acme', playbook: 'alpha' }, content) };
+}
+
 describe('the typed call', () => {
   const ledger = memoryLedger();
   const withNotes = <A, E>(call: Effect.Effect<A, E, PlaybookReader | PlaybookWriter>) =>
     call.pipe(
       Effect.provideService(PlaybookReader, readerOf(ledger)),
-      Effect.provideService(PlaybookWriter, ledger.service),
+      Effect.provideService(PlaybookWriter, writerOf(ledger)),
     );
 
   it('runs the handler with typed input and output in the services it is given', async () => {

@@ -1,0 +1,20 @@
+{
+  "type": "request_answered",
+  "data": {
+    "answer_sha256": "fd11c378b4951bc53e08acf3ebe4bca7e7d5af5a8f1a8a0ff56ea153d87cf445",
+    "answer_bytes": 3028,
+    "claimed_for": "request-1",
+    "answered_by": {
+      "id": "playbook:alpha",
+      "name": "alpha"
+    }
+  },
+  "context": {
+    "at": "2026-10-01T09:00:00.000Z",
+    "by": "playbook:alpha",
+    "runId": "0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "asking",
+    "definitionName": "approve",
+    "definitionVersion": 1
+  }
+}

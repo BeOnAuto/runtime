@@ -71,7 +71,7 @@ function overtakenOnce(id: string) {
     });
     const execute: StreamWriter['execute'] = (stream, decider, command, lineage) =>
       Effect.andThen(overtaking, writer.execute(stream, decider, command, lineage));
-    return { execute };
+    return { ...writer, execute };
   });
 }
 

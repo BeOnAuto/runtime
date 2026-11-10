@@ -4,9 +4,9 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { commandMetadata } from '../operations/command-metadata.ts';
 import { reasonFieldOf, RunIdInputField } from '../operations/definition-fields.ts';
+import { withItsOutputRead } from '../payloads/run-payloads.ts';
 import { cancellingWordsFor } from '../plain-language/run-words.ts';
 import { runDecider, runStreamNameOf } from '../runs/run-decider.ts';
-import { withItsOutputRead } from '../runs/run-payloads.ts';
 import { RunSchema } from '../runs/run.ts';
 import { runAfterItsAttemptHere } from './run-cancels.ts';
 

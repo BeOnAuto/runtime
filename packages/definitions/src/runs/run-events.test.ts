@@ -1,6 +1,7 @@
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { describe } from 'vitest';
 
+import { keptFactsWritten } from '../testing/kept-facts-written.ts';
 import { RunEventSchema } from './run-events.ts';
 
 const acted = { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' };
@@ -48,11 +49,7 @@ const baseline: readonly (typeof RunEventSchema.Type)[] = [
   },
   { type: 'run_deferred', data: { record: { waiting_for: 'reply' } }, context: onTheRun },
   { type: 'attempt_resumed', data: { attempt: 2 }, context: onTheRun },
-  {
-    type: 'run_succeeded',
-    data: { output: { score: 0.8 }, record: { steps: 3 } },
-    context: onTheRun,
-  },
+  { type: 'run_succeeded', data: { output: { score: 0.8 }, record: { steps: 3 } }, context: onTheRun },
   {
     type: 'run_rejected',
     data: {
@@ -288,6 +285,8 @@ const answeredInEachMode: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
+const keptOutside = await keptFactsWritten();
+
 describe('the facts a playbook records on the stream of a run', () => {
   recordedFactsBehaviour({
     schema: RunEventSchema,
@@ -295,6 +294,7 @@ describe('the facts a playbook records on the stream of a run', () => {
     releases: {
       '0.46.0': baseline,
       '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
+      '0.58.0': keptOutside,
     },
   });
 });

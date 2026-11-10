@@ -7,7 +7,7 @@ import { dueInBothLanes } from './harness-parts.ts';
 
 const isWork = Schema.is(Schema.Struct({ command: Schema.Struct({ type: Schema.Literal('work') }) }));
 
-function stoppingBeforeSettling(ledger: RequestLedger): RequestLedger {
+function stoppingBeforeSettling<Ledger extends RequestLedger>(ledger: Ledger): Ledger {
   return {
     ...ledger,
     execute: (stream, decider, command, lineage) =>

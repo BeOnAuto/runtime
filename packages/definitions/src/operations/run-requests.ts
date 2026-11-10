@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { claimOf } from '../runs/run-claims.ts';
+import { claimOf, comparedWithItsRecordedInput } from '../runs/run-claims.ts';
 import { askedOf, type RunRequest } from '../runs/run-commands.ts';
 import { runAnswered } from '../runs/run-lookup.ts';
 import { answeredAttempt } from './attempt-endings.ts';
@@ -25,10 +25,11 @@ const resumedRun = Effect.fnUntraced(function* (
 export const requestedRun = Effect.fnUntraced(function* (
   capabilities: readonly Capability[],
   capability: Capability,
-  request: RunRequest,
+  given: RunRequest,
   id: string,
 ) {
   const recorded = yield* loadRunStream(id);
+  const request = yield* comparedWithItsRecordedInput(recorded, given);
   const claim = yield* Effect.fromResult(claimOf(recorded, askedOf(request), capability.resumes));
   if (claim.type === 'answer') {
     return yield* runAnswered(id, recorded);

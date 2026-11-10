@@ -1,4 +1,4 @@
-import { Conflict, messageIdOf, type StreamReader, type StreamWriter } from '@on.auto/operations';
+import { Conflict, messageIdOf } from '@on.auto/operations';
 import { Effect, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -16,6 +16,7 @@ import {
 } from '../testing/asked-runs.ts';
 import { askedRequest } from '../testing/asking.ts';
 import { recordedAdmin } from '../testing/callers.ts';
+import type { WorkLedger } from './work-recorder.ts';
 
 describe('a run of a capability that answers by its input', () => {
   it('records that it finishes later from the input it is given, and finishes in its call for another', async () => {
@@ -103,7 +104,7 @@ describe('the work a capability records on a run that changes under it, or on a 
     const { ledger, recorded } = await asked();
     const other = workRecorder(ledger.service, askingFacts);
     const turns = { next: (): Effect.Effect<unknown, unknown> => other(run, nudge(1), lineage) };
-    const changedOnce: StreamReader & StreamWriter = {
+    const changedOnce: WorkLedger = {
       ...ledger.service,
       execute: (named, decider, command, given) => {
         const turn = Effect.orDie(turns.next());

@@ -30,7 +30,10 @@ export function playbookReaderOf(ledger: LedgerPorts, address: PlaybookAddress):
 }
 
 export function playbookWriterOf(ledger: LedgerPorts, address: PlaybookAddress): PlaybookWriter['Service'] {
-  return prefixedWriter(ledger, streamPrefixOfPlaybook(address));
+  return {
+    ...prefixedWriter(ledger, streamPrefixOfPlaybook(address)),
+    keepContent: (content) => ledger.content.put(address, content),
+  };
 }
 
 export function playbookLedgerOf(

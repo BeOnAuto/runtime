@@ -1,5 +1,11 @@
 import type { ContentOwner, Digested } from '@on.auto/content';
-import { Unavailable, playbookPayloadReader, type PlaybookContext, type PlaybookReader } from '@on.auto/operations';
+import {
+  Conflict,
+  Unavailable,
+  playbookPayloadReader,
+  type PlaybookContext,
+  type PlaybookReader,
+} from '@on.auto/operations';
 import {
   payloadReaderOf,
   type Payload,
@@ -8,6 +14,8 @@ import {
   type PayloadSource,
 } from '@on.auto/operations/payloads';
 import { Effect, Struct, type Schema } from 'effect';
+
+import type { ValuesRead } from './payload-comparisons.ts';
 
 export type PayloadUnread = 'unavailable' | 'missing' | 'erased';
 
@@ -52,11 +60,44 @@ export function inputOf(run: { readonly input: Payload<Schema.Json> }): ReadInTh
   return Effect.flatMap(playbookPayloadReader, (payloads) => payloadAsRead(run.input, payloads));
 }
 
-export function outputOf(run: { readonly output?: Payload<Schema.Json> }): ReadInTheCall<PayloadAsRead | undefined> {
+function inHand(output: Payload<Schema.Json>, written: ValuesRead): PayloadAsRead | undefined {
+  const value = 'kept' in output ? written.get(output.kept.sha256) : undefined;
+  return value === undefined ? undefined : { read: value };
+}
+
+export function outputOf(
+  run: { readonly output?: Payload<Schema.Json> },
+  written: ValuesRead = new Map(),
+): ReadInTheCall<PayloadAsRead | undefined> {
   const { output } = run;
-  return output === undefined
-    ? Effect.undefined
-    : Effect.flatMap(playbookPayloadReader, (payloads) => payloadAsRead(output, payloads));
+  if (output === undefined) {
+    return Effect.undefined;
+  }
+  const known = inHand(output, written);
+  return known === undefined
+    ? Effect.flatMap(playbookPayloadReader, (payloads) => payloadAsRead(output, payloads))
+    : Effect.succeed(known);
+}
+
+function notComparable(because: 'is missing from the content of its playbook' | 'was erased'): Conflict {
+  return new Conflict({
+    detail: `The run's recorded value, which its playbook keeps outside the run's record, ${because}, so this one cannot be told the same as it or another`,
+  });
+}
+
+export function valuesReadFor(
+  kept: readonly Digested[],
+  payloads: PayloadReader,
+): Effect.Effect<ValuesRead, Unavailable | Conflict> {
+  return Effect.forEach(kept, (each) => Effect.map(payloads.json(each), (value) => [each.sha256, value] as const), {
+    concurrency: 'unbounded',
+  }).pipe(
+    Effect.map((values: readonly (readonly [string, Schema.Json])[]): ValuesRead => new Map(values)),
+    Effect.catchTags({
+      payload_missing: () => Effect.fail(notComparable('is missing from the content of its playbook')),
+      payload_erased: () => Effect.fail(notComparable('was erased')),
+    }),
+  );
 }
 
 const outputUnavailable = new Unavailable({
@@ -96,6 +137,7 @@ export function withItsOutputShown<Recorded extends { readonly output?: Payload<
 
 export function withItsOutputRead<Recorded extends { readonly output?: Payload<Schema.Json> }>(
   recorded: Recorded,
+  written?: ValuesRead,
 ): Effect.Effect<WithItsOutputShown<Recorded>, Unavailable, PlaybookReader | PlaybookContext> {
-  return Effect.flatMap(outputOf(recorded), (read) => withItsOutputShown(recorded, read));
+  return Effect.flatMap(outputOf(recorded, written), (read) => withItsOutputShown(recorded, read));
 }

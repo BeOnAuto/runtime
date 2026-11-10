@@ -1,7 +1,7 @@
 import type { PlaybookAddress } from '@on.auto/operations';
 
+import type { PayloadAsRead } from '../payloads/run-payloads.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
-import type { PayloadAsRead } from '../runs/run-payloads.ts';
 import type { RunDetailAsRecorded } from '../runs/run.ts';
 import type { RunShown, SubjectShown } from './page-rendering.ts';
 

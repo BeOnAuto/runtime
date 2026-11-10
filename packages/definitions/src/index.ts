@@ -118,13 +118,13 @@ export {
   type DeclaringCapability,
   type RunFacts,
 } from './run-work/declared-facts.ts';
+export { playbookBoundAnswerer, type AnswerRun } from './run-work/answer-commands.ts';
 export {
-  playbookBoundAnswerer,
   workRecorder,
-  type AnswerRun,
   type RecordWork,
   type RecordedWorkAt,
   type Work,
+  type WorkLedger,
   type WorkRule,
 } from './run-work/work-recorder.ts';
 export { answeredAlready, cancelledUnanswered, endedUnanswered, runEnded } from './run-work/work-decisions.ts';
@@ -153,7 +153,7 @@ export {
   type RunDetail,
   type RunDetailAsRecorded,
 } from './runs/run.ts';
-export { payloadAsRead, payloadsKeptIn, type KeptContentReader, type PayloadAsRead } from './runs/run-payloads.ts';
+export { payloadAsRead, payloadsKeptIn, type KeptContentReader, type PayloadAsRead } from './payloads/run-payloads.ts';
 export {
   playbookBoundSettler,
   runSettler,

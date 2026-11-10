@@ -1,6 +1,6 @@
 import type { Schema } from 'effect';
 
-import type { PayloadUnread } from '../runs/run-payloads.ts';
+import type { PayloadUnread } from '../payloads/run-payloads.ts';
 import { recordOf } from '../shapes/shape-values.ts';
 import type { RenderClock } from '../template/render-clock.ts';
 import type { ParsedTemplate } from '../template/template-parsing.ts';

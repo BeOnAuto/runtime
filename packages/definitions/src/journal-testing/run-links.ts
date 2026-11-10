@@ -1,4 +1,4 @@
-import { PlaybookContext, PlaybookWriter, Caller, messageIdOf, type RecordedEvent } from '@on.auto/operations';
+import { PlaybookContext, Caller, messageIdOf, playbookLedgerOf, type RecordedEvent } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { runJournal, type LedgerJournal } from '../journal/run-journal.ts';
@@ -67,10 +67,7 @@ export function journalled<A>(definitions: Harness, use: (journal: LedgerJournal
       ),
     );
   }).pipe(
-    Effect.provideService(PlaybookWriter, {
-      execute: (relative, decider, command, lineage) =>
-        definitions.ledger.service.execute(`playbook/acme/alpha/${relative}`, decider, command, lineage),
-    }),
+    Effect.provideContext(playbookLedgerOf(definitions.ledger.service, { org: 'acme', playbook: 'alpha' })),
     Effect.provideService(Caller, acmeAdmin),
     Effect.provideService(PlaybookContext, { org: 'acme', playbook: 'alpha' }),
   );

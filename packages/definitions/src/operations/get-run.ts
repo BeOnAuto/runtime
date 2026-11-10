@@ -4,9 +4,9 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { RunReadSchema } from '../page/page-shown.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
+import { outputOf, withItsOutputShown } from '../payloads/run-payloads.ts';
 import { runWordsFor } from '../plain-language/run-words.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
-import { outputOf, withItsOutputShown } from '../runs/run-payloads.ts';
 import { RunIdInputField } from './definition-fields.ts';
 import { loadRun } from './run-access.ts';
 

@@ -1,6 +1,8 @@
+import { outputPayloadOf, payloadMembers } from '@on.auto/operations/payloads';
 import { Cause, Effect, type Schema } from 'effect';
 
 import type { CapabilityAnswer, CapabilityRejection } from '../capability/capability.ts';
+import { payloadWritten, type PayloadWritten } from '../payloads/payload-writing.ts';
 import type { InterruptedAttempt, RunOutcome } from '../runs/run-commands.ts';
 import { isTaken } from '../runs/run-decisions.ts';
 import { runAnswered } from '../runs/run-lookup.ts';
@@ -8,17 +10,28 @@ import { answerAfterAnother, loadCalls, loadRun, recordRun } from './run-access.
 import { attempt, failedAttempt, interruptedAttempt, isTakenByAnother } from './run-attempt.ts';
 import type { JournalledRun, Prepared } from './run-contexts.ts';
 
-export function answeredWith(
-  id: string,
-  context: JournalledRun,
-  outcome: RunOutcome | InterruptedAttempt,
-  number: number,
-) {
+type Ending = RunOutcome | InterruptedAttempt;
+
+const nothingWritten = { inHand: new Map() } satisfies Pick<PayloadWritten, 'inHand'>;
+
+function endingWritten(ending: Ending) {
+  if (ending.type !== 'run_succeeded') {
+    return Effect.succeed({ ...nothingWritten, ending });
+  }
+  const { record } = ending.data;
+  return Effect.map(payloadWritten(outputPayloadOf(ending)), ({ payload, inHand }) => ({
+    inHand,
+    ending: { type: 'run_succeeded', data: { ...payloadMembers('output', payload), record } } satisfies Ending,
+  }));
+}
+
+export function answeredWith(id: string, context: JournalledRun, outcome: Ending, number: number) {
   return Effect.gen(function* () {
     const causationId = outcome.type === 'run_deferred' ? context.lineage.startId : yield* context.journal.latest;
     const lineage = { causationId, correlationId: context.lineage.correlationId };
-    const { state } = yield* recordRun(id, { type: 'finish', result: outcome, attempt: number }, lineage);
-    return yield* runAnswered(id, state);
+    const { ending, inHand } = yield* endingWritten(outcome);
+    const { state } = yield* recordRun(id, { type: 'finish', result: ending, attempt: number }, lineage);
+    return yield* runAnswered(id, state, inHand);
   });
 }
 

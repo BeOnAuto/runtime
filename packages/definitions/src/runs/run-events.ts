@@ -32,15 +32,16 @@ export const CancelRequestKindSchema = Schema.Literals(['requested', 'deadline',
 
 const ReplyIdentitySchema = Schema.Struct({ id: Schema.String, sender: Schema.String });
 
-export const RequestAnsweredSchema = withPayloads(
-  Schema.Struct({
-    ...payloadFields('answer', Schema.Json),
-    claimed_for: Schema.optionalKey(Schema.String),
-    reply: Schema.optionalKey(ReplyIdentitySchema),
-    answered_by: RecordedCallerSchema,
-  }),
-  ['answer'],
-);
+const AnswerOfARequestSchema = Schema.Struct({
+  ...payloadFields('answer', Schema.Json),
+  claimed_for: Schema.optionalKey(Schema.String),
+  reply: Schema.optionalKey(ReplyIdentitySchema),
+  answered_by: RecordedCallerSchema,
+});
+
+export type AnswerBeside = Omit<typeof AnswerOfARequestSchema.Type, 'answer' | 'answer_sha256' | 'answer_bytes'>;
+
+export const RequestAnsweredSchema = withPayloads(AnswerOfARequestSchema, ['answer']);
 
 export const RunStartedSchema = factOf(
   'run_started',

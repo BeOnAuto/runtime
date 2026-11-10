@@ -3,7 +3,12 @@ import type { Unavailable } from '@on.auto/operations';
 import { outputPayloadOf } from '@on.auto/operations/payloads';
 import { Result, type Schema } from 'effect';
 
-import { comparedPayloads, comparedWithoutItsValue, type Compared } from './payload-comparisons.ts';
+import {
+  comparedPayloads,
+  comparedWithoutItsValue,
+  type Compared,
+  type ValuesRead,
+} from '../payloads/payload-comparisons.ts';
 import type { RunResult } from './run-commands.ts';
 
 function canonical(value: Schema.Json): Schema.Json {
@@ -39,9 +44,9 @@ function settlementKeyOf(result: RunResult): string {
   return JSON.stringify([result.type]);
 }
 
-function settlementsCompared(recorded: RunResult | undefined, offered: RunResult): Compared {
+function settlementsCompared(recorded: RunResult | undefined, offered: RunResult, read?: ValuesRead): Compared {
   if (recorded !== undefined && recorded.type === 'run_succeeded' && offered.type === 'run_succeeded') {
-    return comparedPayloads(outputPayloadOf(recorded), outputPayloadOf(offered), canonicallyEqual);
+    return comparedPayloads(outputPayloadOf(recorded), outputPayloadOf(offered), canonicallyEqual, read);
   }
   return recorded !== undefined && settlementKeyOf(recorded) === settlementKeyOf(offered) ? 'same' : 'different';
 }
@@ -49,7 +54,8 @@ function settlementsCompared(recorded: RunResult | undefined, offered: RunResult
 export function settledTheSame(
   recorded: RunResult | undefined,
   offered: RunResult,
+  read?: ValuesRead,
 ): Result.Result<boolean, Unavailable> {
-  const compared = settlementsCompared(recorded, offered);
+  const compared = settlementsCompared(recorded, offered, read);
   return compared === 'unknown' ? Result.fail(comparedWithoutItsValue) : Result.succeed(compared === 'same');
 }

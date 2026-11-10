@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { canonicallyEqual } from '../runs/settlement-keys.ts';
 import { keptArmOf } from '../testing/kept-payloads.ts';
-import { comparedPayloads } from './payload-comparisons.ts';
-import { canonicallyEqual } from './settlement-keys.ts';
+import { comparedPayloads, keptToCompare } from './payload-comparisons.ts';
 
 const leads = { region: 'emea', leads: Array.from({ length: 80 }, (_, index) => `lead-${index}`) };
 
@@ -33,5 +33,26 @@ describe('two payloads compared', () => {
       comparedPayloads({ kept }, { inline: reordered }, canonicallyEqual),
       comparedPayloads({ kept }, { kept: another }, canonicallyEqual),
     ]).toEqual(['unknown', 'unknown']);
+  });
+});
+
+describe('two payloads compared with the values read of those kept outside', () => {
+  it('are compared by value where every kept one was read, and unknown where one was not', () => {
+    const read = new Map([[kept.sha256, leads]]);
+
+    expect([
+      comparedPayloads({ kept }, { inline: reordered }, canonicallyEqual, read),
+      comparedPayloads({ kept }, { inline: { region: 'apac' } }, canonicallyEqual, read),
+      comparedPayloads({ kept }, { kept: another }, canonicallyEqual, read),
+    ]).toEqual(['same', 'different', 'unknown']);
+  });
+
+  it('need the values kept outside of a pair that cannot be told apart otherwise, and none for a pair that can', () => {
+    expect([
+      keptToCompare({ kept }, { inline: reordered }),
+      keptToCompare({ kept }, { kept: another }),
+      keptToCompare({ kept }, { inline: leads }),
+      keptToCompare({ inline: leads }, { inline: { region: 'apac' } }),
+    ]).toEqual([[kept], [kept, another], [], []]);
   });
 });

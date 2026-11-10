@@ -2,7 +2,7 @@ import { CallLineage, PlaybookContext, personOfTheOrg } from '@on.auto/operation
 import { Effect } from 'effect';
 
 import type { Capability } from '../capability/capability.ts';
-import { takesAStartOnce } from '../runs/run-claims.ts';
+import { comparedWithItsRecordedInput, takesAStartOnce } from '../runs/run-claims.ts';
 import type { RunRequest } from '../runs/run-commands.ts';
 import { isTaken } from '../runs/run-decisions.ts';
 import { runAnswered } from '../runs/run-lookup.ts';
@@ -12,7 +12,7 @@ import { loadRun, loadStartedRun } from './run-access.ts';
 
 const answeredWhilePaused = Effect.fnUntraced(function* (id: string, request: RunRequest) {
   const { recorded, run } = yield* loadStartedRun(id);
-  const taken = yield* Effect.fromResult(takesAStartOnce(run, request));
+  const taken = yield* Effect.fromResult(takesAStartOnce(run, yield* comparedWithItsRecordedInput(recorded, request)));
   return taken ? yield* runAnswered(id, recorded) : undefined;
 });
 

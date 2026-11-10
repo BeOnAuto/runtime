@@ -1,8 +1,14 @@
-import { Conflict, type RunCancelled, type Unavailable } from '@on.auto/operations';
-import { Equal, Result } from 'effect';
+import { Conflict, playbookPayloadReader, type RunCancelled, type Unavailable } from '@on.auto/operations';
+import { Effect, Equal, Result } from 'effect';
 
+import {
+  comparedPayloads,
+  comparedWithoutItsValue,
+  keptToCompare,
+  type Compared,
+} from '../payloads/payload-comparisons.ts';
+import { valuesReadFor } from '../payloads/run-payloads.ts';
 import { cancelledAsAsked } from '../run-work/work-decisions.ts';
-import { comparedPayloads, comparedWithoutItsValue, type Compared } from './payload-comparisons.ts';
 import { askedOf, type RunAsked, type RunRequest } from './run-commands.ts';
 import {
   awaitsSettlement,
@@ -29,7 +35,7 @@ const answerClaimed: Claim = { type: 'answer' };
 
 function requestComparedWith({ input, run }: RecordedRunState, asked: RunAsked): Compared {
   return run.type === asked.definition_type && run.name === asked.name
-    ? comparedPayloads(input, asked.input, (recorded, offered) => Equal.equals(recorded, offered))
+    ? comparedPayloads(input, asked.input, (recorded, offered) => Equal.equals(recorded, offered), asked.valuesRead)
     : 'different';
 }
 
@@ -92,3 +98,16 @@ export function takesAStartOnce(state: RunState, request: RunRequest): Result.Re
   const again = startsAgain(request, state);
   return again === 'unknown' ? Result.fail(comparedWithoutItsValue) : Result.succeed(again === 'different');
 }
+
+export const comparedWithItsRecordedInput = Effect.fnUntraced(function* (
+  recorded: RunStreamState,
+  request: RunRequest,
+) {
+  const run = startedRunOf(recorded);
+  const kept = run === undefined ? [] : keptToCompare(run.input, { inline: request.input });
+  if (kept.length === 0) {
+    return request;
+  }
+  const valuesRead = yield* valuesReadFor(kept, yield* playbookPayloadReader);
+  return { ...request, valuesRead } satisfies RunRequest;
+});

@@ -1,17 +1,20 @@
 import { memoryRecordedContent } from '@on.auto/content/testing';
-import { Unavailable } from '@on.auto/operations';
+import { PlaybookContext, Unavailable, playbookLedgerOf } from '@on.auto/operations';
+import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import type { RunAsRecorded } from '../runs/run.ts';
 import { erasingReader, keptArmOf, keptIn } from '../testing/kept-payloads.ts';
 import {
   payloadAsRead,
   payloadsKeptIn,
   payloadValueOf,
+  valuesReadFor,
+  withItsOutputRead,
   withItsOutputShown,
   type PayloadAsRead,
 } from './run-payloads.ts';
-import type { RunAsRecorded } from './run.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -91,6 +94,15 @@ describe('the output of a run, as an operation answers it', () => {
     ]);
   });
 
+  it('is its value with no read where the operation that kept it has it in hand', async () => {
+    const inHand = withItsOutputRead({ ...run, output: { kept } }, new Map([[kept.sha256, report]])).pipe(
+      Effect.provideContext(playbookLedgerOf(memoryLedger().service, alpha)),
+      Effect.provideService(PlaybookContext, alpha),
+    );
+
+    expect(await Effect.runPromise(inHand)).toEqual({ ...run, output: report });
+  });
+
   it('is unavailable, to be asked again, where the store did not answer', async () => {
     expect(await shown({ unread: 'unavailable', kept })).toStrictEqual(
       Exit.fail(
@@ -100,5 +112,32 @@ describe('the output of a run, as an operation answers it', () => {
         }),
       ),
     );
+  });
+});
+
+describe('the values read to tell a payload kept outside from another', () => {
+  it('are the values of those kept outside, by their digests', async () => {
+    const content = contentOf();
+    await Effect.runPromise(keptIn(content, alpha, report));
+
+    expect(await Effect.runPromise(valuesReadFor([kept], payloadsKeptIn(content, alpha)))).toEqual(
+      new Map([[kept.sha256, report]]),
+    );
+  });
+
+  it('are refused where one is missing or erased, since nothing can tell it from another, and unavailable while the store does not answer', async () => {
+    const refusals = [
+      valuesReadFor([kept], payloadsKeptIn(contentOf(), alpha)),
+      valuesReadFor([kept], erasingReader(alpha)),
+      valuesReadFor([kept], payloadsKeptIn(contentOf(true), alpha)),
+    ].map((read) => Effect.flip(read));
+    const missing: unknown = expect.stringContaining('is missing from the content of its playbook');
+    const erased: unknown = expect.stringContaining('was erased');
+
+    expect(await Effect.runPromise(Effect.all(refusals))).toMatchObject([
+      { _tag: 'conflict', detail: missing },
+      { _tag: 'conflict', detail: erased },
+      { _tag: 'unavailable' },
+    ]);
   });
 });

@@ -11,12 +11,12 @@ import { Effect, type Schema } from 'effect';
 
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { admittedByTheMeter, type MeteredRun } from '../metering/run-meter.ts';
-import { firstAttempt, type RunRequest } from '../runs/run-commands.ts';
+import { payloadWritten, type PayloadWritten } from '../payloads/payload-writing.ts';
+import { firstAttempt, type RunRequest, type RunStart } from '../runs/run-commands.ts';
 import { shapeNameIn } from '../shapes/published-output.ts';
-import type { OutputShapeName } from '../shapes/shape-names.ts';
 import { answeredAttempt } from './attempt-endings.ts';
-import { recordRun } from './run-access.ts';
 import { contextOf, type Called, type Prepared } from './run-contexts.ts';
+import { startRecorded } from './start-recording.ts';
 
 export const mostCallDepth = 8;
 
@@ -26,12 +26,12 @@ function tooDeep(callDepth: number): Conflict {
   });
 }
 
-function outputShapeOf(prepared: PreparedDefinition, input: Schema.Json): OutputShapeName | undefined {
+function outputShapeOf(prepared: PreparedDefinition, input: Schema.Json) {
   return prepared.answersItsShapeFor(input) ? shapeNameIn(prepared.summary.details) : undefined;
 }
 
 function startOf(
-  request: RunRequest,
+  request: RunRequest & Pick<RunStart, 'inputKept'>,
   { definition, prepared, createOnly }: Prepared,
   given: GivenLineage,
   startedBy: RecordedCaller,
@@ -80,6 +80,10 @@ function meteredRunOf({ id, request, run: { definition }, given, correlationId, 
   }));
 }
 
+function inputKeptIn(request: RunRequest, { payload }: PayloadWritten): RunRequest & Pick<RunStart, 'inputKept'> {
+  return 'kept' in payload ? { ...request, inputKept: payload.kept } : request;
+}
+
 export const runPrepared = Effect.fnUntraced(function* (
   capabilities: readonly Capability[],
   id: string,
@@ -92,13 +96,18 @@ export const runPrepared = Effect.fnUntraced(function* (
   }
   const correlationId = given.lineage?.correlationId ?? id;
   const startedBy = recordedCallerOf(yield* Caller);
+  const written = inputKeptIn(request, yield* payloadWritten({ inline: request.input }));
   yield* admittedByTheMeter(yield* meteredRunOf({ id, request, run, given, correlationId, startedBy }));
   return yield* Effect.uninterruptibleMask((restore) =>
     Effect.gen(function* () {
-      const { messageId, startedAt, modelCallsBefore } = yield* recordRun(id, startOf(request, run, given, startedBy), {
-        causationId: given.lineage?.causationId ?? null,
-        correlationId,
-      });
+      const { messageId, startedAt, modelCallsBefore } = yield* startRecorded(
+        id,
+        startOf(written, run, given, startedBy),
+        {
+          causationId: given.lineage?.causationId ?? null,
+          correlationId,
+        },
+      );
       const lineage = { startId: messageId, correlationId };
       const context = yield* contextOf(id, run, given, {
         lineage,

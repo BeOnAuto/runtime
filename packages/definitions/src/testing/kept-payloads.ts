@@ -65,23 +65,40 @@ export interface WatchedStore {
   readonly store: ContentStore;
   readonly reads: () => number;
   readonly fail: () => void;
+  readonly failPuts: () => void;
+  readonly lose: () => void;
 }
+
+const noAnswer = Effect.die(new Error('The bucket did not answer'));
 
 export function watchedStore(): WatchedStore {
   const store = memoryContentStore();
-  const watched = { reads: 0, failing: false };
+  const watched = { reads: 0, failing: false, failingPuts: false, lost: false };
+  const readOf: ContentStore['read'] = (owner, sha256) => {
+    if (watched.failing) {
+      return noAnswer;
+    }
+    return watched.lost ? Effect.undefined : store.read(owner, sha256);
+  };
   return {
     store: {
       ...store,
       read: (owner, sha256) =>
         Effect.suspend(() => {
           watched.reads += 1;
-          return watched.failing ? Effect.die(new Error('The bucket did not answer')) : store.read(owner, sha256);
+          return readOf(owner, sha256);
         }),
+      stage: (owner, content) => Effect.suspend(() => (watched.failingPuts ? noAnswer : store.stage(owner, content))),
     },
     reads: () => watched.reads,
     fail: () => {
       watched.failing = true;
+    },
+    failPuts: () => {
+      watched.failingPuts = true;
+    },
+    lose: () => {
+      watched.lost = true;
     },
   };
 }

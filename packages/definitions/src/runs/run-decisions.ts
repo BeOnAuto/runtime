@@ -4,7 +4,7 @@ import { Result } from 'effect';
 import { endingOfADeadAttempt } from '../cancellation/dead-attempt-endings.ts';
 import { decideAnswer, decideCall, decideWork, type AdmitsFact } from '../run-work/work-decisions.ts';
 import { cancelledBeforeItsStart, claimOf, needsNoRun, takesAStartOnce } from './run-claims.ts';
-import { askedOf } from './run-commands.ts';
+import { askedOf, startedEvent } from './run-commands.ts';
 import type {
   RunCancel,
   RunCommand,
@@ -65,20 +65,6 @@ const runsWithinItsCall = new Conflict({
 
 function startedCallingToolsBefore(start: RunStart, state: RunState): boolean {
   return state !== undefined && isRunning(state) && (state.callsTools || start.calls_tools);
-}
-
-function startedEvent({ input, started_by, calls_tools, finishes_later, resumes, output_shape }: RunStart): RunEvent {
-  return {
-    type: 'run_started',
-    data: {
-      input,
-      started_by,
-      ...(calls_tools ? { calls_tools } : {}),
-      ...(finishes_later === true ? { finishes_later } : {}),
-      ...(resumes === true ? { resumes } : {}),
-      ...(output_shape === undefined ? {} : { output_shape }),
-    },
-  };
 }
 
 function decideCreateOnly(start: RunStart, state: RunState): Decision {
@@ -155,7 +141,7 @@ function unansweredThoughAnswered({ answer }: RecordedRunState, { result }: RunS
 }
 
 function settledAlready({ result }: RecordedRunState, settlement: RunSettlement): Decision {
-  return Result.flatMap(settledTheSame(result, settlement.result), (same): Decision =>
+  return Result.flatMap(settledTheSame(result, settlement.result, settlement.valuesRead), (same): Decision =>
     same ? nothingToRecord : Result.fail(endedWithAnotherResult),
   );
 }

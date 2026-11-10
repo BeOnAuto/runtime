@@ -1,9 +1,10 @@
 import { Conflict, RunCancelled, type Rejection } from '@on.auto/operations';
+import { answerPayloadOf } from '@on.auto/operations/payloads';
 import { Result } from 'effect';
 
 import { isCallStart, numberedCall } from '../journal/call-numbering.ts';
+import { comparedPayloads, comparedWithoutItsValue } from '../payloads/payload-comparisons.ts';
 import { takesAnAnswer } from '../requests/request-record.ts';
-import { comparedPayloads, comparedWithoutItsValue } from '../runs/payload-comparisons.ts';
 import type { CapabilityFact, RunAnswer, RunCall, RunWork } from '../runs/run-commands.ts';
 import type { RunEvent } from '../runs/run-events.ts';
 import {
@@ -63,18 +64,18 @@ export const cancelledUnanswered = new Conflict({
   detail: 'A cancel of the run was asked before it took an answer, so it takes none',
 });
 
-function answeredAgain(taken: RecordedAnswer, { answer }: RunAnswer['answer']): Decision {
-  const compared = comparedPayloads(taken.answer, { inline: answer }, canonicallyEqual);
+function answeredAgain(taken: RecordedAnswer, { answer, valuesRead }: RunAnswer): Decision {
+  const compared = comparedPayloads(taken.answer, answerPayloadOf({ data: answer }), canonicallyEqual, valuesRead);
   if (compared === 'unknown') {
     return Result.fail(comparedWithoutItsValue);
   }
   return compared === 'same' ? Result.succeed([]) : Result.fail(answeredAlready);
 }
 
-export function decideAnswer({ answer }: RunAnswer, state: RunState): Decision {
+export function decideAnswer(command: RunAnswer, state: RunState): Decision {
   const taken = state?.answer ?? null;
   if (taken !== null) {
-    return answeredAgain(taken, answer);
+    return answeredAgain(taken, command);
   }
   if (state === undefined || !awaitsSettlement(state)) {
     return Result.fail(endedUnanswered);
@@ -83,6 +84,6 @@ export function decideAnswer({ answer }: RunAnswer, state: RunState): Decision {
     return Result.fail(cancelledUnanswered);
   }
   return takesAnAnswer(state.record)
-    ? Result.succeed([{ type: 'request_answered', data: answer }])
+    ? Result.succeed([{ type: 'request_answered', data: command.answer }])
     : Result.fail(takesNoAnswer);
 }
