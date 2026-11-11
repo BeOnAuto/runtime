@@ -34,7 +34,7 @@ describe('the operations of the definitions, with the read model of the definiti
 
     expect(JSON.stringify(shadow.answers)).toBe(JSON.stringify(today));
     expect(new Set(shadow.compared.map(([read]) => read))).toEqual(
-      new Set(['used_by', 'get_definition', 'list_definitions', 'definition_page', 'run_start']),
+      new Set(['used_by', 'get_definition', 'triggers_since', 'list_definitions', 'definition_page', 'run_start']),
     );
     expect(shadow.compared.filter(([, outcome]) => outcome !== 'matched')).toEqual([]);
   });

@@ -1,10 +1,11 @@
-import { NotFound, PlaybookReader } from '@on.auto/operations';
+import { NotFound, type PlaybookContext, type PlaybookReader } from '@on.auto/operations';
 import { payloadOf } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import type { RegisteredDefinition } from '../registry/definition-registry.ts';
-import { versionAndSaveIn, type ReadModelReader } from './read-model-rows.ts';
+import type { ReadModelRefused } from './read-model-refused.ts';
+import { inThePlaybookOf, versionAndSaveIn, type ReadModelReader } from './read-model-rows.ts';
 
 export interface VersionInTheReadModel {
   readonly name: string;
@@ -25,7 +26,7 @@ export function versionFromTheReadModelIn(
   type: string,
   name: string,
   version: number,
-): Effect.Effect<VersionInTheReadModel, NotFound> {
+): Effect.Effect<VersionInTheReadModel, NotFound | ReadModelRefused> {
   return Effect.flatMap(versionAndSaveIn(reader, type, name, version), (found) => {
     if (found === undefined) {
       return Effect.fail(versionNotFound(type, name, version));
@@ -45,6 +46,6 @@ export function versionFromTheReadModel(
   type: string,
   name: string,
   version: number,
-): Effect.Effect<VersionInTheReadModel, NotFound, PlaybookReader> {
-  return PlaybookReader.use((reader) => versionFromTheReadModelIn(reader, type, name, version));
+): Effect.Effect<VersionInTheReadModel, NotFound | ReadModelRefused, PlaybookReader | PlaybookContext> {
+  return inThePlaybookOf((reader) => versionFromTheReadModelIn(reader, type, name, version));
 }

@@ -11,6 +11,7 @@ import {
   streamPortsOf,
   VersionConflict,
   type DecisionLoop,
+  type StreamMessagesStore,
   type Streams,
 } from './index.ts';
 import { stamped } from './testing/happenings.ts';
@@ -157,7 +158,7 @@ describe('the context of a decision', () => {
   });
 });
 
-async function lentStreams(): Promise<Streams> {
+async function lentStreams(): Promise<Streams & StreamMessagesStore> {
   const emmett = getSQLiteEventStore({
     driver: sqlite3EventStoreDriver,
     fileName: ':memory:',
@@ -170,11 +171,12 @@ async function lentStreams(): Promise<Streams> {
     mostEventsInOneAppend: store.mostEventsInOneAppend,
     read: store.read,
     readPage: store.readPage,
+    messageAt: store.messageAt,
     append: store.append,
   };
 }
 
-function aheadOnce(streams: Streams): Streams {
+function aheadOnce(streams: Streams & StreamMessagesStore): Streams & StreamMessagesStore {
   const ahead = { written: false };
   return {
     ...streams,
@@ -190,7 +192,7 @@ function aheadOnce(streams: Streams): Streams {
 
 class ConflictOfAnotherCopy extends Data.TaggedError('version_conflict') {}
 
-function inConflictOnce(streams: Streams, conflict: () => Error): Streams {
+function inConflictOnce(streams: Streams & StreamMessagesStore, conflict: () => Error): Streams & StreamMessagesStore {
   const met = { conflict: false };
   return {
     ...streams,

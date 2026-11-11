@@ -82,6 +82,10 @@ export function prefixedReader(ledger: StreamReader, prefix: string): StreamRead
   };
 }
 
+export function playbookBoundStreamReader(ledger: StreamReader, playbook: PlaybookAddress): StreamReader {
+  return prefixedReader(ledger, streamPrefixOfPlaybook(playbook));
+}
+
 export function prefixedAges(ledger: StreamAges, prefix: string): StreamAges {
   return {
     ageOfLastAppend: (stream) =>

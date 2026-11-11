@@ -1,8 +1,8 @@
 export {
   orgOfStreamPrefix,
   playbookBoundProjectionReader,
+  playbookBoundStreamReader,
   playbookOfStreamPrefix,
-  prefixedReader,
   streamPrefixOfPlaybook,
   streamPrefixOfOrg,
 } from './ledger/bound-ports.ts';
@@ -44,6 +44,8 @@ export { advancedColumnsOf, childKeyColumn, foldsStream } from './projections/ke
 export { checkedProjection } from './projections/projection-checks.ts';
 export { checkedStreamProjection, checkpointsOf, typesOf } from './stream-projections/stream-projection.ts';
 export type { CountedRows, GroupwiseMaximum, StreamProjection } from './stream-projections/stream-projection.ts';
+export { circuitBreakers, readModelOpenForMs, type CircuitBreakers } from './stream-projections/circuit-breakers.ts';
+export { isStreamProjectionRefused, StreamProjectionRefused } from './stream-projections/stream-projection-refused.ts';
 export { keepsChildRows, projectedTableOf, requireAdvancedColumns } from './projections/keyed-projection.ts';
 export { rowKeyColumn, rowKeyOf, scopesOf, streamPrefixOfAddress } from './projections/keyed-projection.ts';
 export { type AddressedStream, type AdvancedColumn } from './projections/keyed-projection.ts';

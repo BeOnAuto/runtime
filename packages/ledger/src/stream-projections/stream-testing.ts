@@ -1,6 +1,12 @@
-import type { Ledger, ProjectedAddress, ProjectedRowsQuery, StreamProjection } from '@on.auto/operations';
+import {
+  isStreamProjectionRefused,
+  type Ledger,
+  type ProjectedAddress,
+  type ProjectedRowsQuery,
+  type StreamProjection,
+} from '@on.auto/operations';
 import { labelFacts, labelReadModelOf, type LabelFact } from '@on.auto/operations/testing';
-import { Effect, Logger, Schema } from 'effect';
+import { Cause, Effect, Exit, Logger, Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import type { LedgerEntry, StreamKept } from '../testing/ledger-entry.ts';
@@ -55,15 +61,20 @@ export interface Logged {
   readonly annotations: Readonly<Record<string, unknown>>;
 }
 
-export async function readLogged(
-  ledger: AnyLedger,
-  address: ProjectedAddress = alpha,
-): Promise<{ readonly rows: readonly unknown[]; readonly logged: readonly Logged[] }> {
+function captured() {
   const logged: Logged[] = [];
   const capture = Logger.map(Logger.formatJson, (line: string) => {
     const { message, annotations = {} } = decodeLine(line);
     logged.push({ message: String(message), annotations });
   });
+  return { logged, capture };
+}
+
+export async function readLogged(
+  ledger: AnyLedger,
+  address: ProjectedAddress = alpha,
+): Promise<{ readonly rows: readonly unknown[]; readonly logged: readonly Logged[] }> {
+  const { logged, capture } = captured();
   const read = Effect.all([
     ledger.readProjectedRows('label_sets', address, everyRow),
     ledger.readProjectedRows('labelled_rows', address, everyRow),
@@ -104,3 +115,16 @@ export const theHistoryFolded = [
   ['n1', 'urgent', 2, 3],
   ['n2', 'billing', 1, 1],
 ];
+
+export interface Refusal {
+  readonly refused: boolean;
+  readonly logged: readonly Logged[];
+}
+
+export async function refusalLogged(ledger: AnyLedger): Promise<Refusal> {
+  const { logged, capture } = captured();
+  const exit = await Effect.runPromise(
+    Effect.exit(ledger.readProjectedRows('label_sets', alpha, everyRow)).pipe(Effect.provide(Logger.layer([capture]))),
+  );
+  return { refused: Exit.isFailure(exit) && isStreamProjectionRefused(Cause.squash(exit.cause)), logged };
+}

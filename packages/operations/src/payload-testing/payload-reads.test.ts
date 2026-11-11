@@ -263,3 +263,22 @@ describe('the facts the check takes', () => {
     expect(payloadReadsOf({ projections: [everything] }, unpaired, [listing])).toEqual([]);
   });
 });
+
+describe('the tables of a read model, checked as the tables kept from facts are', () => {
+  it('name a table of a read model that follows a payload, as a keyed projection of its own is named', () => {
+    const leads = projectionOf('leads', (row, { data }) => ({ ...row, lead: String(memberOf(data, 'input', 'lead')) }));
+    const readModel = {
+      name: 'leads',
+      version: 1,
+      kind: 'runs',
+      streams: ['r'],
+      tables: [leads],
+      counted: [],
+      groupwiseMaxima: [],
+    };
+
+    expect(
+      payloadReadsOf({ projections: [], streamProjections: [readModel] }, runHolders, [started, succeeded, saved]),
+    ).toEqual([{ table: 'leads_1', type: 'run_started', payload: '/input', because: 'folded' }]);
+  });
+});

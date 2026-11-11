@@ -86,19 +86,29 @@ function askedRightly({ render = false, sample_output: sample, run_id: runId }: 
   return runId === undefined ? Effect.void : Effect.fail(runWithSample);
 }
 
+type ReadOn = Pick<DefinitionReadAt, 'stored' | 'definition' | 'triggersSince' | 'triggersSinceAnswered'>;
+
+const withItsTriggersSince = Effect.fnUntraced(function* (read: ReadOn) {
+  const { stored, definition } = read;
+  if ((stored.triggers ?? []).length === 0 || stored.status !== 'active') {
+    return definition;
+  }
+  const since = yield* read.triggersSince();
+  yield* read.triggersSinceAnswered(since);
+  return { ...definition, triggers_since: since };
+});
+
 const readOn = Effect.fnUntraced(function* (
   capability: Capability,
-  { stored, definition: read, triggersSince }: Pick<DefinitionReadAt, 'stored' | 'definition' | 'triggersSince'>,
+  read: ReadOn,
   { pages, asked, refusedWithoutAPage }: Asking,
 ) {
+  const { stored } = read;
   const { name, render = false, sample_output: sample, run_id: runId } = asked;
   const reading = { pages, type: capability.type, stored };
   const run = runId === undefined ? undefined : yield* runOfThePage(reading, runId);
   const result = render ? yield* resultOfAPreview(reading, overOf(sample, run), refusedWithoutAPage) : undefined;
-  const definition =
-    (stored.triggers ?? []).length > 0 && stored.status === 'active'
-      ? { ...read, triggers_since: yield* triggersSince() }
-      : read;
+  const definition = yield* withItsTriggersSince(read);
   const { org, playbook } = yield* PlaybookContext;
   const standing = yield* capability.standing({
     org,

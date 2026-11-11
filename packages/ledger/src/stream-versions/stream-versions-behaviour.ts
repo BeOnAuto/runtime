@@ -39,7 +39,7 @@ function factsAtTheirPositions(entry: LedgerEntry): void {
       expect(await readAt(ledger.factAt)).toEqual(theSecondAlone);
     });
 
-    it('is read over any streams as a page of one fact, as streams lent across a boundary are read', async () => {
+    it('is read over any streams that answer the one message at a version, as streams lent across a boundary are', async () => {
       const ports = streamPortsOf(await aStore(entry));
       await Effect.runPromise(ports.execute(remarks, remarkFacts, twoRemarks));
 

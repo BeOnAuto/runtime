@@ -1,9 +1,10 @@
-import type { PlaybookReader } from '@on.auto/operations';
+import type { PlaybookContext, PlaybookReader } from '@on.auto/operations';
 import { Effect, Order, Schema } from 'effect';
 
 import { definitionTypeRankOf } from '../capability/function-terminology.ts';
 import { CallingStepSchema, type NamedDefinition } from '../used-by/called-definitions.ts';
 import type { DefinitionUser } from '../used-by/user-relations.ts';
+import type { ReadModelRefused } from './read-model-refused.ts';
 import { referencesTo, type ReferenceRow } from './read-model-rows.ts';
 
 const decodeSteps = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Array(CallingStepSchema)));
@@ -22,7 +23,7 @@ function userOf({ user_type: type, user_name: name, relation, places }: Referenc
 export function usersFromTheReadModel(
   types: readonly string[],
   used: NamedDefinition,
-): Effect.Effect<readonly DefinitionUser[], never, PlaybookReader> {
+): Effect.Effect<readonly DefinitionUser[], ReadModelRefused, PlaybookReader | PlaybookContext> {
   return Effect.map(referencesTo(used.type, used.name), (rows) =>
     rows
       .filter(

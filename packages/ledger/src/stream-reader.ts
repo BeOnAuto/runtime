@@ -28,17 +28,6 @@ export function factReaderOf(store: StreamMessagesStore): StreamReader['factAt']
     );
 }
 
-export function pagedFactReaderOf(streams: Streams): StreamReader['factAt'] {
-  return (stream, position, eventSchema) =>
-    atAWholePosition(position, () =>
-      Effect.promise(() => streams.readPage(stream, position - 1, 1)).pipe(
-        Effect.flatMap(({ messages, through }) =>
-          decodedOf(through === position ? messages[0] : undefined, eventSchema),
-        ),
-      ),
-    );
-}
-
 export function streamReaderOf(store: Streams): StreamReader['load'] {
   return (stream, fold) =>
     Effect.gen(function* () {

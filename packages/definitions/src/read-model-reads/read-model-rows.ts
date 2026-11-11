@@ -1,6 +1,8 @@
 import {
+  PlaybookContext,
   PlaybookReader,
   type BoundProjectionReader,
+  type PlaybookAddress,
   type ProjectedCondition,
   type ProjectedKeyedRow,
   type StreamReader,
@@ -9,6 +11,7 @@ import { Effect, Schema } from 'effect';
 
 import { DefinitionEventSchema, isDefinitionSaved, type DefinitionSaved } from '../registry/definition-events.ts';
 import { definitionTypeStreamOf } from '../registry/definitions-decider.ts';
+import { oncePerOpening, refusedWhenItsChecksFailed, type ReadModelRefused } from './read-model-refused.ts';
 
 const rowsInAPage = 100;
 
@@ -64,12 +67,24 @@ const decodeVersionRow = Schema.decodeUnknownSync(VersionRowSchema);
 
 const decodeReferenceRow = Schema.decodeUnknownSync(ReferenceRowSchema);
 
-export type ReadModelReader = Pick<StreamReader, 'factAt'> &
-  Pick<BoundProjectionReader, 'readProjectedRows' | 'resetStreamProjection'>;
+export interface ReadModelReader
+  extends Pick<StreamReader, 'factAt'>, Pick<BoundProjectionReader, 'readProjectedRows' | 'resetStreamProjection'> {
+  readonly playbook: PlaybookAddress;
+}
 
-type Read<A> = Effect.Effect<A>;
+type Read<A> = Effect.Effect<A, ReadModelRefused>;
 
-type ReadInThePlaybook<A> = Effect.Effect<A, never, PlaybookReader>;
+type ReadInThePlaybook<A> = Effect.Effect<A, ReadModelRefused, PlaybookReader | PlaybookContext>;
+
+export function inThePlaybookOf<A, E>(
+  read: (reader: ReadModelReader) => Effect.Effect<A, E>,
+): Effect.Effect<A, E, PlaybookReader | PlaybookContext> {
+  return Effect.gen(function* () {
+    const playbook = yield* PlaybookContext;
+    const { factAt, readProjectedRows, resetStreamProjection } = yield* PlaybookReader;
+    return yield* read({ factAt, readProjectedRows, resetStreamProjection, playbook });
+  });
+}
 
 function rowsOf(
   reader: ReadModelReader,
@@ -77,7 +92,7 @@ function rowsOf(
   where: readonly ProjectedCondition[],
   limit: number,
 ): Read<readonly ProjectedKeyedRow[]> {
-  return reader.readProjectedRows(table, { where, orderBy: [], order: 'asc', limit });
+  return refusedWhenItsChecksFailed(reader.readProjectedRows(table, { where, orderBy: [], order: 'asc', limit }));
 }
 
 function everyRowOf(
@@ -86,13 +101,15 @@ function everyRowOf(
   where: readonly ProjectedCondition[],
   after: readonly (string | number)[] = [],
 ): Read<readonly ProjectedKeyedRow[]> {
-  const page = reader.readProjectedRows(table, {
-    where,
-    orderBy: [],
-    order: 'asc',
-    limit: rowsInAPage,
-    ...(after.length === 0 ? {} : { after }),
-  });
+  const page = refusedWhenItsChecksFailed(
+    reader.readProjectedRows(table, {
+      where,
+      orderBy: [],
+      order: 'asc',
+      limit: rowsInAPage,
+      ...(after.length === 0 ? {} : { after }),
+    }),
+  );
   return Effect.flatMap(page, (rows) => {
     const last = rows.at(-1);
     return last === undefined || rows.length < rowsInAPage
@@ -111,7 +128,7 @@ function definitionRowOf(reader: ReadModelReader, type: string, name: string): R
 }
 
 export function definitionRowsOfType(type: string): ReadInThePlaybook<readonly DefinitionRow[]> {
-  return PlaybookReader.use((reader) =>
+  return inThePlaybookOf((reader) =>
     Effect.map(everyRowOf(reader, 'definitions', [{ column: 'definition_type', equals: type }]), (rows) =>
       rows.map(({ row }) => decodeDefinitionRow(row)),
     ),
@@ -131,7 +148,7 @@ function versionRowOf(
 }
 
 export function referencesTo(type: string, name: string): ReadInThePlaybook<readonly ReferenceRow[]> {
-  return PlaybookReader.use((reader) =>
+  return inThePlaybookOf((reader) =>
     Effect.map(
       everyRowOf(reader, 'definition_references', [
         { column: 'used_type', equals: type },
@@ -174,29 +191,12 @@ function rowAndSaveOnce(
   );
 }
 
-function disagreement(type: string): Error {
-  return new Error(
-    `A row of the ${type} definitions of the read model still names no save of its version once the read model was built again`,
-  );
-}
-
-function onceResetAgain<A>(
-  reader: ReadModelReader,
-  read: Effect.Effect<A | 'disagrees'>,
-  type: string,
-): Effect.Effect<A> {
-  return Effect.flatMap(read, (first) =>
-    first === 'disagrees'
-      ? reader.resetStreamProjection('definitions').pipe(
-          Effect.andThen(read),
-          Effect.flatMap((again) => (again === 'disagrees' ? Effect.die(disagreement(type)) : Effect.succeed(again))),
-        )
-      : Effect.succeed(first),
-  );
+function pointerResetOf(reader: ReadModelReader, type: string) {
+  return { playbook: reader.playbook, type, reset: reader.resetStreamProjection('definitions') };
 }
 
 export function rowAndSaveOf(type: string, name: string): ReadInThePlaybook<RowAndSave | undefined> {
-  return PlaybookReader.use((reader) => onceResetAgain(reader, rowAndSaveOnce(reader, type, name), type));
+  return inThePlaybookOf((reader) => oncePerOpening(pointerResetOf(reader, type), rowAndSaveOnce(reader, type, name)));
 }
 
 export interface VersionAndSave {
@@ -225,5 +225,5 @@ export function versionAndSaveIn(
   name: string,
   version: number,
 ): Read<VersionAndSave | undefined> {
-  return onceResetAgain(reader, versionAndSaveOnce(reader, type, name, version), type);
+  return oncePerOpening(pointerResetOf(reader, type), versionAndSaveOnce(reader, type, name, version));
 }

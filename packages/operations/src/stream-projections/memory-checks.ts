@@ -6,6 +6,7 @@ import {
 } from '../projections/keyed-projection.ts';
 import { rowsAt, type Table } from '../projections/memory-rows.ts';
 import { rowsNotOfTheGreatest } from './stream-checks.ts';
+import { StreamProjectionRefused } from './stream-projection-refused.ts';
 import type { StreamProjection } from './stream-projection.ts';
 
 interface LoggedType {
@@ -96,9 +97,7 @@ function verifiedIn<Fact extends LoggedAt>(
   }
   rebuiltIn(checking, log, { name: projection.name, address });
   if (checksFail(projection, log, prefix, rowsOf)) {
-    throw new Error(
-      `The rows of the read model ${projection.name} of ${prefix.slice(0, -1)} disagree with its facts after it was built again`,
-    );
+    throw new StreamProjectionRefused(projection.name, prefix.slice(0, -1));
   }
 }
 

@@ -1,7 +1,6 @@
 import {
   playbookBoundProjectionReader,
-  prefixedReader,
-  streamPrefixOfPlaybook,
+  playbookBoundStreamReader,
   type PlaybookAddress,
   type ProjectionReader,
   type StreamReader,
@@ -34,8 +33,9 @@ type RunVersionLedger = StreamReader & ProjectionReader;
 
 function readModelReaderIn(ledger: RunVersionLedger, address: PlaybookAddress): ReadModelReader {
   return {
-    ...prefixedReader(ledger, streamPrefixOfPlaybook(address)),
+    ...playbookBoundStreamReader(ledger, address),
     ...playbookBoundProjectionReader(ledger, address),
+    playbook: address,
   };
 }
 

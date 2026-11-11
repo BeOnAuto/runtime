@@ -8,6 +8,7 @@ import {
   type ProjectedRows,
 } from '../projections/keyed-projection.ts';
 import type { RunOutcome, RunOutcomeMapping } from '../run-outcomes/run-outcomes.ts';
+import type { StreamProjection } from '../stream-projections/stream-projection.ts';
 import { inlineMembersOf, sampledInline, twinsOf, type SampledFact } from './payload-twins.ts';
 
 export type { SampledFact } from './payload-twins.ts';
@@ -15,6 +16,7 @@ export type { SampledFact } from './payload-twins.ts';
 export interface KeptTables {
   readonly projections: readonly KeptProjection[];
   readonly runOutcomes?: RunOutcomeMapping;
+  readonly streamProjections?: readonly StreamProjection[];
 }
 
 export type PayloadReadBecause = 'folded' | 'unsampled';
@@ -96,9 +98,10 @@ function outcomesFold(mapping: RunOutcomeMapping): TableFold {
   };
 }
 
-function foldsOf({ projections, runOutcomes }: KeptTables): readonly TableFold[] {
+function foldsOf({ projections, runOutcomes, streamProjections = [] }: KeptTables): readonly TableFold[] {
   return [
     ...projections.map((projection) => keyedFold(projection)),
+    ...streamProjections.flatMap(({ tables }) => tables.map((projection) => keyedFold(projection))),
     ...(runOutcomes === undefined ? [] : [outcomesFold(runOutcomes)]),
   ];
 }

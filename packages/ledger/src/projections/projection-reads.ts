@@ -18,8 +18,8 @@ import {
 import { Effect, Option, Schema } from 'effect';
 
 import type { InTransaction } from '../event-store.ts';
+import type { Kept } from '../stream-projections/guarded-builds.ts';
 import { keptLogged } from '../stream-projections/kept-logs.ts';
-import type { Kept } from '../stream-projections/stream-projection-parts.ts';
 import { boundOf, type ProjectionDialect } from './projection-dialect.ts';
 import {
   columnOf,

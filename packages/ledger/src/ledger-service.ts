@@ -18,11 +18,11 @@ import { Clock, Effect, Result } from 'effect';
 
 import { appendedFactsReaderOf } from './appended/appended-reader.ts';
 import { eventAppenderOf } from './event-appender.ts';
-import type { LedgerContent, LedgerStore, Streams } from './event-store.ts';
+import type { LedgerContent, LedgerStore, StreamMessagesStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
 import { runOutcomesReaderOf } from './outcomes/run-outcomes-reader.ts';
 import { recordedEventReaderOf, recordedReaderOf } from './recorded/recorded-reader.ts';
-import { factReaderOf, pagedFactReaderOf, streamReaderOf } from './stream-reader.ts';
+import { factReaderOf, streamReaderOf } from './stream-reader.ts';
 import { retriedOnVersionConflict, type VersionConflict } from './version-conflict.ts';
 
 export type StreamLoad<Loaded> = (stream: string) => Effect.Effect<Loaded>;
@@ -88,11 +88,11 @@ export function decisionLoop<
     retriedOnVersionConflict(attempt(stream, command)).pipe(Effect.flatMap(Effect.fromResult));
 }
 
-export function streamPortsOf(streams: Streams): StreamReader & StreamWriter {
+export function streamPortsOf(streams: Streams & StreamMessagesStore): StreamReader & StreamWriter {
   const load = streamReaderOf(streams);
   return {
     load,
-    factAt: pagedFactReaderOf(streams),
+    factAt: factReaderOf(streams),
     execute: (stream, decider, command, lineage) =>
       decisionLoop(
         (named: string) => load(named, decider),
@@ -119,7 +119,6 @@ export function ownContentOf(store: LedgerStore): LedgerContent {
 export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentOf(store)): Ledger['Service'] {
   return Ledger.of({
     ...streamPortsOf(store),
-    factAt: factReaderOf(store),
     scrubFact: store.scrubFact,
     ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     readRecorded: recordedReaderOf(store),

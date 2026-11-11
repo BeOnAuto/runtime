@@ -1,8 +1,12 @@
+import { StreamProjectionRefused } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { Kept } from './stream-projection-parts.ts';
+import type { Kept } from './guarded-builds.ts';
 
 function loggedOne(kept: Kept): Effect.Effect<void> {
+  if (kept.kept === 'refused') {
+    return Effect.void;
+  }
   if (kept.kept === 'disagreed') {
     return Effect.logError('The rows of a read model disagree with its facts after it was built again').pipe(
       Effect.annotateLogs({ read_model: kept.projection, playbook: kept.playbook }),
@@ -22,14 +26,10 @@ function loggedOne(kept: Kept): Effect.Effect<void> {
 }
 
 function disagreement(kept: readonly Kept[]): Effect.Effect<void> {
-  const disagreed = kept.find((each) => each.kept === 'disagreed');
-  return disagreed === undefined
+  const refused = kept.find((each) => each.kept === 'disagreed' || each.kept === 'refused');
+  return refused === undefined
     ? Effect.void
-    : Effect.die(
-        new Error(
-          `The rows of the read model ${disagreed.projection} of ${disagreed.playbook} disagree with its facts after it was built again`,
-        ),
-      );
+    : Effect.die(new StreamProjectionRefused(refused.projection, refused.playbook));
 }
 
 export function keptLogged(kept: readonly Kept[]): Effect.Effect<void> {

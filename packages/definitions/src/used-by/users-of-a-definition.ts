@@ -1,4 +1,4 @@
-import type { PlaybookReader } from '@on.auto/operations';
+import type { PlaybookContext, PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { loadRegistry } from '../operations/registry-access.ts';
@@ -10,7 +10,9 @@ import type { NamedDefinition } from './called-definitions.ts';
 import { usersOf, type PlaybookRegistries } from './definition-users.ts';
 import type { DefinitionUser } from './user-relations.ts';
 
-type Users = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader>;
+type UsersToday = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader>;
+
+type Users = Effect.Effect<readonly DefinitionUser[], never, PlaybookReader | PlaybookContext>;
 
 function registriesWith(
   types: readonly string[],
@@ -26,7 +28,7 @@ function registriesWith(
   );
 }
 
-export function usersToday(types: readonly string[], registry: DefinitionRegistry, used: NamedDefinition): Users {
+export function usersToday(types: readonly string[], registry: DefinitionRegistry, used: NamedDefinition): UsersToday {
   return Effect.map(registriesWith(types, used.type, registry), (registries) => usersOf(registries, used));
 }
 
@@ -38,7 +40,7 @@ function stagedUsers(
   types: readonly string[],
   used: NamedDefinition,
   today: Effect.Effect<readonly DefinitionUser[], never, PlaybookReader>,
-): Effect.Effect<readonly DefinitionUser[], never, PlaybookReader> {
+): Users {
   return stagedRead({
     read: 'used_by',
     reading: 'answers',

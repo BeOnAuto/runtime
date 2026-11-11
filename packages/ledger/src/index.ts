@@ -40,6 +40,7 @@ export type {
   RecordedStore,
   RecordedStream,
   StatementExecutor,
+  StreamMessagesStore,
   StoredPage,
   StoredPlace,
   StoredRecord,

@@ -7,45 +7,51 @@ import { triggersSince } from '../operations/registry-access.ts';
 import { listedOfTheRow } from '../read-model-reads/read-model-answers.ts';
 import { definitionFromTheReadModel, type ReadFromTheReadModel } from '../read-model-reads/read-model-definitions.ts';
 import { differingFieldsOf, sameAnswer } from './same-answers.ts';
-import { comparisonOf, stagedRead } from './shadow-comparison.ts';
+import { comparisonOf, loggedComparison, matched, stagedRead } from './shadow-comparison.ts';
 
 type Reading<A, E = never> = Effect.Effect<A, E, PlaybookReader | PlaybookContext>;
 
 export interface DefinitionReadAt extends ReadDefinition {
   triggersSince(): Reading<string>;
+  triggersSinceAnswered(since: string): Effect.Effect<void>;
 }
 
 function namedFields(prefix: string, fields: readonly string[]): readonly string[] {
   return fields.map((field) => `${prefix}.${field}`);
 }
 
-function triggersSinceCompared(today: DefinitionReadAt, { stored, savedBy }: ReadFromTheReadModel): Reading<boolean> {
-  return (stored.triggers ?? []).length === 0
-    ? Effect.succeed(true)
-    : Effect.map(today.triggersSince(), (since) => since === savedBy);
-}
-
 export function readsCompared(capability: Capability, today: DefinitionReadAt, candidate: ReadFromTheReadModel) {
   const remembered = listedOfTheRow(capability, candidate.row, candidate.savedBy).warnings;
-  return Effect.map(triggersSinceCompared(today, candidate), (sameSince) =>
+  return Effect.succeed(
     comparisonOf([
       ...namedFields('stored', differingFieldsOf(today.stored, candidate.stored)),
       ...namedFields('definition', differingFieldsOf(today.definition, candidate.definition)),
-      ...(sameSince ? [] : ['triggers_since']),
       ...(sameAnswer(remembered, candidate.definition.warnings) ? [] : ['remembered_warnings']),
     ]),
   );
+}
+
+export function triggersSinceCompared(type: string, savedBy: string, since: string): Effect.Effect<void> {
+  const comparison = since === savedBy ? matched : comparisonOf(['triggers_since']);
+  return Effect.ignore(Effect.exit(loggedComparison({ read: 'triggers_since', definitionType: type }, comparison)));
 }
 
 export function readToday(capability: Capability, types: readonly string[], name: string) {
   return Effect.map(readDefinition(capability, types, name), (read): DefinitionReadAt => ({
     ...read,
     triggersSince: () => triggersSince(capability.type, read.stored),
+    triggersSinceAnswered: () => Effect.void,
   }));
 }
 
 function readFromTheReadModel({ stored, definition, inHand, savedBy }: ReadFromTheReadModel): DefinitionReadAt {
-  return { stored, definition, inHand, triggersSince: () => Effect.succeed(savedBy) };
+  return {
+    stored,
+    definition,
+    inHand,
+    triggersSince: () => Effect.succeed(savedBy),
+    triggersSinceAnswered: () => Effect.void,
+  };
 }
 
 export function stagedDefinitionRead(
@@ -62,5 +68,9 @@ export function stagedDefinitionRead(
     fromTheReadModel: definitionFromTheReadModel(capability, types, name),
     answerOf: readFromTheReadModel,
     compared: (today, candidate) => readsCompared(capability, today, candidate),
+    answerCompared: (today, { savedBy }) => ({
+      ...today,
+      triggersSinceAnswered: (since) => triggersSinceCompared(capability.type, savedBy, since),
+    }),
   });
 }

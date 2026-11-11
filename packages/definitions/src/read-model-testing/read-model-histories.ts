@@ -197,10 +197,15 @@ export function namesOf(types: readonly string[]): readonly UsedDefinition[] {
 
 const savedAt = '2026-11-11T09:00:00.000Z';
 
-export function executedIn(ledger: Ledger['Service'], type: string, command: DefinitionCommandData): Promise<void> {
+export function executedIn(
+  ledger: Ledger['Service'],
+  type: string,
+  command: DefinitionCommandData,
+  playbook = 'alpha',
+): Promise<void> {
   return Effect.runPromise(
     Effect.ignore(
-      ledger.execute(`playbook/acme/alpha/${definitionTypeStreamOf(type)}`, definitionsDecider(type), {
+      ledger.execute(`playbook/acme/${playbook}/${definitionTypeStreamOf(type)}`, definitionsDecider(type), {
         ...command,
         by: someone.id,
         at: savedAt,
@@ -209,8 +214,13 @@ export function executedIn(ledger: Ledger['Service'], type: string, command: Def
   );
 }
 
-export function createdWith(ledger: Ledger['Service'], name: string, content: DefinitionContent): Promise<void> {
-  return executedIn(ledger, 'echo', { type: 'create', name, content, created_by: someone });
+export function createdWith(
+  ledger: Ledger['Service'],
+  name: string,
+  content: DefinitionContent,
+  playbook = 'alpha',
+): Promise<void> {
+  return executedIn(ledger, 'echo', { type: 'create', name, content, created_by: someone }, playbook);
 }
 
 export function createdInTurn(
@@ -233,6 +243,6 @@ export function createdInTurn(
   );
 }
 
-export function createdIn(ledger: Ledger['Service'], name: string): Promise<void> {
-  return createdWith(ledger, name, { source: JSON.stringify({ greeting: name }) });
+export function createdIn(ledger: Ledger['Service'], name: string, playbook = 'alpha'): Promise<void> {
+  return createdWith(ledger, name, { source: JSON.stringify({ greeting: name }) }, playbook);
 }

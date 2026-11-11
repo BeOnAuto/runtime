@@ -4,9 +4,10 @@ import { Effect } from 'effect';
 import type { RegisteredDefinition } from '../registry/definition-registry.ts';
 import { definitionNotFound } from '../registry/registry-lookup.ts';
 import { savedByOf, storedOf } from './read-model-answers.ts';
+import type { ReadModelRefused } from './read-model-refused.ts';
 import { rowAndSaveOf, type DefinitionRow } from './read-model-rows.ts';
 
-type Reading<A, E = never> = Effect.Effect<A, E, PlaybookReader | PlaybookContext>;
+type Reading<A, E = never> = Effect.Effect<A, E | ReadModelRefused, PlaybookReader | PlaybookContext>;
 
 export interface RegisteredInTheReadModel {
   readonly stored: RegisteredDefinition;

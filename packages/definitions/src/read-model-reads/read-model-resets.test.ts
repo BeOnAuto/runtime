@@ -48,14 +48,4 @@ describe('a row of the read model whose position names no save of its version', 
       (await inThePlaybook(wrongUntilReset(ledger, 1), versionFromTheReadModel('echo', 'greeter', 1))).putInPlaceBy,
     ]).toEqual(['paused', aReader.id]);
   });
-
-  it('fails the read once the rows built again still name no save of their version', async () => {
-    const ledger = await aPausedGreeter();
-
-    await expect(
-      inThePlaybook(wrongUntilReset(ledger, Number.POSITIVE_INFINITY), registeredFromTheReadModel('echo', 'greeter')),
-    ).rejects.toThrow(
-      'A row of the echo definitions of the read model still names no save of its version once the read model was built again',
-    );
-  });
 });

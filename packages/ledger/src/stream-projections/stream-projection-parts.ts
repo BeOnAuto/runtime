@@ -1,6 +1,7 @@
-import type { SQL } from '@event-driven-io/dumbo';
 import {
   checkedStreamProjection,
+  circuitBreakers,
+  readModelOpenForMs,
   streamPrefixOfAddress,
   type KeptProjection,
   type ProjectedAddress,
@@ -11,22 +12,11 @@ import type { InTransaction, StatementExecutor } from '../event-store.ts';
 import { inTurn, type InlineRegistration } from '../projections/inline-projection.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
 import { failedCheckOf, type FailedCheck } from './build-checks.ts';
-import { caughtUp, type Built } from './catch-up.ts';
+import { caughtUp } from './catch-up.ts';
+import { guardedBuild, playbookOf, type Kept, type ResetBecause, type StreamStatements } from './guarded-builds.ts';
 import { contiguousFoldOf, placeOfItsStream } from './stream-folds.ts';
 import { emptied, freshnessOf, type StreamFreshness } from './stream-statements.ts';
 import { prepared, tablesOf } from './stream-tables.ts';
-
-export type Kept =
-  | ({ readonly kept: 'built'; readonly projection: string } & Built)
-  | { readonly kept: 'reset'; readonly projection: string; readonly playbook: string; readonly because: ResetBecause }
-  | { readonly kept: 'disagreed'; readonly projection: string; readonly playbook: string };
-
-type ResetBecause = 'checkpoint_ahead' | FailedCheck | 'asked';
-
-interface StreamStatements {
-  readonly query: (sql: SQL) => Promise<readonly unknown[]>;
-  readonly inTransaction: InTransaction;
-}
 
 export interface StreamProjectionParts {
   readonly named: ReturnType<typeof tablesOf>;
@@ -74,10 +64,6 @@ async function behindCaughtUp(
   return built;
 }
 
-function playbookOf(prefix: string): string {
-  return prefix.slice(0, -1);
-}
-
 function resetOf(projection: StreamProjection, prefix: string, because: ResetBecause): Kept {
   return { kept: 'reset', projection: projection.name, playbook: playbookOf(prefix), because };
 }
@@ -106,10 +92,10 @@ async function afterAFailedCheck(
   { failed, again }: { readonly failed: FailedCheck; readonly again: boolean },
 ): Promise<readonly Kept[]> {
   const { projection, statements, prefix } = freshening;
+  await resetIn(projection, prefix, statements.inTransaction);
   if (again) {
     return [{ kept: 'disagreed', projection: projection.name, playbook: playbookOf(prefix) }];
   }
-  await resetIn(projection, prefix, statements.inTransaction);
   return [resetOf(projection, prefix, failed), ...(await brought(freshening, true))];
 }
 
@@ -124,6 +110,7 @@ export function streamProjectionPartsOf(
 ): StreamProjectionParts {
   const projections = given.map((projection) => checkedStreamProjection(projection));
   const parts = { dialect, mostBytes };
+  const breakers = circuitBreakers(readModelOpenForMs);
   return {
     named: projections.flatMap((projection) => tablesOf(projection)),
     tables: projections.flatMap(({ tables }) => tables),
@@ -134,7 +121,12 @@ export function streamProjectionPartsOf(
       const projection = projectionOfTable(projections, table);
       return projection === undefined || address.playbook === undefined
         ? Promise.resolve([])
-        : brought({ parts, projection, statements, prefix: streamPrefixOfAddress(address) }, false);
+        : guardedBuild(
+            breakers,
+            { projection: projection.name, prefix: streamPrefixOfAddress(address) },
+            Date.now(),
+            (again) => brought({ parts, projection, statements, prefix: streamPrefixOfAddress(address) }, again),
+          );
     },
     resetOn: (inTransaction) => async (name, address) => {
       const projection = projections.find((each) => each.name === name);

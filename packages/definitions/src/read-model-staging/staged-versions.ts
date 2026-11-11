@@ -1,4 +1,4 @@
-import type { NotFound, PlaybookReader } from '@on.auto/operations';
+import type { NotFound, PlaybookContext, PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { versionOf } from '../operations/registry-access.ts';
@@ -10,7 +10,7 @@ export function stagedVersion(
   type: string,
   name: string,
   version: number,
-): Effect.Effect<VersionInTheReadModel, NotFound, PlaybookReader> {
+): Effect.Effect<VersionInTheReadModel, NotFound, PlaybookReader | PlaybookContext> {
   return stagedRead({
     read: 'version',
     reading: 'run_starts',

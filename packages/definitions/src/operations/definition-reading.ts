@@ -29,7 +29,7 @@ function withUsers(definition: Definition, users: readonly DefinitionUser[]): De
 function answeredWithItsUsers(
   capability: Capability,
   stored: StoredDefinition,
-  users: Effect.Effect<readonly DefinitionUser[], never, PlaybookReader>,
+  users: Effect.Effect<readonly DefinitionUser[], never, PlaybookReader | PlaybookContext>,
   answering?: Answering,
 ): Effect.Effect<DefinitionAnswered, Unavailable | Conflict, PlaybookReader | PlaybookContext> {
   return Effect.zipWith(definitionAnswered(capability, stored, answering), users, ({ definition, inHand }, found) => ({

@@ -4,11 +4,12 @@ import { Effect, Order } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import type { ListedDefinition } from '../registry/definition.ts';
 import { listedOfTheRow, savedByOf } from './read-model-answers.ts';
+import type { ReadModelRefused } from './read-model-refused.ts';
 import { definitionRowsOfType, type DefinitionRow } from './read-model-rows.ts';
 
 const rowsByName = Order.mapInput(Order.String, ({ name }: DefinitionRow) => name);
 
-type Reading<A> = Effect.Effect<A, never, PlaybookReader | PlaybookContext>;
+type Reading<A> = Effect.Effect<A, ReadModelRefused, PlaybookReader | PlaybookContext>;
 
 export interface ListedRow {
   readonly row: DefinitionRow;

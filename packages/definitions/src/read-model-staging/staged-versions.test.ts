@@ -29,11 +29,16 @@ async function versionsAt(stage: ReadModelStage) {
       Effect.provide(Logger.layer([logs.logger])),
     ),
   );
-  return { answers, outcomes: logs.logged().map(({ annotations }) => [annotations['read'], annotations['outcome']]) };
+  return {
+    answers,
+    outcomes: logs
+      .logged()
+      .map(({ annotations }) => [annotations['read'], annotations['outcome'] ?? annotations['because']]),
+  };
 }
 
 describe('a version read to start or resume a run, staged between today and the read model', () => {
-  it('is compared while reads are switched, and read from the read model alone at on, with the same answers', async () => {
+  it('is compared while reads are switched, and read from the read model at on, falling back to today on a missing version', async () => {
     const answered = ['person_reader', 'not found'];
 
     expect([await versionsAt('reads'), await versionsAt('on')]).toEqual([
@@ -44,7 +49,7 @@ describe('a version read to start or resume a run, staged between today and the 
           ['version', 'matched'],
         ],
       },
-      { answers: answered, outcomes: [] },
+      { answers: answered, outcomes: [['version', 'failed']] },
     ]);
   });
 });

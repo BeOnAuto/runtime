@@ -11,6 +11,7 @@ import {
   keptWith,
   labelled,
   readLogged,
+  refusalLogged,
   set,
   theHistoryFolded,
 } from './stream-testing.ts';
@@ -104,7 +105,32 @@ function failedWhenNotTheGreatest(entry: LedgerEntry): void {
   });
 }
 
+function refusedOnceItDisagreed(entry: LedgerEntry): void {
+  describe('a stream projection whose rows disagreed with its facts after it was built again', () => {
+    it('keeps none of those rows, and refuses each later read of its playbook without building, its breaker open', async () => {
+      const database = await entry.aDatabase();
+      await historyOf(await aStreamLedger(entry, database), 'alpha');
+      const ledger = await aStreamLedger(entry, database, keptWith(countedWrong));
+
+      const [first, later] = [await refusalLogged(ledger), await refusalLogged(ledger)];
+      const rebuilt = await readLogged(await aStreamLedger(entry, database, keptWith()));
+
+      expect([first.refused, builtOf(first.logged).length > 0, later.refused, later.logged]).toEqual([
+        true,
+        true,
+        true,
+        [],
+      ]);
+      expect([rebuilt.rows, new Set(builtOf(rebuilt.logged).map(([, from]) => from))]).toEqual([
+        theHistoryFolded,
+        new Set([0]),
+      ]);
+    });
+  });
+}
+
 export function streamRebuildBehaviour(entry: LedgerEntry): void {
+  refusedOnceItDisagreed(entry);
   rebuiltAfterAScrub(entry);
   rebuiltOnANewVersion(entry);
   failedWhenItsCountsDiffer(entry);
