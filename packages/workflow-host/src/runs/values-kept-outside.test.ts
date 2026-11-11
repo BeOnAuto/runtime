@@ -3,9 +3,9 @@ import { contentHoldersOf } from '@on.auto/operations';
 import { PayloadsOutside } from '@on.auto/operations/payloads';
 import { RunLogRecordSchema, mostInlineHeldValueBytes, stateFormatKeepingPayloads } from '@on.auto/workflow-engine';
 import { Context, Effect, Schema } from 'effect';
-import { describe, expect, it } from 'vitest';
+import { Client } from 'pg';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
-import type { DatabaseSettings } from '../ledger-testing/ledger-connections.ts';
 import { runAt, startOf, workflow } from '../testing/host-documents.ts';
 import { aSQLiteFile, onPostgreSQLAt, openedOn } from '../testing/host-files.ts';
 import { hostedOn } from '../testing/host-runs.ts';
@@ -28,6 +28,29 @@ const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 
 const notice =
   server === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
+
+type DatabaseSettings = Parameters<typeof openedOn>[0];
+
+async function administered(statementText: string): Promise<void> {
+  const client = new Client({ connectionString: server });
+  await client.connect();
+  try {
+    await client.query(statementText);
+  } finally {
+    await client.end();
+  }
+}
+
+async function aPostgreSQLDatabase(): Promise<DatabaseSettings> {
+  const name = `workflow_host_${crypto.randomUUID().replaceAll('-', '')}`;
+  await administered(`CREATE DATABASE ${name}`);
+  onTestFinished(async () => {
+    await administered(`DROP DATABASE ${name} WITH (FORCE)`);
+  });
+  const database = new URL(server);
+  database.pathname = `/${name}`;
+  return onPostgreSQLAt(database.href);
+}
 
 const LogRows = Schema.Array(Schema.Struct({ data: Schema.String }));
 
@@ -69,7 +92,7 @@ describe('the engine the host composes where payloads are kept outside', () => {
   });
 
   it.skipIf(server === '')(`keeps it outside and holds it the same way on PostgreSQL${notice}`, async () => {
-    const settings = { ...onPostgreSQLAt(server), holders };
+    const settings = { ...(await aPostgreSQLDatabase()), holders };
     await startedKeeping(settings);
 
     const log = await runLogOn(settings);
