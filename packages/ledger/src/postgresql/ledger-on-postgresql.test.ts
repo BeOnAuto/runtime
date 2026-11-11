@@ -13,6 +13,7 @@ import {
   factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
+  receivedWebhooksBehaviour,
   knownFactsBehaviour,
   ledgerBehaviour,
   ledgerStepsBehaviour,
@@ -25,6 +26,7 @@ import {
   postgresqlEventStore,
   postgresqlLedgerLayer,
   postgresqlLedgerOpened,
+  postgresqlReceivedWebhooks,
   postgresqlSecretRows,
 } from './postgresql-ledger.ts';
 
@@ -168,5 +170,9 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   keptSecretsBehaviour({
     ...onPostgreSQL,
     secretRowsOn: (database) => postgresqlSecretRows({ pools: plainPoolsOn(database) }),
+  });
+  receivedWebhooksBehaviour({
+    ...onPostgreSQL,
+    receivedWebhooksOn: (database) => postgresqlReceivedWebhooks({ pools: plainPoolsOn(database) }),
   });
 });

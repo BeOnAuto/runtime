@@ -8,11 +8,13 @@ import { sqliteLedgerLayer, type SQLiteOpening } from '../connection/sqlite-open
 import type { ReturningExecutor } from '../event-store.ts';
 import type { LedgerServices, StoreLayerOptions } from '../ledger-layer.ts';
 import { pooledOptionsOf, type AnyDriver, type SQLiteStoreOptions } from '../sqlite-event-store.ts';
+import { receivedWebhooksOn, type ReceivedWebhooks } from '../webhooks/received-webhooks.ts';
 import { secretRowsOn } from './secret-rows.ts';
 
 export interface SQLiteLedgerFile {
   readonly ledgerLayer: (options?: StoreLayerOptions) => Layer.Layer<LedgerServices>;
   readonly secretRows: Effect.Effect<SecretRows>;
+  readonly receivedWebhooks: Effect.Effect<ReceivedWebhooks>;
 }
 
 interface SQLiteLedgerFileOpening<Driver extends AnyDriver> extends SQLiteOpening<Driver> {
@@ -50,16 +52,21 @@ export function sqliteLedgerFileOn<Driver extends AnyDriver>(
       }),
     ),
   );
-  return {
-    ledgerLayer: (options = {}) => Layer.merge(sqliteLedgerLayer({ ...opening, optionsOf }, options), closed),
-    secretRows: Effect.suspend(() =>
+  const onItsOpenLedger = <Rows>(rows: string, rowsOn: (writing: ReturningExecutor) => Rows): Effect.Effect<Rows> =>
+    Effect.suspend(() =>
       open.writing === undefined
         ? Effect.die(
             new LedgerNotOpen(
-              `The secret rows of the ledger in ${named} run on the pool its ledger opens, and its ledger is not open`,
+              `The ${rows} of the ledger in ${named} run on the pool its ledger opens, and its ledger is not open`,
             ),
           )
-        : Effect.succeed(secretRowsOn(open.writing, closedByTheLedger, mostValuesTheLedgerBindsOnSQLite)),
+        : Effect.succeed(rowsOn(open.writing)),
+    );
+  return {
+    ledgerLayer: (options = {}) => Layer.merge(sqliteLedgerLayer({ ...opening, optionsOf }, options), closed),
+    secretRows: onItsOpenLedger('secret rows', (writing) =>
+      secretRowsOn(writing, closedByTheLedger, mostValuesTheLedgerBindsOnSQLite),
     ),
+    receivedWebhooks: onItsOpenLedger('webhooks received', (writing) => receivedWebhooksOn(writing, closedByTheLedger)),
   };
 }

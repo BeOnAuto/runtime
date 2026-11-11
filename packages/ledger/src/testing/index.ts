@@ -6,6 +6,7 @@ export { factScrubOnStoresBehaviour } from '../scrub/fact-scrub-on-stores-behavi
 export { appendsWithStatementsOnStoresBehaviour } from '../connection/appends-with-statements-behaviour.ts';
 export { measuredRiddenAppendsBehaviour } from '../connection/measured-ridden-appends-behaviour.ts';
 export { keptSecretsBehaviour, type KeptSecretsEntry } from '../secrets/kept-secrets-behaviour.ts';
+export { receivedWebhooksBehaviour } from '../webhooks/received-webhooks-behaviour.ts';
 export { earlierShapesBehaviour } from '../recorded-facts/earlier-shapes-behaviour.ts';
 export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';
 export { ledgerStepsBehaviour } from '../layout/ledger-steps-behaviour.ts';
@@ -14,4 +15,4 @@ export type { RecordedFacts } from '../recorded-facts/recorded-facts.ts';
 export type { LedgerEntry } from './ledger-entry.ts';
 export { unreachableDatabase, type UnreachableDatabase } from './unreachable-database.ts';
 export { valuesListOf } from './values-list.ts';
-export { secretRowsOfItsOpenLedger } from './open-ledger.ts';
+export { receivedWebhooksOfItsOpenLedger, secretRowsOfItsOpenLedger } from './open-ledger.ts';

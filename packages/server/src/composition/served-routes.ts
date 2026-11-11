@@ -24,6 +24,7 @@ import {
 import type { ShippedFiles } from '@on.auto/shipped-files';
 
 import { logMcpError } from '../logging/logging.ts';
+import { answersServedBy, type AnswerStores } from '../webhooks/served-answers.ts';
 import { release } from './release.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
 
@@ -38,6 +39,7 @@ export interface ServedCatalog {
   readonly identityIssuer: string;
   readonly retryStateKeys: RetryStateKeys;
   readonly contentAddressKey: ContentAddressKey;
+  readonly answerStores?: AnswerStores | undefined;
   readonly shippedFiles: ShippedFiles;
 }
 
@@ -52,6 +54,7 @@ export async function routesFor(
     identityIssuer,
     retryStateKeys,
     contentAddressKey,
+    answerStores,
     shippedFiles,
   }: ServedCatalog,
 ): Promise<readonly RegisterRoutes[]> {
@@ -63,6 +66,7 @@ export async function routesFor(
     operationRoutes({ catalog, dispatcher, runCall: runtime.run }),
     openApiDocumentRoutes({ catalog, serverInfo: release, shelf, identityIssuer }),
     contentAddressRoutes({ key: contentAddressKey, content: runtimeLedger(runtime).content }),
+    ...(answerStores === undefined ? [] : [answersServedBy(runtime, answerStores)]),
     guideRoutes(shelf),
     debugRoutes({ catalog, shelf, serverInfo: release, directoryListing }, debugStyle),
     apiCatalogRoutes(shelf),

@@ -1,5 +1,5 @@
 import { configFileVariable, serverConfigVariables } from '@on.auto/config';
-import { connectionsSetting } from '@on.auto/connections';
+import { connectionsSetting, receiveEventsSetting } from '@on.auto/connections';
 import { apiKeysVariable } from '@on.auto/identity';
 import { awsCredentialVariables, proxySettingsVariables } from '@on.auto/outbound';
 
@@ -10,4 +10,5 @@ export const variablesOfTheLibraries: readonly string[] = [
   ...proxySettingsVariables,
   ...awsCredentialVariables,
   connectionsSetting,
+  receiveEventsSetting,
 ];

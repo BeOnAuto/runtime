@@ -12,6 +12,7 @@ import type { LedgerDatabase } from './ledger-database.ts';
 
 export interface LedgerStores {
   readonly secrets: SecretStore;
+  readonly received: Effect.Success<LedgerDatabase['receivedWebhooks']>;
   readonly withSecretsClosed: (served: Served) => Served;
 }
 
@@ -29,13 +30,16 @@ export async function ledgerStoresOpenedBy(
   const custodians = secrets === undefined ? undefined : await custodiansOf(secrets, making);
   const kept = await keepersOf(keepers, custodians, making);
   const store = await run(secretStoreStarted(database, { custodians, keepers: kept }, { secrets, keepers }));
+  const received = await run(database.receivedWebhooks);
   return {
     secrets: store,
+    received,
     withSecretsClosed: ({ routes, stopWork }) => ({
       routes,
       stopWork: async () => {
         await stopWork();
         await store.close();
+        await received.close();
       },
     }),
   };

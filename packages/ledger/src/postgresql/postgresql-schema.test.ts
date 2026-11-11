@@ -34,9 +34,15 @@ const theContentTables = [firstContentTable, 'CREATE TABLE IF NOT EXISTS recorde
 const theContentIndexes = ['CREATE INDEX IF NOT EXISTS recorded_content_heads_by_upload ON recorded_content_heads'];
 
 describe("the ledger's own schema on PostgreSQL", () => {
-  it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the table of its kept secrets, each only when missing", async () => {
+  it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the tables of its kept secrets and of the webhooks it received, each only when missing", async () => {
     const empty = executorFinding([]);
-    const found = executorFinding([...contentTableNames, 'recorded_content_heads_by_upload', 'kept_secrets']);
+    const found = executorFinding([
+      ...contentTableNames,
+      'recorded_content_heads_by_upload',
+      'kept_secrets',
+      'webhooks_received',
+      'webhooks_received_kept_until',
+    ]);
 
     await postgresqlSchemaCreated(empty.execute);
     await postgresqlSchemaCreated(found.execute);
@@ -48,7 +54,9 @@ describe("the ledger's own schema on PostgreSQL", () => {
       ...theContentTables,
       ...theContentIndexes,
       'CREATE TABLE IF NOT EXISTS kept_secrets',
+      'CREATE TABLE IF NOT EXISTS webhooks_received',
+      'CREATE INDEX IF NOT EXISTS webhooks_received_kept_until ON webhooks_received',
     ]);
-    expect(found.commands.filter((command) => /content|kept_secrets/u.test(command))).toEqual([]);
+    expect(found.commands.filter((command) => /content|kept_secrets|webhooks_received/u.test(command))).toEqual([]);
   });
 });

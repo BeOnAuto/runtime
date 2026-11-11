@@ -2,7 +2,7 @@ import { dumbo } from '@event-driven-io/dumbo';
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 import { describe, onTestFinished } from 'vitest';
 
-import { sqliteLayout, sqliteLedgerOpened, sqliteSecretRowsOn } from './index.ts';
+import { sqliteLayout, sqliteLedgerOpened, sqliteReceivedWebhooksOn, sqliteSecretRowsOn } from './index.ts';
 import { sqliteLayoutCarried } from './layout/sqlite-schema.ts';
 import { definitionStreamsIndexed, executedOn, planOf, queried } from './recorded/sqlite-checks.ts';
 import { ledgerLayer, sqliteLedgerFile } from './sqlite3.ts';
@@ -14,10 +14,12 @@ import {
   factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
+  receivedWebhooksBehaviour,
   knownFactsBehaviour,
   ledgerBehaviour,
   ledgerStepsBehaviour,
   logBehaviour,
+  receivedWebhooksOfItsOpenLedger,
   secretRowsOfItsOpenLedger,
   type LedgerEntry,
 } from './testing/index.ts';
@@ -79,11 +81,22 @@ describe('The ledger on SQLite', () => {
     ...onSQLite,
     secretRowsOn: (fileName) => secretRowsOfItsOpenLedger(sqliteLedgerFile(fileName)),
   });
+  receivedWebhooksBehaviour({
+    ...onSQLite,
+    receivedWebhooksOn: (fileName) => receivedWebhooksOfItsOpenLedger(sqliteLedgerFile(fileName)),
+  });
 });
 
 describe('The secret rows on a pool of their own, as code that opens the ledger on a driver of its own opens them', () => {
   keptSecretsBehaviour({
     ...onSQLite,
     secretRowsOn: (fileName) => sqliteSecretRowsOn(() => ({ driver: sqlite3EventStoreDriver, fileName })),
+  });
+});
+
+describe('The webhooks received on a pool of their own, as code that opens the ledger on a driver of its own opens them', () => {
+  receivedWebhooksBehaviour({
+    ...onSQLite,
+    receivedWebhooksOn: (fileName) => sqliteReceivedWebhooksOn(() => ({ driver: sqlite3EventStoreDriver, fileName })),
   });
 });

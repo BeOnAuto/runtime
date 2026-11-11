@@ -65,6 +65,7 @@ type Appended = (inside: InsideTheTransaction) => Promise<void>;
 
 interface AnOpenLedger {
   readonly rows: SecretRows;
+  readonly received: Effect.Success<SQLiteLedgerFile['receivedWebhooks']>;
   readonly appended: Appended;
   readonly named: string;
 }
@@ -75,6 +76,7 @@ export async function anOpenLedger(place: APlace): Promise<AnOpenLedger> {
   onTestFinished(dispose);
   return {
     rows: await Effect.runPromise(file.secretRows),
+    received: await Effect.runPromise(file.receivedWebhooks),
     named,
     appended: (work) => {
       inside.work = work;

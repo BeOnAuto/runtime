@@ -5,6 +5,7 @@ import { Effect, ManagedRuntime, type Layer, type Result } from 'effect';
 import { LedgerConnection, type ConnectionPorts } from '../connection/ledger-connection.ts';
 import { LedgerChores } from '../content/content-sweep.ts';
 import type { SQLiteLedgerFile } from '../secrets/sqlite-ledger-file.ts';
+import type { ReceivedWebhooks } from '../webhooks/received-webhooks.ts';
 
 export interface OpenLedger {
   readonly ledger: Ledger['Service'];
@@ -49,10 +50,21 @@ export function outcomeOf<A, E>(effect: Effect.Effect<A, E>): Promise<Result.Res
   return Effect.runPromise(Effect.result(effect));
 }
 
-export function secretRowsOfItsOpenLedger(file: SQLiteLedgerFile): Effect.Effect<SecretRows> {
+function openedWithItsLedger<Rows extends { readonly close: () => Promise<void> }>(
+  file: SQLiteLedgerFile,
+  rowsOfTheFile: Effect.Effect<Rows>,
+): Effect.Effect<Rows> {
   return Effect.promise(async () => {
     const runtime = ManagedRuntime.make(file.ledgerLayer());
-    const rows = await runtime.runPromise(Effect.andThen(Ledger, file.secretRows));
+    const rows = await runtime.runPromise(Effect.andThen(Ledger, rowsOfTheFile));
     return { ...rows, close: () => runtime.dispose() };
   });
+}
+
+export function secretRowsOfItsOpenLedger(file: SQLiteLedgerFile): Effect.Effect<SecretRows> {
+  return openedWithItsLedger(file, file.secretRows);
+}
+
+export function receivedWebhooksOfItsOpenLedger(file: SQLiteLedgerFile): Effect.Effect<ReceivedWebhooks> {
+  return openedWithItsLedger(file, file.receivedWebhooks);
 }

@@ -87,6 +87,10 @@ function fieldsOf(text: string, contentType: string | null): Result.Result<JsonO
   return Predicate.isReadonlyObject(body) ? Result.succeed(body) : notAnObject;
 }
 
+export function jsonObjectOfText(text: string, contentType: string | null): Result.Result<JsonObject, Problem> {
+  return declaresAnotherCharset(mediaTypeOf(contentType)) ? bodyNotUtf8 : fieldsOf(text, contentType);
+}
+
 export async function parseJsonBody(request: Request): Promise<Result.Result<JsonObject, Problem>> {
   return Result.flatMap(await bodyTextOf(request), (text) => fieldsOf(text, request.headers.get('content-type')));
 }

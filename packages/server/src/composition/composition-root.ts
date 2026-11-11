@@ -64,6 +64,7 @@ function servedWith(serving: Serving): Awaited<ReturnType<ComposedServerOptions[
       workflows,
       identityIssuer,
       ...ownKeys,
+      ...(settings.receiving.overHttp ? { answerStores: stores } : {}),
       shippedFiles,
       ...functions.parts,
       orgOperations: [...functions.parts.orgOperations, ...connections, ...license.operations],

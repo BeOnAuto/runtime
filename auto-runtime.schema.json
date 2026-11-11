@@ -858,6 +858,15 @@
             "required": ["name", "title", "description", "website", "type", "credentials"],
             "additionalProperties": false
           }
+        },
+        "receive_events": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["http"],
+            "description": "A way the runtime receives what a connection's service sends: http, a delivery signed as the Standard Webhooks specification signs a webhook, at the connection's answer addresses"
+          },
+          "description": "The ways the runtime receives what a connection's service sends, of http; every way when left out, and none for an empty list, so a request is answered only through Auto or by reading its replies. CONNECTIONS_RECEIVE_EVENTS wins over it"
         }
       },
       "additionalProperties": false,

@@ -8,5 +8,6 @@ export function sqliteLedgerDatabase(file: string, observer?: AppendObserver): L
   return {
     ledgerLayer: (kept) => ledgerFile.ledgerLayer({ ...kept, observer }),
     secretRows: ledgerFile.secretRows,
+    receivedWebhooks: ledgerFile.receivedWebhooks,
   };
 }

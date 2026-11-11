@@ -24,6 +24,7 @@ import {
 import { registeredClientsOf, RegisteredClientsSchema } from '../registered-clients/registered-clients.ts';
 import { CredentialKindSchema, type CredentialKind } from '../registry/credential.ts';
 import { AddedProvidersSchema, type AddedProviders } from './added-providers.ts';
+import { ReceiveEventsSchema, receiveEventsIn, type ReceivingWay } from './receiving-ways.ts';
 
 export const connectionsSetting = 'CONNECTIONS';
 
@@ -99,6 +100,7 @@ export const ConnectionsSettingSchema = Schema.Struct({
     }),
   ),
   providers: Schema.optionalKey(AddedProvidersSchema),
+  receive_events: Schema.optionalKey(ReceiveEventsSchema),
 }).annotate({
   description:
     "What people may add as connections through their agents, tool servers of an org which every playbook of the org may use; the clients whoever runs the runtime registered at authorization servers, and whether Auto's clients serve as well; and the providers it adds beside those the runtime ships. CONNECTIONS wins over it",
@@ -126,6 +128,7 @@ export interface ConnectionsSetting {
   readonly autoClients: boolean | undefined;
   readonly clientVariables: readonly string[];
   readonly providers: AddedProviders;
+  readonly receiveEvents: readonly ReceivingWay[] | undefined;
 }
 
 interface ResolvedClient {
@@ -253,32 +256,30 @@ function settingOf(
 ): Result.Result<ConnectionsSetting, readonly SettingProblem[]> {
   const clients = writtenClientsOf(written);
   return Result.flatMap(decodedFields(written, clients), (fields) =>
-    Result.map(clientsResolved(fields.registered_clients ?? [], environment), (resolved) => ({
-      policy: connectionPolicyOf(fields),
-      registeredClients: registeredClientsOf(resolved),
-      autoClients: fields.auto_clients,
-      clientVariables: referencedVariablesOf(clients),
-      providers: fields.providers ?? [],
-    })),
+    Result.flatMap(receiveEventsIn(environment, fields.receive_events), (receiveEvents) =>
+      Result.map(clientsResolved(fields.registered_clients ?? [], environment), (resolved) => ({
+        policy: connectionPolicyOf(fields),
+        registeredClients: registeredClientsOf(resolved),
+        autoClients: fields.auto_clients,
+        clientVariables: referencedVariablesOf(clients),
+        providers: fields.providers ?? [],
+        receiveEvents,
+      })),
+    ),
   );
 }
+
+const nothingWritten: Schema.Json = {};
 
 export function readConnectionsSetting(
   environment: Environment,
 ): Effect.Effect<ConnectionsSetting, ConnectionsSettingInvalid> {
   const text = environment[connectionsSetting];
-  if (text === undefined || text === '') {
-    return Effect.succeed({
-      policy: connectionPolicyOf({}),
-      registeredClients: [],
-      autoClients: undefined,
-      clientVariables: [],
-      providers: [],
-    });
-  }
-  const read = Result.flatMap(decodedJsonSetting(connectionsSetting, text, Schema.Json), (written) =>
-    settingOf(written, environment),
-  );
+  const written =
+    text === undefined || text === ''
+      ? Result.succeed(nothingWritten)
+      : decodedJsonSetting(connectionsSetting, text, Schema.Json);
+  const read = Result.flatMap(written, (json) => settingOf(json, environment));
   return Result.match(read, {
     onSuccess: (setting) => Effect.succeed(setting),
     onFailure: (problems) => Effect.fail(invalid(problems)),

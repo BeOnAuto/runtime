@@ -70,6 +70,8 @@ export {
 export { sqliteLedgerLayer, sqliteLedgerOpened } from './connection/sqlite-opening.ts';
 export { sqliteEventStore, type SQLiteStoreOptions } from './sqlite-event-store.ts';
 export { sqliteSecretRowsOn } from './secrets/sqlite-secret-rows.ts';
+export { sqliteReceivedWebhooksOn } from './webhooks/sqlite-received-webhooks.ts';
+export type { ReceivedWebhooks, WebhookReceipt } from './webhooks/received-webhooks.ts';
 export { recordedReaderOf } from './recorded/recorded-reader.ts';
 export { sqliteDefinitionStreamsIndexed, sqlitePlanOf } from './recorded/sqlite-plans.ts';
 export { isVersionConflict, retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';

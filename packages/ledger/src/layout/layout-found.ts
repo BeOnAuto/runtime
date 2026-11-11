@@ -5,6 +5,7 @@ import { contentTableNames, namesFound } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { versionOfTable, type NamedProjection } from '../projections/projection-fill.ts';
 import { keptSecretsTableName } from '../secrets/kept-secrets.ts';
+import { receivedWebhooksTableName } from '../webhooks/received-webhooks-table.ts';
 import type { LayoutDialect } from './layout-dialects.ts';
 
 export interface FoundLayout {
@@ -14,7 +15,12 @@ export interface FoundLayout {
 
 export const layoutTable = 'ledger_layout';
 
-const tablesOfTheLayout: ReadonlySet<string> = new Set([layoutTable, ...contentTableNames, keptSecretsTableName]);
+const tablesOfTheLayout: ReadonlySet<string> = new Set([
+  layoutTable,
+  ...contentTableNames,
+  keptSecretsTableName,
+  receivedWebhooksTableName,
+]);
 
 const prefixesOfTheStore: readonly string[] = ['emt_', 'dmb_'];
 

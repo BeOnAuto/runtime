@@ -20,7 +20,7 @@ async function aContextLogging(): Promise<{ readonly context: Context.Context<ne
 }
 
 describe('the stores of a ledger in PostgreSQL, as the server opens them, without a database', () => {
-  it('open the secret store on a pool of two connections of its own, which nothing reaches without a previous key, and end it once the work stops', async () => {
+  it('open the secret store and the webhooks received each on a pool of two connections of its own, which nothing reaches without a previous key, and end them once the work stops', async () => {
     const { url, port } = await unreachableDatabase();
     const { context, lines } = await aContextLogging();
     const bounds: number[] = [];
@@ -52,7 +52,7 @@ describe('the stores of a ledger in PostgreSQL, as the server opens them, withou
       "Content is kept in the ledger's database",
       `Secrets are kept in the ledger's database, sealed under the key ${sha256Of(Buffer.from(secretsKey, 'base64')).slice(0, 16)} that SECRETS_KEY holds, and 0 sealed under the previous key were sealed again under it`,
     ]);
-    expect({ bounds, ended: endedYet.map((ended) => ended()) }).toEqual({ bounds: [2], ended: [true] });
+    expect({ bounds, ended: endedYet.map((ended) => ended()) }).toEqual({ bounds: [2, 2], ended: [true, true] });
     expect(stopped).toEqual(['the work']);
   });
 });

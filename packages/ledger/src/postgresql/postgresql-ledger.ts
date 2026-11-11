@@ -22,6 +22,10 @@ export {
   type PostgreSQLSecretRowsOptions,
   type SecretConnections,
 } from '../secrets/postgresql-secret-rows.ts';
+export {
+  postgresqlReceivedWebhooks,
+  type PostgreSQLReceivedWebhooksOptions,
+} from '../webhooks/postgresql-received-webhooks.ts';
 
 export interface PostgreSQLLedgerOptions extends PostgreSQLOptions {
   readonly appends?: AppendSignal;

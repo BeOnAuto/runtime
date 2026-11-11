@@ -1,5 +1,10 @@
 import type { AppendObserver } from '@on.auto/ledger';
-import { postgresqlLedgerLayer, postgresqlSecretRows, type PostgreSQLPools } from '@on.auto/ledger/postgresql';
+import {
+  postgresqlLedgerLayer,
+  postgresqlReceivedWebhooks,
+  postgresqlSecretRows,
+  type PostgreSQLPools,
+} from '@on.auto/ledger/postgresql';
 import type { ProxySettings } from '@on.auto/outbound';
 
 import type { PostgreSQLLedgerSettings } from '../settings/ledger-settings.ts';
@@ -10,6 +15,7 @@ export function postgresqlLedgerDatabase(pools: PostgreSQLPools, observer?: Appe
   return {
     ledgerLayer: (kept) => postgresqlLedgerLayer({ ...kept, pools, observer }),
     secretRows: postgresqlSecretRows({ pools }),
+    receivedWebhooks: postgresqlReceivedWebhooks({ pools }),
   };
 }
 

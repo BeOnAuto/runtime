@@ -38,11 +38,11 @@ const notLocal = { loopbackAllowed: false };
 
 describe('readSettings', () => {
   it('listens on every interface at port 5555, allows no origin, has no API keys and keeps the ledger in data/ by default', () => {
-    const { models, toolServers, interaction, ...server } = readSettingsOf({});
+    const { models, toolServers, interaction, receiving, ...server } = readSettingsOf({});
 
     expect(models.openai).toEqual({ configured: false, missing: ['OPENAI_API_KEY'] });
     expect(toolServers).toEqual({ servers: [], referencedVariables: [] });
-    expect(interaction).toEqual({ mostOpenRequests: 10_000 });
+    expect([interaction, receiving]).toEqual([{ mostOpenRequests: 10_000 }, { overHttp: true }]);
     expect(server).toEqual({
       host: '0.0.0.0',
       port: 5555,
@@ -111,6 +111,7 @@ const everySetting = {
     credential_kinds: ['none'],
     auto_clients: false,
   }),
+  CONNECTIONS_RECEIVE_EVENTS: '',
   AUTO_CLIENTS: 'true',
   CONSENT_SERVICE_URL: 'https://consent.example.com',
   AUTO_RUNTIME_LICENSE_KEY: 'alk.acme.0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a.c2VjcmV0',
@@ -148,6 +149,7 @@ const everySettingRead = {
     'vertex-anthropic',
   ],
   reasoning: { mostInputTokens: 500_000 },
+  receiving: { overHttp: false },
   workflows: { mostDurationMs: 2_592_000_000, mostCallsAtOnce: 32, mostOpenCalls: 1000, sweepEveryMs: 1000 },
   computation: { workers: 4 },
   projection: { pageRebuildsAtOnce: 4, playbooksAtOnce: 4 },

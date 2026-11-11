@@ -11,6 +11,7 @@ import {
   type FactSchemaRead,
   type LayoutStep,
   type LedgerServices,
+  type ReceivedWebhooks,
 } from '@on.auto/ledger';
 import type { ContentHolders, KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
 import type { SecretRows } from '@on.auto/secrets';
@@ -34,6 +35,7 @@ interface KeptByTheLedger {
 export interface LedgerDatabase {
   readonly ledgerLayer: (kept: KeptByTheLedger) => Layer.Layer<LedgerServices>;
   readonly secretRows: Effect.Effect<SecretRows>;
+  readonly receivedWebhooks: Effect.Effect<ReceivedWebhooks>;
 }
 
 export async function ledgerDatabaseOf(

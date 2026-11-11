@@ -29,6 +29,19 @@ export { debugPath } from './debug/debug-path.ts';
 export type { DebugServing } from './debug/agent-surface.ts';
 export { readDebugStyle, type DebugStyle } from './debug/debug-style.ts';
 export { contentAddressRoutes, type ContentAddressServing } from './content/content-routes.ts';
+export { signedAnswerRoutes } from './webhooks/signed-answers.ts';
+export type {
+  AnswerAddress,
+  HeardDelivery,
+  KeysAnswer,
+  KeysLimited,
+  KeysRead,
+  SignedAnswer,
+  SignedAnswerServing,
+  SigningKeys,
+  WebhookTaken,
+} from './webhooks/delivery-ports.ts';
+export type { DeliveryOutcome } from './webhooks/delivery-problems.ts';
 export { apiCatalogRoutes } from './discovery/api-catalog.ts';
 export { clientMetadataRoutes, type ClientMetadataDocument } from './discovery/client-metadata.ts';
 export {

@@ -1,5 +1,5 @@
 {
-  "layout": 19,
+  "layout": 20,
   "catalog": [
     {
       "name": "activity_1",
@@ -236,6 +236,14 @@
     {
       "name": "tellings_1_by_run",
       "sql": "CREATE INDEX tellings_1_by_run ON tellings_1 (playbook_key, run_id, known)"
+    },
+    {
+      "name": "webhooks_received",
+      "sql": "CREATE TABLE webhooks_received (org TEXT NOT NULL, connection TEXT NOT NULL, webhook_id TEXT NOT NULL, taken_for TEXT NOT NULL, kept_until BIGINT NOT NULL, PRIMARY KEY (org, connection, webhook_id))"
+    },
+    {
+      "name": "webhooks_received_kept_until",
+      "sql": "CREATE INDEX webhooks_received_kept_until ON webhooks_received (kept_until)"
     },
     {
       "name": "workflow_calls",

@@ -25313,6 +25313,22 @@
               {
                 "type": "string",
                 "enum": [
+                  "request_timeout"
+                ],
+                "title": "Request timeout",
+                "description": "The body did not arrive within the time the server waits"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "too_many_requests"
+                ],
+                "title": "Too many requests",
+                "description": "More requests came than the server takes in a minute"
+              },
+              {
+                "type": "string",
+                "enum": [
                   "internal"
                 ],
                 "title": "Internal error",

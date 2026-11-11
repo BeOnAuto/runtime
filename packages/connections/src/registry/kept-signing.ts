@@ -32,6 +32,14 @@ export function signingSecretsHeldBy(signing: KeptSigning | undefined): readonly
   return [signing?.current.secretId, signing?.previous?.secretId].filter((secretId) => secretId !== undefined);
 }
 
+export function signingSecretsVerifyingAt(signing: KeptSigning | undefined, at: string): readonly string[] {
+  if (signing === undefined) {
+    return [];
+  }
+  const { current, previous } = signing;
+  return previous === undefined || previous.until <= at ? [current.secretId] : [current.secretId, previous.secretId];
+}
+
 export function signingSecretsReleasedOf(
   before: KeptSigning | undefined,
   after: KeptSigning | undefined,

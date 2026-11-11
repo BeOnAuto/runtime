@@ -118,9 +118,13 @@ model_aliases:
 # its format, and the key given in another format is refused. auto_clients lets a
 # provider take Auto's client, through Auto's consent service, where you register
 # none at its vendor: on in local mode and off otherwise when left out.
+# receive_events lists the ways the runtime receives what a connection's service
+# sends: http, a delivery signed with the connection's signing secret at a
+# request's answer address, when left out; [] for none.
 # connections:
 #   people_may_add: true
 #   auto_clients: true
+#   receive_events: [http]
 #   allowed_hosts: ['*.example.com', 'crm.example.com']
 #   credential_kinds: [none, reference, secret, client_credentials, authorization]
 #   providers:

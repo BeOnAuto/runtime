@@ -56,16 +56,16 @@ const indexes = [
   'ledger_messages_by_id',
 ].map((name) => ({ name }));
 
-const contentAndSecrets = [...contentTableNames, 'recorded_content_heads_by_upload', 'kept_secrets'].map((name) => ({
-  name,
-}));
+const ownTables = 'recorded_content_heads_by_upload kept_secrets webhooks_received webhooks_received_kept_until';
+
+const contentAndSecrets = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({ name }));
 
 function aLedgerWithOneRun(tables: readonly string[]): Answers {
   return (statement) => {
     if (statement.includes('ledger_messages_by_playbook')) {
       return indexes;
     }
-    if (/recorded_content_chunks|_by_upload|kept_secrets/u.test(statement)) {
+    if (/recorded_content_chunks|_by_upload|kept_secrets|webhooks_received/u.test(statement)) {
       return contentAndSecrets;
     }
     if (statement.includes('pg_class')) {

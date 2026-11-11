@@ -33,4 +33,5 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
     layout: 15,
     statements: [statement`DROP TABLE IF EXISTS memories_1`],
   },
+  { layout: 20, statements: [] },
 ];
