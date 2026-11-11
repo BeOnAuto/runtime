@@ -1,8 +1,15 @@
-import { Conflict, type Decider } from '@on.auto/operations';
-import { Equal, Result } from 'effect';
+import {
+  Conflict,
+  type Decider,
+  type Lineage,
+  type Rejection,
+  type StreamState,
+  type StreamWriter,
+} from '@on.auto/operations';
+import { Effect, Equal, Result } from 'effect';
 
 import type { AdmitsFact } from '../run-work/work-decisions.ts';
-import type { RunCommand } from './run-commands.ts';
+import type { RunCommand, RunSettlement } from './run-commands.ts';
 import { runContextOf } from './run-context.ts';
 import { decideOnRun } from './run-decisions.ts';
 import { RunEventSchema, runEventSchemaOf, type IsDeclared, type RecordedRunEvent } from './run-events.ts';
@@ -69,4 +76,22 @@ export const runDeciderAsRead: RunDeciderAsRead = readingAnyWork.asRead;
 
 export function runStreamNameOf(id: string): string {
   return `runs/${id}`;
+}
+
+export type SettledOn = (
+  stream: string,
+  command: RunSettlement,
+  lineage: Lineage | undefined,
+) => Effect.Effect<StreamState<RunStreamState>, Rejection<RunReason>>;
+
+export function settledOnLatest(ledger: StreamWriter): SettledOn {
+  return (stream, command, lineage) => ledger.execute(stream, runDecider, command, lineage);
+}
+
+export function settledOnRead(ledger: StreamWriter, readAt: number): SettledOn {
+  return (stream, command, lineage) =>
+    Effect.map(ledger.execute(stream, runDeciderAsRead, { readAt, command }, lineage), ({ state, version }) => ({
+      state: state.state,
+      version,
+    }));
 }

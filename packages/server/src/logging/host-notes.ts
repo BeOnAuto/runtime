@@ -90,6 +90,21 @@ function runReloaded({ run, snapshot, events, keptBytes }: NoteOf<'run_reloaded'
   );
 }
 
+function payloadsRead({ run, texts, bytes, unread }: NoteOf<'payloads_read'>): Effect.Effect<void> {
+  return Effect.logDebug(
+    'A run read from the content store the texts of values it keeps outside its log, to decide or to start a call',
+  ).pipe(
+    Effect.annotateLogs({
+      org: run.org,
+      playbook: run.playbook,
+      run_id: run.runId,
+      texts,
+      bytes,
+      unread,
+    }),
+  );
+}
+
 const loggers: { readonly [Kind in HostNote['kind']]: (note: NoteOf<Kind>) => Effect.Effect<void> } = {
   standing_by: standingBy,
   took_over: tookOver,
@@ -103,6 +118,7 @@ const loggers: { readonly [Kind in HostNote['kind']]: (note: NoteOf<Kind>) => Ef
   record_unreadable: recordUnreadable,
   run_record_passed: runRecordPassed,
   run_reloaded: runReloaded,
+  payloads_read: payloadsRead,
 };
 
 function loggedBy<Kind extends HostNote['kind']>(note: NoteOf<Kind>): Effect.Effect<void> {

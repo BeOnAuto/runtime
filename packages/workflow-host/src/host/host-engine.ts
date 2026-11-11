@@ -3,6 +3,7 @@ import {
   runCacheBounds,
   runCacheOf,
   workflowEngineOf,
+  type ContentUnavailable,
   type MachineOptions,
   type RunCacheBounds,
   type RunInput,
@@ -28,15 +29,18 @@ export interface EngineOptions extends Pick<PortParts, 'settle' | 'reports'> {
   readonly cacheBounds?: RunCacheBounds;
   readonly reactions: ReactionOptions;
   readonly context?: Context.Context<never> | undefined;
+  readonly sharedPayloads?: PortParts['sharedPayloads'];
 }
 
+type Submitted = (input: RunInput) => Effect.Effect<Submission, Conflict | ContentUnavailable>;
+
 export interface HostEngine {
-  readonly engine: WorkflowEngine;
+  readonly engine: WorkflowEngine<ContentUnavailable>;
   readonly runStore: RunLogStore;
   readonly timers: TimerTable;
   readonly executor: HostExecutor;
   readonly reacting: ReactionPorts;
-  readonly submitted: (input: RunInput) => Effect.Effect<Submission, Conflict>;
+  readonly submitted: Submitted;
 }
 
 export type WaitingCalls = Pick<ExecutorParts, 'mostOpen' | 'childOf' | 'childAnswerOf' | 'cancelChild'>;
@@ -49,7 +53,7 @@ export function hostEngineOn(
 ): HostEngine {
   const { reports, clock } = options;
   const timers = sqlTimers(database, armed);
-  const submitted = (input: RunInput): Effect.Effect<Submission, Conflict> =>
+  const submitted: Submitted = (input) =>
     Effect.uninterruptible(engine.submit(input)).pipe(
       Effect.tap(({ outcome, version }: Submission) =>
         Effect.annotateCurrentSpan({ 'auto.on.submission': outcome, 'auto.on.version': version }),
@@ -74,6 +78,8 @@ export function hostEngineOn(
     executor: executor.executor,
     listeners: reacting.listeners,
     emitter: reacting.emitter,
+    context: options.context,
+    sharedPayloads: options.sharedPayloads,
     now: clock.now,
   });
   const engine = workflowEngineOf(ports, options.machine, runCacheOf(options.cacheBounds ?? runCacheBounds));

@@ -69,6 +69,12 @@ export function isSnapshotDue({ bytes, snapshotBytes }: SinceSnapshot): boolean 
   return bytes >= Math.max(snapshotEveryBytes, snapshotBytes);
 }
 
+const utf8 = new TextEncoder();
+
+export function snapshotBytesOf(snapshot: Snapshot): number {
+  return utf8.encode(encodeSnapshot(snapshot)).byteLength;
+}
+
 export function snapshotChunks(snapshot: Snapshot): readonly string[] {
   const text = encodeSnapshot(snapshot);
   const chunksFrom = (start: number): readonly string[] => {

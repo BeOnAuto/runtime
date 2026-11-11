@@ -2,7 +2,7 @@ import { Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { StreamsCarrying } from '../connection/appends-with.ts';
-import type { ConnectionPorts } from '../connection/ledger-connection.ts';
+import type { OpenedConnection } from '../connection/ledger-connection.ts';
 import type { StatementAnswer } from '../connection/statement-answers.ts';
 import { statement, textOnPostgreSQL, type StatementValue } from '../connection/statement.ts';
 import type { RecordedMessage, StoredRecord } from '../event-store.ts';
@@ -14,7 +14,7 @@ interface Asked {
 }
 
 interface Telling {
-  readonly connection: ConnectionPorts;
+  readonly connection: OpenedConnection;
   readonly asked: () => readonly Asked[];
   readonly said: () => readonly string[];
 }

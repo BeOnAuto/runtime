@@ -2,8 +2,8 @@ import { sha256Of } from '@on.auto/content';
 
 import { runCacheOf } from '../cache/run-cache.ts';
 import { workflowEngineOf } from '../engine/engine.ts';
-import type { RunInput } from '../machine/run-input.ts';
-import type { RunState } from '../machine/run-state.ts';
+import type { RunInput, TimerFired } from '../machine/run-input.ts';
+import type { ArmedTimer, RunState } from '../machine/run-state.ts';
 import type { MemoryEngine, MemoryPorts } from '../memory/memory-ports.ts';
 import { testMachine, testSandbox } from '../pool-testing/test-sandbox.ts';
 import { memoryDriver, type MemoryDriver } from '../testing/memory-driver.ts';
@@ -39,4 +39,15 @@ export function pauseEnded(state: RunState): RunInput {
 
 export function coldEngineOn(ports: MemoryPorts): MemoryEngine {
   return workflowEngineOf(ports, testMachine, runCacheOf());
+}
+
+export function callDeadlinesFired(state: RunState): readonly TimerFired[] {
+  return Object.entries(state.timers.armed)
+    .filter(([, { purpose }]: readonly [string, ArmedTimer]) => purpose === 'call_deadline')
+    .map(([timerId, { dueAt }]: readonly [string, ArmedTimer]) => ({
+      kind: 'timer_fired',
+      runId: state.runId,
+      at: dueAt,
+      timerId,
+    }));
 }

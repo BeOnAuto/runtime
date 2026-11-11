@@ -1,5 +1,5 @@
 import type { Conflict } from '@on.auto/operations';
-import type { ReceivedEvent, RunState } from '@on.auto/workflow-engine';
+import type { ContentUnavailable, ReceivedEvent, RunState } from '@on.auto/workflow-engine';
 import type { Effect } from 'effect';
 
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
@@ -22,7 +22,7 @@ export interface HostOptions extends Omit<ServingOptions, 'clock' | 'placeAtOpen
   readonly holder?: string;
 }
 
-type Refusal = Conflict | HostElsewhere | HostStopped;
+type Refusal = Conflict | ContentUnavailable | HostElsewhere | HostStopped;
 
 export interface WorkflowHost {
   readonly start: (run: RunAddress, start: RunStart) => Effect.Effect<StartAnswer, Refusal>;

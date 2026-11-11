@@ -2,7 +2,7 @@ import { sha256Of } from '@on.auto/content';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { coldEngineOn } from '../kept-testing/kept-drivers.ts';
+import { callDeadlinesFired, coldEngineOn } from '../kept-testing/kept-drivers.ts';
 import { argumentsPerformedBy } from '../kept-testing/kept-events.ts';
 import type { MemoryPorts } from '../memory/memory-ports.ts';
 import { testSandbox } from '../pool-testing/test-sandbox.ts';
@@ -59,30 +59,44 @@ describe('a start whose call’s arguments the run keeps outside', () => {
     expect([held.dispatchedThrough, after.dispatchedThrough]).toEqual([0, 1]);
     expect(argumentsPerformedBy(driver)).toEqual([callArguments]);
   });
+});
 
-  it.each(['missing', 'erased'] as const)(
-    'is a failed dispatch while the arguments are %s; the next input ends the run, and the start is then passed over',
-    (kind) => {
+describe('a start whose call’s kept arguments are lost', () => {
+  it.each([
+    ['missing', 'is missing from the content it was kept in'],
+    ['erased', 'was erased'],
+  ] as const)(
+    'is passed over at once while the arguments are %s, so its deadline is armed and ends the run by the value it lost',
+    (kind, said) => {
       const driver = startNotPerformed();
       driver.ports.payloads.lose(keptArguments, kind);
       const cold = coldEngineOn(driver.ports);
 
-      const held = Effect.runSync(cold.wake(drivenRunId));
-      Effect.runSync(
-        cold.submit({
-          kind: 'cancel_requested',
-          runId: drivenRunId,
-          at: driver.clock.now(),
-          cancel: { by: 'tester', kind: 'requested', reason: 'stop' },
-        }),
-      );
-      const ended = Effect.runSync(cold.wake(drivenRunId));
+      const woken = Effect.runSync(cold.wake(drivenRunId));
+      const deadlines = callDeadlinesFired(driver.state(drivenRunId));
+      Effect.runSync(Effect.forEach(deadlines, (fired) => cold.submit(fired)));
 
-      expect([held.dispatchedThrough, ended.dispatchedThrough]).toEqual([0, 2]);
-      expect(driver.state(drivenRunId).outcome).toMatchObject({ kind: 'raised', error: { status: 500 } });
+      expect(woken).toEqual({ version: 1, dispatchedThrough: 1 });
+      expect(deadlines).toHaveLength(1);
+      expect(driver.state(drivenRunId).outcome).toMatchObject({
+        kind: 'raised',
+        error: { status: 500, title: `A value the workflow holds, kept under ${keptArguments}, ${said}` },
+      });
       expect(argumentsPerformedBy(driver)).toEqual([]);
     },
   );
+});
+
+describe('a start dispatched again by a wake of the engine that decided it', () => {
+  it('is performed with the text the engine still holds for the run, read from nowhere', () => {
+    const driver = startNotPerformed();
+
+    const woken = Effect.runSync(driver.engine.wake(drivenRunId));
+
+    expect(woken).toEqual({ version: 1, dispatchedThrough: 1 });
+    expect(argumentsPerformedBy(driver)).toEqual([callArguments]);
+    expect(driver.ports.payloads.reads()).toEqual([]);
+  });
 });
 
 describe('two starts of one dispatch whose arguments are one kept text', () => {

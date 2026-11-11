@@ -1,4 +1,4 @@
-import type { WorkflowEngine } from '@on.auto/workflow-engine';
+import type { ContentUnavailable, WorkflowEngine } from '@on.auto/workflow-engine';
 import { Deferred, Effect } from 'effect';
 
 import type { Trouble } from '../calls/host-executor.ts';
@@ -11,7 +11,7 @@ export interface WakeUpParts {
   readonly clock: HostClock;
   readonly timers: Omit<TimerTable, 'timers'>;
   readonly dueWork: readonly DueWork[];
-  readonly engine: WorkflowEngine;
+  readonly engine: WorkflowEngine<ContentUnavailable>;
   readonly fire: (timer: DueTimer, at: number) => Effect.Effect<void, unknown>;
   readonly resume: () => Effect.Effect<number>;
   readonly trouble: Trouble;

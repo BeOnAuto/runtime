@@ -1,14 +1,13 @@
-import type { CallResult } from '@on.auto/operations';
-
 import type { CancelCall, StartCall } from '../dispatch/run-output.ts';
 import { callKeyText, type CallKey } from '../executor/call-key.ts';
 import type { CallCancelReceipt, Executor, StartReceipt } from '../executor/executor.ts';
+import type { CallAnsweredResult } from '../machine/call-answers.ts';
 import type { Faults, Submit } from './memory-timers.ts';
 import type { VirtualClock } from './virtual-clock.ts';
 
 export type CallAnswer =
-  | { readonly after?: number; readonly result: CallResult }
-  | { readonly later: Promise<CallResult> }
+  | { readonly after?: number; readonly result: CallAnsweredResult }
+  | { readonly later: Promise<CallAnsweredResult> }
   | 'never';
 
 export type Responder = (call: StartCall) => CallAnswer;
@@ -19,19 +18,19 @@ export interface MemoryExecutor extends Executor {
 }
 
 interface CallBook {
-  readonly answered: ReadonlyMap<string, CallResult>;
+  readonly answered: ReadonlyMap<string, CallAnsweredResult>;
   readonly isRunning: (key: string) => boolean;
-  readonly answerAgain: (call: StartCall, result: CallResult) => void;
+  readonly answerAgain: (call: StartCall, result: CallAnsweredResult) => void;
   readonly begin: (call: StartCall) => StartReceipt;
   readonly forget: (key: string) => boolean;
   readonly lose: (key: string) => void;
 }
 
 function callBookOf(clock: VirtualClock, submit: Submit, responder: Responder): CallBook {
-  const answered = new Map<string, CallResult>();
+  const answered = new Map<string, CallAnsweredResult>();
   const started = new Set<string>();
   const awaited = new Set<string>();
-  const answer = (call: StartCall, result: CallResult): CallResult => {
+  const answer = (call: StartCall, result: CallAnsweredResult): CallAnsweredResult => {
     const key = callKeyText(call.key);
     awaited.delete(key);
     answered.set(key, result);

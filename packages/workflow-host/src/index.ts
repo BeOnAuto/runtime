@@ -21,6 +21,7 @@ export {
 } from './host/run-requests.ts';
 export { openWorkflowHost, type HostOptions, type WorkflowHost } from './host/workflow-host.ts';
 export { openWorkflowStore, type WorkflowStore } from './host/workflow-store.ts';
+export { hostPayloadCacheBytes, sharedPayloadsWithin, type SharedPayloads } from './runs/run-payloads.ts';
 export type {
   CapabilityDatabase,
   CapabilityFactory,

@@ -1,6 +1,6 @@
 import type { Digested } from '@on.auto/content';
 import { payloadOf } from '@on.auto/operations/payloads';
-import { Effect } from 'effect';
+import { Data, Effect } from 'effect';
 
 import { DispatchFailed } from '../dispatch/dispatch-watermark.ts';
 import type { RecordedStartCall, StartCall } from '../dispatch/run-output.ts';
@@ -17,6 +17,11 @@ interface CallArguments<Unavailable> {
 
 type ContentOf = (kept: Digested) => Effect.Effect<HeldContent | undefined, DispatchFailed>;
 
+export class ArgumentsLost extends Data.TaggedError('arguments_lost')<{
+  readonly sha256: string;
+  readonly kind: 'missing' | 'erased';
+}> {}
+
 function notRead(kept: Digested, why: string): DispatchFailed {
   return new DispatchFailed({
     output: 'start_call',
@@ -24,18 +29,21 @@ function notRead(kept: Digested, why: string): DispatchFailed {
   });
 }
 
-function argumentsKept(contentOf: ContentOf, kept: Digested): Effect.Effect<Json, DispatchFailed> {
-  return Effect.flatMap(contentOf(kept), (content) => {
+function argumentsKept(contentOf: ContentOf, kept: Digested): Effect.Effect<Json, DispatchFailed | ArgumentsLost> {
+  return Effect.flatMap(contentOf(kept), (content): Effect.Effect<Json, DispatchFailed | ArgumentsLost> => {
     if (content === undefined) {
       return Effect.fail(notRead(kept, 'were not answered by the store of payloads'));
     }
     return content.kind === 'read'
       ? Effect.succeed(jsonOfText(content.text))
-      : Effect.fail(notRead(kept, content.kind === 'missing' ? 'are missing' : 'were erased'));
+      : Effect.fail(new ArgumentsLost({ sha256: kept.sha256, kind: content.kind }));
   });
 }
 
-function performedCallOf(call: RecordedStartCall, contentOf: ContentOf): Effect.Effect<StartCall, DispatchFailed> {
+function performedCallOf(
+  call: RecordedStartCall,
+  contentOf: ContentOf,
+): Effect.Effect<StartCall, DispatchFailed | ArgumentsLost> {
   const { kind, key, function: name, longestMs } = call;
   const payload = payloadOf(call, 'arguments');
   const started = (json: Json): StartCall => ({ kind, key, function: name, arguments: json, longestMs });

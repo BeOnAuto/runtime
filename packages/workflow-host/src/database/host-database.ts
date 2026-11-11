@@ -7,6 +7,7 @@ export type ReadStatement = (statement: Statement) => Effect.Effect<readonly unk
 
 export interface HostDatabase {
   readonly store: LedgerStreams;
+  readonly content: ConnectionPorts['content'];
   readonly appendWith: ConnectionPorts['appendWith'];
   readonly read: ReadStatement;
   readonly write: (statement: Statement) => Effect.Effect<readonly unknown[], DatabaseFailed>;
@@ -49,6 +50,7 @@ export function hostDatabaseOn(connection: ConnectionPorts): HostDatabase {
   const { sharedClock, mostBoundValues } = connection;
   return {
     store: connection.streams,
+    content: connection.content,
     appendWith: connection.appendWith,
     read: readsOn(connection.read),
     write: readsOn(connection.write),

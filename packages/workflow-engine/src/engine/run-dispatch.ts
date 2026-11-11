@@ -1,7 +1,7 @@
 import { Effect } from 'effect';
 
-import { contentsAtHandAfter } from '../cache/run-contents.ts';
-import { nothingAtHand, type HeldContents } from '../machine/held-contents.ts';
+import type { CachedRun, RunCache } from '../cache/run-cache.ts';
+import { contentsAtHandAfter, contentsCachedIn } from '../cache/run-contents.ts';
 import type { RunState } from '../machine/run-state.ts';
 import type { RunDecision } from './decided-append.ts';
 import { runStoresOf, type EnginePorts } from './engine-ports.ts';
@@ -20,16 +20,17 @@ interface RunDispatch {
   readonly stored: (runId: string) => Effect.Effect<StoredDispatch>;
 }
 
-export function runDispatchOf<Unavailable>(ports: EnginePorts<Unavailable>): RunDispatch {
+export function runDispatchOf<Unavailable>(ports: EnginePorts<Unavailable>, cache: RunCache): RunDispatch {
   const { payloads } = runStoresOf(ports);
-  const dispatched = (loaded: LoadedForDispatch, contents: HeldContents) =>
+  const contentsCachedFor = contentsCachedIn(cache);
+  const dispatched = (loaded: LoadedForDispatch, contents: CachedRun['contents']) =>
     dispatchRun(ports, loaded, callsPerformedWith({ runId: loaded.runId, payloads, contents }));
   return {
     decided: (runId, decision) =>
       dispatched({ runId, state: decision.state, version: decision.version }, contentsAtHandAfter(decision)),
     stored: (runId) =>
       Effect.flatMap(loadedFrom(ports.runStore, runId), ({ state, version }) =>
-        Effect.map(dispatched({ runId, state, version }, nothingAtHand().contents), (wake) => ({ state, wake })),
+        Effect.map(dispatched({ runId, state, version }, contentsCachedFor(runId)), (wake) => ({ state, wake })),
       ),
   };
 }

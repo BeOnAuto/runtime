@@ -197,6 +197,21 @@ describe('the answer of a definition a workflow called', () => {
   });
 });
 
+describe('the answer of a workflow a workflow called, whose output its playbook keeps outside', () => {
+  it('carries an output its playbook keeps outside the run by its digest and size, and fails one larger than a workflow takes', async () => {
+    const kept = { status: 'succeeded', output_sha256: 'a'.repeat(64), output_bytes: 40_000 } as const;
+    const tooLarge = { ...kept, output_bytes: 1_048_577 };
+
+    expect([
+      await Effect.runPromise(answering(kept).perform(classify, run, origin, firstAttempt)),
+      await Effect.runPromise(answering(tooLarge).perform(classify, run, origin, firstAttempt)),
+    ]).toEqual([
+      kept,
+      { status: 'failed', detail: 'The run returned 1048577 bytes as JSON, more than the 1048576 a workflow takes' },
+    ]);
+  });
+});
+
 describe('a call whose definition is rejected with a kind and because', () => {
   it('carries the kind and because of a rejection', async () => {
     const { perform } = answering({

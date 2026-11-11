@@ -1,7 +1,9 @@
 import type { PayloadToKeep } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
-import { keptValuesReached, type HeldContent, type HeldContents } from '../machine/held-contents.ts';
+import { keptValuesReached, nothingAtHand, type HeldContent, type HeldContents } from '../machine/held-contents.ts';
+import { keptReadBefore } from '../machine/kept-reads.ts';
+import type { RunInput } from '../machine/run-input.ts';
 import type { RunState } from '../machine/run-state.ts';
 import type { RunLogEvent } from '../run-log/run-event.ts';
 import type { RunPayloads } from '../run-log/run-payloads.ts';
@@ -20,9 +22,9 @@ interface DecidedRun {
 export function resolvedIn<Unavailable>(
   cache: RunCache,
   payloads: RunPayloads<Unavailable>,
-  [runId, run]: readonly [string, CachedRun],
+  [runId, run, input]: readonly [string, CachedRun, RunInput],
 ): Effect.Effect<CachedRun, Unavailable> {
-  const unread = keptValuesReached(run.state).filter(({ sha256 }) => !run.contents.has(sha256));
+  const unread = keptReadBefore(run.state, input).filter(({ sha256 }) => !run.contents.has(sha256));
   if (unread.length === 0) {
     return Effect.succeed(run);
   }
@@ -34,6 +36,10 @@ export function resolvedIn<Unavailable>(
       }),
     ),
   );
+}
+
+export function contentsCachedIn(cache: RunCache): (runId: string) => HeldContents {
+  return (runId) => cache.get(runId)?.contents ?? nothingAtHand().contents;
 }
 
 function contentsReachedBy(state: RunState, contents: HeldContents): HeldContents {

@@ -1,5 +1,5 @@
 import { Conflict } from '@on.auto/operations';
-import { callKeyText, type Json, type Submission } from '@on.auto/workflow-engine';
+import { callKeyText, ContentUnavailable, type Json, type Submission } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -40,7 +40,10 @@ function listening(database: HostDatabase, run: string, filters: readonly Json[]
   );
 }
 
-function offering(database: HostDatabase, answer: (runKey: string) => Effect.Effect<Submission, Conflict>): Offering {
+function offering(
+  database: HostDatabase,
+  answer: (runKey: string) => Effect.Effect<Submission, Conflict | ContentUnavailable>,
+): Offering {
   const offers: string[] = [];
   const { refusals, said, say } = saidRefusals();
   const { match, stops, evaluated } = countingMatches();
@@ -171,6 +174,32 @@ describe('an offer of an event to a listening run', () => {
     expect(said()).toEqual([
       'acme/alpha/run-a declined: The run took no event of this kind',
       'wf-run-b: An event could not be offered to a run waiting for it: The ledger cannot be reached',
+    ]);
+  });
+});
+
+function contentDownForRunA(runKey: string) {
+  return runKey.endsWith('run-a')
+    ? Effect.fail(new ContentUnavailable({ detail: 'The store of payloads did not answer' }))
+    : Effect.fail(new Conflict({ detail: 'The ledger cannot be reached' }));
+}
+
+describe('an offer the run cannot take while the content store does not answer', () => {
+  it('fails held for the content, which a sweep never counts toward passing it over, where any other failure is counted', async () => {
+    const database = await openedOn(await onSQLite());
+    await listening(database, 'run-a', [{ type: 'go' }]);
+    await listening(database, 'run-b', [{ type: 'go' }]);
+    const { consumer } = offering(database, contentDownForRunA);
+
+    const failures = await Effect.runPromise(
+      Effect.flatMap(consumer.batchOf(followedRecordOf(null), undefined, 10), ({ deliveries }) =>
+        Effect.forEach(deliveries, ({ deliver }) => Effect.flip(deliver)),
+      ),
+    );
+
+    expect(failures.map(({ detail, held }: Readonly<{ detail: string; held?: 'content' }>) => [detail, held])).toEqual([
+      ['The store of payloads did not answer', 'content'],
+      ['The ledger cannot be reached', undefined],
     ]);
   });
 });

@@ -1,5 +1,5 @@
 import { callKeyText } from '../executor/call-key.ts';
-import type { RunInput } from '../machine/run-input.ts';
+import type { AppliedInput, RunInput } from '../machine/run-input.ts';
 import type { Machine } from '../runner/advance.ts';
 import { listenFrameAt } from '../runner/frame-search.ts';
 import type { OfferVerdict } from '../runner/run-inbox.ts';
@@ -48,7 +48,7 @@ function offered(machine: Machine, input: Extract<RunInput, { readonly kind: 'ev
   }
 }
 
-export function applied(machine: Machine, input: RunInput): void {
+export function applied(machine: Machine, input: AppliedInput): void {
   if (input.kind === 'started') {
     startRun(machine, input);
   } else if (input.kind === 'timer_fired') {

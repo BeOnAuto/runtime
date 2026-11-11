@@ -32,6 +32,10 @@ export function dataBytesOf(message?: string): string {
 
 export const dataBytesOfMessage = SQL.plain(dataBytesOf());
 
+export function storedBytesOf(message?: string): string {
+  return `(octet_length(${message === undefined ? 'message_data' : `${message}.message_data`}))`;
+}
+
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 
 const playbookIndexes: readonly PlaybookIndex[] = [

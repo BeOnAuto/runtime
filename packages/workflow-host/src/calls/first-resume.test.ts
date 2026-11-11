@@ -1,6 +1,5 @@
 import type { Statement } from '@on.auto/ledger';
-import type { CallResult } from '@on.auto/operations';
-import type { StartCall } from '@on.auto/workflow-engine';
+import type { CallAnsweredResult, StartCall } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -43,8 +42,8 @@ describe('the first resume of an executor', () => {
   it('answers each waiting call whose run has ended, and reads the waiting calls again at the next when it could not', async () => {
     const database = failingOnce(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
     const troubles: string[] = [];
-    const answered: CallResult[] = [];
-    const ended: { result?: CallResult } = {};
+    const answered: CallAnsweredResult[] = [];
+    const ended: { result?: CallAnsweredResult } = {};
     const executor = hostExecutor({
       now: Date.now,
       database,

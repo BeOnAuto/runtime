@@ -1,6 +1,6 @@
 import { cancelRequestOf, type CancelRequested } from '@on.auto/definitions';
 import type { PlaybookAddress, Conflict, Lineage, RecordedEvent } from '@on.auto/operations';
-import type { RunInput, Submission } from '@on.auto/workflow-engine';
+import type { ContentUnavailable, RunInput, Submission } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 
 import type { HostDatabase } from '../database/host-database.ts';
@@ -17,7 +17,7 @@ import type { WaitingOptions } from './waiting-options.ts';
 
 export interface CancelParts {
   readonly database: HostDatabase;
-  readonly submitted: (input: RunInput) => Effect.Effect<Submission, Conflict>;
+  readonly submitted: (input: RunInput) => Effect.Effect<Submission, Conflict | ContentUnavailable>;
   readonly cancelDeferred: WaitingOptions['cancelDeferred'];
   readonly workflows: string;
   readonly now: () => number;

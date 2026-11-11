@@ -1,6 +1,5 @@
 import { type Statement, statement } from '@on.auto/ledger';
-import type { CallResult } from '@on.auto/operations';
-import type { StartCall } from '@on.auto/workflow-engine';
+import type { CallAnsweredResult, StartCall } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Exit, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -52,7 +51,7 @@ const States = Schema.Array(Schema.Struct({ state: Schema.String }));
 describe('the open calls of runs of one tree that start at the same moment', () => {
   it('are counted and recorded one run after another, so only as many begin as the bound allows', async () => {
     const database = countsThatMeet(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
-    const answered: CallResult[] = [];
+    const answered: CallAnsweredResult[] = [];
     const executor = hostExecutor({
       now: Date.now,
       database,
@@ -82,7 +81,7 @@ describe('the open calls of runs of one tree that start at the same moment', () 
       ),
     );
     await until(
-      (): readonly CallResult[] => answered,
+      (): readonly CallAnsweredResult[] => answered,
       (answers) => answers.length > 0,
     );
     const states = Schema.decodeUnknownSync(States)(

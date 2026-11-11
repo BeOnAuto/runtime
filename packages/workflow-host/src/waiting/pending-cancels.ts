@@ -1,7 +1,7 @@
 import { cancelRequestOf } from '@on.auto/definitions';
 import { recordedReaderOf } from '@on.auto/ledger';
 import { messageIdOf, streamPrefixOfPlaybook, type Conflict } from '@on.auto/operations';
-import type { CancelOrder, RunInput, Submission } from '@on.auto/workflow-engine';
+import type { CancelOrder, ContentUnavailable, RunInput, Submission } from '@on.auto/workflow-engine';
 import { Effect, type Cause } from 'effect';
 
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
@@ -37,11 +37,14 @@ function pendingCancelOf(database: HostDatabase, run: RunAddress): Effect.Effect
 
 export interface PendingParts {
   readonly database: HostDatabase;
-  readonly submitted: (input: RunInput) => Effect.Effect<Submission, Conflict>;
+  readonly submitted: (input: RunInput) => Effect.Effect<Submission, Conflict | ContentUnavailable>;
   readonly now: () => number;
 }
 
-export function cancelledIfAsked(parts: PendingParts, run: RunAddress): Effect.Effect<void, Conflict> {
+export function cancelledIfAsked(
+  parts: PendingParts,
+  run: RunAddress,
+): Effect.Effect<void, Conflict | ContentUnavailable> {
   return Effect.flatMap(pendingCancelOf(parts.database, run), (pending) =>
     pending === undefined
       ? Effect.void

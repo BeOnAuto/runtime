@@ -188,9 +188,9 @@ export function keyedFillBehaviour(entry: FillEntry): void {
       ]);
     });
 
-    it('fills the holds of content in reads of at most that, counting the payloads a fact keeps outside', async () => {
+    it('fills the holds of content in reads bounded by the bytes they load, so facts that each keep a mebibyte outside are read as many at once as the listing grows to, not four at a time', async () => {
       const database = await entry.aDatabase();
-      await wroteHeldPayloads(await aLedgerOn(entry, database, { holders: noteHolders }), 2, 5);
+      await wroteHeldPayloads(await aLedgerOn(entry, database, { holders: noteHolders }), 20, 5);
       await entry.executedOn(database, (execute) => execute.command(SQL`DROP TABLE content_references_1`));
 
       const { facts } = await filledMeasured(entry, database, {
@@ -198,7 +198,7 @@ export function keyedFillBehaviour(entry: FillEntry): void {
         mostBytesFilledAtOnce: 4 * mebibyte,
       });
 
-      expect([Math.max(...facts), facts.reduce((sum, read) => sum + read, 0)]).toEqual([3, 10]);
+      expect(facts.filter((read) => read > 0)).toEqual([1, 2, 4, 8, 16, 32, 37]);
     });
   });
 }

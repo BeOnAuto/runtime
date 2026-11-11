@@ -6,22 +6,30 @@ import {
   streamPrefixOfPlaybook,
   type Conflict,
   type Lineage,
-  type Rejection,
   type SettledRejection,
   type Settlement as SettlementOfAnOperation,
-  type StreamState,
+  type ContentKeeper,
+  type StreamReader,
   type StreamWriter,
   type Unavailable,
 } from '@on.auto/operations';
 import { outputPayloadOf, payloadMembers, type Payload } from '@on.auto/operations/payloads';
 import { DateTime, Effect, Schema, Struct } from 'effect';
 
+import {
+  outputsAsGiven,
+  outputsKeptIn,
+  resultedAlone,
+  settledComparing,
+  type Resulted,
+  type SettledOutputs,
+  type WrittenOutput,
+} from '../payloads/settled-outputs.ts';
 import { jsonBytesOf, payloadBytesOf, withinResultBytes, withinResultLimit } from './recorded-size.ts';
-import type { RunResult, RunSettlement } from './run-commands.ts';
-import { runDecider, runDeciderAsRead, runStreamNameOf } from './run-decider.ts';
+import type { RunResult } from './run-commands.ts';
+import { runStreamNameOf, settledOnLatest, settledOnRead, type SettledOn } from './run-decider.ts';
 import type { Settlement } from './run-events.ts';
 import { runOf } from './run-lookup.ts';
-import type { RunStreamState } from './run-state.ts';
 import { causeOf, type RunRejection, type SettledRun } from './run.ts';
 
 export type { Settlement } from './run-events.ts';
@@ -48,12 +56,6 @@ type SettleAsRead = (
   readAt: number,
   lineage?: Lineage,
 ) => Effect.Effect<SettledRun, NotFound | Conflict | Unavailable>;
-
-type SettledOn = (
-  stream: string,
-  command: RunSettlement,
-  lineage: Lineage | undefined,
-) => Effect.Effect<StreamState<RunStreamState>, Rejection<'not_found' | 'conflict' | 'cancelled' | 'unavailable'>>;
 
 const isWellFormed = Schema.is(
   Schema.Struct({ org: OrgIdSchema, playbook: PlaybookIdSchema, id: Schema.String.check(Schema.isUUID()) }),
@@ -113,6 +115,7 @@ function rejectedWith(settlement: SettledRejection): Effect.Effect<RunResult> {
 const noSuchRun = new NotFound({ detail: 'There is no such run in this playbook' });
 
 interface SettlingTarget {
+  readonly run: RunStreamAddress;
   readonly stream: string;
   readonly runId: string;
 }
@@ -142,58 +145,63 @@ function succeededWith(output: Payload<Schema.Json>, given: Schema.JsonObject): 
   });
 }
 
-function resultOf(settlement: Settlement): Effect.Effect<RunResult> {
+function resultOf(settlement: Settlement, written: WrittenOutput): Effect.Effect<Resulted> {
   if (settlement.status === 'succeeded') {
-    return Effect.suspend(() => succeededWith(outputPayloadOf({ data: settlement }), settlement.record ?? {}));
+    return Effect.suspend(() =>
+      Effect.flatMap(written(outputPayloadOf({ data: settlement })), ({ payload, inHand }) =>
+        Effect.map(succeededWith(payload, settlement.record ?? {}), (result) => ({ result, inHand })),
+      ),
+    );
   }
   if (settlement.status === 'rejected') {
-    return rejectedWith(settlement);
+    return Effect.map(rejectedWith(settlement), resultedAlone);
   }
   const { incident } = settlement;
-  return Effect.succeed(incident === undefined ? failure : { type: 'run_failed', data: { incident } });
-}
-
-function settledOnLatest(ledger: StreamWriter): SettledOn {
-  return (stream, command, lineage) => ledger.execute(stream, runDecider, command, lineage);
-}
-
-function settledOnRead(ledger: StreamWriter, readAt: number): SettledOn {
-  return (stream, command, lineage) =>
-    Effect.map(ledger.execute(stream, runDeciderAsRead, { readAt, command }, lineage), ({ state, version }) => ({
-      state: state.state,
-      version,
-    }));
+  return Effect.succeed(resultedAlone(incident === undefined ? failure : { type: 'run_failed', data: { incident } }));
 }
 
 function settlerOver(
   settledOn: SettledOn,
   streamNamed: (address: RunStreamAddress) => Effect.Effect<string, NotFound>,
+  outputs: SettledOutputs = outputsAsGiven,
 ): SettleRunWithItsPayload {
   const settle = Effect.fnUntraced(function* (
     target: SettlingTarget,
-    result: RunResult,
+    offered: Resulted,
     by: string,
     lineage?: Lineage,
   ) {
     const at = DateTime.formatIso(yield* DateTime.now);
-    return yield* settledOn(target.stream, { type: 'settle', result, runId: target.runId, by, at }, lineage).pipe(
+    const { run, stream, runId } = target;
+    const { result } = offered;
+    const settled = (valuesRead: Resulted['inHand']) =>
+      settledOn(
+        stream,
+        { type: 'settle', result, runId, by, at, ...(valuesRead.size === 0 ? {} : { valuesRead }) },
+        lineage,
+      );
+    return yield* settledComparing(outputs, { run, stream, offered }, settled).pipe(
       Effect.catchTag('cancelled', Effect.die),
     );
   });
   return (run, settlement, lineage) =>
     Effect.gen(function* () {
-      const target = { stream: yield* streamNamed(run), runId: run.id.toLowerCase() };
+      const target = { run, stream: yield* streamNamed(run), runId: run.id.toLowerCase() };
       const by = settlement.by ?? playbookCallerOf(run).id;
-      const result = yield* resultOf(settlement).pipe(
-        Effect.tapDefect(() => Effect.ignore(settle(target, failure, by, lineage))),
+      const offered = yield* resultOf(settlement, outputs.written(run)).pipe(
+        Effect.tapDefect(() => Effect.ignore(settle(target, resultedAlone(failure), by, lineage))),
       );
-      const { state } = yield* settle(target, result, by, lineage);
+      const { state } = yield* settle(target, offered, by, lineage);
       return Struct.omit(yield* runOf(target.runId, state), ['output']);
     });
 }
 
 export function runSettler(ledger: StreamWriter): SettleRunWithItsPayload {
   return settlerOver(settledOnLatest(ledger), streamOf);
+}
+
+export function runSettlerKeepingOutputs(ledger: StreamWriter & StreamReader & ContentKeeper): SettleRunWithItsPayload {
+  return settlerOver(settledOnLatest(ledger), streamOf, outputsKeptIn(ledger));
 }
 
 export function runSettlerAsRead(ledger: StreamWriter): SettleAsRead {

@@ -22,7 +22,7 @@ export function nothingAtHand(): RunAtHand {
   return { contents: new Map(), format: null, keepsPayloadsOutside: false };
 }
 
-interface LostContent {
+export interface LostContent {
   readonly sha256: string;
   readonly kind: 'missing' | 'erased';
 }
@@ -40,7 +40,7 @@ export function keptValuesReached(state: RunState): readonly KeptValue[] {
   return [...new Map(kept.map((held) => [held.sha256, held])).values()];
 }
 
-function contentOf(contents: HeldContents, sha256: string): HeldContent {
+export function heldContentOf(contents: HeldContents, sha256: string): HeldContent {
   const content = contents.get(sha256);
   if (content === undefined) {
     throw new HeldContentNotGiven({ sha256 });
@@ -50,7 +50,7 @@ function contentOf(contents: HeldContents, sha256: string): HeldContent {
 
 export function lostContentOf(state: RunState, contents: HeldContents): LostContent | undefined {
   for (const { sha256 } of keptValuesReached(state)) {
-    const { kind } = contentOf(contents, sha256);
+    const { kind } = heldContentOf(contents, sha256);
     if (kind !== 'read') {
       return { sha256, kind };
     }
@@ -62,6 +62,6 @@ export function heldJsonOf(held: HeldValue, contents: HeldContents): Json | unde
   if (!isKept(held)) {
     return held.value;
   }
-  const content = contentOf(contents, held.sha256);
+  const content = heldContentOf(contents, held.sha256);
   return content.kind === 'read' ? jsonOfText(content.text) : undefined;
 }

@@ -2,7 +2,7 @@ import { Schema } from 'effect';
 
 import { appendsWithOn, type StreamsCarrying } from '../connection/appends-with.ts';
 import { postgresqlMostBoundValues } from '../connection/bound-values.ts';
-import type { ConnectionPorts, ReadRows } from '../connection/ledger-connection.ts';
+import type { ConnectionPorts, OpenedConnection, ReadRows } from '../connection/ledger-connection.ts';
 import { lastAnswerOf, wroteARow, type StatementAnswer } from '../connection/statement-answers.ts';
 import { statement, textOnPostgreSQL, type Statement, type StatementValue } from '../connection/statement.ts';
 
@@ -80,7 +80,7 @@ function snapshotsOn(connections: Connections): ConnectionPorts['readConsistentl
   return read;
 }
 
-export function postgresqlConnectionOn(connections: Connections, streams: StreamsCarrying): ConnectionPorts {
+export function postgresqlConnectionOn(connections: Connections, streams: StreamsCarrying): OpenedConnection {
   const query = async (asked: Statement) => (await connections.query(textOnPostgreSQL(asked), asked.values)).rows;
   return {
     dialect: 'postgresql',

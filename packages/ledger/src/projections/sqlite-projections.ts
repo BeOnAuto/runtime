@@ -5,7 +5,7 @@ import { Schema } from 'effect';
 import { sizedPositionsOf, type SizesAfter } from '../appends/stream-pages.ts';
 import { itemsInAStatement, mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts';
 import { inTransactionOf, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
-import { dataBytesOf, playbookKeyOfStream } from '../recorded/sqlite-indexes.ts';
+import { dataBytesOf, playbookKeyOfStream, storedBytesOf } from '../recorded/sqlite-indexes.ts';
 import {
   type FoldedStreams,
   type HeldRead,
@@ -34,7 +34,7 @@ const columnsOfAMessage = SQL`${SQL.plain(`CAST(global_position AS TEXT) AS poin
   printf('%020d', global_position) AS ordered, stream_id AS stream, message_type AS type,
   message_data AS data, message_metadata AS metadata, stream_position AS position`)}`;
 
-const columnsOfASize = SQL`${SQL.plain(`CAST(global_position AS TEXT) AS point, ${dataBytesOf()} AS size`)}`;
+const columnsOfASize = SQL`${SQL.plain(`CAST(global_position AS TEXT) AS point, ${storedBytesOf()} AS size`)}`;
 
 function typesIn(types: readonly string[]): SQL {
   return SQL`message_type IN (SELECT value FROM json_each(${JSON.stringify(types)}))`;
@@ -121,7 +121,7 @@ const sqliteProjectionDialect: ProjectionDialect = {
   asNumber: (expression) => expression,
   streamsAfter: (after, count, folded, types) =>
     SQL`SELECT s.stream_id AS stream, (
-        SELECT coalesce(sum(${SQL.plain(dataBytesOf('m'))}), 0) FROM emt_messages AS m
+        SELECT coalesce(sum(${SQL.plain(storedBytesOf('m'))}), 0) FROM emt_messages AS m
         WHERE m.stream_id = s.stream_id AND m.message_type IN (SELECT value FROM json_each(${JSON.stringify(types)}))
           AND m.partition = ${defaultPartition} AND m.is_archived = FALSE
       ) AS size

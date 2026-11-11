@@ -1,6 +1,12 @@
 import { statement } from '@on.auto/ledger';
 import type { Conflict } from '@on.auto/operations';
-import { loadedRunOf, type ReceivedEvent, type RunState, type Started } from '@on.auto/workflow-engine';
+import {
+  loadedRunOf,
+  type ContentUnavailable,
+  type ReceivedEvent,
+  type RunState,
+  type Started,
+} from '@on.auto/workflow-engine';
 import { Data, Effect, Schema } from 'effect';
 
 import { rowsOf, type HostDatabase } from '../database/host-database.ts';
@@ -18,9 +24,11 @@ export type DeliveryAnswer = 'delivered' | 'not_started' | 'ended';
 
 export class HostElsewhere extends Data.TaggedError('host_elsewhere')<{ readonly detail: string }> {}
 
+type Refused = Conflict | ContentUnavailable | HostElsewhere;
+
 export interface RunRequests {
-  readonly start: (run: RunAddress, start: RunStart) => Effect.Effect<StartAnswer, Conflict | HostElsewhere>;
-  readonly deliver: (run: RunAddress, event: ReceivedEvent) => Effect.Effect<DeliveryAnswer, Conflict | HostElsewhere>;
+  readonly start: (run: RunAddress, start: RunStart) => Effect.Effect<StartAnswer, Refused>;
+  readonly deliver: (run: RunAddress, event: ReceivedEvent) => Effect.Effect<DeliveryAnswer, Refused>;
   readonly stateOf: (runKey: string) => Effect.Effect<RunState>;
 }
 

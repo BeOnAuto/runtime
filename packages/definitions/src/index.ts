@@ -157,6 +157,7 @@ export { payloadAsRead, payloadsKeptIn, type KeptContentReader, type PayloadAsRe
 export {
   playbookBoundSettler,
   runSettler,
+  runSettlerKeepingOutputs,
   type RunStreamAddress,
   type SettleRun,
   type Settlement,

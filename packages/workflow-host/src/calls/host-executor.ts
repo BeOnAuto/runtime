@@ -1,6 +1,6 @@
-import type { CallResult } from '@on.auto/operations';
 import {
   DispatchFailed,
+  type CallAnsweredResult,
   type CallKey,
   type Executor,
   type OutputOrigin,
@@ -33,7 +33,7 @@ interface Waiting {
   readonly resumesAfterMs?: number;
 }
 
-export type CallAnswer = CallResult | Waiting;
+export type CallAnswer = CallAnsweredResult | Waiting;
 
 export type Perform = (
   call: StartCall,
@@ -42,7 +42,7 @@ export type Perform = (
   attempt: CallAttempt,
 ) => Effect.Effect<CallAnswer>;
 
-export type Deliver = (key: CallKey, result: CallResult) => Effect.Effect<unknown, unknown>;
+export type Deliver = (key: CallKey, result: CallAnsweredResult) => Effect.Effect<unknown, unknown>;
 
 export type Trouble = (what: string, cause: Cause.Cause<unknown>) => Effect.Effect<void>;
 
@@ -51,7 +51,7 @@ export interface ExecutorParts extends StartParts {
   readonly deliver: Deliver;
   readonly trouble: Trouble;
   readonly mostAtOnce: number;
-  readonly childAnswerOf: (runKey: string, child: string) => Effect.Effect<CallResult | undefined>;
+  readonly childAnswerOf: (runKey: string, child: string) => Effect.Effect<CallAnsweredResult | undefined>;
   readonly cancelChild: CancelChild;
   readonly now: () => number;
   readonly context?: Context.Context<never> | undefined;
@@ -94,7 +94,7 @@ function failedTo(output: 'start_call' | 'cancel_call') {
   return ({ detail }: { readonly detail: string }) => new DispatchFailed({ output, detail });
 }
 
-type Settled = (key: string, call: StartCall, result: CallResult) => Effect.Effect<void, DatabaseFailed>;
+type Settled = (key: string, call: StartCall, result: CallAnsweredResult) => Effect.Effect<void, DatabaseFailed>;
 
 function dispatchedAgainBy(
   { database, perform }: ExecutorParts,
@@ -113,7 +113,7 @@ function dispatchedAgainBy(
 function callsOf(parts: ExecutorParts, running: Background): Calls {
   const { database, perform, deliver, trouble, mostAtOnce, now } = parts;
   const atOnce = Semaphore.makeUnsafe(mostAtOnce);
-  const delivered = (key: string, callKey: CallKey, result: CallResult): Effect.Effect<void> =>
+  const delivered = (key: string, callKey: CallKey, result: CallAnsweredResult): Effect.Effect<void> =>
     deliver(callKey, result).pipe(
       Effect.andThen(deliveredRow(database, key)),
       Effect.catchCause((cause: Cause.Cause<unknown>) =>

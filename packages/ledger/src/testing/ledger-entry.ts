@@ -25,7 +25,7 @@ export interface LedgerEntry {
     database: string,
     holders: ContentHolders,
     content: NonNullable<OpenedWith['content']>,
-  ) => Layer.Layer<Exclude<LedgerServices, LedgerConnection>>;
+  ) => Layer.Layer<LedgerServices>;
   readonly ledgerRaisingOn: (database: string, appended: StreamSignal) => Layer.Layer<Ledger | LedgerConnection>;
   readonly storeOn: (database: string) => LedgerStore;
   readonly openedOn: (database: string) => OpenedLedger;

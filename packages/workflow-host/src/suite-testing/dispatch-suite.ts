@@ -1,5 +1,4 @@
-import type { CallResult } from '@on.auto/operations';
-import { callKeyText, type StartCall } from '@on.auto/workflow-engine';
+import { type CallAnsweredResult, callKeyText, type StartCall } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 import { expect, it } from 'vitest';
 
@@ -46,7 +45,7 @@ const [quick, slow, notResuming] = [callAt('/do/0/a'), callAt('/do/1/b'), callAt
 async function dispatching(settings: SettingsOf, againAnswers: (call: StartCall) => CallAnswer) {
   const database = await openedOn(await settings());
   const attempts: (CallAttempt & { readonly reference: string })[] = [];
-  const answered: CallResult[] = [];
+  const answered: CallAnsweredResult[] = [];
   const executor = hostExecutor({
     database,
     now: () => startedAt,

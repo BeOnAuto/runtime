@@ -44,6 +44,7 @@ export async function servingReasoning(
     ledger: shared,
     meter,
     shippedFilesOver,
+    keptOutside,
     ...composing
   }: ServedParts = {},
 ): Promise<ReasoningServer> {
@@ -59,7 +60,7 @@ export async function servingReasoning(
   );
   const server = await startServer(
     { ...loopbackSettingsOver(ledger), ...environment },
-    composedWithTheParts(composition, { ledgerOver, meter, shippedFilesOver }),
+    composedWithTheParts(composition, { ledgerOver, meter, shippedFilesOver, keptOutside }),
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,

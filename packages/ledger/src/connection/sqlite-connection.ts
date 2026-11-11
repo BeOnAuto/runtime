@@ -2,7 +2,7 @@ import type { SQL } from '@event-driven-io/dumbo';
 
 import { inTurn } from '../projections/inline-projection.ts';
 import { appendsWithOn, type StreamsCarrying } from './appends-with.ts';
-import type { ConnectionPorts, ReadRows } from './ledger-connection.ts';
+import type { ConnectionPorts, OpenedConnection, ReadRows } from './ledger-connection.ts';
 import { lastAnswerOf, wroteARow, type StatementAnswer } from './statement-answers.ts';
 import { sqlOf } from './statement.ts';
 
@@ -66,7 +66,7 @@ function snapshotsOn(pool: SQLitePool, inMemory: boolean): ConnectionPorts['read
 export function sqliteConnectionOn(
   pool: SQLitePool,
   { inMemory, streams, mostBoundValues }: SQLiteConnecting,
-): ConnectionPorts {
+): OpenedConnection {
   const write = async (asked: Parameters<ReadRows>[0]) => (await pool.execute.command(sqlOf(asked))).rows;
   return {
     dialect: 'sqlite',

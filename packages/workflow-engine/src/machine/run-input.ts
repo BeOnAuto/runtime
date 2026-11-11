@@ -1,8 +1,9 @@
-import { CallResultSchema } from '@on.auto/operations';
+import type { CallResult } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { CallKeySchema } from '../executor/call-key.ts';
 import { ReceivedEventSchema } from '../inbox/received-event.ts';
+import { CallAnsweredResultSchema } from './call-answers.ts';
 import { InstantSchema } from './instant.ts';
 import { mostEventIdLength } from './limits.ts';
 
@@ -45,7 +46,7 @@ const CallAnsweredSchema = Schema.Struct({
   runId: RunIdSchema,
   at: InstantSchema,
   key: CallKeySchema,
-  result: CallResultSchema,
+  result: CallAnsweredResultSchema,
 });
 
 const EventReceivedSchema = Schema.Struct({
@@ -100,5 +101,9 @@ export type EventOffered = typeof EventOfferedSchema.Type;
 export type CancelRequested = typeof CancelRequestedSchema.Type;
 
 export type RunInput = typeof RunInputSchema.Type;
+
+type AnsweredInline = Omit<CallAnswered, 'result'> & { readonly result: CallResult };
+
+export type AppliedInput = Exclude<RunInput, CallAnswered> | AnsweredInline;
 
 export type RunInputKind = RunInput['kind'];

@@ -53,7 +53,7 @@ export function appendedDecision<Unavailable>(
     yield* Effect.sync(() => {
       requireValuesHeldInline(event, state);
     });
-    const { payloads } = decision;
+    const payloads = decision.payloads.filter(({ sha256 }) => contents.get(sha256)?.kind !== 'read');
     const kept = yield* Effect.result(payloads.length === 0 ? Effect.void : stores.payloads.keep(runId, payloads));
     if (Result.isFailure(kept)) {
       return Result.fail(kept.failure);

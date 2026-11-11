@@ -12,9 +12,10 @@ import type { RunState } from '../machine/run-state.ts';
 import type { PositionedEvent } from '../run-log/run-event.ts';
 import { isTroubling } from '../settlement/record-store.ts';
 import type { EnginePorts } from './engine-ports.ts';
+import type { ArgumentsLost } from './performed-calls.ts';
 import type { Wake } from './workflow-engine.ts';
 
-export type CallPerforming = (call: RecordedStartCall) => Effect.Effect<StartCall, DispatchFailed>;
+export type CallPerforming = (call: RecordedStartCall) => Effect.Effect<StartCall, DispatchFailed | ArgumentsLost>;
 
 interface Dispatching<Unavailable> {
   readonly ports: EnginePorts<Unavailable>;
@@ -34,7 +35,9 @@ function performed<Unavailable>(
     return ports.timers.cancel(output, run);
   }
   if (output.kind === 'start_call') {
-    return Effect.flatMap(startedCall(output), (call) => ports.executor.start(call, run, origin));
+    return Effect.flatMap(startedCall(output), (call) => ports.executor.start(call, run, origin)).pipe(
+      Effect.catchTag('arguments_lost', () => Effect.void),
+    );
   }
   if (output.kind === 'cancel_call') {
     return ports.executor.cancel(output, run, origin);

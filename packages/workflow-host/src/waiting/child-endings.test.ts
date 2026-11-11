@@ -1,4 +1,4 @@
-import { Conflict } from '@on.auto/operations';
+import { ContentUnavailable } from '@on.auto/workflow-engine';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -87,15 +87,84 @@ function endingReadBy(consumer: CallConsumer): BoundConsumer {
   return reading;
 }
 
+const noTrouble = () => Effect.void;
+
+type ParentDatabase = Awaited<ReturnType<typeof waitingParent>>['database'];
+
+function endingsTheRunCannotTake(database: ParentDatabase) {
+  const troubles: string[] = [];
+  const consumer = endingReadBy(
+    childEndings({
+      database,
+      submitted: () => Effect.fail(new ContentUnavailable({ detail: 'The store of payloads did not answer' })),
+      resultOf: resultOfEnding,
+      now: () => 1,
+      trouble: (what) =>
+        Effect.sync(() => {
+          troubles.push(what);
+        }),
+    }),
+  );
+  return { consumer, troubles: () => troubles };
+}
+
+function endingsTakenBeforeATimer(database: ParentDatabase) {
+  const submitted: unknown[] = [];
+  const endedChildren = endedChildrenOn({
+    database,
+    submitted: (input) =>
+      Effect.sync(() => {
+        submitted.push(input);
+        return { outcome: 'applied', version: 2 };
+      }),
+    resultOf: resultOfEnding,
+    now: () => 2,
+    trouble: noTrouble,
+  });
+  return { endedChildren, submitted: () => submitted };
+}
+
 describe('a delivery of an ending that the run cannot take now', () => {
+  it('answers the call’s row and goes on, telling the trouble, and the answer the row keeps is given to the run before its next timer', async () => {
+    const { database, callStates } = await waitingParent(child);
+    const { consumer, troubles } = endingsTheRunCannotTake(database);
+    const { endedChildren, submitted } = endingsTakenBeforeATimer(database);
+
+    const { deliveries } = await Effect.runPromise(consumer.batchOf(undefined, 100));
+    await Effect.runPromise(Effect.forEach(deliveries, ({ deliver }) => deliver));
+    const kept = await callStates();
+    await Effect.runPromise(endedChildren(parentRun));
+
+    expect([consumer.skippedAfterSweeps, troubles().length, kept]).toEqual([
+      Infinity,
+      1,
+      [{ state: 'answered', delivered: 0 }],
+    ]);
+    expect(submitted()).toEqual([
+      {
+        kind: 'call_answered',
+        runId: parentRun,
+        at: 2,
+        key: { runId: parentRun, reference: '/do/0/ask', run: 1 },
+        result: { status: 'succeeded', output: 'checked' },
+      },
+    ]);
+    expect(await callStates()).toEqual([{ state: 'answered', delivered: 1 }]);
+  });
+});
+
+describe('a delivery of an ending while the call’s row cannot be read', () => {
   it('fails, to be made again, by a consumer that never skips a delivery', async () => {
     const { database } = await waitingParent(child);
+    const reading = faultyDatabase(database);
+    reading.failing(true);
     const consumer = endingReadBy(
       childEndings({
-        database,
-        submitted: () => Effect.fail(new Conflict({ detail: 'The log of the run kept changing' })),
+        database: reading,
+        submitted: () => Effect.die(new Error('Nothing is submitted')),
         resultOf: resultOfEnding,
         now: () => 1,
+        trouble: noTrouble,
       }),
     );
 
@@ -104,7 +173,7 @@ describe('a delivery of an ending that the run cannot take now', () => {
     const skipped = Effect.forEach(deliveries, (delivery) => delivery.skipped(failure));
     const resumed = await Effect.runPromise(consumer.batchOf('call', 100));
 
-    expect([failure.detail, consumer.skippedAfterSweeps]).toEqual(['The log of the run kept changing', Infinity]);
+    expect(failure.detail).toBe('The database was told to fail');
     expect(resumed.deliveries).toEqual([]);
     expect(await Effect.runPromise(Effect.as(skipped, 'nothing skipped'))).toBe('nothing skipped');
   });
@@ -129,6 +198,7 @@ describe('the endings of the runs a run waits for, before a timer of that run fi
         }),
       resultOf: resultOfEnding,
       now: () => 1,
+      trouble: noTrouble,
     });
 
     await Effect.runPromise(endedChildren(parentRun));
@@ -165,10 +235,27 @@ describe('the endings of the runs a run waits for, when its calls cannot be read
       submitted: () => Effect.die(new Error('Nothing is submitted')),
       resultOf: resultOfEnding,
       now: () => 1,
+      trouble: noTrouble,
     });
 
     expect(await Effect.runPromise(Effect.flip(endedChildren(parentRun)))).toMatchObject({
       detail: 'The database was told to fail',
     });
+  });
+});
+
+describe('an answer a call’s row keeps that its run cannot take, before a timer of that run fires', () => {
+  it('fails the fire of the timer, so the call is not timed out while its answer waits to be given', async () => {
+    const { database } = await waitingParent(child);
+    const failing = { database, resultOf: resultOfEnding, now: () => 1, trouble: noTrouble };
+    const unavailable = new ContentUnavailable({ detail: 'The store of payloads did not answer' });
+    await recorded(database.store, `${alpha}runs/${child}`, succeeded, ofTheChild);
+    const consumer = endingReadBy(childEndings({ ...failing, submitted: () => Effect.fail(unavailable) }));
+    const { deliveries } = await Effect.runPromise(consumer.batchOf(undefined, 100));
+    await Effect.runPromise(Effect.forEach(deliveries, ({ deliver }) => deliver));
+
+    const fired = endedChildrenOn({ ...failing, submitted: () => Effect.fail(unavailable) })(parentRun);
+
+    expect(await Effect.runPromise(Effect.flip(fired))).toMatchObject({ detail: unavailable.detail });
   });
 });

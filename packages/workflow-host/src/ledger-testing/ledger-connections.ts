@@ -6,6 +6,7 @@ import {
   type Statement,
 } from '@on.auto/ledger';
 import type { PostgreSQLPools } from '@on.auto/ledger/postgresql';
+import type { ContentHolders } from '@on.auto/operations';
 import { Effect, ManagedRuntime, type Layer } from 'effect';
 
 import { hostDatabaseOn, type HostDatabase } from '../database/host-database.ts';
@@ -15,6 +16,7 @@ import { boundedConnection } from './bounded-connection.ts';
 
 interface DatabaseBound {
   readonly mostBoundValues?: number | undefined;
+  readonly holders?: ContentHolders | undefined;
 }
 
 export type DatabaseSettings = DatabaseBound &
@@ -35,10 +37,15 @@ export interface ClosingHostDatabase extends HostDatabase {
 async function ledgerLayerOn(settings: DatabaseSettings): Promise<Layer.Layer<LedgerServices>> {
   if (settings.store === 'sqlite') {
     const { ledgerLayer } = await import('@on.auto/ledger/sqlite3');
-    return ledgerLayer({ fileName: settings.file, observer: settings.observer });
+    return ledgerLayer({ fileName: settings.file, observer: settings.observer, holders: settings.holders });
   }
   const { postgresqlLedgerLayer } = await import('@on.auto/ledger/postgresql');
-  return postgresqlLedgerLayer({ pools: settings.pools, observer: settings.observer });
+  const { holders } = settings;
+  return postgresqlLedgerLayer({
+    pools: settings.pools,
+    observer: settings.observer,
+    ...(holders === undefined ? {} : { holders }),
+  });
 }
 
 export async function ledgerConnectedOn(settings: DatabaseSettings): Promise<ConnectedLedger> {

@@ -1,6 +1,6 @@
 import { statement } from '@on.auto/ledger';
 import { messageIdOf, type CallResult } from '@on.auto/operations';
-import type { StartCall } from '@on.auto/workflow-engine';
+import type { CallAnsweredResult, StartCall } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -62,7 +62,7 @@ async function executing(
 ) {
   const database = faultyDatabase(await openedOn({ store: 'sqlite', file: aSQLiteFile() }));
   const counts = { performed: 0 };
-  const answered: CallResult[] = [];
+  const answered: CallAnsweredResult[] = [];
   const cancels: ChildCancel[] = [];
   const executor = hostExecutor({
     now: Date.now,
@@ -96,7 +96,7 @@ async function executing(
     executor,
     rows,
     performed: () => counts.performed,
-    answered: (): readonly CallResult[] => answered,
+    answered: (): readonly CallAnsweredResult[] => answered,
     cancels: () => cancels,
   };
 }

@@ -30,7 +30,7 @@ export function workflowEngineOf<Unavailable = never>(
   cache: RunCache = runCacheOf(),
 ): WorkflowEngine<Unavailable> {
   const loop = runLoopOf(runStoresOf(ports), workflowMachine(options), cache, upkeepOf(ports, options));
-  const dispatch = runDispatchOf(ports);
+  const dispatch = runDispatchOf(ports, cache);
   const wake = (runId: string): Effect.Effect<Wake> =>
     ports.serialiser.serialise(
       runId,

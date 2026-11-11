@@ -19,7 +19,7 @@ do:
 `);
 
 describe('the engine the host composes', () => {
-  it('keeps every value a run holds inline in its log, past the size a store of payloads would keep outside, writing format 11, since the host composes no store of payloads', async () => {
+  it('keeps every value a run holds inline in its log, past the size a store of payloads would keep outside, writing format 11, while payloads are not kept outside', async () => {
     const file = aSQLiteFile();
     const hosted = await hostedOn({ store: 'sqlite', file });
     await Effect.runPromise(hosted.host.start(run, startOf(holding)));

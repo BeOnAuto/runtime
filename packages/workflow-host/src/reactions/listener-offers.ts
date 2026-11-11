@@ -3,6 +3,7 @@ import {
   describeError,
   listenerFilterOf,
   type CallKey,
+  type ContentUnavailable,
   type DslError,
   type MatchedFilter,
   type Submission,
@@ -51,7 +52,7 @@ interface Offer {
 export interface OfferParts {
   readonly database: HostDatabase;
   readonly refusals: RefuseReaction;
-  readonly offer: (offer: Offer) => Effect.Effect<Submission, Conflict | Readonly<{ detail: string }>>;
+  readonly offer: (offer: Offer) => Effect.Effect<Submission, Conflict | ContentUnavailable>;
   readonly declined: (runKey: string, detail: string) => Effect.Effect<void>;
   readonly match: MatchFilters;
   readonly stops: FilterStops;
@@ -168,7 +169,11 @@ function offerOf(parts: OfferParts, row: MatchedListener, followed: FollowedReco
         Effect.flatMap(({ declined }) =>
           declined === undefined ? Effect.void : parts.declined(row.run_key, declined),
         ),
-        Effect.mapError(({ detail }: Readonly<{ detail: string }>) => new DeliveryFailed({ detail })),
+        Effect.catchTags({
+          content_unavailable: ({ detail }: Readonly<{ detail: string }>) =>
+            Effect.fail(new DeliveryFailed({ detail, held: 'content' })),
+          conflict: ({ detail }: Readonly<{ detail: string }>) => Effect.fail(new DeliveryFailed({ detail })),
+        }),
       ),
   };
 }

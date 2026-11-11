@@ -30,7 +30,7 @@ export function sqliteLedgerOpened<Driver extends AnyDriver>(
     store: sqliteEventStore(onThePool, kept, listeners),
     connection: sqliteConnectionOn(options.pool, {
       inMemory,
-      streams: sqliteEventStore(onThePool, {}, listeners),
+      streams: sqliteEventStore(onThePool, { holders: kept.holders }, listeners),
       mostBoundValues,
     }),
   };

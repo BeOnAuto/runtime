@@ -1,6 +1,7 @@
 import type { CallResult } from '@on.auto/operations';
 import {
   callKeyText,
+  type CallAnsweredResult,
   type CallKey,
   type OutputOrigin,
   type RunContext,
@@ -36,7 +37,7 @@ export interface StartParts {
 
 export interface StartingCalls {
   readonly begin: (key: string, starting: Starting, attempt: CallAttempt, parent?: SpanIdentity) => void;
-  readonly answerAgain: (key: string, callKey: CallKey, result: CallResult) => void;
+  readonly answerAgain: (key: string, callKey: CallKey, result: CallAnsweredResult) => void;
   readonly isRunning: (key: string) => boolean;
   readonly underItsRoot: <A, E>(root: string, work: Effect.Effect<A, E>) => Effect.Effect<A, E>;
 }

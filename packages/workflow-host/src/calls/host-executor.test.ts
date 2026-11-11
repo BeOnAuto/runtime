@@ -1,5 +1,5 @@
 import type { CallResult } from '@on.auto/operations';
-import { callKeyText, type CallKey, type StartCall } from '@on.auto/workflow-engine';
+import { type CallAnsweredResult, type CallKey, callKeyText, type StartCall } from '@on.auto/workflow-engine';
 import { Deferred, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -181,7 +181,7 @@ describe('the executor of the host, resuming recorded answers', () => {
     const refusing = calls.executorOn(() => Effect.fail(new Error('The run is busy')));
     await Effect.runPromise(refusing.executor.start(call, run, origin));
     await Effect.runPromise(refusing.idle());
-    const answers: CallResult[] = [];
+    const answers: CallAnsweredResult[] = [];
     const giving = calls.executorOn((_key, result) =>
       Effect.sync(() => {
         answers.push(result);

@@ -41,3 +41,11 @@ export { payloadBytesASecond, payloadWaitMs, payloadWaitOf } from './payload-wai
 export { PayloadMissing, type PayloadMissingBecause } from './payload-missing.ts';
 export { PayloadErased } from './payload-erased.ts';
 export { payloadCacheWithin, type PayloadCache } from './payload-cache.ts';
+export {
+  firstTryAgainMs,
+  mostTryAgainMs,
+  noPayloadGate,
+  payloadGateOf,
+  tryAgainAfter,
+  type PayloadGate,
+} from './payload-gate.ts';

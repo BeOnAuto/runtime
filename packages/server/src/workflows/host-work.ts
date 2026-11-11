@@ -11,7 +11,7 @@ import {
   defineRunDefinition,
   deferredCanceller,
   runCanceller,
-  runSettler,
+  runSettlerKeepingOutputs,
   type PlaybookOperation,
   type PlaybookOwnNames,
   type Capability,
@@ -79,7 +79,7 @@ function settlements(runtime: AppRuntime<DispatcherServices>): SettleRun {
   return (run, settlement, lineage) =>
     inRuntime(
       runtime,
-      Effect.flatMap(Effect.service(Ledger), (ledger) => runSettler(ledger)(run, settlement, lineage)),
+      Effect.flatMap(Effect.service(Ledger), (ledger) => runSettlerKeepingOutputs(ledger)(run, settlement, lineage)),
     );
 }
 

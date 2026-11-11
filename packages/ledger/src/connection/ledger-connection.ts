@@ -1,3 +1,4 @@
+import type { RecordedContent } from '@on.auto/content';
 import { Context } from 'effect';
 
 import type { AppendPlace, EncodedEvent, LedgerStreams } from '../event-store.ts';
@@ -30,7 +31,10 @@ export interface ConnectionPorts {
   readonly sharedClock: (() => Promise<number>) | null;
   readonly mostBoundValues: number;
   readonly migrated: (statements: readonly Statement[]) => Promise<void>;
+  readonly content: RecordedContent;
 }
+
+export type OpenedConnection = Omit<ConnectionPorts, 'content'>;
 
 export class LedgerConnection extends Context.Service<LedgerConnection, ConnectionPorts>()(
   '@on.auto/ledger/LedgerConnection',

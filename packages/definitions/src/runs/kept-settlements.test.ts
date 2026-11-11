@@ -1,0 +1,77 @@
+import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { Effect, Result } from 'effect';
+import { describe, expect, it } from 'vitest';
+
+import { comparedWithoutItsValue } from '../payloads/payload-comparisons.ts';
+import { relayedId, settledAt, withHandOn } from '../testing/relaying.ts';
+import { endedWithAnotherResult } from './run-decisions.ts';
+import { runSettler, runSettlerKeepingOutputs, type Settlement } from './run-settler.ts';
+
+const relayed = { org: 'acme', playbook: 'alpha', id: relayedId };
+
+const leads = Array.from({ length: 3000 }, (_, index) => `lead-${index}`);
+
+const scored: Settlement = { status: 'succeeded', output: { leads, scores: { best: 1 } }, record: {} };
+
+const reordered: Settlement = { status: 'succeeded', output: { scores: { best: 1 }, leads }, record: {} };
+
+const another: Settlement = { status: 'succeeded', output: { leads: [], scores: { best: 1 } }, record: {} };
+
+async function settledKeeping(keepsOutside: boolean) {
+  const handed = await withHandOn();
+  await handed.running();
+  const settle = runSettlerKeepingOutputs(handed.ledger.service)(relayed, scored);
+  await handed.run(Effect.orDie(settle.pipe(Effect.provideService(PayloadsOutside, keepsOutside))), settledAt);
+  const { records } = await Effect.runPromise(
+    handed.ledger.service.readRecorded(relayed, { kind: 'run', run: relayedId }, { order: 'asc', limit: 10 }),
+  );
+  const ended = records.find(({ type }) => type === 'run_succeeded');
+  return { handed, ended: ended?.data, keptByDigest: JSON.stringify(ended?.data ?? null).includes('output_sha256') };
+}
+
+describe('a workflow’s run settled by the settler that keeps outputs', () => {
+  it('keeps a large output outside the run’s ending where payloads are kept outside, and inline where they are not', async () => {
+    const [keeping, inline] = [await settledKeeping(true), await settledKeeping(false)];
+
+    expect(keeping.ended).toMatchObject({ output_bytes: JSON.stringify(scored.output).length, record: {} });
+    expect(inline.ended).toEqual({ output: scored.output, record: {} });
+  });
+});
+
+describe('a workflow’s run settled again after it ended with an output its playbook keeps outside', () => {
+  it('records nothing for the same value in another order, read and compared, where a settler that reads nothing answers unavailable', async () => {
+    const { handed } = await settledKeeping(true);
+    const again = (settled: Effect.Effect<unknown, unknown>) => handed.run(Effect.result(settled), settledAt);
+
+    const keeping = await again(runSettlerKeepingOutputs(handed.ledger.service)(relayed, reordered));
+    const plain = await again(runSettler(handed.ledger.service)(relayed, reordered));
+
+    expect(Result.isSuccess(keeping)).toBe(true);
+    expect(plain).toEqual(Result.fail(comparedWithoutItsValue));
+  });
+
+  it('records nothing for the same text, with no read, and is a conflict for another value', async () => {
+    const { handed } = await settledKeeping(true);
+    const settle = runSettlerKeepingOutputs(handed.ledger.service);
+
+    const same = await handed.run(Effect.result(settle(relayed, scored)), settledAt);
+    const other = await handed.run(Effect.result(settle(relayed, another)), settledAt);
+
+    expect(Result.isSuccess(same)).toBe(true);
+    expect(other).toEqual(Result.fail(endedWithAnotherResult));
+  });
+
+  it('is unavailable while the kept output cannot be read', async () => {
+    const { handed, keptByDigest } = await settledKeeping(true);
+    const { service } = handed.ledger;
+    const unreadable = { ...service, content: { ...service.content, get: () => Effect.die(new Error('down')) } };
+
+    const settled = await handed.run(
+      Effect.result(runSettlerKeepingOutputs(unreadable)(relayed, reordered)),
+      settledAt,
+    );
+
+    expect(keptByDigest).toBe(true);
+    expect(settled).toMatchObject(Result.fail({ _tag: 'unavailable' }));
+  });
+});

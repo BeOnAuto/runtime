@@ -13,6 +13,7 @@ import { keptContentGraceMs } from '../held-content/unheld-removal.ts';
 import type { Unavailable } from '../outcome/unavailable.ts';
 import { noPayloadCache, type PayloadCache } from './payload-cache.ts';
 import type { PayloadErased } from './payload-erased.ts';
+import { noPayloadGate, type PayloadGate } from './payload-gate.ts';
 import { PayloadMissing, type PayloadMissingBecause } from './payload-missing.ts';
 import { unreachable, waitedFor } from './payload-waits.ts';
 
@@ -32,6 +33,7 @@ export interface PayloadSource {
   readonly owner: ContentOwner;
   readonly content: Pick<RecordedContent, 'get' | 'getHead'>;
   readonly cache?: PayloadCache;
+  readonly gate?: PayloadGate;
   readonly readsAtOnce?: number;
 }
 
@@ -88,46 +90,58 @@ function found(source: PayloadSource, sha256: string): Effect.Effect<StreamedCon
   });
 }
 
-function decodedOnto(utf8: TextDecoder, text: string | undefined, chunk?: Readonly<Uint8Array>): string | undefined {
-  if (text === undefined) {
-    return undefined;
-  }
-  try {
-    return chunk === undefined ? `${text}${utf8.decode()}` : `${text}${utf8.decode(chunk, { stream: true })}`;
-  } catch {
-    return undefined;
-  }
+interface Chunks {
+  readonly add: (chunk: Readonly<Uint8Array>) => void;
+  readonly decodedWhole: (bytes: number) => string | undefined;
 }
 
 interface Reading {
   readonly reader: BytesReader;
   readonly most: number;
   readonly digest: Sha256Digest;
-  readonly utf8: TextDecoder;
+  readonly chunks: Chunks;
 }
 
-interface ReadSoFar {
-  readonly bytes: number;
-  readonly text: string | undefined;
+function decodedWhole(chunks: readonly Readonly<Uint8Array>[], bytes: number): string | undefined {
+  const whole = new Uint8Array(bytes);
+  chunks.reduce((at, chunk) => {
+    whole.set(chunk, at);
+    return at + chunk.byteLength;
+  }, 0);
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(whole);
+  } catch {
+    return undefined;
+  }
 }
 
-function readEnded({ digest, utf8 }: Reading, { bytes, text }: ReadSoFar): StreamRead {
-  return { bytes, sha256: digest.hex(), text: decodedOnto(utf8, text) };
+function chunksHeld(): Chunks {
+  const held: Readonly<Uint8Array>[] = [];
+  return {
+    add: (chunk) => {
+      held.push(chunk);
+    },
+    decodedWhole: (bytes) => decodedWhole(held, bytes),
+  };
 }
 
-async function readOn(reading: Reading, { bytes, text }: ReadSoFar): Promise<StreamRead> {
+function readEnded({ digest, chunks }: Reading, bytes: number): StreamRead {
+  return { bytes, sha256: digest.hex(), text: chunks.decodedWhole(bytes) };
+}
+
+async function readOn(reading: Reading, bytes: number): Promise<StreamRead> {
   const next = await reading.reader.read();
   if (next.done) {
-    return readEnded(reading, { bytes, text });
+    return readEnded(reading, bytes);
   }
   reading.digest.update(next.value);
-  const soFar = { bytes: bytes + next.value.byteLength, text: decodedOnto(reading.utf8, text, next.value) };
-  return soFar.bytes > reading.most ? readEnded(reading, soFar) : readOn(reading, soFar);
+  reading.chunks.add(next.value);
+  const soFar = bytes + next.value.byteLength;
+  return soFar > reading.most ? readEnded(reading, soFar) : readOn(reading, soFar);
 }
 
 function readThrough(reader: BytesReader, most: number): Promise<StreamRead> {
-  const utf8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
-  return readOn({ reader, most, digest: sha256Digest(), utf8 }, { bytes: 0, text: '' });
+  return readOn({ reader, most, digest: sha256Digest(), chunks: chunksHeld() }, 0);
 }
 
 function textOfRead(owner: ContentOwner, kept: Digested, read: StreamRead): Effect.Effect<string, PayloadMissing> {
@@ -169,7 +183,8 @@ function textRead(source: PayloadSource, kept: Digested): Effect.Effect<string, 
       return restore(textIn(source.owner, kept, content, reader)).pipe(Effect.ensuring(leftUnread(reader)));
     }),
   );
-  return waitedFor(read, kept.bytes, { detail: notReadNow, sha256: kept.sha256 });
+  const { gate = noPayloadGate } = source;
+  return gate.through(waitedFor(read, kept.bytes, { detail: notReadNow, sha256: kept.sha256 }), notReadNow);
 }
 
 function cachedText(source: PayloadSource, kept: Digested): Effect.Effect<string, PayloadNotRead> {

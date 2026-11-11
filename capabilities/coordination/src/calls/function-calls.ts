@@ -1,6 +1,6 @@
 import { nestedRunId, type RunEnding } from '@on.auto/definitions';
 import { invalidArguments, type CallResult } from '@on.auto/operations';
-import { jsonBytesOf } from '@on.auto/workflow-engine';
+import { jsonBytesOf, type CallAnsweredResult } from '@on.auto/workflow-engine';
 import { recordIdOf, type CallAnswer, type Perform } from '@on.auto/workflow-host';
 import { Effect, Option } from 'effect';
 
@@ -33,14 +33,18 @@ function rejectedCallOf(result: Extract<EndedRunResult, { readonly status: 'reje
   };
 }
 
-function callResultOf(result: EndedRunResult): CallResult {
+function bytesOfTheOutput(result: Extract<EndedRunResult, { readonly status: 'succeeded' }>): number {
+  return 'output_bytes' in result ? result.output_bytes : jsonBytesOf(result.output);
+}
+
+function callResultOf(result: EndedRunResult): CallAnsweredResult {
   if (result.status === 'rejected') {
     return rejectedCallOf(result);
   }
   if (result.status === 'failed') {
     return result;
   }
-  const bytes = jsonBytesOf(result.output);
+  const bytes = bytesOfTheOutput(result);
   return bytes > mostDefinitionOutputBytes
     ? {
         status: 'failed',
@@ -49,7 +53,7 @@ function callResultOf(result: EndedRunResult): CallResult {
     : result;
 }
 
-export function callResultOfEnding(ending: RunEnding): CallResult {
+export function callResultOfEnding(ending: RunEnding): CallAnsweredResult {
   return callResultOf(endedRunResultOf(ending));
 }
 
@@ -60,7 +64,7 @@ const refusedAdmission: ReadonlySet<string> = new Set([
   'meter_unavailable',
 ]);
 
-function asAnswered(result: EndedRunResult): CallResult {
+function asAnswered(result: EndedRunResult): CallAnsweredResult {
   const answer = callResultOf(result);
   return answer.status === 'rejected' && refusedAdmission.has(answer.kind ?? '')
     ? { ...answer, admission: 'refused' }

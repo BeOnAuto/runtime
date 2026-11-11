@@ -42,6 +42,7 @@ describe('the ending of a run a run waits for, read before a timer of that run f
         }),
       resultOf: resultOfEnding,
       now: () => 1,
+      trouble: () => Effect.void,
     });
 
     await Effect.runPromise(endedChildren(parentRun));

@@ -13,7 +13,7 @@ const onTheRun = {
 };
 
 describe('the result of a run a workflow called, from its ending', () => {
-  it('is the output of a success that holds it, and a failure naming why for one whose output its playbook keeps outside the run', () => {
+  it('is the output of a success that holds it, and the digest and size of one whose output its playbook keeps outside the run, which the workflow reads', () => {
     const inline: RunEnding = { type: 'run_succeeded', data: { output: { a: 1 }, record: {} }, context: onTheRun };
     const kept: RunEnding = {
       type: 'run_succeeded',
@@ -23,11 +23,7 @@ describe('the result of a run a workflow called, from its ending', () => {
 
     expect([endedRunResultOf(inline), endedRunResultOf(kept)]).toEqual([
       { status: 'succeeded', output: { a: 1 } },
-      {
-        status: 'failed',
-        detail:
-          'The run succeeded with an output its playbook keeps outside the run, which a workflow is not yet handed',
-      },
+      { status: 'succeeded', output_sha256: 'c'.repeat(64), output_bytes: 4096 },
     ]);
   });
 });
@@ -46,12 +42,13 @@ describe('the result of running a definition through the operations', () => {
 });
 
 describe('the result of running a definition whose run kept its output outside it', () => {
-  it('is a failure naming the digest of a success whose kept output is missing or erased, as its ending is', () => {
+  it('is the digest and size of a success whose kept output could not be read, which the workflow then reads, as from its ending', () => {
     const lost = { status: 'succeeded', output_sha256: 'a'.repeat(64), output_bytes: 91_844 };
 
     expect(definitionRunResultOf({ status: 'succeeded', output: lost })).toEqual({
-      status: 'failed',
-      detail: `The run succeeded, but its output, kept outside the run under ${'a'.repeat(64)}, is missing from its playbook or was erased, so the workflow is not handed it`,
+      status: 'succeeded',
+      output_sha256: 'a'.repeat(64),
+      output_bytes: 91_844,
     });
   });
 

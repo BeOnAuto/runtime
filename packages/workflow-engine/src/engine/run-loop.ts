@@ -32,7 +32,7 @@ export function runLoopOf<Unavailable>(
   const attempt = (runId: string, input: RunInput): Attempt<Unavailable> =>
     Effect.gen(function* () {
       const loaded = yield* load(runId);
-      const run = yield* Effect.result(resolvedIn(cache, stores.payloads, [runId, loaded]));
+      const run = yield* Effect.result(resolvedIn(cache, stores.payloads, [runId, loaded, input]));
       const outcome = Result.isFailure(run)
         ? Result.fail(run.failure)
         : yield* Effect.andThen(reserve, appendedDecision(stores, [runId, input], [run.success, decider]));

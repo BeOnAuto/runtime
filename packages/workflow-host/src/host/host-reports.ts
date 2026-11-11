@@ -24,6 +24,13 @@ export type HostNote =
       readonly keptBytes: number;
     }
   | {
+      readonly kind: 'payloads_read';
+      readonly run: RunAddress;
+      readonly texts: number;
+      readonly bytes: number;
+      readonly unread: number;
+    }
+  | {
       readonly kind: 'record_unreadable';
       readonly org: string;
       readonly playbook: string;

@@ -9,6 +9,7 @@ import type {
   RejectionBecause,
   RejectionCause,
 } from '@on.auto/operations';
+import type { KeptCallResult } from '@on.auto/workflow-engine';
 import type { Effect, Schema } from 'effect';
 
 export interface DefinitionRunRequest {
@@ -31,6 +32,7 @@ export interface DefinitionRunRequest {
 
 export type EndedRunResult =
   | { readonly status: 'succeeded'; readonly output: Schema.Json }
+  | KeptCallResult
   | {
       readonly status: 'rejected';
       readonly reason: RejectionReason;

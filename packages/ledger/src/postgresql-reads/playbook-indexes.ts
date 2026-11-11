@@ -22,6 +22,10 @@ export function dataBytesOf({ data, metadata }: MessageColumns): string {
   return `(octet_length(${data} ->> 'json') + coalesce((${metadata} ->> 'payloadBytes')::integer, 0))`;
 }
 
+export function storedBytesOf({ data }: MessageColumns): string {
+  return `(octet_length(${data} ->> 'json'))`;
+}
+
 export const definitionTypeOfStream = "substring(stream_id FROM '^(?:[^/]*/){3}definitions/([^/]+)$')";
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));

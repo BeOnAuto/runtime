@@ -24,19 +24,28 @@ function keyed(index: number): string {
   return String(index).padStart(4, '0');
 }
 
+interface CountedOptions {
+  readonly failing?: ReadonlySet<string>;
+  readonly delivers?: (key: string) => boolean;
+  readonly held?: ReadonlySet<string>;
+}
+
 function counted(
   name: string,
   count: number,
-  failing: ReadonlySet<string> = new Set(),
-  delivers: (key: string) => boolean = () => true,
+  { failing = new Set(), delivers = () => true, held = new Set() }: CountedOptions = {},
 ): Counted {
   const delivered: string[] = [];
   const skipped: string[] = [];
+  const failed = (key: string) =>
+    held.has(key)
+      ? new DeliveryFailed({ detail: `${key} waits for the content store`, held: 'content' })
+      : new DeliveryFailed({ detail: `${key} failed` });
   const deliveryOf = (key: string): Delivery => ({
     key,
     workflow: 'close',
     deliver: failing.has(key)
-      ? Effect.fail(new DeliveryFailed({ detail: `${key} failed` }))
+      ? Effect.fail(failed(key))
       : Effect.sync(() => {
           delivered.push(`${name} ${key}`);
         }),
@@ -85,7 +94,7 @@ describe('the deliveries of one record', () => {
   });
 
   it('try a delivery that keeps failing on 20 sweeps, holding the record, then skip it and say so', async () => {
-    const starts = counted('starts', 3, new Set(['0001']));
+    const starts = counted('starts', 3, { failing: new Set(['0001']) });
     const swept = (progress: Progress) => deliveredAll(boundAll(starts.consumer), progress, 'sweep');
 
     const signalled = await Effect.runPromise(deliveredAll(boundAll(starts.consumer), fresh, 'signal'));
@@ -107,10 +116,27 @@ describe('the deliveries of one record', () => {
   });
 
   it('ask a consumer again within the pass, from where its last batch ended, while its batches deliver fewer than they take', async () => {
-    const sparse = counted('sparse', 298, new Set(), (key) => Number(key) % 3 === 0);
+    const sparse = counted('sparse', 298, { delivers: (key) => Number(key) % 3 === 0 });
 
     const pass = await Effect.runPromise(deliveredAll(boundAll(sparse.consumer), fresh, 'signal'));
 
     expect([pass.end, sparse.delivered().length, sparse.delivered().at(-1)]).toEqual([undefined, 100, 'sparse 0297']);
+  });
+});
+
+describe('the deliveries of one record while the content store does not answer', () => {
+  it('hold a delivery that fails for the content store at its record through any number of sweeps, never counting it nor skipping it', async () => {
+    const starts = counted('starts', 3, { failing: new Set(['0001']), held: new Set(['0001']) });
+    const swept = (progress: Progress) => deliveredAll(boundAll(starts.consumer), progress, 'sweep');
+
+    const held = await Effect.runPromise(
+      Array.from({ length: 40 }).reduce<Effect.Effect<Progress>>(
+        (before) => Effect.flatMap(before, (progress) => Effect.map(swept(progress), (step) => step.progress)),
+        Effect.succeed(fresh),
+      ),
+    );
+
+    expect([held.attempts, held.waiting]).toEqual([0, true]);
+    expect([starts.delivered(), starts.skipped()]).toEqual([['starts 0000'], []]);
   });
 });

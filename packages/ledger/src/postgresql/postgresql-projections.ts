@@ -4,7 +4,12 @@ import type { StreamScope } from '@on.auto/operations';
 import { sizedPositionsOf, type SizesAfter } from '../appends/stream-pages.ts';
 import { inTransactionOn, type ContentConnections } from '../content/postgresql-content.ts';
 import type { StatementExecutor } from '../event-store.ts';
-import { columnsOfTheTable, dataBytesOf, playbookKeyOfStream } from '../postgresql-reads/playbook-indexes.ts';
+import {
+  columnsOfTheTable,
+  dataBytesOf,
+  playbookKeyOfStream,
+  storedBytesOf,
+} from '../postgresql-reads/playbook-indexes.ts';
 import {
   type FoldedStreams,
   type HeldRead,
@@ -44,7 +49,7 @@ const columnsOfAMessage = SQL`${SQL.plain(`m.transaction_id::text || '/' || m.gl
   m.stream_position::float8 AS position`)}`;
 
 const columnsOfASize = SQL`${SQL.plain(`m.transaction_id::text || '/' || m.global_position::text AS point,
-  ${dataBytesOf(columnsOfTheTable('m'))}::float8 AS size`)}`;
+  ${storedBytesOf(columnsOfTheTable('m'))}::float8 AS size`)}`;
 
 const columnsToSize = SQL.plain('m.transaction_id, m.global_position, m.stream_id, m.message_data, m.message_metadata');
 
@@ -131,7 +136,7 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
   asNumber: (expression) => `${expression}::float8`,
   streamsAfter: (after, count, folded, types) =>
     SQL`SELECT s.stream_id AS stream, (
-        SELECT coalesce(sum(${SQL.plain(dataBytesOf(columnsOfTheTable('m')))}), 0)::float8 FROM emt_messages AS m
+        SELECT coalesce(sum(${SQL.plain(storedBytesOf(columnsOfTheTable('m')))}), 0)::float8 FROM emt_messages AS m
         WHERE m.stream_id = s.stream_id
           AND m.message_type IN (SELECT jsonb_array_elements_text(${JSON.stringify(types)}::jsonb))
           AND m.partition = ${defaultPartition} AND m.is_archived = FALSE

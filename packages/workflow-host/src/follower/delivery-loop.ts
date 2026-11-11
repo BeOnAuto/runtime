@@ -46,7 +46,8 @@ function deliveredOne(
     if (Result.isSuccess(done)) {
       return { progress: { ...progress, delivered: textOf(consumer.name, delivery.key), attempts: 0 } };
     }
-    const attempts = mode === 'sweep' ? progress.attempts + 1 : progress.attempts;
+    const counted = mode === 'sweep' && done.failure.held === undefined;
+    const attempts = counted ? progress.attempts + 1 : progress.attempts;
     if (attempts < consumer.skippedAfterSweeps) {
       return { progress: { ...progress, attempts, waiting: true }, end: 'waiting' };
     }

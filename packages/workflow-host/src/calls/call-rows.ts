@@ -1,6 +1,13 @@
 import { statement } from '@on.auto/ledger';
-import { CallResultSchema, type CallResult } from '@on.auto/operations';
-import { CallKeySchema, type OutputOrigin, type RunContext, type StartCall } from '@on.auto/workflow-engine';
+import type { CallResult } from '@on.auto/operations';
+import {
+  CallAnsweredResultSchema,
+  CallKeySchema,
+  type CallAnsweredResult,
+  type OutputOrigin,
+  type RunContext,
+  type StartCall,
+} from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
 import { oneRowOf, rowsOf, WholeNumber, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
@@ -13,11 +20,11 @@ const StartCallSchema = Schema.Struct({
   longestMs: Schema.Int,
 });
 
-const CallText = Schema.fromJsonString(Schema.toCodecJson(StartCallSchema));
+export const CallText = Schema.fromJsonString(Schema.toCodecJson(StartCallSchema));
 
 const AttributesText = Schema.fromJsonString(Schema.JsonObject);
 
-const ResultText = Schema.fromJsonString(Schema.toCodecJson(CallResultSchema));
+export const ResultText = Schema.fromJsonString(Schema.toCodecJson(CallAnsweredResultSchema));
 
 const encodeCall = Schema.encodeSync(CallText);
 
@@ -66,7 +73,7 @@ export interface WaitingCallOfARun extends CallOfARun {
 }
 
 export interface UnfinishedCall extends CallOfARun {
-  readonly result: CallResult | null;
+  readonly result: CallAnsweredResult | null;
 }
 
 export interface WaitingCall {
@@ -178,7 +185,7 @@ export function tombstonedRow(
 export function answeredRow(
   database: HostDatabase,
   key: string,
-  result: CallResult,
+  result: CallAnsweredResult,
 ): Effect.Effect<boolean, DatabaseFailed> {
   return database
     .write(

@@ -3,7 +3,7 @@ import { Ledger } from '@on.auto/operations';
 import { Context, Effect, Layer, Semaphore } from 'effect';
 
 import { signalledOn, type AppendSignal } from './appends/append-signal.ts';
-import { LedgerConnection, type ConnectionPorts } from './connection/ledger-connection.ts';
+import { LedgerConnection, type OpenedConnection } from './connection/ledger-connection.ts';
 import { LedgerChores, orphansSweptOf, type ContentSweeping } from './content/content-sweep.ts';
 import type { AppendListeners, LedgerContent, LedgerStore } from './event-store.ts';
 import { makeLedger, ownContentOf } from './ledger-service.ts';
@@ -19,7 +19,7 @@ export interface StoreLayerOptions extends OpenedWith, AppendListeners, KeptTabl
 
 export interface OpenedLedger {
   readonly store: LedgerStore;
-  readonly connection: ConnectionPorts;
+  readonly connection: OpenedConnection;
 }
 
 export type LedgerServices = Ledger | LedgerConnection | LedgerChores | LedgerLog;
@@ -54,7 +54,7 @@ export function ledgerLayerOver(
       const orphansSwept = orphansSweptOf(sweptWith(store, content));
       const ledger = makeLedger(store, contentOf(store, content));
       return Context.make(Ledger, ledger).pipe(
-        Context.add(LedgerConnection, opened.connection),
+        Context.add(LedgerConnection, { ...opened.connection, content: ledger.content }),
         Context.add(LedgerLog, store.log),
         Context.add(LedgerChores, {
           sweepOrphans: (now: number) => sweeping.withPermit(orphansSwept(now)),

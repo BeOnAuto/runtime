@@ -14,7 +14,9 @@ export interface FollowedRecord extends CallRecord {
   readonly event: FollowedEvent;
 }
 
-export class DeliveryFailed extends Data.TaggedError('delivery_failed')<FailureDetail> {}
+export class DeliveryFailed extends Data.TaggedError('delivery_failed')<
+  FailureDetail & { readonly held?: 'content' }
+> {}
 
 export interface Delivery {
   readonly key: string;

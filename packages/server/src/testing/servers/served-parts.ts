@@ -1,9 +1,8 @@
 import { RunMeter, type Meter } from '@on.auto/definitions';
 import type { LicensedFeatures } from '@on.auto/meter';
 import { Ledger } from '@on.auto/operations';
+import { PayloadsOutside } from '@on.auto/operations/payloads';
 import type { LanguageModel } from '@on.auto/reasoning';
-import type { Timing } from '@on.auto/tool-servers';
-import type { HostClock } from '@on.auto/workflow-host';
 import { Context, Layer } from 'effect';
 
 import type { CompositionParts } from '../../composition/composition-root.ts';
@@ -18,8 +17,8 @@ type ShippedFilesOver = (files: ShippedFiles) => ShippedFiles;
 
 export interface ServedParts {
   readonly programPoolOf?: NonNullable<CompositionParts['programPoolOf']>;
-  readonly clock?: HostClock;
-  readonly toolTiming?: Timing;
+  readonly clock?: NonNullable<CompositionParts['clock']>;
+  readonly toolTiming?: NonNullable<CompositionParts['toolTiming']>;
   readonly ledgerOver?: LedgerOver;
   readonly admit?: LanguageModel['Service']['admit'];
   readonly ledger?: TemporaryLedger;
@@ -28,6 +27,7 @@ export interface ServedParts {
   readonly installed?: NonNullable<CompositionParts['installed']>;
   readonly features?: Layer.Layer<LicensedFeatures>;
   readonly shippedFilesOver?: ShippedFilesOver;
+  readonly keptOutside?: true;
 }
 
 function composedWithTheLedgerOver(options: ComposedServerOptions, ledgerOver: LedgerOver): ComposedServerOptions {
@@ -56,18 +56,33 @@ function composedWithTheMeter(options: ComposedServerOptions, meter: Meter): Com
   };
 }
 
+function composedKeepingPayloadsOutside(options: ComposedServerOptions): ComposedServerOptions {
+  return {
+    ...options,
+    composed: async (settings, telemetry, shippedFiles) => {
+      const composed = await options.composed(settings, telemetry, shippedFiles);
+      const services = Layer.flatMap(composed.services, (served) =>
+        Layer.succeedContext(Context.add(served, PayloadsOutside, true)),
+      );
+      return { ...composed, services };
+    },
+  };
+}
+
 interface ComposedParts {
   readonly ledgerOver: LedgerOver | undefined;
   readonly meter: Meter | undefined;
   readonly shippedFilesOver: ShippedFilesOver | undefined;
+  readonly keptOutside: true | undefined;
 }
 
 export function composedWithTheParts(
   options: ComposedServerOptions,
-  { ledgerOver, meter, shippedFilesOver }: ComposedParts,
+  { ledgerOver, meter, shippedFilesOver, keptOutside }: ComposedParts,
 ): ComposedServerOptions {
   const shipped =
     shippedFilesOver === undefined ? options : { ...options, shippedFiles: shippedFilesOver(options.shippedFiles) };
   const metered = meter === undefined ? shipped : composedWithTheMeter(shipped, meter);
-  return ledgerOver === undefined ? metered : composedWithTheLedgerOver(metered, ledgerOver);
+  const keeping = keptOutside === undefined ? metered : composedKeepingPayloadsOutside(metered);
+  return ledgerOver === undefined ? keeping : composedWithTheLedgerOver(keeping, ledgerOver);
 }

@@ -73,7 +73,7 @@ describe('a payload read back from the content of its playbook', () => {
   it('is read from the cache it was kept or read into, with no read of the store', async () => {
     const content = await contentWith();
     const cache = payloadCacheWithin(1_000_000);
-    await Effect.runPromise(payloadKept(content, alpha, json, cache));
+    await Effect.runPromise(payloadKept(content, alpha, json, { cache }));
 
     const read = await Effect.runPromise(payloadReaderOf({ owner: alpha, content: unreachable, cache }).json(json));
 
