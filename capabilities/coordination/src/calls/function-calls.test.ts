@@ -272,3 +272,18 @@ describe('a call whose definition the meter refused to start', () => {
     });
   });
 });
+
+describe('a call whose function could not be read from storage just now', () => {
+  it('answers its refusal as a refusal of admission, so the step waits', async () => {
+    const detail = 'The document of the reasoning function brief could not be read just now, so no run started';
+    const { perform } = answering({ status: 'rejected', reason: 'unavailable', detail, kind: 'content_unavailable' });
+
+    expect(await Effect.runPromise(perform(classify, run, origin, firstAttempt))).toEqual({
+      status: 'rejected',
+      reason: 'unavailable',
+      detail,
+      kind: 'content_unavailable',
+      admission: 'refused',
+    });
+  });
+});

@@ -118,6 +118,7 @@ const awaited: ReadonlyMap<string, string> = new Map([
   ['license_required', 'waits for a license key'],
   ['license_invalid', 'waits for its license to be fixed'],
   ['meter_unavailable', 'waits until its credits can be checked'],
+  ['content_unavailable', 'waits until what it calls can be read from storage'],
 ]);
 
 const fixedAt: ReadonlyMap<string, (page: string) => string> = new Map([

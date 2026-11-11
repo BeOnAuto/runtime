@@ -41,6 +41,7 @@ export { payloadBytesASecond, payloadWaitMs, payloadWaitOf } from './payload-wai
 export { PayloadMissing, type PayloadMissingBecause } from './payload-missing.ts';
 export { PayloadErased } from './payload-erased.ts';
 export { payloadCacheWithin, type PayloadCache } from './payload-cache.ts';
+export { PayloadsShared, noSharedPayloads, sharedPayloadsWithin, type SharedPayloads } from './shared-payloads.ts';
 export {
   firstTryAgainMs,
   mostTryAgainMs,

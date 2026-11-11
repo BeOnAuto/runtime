@@ -35,6 +35,7 @@ export function refusedToRunFor(type: string, named: VersionNamed) {
     return because === 'unavailable'
       ? new Unavailable({
           detail: `The document of the ${label} ${name}, which the playbook keeps outside its record, could not be read just now, so no run started; ask again in a moment`,
+          kind: 'content_unavailable',
         })
       : new Conflict({
           detail: `The ${label} ${name} at ${versionCalled(named)} cannot run: its document ${lostWords[because]}; update it`,
@@ -45,6 +46,7 @@ export function refusedToRunFor(type: string, named: VersionNamed) {
 
 function unreadNow(label: string, name: string, text: string, change: Change | undefined): Unavailable {
   return new Unavailable({
+    kind: 'content_unavailable',
     detail:
       change === undefined
         ? `The ${text} of the ${label} ${name}, which the playbook keeps outside its record, could not be read just now; ask again in a moment`

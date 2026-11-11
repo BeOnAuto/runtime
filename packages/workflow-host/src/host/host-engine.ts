@@ -29,7 +29,6 @@ export interface EngineOptions extends Pick<PortParts, 'settle' | 'reports'> {
   readonly cacheBounds?: RunCacheBounds;
   readonly reactions: ReactionOptions;
   readonly context?: Context.Context<never> | undefined;
-  readonly sharedPayloads?: PortParts['sharedPayloads'];
 }
 
 type Submitted = (input: RunInput) => Effect.Effect<Submission, Conflict | ContentUnavailable>;
@@ -79,7 +78,6 @@ export function hostEngineOn(
     listeners: reacting.listeners,
     emitter: reacting.emitter,
     context: options.context,
-    sharedPayloads: options.sharedPayloads,
     now: clock.now,
   });
   const engine = workflowEngineOf(ports, options.machine, runCacheOf(options.cacheBounds ?? runCacheBounds));

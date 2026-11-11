@@ -1,17 +1,18 @@
 import { createHash } from 'node:crypto';
 
-import { jsonPayloadText, type PayloadSource, type PayloadToKeep } from '@on.auto/operations/payloads';
+import {
+  jsonPayloadText,
+  sharedPayloadsWithin,
+  type PayloadSource,
+  type PayloadToKeep,
+  type SharedPayloads,
+} from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
 import type { ContentUnavailable, RunPayloads } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Exit, type Schema } from 'effect';
 
 import type { HostNote } from '../host/host-reports.ts';
-import {
-  hostPayloadCacheBytes,
-  hostRunPayloadsOf,
-  sharedPayloadsWithin,
-  type SharedPayloads,
-} from '../runs/run-payloads.ts';
+import { hostPayloadCacheBytes, hostRunPayloadsOf } from '../runs/run-payloads.ts';
 
 type Content = PayloadSource['content'] & Parameters<typeof hostRunPayloadsOf>[0]['content'];
 

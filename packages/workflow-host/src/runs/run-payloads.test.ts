@@ -1,10 +1,10 @@
-import { PayloadErased, payloadReaderOf, type PayloadReader } from '@on.auto/operations/payloads';
+import { PayloadErased, payloadReaderOf, sharedPayloadsWithin, type PayloadReader } from '@on.auto/operations/payloads';
 import { Effect, Fiber } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { keptOf, notesKept, storeOn, streamedIn } from '../payload-testing/kept-payloads.ts';
 import { runKeyOf } from './run-address.ts';
-import { hostRunPayloadsOf, sharedPayloadsWithin } from './run-payloads.ts';
+import { hostRunPayloadsOf } from './run-payloads.ts';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 

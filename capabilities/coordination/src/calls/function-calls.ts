@@ -62,6 +62,7 @@ const refusedAdmission: ReadonlySet<string> = new Set([
   'license_required',
   'license_invalid',
   'meter_unavailable',
+  'content_unavailable',
 ]);
 
 function asAnswered(result: EndedRunResult): CallAnsweredResult {

@@ -53,7 +53,7 @@ describe('a definition whose texts its playbook keeps outside its facts, read', 
       await unreachable.asked(getDefinition),
       await askedAt(lost.definitions, twoHoursLater)(getDefinition),
     ]).toMatchObject([
-      { status: 'rejected', reason: 'unavailable', detail: unreadNow },
+      { status: 'rejected', reason: 'unavailable', kind: 'content_unavailable', detail: unreadNow },
       {
         status: 'rejected',
         reason: 'conflict',
@@ -74,6 +74,7 @@ describe('a definition whose texts its playbook keeps outside its facts, paused'
     expect(await asked(pauseDefinition)).toMatchObject({
       status: 'rejected',
       reason: 'unavailable',
+      kind: 'content_unavailable',
       detail: pausedUnread,
     });
     expect((await definitionFactsOf(definitions)).map(({ type }) => type)).toEqual([

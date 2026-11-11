@@ -18,17 +18,16 @@ export interface PortParts {
   readonly listeners: Listeners;
   readonly emitter: Emitter;
   readonly context: ComposedPayloads['context'];
-  readonly sharedPayloads: ComposedPayloads['shared'];
   readonly now: () => number;
 }
 
 export function hostPortsOn(
   database: HostDatabase,
-  { settle, reports, timers, executor, listeners, emitter, context, sharedPayloads, now }: PortParts,
+  { settle, reports, timers, executor, listeners, emitter, context, now }: PortParts,
 ): EnginePorts<ContentUnavailable> {
   return {
     runStore: ledgerRunLogStore(database),
-    payloads: hostPayloadsOf({ content: database.content, context, shared: sharedPayloads, note: reports.note }),
+    payloads: hostPayloadsOf({ content: database.content, context, note: reports.note }),
     watermark: sqlWatermark(database),
     timers,
     executor,

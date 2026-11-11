@@ -42,6 +42,7 @@ describe('the services the playbook operations run on', () => {
       '@on.auto/meter/RuntimeLicense',
       '@on.auto/operations/IncidentReporter',
       '@on.auto/operations/Ledger',
+      '@on.auto/operations/PayloadsShared',
       '@on.auto/operations/PlaybookRegistry',
     ]);
   });

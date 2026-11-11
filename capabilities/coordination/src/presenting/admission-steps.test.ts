@@ -116,6 +116,10 @@ describe('a step that waits for a refusal of each kind', () => {
       'meter_unavailable',
       'The step “ask” waits until its credits can be checked. The account it runs under could not be asked for its credits.',
     ],
+    [
+      'content_unavailable',
+      'The step “ask” waits until what it calls can be read from storage. Something it needs, which its playbook keeps in its stored content, could not be read just now.',
+    ],
     ['busy_elsewhere', 'The step “ask” waits for credits or a license.'],
   ])('says what a refusal of the kind %s waits for', (kind, said) => {
     const { resolve_at: link, because, ...refused } = outOfCredits;

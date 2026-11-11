@@ -38,6 +38,7 @@ describe('a run of a definition whose document its playbook keeps outside its fa
     expect(await asked(runDefinition, { input: { who: 'Grace' } })).toMatchObject({
       status: 'rejected',
       reason: 'unavailable',
+      kind: 'content_unavailable',
       detail: notStarted,
     });
     expect(await runsStartedIn(definitions)).toBe(1);

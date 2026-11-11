@@ -2230,7 +2230,7 @@ Inside a workflow, three rejections of a run the workflow called differ from the
 
 - `invalid_input` is status 422 over HTTP, but a workflow raises it as a `validation` error of status 400. A `catch` for it matches status 400 or the `validation` type, never 422.
 - A cancellation of a called run that the workflow does not catch rejects the workflow as `invalid_input`, not as `cancelled`, since the workflow itself was not cancelled.
-- `credits_exhausted`, `license_required`, `license_invalid` and `meter_unavailable`, when the meter would not start the run, reach the workflow only 24 hours on, or once the step's own `timeout` passes: until then its step waits and asks again ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)).
+- `credits_exhausted`, `license_required`, `license_invalid` and `meter_unavailable`, when the meter would not start the run, and `content_unavailable`, when something the playbook keeps in its stored content, such as the function's document, could not be read just now, reach the workflow only 24 hours on, or once the step's own `timeout` passes: until then its step waits and asks again ([When the runtime will not start the run for now](workflow-format.md#when-the-runtime-will-not-start-the-run-for-now)).
 
 [When the function's run does not succeed](workflow-format.md#when-the-function-s-run-does-not-succeed) has the full table of what a workflow `catch` sees.
 

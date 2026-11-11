@@ -1,15 +1,14 @@
 import {
-  payloadCacheWithin,
-  payloadGateOf,
+  noSharedPayloads,
   payloadKept,
   payloadReaderOf,
   payloadReadsAtOnce,
   PayloadsOutside,
-  type PayloadCache,
-  type PayloadGate,
+  PayloadsShared,
   type PayloadNotRead,
   type PayloadReader,
   type PayloadSource,
+  type SharedPayloads,
 } from '@on.auto/operations/payloads';
 import { ContentUnavailable, type HeldContent, type RunPayloads } from '@on.auto/workflow-engine';
 import { Context, Deferred, Effect } from 'effect';
@@ -21,16 +20,7 @@ type Owner = PayloadSource['owner'];
 
 type Kept = Parameters<RunPayloads<never>['read']>[1][number];
 
-export interface SharedPayloads {
-  readonly cache: PayloadCache;
-  readonly gate: PayloadGate;
-}
-
 export const hostPayloadCacheBytes = 64 * 1_048_576;
-
-export function sharedPayloadsWithin(cacheBytes: number): SharedPayloads {
-  return { cache: payloadCacheWithin(cacheBytes), gate: payloadGateOf() };
-}
 
 interface HostPayloadParts {
   readonly content: PayloadSource['content'] & Parameters<typeof payloadKept>[0];
@@ -133,14 +123,18 @@ export function hostRunPayloadsOf({
 
 export interface ComposedPayloads extends Pick<HostPayloadParts, 'content' | 'note'> {
   readonly context: Context.Context<never> | undefined;
-  readonly shared: SharedPayloads | undefined;
 }
 
-export function hostPayloadsOf({ content, context, shared, note }: ComposedPayloads): RunPayloads<ContentUnavailable> {
+export function hostPayloadsOf({
+  content,
+  context = Context.empty(),
+  note,
+}: ComposedPayloads): RunPayloads<ContentUnavailable> {
+  const keepsPayloadsOutside = Context.get(context, PayloadsOutside);
   return hostRunPayloadsOf({
     content,
-    keepsPayloadsOutside: Context.get(context ?? Context.empty(), PayloadsOutside),
-    shared: shared ?? sharedPayloadsWithin(hostPayloadCacheBytes),
+    keepsPayloadsOutside,
+    shared: keepsPayloadsOutside ? Context.get(context, PayloadsShared) : noSharedPayloads,
     note,
   });
 }
