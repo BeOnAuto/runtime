@@ -399,6 +399,7 @@ An answer with no list at `list`, or larger than 64 KiB, is a failed read. The r
 
 - A message whose `id` or `sender` is not a text or a whole number of at most 256 bytes, without a control character, is passed over.
 - A message whose `id` is one the playbook sent in the conversation, such as the first message of a thread it started, is the playbook's own and not a reply. It is passed over and not counted, so a read that finds nothing else has found nothing and records no `replies_read`.
+- A message a telling of the playbook posted is the playbook's own too, whoever the chat names as its sender, as through a connection that posts as the person who answers. The playbook knows it by the id the telling's tool answered, read at `deliver.sent.id` where the telling goes through `deliver.tool`, and neither takes nor refuses it. Unlike the request's own message, it is still counted among the replies the read found, so a read that finds only a telling records `replies_read` with one reply, none taken and none refused.
 - With `to`, a message answers the open request whose `sent.id` it names. It is passed over when it names none of them.
 - A message with nothing at `to`, or any message when `each` has no `to`, answers the conversation's one open request. It is refused when several are open.
 
@@ -411,6 +412,7 @@ An answer with no list at `list`, or larger than 64 KiB, is a failed read. The r
 
 - Here `message` is the telling, not the request's message. It says how to answer, such as `To answer, reply with one of approve, revise; what follows is kept as the note.` After a reply the answer schema refuses, it names the problems first. After a reply that answers no single request, it asks the party to reply to the message of the one they answer. After a reply past 8 KiB, it gives the limit.
 - A request is told at most three times. Arguments that do not render are not sent; the reply is still refused.
+- A telling whose message the playbook cannot know is the request's last: one through a tool other than `deliver.tool`, whose answer it reads no id from, or one whose tool failed after it may have posted, such as by not answering in time. A reply after it is still refused, and nobody is told.
 
 ## Answering a request
 

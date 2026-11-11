@@ -12,5 +12,6 @@ export { answerInteraction } from './requests/answer-interaction.ts';
 export { listInteractions } from './requests/list-interactions.ts';
 export { openRequests, openRequestsName } from './requests/open-requests.ts';
 export { readings, readingsName } from './readings/reading-rows.ts';
+export { tellings, tellingsName } from './tellings/telling-rows.ts';
 export type { InteractionPorts } from './run/request-reach.ts';
 export { interactionBounds } from './run/run-bounds.ts';

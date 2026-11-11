@@ -35,6 +35,7 @@ export {
   type Recorded,
 } from './chat-harness.ts';
 export { flatReplies } from './reading-documents.ts';
+export { chatProjections } from './chat-projections.ts';
 export {
   beforeReadings,
   flatReadsNamingReplies,
@@ -42,7 +43,9 @@ export {
   recordedBeforeReadings,
   recordedFlatReadsNamingReplies,
   recordedReadsPastTheBound,
+  recordedTellingsBefore,
   readsPastTheBound,
+  tellingsBefore,
   type KeptFact,
   type RecordedBeforeReadings,
 } from './before-readings.ts';

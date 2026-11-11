@@ -1,5 +1,5 @@
 import { runCorrelationIn, type RecordWork, type RecordedWorkAt, type Work } from '@on.auto/definitions';
-import type { PlaybookAddress, RecordedReader, StreamWriter, Unavailable } from '@on.auto/operations';
+import type { PlaybookAddress, ProjectionReader, RecordedReader, StreamWriter, Unavailable } from '@on.auto/operations';
 import type { ToolAccess } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
@@ -8,7 +8,7 @@ import { recordedWork } from '../schedule/request-ledger.ts';
 import type { KeptRequest, Reply } from './reply-taking.ts';
 
 export interface IntakeParts {
-  readonly ledger: StreamWriter & Pick<RecordedReader, 'readRecorded'>;
+  readonly ledger: StreamWriter & Pick<RecordedReader, 'readRecorded'> & Pick<ProjectionReader, 'readProjectedRows'>;
   readonly tools: Pick<ToolAccess, 'preparedCall'>;
   readonly record: RecordWork;
 }

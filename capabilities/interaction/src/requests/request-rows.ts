@@ -3,6 +3,7 @@ import { Option, Schema } from 'effect';
 
 import { interactionType } from '../capability/interaction-type.ts';
 import { routeOf, type Route } from '../tool-blocks/routes.ts';
+import { SentSchema } from '../tool-blocks/tool-block-schemas.ts';
 
 export const StandingSchema = Schema.Literals([
   'held_for_an_agent',
@@ -101,14 +102,18 @@ export function endingDueAtOf(row: UndueRequestRow): number | null {
   return Math.min(row.expires_at, lostAt ?? Number.POSITIVE_INFINITY);
 }
 
-const DeliverySchema = Schema.Struct({ server: Schema.String, tool: Schema.String });
+export const DeliverySchema = Schema.Struct({
+  server: Schema.String,
+  tool: Schema.String,
+  sent: Schema.optionalKey(SentSchema),
+});
 
 const readDelivery = Schema.decodeUnknownOption(DeliverySchema);
 
 export function deliveryOf(deliver: Schema.JsonObject | undefined): string | null {
   return Option.match(readDelivery(deliver), {
     onNone: () => null,
-    onSome: ({ server, tool }) => JSON.stringify({ server, tool }),
+    onSome: ({ server, tool, sent }) => JSON.stringify({ server, tool, ...(sent === undefined ? {} : { sent }) }),
   });
 }
 

@@ -60,6 +60,11 @@ export const flatReadsNamingReplies = {
   waitingOfAnother: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b84',
 } as const;
 
+export const tellingsBefore = {
+  toldBefore: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8ba1',
+  waitingUntold: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8ba2',
+} as const;
+
 export const readsPastTheBound = {
   beside: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b91',
   unrenderedBeside: '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b92',
@@ -83,6 +88,10 @@ export function recordedFlatReadsNamingReplies(): RecordedBeforeReadings {
 
 export function recordedReadsPastTheBound(): RecordedBeforeReadings {
   return recordedIn('facts-of-reads-past-the-bound.json');
+}
+
+export function recordedTellingsBefore(): RecordedBeforeReadings {
+  return recordedIn('facts-of-tellings-before.json');
 }
 
 interface Held {

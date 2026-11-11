@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { conversations } from '../conversations/conversation-rows.ts';
-import { openRequests } from '../requests/open-requests.ts';
 import {
+  chatProjections,
   answererId,
   chatHarness,
   farAhead,
@@ -12,14 +11,13 @@ import {
   recordsOf,
 } from '../testing/index.ts';
 import { ledgerHoldingRuns } from '../testing/interaction-harness.ts';
-import { readings } from './reading-rows.ts';
 
 const { answeredOfOneCall, waitingOfOneCall, answeredOfAnother, waitingOfAnother } = flatReadsNamingReplies;
 
 describe('requests main left waiting in channels read flat whose replies may name their message, each after an earlier request was answered there by a plain reply', () => {
   it('are read on from where each conversation was, so the earlier answer answers no later request and the next plain reply does', async () => {
     const recorded = recordedFlatReadsNamingReplies();
-    const ledger = ledgerHoldingRuns([openRequests, conversations, readings]);
+    const ledger = ledgerHoldingRuns(chatProjections);
     await keptAsRecorded(ledger.service, recorded.facts);
     const playbook = await chatHarness({ ledger, inTheChat: recorded.messages });
     const settledAt = recorded.lastAt + 60_000;

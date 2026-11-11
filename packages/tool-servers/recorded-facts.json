@@ -8,5 +8,6 @@
   "src/own-calls/0.46.0/telling_started.json": "5b8c0d0b1ed3b2f19824737c87c1e5e3c6c0be9fd7008a3a252c6d145431a0c4",
   "src/own-calls/0.46.0/telling_succeeded.json": "2200334d17ee74c843070035f875c03de19ad4637661821039f2dcdd3803892b",
   "src/own-calls/0.57.0/reading_failed.json": "de789161d9de902c4c96ea1a26b1744b7f1adff9acc2490994f3fcb2624fd591",
-  "src/own-calls/0.57.0/replies_read.json": "270bb1272b9fc1432d561bcb2c2331fc4040e76b6a3cde93fc59b067542bcad0"
+  "src/own-calls/0.57.0/replies_read.json": "270bb1272b9fc1432d561bcb2c2331fc4040e76b6a3cde93fc59b067542bcad0",
+  "src/own-calls/0.57.0/telling_succeeded.json": "0ed3c3d954568c2f1c635f5ff66b0be1d8083f2e4adbb2cba1ee877091dcf51f"
 }

@@ -6,6 +6,8 @@ import {
   openRequestsName,
   readings,
   readingsName,
+  tellings,
+  tellingsName,
 } from '@on.auto/interaction';
 import {
   alpha,
@@ -32,7 +34,7 @@ const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 const notice =
   postgresql === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
-const projections = [openRequests, conversations, readings];
+const projections = [openRequests, conversations, readings, tellings];
 
 const tables = projections.map((projection) => projectedTableOf(projection));
 
@@ -126,13 +128,18 @@ async function threadOfRun(ledger: HarnessLedger, run: string): Promise<string> 
 async function rowsOf(ledger: HarnessLedger) {
   const requests = await requestRowsOf(ledger);
   const conversationsRead = await conversationRows(ledger);
-  const readingsKept = await Effect.runPromise(
-    ledger.service.readProjectedRows(readingsName, alpha, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+  const [readingsKept, tellingsKept] = await Promise.all(
+    [readingsName, tellingsName].map((name) =>
+      Effect.runPromise(
+        ledger.service.readProjectedRows(name, alpha, { where: [], orderBy: [], order: 'asc', limit: 50 }),
+      ),
+    ),
   );
   return {
     requests: requests.map(({ row }) => row),
     conversations: conversationsRead.map(({ row }) => foldedColumnsOf(row)),
-    readings: readingsKept.map(({ row }) => row),
+    readings: (readingsKept ?? []).map(({ row }) => row),
+    tellings: (tellingsKept ?? []).map(({ row }) => row),
   };
 }
 
@@ -166,6 +173,7 @@ describe.each(stores)('the projections of the requests and the conversations on 
         { type: 'nudging', function: 'forecast', standing: 'to_deliver', open: true, message: 'Go?' },
       ]);
       expect(kept.conversations).toHaveLength(2);
+      expect(kept.tellings).toMatchObject([{ run_id: runId, conversation: '#approvals-sales', known: true }]);
       expect(filled).toEqual(kept);
     },
   );

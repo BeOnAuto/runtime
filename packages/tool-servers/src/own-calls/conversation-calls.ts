@@ -12,6 +12,7 @@ import {
   type ReadingRecorded,
   type TellingEnded,
   type TellingStarted,
+  type ToldAs,
 } from './conversation-call-events.ts';
 import { ownCallDecider, type OwnCall } from './own-call-decider.ts';
 
@@ -59,13 +60,14 @@ export function tellingStartedOf(telling: Telling, start: StartedFields, recorde
   return { event, context: tellingContextOf(telling, recorded) };
 }
 
-function tellingEnd(callId: string, end: CalledOnce): TellingEnded {
+function tellingEnd(callId: string, end: CalledOnce, toldAs: ToldAs | undefined): TellingEnded {
   if (end.kind === 'unopened') {
     const because = end.refused === 'tool_not_offered' ? 'tool_not_offered' : 'server_failure';
     return { type: 'telling_failed', data: { call_id: callId, because, ...detailOf(end.detail) } };
   }
   if (end.outcome === 'result') {
-    return { type: 'telling_succeeded', data: { call_id: callId, ...answeredOf(end.answered) } };
+    const posted = toldAs === undefined ? {} : { told_as: toldAs };
+    return { type: 'telling_succeeded', data: { call_id: callId, ...answeredOf(end.answered), ...posted } };
   }
   return {
     type: 'telling_failed',
@@ -73,8 +75,13 @@ function tellingEnd(callId: string, end: CalledOnce): TellingEnded {
   };
 }
 
-export function tellingEndedOf(telling: Telling, end: CalledOnce, recorded: Recorded): ConversationCall {
-  return { event: tellingEnd(telling.callId, end), context: tellingContextOf(telling, recorded) };
+export function tellingEndedOf(
+  telling: Telling,
+  end: CalledOnce,
+  recorded: Recorded,
+  toldAs?: ToldAs,
+): ConversationCall {
+  return { event: tellingEnd(telling.callId, end, toldAs), context: tellingContextOf(telling, recorded) };
 }
 
 interface ReadPlace {

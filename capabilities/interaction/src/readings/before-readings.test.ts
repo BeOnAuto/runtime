@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { conversations } from '../conversations/conversation-rows.ts';
-import { openRequests } from '../requests/open-requests.ts';
 import {
+  chatProjections,
   answererId,
   beforeReadings,
   chatHarness,
@@ -16,7 +15,6 @@ import {
   type ChatHarness,
 } from '../testing/index.ts';
 import { ledgerHoldingRuns } from '../testing/interaction-harness.ts';
-import { readings } from './reading-rows.ts';
 
 const { older, newer, answeredFlat, waitingFlat, unreadableBeside, unreadableAlone } = beforeReadings;
 
@@ -28,7 +26,7 @@ interface Waiting {
 const renderedUnderTodaysBound = (channel: string) => `${'a'.repeat(16_240)}${channel.repeat(20)}`;
 
 async function waitingSinceBefore(recorded = recordedBeforeReadings()): Promise<Waiting> {
-  const ledger = ledgerHoldingRuns([openRequests, conversations, readings]);
+  const ledger = ledgerHoldingRuns(chatProjections);
   await keptAsRecorded(ledger.service, recorded.facts);
   const playbook = await chatHarness({ ledger, inTheChat: recorded.messages });
   return { playbook, settledAt: recorded.lastAt + 60_000 };

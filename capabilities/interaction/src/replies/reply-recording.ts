@@ -1,9 +1,13 @@
-import type { RenderClock } from '@on.auto/definitions/template';
+import { renderClock, type RenderClock } from '@on.auto/definitions/template';
 import { renderedArguments } from '@on.auto/definitions/tool-blocks';
-import { Result } from 'effect';
+import type { Issue, PlaybookAddress } from '@on.auto/operations';
+import { Effect, Result } from 'effect';
 
+import type { ReplyRefusal } from '../facts/run-facts.ts';
+import { toldUnknowingly, type TellingsReader } from '../tellings/own-messages.ts';
 import type { KeptRequest } from './reply-taking.ts';
-import type { RepliesRoute } from './request-routes.ts';
+import { routeOfRequest, type RepliesRoute } from './request-routes.ts';
+import { tellingWords } from './telling-words.ts';
 
 export interface IntakeState {
   readonly taken: number;
@@ -29,12 +33,43 @@ export function carriedOn(state: IntakeState): IntakeState {
 
 export const replyBoundsOfAReading = { told: 3, issues: 16 } as const;
 
-export function tellingInput({ replies }: RepliesRoute, request: KeptRequest, message: string, clock: RenderClock) {
+function tellingInput({ replies }: RepliesRoute, request: KeptRequest, message: string, clock: RenderClock) {
   const variables = { to: request.row.party, sent: { ...request.sent }, message };
   const rendered = replies.tell === undefined ? undefined : renderedArguments(replies.tell.with, variables, clock);
   return rendered !== undefined && Result.isSuccess(rendered) ? rendered.success.input : undefined;
 }
 
-export function mayTell(state: IntakeState, request: KeptRequest): boolean {
+function mayTell(state: IntakeState, request: KeptRequest): boolean {
   return request.row.refusals_told + (state.told.get(request.runId) ?? 0) < replyBoundsOfAReading.told;
+}
+
+export interface RefusalTold {
+  readonly request: KeptRequest;
+  readonly because: ReplyRefusal;
+  readonly issues: readonly Issue[];
+}
+
+function mayTellNow(
+  ledger: TellingsReader,
+  playbook: PlaybookAddress,
+  state: IntakeState,
+  request: KeptRequest,
+): Effect.Effect<boolean> {
+  return mayTell(state, request)
+    ? Effect.map(toldUnknowingly(ledger, playbook, request.runId), (unknown) => !unknown)
+    : Effect.succeed(false);
+}
+
+export function tellingInputOf(
+  ledger: TellingsReader,
+  playbook: PlaybookAddress,
+  state: IntakeState,
+  { request, because, issues }: RefusalTold,
+) {
+  return Effect.gen(function* () {
+    const clock = yield* renderClock;
+    return (yield* mayTellNow(ledger, playbook, state, request))
+      ? tellingInput(routeOfRequest(request), request, tellingWords(request.rule, because, issues), clock)
+      : undefined;
+  });
 }

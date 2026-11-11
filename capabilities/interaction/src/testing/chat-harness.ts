@@ -1,10 +1,9 @@
 import { Effect } from 'effect';
 
-import { conversations, conversationsName } from '../conversations/conversation-rows.ts';
+import { conversationsName } from '../conversations/conversation-rows.ts';
 import { conversationsDue } from '../conversations/conversations-due.ts';
-import { readings } from '../readings/reading-rows.ts';
-import { openRequests } from '../requests/open-requests.ts';
 import type { RequestsDue } from '../schedule/due-requests.ts';
+import { chatProjections } from './chat-projections.ts';
 import { threadDocument } from './documents.ts';
 import { fakeTools, type FakeTools } from './fake-tools.ts';
 import { dueInBothLanes, performedAll } from './harness-parts.ts';
@@ -31,6 +30,7 @@ export interface ChatHarnessOptions {
   readonly others?: HarnessOptions['others'];
   readonly recording?: (record: InteractionHarness['record']) => InteractionHarness['record'];
   readonly inTheChat?: Parameters<typeof fakeTools>[1];
+  readonly postsAs?: string;
 }
 
 export const answererId = 'U024BE7LH';
@@ -38,8 +38,8 @@ export const answererId = 'U024BE7LH';
 export const farAhead = 3_600_000;
 
 export async function chatHarness(options: ChatHarnessOptions = {}): Promise<ChatHarness> {
-  const chat = fakeTools(options.duringCall, options.inTheChat);
-  const ledger = options.ledger ?? ledgerHoldingRuns([openRequests, conversations, readings]);
+  const chat = fakeTools(options.duringCall, options.inTheChat, options.postsAs);
+  const ledger = options.ledger ?? ledgerHoldingRuns(chatProjections);
   const playbook = interactionHarness({ ledger, tools: chat, others: options.others ?? [] });
   const record = options.recording?.(playbook.record) ?? playbook.record;
   const reads = conversationsDue({ ledger: ledger.service, tools: chat, record });

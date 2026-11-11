@@ -1,14 +1,13 @@
-import { renderClock } from '@on.auto/definitions/template';
 import type { Issue, PlaybookAddress } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import type { ReplyRefusal, ReplyRefused } from '../facts/run-facts.ts';
+import { isPostedByThePlaybook } from '../tellings/own-messages.ts';
+import { told, type Telling } from '../tellings/tellings.ts';
 import { recordedReplyWork, type IntakeParts, type RecordedReply, type ReplyPlace } from './reply-recorder.ts';
-import { mayTell, replyBoundsOfAReading, tellingInput, type IntakeState } from './reply-recording.ts';
-import { decisionOf, type KeptRequest, type Reply } from './reply-taking.ts';
-import { routeOfRequest } from './request-routes.ts';
-import { tellingWords } from './telling-words.ts';
-import { told, type Telling } from './tellings.ts';
+import { replyBoundsOfAReading, tellingInputOf, type IntakeState } from './reply-recording.ts';
+import { decisionOf, type KeptRequest, type Reply, type ReplyDecision } from './reply-taking.ts';
+import { routeOfRequest, type RepliesRoute } from './request-routes.ts';
 
 interface Arrival {
   readonly server: string;
@@ -77,6 +76,10 @@ function refusalFactOf({ arrival }: Intake, { reply, because, issues }: Refusal,
   };
 }
 
+function idOfATellingAt({ delivering, replies, sentIdAt }: RepliesRoute): string | undefined {
+  return (replies.tell?.tool ?? delivering) === delivering ? sentIdAt : undefined;
+}
+
 function tellingOf(intake: Intake, request: KeptRequest, input: Telling['input'], made: RecordedReply): Telling {
   const route = routeOfRequest(request);
   return {
@@ -91,21 +94,14 @@ function tellingOf(intake: Intake, request: KeptRequest, input: Telling['input']
     },
     input,
     lineage: { causationId: made.id, correlationId: made.correlationId },
+    place: { conversation: request.sent.conversation, idAt: idOfATellingAt(route) },
   };
-}
-
-function tellingInputOf(state: IntakeState, { request, because, issues }: Refusal) {
-  return Effect.map(renderClock, (clock) =>
-    mayTell(state, request)
-      ? tellingInput(routeOfRequest(request), request, tellingWords(request.rule, because, issues), clock)
-      : undefined,
-  );
 }
 
 function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
   const { request, reply } = refusal;
   return Effect.gen(function* () {
-    const input = yield* tellingInputOf(state, refusal);
+    const input = yield* tellingInputOf(intake.parts.ledger, intake.playbook, state, refusal);
     if (input !== undefined && !(yield* intake.roomForATelling)) {
       return { ...state, foundAnswerer: true, unrecorded: true };
     }
@@ -129,13 +125,22 @@ function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
   });
 }
 
+type Decided = Exclude<ReplyDecision, { readonly kind: 'nothing' }>;
+
+function decided(intake: Intake, state: IntakeState, reply: Reply, decision: Decided): Effect.Effect<IntakeState> {
+  if (decision.kind === 'take') {
+    return taken(intake, state, { request: decision.request, reply, answer: decision.answer });
+  }
+  return refusedReply(intake, state, { ...decision, reply });
+}
+
 export function replyTaken(intake: Intake, state: IntakeState, reply: Reply): Effect.Effect<IntakeState> {
   const decision = decisionOf(reply, intake.candidates);
   if (state.unrecorded || decision.kind === 'nothing') {
     return Effect.succeed(state);
   }
-  if (decision.kind === 'take') {
-    return taken(intake, state, { request: decision.request, reply, answer: decision.answer });
-  }
-  return refusedReply(intake, state, { ...decision, reply });
+  const posted = { conversation: decision.request.sent.conversation, id: reply.id };
+  return Effect.flatMap(isPostedByThePlaybook(intake.parts.ledger, intake.playbook, posted), (own) =>
+    own ? Effect.succeed(state) : decided(intake, state, reply, decision),
+  );
 }

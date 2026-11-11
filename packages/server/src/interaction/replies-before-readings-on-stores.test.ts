@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { conversations, openRequests, readings } from '@on.auto/interaction';
+import { conversations, openRequests, readings, tellings } from '@on.auto/interaction';
 import {
   answererId,
   beforeReadings,
@@ -30,7 +30,7 @@ const postgresql = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
 const notice =
   postgresql === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
-const projections = [openRequests, conversations, readings];
+const projections = [openRequests, conversations, readings, tellings];
 
 interface Opened {
   readonly ledger: HarnessLedger;

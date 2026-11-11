@@ -61,6 +61,7 @@ export {
   type TellingEnded,
   type TellingFailedBecause,
   type TellingStarted,
+  type ToldAs,
 } from './own-calls/conversation-call-events.ts';
 export {
   conversationCallDecider,

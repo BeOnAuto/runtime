@@ -50,8 +50,9 @@ function threadOf(thread: string) {
   return thread === '' ? {} : { thread_ts: thread };
 }
 
-export function chatBoard(already: readonly ChatMessage[] = []): ChatBoard {
+export function chatBoard(already: readonly ChatMessage[] = [], postsAs = playbookUser): ChatBoard {
   const messages: ChatMessage[] = [...already];
+  const sentThroughTheTool = new Set(already.filter(({ user }) => user === playbookUser).map(({ ts }) => ts));
   const nextTs = () => `1699.${String(messages.length + 1).padStart(6, '0')}`;
   const post = (call: OneCall): BoardAnswer => {
     const ts = nextTs();
@@ -59,10 +60,11 @@ export function chatBoard(already: readonly ChatMessage[] = []): ChatBoard {
     messages.push({
       ts,
       channel,
-      user: playbookUser,
+      user: postsAs,
       text: argument(call, 'text'),
       ...threadOf(argument(call, 'thread_ts')),
     });
+    sentThroughTheTool.add(ts);
     return answered({ ok: true, channel, ts });
   };
   const read = (call: OneCall): BoardAnswer => {
@@ -77,7 +79,7 @@ export function chatBoard(already: readonly ChatMessage[] = []): ChatBoard {
   };
   return {
     answerOf: (call) => (call.reference.tool === 'thread_replies' ? read(call) : post(call)),
-    posted: () => messages.filter(({ user }) => user === playbookUser),
+    posted: () => messages.filter(({ ts }) => sentThroughTheTool.has(ts)),
     reply: ({ channel, thread, user, text }) => {
       const ts = nextTs();
       messages.push({ ts, channel, user, ...(text === undefined ? {} : { text }), ...threadOf(thread ?? '') });

@@ -1,3 +1,4 @@
+import { textAt } from '@on.auto/definitions/tool-blocks';
 import {
   playbookCallerOf,
   messageIdOf,
@@ -8,15 +9,25 @@ import {
   type StreamWriter,
 } from '@on.auto/operations';
 import {
+  answerDocument,
   conversationCallDecider,
   conversationCallStreamOf,
   tellingEndedOf,
   tellingStartedOf,
+  type CalledOnce,
   type DefinitionOfTheTelling,
+  type ToldAs,
   type ToolAccess,
 } from '@on.auto/tool-servers';
 import { conversationCallIdKey } from '@on.auto/tool-servers/policy';
 import { DateTime, Effect, type Schema } from 'effect';
+
+import { isBoundedPart } from '../delivery/sent-messages.ts';
+
+interface TellingPlace {
+  readonly conversation: string;
+  readonly idAt: string | undefined;
+}
 
 export interface Telling {
   readonly playbook: PlaybookAddress;
@@ -26,6 +37,7 @@ export interface Telling {
   readonly definition: DefinitionOfTheTelling;
   readonly input: Readonly<Record<string, Schema.Json>>;
   readonly lineage: Lineage;
+  readonly place: TellingPlace;
 }
 
 export interface TellingParts {
@@ -34,6 +46,14 @@ export interface TellingParts {
 }
 
 const moment = Effect.map(DateTime.now, DateTime.formatIso);
+
+function toldAsOf({ conversation, idAt }: TellingPlace, called: CalledOnce): ToldAs | undefined {
+  if (idAt === undefined || called.kind !== 'answered' || called.outcome !== 'result') {
+    return undefined;
+  }
+  const id = textAt(answerDocument(called.answer), idAt);
+  return id !== undefined && isBoundedPart(id) ? { conversation, id } : undefined;
+}
 
 export function told({ ledger, tools }: TellingParts, telling: Telling): Effect.Effect<void> {
   const { playbook, server, tool, runId, definition, input, lineage } = telling;
@@ -46,7 +66,8 @@ export function told({ ledger, tools }: TellingParts, telling: Telling): Effect.
     const started = tellingStartedOf({ callId, runId, definition }, fields, { by, at: yield* moment });
     const { version } = yield* ledger.execute(stream, conversationCallDecider, started, lineage).pipe(Effect.orDie);
     const called = yield* calling;
-    const ended = tellingEndedOf({ callId, runId, definition }, called, { by, at: yield* moment });
+    const toldAs = toldAsOf(telling.place, called);
+    const ended = tellingEndedOf({ callId, runId, definition }, called, { by, at: yield* moment }, toldAs);
     yield* ledger
       .execute(stream, conversationCallDecider, ended, { ...lineage, causationId: messageIdOf(stream, version) })
       .pipe(Effect.orDie);

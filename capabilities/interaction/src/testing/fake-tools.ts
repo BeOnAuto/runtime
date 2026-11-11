@@ -140,8 +140,9 @@ function namedBy(refusals: readonly (Refusal | undefined)[]): Effect.Effect<void
 export function fakeTools(
   duringCall: (call: OneCall) => Effect.Effect<unknown> = () => Effect.void,
   inTheChat: readonly ChatMessage[] = [],
+  postsAs?: string,
 ): FakeTools {
-  const board = chatBoard(inTheChat);
+  const board = chatBoard(inTheChat, postsAs);
   const calls: OneCall[] = [];
   const queued: FakeAnswer[] = [];
   const offering = { disallowed: new Set<string>() };
