@@ -1,6 +1,13 @@
-import { capitalized } from '@on.auto/phrasing';
-
-import { follows, inTurn, partLinesOf, runningAtOnce, serves, where, type Carried } from './start-guide.ts';
+import {
+  follows,
+  inTurn,
+  partLinesOf,
+  runningAtOnce,
+  sentenceOver,
+  serves,
+  where,
+  type Carried,
+} from './start-guide.ts';
 
 export interface Built {
   readonly servedWhere: (carried: Carried) => boolean;
@@ -8,7 +15,7 @@ export interface Built {
 }
 
 export const everyDocumentCarriesItsPage =
-  'Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.';
+  'Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says.';
 
 export const modelsOfAServer =
   'A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.';
@@ -62,7 +69,7 @@ function askingForTheJob(carried: Carried): string {
     ),
     where(
       serves(carried, 'interaction'),
-      'Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither is refused, with the connections that can send it and read the reply. Ask once, too, where a notice goes: a channel or their direct messages.',
+      'Where a person must approve or decide, ask once where they want to be asked. It can be through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you (`deliver: agent`). A request saved with neither is refused, and the refusal names the connections that can send it and read the reply. Ask once, too, where a notice goes: a channel or their direct messages.',
     ),
   );
 }
@@ -105,16 +112,32 @@ function partsAndTheirTypes(carried: Carried): string {
   ].join('\n');
 }
 
-function aRunToday(carried: Carried): string {
-  const ways = [
+function aRunToday(carried: Carried): readonly string[] {
+  return [
+    'Or build without it for now, so that the person sees a run today.',
     ...where(
       serves(carried, 'workflow'),
-      'let the workflow take what a part would read as its input for now, pasted by the person',
+      'Let the workflow take what a part would read as its input, pasted by the person.',
     ),
-    ...where(serves(carried, 'interaction'), 'ask a person through you, `deliver: agent`'),
-    'leave a part that has a service act, or sends a notice, until its service is connected, telling the person it is not built yet',
+    ...where(serves(carried, 'interaction'), 'Ask a person through you (`deliver: agent`).'),
+    'Leave a part that has a service act, or sends a notice, until its service is connected, and tell the person it is not built yet.',
   ];
-  return `Or, so that the person sees a run today: ${ways.length === 1 ? ways.join('') : `${ways.slice(0, -1).join('; ')}; and ${String(ways.at(-1))}`}.`;
+}
+
+function whatGiveToolsMakes(carried: Carried): readonly string[] {
+  const made = [
+    ...where(serves(carried, 'lookup'), 'a read a lookup function'),
+    ...where(serves(carried, 'interaction'), 'an act an interaction function'),
+  ];
+  return [
+    'For a part that reads from a service or acts on one, follow the give-tools recipe.',
+    ...where(made.length > 0, `It makes ${inTurn(made, 'and')}.`),
+    ...where(
+      made.length > 0 && serves(carried, 'reasoning'),
+      'A reasoning function names tools in `tools` only where its model must choose among them.',
+    ),
+    'Where that service is not connected yet, connect it with the connect-a-service recipe.',
+  ];
 }
 
 function writingEachFunction(carried: Carried): string {
@@ -126,12 +149,8 @@ function writingEachFunction(carried: Carried): string {
       serves(carried, 'reasoning') && serves(carried, 'workflow'),
       'A reasoning function takes the facts it judges as its input, which the workflow hands it.',
     ),
-    where(
-      follows(carried, 'give-tools'),
-      'For a part that reads from a service or acts on one, follow the give-tools recipe.',
-      'Where that service is not connected yet, connect it with the connect-a-service recipe.',
-      aRunToday(carried),
-    ),
+    follows(carried, 'give-tools') ? whatGiveToolsMakes(carried) : [],
+    follows(carried, 'give-tools') ? aRunToday(carried) : [],
     ['Show the person the documents and ask whether to save them.'],
   );
 }
@@ -139,24 +158,24 @@ function writingEachFunction(carried: Carried): string {
 function savingEach(carried: Carried): string {
   return sentences(
     ['Once they agree, save each with create_definition, with its `type`.'],
-    [
-      `A function needs \`diagram\`, Mermaid source of how it works or the word none${serves(carried, 'workflow') ? '; a workflow takes none' : ''}.`,
-    ],
-    ['A name that is taken is refused; choose another with the person rather than changing the function that has it.'],
+    ['A function needs `diagram`: Mermaid source of how it works, or the word none.'],
+    where(serves(carried, 'workflow'), 'A workflow takes none.'),
+    ['`overview` is optional: Markdown that tells the person what it does and why it is needed.'],
+    ['A name that is taken is refused. Choose another with the person rather than change the function that has it.'],
   );
 }
 
 function testingEach(carried: Carried): string {
-  const atOnce = runningAtOnce(carried);
   return sentences(
     [
       'Test each function that can run now with run_definition on a made-up input, and tell the person what it answered, in their words.',
     ],
+    sentenceOver(runningAtOnce(carried), 'needs no connection', 'These need no connection'),
     where(
-      atOnce.length > 0,
-      `${capitalized(inTurn(atOnce, 'and'))} ${atOnce.length === 1 ? 'needs' : 'need'} no connection.`,
+      serves(carried, 'interaction'),
+      'A test of an interaction function held for you (`deliver: agent`) waits for its answer. list_interactions shows the request, and answer_interaction answers it once the person says what to answer.',
     ),
-    ['A function that has a service act really acts when it runs, so run it only once the person agrees.'],
+    ['A function that has a service act really acts when it runs. Run it only once the person agrees.'],
     where(serves(carried, 'prediction'), 'A prediction function answers once the playbook has history.'),
   );
 }
@@ -172,9 +191,12 @@ function writingTheWorkflow(carried: Carried): string {
       'Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period.',
     ),
     [
-      'Where the work starts on its own, give it a `schedule` as the triggers guide says.',
-      `For set times, \`cron\` with \`time_zone\` naming the person's time zone, or \`every\`: a run on a clock is given its due time alone, so ${lookups ? 'its first steps are the lookup functions that find its material, or ' : ''}the workflow gives it a fixed input in \`input.from\`.`,
-      "For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.example.item.received`: a run is given a list holding the event, and the workflow passes the event's `data` to its first step.",
+      'Where the work starts on its own, give it a `schedule`, as the triggers guide says.',
+      'A `schedule` holds its triggers: `cron` or `every` for set times, and `on` for what arrives.',
+      "For set times, use `cron` with `time_zone` naming the person's time zone, or `every`. A run on a clock is given its due time alone.",
+      `So ${lookups ? 'its first steps are the lookup functions that find its material, or ' : ''}the workflow gives it a fixed input in \`input.from\`.`,
+      'For what arrives, use `on` with a filter on an event `type` named in the past tense, such as `com.example.item.received`.',
+      "A run is then given a list holding the event, and the workflow passes the event's `data` to its first step.",
       `Where the material comes from sources not yet connected, start with \`on\`, so that the person starts runs today with material they paste, and move to a clock once ${lookups ? 'lookup functions reach' : 'its functions reach'} the sources.`,
     ],
   );
@@ -183,8 +205,23 @@ function writingTheWorkflow(carried: Carried): string {
 const savingTheWorkflow =
   "Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.";
 
-const runningTheWorkflow =
-  "Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`: a real event's `source` and `id` would make that event a repeat, ignored when it comes. A moment later, show what its run answered with list_runs, `type` workflow, and get_run.";
+function runningTheWorkflow(carried: Carried): string {
+  return sentences(
+    [
+      'Run the workflow once, in one of two ways, never both.',
+      "Where it starts `on` an event, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`. A real event's `source` and `id` would make that event a repeat, ignored when it comes.",
+      'The event starts the run, so a moment later find it with list_runs, `type` workflow, and read it with get_run.',
+      'Otherwise, start the run with run_definition.',
+    ],
+    where(
+      serves(carried, 'interaction'),
+      'A step held for you (`deliver: agent`) waits for its answer, which you give with answer_interaction, as in a test.',
+    ),
+    [
+      'Tell the person what the run answered, in their words. Where the workflow starts on its own, tell them too when it next runs, in their own time, or what starts it.',
+    ],
+  );
+}
 
 function whatComesNext(carried: Carried): readonly string[] {
   const next = [
@@ -217,7 +254,7 @@ function firstPlaybookText(carried: Carried): string {
     writingEachFunction(carried),
     savingEach(carried),
     testingEach(carried),
-    ...where(workflows, writingTheWorkflow(carried), savingTheWorkflow, runningTheWorkflow),
+    ...where(workflows, writingTheWorkflow(carried), savingTheWorkflow, runningTheWorkflow(carried)),
   ];
   return [
     '# Create your first playbook',

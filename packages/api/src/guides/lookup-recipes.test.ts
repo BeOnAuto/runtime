@@ -73,9 +73,9 @@ describe('the keep recipe', () => {
     ]);
   });
 
-  it('stays within the bound of a recipe with its page, at 2,111 bytes', () => {
+  it('stays within the bound of a recipe with its page, at 2,093 bytes', () => {
     const bytes = new TextEncoder().encode(keepOf(servedWithLookupAndPages)).byteLength;
 
-    expect([bytes, bytes <= mostRecipeBytes]).toEqual([2111, true]);
+    expect([bytes, bytes <= mostRecipeBytes]).toEqual([2093, true]);
   });
 });

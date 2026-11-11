@@ -100,23 +100,21 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('say in create_definition that each part of a job is its own function, of the type its work needs, that a workflow owns one job the business does again and again, that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the page guide says, at 722 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('say in create_definition that each part of a job is its own function, of the type its work needs, that a workflow owns one job the business does again and again, that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the page guide says, at 725 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
       'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
     );
     expect(description).toContain(
-      "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
+      "`source` is the whole document in its type's format, which get_guide gives, and `overview`, optional, Markdown for the person who runs the business.",
     );
-    expect(description).toContain('A function needs `diagram` too; a workflow takes none.');
-    expect(description).toContain(
-      "The document's `page` key shows the person its runs; write it as the page guide says.",
-    );
+    expect(description).toContain('A function needs `diagram`; a workflow takes none.');
+    expect(description).toContain("The document's `page` shows the person its runs; write it as the page guide says.");
     expect(description).toContain(
       'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
     );
-    expect([description.length, sentencesOf(description)]).toEqual([722, 7]);
+    expect([description.length, sentencesOf(description)]).toEqual([725, 7]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });

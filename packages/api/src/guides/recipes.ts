@@ -39,7 +39,7 @@ const wherePagesAreServed: AdditionsByRecipe = {
       {
         after: 'or write one in the format of the workflow guide.',
         words:
-          ' Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the workflow guide says under Its page.',
+          ' Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says.',
       },
       { after: 'and get_run for one run', words: ', whose headline says what it did' },
     ],
@@ -55,10 +55,15 @@ const whereWorkflowsHavePages: AdditionsByRecipe = {
   'first-playbook': { insertions: [], calls: ['update_playbook'] },
 };
 
+const whereTheAgentAnswers: AdditionsByRecipe = {
+  'first-playbook': { insertions: [], calls: ['list_interactions', 'answer_interaction'] },
+};
+
 const additionsWhereServed: readonly AdditionsOfGuides[] = [
   { guides: ['workflow'], byRecipe: whereWorkflowsAreServed },
   { guides: ['page'], byRecipe: wherePagesAreServed },
   { guides: ['workflow', 'page'], byRecipe: whereWorkflowsHavePages },
+  { guides: ['interaction-function'], byRecipe: whereTheAgentAnswers },
 ];
 
 function additionsTo(name: string, carried: ReadonlySet<string>): readonly Additions[] {

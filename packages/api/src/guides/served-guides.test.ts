@@ -218,7 +218,7 @@ describe('the recipes that give a playbook tools', () => {
       'For a part that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe.',
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      3013, 5577,
+      3013, 5909,
     ]);
   });
 });
@@ -234,13 +234,13 @@ describe('the recipes of a server that serves interaction functions', () => {
     expect(texts['first-playbook']).toContain(
       '   - it asks a person and takes their answer, or has a service act: an interaction function\n',
     );
-    expect(texts['first-playbook']).toContain('; ask a person through you, `deliver: agent`; and leave a part');
+    expect(texts['first-playbook']).toContain(' Ask a person through you (`deliver: agent`). Leave a part');
     expect([
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [6178, 3661, 3564],
-      [5577, 3013, 3564],
+      [6978, 3661, 3564],
+      [5909, 3013, 3564],
     ]);
   });
 });

@@ -23,7 +23,7 @@ describe('the recipes whose function calls a model', () => {
 });
 
 const everyDocumentCarriesItsPage =
-  'Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.';
+  'Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says.';
 
 describe('the keep recipe', () => {
   it('says first that every function it writes carries its page, read in the page guide, where the page guide is carried', async () => {
@@ -31,7 +31,7 @@ describe('the keep recipe', () => {
     const withoutPages = await recipeCarrying('keep', 'lookup-function');
 
     expect(withPages?.text).toContain(
-      "its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.\n",
+      "its section Reading the playbook's own runs sets out `runs`. Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document as the page guide says.\n",
     );
     expect(withoutPages?.text).not.toContain('page');
   });
@@ -59,7 +59,7 @@ describe('the schedule recipe', () => {
     const withoutPages = await recipeCarrying('schedule', 'workflow');
 
     expect(withPages?.text).toContain(
-      'or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the workflow guide says under Its page.\n2. ',
+      'or write one in the format of the workflow guide. Its document carries its `page`, so the person sees what each run did while they were away: keep it, or write it in the same document, as the page guide says.\n2. ',
     );
     expect(withPages?.text).toContain('and get_run for one run, whose headline says what it did.\n9. ');
     expect(withoutPages?.text).toContain('and get_run for one run.\n9. ');

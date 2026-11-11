@@ -52,36 +52,39 @@ export function partLinesOf({ definitionTypes }: Carried): readonly string[] {
   });
 }
 
-function asOneSentence(clauses: readonly string[]): readonly string[] {
-  return clauses.length === 0 ? [] : [`${capitalized(clauses.join('; '))}.`];
-}
-
 export function runningAtOnce(carried: Carried): readonly string[] {
   return [
     ...where(serves(carried, 'reasoning'), 'a reasoning function'),
     ...where(serves(carried, 'computation'), 'a computation function'),
-    ...where(serves(carried, 'interaction'), 'an interaction function held for you, `deliver: agent`,'),
+    ...where(serves(carried, 'interaction'), 'an interaction function held for you (`deliver: agent`)'),
   ];
 }
 
-function inTheVerbOf(subjects: readonly string[], one: string, more: string): string {
-  return `${inTurn(subjects, 'and')} ${subjects.length === 1 ? one : more}`;
+export function sentenceOver(subjects: readonly string[], alone: string, together: string): readonly string[] {
+  if (subjects.length === 0) {
+    return [];
+  }
+  return [
+    subjects.length === 1
+      ? `${capitalized(String(subjects[0]))} ${alone}.`
+      : `${together}: ${inTurn(subjects, 'and')}.`,
+  ];
 }
 
 function whenEachRuns(carried: Carried): readonly string[] {
-  const atOnce = runningAtOnce(carried);
-  const throughAService = [
-    ...where(serves(carried, 'lookup'), 'a lookup function'),
-    ...where(serves(carried, 'interaction'), 'an interaction function'),
-  ];
-  return asOneSentence([
-    ...where(atOnce.length > 0, inTheVerbOf(atOnce, 'runs at once', 'run at once')),
-    ...where(
-      throughAService.length > 0,
-      `${throughAService.join(' or ')} that goes through a service needs its connection`,
+  return [
+    ...sentenceOver(
+      runningAtOnce(carried),
+      'runs at once, with nothing connected',
+      'These run at once, with nothing connected',
     ),
-    ...where(serves(carried, 'prediction'), 'a prediction function needs history'),
-  ]);
+    ...where(serves(carried, 'lookup'), 'A lookup function that reads a service needs its connection.'),
+    ...where(
+      serves(carried, 'interaction'),
+      'An interaction function that goes through a service needs its connection.',
+    ),
+    ...where(serves(carried, 'prediction'), "A prediction function needs the playbook's history."),
+  ];
 }
 
 function whatTheWorkflowOwns(carried: Carried): readonly string[] {
@@ -113,7 +116,7 @@ function whenAPlaybookChanges(carried: Carried): readonly string[] {
   return where(
     serves(carried, 'reasoning') && serves(carried, 'workflow') && parts.length > 0,
     '',
-    `When you change a playbook that exists, keep to the same rule: where a reasoning function has come to hold ${inTurn(parts, 'or')}, give that part a function of its own type and make it a step of the workflow, once the person agrees, rather than a longer prompt.`,
+    `When you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold ${inTurn(parts, 'or')}, give that part a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.`,
   );
 }
 
@@ -148,6 +151,14 @@ function whatIsWritten(carried: Carried): string {
   return serves(carried, 'workflow') ? 'a function or a workflow' : 'a function';
 }
 
+function asFunctionsOfTools(carried: Carried): string {
+  const types = [
+    ...where(serves(carried, 'lookup'), 'lookup'),
+    ...where(serves(carried, 'interaction'), 'interaction'),
+  ];
+  return types.length === 0 ? '' : `, as ${inTurn(types, 'and')} functions`;
+}
+
 const whereToGo: Lines = (carried) => [
   '',
   '## Where to go',
@@ -167,7 +178,7 @@ const whereToGo: Lines = (carried) => [
   ),
   ...where(
     follows(carried, 'give-tools'),
-    '- To give a function the tools of a connected service: the recipe give-tools.',
+    `- To put the tools of a connected service to work${asFunctionsOfTools(carried)}: the recipe give-tools.`,
   ),
   ...where(
     follows(carried, 'schedule'),
@@ -175,6 +186,10 @@ const whereToGo: Lines = (carried) => [
   ),
   ...where(follows(carried, 'keep'), '- To keep something for later, and read it back: the recipe keep.'),
   `- The filters a template may use: the guide templates.${carried.pages ? ' How a page is written: the guide page.' : ''}`,
+  ...where(
+    serves(carried, 'workflow'),
+    '- How a workflow starts on its own, by its triggers and their limits: the guide triggers.',
+  ),
   ...where(carried.events, "- What the playbook's events hold, and how a filter names them: the guide events."),
   '',
   'get_guide reads any of them, and its description names the recipes this connection can follow. A tool that cannot do what was asked says why and what to change.',
@@ -198,7 +213,7 @@ const whatAPlaybookIsMadeOf: Lines = (carried) => [
   '',
   '## What a playbook is made of',
   '',
-  'A playbook holds work that keeps running after a conversation, in any line of business: one responsibility, such as reviewing campaign briefs or keeping a backlog of experiments ranked. It contains one brain, its reusable functions, and its workflows; runs belong to the playbook.',
+  'A playbook holds work that keeps running after a conversation, in any line of business: one responsibility, such as deciding each case that comes in or keeping a list of records ranked. It contains one brain, the collection of its reusable functions, and its workflows. Runs belong to the playbook.',
   ...where(whatTheTypesTake(carried).length > 0, '', whatTheTypesTake(carried).join(' ')),
   ...where(
     carried.pages,
@@ -213,16 +228,16 @@ const whatAWorkflowOwns: Lines = (carried) =>
     '',
     '## What a workflow owns',
     '',
-    'A workflow owns one job the business does again and again, with a result the person recognizes as done: a backlog kept ranked, an accepted idea made ready to run, a finished experiment measured and concluded. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job.',
+    'A workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.',
     '',
     "The playbook's workflows, which list_definitions shows and Studio presents, are the person's list of jobs: read it back in their words, and keep off it anything that is not a job they want done again. These are not workflows:",
     '',
-    '- A function the person wants to see answer, or that you want to test: run it with run_definition. A workflow is not a wrapper for a saved function.',
+    '- A function the person wants to see answer, or that you want to test: run it with run_definition. A workflow made only to see a function answer is a wrapper, not a job.',
     ...where(
       serves(carried, 'interaction'),
       '- A question to a person, and the wait for their answer: an interaction function. The workflow that needs the answer calls it as a step, and owns what comes before and after.',
     ),
-    '- Work that several jobs share, such as scoring an item or reading a board: a function, which each workflow calls as a step.',
+    '- Work that several jobs share, such as scoring an item or reading a list of records: a function, which each workflow calls as a step.',
     '- A check of a service, its connection or its setup, a test, or a change to saved definitions: your own work, below.',
     '',
     'Before you add a workflow, look for the one that owns the same job: a new source of input, a check inside the job or a handoff to a person usually belongs inside it.',

@@ -50,9 +50,10 @@ describe('the guide start of a server that runs every type and keeps pages', () 
       '- To build a playbook from nothing: the recipe first-playbook, which names the guides its steps need.',
       '- To write a function or a workflow: the guide of its type, one of reasoning-function, interaction-function, prediction-function, computation-function, and workflow. Each says how its document is written, with its examples and bounds, and how its page shows the person its results.',
       "- To connect a service and set it up for the playbook's runs: the recipe connect-a-service.",
-      '- To give a function the tools of a connected service: the recipe give-tools.',
+      '- To put the tools of a connected service to work, as interaction functions: the recipe give-tools.',
       '- To start a workflow on its own, at set times or whenever an event arrives: the recipe schedule.',
       '- The filters a template may use: the guide templates. How a page is written: the guide page.',
+      '- How a workflow starts on its own, by its triggers and their limits: the guide triggers.',
       "- What the playbook's events hold, and how a filter names them: the guide events.",
     ]);
     expect(text).toContain(
@@ -62,13 +63,13 @@ describe('the guide start of a server that runs every type and keeps pages', () 
 
   it('says what a playbook is made of, how a reasoning function names its model and what a workflow does, and that every workflow and function takes a page', () => {
     expect(text).toContain(
-      "## What a playbook is made of\n\nA playbook holds work that keeps running after a conversation, in any line of business: one responsibility, such as reviewing campaign briefs or keeping a backlog of experiments ranked. It contains one brain, its reusable functions, and its workflows; runs belong to the playbook.\n\nA reasoning function names a model that list_models lists. A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.\n\nEvery workflow and function takes a page that shows the person its results, run by run and over time.\n",
+      "## What a playbook is made of\n\nA playbook holds work that keeps running after a conversation, in any line of business: one responsibility, such as deciding each case that comes in or keeping a list of records ranked. It contains one brain, the collection of its reusable functions, and its workflows. Runs belong to the playbook.\n\nA reasoning function names a model that list_models lists. A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.\n\nEvery workflow and function takes a page that shows the person its results, run by run and over time.\n",
     );
   });
 
   it('teaches first that each part of the job takes a function of the type its work needs, a line for each type it runs, and what the workflow owns', () => {
     expect(sectionOf(text, 'Build from the job')).toBe(
-      "Build from the job\n\nStart from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:\n\n- it interprets, judges or writes: a reasoning function\n- it asks a person and takes their answer, or has a service act: an interaction function\n- it forecasts a quantity from the playbook's own history: a prediction function\n- it calculates or transforms data exactly: a computation function\n\nA workflow runs the parts in order and hands each one what the parts before it answered. The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough. A reasoning function, a computation function and an interaction function held for you, `deliver: agent`, run at once; an interaction function that goes through a service needs its connection; a prediction function needs history.\n\nWhen you change a playbook that exists, keep to the same rule: where a reasoning function has come to hold a calculation, a question or an act, give that part a function of its own type and make it a step of the workflow, once the person agrees, rather than a longer prompt.\n",
+      "Build from the job\n\nStart from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:\n\n- it interprets, judges or writes: a reasoning function\n- it asks a person and takes their answer, or has a service act: an interaction function\n- it forecasts a quantity from the playbook's own history: a prediction function\n- it calculates or transforms data exactly: a computation function\n\nA workflow runs the parts in order and hands each one what the parts before it answered. The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough. These run at once, with nothing connected: a reasoning function, a computation function and an interaction function held for you (`deliver: agent`). An interaction function that goes through a service needs its connection. A prediction function needs the playbook's history.\n\nWhen you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a calculation, a question or an act, give that part a function of its own type, and make it a step of the workflow. Do so once the person agrees, rather than write a longer prompt.\n",
     );
   });
 });
@@ -78,10 +79,10 @@ describe('what the guide start of that server says of workflows, of the agent an
 
   it('says that a workflow owns one job the business does again and again, and what is not a workflow', () => {
     expect(text).toContain(
-      '## What a workflow owns\n\nA workflow owns one job the business does again and again, with a result the person recognizes as done: a backlog kept ranked, an accepted idea made ready to run, a finished experiment measured and concluded. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job.\n',
+      '## What a workflow owns\n\nA workflow owns one job the business does again and again, with a result the person recognizes as done: a list of records kept ranked, a case that came in decided and answered, a period that ended measured and reported. Before you write one, work out with the person what starts it, a time, an event or someone asking; what one run handles, an item, a case or a period; what done looks like; and which decisions stay with a person. One step is enough when that step finishes the job. Such a workflow is the job, not a wrapper: it is what runs that step again and again.\n',
     );
     expect(text).toContain(
-      "The playbook's workflows, which list_definitions shows and Studio presents, are the person's list of jobs: read it back in their words, and keep off it anything that is not a job they want done again. These are not workflows:\n\n- A function the person wants to see answer, or that you want to test: run it with run_definition. A workflow is not a wrapper for a saved function.\n- A question to a person, and the wait for their answer: an interaction function. The workflow that needs the answer calls it as a step, and owns what comes before and after.\n- Work that several jobs share, such as scoring an item or reading a board: a function, which each workflow calls as a step.\n- A check of a service, its connection or its setup, a test, or a change to saved definitions: your own work, below.\n\nBefore you add a workflow, look for the one that owns the same job: a new source of input, a check inside the job or a handoff to a person usually belongs inside it.\n",
+      "The playbook's workflows, which list_definitions shows and Studio presents, are the person's list of jobs: read it back in their words, and keep off it anything that is not a job they want done again. These are not workflows:\n\n- A function the person wants to see answer, or that you want to test: run it with run_definition. A workflow made only to see a function answer is a wrapper, not a job.\n- A question to a person, and the wait for their answer: an interaction function. The workflow that needs the answer calls it as a step, and owns what comes before and after.\n- Work that several jobs share, such as scoring an item or reading a list of records: a function, which each workflow calls as a step.\n- A check of a service, its connection or its setup, a test, or a change to saved definitions: your own work, below.\n\nBefore you add a workflow, look for the one that owns the same job: a new source of input, a check inside the job or a handoff to a person usually belongs inside it.\n",
     );
   });
 
@@ -97,7 +98,7 @@ describe('what the guide start of that server says of workflows, of the agent an
     );
   });
 
-  it('has its eight sections in that order, takes 7,353 bytes, and uses no term of the internal vocabulary', () => {
+  it('has its eight sections in that order, takes 7,670 bytes, and uses no term of the internal vocabulary', () => {
     expect(headings(text)).toEqual([
       '## Build from the job',
       '## Where to go',
@@ -107,7 +108,7 @@ describe('what the guide start of that server says of workflows, of the agent an
       '## Connecting a service',
       '## Asking a person',
     ]);
-    expect(byteLengthOf(text)).toBe(7353);
+    expect(byteLengthOf(text)).toBe(7670);
     expect(internalTermsIn(text)).toEqual([]);
   });
 });
@@ -121,10 +122,10 @@ describe('the guide start of a server that runs lookup functions and keeps pages
       '- it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function\n',
     );
     expect(text).toContain(
-      'A reasoning function runs at once; a lookup function that goes through a service needs its connection.\n\nWhen you change a playbook that exists, keep to the same rule: where a reasoning function has come to hold a read, give that part',
+      'A reasoning function runs at once, with nothing connected. A lookup function that reads a service needs its connection.\n\nWhen you change a playbook that exists, keep to the same rule. Where a reasoning function has come to hold a read, give that part',
     );
     expect(text).toContain(
-      "runs belong to the playbook.\n\nWhat the person wants kept is the output of a run, read back with a lookup of that definition's runs. A reasoning function names a model",
+      "Runs belong to the playbook.\n\nWhat the person wants kept is the output of a run, read back with a lookup of that definition's runs. A reasoning function names a model",
     );
   });
 });
@@ -135,7 +136,7 @@ describe('the guide start of a server that runs neither interaction functions no
   it('says nothing of asking a person, of pages or of the recipe keep', () => {
     expect(text).not.toMatch(/interaction function|takes a page|the guide page|the recipe keep|Asking a person/u);
     expect(headings(text)).not.toContain('## Asking a person');
-    expect(whereToGo(text)).toHaveLength(8);
+    expect(whereToGo(text)).toHaveLength(9);
   });
 });
 
@@ -152,7 +153,7 @@ describe('the guide start of a server that runs reasoning functions alone', () =
     ]);
     expect(text).toContain('- To write a function: the guide of its type, reasoning-function. Each says how');
     expect(text).toContain(
-      '\n\n- it interprets, judges or writes: a reasoning function\n\nA job that is one judgement is one reasoning function. A reasoning function runs at once.\n\n## Where to go\n',
+      '\n\n- it interprets, judges or writes: a reasoning function\n\nA job that is one judgement is one reasoning function. A reasoning function runs at once, with nothing connected.\n\n## Where to go\n',
     );
     expect(text).toContain('\n\nA reasoning function names a model that list_models lists.\n');
     expect(text).not.toMatch(/schedule|computation|prediction|lookup|the guide events/u);
