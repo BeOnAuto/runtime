@@ -38,6 +38,14 @@ export type HostNote =
       readonly type: string;
     }
   | {
+      readonly kind: 'record_content_missing';
+      readonly org: string;
+      readonly playbook: string;
+      readonly recordId: string;
+      readonly type: string;
+      readonly passedBy: 'reactions' | 'views';
+    }
+  | {
       readonly kind: 'record_passed_over';
       readonly playbook: string;
       readonly record: string;

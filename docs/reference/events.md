@@ -42,7 +42,7 @@ So `run_started` is in both, with the run's input in the history and with no dat
 | `definition_created`, `definition_updated`, `definition_retired`, `definition_paused`, `definition_resumed` | `/definitions/<type>/<name>` | none            | none                                                                                            |
 | An event published to the playbook, of any other type                                                       | as its publisher gave it     | as given        | as given; see [Publishing events](http.md#publishing-events)                                    |
 
-A run's `subject` names its definition, such as `reasoning/summarize`. A filter never sees a run's input.
+A run's `subject` names its definition, such as `reasoning/summarize`. A filter never sees a run's input. An output the playbook stores apart from the run's record is read for the event, so triggers, listeners and pages see it as they see any other; while it cannot be read, the event waits for it.
 
 ## What an event holds
 

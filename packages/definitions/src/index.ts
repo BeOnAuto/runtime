@@ -173,6 +173,7 @@ export { makeDefinitionPresenters } from './presenting/definition-presenters.ts'
 export { runChanged, runChangedBy } from './presenting/changed-resources.ts';
 export { cutAtCodePoint, issuesShown, mostNameBytes } from './presenting/event-data.ts';
 export { playbookEventOf, playbookEventRead, playbookFactOf, playbookFactRead } from './events/playbook-facts.ts';
+export { playbookEventBytesToRead } from './events/playbook-facts.ts';
 export {
   DefinitionEventSchema,
   definitionFactTypes,

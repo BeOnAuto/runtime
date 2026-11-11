@@ -17,7 +17,8 @@ export interface PartsOptions extends EngineOptions {
   readonly closesEndedRuns?: boolean;
 }
 
-export interface HostParts extends WakeUpParts, Pick<HostEngine, 'submitted' | 'reacting' | 'executor'> {
+export interface HostParts
+  extends WakeUpParts, Pick<HostEngine, 'submitted' | 'reacting' | 'executor' | 'factPayloadsOf'> {
   readonly calls: ServedWaiting['calls'];
   readonly waitingCallAnswered: ServedWaiting['waitingCallAnswered'];
 }
@@ -62,6 +63,7 @@ export function openHostParts(
     executor: engine.executor,
     calls: served.calls,
     waitingCallAnswered: served.waitingCallAnswered,
+    factPayloadsOf: engine.factPayloadsOf,
   };
 }
 

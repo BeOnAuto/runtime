@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { HostDatabase } from '../database/host-database.ts';
+import { factPayloadsOn } from '../ledger-testing/ledger-connections.ts';
 import { insertedListener } from '../listeners/listener-rows.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 import { followedPlaybooksOn } from './followed-playbooks.ts';
@@ -80,6 +81,8 @@ async function passing(counted: CountedRecords) {
     definitionType: 'workflow',
     applyDefinitionRecord: () => Effect.succeed('applied'),
     unreadable: () => Effect.void,
+    contentMissing: () => Effect.void,
+    factPayloadsOf: factPayloadsOn(opened),
     passedEarly: () => Effect.void,
     registered: [],
   });

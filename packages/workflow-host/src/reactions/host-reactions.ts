@@ -12,7 +12,10 @@ import type { HostWakeUp, WakeSignal } from '../loop/host-wake-up.ts';
 
 export type FollowerConsumers = FollowerAssembly['consumers'];
 
-export interface FollowedParts extends Pick<HostParts, 'submitted' | 'clock' | 'sweepEveryMs' | 'context' | 'calls'> {
+export interface FollowedParts extends Pick<
+  HostParts,
+  'submitted' | 'clock' | 'sweepEveryMs' | 'context' | 'calls' | 'factPayloadsOf'
+> {
   readonly reacting: Pick<HostParts['reacting'], 'refusals' | 'stops'>;
 }
 
@@ -33,9 +36,9 @@ function followerWorkOf({
   placeAtOpen,
   consumers = [],
 }: FollowingParts): FollowerWork {
-  const { submitted, clock, sweepEveryMs, context, reacting, calls } = parts;
+  const { submitted, clock, sweepEveryMs, context, reacting, calls, factPayloadsOf } = parts;
   return followerWorkOn(
-    { database, submitted, clock, sweepEveryMs, reports, context, placeAtOpen },
+    { database, submitted, clock, sweepEveryMs, reports, context, placeAtOpen, factPayloadsOf },
     {
       options: reactions,
       refusals: reacting.refusals,

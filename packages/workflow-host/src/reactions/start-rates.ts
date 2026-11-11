@@ -92,6 +92,11 @@ function deferredOf(database: HostDatabase, playbookKey: string, workflow: strin
   ).pipe(Effect.map((rows) => rows.reduce((sum, { deferred }) => sum + deferred, 0)));
 }
 
+function deliveryFailureOf(refused: FailureDetail): ConstructorParameters<typeof DeliveryFailed>[0] {
+  const failure = { detail: refused.detail, ...codesOf(refused) };
+  return refused.kind === 'content_unavailable' ? { ...failure, held: 'content' } : failure;
+}
+
 function started(
   { startReaction, refusals }: StartingParts,
   playbookKey: string,
@@ -101,7 +106,7 @@ function started(
     Effect.catchTag('start_rejected', (rejected: FailureDetail) =>
       refusals.refuse(playbookKey, unstarted(start, rejected)),
     ),
-    Effect.mapError((refused: FailureDetail) => new DeliveryFailed({ detail: refused.detail, ...codesOf(refused) })),
+    Effect.mapError((refused: FailureDetail) => new DeliveryFailed(deliveryFailureOf(refused))),
   );
 }
 

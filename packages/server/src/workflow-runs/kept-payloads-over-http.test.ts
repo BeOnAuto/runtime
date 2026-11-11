@@ -20,6 +20,11 @@ import {
   waitingWithItsAnswerKept,
   type OpenStore,
 } from '../testing/interaction-servers/kept-answer-servers.ts';
+import {
+  endedRunOf,
+  postsDraftedOnThePage,
+  reactingToTheReview,
+} from '../testing/interaction-servers/kept-output-reactions.ts';
 import { readOfTheLedgerIn } from '../testing/records/ledger-file.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
@@ -182,4 +187,36 @@ describe.each(stores)('a run of a playbook that turned keeping on, or lost a kep
 
     expect(await second.settled(runId)).toMatchObject({ status: 'rejected', rejection: { reason: 'unavailable' } });
   });
+});
+
+describe.each(stores)('a trigger, a listener and a page given the output a run keeps outside, on $name', (store) => {
+  it.skipIf(store.skipped)(
+    'starts the trigger’s workflow and wakes the listening run with the whole output',
+    async () => {
+      const opened = await store.open();
+      const server = await playbookOn(opened);
+      await reactingToTheReview(server);
+      const listening = await started(server, 'listening');
+      const waiting = await started(server, 'waiting');
+
+      await answeredAndHeld(opened, server, 1);
+      await eventSent(server, waiting);
+
+      expect(await server.settled(await endedRunOf(server, 'on-review'))).toMatchObject({
+        status: 'succeeded',
+        output: { length: notes.length },
+      });
+      expect(await server.settled(listening)).toMatchObject({ status: 'succeeded', output: { length: notes.length } });
+    },
+  );
+
+  it.skipIf(store.skipped)(
+    'folds the whole output into a page’s view, as it does where the output is inline',
+    async () => {
+      expect([
+        await postsDraftedOnThePage(await store.open(), true),
+        await postsDraftedOnThePage(await store.open(), false),
+      ]).toEqual(['Since it began, 3 posts were drafted.', 'Since it began, 3 posts were drafted.']);
+    },
+  );
 });

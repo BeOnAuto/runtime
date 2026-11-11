@@ -1,8 +1,10 @@
+import type { Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { comparePoints, earliestOf, type Point } from '../pages/history-points.ts';
+import { factPayloadsIn } from '../runs/run-payloads.ts';
 import {
   folderPassOf,
   readFor,
@@ -22,6 +24,7 @@ export interface PassParts {
   readonly resting: Resting;
   readonly firstSeen: (record: string) => boolean;
   readonly trouble: (what: string) => Effect.Effect<void>;
+  readonly factPayloadsOf?: FolderParts['factPayloadsOf'] | undefined;
 }
 
 interface Sharing {
@@ -51,7 +54,7 @@ function sharedSteps(
   playbook: string,
   passes: readonly FolderPass[],
   pages: number,
-): Effect.Effect<number, DatabaseFailed> {
+): Effect.Effect<number, DatabaseFailed | Unavailable> {
   const sharing = sharingNow(passes);
   if (sharing.length === 0 || pages === 0) {
     return Effect.succeed(pages);
@@ -67,8 +70,18 @@ function sharedSteps(
   });
 }
 
-function folderPartsOf({ database, settings, definitions, note, resting, firstSeen, trouble }: PassParts): FolderParts {
+function folderPartsOf({
+  database,
+  settings,
+  definitions,
+  note,
+  resting,
+  firstSeen,
+  trouble,
+  factPayloadsOf,
+}: PassParts): FolderParts {
   return {
+    factPayloadsOf: factPayloadsOf ?? factPayloadsIn(database.content),
     database,
     definitions,
     note,
@@ -79,7 +92,7 @@ function folderPartsOf({ database, settings, definitions, note, resting, firstSe
   };
 }
 
-export function playbookPass(parts: PassParts, playbook: string): Effect.Effect<boolean, DatabaseFailed> {
+export function playbookPass(parts: PassParts, playbook: string): Effect.Effect<boolean, DatabaseFailed | Unavailable> {
   const folderParts = folderPartsOf(parts);
   return Effect.gen(function* () {
     const passes = yield* Effect.forEach(parts.settings.folders, (some) =>

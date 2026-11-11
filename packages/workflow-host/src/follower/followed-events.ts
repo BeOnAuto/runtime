@@ -1,11 +1,14 @@
 import {
   definitionFactTypes,
   playbookFactOf,
+  playbookFactRead,
   publishedEventOf,
   type CloudEvent,
   type RecordedEventPublished,
 } from '@on.auto/definitions';
-import { streamKindOf, type RecordedEvent } from '@on.auto/operations';
+import { streamKindOf, type PlaybookAddress, type RecordedEvent } from '@on.auto/operations';
+import type { PayloadReader } from '@on.auto/operations/payloads';
+import { Effect } from 'effect';
 
 interface Emitter {
   readonly runId: string;
@@ -86,4 +89,23 @@ export function followedEventOf(record: RecordedEvent, type: string): EventOfRec
   const isFact =
     (kind === 'runs' && runFacts.has(record.type)) || (kind === 'definitions' && definitionFacts.has(record.type));
   return isFact ? fact(record, type) : 'none';
+}
+
+export type FactPayloads = (playbook: PlaybookAddress) => PayloadReader;
+
+export type EventRead = { readonly event: FollowedEvent } | 'held' | 'missing';
+
+export function followedEventRead(
+  record: RecordedEvent,
+  followed: FollowedEvent,
+  payloads: PayloadReader,
+): Effect.Effect<EventRead> {
+  return playbookFactRead(record, payloads).pipe(
+    Effect.map((event): EventRead => ({ event: event === undefined ? followed : { ...followed, event } })),
+    Effect.catchTags({
+      unavailable: () => Effect.succeed<EventRead>('held'),
+      payload_missing: () => Effect.succeed<EventRead>('missing'),
+      payload_erased: () => Effect.succeed<EventRead>({ event: followed }),
+    }),
+  );
 }

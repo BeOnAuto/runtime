@@ -7,6 +7,7 @@ import type { HostDatabase } from '../database/host-database.ts';
 import type { HostReports } from '../host/host-reports.ts';
 import type { HostContext } from '../loop/forked-fibers.ts';
 import type { HostClock } from '../loop/host-clock.ts';
+import type { FactPayloads } from './followed-events.ts';
 
 export interface FollowerHost {
   readonly database: HostDatabase;
@@ -16,4 +17,5 @@ export interface FollowerHost {
   readonly reports: HostReports;
   readonly context?: HostContext;
   readonly placeAtOpen: RecordedPoint;
+  readonly factPayloadsOf: FactPayloads;
 }

@@ -7,7 +7,13 @@ import { payloadsKeptIn } from '../payloads/run-payloads.ts';
 import { erasingReader, keptArmOf, keptIn } from '../testing/kept-payloads.ts';
 import { testRunId as runId } from '../testing/run-facts.ts';
 import { mostPublishedEventBytes } from './cloud-event.ts';
-import { playbookEventOf, playbookEventRead, playbookFactOf, playbookFactRead } from './playbook-facts.ts';
+import {
+  playbookEventBytesToRead,
+  playbookEventOf,
+  playbookEventRead,
+  playbookFactOf,
+  playbookFactRead,
+} from './playbook-facts.ts';
 
 const at = '2026-10-01T09:00:05.000Z';
 
@@ -113,6 +119,18 @@ describe('the event of a success whose output its playbook keeps outside the run
   });
 });
 
+describe('the bytes the event of a success reads from its playbook’s content', () => {
+  it('names the bytes its read loads, none where the output would not fit the event', () => {
+    const fitting = 'x'.repeat(room);
+
+    expect([
+      playbookEventBytesToRead(keptSuccessOf(report)),
+      playbookEventBytesToRead(keptSuccessOf(fitting)),
+      playbookEventBytesToRead(keptSuccessOf(`${fitting}x`)),
+    ]).toEqual([jsonBytesOf(report), room + 2, 0]);
+  });
+});
+
 describe('the event of every other fact, read with the payloads it may keep', () => {
   it('is made as before for every other fact, reading nothing, published events among them', async () => {
     const payloads = erasingReader(alpha);
@@ -154,5 +172,12 @@ describe('the event of every other fact, read with the payloads it may keep', ()
       undefined,
       playbookFactOf(retired),
     ]);
+    expect([
+      playbookEventBytesToRead(inline),
+      playbookEventBytesToRead(rejected),
+      playbookEventBytesToRead(published),
+      playbookEventBytesToRead(unknown),
+      playbookEventBytesToRead(retired),
+    ]).toEqual([0, 0, 0, 0, 0]);
   });
 });

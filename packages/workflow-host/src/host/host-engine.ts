@@ -19,7 +19,7 @@ import type { ReactionOptions } from '../reactions/reaction-options.ts';
 import { reactionPortsOn, type ReactionPorts } from '../reactions/reaction-ports.ts';
 import { runAttributesOf } from '../runs/run-spans.ts';
 import { sqlTimers, type TimerTable } from '../timers/sql-timers.ts';
-import { hostPortsOn, type PortParts } from './host-ports.ts';
+import { hostPortsOn, type HostPorts, type PortParts } from './host-ports.ts';
 
 export interface EngineOptions extends Pick<PortParts, 'settle' | 'reports'> {
   readonly machine: MachineOptions;
@@ -40,6 +40,7 @@ export interface HostEngine {
   readonly executor: HostExecutor;
   readonly reacting: ReactionPorts;
   readonly submitted: Submitted;
+  readonly factPayloadsOf: HostPorts['factPayloadsOf'];
 }
 
 export type WaitingCalls = Pick<ExecutorParts, 'mostOpen' | 'childOf' | 'childAnswerOf' | 'cancelChild'>;
@@ -81,5 +82,13 @@ export function hostEngineOn(
     now: clock.now,
   });
   const engine = workflowEngineOf(ports, options.machine, runCacheOf(options.cacheBounds ?? runCacheBounds));
-  return { engine, runStore: ports.runStore, timers, executor, reacting, submitted };
+  return {
+    engine,
+    runStore: ports.runStore,
+    timers,
+    executor,
+    reacting,
+    submitted,
+    factPayloadsOf: ports.factPayloadsOf,
+  };
 }

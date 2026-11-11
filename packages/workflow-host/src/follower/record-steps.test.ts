@@ -3,7 +3,7 @@ import { recordingTracer } from '@on.auto/operations/testing';
 import { Effect, Function } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { callConsumerOf, deliverySweeps } from './consumers.ts';
+import { callConsumerOf, deliverySweeps, type FollowedRecord } from './consumers.ts';
 import { playbookOfKey, stepOf, type StepParts } from './record-steps.ts';
 import type { GateVerdict } from './run-gate.ts';
 
@@ -14,6 +14,7 @@ const parts: StepParts = {
   definitionType: 'workflow',
   applyDefinitionRecord: () => Effect.succeed('applied'),
   unreadable: () => Effect.void,
+  contentMissing: () => Effect.void,
   passedEarly: () => Effect.void,
   registered: [],
   calls: [],
@@ -47,6 +48,7 @@ function steppedPast(verdict: GateVerdict, wantsMore: boolean) {
     delivers: () => Effect.succeed(false),
     reactsTo: () => Effect.succeed(false),
     wantsMore: () => Effect.succeed(wantsMore),
+    eventRead: ({ event }: FollowedRecord) => Effect.succeed({ event }),
   };
   return Effect.runPromise(stepOf(parts, stepping, fresh, record));
 }
@@ -96,6 +98,7 @@ function deliveredUnder(followed: RecordedEvent) {
     delivers: () => Effect.succeed(true),
     reactsTo: () => Effect.succeed(false),
     wantsMore: () => Effect.succeed(false),
+    eventRead: ({ event }: FollowedRecord) => Effect.succeed({ event }),
   };
   return Effect.runPromise(
     Effect.withTracer(stepOf({ ...parts, calls: [answering] }, stepping, fresh, followed), recording.tracer),

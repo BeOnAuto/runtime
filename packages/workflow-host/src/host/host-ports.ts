@@ -6,7 +6,7 @@ import { runSerialiser } from '../dispatch/run-serialiser.ts';
 import { sqlWatermark } from '../dispatch/sql-watermark.ts';
 import { ledgerRunLogStore } from '../runs/ledger-run-store.ts';
 import { addressOfRun } from '../runs/run-address.ts';
-import { hostPayloadsOf, type ComposedPayloads } from '../runs/run-payloads.ts';
+import { hostPayloadsOf, type ComposedPayloads, type HostPayloads } from '../runs/run-payloads.ts';
 import { ledgerRecordStore } from '../settlement/ledger-record-store.ts';
 import type { HostReports } from './host-reports.ts';
 
@@ -21,13 +21,19 @@ export interface PortParts {
   readonly now: () => number;
 }
 
+export interface HostPorts extends EnginePorts<ContentUnavailable> {
+  readonly factPayloadsOf: HostPayloads['factsOf'];
+}
+
 export function hostPortsOn(
   database: HostDatabase,
   { settle, reports, timers, executor, listeners, emitter, context, now }: PortParts,
-): EnginePorts<ContentUnavailable> {
+): HostPorts {
+  const payloads = hostPayloadsOf({ content: database.content, context, note: reports.note });
   return {
     runStore: ledgerRunLogStore(database),
-    payloads: hostPayloadsOf({ content: database.content, context, note: reports.note }),
+    payloads: payloads.runs,
+    factPayloadsOf: payloads.factsOf,
     watermark: sqlWatermark(database),
     timers,
     executor,

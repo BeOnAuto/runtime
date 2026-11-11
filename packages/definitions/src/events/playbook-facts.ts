@@ -183,6 +183,17 @@ export function playbookFactRead(
   return Effect.map(cloudEventRead(record, payloads), (fact) => withLineage(record, fact));
 }
 
+function keptOutputBytesToRead(record: RecordedFact): number {
+  const read = factReadOf(record);
+  if (read === undefined || 'definition' in read || read.run.type !== 'run_succeeded') {
+    return 0;
+  }
+  const output = outputPayloadOf(read.run);
+  return 'inline' in output || !mayCarryItsOutput(bareRunFactOf(record.id, read.named, read.run), output.kept.bytes)
+    ? 0
+    : output.kept.bytes;
+}
+
 function isPublishedEvent(record: RecordedFact): boolean {
   return streamKindOf(record.stream) === publishedEventsKind && record.type === 'event_published';
 }
@@ -200,4 +211,8 @@ export function playbookEventRead(
   payloads: PayloadReader,
 ): Effect.Effect<CloudEvent | undefined, PayloadNotRead> {
   return isPublishedEvent(record) ? Effect.succeed(publishedEventIn(record)) : playbookFactRead(record, payloads);
+}
+
+export function playbookEventBytesToRead(record: RecordedFact): number {
+  return isPublishedEvent(record) ? 0 : keptOutputBytesToRead(record);
 }

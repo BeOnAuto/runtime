@@ -181,6 +181,34 @@ describe('the notes of the reactions of the workflow host', () => {
   });
 });
 
+describe('the note of an output a record keeps outside that its playbook holds no more', () => {
+  it('is an error, naming the record and saying what the reactions and the views did with it', async () => {
+    const missing = {
+      kind: 'record_content_missing',
+      org: 'acme',
+      playbook: 'alpha',
+      recordId: 'r-1',
+      type: 'run_succeeded',
+    } as const;
+    const lines = [
+      ...(await linesLoggedBy(logHostNote({ ...missing, passedBy: 'reactions' }))),
+      ...(await linesLoggedBy(logHostNote({ ...missing, passedBy: 'views' }))),
+    ];
+
+    expect(lines).toEqual([
+      expect.stringContaining(
+        '"message":"The output a record of the playbook keeps outside is missing from its content, so triggers and waiting runs were not given it","level":"ERROR"',
+      ),
+      expect.stringContaining(
+        '"message":"The output a record of the playbook keeps outside is missing from its content, so the views folded it with the output as its size","level":"ERROR"',
+      ),
+    ]);
+    expect(lines[0]).toContain(
+      '"annotations":{"org":"acme","playbook":"alpha","record_id":"r-1","type":"run_succeeded"}',
+    );
+  });
+});
+
 describe('the note of a run loaded again', () => {
   it('is logged at the debug level alone, with the run, whether it began at a snapshot, its events and the bytes it is kept as', async () => {
     const reloaded = logHostNote({ kind: 'run_reloaded', run, snapshot: true, events: 12, keptBytes: 524_288 });

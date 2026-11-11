@@ -5,6 +5,7 @@ import type { HostDatabase } from '../database/host-database.ts';
 import type { CallConsumer, RecordConsumer } from '../follower/consumers.ts';
 import { followedPlaybooksOn } from '../follower/followed-playbooks.ts';
 import { passOf, type PassParts } from '../follower/playbook-pass.ts';
+import { factPayloadsOn } from '../ledger-testing/ledger-connections.ts';
 import type { ListenerRow } from '../listeners/listener-rows.ts';
 import { onSQLite, openedOn } from '../testing/host-files.ts';
 
@@ -118,6 +119,8 @@ export async function passingOn(over: (database: HostDatabase) => PassedOver) {
     definitionType: 'workflow',
     applyDefinitionRecord: Function.constant(Effect.succeed('applied')),
     unreadable: Function.constant(Effect.void),
+    contentMissing: Function.constant(Effect.void),
+    factPayloadsOf: factPayloadsOn(opened),
     registered: [],
     ...over(opened),
   });

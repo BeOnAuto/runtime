@@ -3,7 +3,11 @@ import { Effect, Function } from 'effect';
 import { followedPlaybooksOn } from '../src/follower/followed-playbooks.ts';
 import { passOf } from '../src/follower/playbook-pass.ts';
 import { playbookRecordsOf } from '../src/follower/playbook-records.ts';
-import { hostDatabaseOpenedOn, type DatabaseSettings } from '../src/ledger-testing/ledger-connections.ts';
+import {
+  factPayloadsOn,
+  hostDatabaseOpenedOn,
+  type DatabaseSettings,
+} from '../src/ledger-testing/ledger-connections.ts';
 import { definitionRecordsKeepingTheirOwnStops } from '../src/reaction-testing/own-stops.ts';
 import { byAdmin, definitionRecorded, eventTrigger, published } from '../src/reaction-testing/playbook-writes.ts';
 import { playbookSweepsOn, type PlaybookSweeps } from '../src/sweeps/playbook-sweeps.ts';
@@ -88,6 +92,8 @@ export async function sweepCostOn(database: DatabaseSettings, playbooks: number,
     definitionType: 'workflow',
     applyDefinitionRecord: definitionRecordsKeepingTheirOwnStops(opened),
     unreadable: () => Effect.void,
+    contentMissing: () => Effect.void,
+    factPayloadsOf: factPayloadsOn(opened),
     passedEarly: () => Effect.void,
     registered: [],
   });

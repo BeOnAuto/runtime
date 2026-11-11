@@ -13,6 +13,7 @@ import {
 import { ContentUnavailable, type HeldContent, type RunPayloads } from '@on.auto/workflow-engine';
 import { Context, Deferred, Effect } from 'effect';
 
+import type { FactPayloads } from '../follower/followed-events.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { addressOfRun } from './run-address.ts';
 
@@ -121,20 +122,27 @@ export function hostRunPayloadsOf({
   };
 }
 
+export function factPayloadsIn(
+  content: PayloadSource['content'],
+  { cache, gate }: SharedPayloads = noSharedPayloads,
+): FactPayloads {
+  return ({ org, playbook }) => payloadReaderOf({ owner: { org, playbook }, content, cache, gate });
+}
+
 export interface ComposedPayloads extends Pick<HostPayloadParts, 'content' | 'note'> {
   readonly context: Context.Context<never> | undefined;
 }
 
-export function hostPayloadsOf({
-  content,
-  context = Context.empty(),
-  note,
-}: ComposedPayloads): RunPayloads<ContentUnavailable> {
+export interface HostPayloads {
+  readonly runs: RunPayloads<ContentUnavailable>;
+  readonly factsOf: FactPayloads;
+}
+
+export function hostPayloadsOf({ content, context = Context.empty(), note }: ComposedPayloads): HostPayloads {
   const keepsPayloadsOutside = Context.get(context, PayloadsOutside);
-  return hostRunPayloadsOf({
-    content,
-    keepsPayloadsOutside,
-    shared: keepsPayloadsOutside ? Context.get(context, PayloadsShared) : noSharedPayloads,
-    note,
-  });
+  const shared = keepsPayloadsOutside ? Context.get(context, PayloadsShared) : noSharedPayloads;
+  return {
+    runs: hostRunPayloadsOf({ content, keepsPayloadsOutside, shared, note }),
+    factsOf: factPayloadsIn(content, shared),
+  };
 }

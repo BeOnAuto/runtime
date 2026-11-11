@@ -16,6 +16,17 @@ export interface FollowerAssembly extends ReactionUse {
   readonly calls: PassParts['calls'];
 }
 
+function contentMissingNotedBy(reports: FollowerHost['reports']): StepParts['contentMissing'] {
+  return (playbookKey, { id, type }) =>
+    reports.note({
+      kind: 'record_content_missing',
+      ...playbookOfKey(playbookKey),
+      recordId: id,
+      type,
+      passedBy: 'reactions',
+    });
+}
+
 export function followerWorkOn(host: FollowerHost, assembly: FollowerAssembly): FollowerWork {
   const { database, clock, reports } = host;
   const playbooks = followedPlaybooksOn(database);
@@ -32,6 +43,8 @@ export function followerWorkOn(host: FollowerHost, assembly: FollowerAssembly): 
     definitionType: assembly.options.definitionType,
     applyDefinitionRecord: reacting.applyDefinitionRecord,
     unreadable,
+    factPayloadsOf: host.factPayloadsOf,
+    contentMissing: contentMissingNotedBy(reports),
     passedEarly: (playbookKey, { stream, version }, sweeps) =>
       reports.note({
         kind: 'run_record_passed',

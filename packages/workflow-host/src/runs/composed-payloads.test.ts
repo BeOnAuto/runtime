@@ -19,8 +19,8 @@ async function keptBy(outside: boolean) {
     context: Context.make(PayloadsOutside, outside).pipe(Context.add(PayloadsShared, shared)),
     note: notesKept().note,
   });
-  await Effect.runPromise(payloads.keep(alphaRun, [answer]));
-  return { outside: payloads.keepsPayloadsOutside, cached: shared.cache.textOf(alpha, answer.sha256) };
+  await Effect.runPromise(payloads.runs.keep(alphaRun, [answer]));
+  return { outside: payloads.runs.keepsPayloadsOutside, cached: shared.cache.textOf(alpha, answer.sha256) };
 }
 
 describe('the payloads the host composes from the context of its runtime', () => {

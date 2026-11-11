@@ -11,7 +11,9 @@ import { Effect, ManagedRuntime, type Layer } from 'effect';
 
 import { hostDatabaseOn, type HostDatabase } from '../database/host-database.ts';
 import { hostTablesMadeOn } from '../database/host-tables.ts';
+import type { FactPayloads } from '../follower/followed-events.ts';
 import { openWorkflowHost, type HostOptions, type WorkflowHost } from '../host/workflow-host.ts';
+import { factPayloadsIn } from '../runs/run-payloads.ts';
 import { boundedConnection } from './bounded-connection.ts';
 
 interface DatabaseBound {
@@ -95,4 +97,8 @@ export async function workflowHostOnALedger(
     await close();
     throw failure;
   }
+}
+
+export function factPayloadsOn({ content }: Pick<HostDatabase, 'content'>): FactPayloads {
+  return factPayloadsIn(content);
 }

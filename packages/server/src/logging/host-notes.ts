@@ -69,6 +69,22 @@ function recordUnreadable({ org, playbook, recordId, type }: NoteOf<'record_unre
   ).pipe(Effect.annotateLogs({ org, playbook, record_id: recordId, type }));
 }
 
+function recordContentMissing({
+  org,
+  playbook,
+  recordId,
+  type,
+  passedBy,
+}: NoteOf<'record_content_missing'>): Effect.Effect<void> {
+  const what =
+    passedBy === 'reactions'
+      ? 'triggers and waiting runs were not given it'
+      : 'the views folded it with the output as its size';
+  return Effect.logError(
+    `The output a record of the playbook keeps outside is missing from its content, so ${what}`,
+  ).pipe(Effect.annotateLogs({ org, playbook, record_id: recordId, type }));
+}
+
 function runRecordPassed({ run, version, sweeps }: NoteOf<'run_record_passed'>): Effect.Effect<void> {
   return Effect.logWarning(
     `A record of a run's log was passed before the run's outputs were dispatched, after ${sweeps} sweeps held it; a listener it armed takes events once it is kept, and none recorded before`,
@@ -116,6 +132,7 @@ const loggers: { readonly [Kind in HostNote['kind']]: (note: NoteOf<Kind>) => Ef
   schedule_stopped: scheduleStopped,
   offer_declined: offerDeclined,
   record_unreadable: recordUnreadable,
+  record_content_missing: recordContentMissing,
   run_record_passed: runRecordPassed,
   run_reloaded: runReloaded,
   payloads_read: payloadsRead,

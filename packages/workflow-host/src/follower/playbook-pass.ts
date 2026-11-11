@@ -4,6 +4,7 @@ import { Effect } from 'effect';
 import type { HostDatabase } from '../database/host-database.ts';
 import { wantedTypesIn } from '../triggers/trigger-rows.ts';
 import type { Mode } from './delivery-loop.ts';
+import { followedEventRead, type FactPayloads } from './followed-events.ts';
 import type { FollowedPlaybook, FollowedPlaybooks, Progress } from './followed-playbooks.ts';
 import { noRecordTypes, recordTypesOf, type PlaybookRecords } from './playbook-records.ts';
 import { playbookOfKey, stepOf, type PassEnd, type StepParts, type Stepping } from './record-steps.ts';
@@ -13,6 +14,7 @@ export interface PassParts extends StepParts {
   readonly database: HostDatabase;
   readonly records: Pick<PlaybookRecords, 'after'>;
   readonly playbooks: FollowedPlaybooks;
+  readonly factPayloadsOf: FactPayloads;
 }
 
 const pagesInAPass = 10;
@@ -94,6 +96,7 @@ function steppingOf(parts: PassParts, playbookKey: string, mode: Mode): Effect.E
       delivers: naming(({ delivered }) => delivered),
       reactsTo: naming(({ reactedTo }) => reactedTo),
       wantsMore: () => Effect.map(refreshed, (now) => [...now.delivered].some((type) => !known.page.has(type))),
+      eventRead: ({ playbook, record, event }) => followedEventRead(record, event, parts.factPayloadsOf(playbook)),
     };
   });
 }

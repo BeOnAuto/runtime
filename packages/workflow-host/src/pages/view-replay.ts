@@ -1,12 +1,12 @@
 import type { StoredPlace } from '@on.auto/ledger';
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
-import { Effect, Semaphore, type Schema } from 'effect';
+import { Effect, Result, Semaphore, type Schema } from 'effect';
 
 import { rowsOf, type DatabaseFailed, type HostDatabase } from '../database/host-database.ts';
 import { keptViewOf, ViewRowSchema, viewRowOf, type KeptView, type ViewRow } from '../views/view-rows.ts';
 import { viewNamed } from '../views/view-statements.ts';
 import { comparePoints } from './history-points.ts';
-import { readPage, typesToRead, type ReadPage } from './page-events.ts';
+import { readPageIn, typesToRead, type ReadPage } from './page-events.ts';
 import { consideredBy, foldedOver, type FoldingTurn } from './page-folding.ts';
 import { rowAfter } from './view-changes.ts';
 
@@ -30,6 +30,7 @@ interface Replay {
 }
 
 interface Going {
+  readonly playbook: PlaybookAddress;
   readonly playbookKey: string;
   readonly through: StoredPlace;
   readonly turn: FoldingTurn;
@@ -72,8 +73,11 @@ function replayedBy(database: HostDatabase, going: Going) {
       if (pages === 0) {
         return 'out_of_reach';
       }
-      const read = yield* Effect.promise(() => readPage(database.store, ofTheRow(row, going)));
-      const page = upTo(read, going.through);
+      const read = yield* Effect.result(readPageIn(database, going.playbook, ofTheRow(row, going)));
+      if (Result.isFailure(read)) {
+        return 'out_of_reach';
+      }
+      const page = upTo(read.success, going.through);
       const events = consideredBy(row, page);
       const result = yield* foldedOver([{ row, view, events }], page, going.turn);
       if (result.again) {
@@ -147,6 +151,8 @@ export function viewsAsOfOn(database: HostDatabase, replaying: Replaying): Views
   };
   return {
     viewAsOfRun: (playbook, name, run) =>
-      Effect.orDie(replayed(database, { playbookKey: streamPrefixOfPlaybook(playbook), turn }, replaying)(name, run)),
+      Effect.orDie(
+        replayed(database, { playbook, playbookKey: streamPrefixOfPlaybook(playbook), turn }, replaying)(name, run),
+      ),
   };
 }

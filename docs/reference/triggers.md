@@ -70,7 +70,7 @@ Each filter is held to its own bounds, and its failure affects no other workflow
 - A workflow's event trigger starts at most 60 runs of it a minute, across its filters. More wait for a later minute, up to 1,000 of them; one more is refused. The runs of its schedules are not counted.
 - A schedule trigger has one run at a time. A time that comes due while the schedule's previous run is still running, of this version or an earlier one, is skipped. After the runtime was stopped, only the latest of the times it missed runs.
 - An event and a due time in one moment start two runs, and so do a `cron` and an `every` due at the same time.
-- A start that the playbook refuses, for example once the playbook is retired, or once the organization's credits or a self-hosted runtime's free runs are spent, is not tried again. An event trigger's start the playbook cannot take at that moment is tried again at each sweep, about twenty times; a schedule records such a start as refused and moves on.
+- A start that the playbook refuses, for example once the playbook is retired, or once the organization's credits or a self-hosted runtime's free runs are spent, is not tried again. An event trigger's start the playbook cannot take at that moment is tried again at each sweep, about twenty times, or for as long as stored content it needs cannot be read; a schedule records such a start as refused and moves on.
 
 When a trigger does not start a run, the playbook records a `reaction_refused` event of its workflow, at most once a minute. The event counts the runs not started and gives the last reason, which names the trigger by its kind. `list_playbook_events` shows it beside the runs triggers started.
 

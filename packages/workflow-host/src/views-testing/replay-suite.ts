@@ -160,9 +160,48 @@ function reachTests(settingsOf: SettingsOf): void {
   });
 }
 
+type StoredRecord = Awaited<ReturnType<HostDatabase['store']['readRecorded']>>['records'][number];
+
+function withItsOutputKept(record: StoredRecord): StoredRecord {
+  return record.type === 'run_succeeded'
+    ? { ...record, data: { output_sha256: 'a'.repeat(64), output_bytes: 2, record: {} } }
+    : record;
+}
+
+function keptAndUnreadable(database: HostDatabase): HostDatabase {
+  return {
+    ...database,
+    content: { ...database.content, get: () => Effect.die(new Error('connect ECONNREFUSED')) },
+    store: {
+      ...database.store,
+      readRecorded: async (playbookKey, selection, page) => {
+        const read = await database.store.readRecorded(playbookKey, selection, page);
+        return {
+          ...read,
+          records: read.records.map((record) => withItsOutputKept(record)),
+        };
+      },
+    },
+  };
+}
+
+function keptOutputTests(settingsOf: SettingsOf): void {
+  it('are out of reach while an output a run keeps outside cannot be read', async () => {
+    const views = await viewHarness(await settingsOf());
+    const [first] = await threeRuns(views);
+    startedOnPages(views);
+    await views.until(morning, foldedAll(3));
+
+    const replayed = asOf(views, { database: keptAndUnreadable(views.store.database) });
+
+    expect(await replayed(String(first))).toMatchObject({ phase: 'out_of_reach' });
+  });
+}
+
 export function replaySuite(settingsOf: SettingsOf): void {
   describe('the views as of a run', () => {
     replayTests(settingsOf);
+    keptOutputTests(settingsOf);
     endingTests(settingsOf);
     reachTests(settingsOf);
   });

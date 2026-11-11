@@ -34,6 +34,7 @@ export function startServing(store: WorkflowStore, options: ServingOptions): Ser
     options.projector === undefined
       ? undefined
       : startProjector({
+          factPayloadsOf: parts.factPayloadsOf,
           database,
           settings: options.projector,
           reports: options.reports,

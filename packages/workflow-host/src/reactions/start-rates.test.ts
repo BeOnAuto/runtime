@@ -164,6 +164,23 @@ describe('a start the playbook refuses', () => {
   });
 });
 
+describe('a start refused because its workflow’s document cannot be read just now', () => {
+  it('fails held for the content, keeping its kind, so the follower holds the record rather than counting it', async () => {
+    const database = await openedOn(await onSQLite());
+    const detail = 'The document of the workflow could not be read just now';
+    const starting = startingOn(
+      database,
+      () => Effect.fail(new StartRefused({ detail, kind: 'content_unavailable' })),
+      refusalsOn(database, () => minute),
+      () => minute,
+    );
+
+    const failure = await Effect.runPromise(Effect.flip(starting.start(playbookKey, startNumber(1))));
+
+    expect(failure).toEqual(new DeliveryFailed({ detail, kind: 'content_unavailable', held: 'content' }));
+  });
+});
+
 describe('a deferred start the playbook refuses', () => {
   it('is tried in 20 minutes and then dropped, which is said with the kind of its refusal and its trigger', async () => {
     const time = { now: minute + 1000 };

@@ -14,7 +14,7 @@ export interface Projector {
   readonly stop: () => Promise<void>;
 }
 
-export interface ProjectorParts {
+export interface ProjectorParts extends Pick<PassParts, 'factPayloadsOf'> {
   readonly database: HostDatabase;
   readonly settings: ProjectorSettings;
   readonly reports: HostReports;
@@ -104,6 +104,7 @@ function round(parts: ProjectorParts, schedule: Schedule, passParts: PassParts):
             }
           }),
         ),
+        Effect.catchTag('unavailable', () => Effect.void),
         Effect.catchCause((cause: Cause.Cause<unknown>) =>
           parts.reports.trouble('A pass of the views of a playbook failed; the next sweep tries again', cause),
         ),
@@ -112,8 +113,9 @@ function round(parts: ProjectorParts, schedule: Schedule, passParts: PassParts):
   );
 }
 
-function passPartsOf({ database, settings, reports }: ProjectorParts, schedule: Schedule): PassParts {
+function passPartsOf({ database, settings, reports, factPayloadsOf }: ProjectorParts, schedule: Schedule): PassParts {
   return {
+    factPayloadsOf,
     database,
     settings,
     definitions: schedule.definitions.of,

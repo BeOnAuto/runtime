@@ -1,6 +1,9 @@
+import type { Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import type { DatabaseFailed } from '../database/host-database.ts';
+import type { FactPayloads } from '../follower/followed-events.ts';
+import { playbookOfKey } from '../follower/record-steps.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { comparePoints, earliestOf, type Point } from '../pages/history-points.ts';
 import { readPage, typesToRead, type ReadPage } from '../pages/page-events.ts';
@@ -18,6 +21,7 @@ export interface FolderParts extends DefinitionsKept {
   readonly firstSeen: (record: string) => boolean;
   readonly trouble: (what: string) => Effect.Effect<void>;
   readonly definitionTypes: readonly string[];
+  readonly factPayloadsOf: FactPayloads;
 }
 
 export interface LiveRead {
@@ -28,7 +32,7 @@ export interface LiveRead {
 export interface FolderPass {
   readonly live: () => LiveRead | undefined;
   readonly foldShared: (page: ReadPage) => Effect.Effect<void, DatabaseFailed>;
-  readonly rebuild: (pages: number) => Effect.Effect<number, DatabaseFailed>;
+  readonly rebuild: (pages: number) => Effect.Effect<number, DatabaseFailed | Unavailable>;
   readonly again: () => boolean;
   readonly canBuild: () => boolean;
 }
@@ -51,16 +55,34 @@ interface Passing<Row extends PassedRow, Change extends PassedChange<Row>> {
 }
 
 function noted(parts: FolderParts, playbook: string, page: ReadPage): Effect.Effect<void> {
-  return Effect.forEach(
-    page.passedOver.filter(({ record }) => parts.firstSeen(record)),
-    ({ record, reason }) => parts.note({ kind: 'record_passed_over', playbook, record, reason }),
-    { discard: true },
+  return Effect.andThen(
+    Effect.forEach(
+      page.passedOver.filter(({ record }) => parts.firstSeen(record)),
+      ({ record, reason }) => parts.note({ kind: 'record_passed_over', playbook, record, reason }),
+      { discard: true },
+    ),
+    Effect.forEach(
+      page.contentMissing.filter(({ record }) => parts.firstSeen(record)),
+      ({ record, type }) =>
+        parts.note({
+          kind: 'record_content_missing',
+          ...playbookOfKey(playbook),
+          recordId: record,
+          type,
+          passedBy: 'views',
+        }),
+      { discard: true },
+    ),
   );
 }
 
-export function readFor(parts: FolderParts, playbook: string, { after, types }: LiveRead): Effect.Effect<ReadPage> {
+export function readFor(
+  parts: FolderParts,
+  playbook: string,
+  { after, types }: LiveRead,
+): Effect.Effect<ReadPage, Unavailable> {
   const read = { playbookKey: playbook, after, types: typesToRead(types), definitionTypes: parts.definitionTypes };
-  return Effect.promise(() => readPage(parts.database.store, read)).pipe(
+  return readPage(parts.database.store, parts.factPayloadsOf(playbookOfKey(playbook)), read).pipe(
     Effect.tap((page) => noted(parts, playbook, page)),
   );
 }
@@ -155,7 +177,7 @@ function rebuildStep<Row extends PassedRow, Change extends PassedChange<Row>>(
   passing: Passing<Row, Change>,
   pass: Pass<Row>,
   row: Row,
-): Effect.Effect<Step<Row>, DatabaseFailed> {
+): Effect.Effect<Step<Row>, DatabaseFailed | Unavailable> {
   const { folder, parts, playbook } = passing;
   return Effect.gen(function* () {
     const page = yield* readFor(parts, playbook, { after: row.checkpoint, types: folder.typesOf(row) });
@@ -173,9 +195,9 @@ function rebuildStep<Row extends PassedRow, Change extends PassedChange<Row>>(
 
 function stepped<Row>(
   start: Pass<Row>,
-  step: (pass: Pass<Row>) => Effect.Effect<Step<Row>, DatabaseFailed>,
-): Effect.Effect<Step<Row>, DatabaseFailed> {
-  const going = (reached: Step<Row>): Effect.Effect<Step<Row>, DatabaseFailed> =>
+  step: (pass: Pass<Row>) => Effect.Effect<Step<Row>, DatabaseFailed | Unavailable>,
+): Effect.Effect<Step<Row>, DatabaseFailed | Unavailable> {
+  const going = (reached: Step<Row>): Effect.Effect<Step<Row>, DatabaseFailed | Unavailable> =>
     reached.done ? Effect.succeed(reached) : Effect.flatMap(step(reached.pass), going);
   return going({ pass: start, done: false, again: false });
 }
@@ -184,7 +206,7 @@ function rebuilt<Row extends PassedRow, Change extends PassedChange<Row>>(
   passing: Passing<Row, Change>,
   start: Pass<Row>,
   again: boolean,
-): Effect.Effect<Step<Row>, DatabaseFailed> {
+): Effect.Effect<Step<Row>, DatabaseFailed | Unavailable> {
   const { folder } = passing;
   const rebuilding = start.rows.filter((row) => row.phase === 'rebuilding' && isAwake(passing, row));
   return Effect.reduce(
