@@ -245,7 +245,7 @@ async function quartersPassed(ticking: Readonly<Ticking>, from: number, to: numb
 }
 
 function heldBesideAHeldEventStart(settingsOf: SettingsOf) {
-  it('is held beside the start of its event trigger, which the same kind keeps trying past the sweeps that drop a start, and both start once the workflow can be read', async () => {
+  it('is held beside the start of its event trigger, which the same kind keeps trying past the sweeps that drop a start, and both start within a minute, the longest a held start waits between tries, once the workflow can be read', async () => {
     const unread = { now: true };
     const ticking = await everyFiveMinutes(settingsOf, unread, [
       everyTrigger(5 * aMinute),
@@ -257,6 +257,7 @@ function heldBesideAHeldEventStart(settingsOf: SettingsOf) {
     const held = await scheduleReaching(ticking, 5, (row) => row.held_due !== null);
     unread.now = false;
     await scheduleReaching(ticking, 6, (row) => row.held_due === null);
+    ticking.clock.moveTo(minutesIn(7));
     const starts = await until(
       () => Promise.resolve(ticking.reacting.reactions.starts()),
       (found) => found.length === 2,
