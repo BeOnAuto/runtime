@@ -1,7 +1,8 @@
 import { noStrippedForms, type Capability, type PlaybookOperation } from '@on.auto/definitions';
 import { onTheStandingClock } from '@on.auto/definitions/testing';
 import type { Outcome } from '@on.auto/operations';
-import { Effect, Schema } from 'effect';
+import { PayloadsOutside } from '@on.auto/operations/payloads';
+import { Effect, Layer, Schema } from 'effect';
 
 import { listInteractions } from '../requests/list-interactions.ts';
 import type { DueRequestItem, RequestsDue } from '../schedule/due-requests.ts';
@@ -50,6 +51,10 @@ export function performedAll(items: readonly DueRequestItem[], now: number): Pro
 
 export function performedEach(times: readonly number[], perform: (now: number) => Promise<number>): Promise<void> {
   return Effect.runPromise(Effect.forEach(times, (now) => Effect.promise(() => perform(now)), { discard: true }));
+}
+
+export function payloadOffloadingOf(on: boolean): Layer.Layer<never> {
+  return Layer.succeed(PayloadsOutside, on);
 }
 
 export function conversationsDeclared(declared: ConversationTools | undefined): ConversationsOf {

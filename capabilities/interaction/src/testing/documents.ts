@@ -1,12 +1,18 @@
-const answerSchema = [
-  'output:',
-  '  schema:',
-  '    type: object',
-  '    required: [choice]',
-  '    properties:',
-  '      choice: { type: string, enum: [approve, reject] }',
-  '      note: { type: string, maxLength: 2000 }',
-];
+function answerSchemaOf(mostNoteLength: number): readonly string[] {
+  return [
+    'output:',
+    '  schema:',
+    '    type: object',
+    '    required: [choice]',
+    '    properties:',
+    '      choice: { type: string, enum: [approve, reject] }',
+    `      note: { type: string, maxLength: ${mostNoteLength} }`,
+  ];
+}
+
+const answerSchema = answerSchemaOf(2000);
+
+export const longNoteAnswerSchema: readonly string[] = answerSchemaOf(20_000);
 
 export const datedAnswerSchema: readonly string[] = [...answerSchema, '      due: { type: string, format: date }'];
 
@@ -121,9 +127,14 @@ const teamInput: readonly string[] = [
 export interface ThreadOptions {
   readonly rule?: readonly string[];
   readonly replies?: readonly string[];
+  readonly answer?: readonly string[];
 }
 
-export function threadDocument({ rule = replyRuleLines, replies = threadReplies }: ThreadOptions = {}): string {
+export function threadDocument({
+  rule = replyRuleLines,
+  replies = threadReplies,
+  answer = answerSchema,
+}: ThreadOptions = {}): string {
   return [
     '---',
     "description: Ask the campaign's owner to approve a brief",
@@ -133,7 +144,7 @@ export function threadDocument({ rule = replyRuleLines, replies = threadReplies 
     ...teamDelivery,
     ...replies,
     ...teamInput,
-    ...answerSchema,
+    ...answer,
     ...rule,
     '---',
     'Please review the brief for {{ input.campaign }}.',

@@ -1,5 +1,5 @@
 import { Client, Pool } from 'pg';
-import { describe, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { executorOn } from '../content/postgresql-content.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
@@ -17,6 +17,7 @@ import {
   knownFactsBehaviour,
   ledgerBehaviour,
   ledgerStepsBehaviour,
+  ledgerLayoutFloor,
   logBehaviour,
   type LedgerEntry,
 } from '../testing/index.ts';
@@ -177,5 +178,26 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   receivedWebhooksBehaviour({
     ...onPostgreSQL,
     receivedWebhooksOn: (database) => postgresqlReceivedWebhooks({ pools: plainPoolsOn(database) }),
+  });
+});
+
+describe.skipIf(skipped)(`A ledger on PostgreSQL given a floor of its own${notice}`, () => {
+  it('carries a database forward from that floor alone, and refuses one of the layout below it as older than its floor', async () => {
+    const database = await aDatabase();
+    await carriedOn(database, { kept: ledgerLayoutFloor, floor: ledgerLayoutFloor, steps: [] });
+    const { store } = postgresqlLedgerOpened({
+      pools: plainPoolsOn(database),
+      reportLostConnection,
+      floor: ledgerLayoutFloor + 1,
+    });
+
+    const refused = await store.migrate().catch((error: unknown) => error);
+    await store.close();
+
+    expect(refused).toMatchObject({
+      _tag: 'ledger_layout_refused',
+      found: ledgerLayoutFloor,
+      floor: ledgerLayoutFloor + 1,
+    });
   });
 });

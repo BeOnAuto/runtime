@@ -45,43 +45,27 @@ async function readsOf(failing: boolean, read: (twice: CountedStore['readTwice']
   return store.reads();
 }
 
+const shared = (twice: CountedStore['readTwice']) =>
+  twice.pipe(Effect.provideService(PayloadsShared, sharedPayloadsWithin(1024)));
+
 describe('the reader of the payloads of the playbook of a call, given the payloads its process shares', () => {
-  it('keeps what it read in the shared cache only while payloads are kept outside, and reads the store each time otherwise', async () => {
+  it('keeps what it read in the shared cache whatever the switch, which decides only whether new payloads are kept outside, and reads the store each time where its process shares none', async () => {
     const reads = [
-      await readsOf(false, (twice) =>
-        twice.pipe(
-          Effect.provideService(PayloadsShared, sharedPayloadsWithin(1024)),
-          Effect.provideService(PayloadsOutside, false),
-        ),
-      ),
+      await readsOf(false, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, false))),
+      await readsOf(false, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, true))),
       await readsOf(false, (twice) => twice.pipe(Effect.provideService(PayloadsOutside, true))),
-      await readsOf(false, (twice) =>
-        twice.pipe(
-          Effect.provideService(PayloadsShared, sharedPayloadsWithin(1024)),
-          Effect.provideService(PayloadsOutside, true),
-        ),
-      ),
     ];
 
-    expect(reads).toEqual([2, 2, 1]);
+    expect(reads).toEqual([1, 1, 2]);
   });
 
-  it('holds the store back through the shared gate once it failed, only while payloads are kept outside', async () => {
+  it('holds the store back through the shared gate once it failed, whatever the switch, and asks it each time where its process shares none', async () => {
     const reads = [
-      await readsOf(true, (twice) =>
-        twice.pipe(
-          Effect.provideService(PayloadsShared, sharedPayloadsWithin(1024)),
-          Effect.provideService(PayloadsOutside, false),
-        ),
-      ),
-      await readsOf(true, (twice) =>
-        twice.pipe(
-          Effect.provideService(PayloadsShared, sharedPayloadsWithin(1024)),
-          Effect.provideService(PayloadsOutside, true),
-        ),
-      ),
+      await readsOf(true, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, false))),
+      await readsOf(true, (twice) => shared(twice).pipe(Effect.provideService(PayloadsOutside, true))),
+      await readsOf(true, (twice) => twice.pipe(Effect.provideService(PayloadsOutside, false))),
     ];
 
-    expect(reads).toEqual([2, 1]);
+    expect(reads).toEqual([1, 1, 2]);
   });
 });

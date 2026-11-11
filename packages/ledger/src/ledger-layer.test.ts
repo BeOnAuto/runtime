@@ -5,7 +5,8 @@ import { Ledger } from '@on.auto/operations';
 import { Cause, Effect } from 'effect';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { ledgerLayer } from './sqlite3.ts';
+import { ledgerLayoutFloor } from './layout/ledger-layout.ts';
+import { aSQLiteFileInLayout, ledgerLayer } from './sqlite3.ts';
 import { openLedgerWith } from './testing/open-ledger.ts';
 import { tally } from './testing/tally.ts';
 import { temporaryDatabase, type TemporaryDatabase } from './testing/temporary-database.ts';
@@ -76,6 +77,23 @@ describe('a ledger on a database file', () => {
 
     expect({ dies: Cause.hasDies(cause), fails: Cause.hasFails(cause) }).toEqual({ dies: true, fails: false });
     expect(Cause.pretty(cause)).toContain('EEXIST: file already exists, mkdir');
+  });
+});
+
+describe('a ledger on a database file given a floor of its own', () => {
+  it('carries a database forward from that floor alone, and refuses one of the layout below it as older than its floor', async () => {
+    const fileName = aDatabaseFile();
+    await aSQLiteFileInLayout(fileName, ledgerLayoutFloor);
+
+    const refused = await openLedgerWith(ledgerLayer({ fileName, floor: ledgerLayoutFloor + 1 })).catch(
+      (error: unknown) => error,
+    );
+
+    expect(refused).toMatchObject({
+      _tag: 'ledger_layout_refused',
+      found: ledgerLayoutFloor,
+      floor: ledgerLayoutFloor + 1,
+    });
   });
 });
 

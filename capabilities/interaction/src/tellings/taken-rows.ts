@@ -2,7 +2,7 @@ import type { RecordedRunFact } from '@on.auto/definitions';
 import type { TellingForm } from '@on.auto/tool-servers';
 import { Function, Option, Schema } from 'effect';
 
-import { ReplyRuleSchema } from '../replies/reply-rule.ts';
+import { ReplyRuleSchema, type ReplyRule } from '../replies/reply-rule.ts';
 import { takenWords, wordsTakenOf } from '../replies/telling-words.ts';
 import { marksATakenReply, tellsALine, type StartedTelling } from './telling-calls.ts';
 import { TellingRouteSchema, type TellingRoute } from './telling-routes.ts';
@@ -29,6 +29,8 @@ const ruleOfRow = Schema.decodeUnknownOption(Schema.fromJsonString(ReplyRuleSche
 
 const answerOf = Schema.decodeUnknownOption(Schema.Struct({ answer: Schema.Record(Schema.String, Schema.Unknown) }));
 
+const answerValueOf = Schema.decodeUnknownOption(Schema.Record(Schema.String, Schema.Unknown));
+
 interface Kept {
   readonly tell: string | null;
   readonly reply: string | null;
@@ -53,9 +55,21 @@ export interface TakenColumns {
   readonly telling_due_at: number | null;
 }
 
+function ruleKept(rule: string | null): ReplyRule {
+  return Option.getOrElse(ruleOfRow(rule), Function.constant({}));
+}
+
+export function ruleTakesWords(rule: string | null): boolean {
+  return Object.values(ruleKept(rule)).some(({ from }) => from === 'word');
+}
+
+export function wordsOfTheAnswer(rule: string | null, answer: unknown): readonly string[] {
+  return wordsTakenOf(ruleKept(rule), Option.getOrElse(answerValueOf(answer), Function.constant({})));
+}
+
 export function wordsAnsweredOf(rule: string | null, data: RecordedRunFact<'request_answered'>['data']) {
   const { answer } = Option.getOrElse(answerOf(data), Function.constant({ answer: {} }));
-  return wordsTakenOf(Option.getOrElse(ruleOfRow(rule), Function.constant({})), answer);
+  return wordsOfTheAnswer(rule, answer);
 }
 
 export function takenColumnsOf(
@@ -67,6 +81,10 @@ export function takenColumnsOf(
   const taken: Taken = { fact: id, reply, words: wordsAnsweredOf(kept.reply, data) };
   const tells = lastTakenFormOf(tellingKept(kept)) !== undefined;
   return { taken: JSON.stringify(taken), telling_due_at: tells ? Date.parse(context.at) : null };
+}
+
+export function tellsTheTakenInALine(kept: Kept): boolean {
+  return lastTakenFormOf(tellingKept(kept)) === 'line';
 }
 
 export function toldAllOfTheTaken(kept: Kept, { about, form }: StartedTelling): boolean {

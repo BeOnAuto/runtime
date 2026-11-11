@@ -5,7 +5,7 @@ import { PlaybookContext } from '../caller/playbook-context.ts';
 import type { Unavailable } from '../outcome/unavailable.ts';
 import { payloadKept } from '../payloads/payload-keeping.ts';
 import type { PayloadToKeep } from '../payloads/payload-texts.ts';
-import { payloadsSharedWhileOutside } from '../payloads/shared-payloads.ts';
+import { PayloadsShared } from '../payloads/shared-payloads.ts';
 import type { StreamWriter } from './stream-ports.ts';
 
 export interface PlaybookContentWriter {
@@ -22,7 +22,7 @@ export function playbookPayloadKept(
   return Effect.gen(function* () {
     const { org, playbook } = yield* PlaybookContext;
     const { keepContent } = yield* PlaybookWriter;
-    const shared = yield* payloadsSharedWhileOutside;
+    const shared = yield* PayloadsShared;
     return yield* payloadKept({ put: (_owner, content) => keepContent(content) }, { org, playbook }, toKeep, shared);
   });
 }

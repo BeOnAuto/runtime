@@ -1,5 +1,5 @@
 import { runCorrelationIn } from '@on.auto/definitions';
-import { playbookRowsOf, type PlaybookProjectedRow } from '@on.auto/operations';
+import { playbookRowsOf, type PlaybookProjectedRow, type Unavailable } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { openRequestsName } from '../requests/open-requests.ts';
@@ -19,7 +19,7 @@ import { settled, settledAnswered, settledDelivered } from './request-ledger.ts'
 export interface DueRequestItem {
   readonly key: string;
   readonly callsOut: boolean;
-  readonly perform: (now: number) => Effect.Effect<void>;
+  readonly perform: (now: number) => Effect.Effect<void, Unavailable>;
 }
 
 type DueAction =

@@ -24,6 +24,7 @@ const lostInput = {
 const inputUnavailable = {
   status: 'rejected',
   reason: 'unavailable',
+  kind: 'content_unavailable',
   detail:
     "The run's input, which its playbook keeps outside the run's record, could not be read just now, so its next attempt is not made; ask again in a moment",
 };

@@ -3,7 +3,7 @@ import { Context, Effect } from 'effect';
 
 import { PlaybookContext } from '../caller/playbook-context.ts';
 import { payloadReaderOf, type PayloadReader } from '../payloads/payload-reader.ts';
-import { payloadsSharedWhileOutside } from '../payloads/shared-payloads.ts';
+import { PayloadsShared } from '../payloads/shared-payloads.ts';
 import type { BoundProjectionReader } from '../projections/keyed-projection.ts';
 import type {
   PlaybookAppendedFactsReader,
@@ -36,7 +36,7 @@ export const playbookPayloadReader: Effect.Effect<PayloadReader, never, Playbook
     return payloadReaderOf({
       owner: { org, playbook },
       content: { get: (_owner, sha256) => readContent(sha256), getHead: (_owner, sha256) => readContentHead(sha256) },
-      ...(yield* payloadsSharedWhileOutside),
+      ...(yield* PayloadsShared),
     });
   },
 );

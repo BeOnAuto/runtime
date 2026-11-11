@@ -30,7 +30,7 @@ async function heldAfterAPut(outside: boolean): Promise<string | undefined> {
 }
 
 describe('the writer of the payloads of the playbook of a call, given the payloads its process shares', () => {
-  it('holds a payload it kept in the set its process shares only while payloads are kept outside', async () => {
-    expect([await heldAfterAPut(false), await heldAfterAPut(true)]).toEqual([undefined, text]);
+  it('holds a payload it kept in the set its process shares whatever the switch, which only its callers read', async () => {
+    expect([await heldAfterAPut(false), await heldAfterAPut(true)]).toEqual([text, text]);
   });
 });

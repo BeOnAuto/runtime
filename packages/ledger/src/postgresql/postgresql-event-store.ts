@@ -25,6 +25,7 @@ export type StoreKept = Pick<
   | 'holders'
   | 'layoutSteps'
   | 'factSchemas'
+  | 'floor'
 >;
 
 const eventsInOneBoundedAppend = 64;

@@ -18,6 +18,7 @@ export type NextAttempt =
 const inputUnavailable = new Unavailable({
   detail:
     "The run's input, which its playbook keeps outside the run's record, could not be read just now, so its next attempt is not made; ask again in a moment",
+  kind: 'content_unavailable',
 });
 
 export const inputToRunOf = Effect.fnUntraced(function* (run: Pick<RecordedRunState, 'input'>) {

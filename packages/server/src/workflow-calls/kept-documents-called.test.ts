@@ -22,8 +22,12 @@ const asking = workflowSource(
 
 type TemporaryLedger = ReturnType<typeof aLedger>;
 
-async function keptByAnotherServer(ledger: TemporaryLedger): Promise<void> {
-  const keeping = await servingReasoning([], {}, undefined, { ledger, keptOutside: true });
+const switchedOn = { keptOutside: true } as const;
+
+type Switched = { readonly keptOutside?: true };
+
+async function savedByAnotherServer(ledger: TemporaryLedger, switched: Switched = switchedOn): Promise<void> {
+  const keeping = await servingReasoning([], {}, undefined, { ledger, ...switched });
   await keeping.call('POST', '/v1/orgs/acme/playbooks', { body: { playbook: 'alpha', name: 'Alpha' } });
   await keeping.call('POST', `${alpha}/definitions/reasoning`, {
     body: { name: 'summary', source: summary, diagram: 'none' },
@@ -36,11 +40,9 @@ function replying(replies: number) {
   return Array.from({ length: replies }, () => answers(textResult('A short day.')));
 }
 
-const switchedOn = { keptOutside: true } as const;
-
-async function keepingTheSummary(replies: number, switched: { readonly keptOutside?: true } = switchedOn) {
+async function keepingTheSummary(replies: number, switched: Switched = switchedOn, saved: Switched = switchedOn) {
   const ledger = aLedger();
-  await keptByAnotherServer(ledger);
+  await savedByAnotherServer(ledger, saved);
   const content = contentReads();
   const clock = nineOClock();
   const server = await servingReasoning(replying(replies), {}, undefined, {
@@ -108,10 +110,19 @@ describe('a function whose document its playbook keeps outside its facts, run ag
 });
 
 describe('a server whose payloads are not kept outside, over a ledger where the document of a function was', () => {
-  it('reads that document from the store at each run, so its process keeps nothing while the switch is off', async () => {
+  it('reads that document from the store once and then from what its process keeps, as with the switch on, since a text is the same for as long as its digest names it', async () => {
     const { server, content } = await keepingTheSummary(2, {});
 
     expect(await twoRunsOfTheSummary(server)).toMatchObject([{ status: 'succeeded' }, { status: 'succeeded' }]);
-    expect(content.reads()).toBe(2);
+    expect(content.reads()).toBe(1);
+  }, 60_000);
+});
+
+describe('a server whose payloads are not kept outside, over a ledger whose documents a server with it off saved', () => {
+  it('reads nothing from the store as it runs a long document twice, the document kept in its fact', async () => {
+    const { server, content } = await keepingTheSummary(2, {}, {});
+
+    expect(await twoRunsOfTheSummary(server)).toMatchObject([{ status: 'succeeded' }, { status: 'succeeded' }]);
+    expect(content.reads()).toBe(0);
   }, 60_000);
 });

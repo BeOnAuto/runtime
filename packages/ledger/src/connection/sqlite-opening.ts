@@ -47,6 +47,7 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
     holders,
     layoutSteps,
     factSchemas,
+    floor,
     mostBytesFilledAtOnce,
     appends,
     content,
@@ -58,6 +59,7 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
     holders,
     layoutSteps,
     factSchemas,
+    floor,
     mostBytesFilledAtOnce,
   };
   return Layer.unwrap(

@@ -12,6 +12,7 @@ export {
   approvalDocument,
   chatDelivery,
   datedAnswerSchema,
+  longNoteAnswerSchema,
   notificationDocument,
   replyRuleLines,
   threadDocument,

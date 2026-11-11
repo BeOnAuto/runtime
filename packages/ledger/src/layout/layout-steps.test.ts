@@ -69,6 +69,14 @@ describe('the steps of a layout, as their statements run and as they are put in 
     expect(layoutStepsInSequence([beyond, ...steps.toReversed()])).toEqual(steps);
   });
 
+  it('are carried forward from the floor a store is given in place of the floor of the ledger', () => {
+    expect(layoutCarryingBy({ floor: ledgerLayoutFloor + 3 })).toEqual({
+      kept: ledgerLayout,
+      floor: ledgerLayoutFloor + 3,
+      steps: [],
+    });
+  });
+
   it('are carried beside a reader of the facts the server reads, when it is given their schemas', () => {
     expect(layoutCarryingBy({ layoutSteps: [], factSchemas: [CountedSchema, NotedSchema] })).toMatchObject({
       kept: ledgerLayout,

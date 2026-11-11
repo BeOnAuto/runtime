@@ -24,4 +24,5 @@ export interface PostgreSQLOptions extends AppendListeners {
   readonly holders?: ContentHolders;
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];
+  readonly floor?: number;
 }

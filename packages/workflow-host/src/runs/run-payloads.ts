@@ -140,7 +140,7 @@ export interface HostPayloads {
 
 export function hostPayloadsOf({ content, context = Context.empty(), note }: ComposedPayloads): HostPayloads {
   const keepsPayloadsOutside = Context.get(context, PayloadsOutside);
-  const shared = keepsPayloadsOutside ? Context.get(context, PayloadsShared) : noSharedPayloads;
+  const shared = Context.get(context, PayloadsShared);
   return {
     runs: hostRunPayloadsOf({ content, keepsPayloadsOutside, shared, note }),
     factsOf: factPayloadsIn(content, shared),

@@ -24,10 +24,15 @@ export interface LayoutCarrying {
 export interface CarriedTables {
   readonly layoutSteps?: readonly LayoutStep[] | undefined;
   readonly factSchemas?: readonly FactSchemaRead[] | undefined;
+  readonly floor?: number | undefined;
 }
 
-export function layoutCarryingBy({ layoutSteps = [], factSchemas }: CarriedTables = {}): LayoutCarrying {
-  const carrying = { kept: ledgerLayout, floor: ledgerLayoutFloor, steps: layoutSteps };
+export function layoutCarryingBy({
+  layoutSteps = [],
+  factSchemas,
+  floor = ledgerLayoutFloor,
+}: CarriedTables = {}): LayoutCarrying {
+  const carrying = { kept: ledgerLayout, floor, steps: layoutSteps };
   return factSchemas === undefined ? carrying : { ...carrying, facts: factsReadBy(factSchemas) };
 }
 
