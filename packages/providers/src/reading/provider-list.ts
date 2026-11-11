@@ -2,6 +2,7 @@ import type { Issue } from '@on.auto/operations';
 import type { ShippedDocument } from '@on.auto/tool-servers';
 import { Option, Order, Result } from 'effect';
 
+import type { Conversations } from '../entry/conversation-parts.ts';
 import type { ProviderEntry } from '../entry/provider-entry.ts';
 import { isAddress } from '../entry/templates.ts';
 
@@ -42,4 +43,8 @@ export function providerNamed({ providers }: ProviderList, name: string): Result
   return found === undefined
     ? Result.fail([{ pointer: '/provider', detail: `There is no provider named ${name} here` }])
     : Result.succeed(found);
+}
+
+export function conversationsOf({ providers }: ProviderList, provider: string | null): Conversations | undefined {
+  return providers.find(({ entry }) => entry.name === provider)?.entry.conversations;
 }

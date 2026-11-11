@@ -10,6 +10,23 @@ failure_codes:
   key_refused: [invalid_auth, not_authed, token_revoked, token_expired, account_inactive]
   scope_lacking: [missing_scope]
   rate_limited: [ratelimited, rate_limited]
+conversations:
+  tell: all
+  reply:
+    tool: chat_postMessage
+    with:
+      body:
+        channel: '{{ sent.conversation }}'
+        thread_ts: '{{ reply.to | default: reply.id | default: sent.id }}'
+        text: '{{ message }}'
+    sent: /ts
+  react:
+    tool: reactions_add
+    with:
+      body:
+        channel: '{{ sent.conversation }}'
+        timestamp: '{{ reply.id }}'
+        name: white_check_mark
 credentials:
   - kind: secret
     in: security

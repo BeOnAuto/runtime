@@ -611,6 +611,55 @@
                 "additionalProperties": false,
                 "description": "For openapi, an API that answers a failure in a JSON answer of a successful status: the pointers to whether the call succeeded and to the code of its failure, and the codes that mean a refused credential, a lacking scope or a limited rate"
               },
+              "conversations": {
+                "type": "object",
+                "properties": {
+                  "tell": {
+                    "type": "string",
+                    "enum": ["all", "refusals"],
+                    "description": "The provider's practice: all where one more message is expected, as in a chat; refusals where each message costs, as in mail or a text message"
+                  },
+                  "reply": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "description": "The tool that posts a message in the conversation of a person's reply, named as the server lists it"
+                      },
+                      "with": {
+                        "type": "object",
+                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over to, sent.conversation, sent.id, message, reply.id and reply.to: message is the line, and reply.to the message the person's reply answers"
+                      },
+                      "sent": {
+                        "type": "string",
+                        "description": "A JSON Pointer into what the tool answered, to the id of the message it posted"
+                      }
+                    },
+                    "required": ["tool", "with", "sent"],
+                    "additionalProperties": false,
+                    "description": "How a line is posted in reply to a person"
+                  },
+                  "react": {
+                    "type": "object",
+                    "properties": {
+                      "tool": {
+                        "type": "string",
+                        "description": "The tool that marks a person's message with a reaction, named as the server lists it"
+                      },
+                      "with": {
+                        "type": "object",
+                        "description": "Its arguments, written as the arguments of a function's deliver are, each a Liquid template over to, sent.conversation, sent.id, message, reply.id and reply.to"
+                      }
+                    },
+                    "required": ["tool", "with"],
+                    "additionalProperties": false,
+                    "description": "How a person's message is marked"
+                  }
+                },
+                "required": ["tell", "reply"],
+                "additionalProperties": false,
+                "description": "How the provider's conversations are replied to and marked, for a function that asks a person through it and reads their replies"
+              },
               "placeholders": {
                 "type": "object",
                 "additionalProperties": {

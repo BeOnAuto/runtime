@@ -5,6 +5,16 @@ website: https://learn.microsoft.com/en-us/graph/auth-v2-user
 type: openapi
 document: documents/microsoft-teams.openapi.json
 request_id: request-id
+conversations:
+  tell: all
+  reply:
+    tool: chats.CreateMessages
+    with:
+      chat-id: '{{ sent.conversation }}'
+      body:
+        body:
+          content: '{{ message }}'
+    sent: /id
 credentials:
   - kind: authorization
     issuer: https://login.microsoftonline.com/organizations/v2.0

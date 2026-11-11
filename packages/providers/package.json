@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@on.auto/config": "workspace:*",
+    "@on.auto/definitions": "workspace:*",
     "@on.auto/operations": "workspace:*",
     "@on.auto/phrasing": "workspace:*",
     "@on.auto/shipped-files": "workspace:*",

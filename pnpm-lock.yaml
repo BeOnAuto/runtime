@@ -1075,6 +1075,9 @@ importers:
       '@on.auto/config':
         specifier: workspace:*
         version: link:../config
+      '@on.auto/definitions':
+        specifier: workspace:*
+        version: link:../definitions
       '@on.auto/operations':
         specifier: workspace:*
         version: link:../operations

@@ -1,0 +1,108 @@
+import type { RenderClock } from '@on.auto/definitions/template';
+import { pointerIssues, templatesIssues, type TemplateSet } from '@on.auto/definitions/tool-blocks';
+import { isToolName, toolNameShape } from '@on.auto/tool-servers/policy';
+import { JsonPointer, Schema } from 'effect';
+
+const ArgumentsSchema = Schema.Record(Schema.String, Schema.Json);
+
+const variablesRead = 'to, sent.conversation, sent.id, message, reply.id and reply.to';
+
+const writtenAsDeliverIs = `written as the arguments of a function's deliver are, each a Liquid template over ${variablesRead}`;
+
+const ReplySchema = Schema.Struct({
+  tool: Schema.String.annotate({
+    description: "The tool that posts a message in the conversation of a person's reply, named as the server lists it",
+  }),
+  with: ArgumentsSchema.annotate({
+    description: `Its arguments, ${writtenAsDeliverIs}: message is the line, and reply.to the message the person's reply answers`,
+  }),
+  sent: Schema.String.annotate({
+    description: 'A JSON Pointer into what the tool answered, to the id of the message it posted',
+  }),
+});
+
+const ReactSchema = Schema.Struct({
+  tool: Schema.String.annotate({
+    description: "The tool that marks a person's message with a reaction, named as the server lists it",
+  }),
+  with: ArgumentsSchema.annotate({ description: `Its arguments, ${writtenAsDeliverIs}` }),
+});
+
+export const ConversationsSchema = Schema.Struct({
+  tell: Schema.Literals(['all', 'refusals']).annotate({
+    description:
+      "The provider's practice: all where one more message is expected, as in a chat; refusals where each message costs, as in mail or a text message",
+  }),
+  reply: ReplySchema.annotate({ description: 'How a line is posted in reply to a person' }),
+  react: Schema.optionalKey(ReactSchema.annotate({ description: "How a person's message is marked" })),
+}).annotate({
+  description:
+    "How the provider's conversations are replied to and marked, for a function that asks a person through it and reads their replies",
+});
+
+export type Conversations = typeof ConversationsSchema.Type;
+
+export const conversationTemplates: TemplateSet = {
+  names: ['to', 'sent.conversation', 'sent.id', 'message', 'reply.id', 'reply.to'],
+  what: 'a template of a conversation',
+  sample: {
+    to: 'ada',
+    sent: { conversation: 'C0123', id: '1699.1' },
+    message: 'A line',
+    reply: { id: '1699.2', to: '1699.1' },
+  },
+  structured: 'sent',
+};
+
+type PartIssue = Schema.FilterIssue;
+
+interface Placed {
+  readonly pointer: string;
+  readonly detail: string;
+}
+
+const noLines: ReadonlyMap<string, number> = new Map();
+
+const checkedOn: RenderClock = () => performance.now();
+
+function pathOf(pointer: string): readonly string[] {
+  return pointer
+    .split('/')
+    .slice(1)
+    .map((token) => JsonPointer.unescapeToken(token));
+}
+
+function issuesOf(placed: readonly Placed[]): readonly PartIssue[] {
+  return placed.map(({ pointer, detail }) => ({ path: pathOf(pointer), issue: detail }));
+}
+
+function toolIssues(pointer: string, tool: string): readonly Placed[] {
+  return isToolName(tool) ? [] : [{ pointer, detail: `Expected ${toolNameShape}` }];
+}
+
+function argumentIssues(pointer: string, written: Conversations['reply']['with']): readonly Placed[] {
+  return templatesIssues(conversationTemplates, written, {
+    lines: noLines,
+    pointer,
+    inputSchema: undefined,
+    clock: checkedOn,
+  });
+}
+
+export function conversationIssuesOf(conversations: Conversations | undefined): readonly PartIssue[] {
+  if (conversations === undefined) {
+    return [];
+  }
+  const { reply, react } = conversations;
+  return issuesOf([
+    ...toolIssues('/conversations/reply/tool', reply.tool),
+    ...argumentIssues('/conversations/reply/with', reply.with),
+    ...pointerIssues(noLines, [['/conversations/reply/sent', reply.sent]]),
+    ...(react === undefined
+      ? []
+      : [
+          ...toolIssues('/conversations/react/tool', react.tool),
+          ...argumentIssues('/conversations/react/with', react.with),
+        ]),
+  ]);
+}
