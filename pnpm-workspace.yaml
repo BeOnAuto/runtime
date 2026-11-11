@@ -24,6 +24,7 @@ allowBuilds:
   sqlite3: true
 
 patchedDependencies:
+  '@event-driven-io/dumbo@0.13.0-beta.56': patches/@event-driven-io__dumbo@0.13.0-beta.56.patch
   '@openworkflowspec/sdk@1.0.3-alpha8': patches/@openworkflowspec__sdk@1.0.3-alpha8.patch
 
 overrides:

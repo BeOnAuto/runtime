@@ -39,6 +39,8 @@
   },
   "devDependencies": {
     "@on.auto/secrets": "workspace:*",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/context-async-hooks": "2.9.0",
     "@opentelemetry/sdk-trace-base": "2.9.0",
     "@types/pg": "8.23.1",
     "@vitest/coverage-v8": "catalog:",

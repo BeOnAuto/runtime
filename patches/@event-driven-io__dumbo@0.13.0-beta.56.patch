@@ -1,0 +1,82 @@
+diff --git a/dist/sqlite3.cjs b/dist/sqlite3.cjs
+index e1800b347c974c4774580b9a14fb13f9e29cb06b..2dde5474648a2be06a13ee12b3bb98bf7b5f331e 100644
+--- a/dist/sqlite3.cjs
++++ b/dist/sqlite3.cjs
+@@ -604,6 +604,10 @@ const taskScheduler = () => {
+ 
+ //#endregion
+ //#region src/core/taskProcessing/taskProcessor.ts
++const callersAsyncContext = () => {
++	const asyncHooks = typeof process === "undefined" ? void 0 : process.getBuiltinModule?.("node:async_hooks");
++	return asyncHooks === void 0 ? (run) => run() : asyncHooks.AsyncLocalStorage.snapshot();
++};
+ const taskProcessor = (processorOptions) => {
+ 	let isProcessing = false;
+ 	let activeTasks = 0;
+@@ -647,6 +651,7 @@ const taskProcessor = (processorOptions) => {
+ 		let didAbortBeforeStart = false;
+ 		let didStart = false;
+ 		let queuedItem = null;
++		const inTheCallersContext = callersAsyncContext();
+ 		const abortScope = Abort.scope(options?.abort, (reason) => {
+ 			didAbortBeforeStart = !didStart;
+ 			if (didAbortBeforeStart && queuedItem) {
+@@ -657,7 +662,7 @@ const taskProcessor = (processorOptions) => {
+ 			reject(reason);
+ 		});
+ 		const taskWithContext = () => {
+-			return new Promise((resolveTask) => {
++			return inTheCallersContext(() => new Promise((resolveTask) => {
+ 				let didRelease = false;
+ 				const release = () => {
+ 					if (didRelease) return;
+@@ -689,7 +694,7 @@ const taskProcessor = (processorOptions) => {
+ 					release();
+ 					reject(err);
+ 				});
+-			});
++			}));
+ 		};
+ 		const expiresAtMs = deadlineForNewTask();
+ 		queuedItem = {
+diff --git a/dist/sqlite3.js b/dist/sqlite3.js
+index 9023dcef94aabf771208d70a5f12c43ef7a44452..b60f09c0244717f641eccf251e37d4881129a098 100644
+--- a/dist/sqlite3.js
++++ b/dist/sqlite3.js
+@@ -574,6 +574,10 @@ const taskScheduler = () => {
+ 
+ //#endregion
+ //#region src/core/taskProcessing/taskProcessor.ts
++const callersAsyncContext = () => {
++	const asyncHooks = typeof process === "undefined" ? void 0 : process.getBuiltinModule?.("node:async_hooks");
++	return asyncHooks === void 0 ? (run) => run() : asyncHooks.AsyncLocalStorage.snapshot();
++};
+ const taskProcessor = (processorOptions) => {
+ 	let isProcessing = false;
+ 	let activeTasks = 0;
+@@ -617,6 +621,7 @@ const taskProcessor = (processorOptions) => {
+ 		let didAbortBeforeStart = false;
+ 		let didStart = false;
+ 		let queuedItem = null;
++		const inTheCallersContext = callersAsyncContext();
+ 		const abortScope = Abort.scope(options?.abort, (reason) => {
+ 			didAbortBeforeStart = !didStart;
+ 			if (didAbortBeforeStart && queuedItem) {
+@@ -627,7 +632,7 @@ const taskProcessor = (processorOptions) => {
+ 			reject(reason);
+ 		});
+ 		const taskWithContext = () => {
+-			return new Promise((resolveTask) => {
++			return inTheCallersContext(() => new Promise((resolveTask) => {
+ 				let didRelease = false;
+ 				const release = () => {
+ 					if (didRelease) return;
+@@ -659,7 +664,7 @@ const taskProcessor = (processorOptions) => {
+ 					release();
+ 					reject(err);
+ 				});
+-			});
++			}));
+ 		};
+ 		const expiresAtMs = deadlineForNewTask();
+ 		queuedItem = {
