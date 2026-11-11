@@ -8,6 +8,8 @@ description: 'The YAML format of a workflow, in the Open Workflow Specification 
 
 A workflow coordinates a playbook's functions through steps. The API stores it as a definition of the type `workflow`. Its source document is YAML in the [Open Workflow Specification](https://github.com/open-workflow-specification/specification) DSL 1.0, within the rules and limits on this page. [Build your first workflow](../tutorials/first-workflow.md) is a guided example, and [Workflows and runs](../concepts/workflows.md) explains how a run starts, waits and ends.
 
+A workflow does none of the work itself: each step that reads, calculates, judges, asks or acts calls a function of that type. The order, the branches, the waits and what happens when a step fails are the workflow's, never a prompt's. A workflow is not a wrapper for one saved function.
+
 ## A workflow document
 
 This workflow reviews a campaign brief, then asks the brief's owner to approve the review. It calls two functions: the reasoning function `review-campaign-brief`, whose document follows it, and the interaction function `approve-campaign-brief`.

@@ -14,6 +14,8 @@ An interaction function is a definition of the type `interaction`. It takes one 
 | Asks a person through a connection | Renders a request to a party, with an expiry, and sends it through the tool of a connection named in `deliver`, such as a chat's post tool, and may read the replies to it | An approval, a choice, or a figure only someone else has, where they work |
 | Asks an agent                      | Renders the same request and holds it for an agent, `deliver: agent`, which reads it with `list_interactions` and answers it with `answer_interaction`                     | The same, answered by the person in a conversation with their agent       |
 
+Use one where a person must decide or supply something, or a service must act. It is not for reading what a tool marked reads returns, which is a lookup function's work, and no model reads the answer: judging or wording it is a reasoning function's.
+
 A run that asks a person renders the message from its input. Then it waits until the request is answered, expires or is cancelled, without using server resources. The answer is checked against the document's answer schema, and becomes the run's output. A function without an answer schema sends a **notification**, which needs no answer and goes through a connection.
 
 ## How a request reaches its party

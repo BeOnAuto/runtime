@@ -11,7 +11,7 @@ A lookup function is a definition of the type `lookup`. It obtains information t
 - through one tool that only reads, such as the replies of a thread, a contact's record or this week's figures from a reporting tool. A run makes one call of that tool and returns the part of its result that `read` points at, at once.
 - from the playbook's own runs, such as the paces a computation function computed this month. A run returns the outputs of the runs of one definition that succeeded, newest first, at once; see [Reading the playbook's own runs](#reading-the-playbook-s-own-runs).
 
-A lookup function never acts: it calls only a tool marked `reads`, or reads the playbook's runs, and asks no model. A reasoning function interprets what a lookup function fetches, and an interaction function calls a tool that may change something. A function document that asks for something else is refused when it is saved.
+A lookup function never acts: it calls only a tool marked `reads`, or reads the playbook's runs, and asks no model. A reasoning function interprets what a lookup function fetches, and an interaction function calls a tool that may change something. It makes one call that the job always makes: where a model must choose which tool to call, that is a reasoning function's `tools`. A function document that asks for something else is refused when it is saved.
 
 ## A function document
 

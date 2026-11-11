@@ -8,7 +8,7 @@ description: 'The document format of a computation function: its input and outpu
 
 A computation function is a definition of the type `computation`. Its document declares the input and output contracts, and holds a TypeScript program that computes the output from the input. A run calls the program's function with its input, and the value the function returns is the run's output.
 
-Use one for the arithmetic and data shaping a language model should not do: totals, paces, projections and transformations of rows of figures.
+Use one for the arithmetic and data shaping a language model should not do: totals, paces, projections and transformations of rows of figures. It reaches nothing outside the playbook and asks no model: reading a service is a lookup function's work, and judging or writing a reasoning function's.
 
 What a run returns depends only on its input and on the moment the run started:
 

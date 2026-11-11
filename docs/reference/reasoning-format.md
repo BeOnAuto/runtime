@@ -8,6 +8,8 @@ description: 'The document format of a reasoning function: its model, input and 
 
 A reasoning function is a definition of the type `reasoning`. Its document names a model, the input and output contracts, the settings and a prompt template. A run renders the prompt from its input, calls the model and records the model's answer. [Build your first playbook](../tutorials/first-playbook.md) walks through one with an agent.
 
+Use one where the work needs judgement or language. It is not for reading what a service holds, which is a lookup function's work; for exact arithmetic or reshaping data, a computation function's; for asking a person or having a service act, an interaction function's; or for the order of the work, its branches and its waits, which are the workflow's.
+
 ## A function document
 
 The source is Markdown: YAML front matter, then a Liquid prompt template. This example reviews a campaign brief and answers JSON: its recommendation and what the brief misses. Its page heads each run with both, and counts the recommendations of each day. Replace the model reference with a concrete id from [`list_models`](mcp.md#model-information), or with one the operator of your runtime confirms.

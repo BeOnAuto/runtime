@@ -8,6 +8,8 @@ description: The document format of a prediction function, which forecasts one q
 
 A prediction function forecasts one quantity for one series at a time from the playbook's own history, one or more periods ahead. Each prediction is a [series](output-shapes.md#series): the last periods observed, and each period ahead as a likely value with its range, from `low` to `high`. The API stores the function as a definition of the type `prediction`.
 
+Use one for a numeric question that comes back again and again and that the playbook's past figures can answer. It asks no model: a figure that its inputs settle exactly is a computation function's work, and explaining a forecast a reasoning function's.
+
 Its document says:
 
 - what it predicts, over which period of time, and how often its ranges are meant to hold the truth;
