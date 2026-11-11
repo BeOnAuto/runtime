@@ -13,7 +13,7 @@ import {
   type Refusals,
   type RejectionCodes,
 } from '../reactions/refusals.ts';
-import { dueSchedules, nextScheduleDue, scheduleMovedOn, type Schedule } from './schedule-rows.ts';
+import { dueSchedules, nextScheduleDue, scheduleHeld, scheduleMovedOn, type Schedule } from './schedule-rows.ts';
 import { dueTimesOf } from './schedule-times.ts';
 
 export interface ScheduleFiring {
@@ -33,7 +33,14 @@ interface Firing {
   readonly latest: number;
 }
 
+interface Plan {
+  readonly firing: Firing;
+  readonly heldSkipped: number | null;
+}
+
 const schedulesInOneFiring = 64;
+
+const aMinute = 60_000;
 
 const EndedRow = Schema.Struct({ ended_at: Schema.NullOr(WholeNumber) });
 
@@ -42,8 +49,12 @@ function playbookOf(playbookKey: string): { readonly org: string; readonly playb
   return { org, playbook };
 }
 
+function isoOf(at: number): string {
+  return new Date(at).toISOString();
+}
+
 function dueAtOf({ latest }: Firing): string {
-  return new Date(latest).toISOString();
+  return isoOf(latest);
 }
 
 function namedOf({ subscription }: Firing): string {
@@ -94,10 +105,22 @@ function missedSaid({ refusals }: FiringParts, firing: Firing) {
         subscription.playbookKey,
         refusalOf(
           subscription,
-          `The runs its ${namedOf(firing)} had due from ${new Date(subscription.nextDue).toISOString()} to ${dueAtOf(firing)} came while the server was down, and only the latest ran`,
+          `The runs its ${namedOf(firing)} had due from ${isoOf(subscription.nextDue)} to ${dueAtOf(firing)} came while the server was down, and only the latest ran`,
         ),
       )
     : Effect.void;
+}
+
+function heldTimeSkipped({ refusals }: FiringParts, firing: Firing, heldDue: number) {
+  const { subscription } = firing;
+  return refusals.refuse(
+    subscription.playbookKey,
+    refusalOf(
+      subscription,
+      `The run scheduled for ${isoOf(heldDue)} by its ${namedOf(firing)} was skipped: the workflow could not be read from storage before the next scheduled run, at ${isoOf(subscription.nextDue)}`,
+      { kind: 'content_unavailable' },
+    ),
+  );
 }
 
 function startOf(firing: Firing): ReactionStart {
@@ -115,8 +138,27 @@ function startOf(firing: Firing): ReactionStart {
   };
 }
 
+function held(parts: FiringParts, firing: Firing) {
+  const { subscription, latest, next } = firing;
+  const triedAgainAt = Math.min(parts.clock.now() + aMinute, ...[next].filter((due) => due !== null));
+  return Effect.andThen(scheduleHeld(parts.database, subscription, latest, triedAgainAt), missedSaid(parts, firing));
+}
+
+function refused(parts: FiringParts, firing: Firing, failure: FailureDetail) {
+  return Effect.andThen(
+    parts.refusals.refuse(
+      firing.subscription.playbookKey,
+      refusalOf(
+        firing.subscription,
+        `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} could not be started: ${failure.detail}`,
+        failure,
+      ),
+    ),
+    scheduleMovedOn(parts.database, firing.subscription, firing.next, null),
+  );
+}
+
 function ran(parts: FiringParts, firing: Firing) {
-  const { playbookKey } = firing.subscription;
   const start = startOf(firing);
   return parts.start(start).pipe(
     Effect.andThen(
@@ -126,17 +168,7 @@ function ran(parts: FiringParts, firing: Firing) {
       ),
     ),
     Effect.catch((failure: FailureDetail) =>
-      Effect.andThen(
-        parts.refusals.refuse(
-          playbookKey,
-          refusalOf(
-            firing.subscription,
-            `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} could not be started: ${failure.detail}`,
-            failure,
-          ),
-        ),
-        scheduleMovedOn(parts.database, firing.subscription, firing.next, null),
-      ),
+      failure.kind === 'content_unavailable' ? held(parts, firing) : refused(parts, firing, failure),
     ),
   );
 }
@@ -165,17 +197,45 @@ function stopped(parts: FiringParts, subscription: Schedule, detail: string) {
   );
 }
 
+function firingFrom(parts: FiringParts, subscription: Schedule, due: number): Result.Result<Firing, string> {
+  const moments = { anchor: subscription.activatedAt, due, now: parts.clock.now() };
+  return Result.map(dueTimesOf(subscription.trigger, moments, parts.clock.inZone), ({ latest, next }) => ({
+    subscription,
+    latest,
+    next,
+  }));
+}
+
+function heldPlanOf(parts: FiringParts, subscription: Schedule, heldDue: number): Result.Result<Plan, string> {
+  const atTheHeldTime = { anchor: subscription.activatedAt, due: heldDue, now: heldDue };
+  return Result.flatMap(
+    dueTimesOf(subscription.trigger, atTheHeldTime, parts.clock.inZone),
+    ({ next }): Result.Result<Plan, string> =>
+      next !== null && next <= parts.clock.now()
+        ? Result.map(firingFrom(parts, { ...subscription, heldDue: null, nextDue: next }, next), (firing) => ({
+            firing,
+            heldSkipped: heldDue,
+          }))
+        : Result.succeed({ firing: { subscription, latest: heldDue, next }, heldSkipped: null }),
+  );
+}
+
+function planOf(parts: FiringParts, subscription: Schedule): Result.Result<Plan, string> {
+  return subscription.heldDue === null
+    ? Result.map(firingFrom(parts, subscription, subscription.nextDue), (firing) => ({ firing, heldSkipped: null }))
+    : heldPlanOf(parts, subscription, subscription.heldDue);
+}
+
 function fired(parts: FiringParts, subscription: Schedule) {
-  const { trigger, activatedAt, nextDue } = subscription;
-  const moments = { anchor: activatedAt, due: nextDue, now: parts.clock.now() };
-  return Result.match(dueTimesOf(trigger, moments, parts.clock.inZone), {
+  return Result.match(planOf(parts, subscription), {
     onFailure: (detail) => stopped(parts, subscription, detail),
-    onSuccess: ({ next, latest }) => {
-      const firing: Firing = { subscription, next, latest };
-      return Effect.flatMap(stillRuns(parts.database, subscription.playbookKey, subscription.running), (runs) =>
-        runs ? skipped(parts, firing) : ran(parts, firing),
-      );
-    },
+    onSuccess: ({ firing, heldSkipped }) =>
+      Effect.andThen(
+        heldSkipped === null ? Effect.void : heldTimeSkipped(parts, firing, heldSkipped),
+        Effect.flatMap(stillRuns(parts.database, subscription.playbookKey, subscription.running), (runs) =>
+          runs ? skipped(parts, firing) : ran(parts, firing),
+        ),
+      ),
   });
 }
 

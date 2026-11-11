@@ -30,7 +30,7 @@ export function defineGetRun(capabilities: readonly Capability[], pages: Subject
     title: 'Get run',
     description: [
       'Reads one run of the playbook by its id: the definition and version that ran, who started it and when, its status,',
-      'and its output or why it did not succeed, with the record its type keeps, such as the prompt and tokens of a reasoning function.',
+      'and its output or why it did not succeed, with the record its type keeps, such as the tokens of a reasoning function or the tool a lookup function called.',
       'A run is started until it ends as succeeded, rejected or failed.',
       'Use it to tell the person how a run ended; list_playbook_events with its run_id shows each step and tool call of the run.',
       'A run whose definition has a page answers page.result.',

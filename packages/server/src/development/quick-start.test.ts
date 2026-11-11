@@ -217,11 +217,10 @@ describe('the workflow requests of the quick start, over /mcp', () => {
 });
 
 const FirstPlaybookSchema = Schema.Struct({
-  messages: Schema.Tuple([
-    Schema.Struct({ content: Schema.Struct({ text: Schema.String }) }),
-    Schema.Struct({ content: Schema.Struct({ resource: Schema.Struct({ uri: Schema.String, text: Schema.String }) }) }),
-  ]),
+  messages: Schema.Tuple([Schema.Struct({ content: Schema.Struct({ text: Schema.String }) })]),
 });
+
+const GuideSchema = Schema.Struct({ content: Schema.Array(Schema.Struct({ text: Schema.String })) });
 
 function inTheirOrder(steps: string, names: readonly string[]): boolean {
   const places = names.map((name) => steps.indexOf(name));
@@ -229,14 +228,17 @@ function inTheirOrder(steps: string, names: readonly string[]): boolean {
 }
 
 describe('the first-playbook prompt of the quick start, over /mcp', () => {
-  it('is served by the playbook, and an agent that follows its steps creates a playbook, saves a reasoning function and runs it', async () => {
+  it('is served by the playbook, and an agent that follows its steps reads the guide of the type, creates a playbook, saves a reasoning function and runs it', async () => {
     const outcome = await onPnpmDev(async (session) => {
       const {
-        messages: [asked, embedded],
+        messages: [asked],
       } = Schema.decodeUnknownSync(FirstPlaybookSchema)(await session.getPrompt('first-playbook'));
+      const { content } = Schema.decodeUnknownSync(GuideSchema)(
+        await session.callTool('get_guide', { guide: 'reasoning-function' }),
+      );
       return {
         recipe: asked.content.text,
-        guide: embedded.content.resource,
+        guide: content.map((part) => part.text).join(''),
         playbooks: structured(await session.callTool('list_playbooks', {})),
         playbook: structured(
           await session.callTool('create_playbook', {
@@ -254,8 +256,8 @@ describe('the first-playbook prompt of the quick start, over /mcp', () => {
     expect(
       inTheirOrder(outcome.recipe, ['list_playbooks', 'create_playbook', 'create_definition', 'run_definition']),
     ).toBe(true);
-    expect(outcome.guide.uri).toBe('guide://reasoning-function');
-    expect(outcome.guide.text).toContain('# Reasoning function format');
+    expect(outcome.recipe).toContain("Read a type's guide with get_guide before you write a function of that type");
+    expect(outcome.guide).toContain('# Reasoning function format');
     expect(outcome).toMatchObject({
       playbooks: { isError: false, playbooks: [] },
       playbook: { isError: false, id: playbook, status: 'active' },

@@ -150,21 +150,29 @@ describe('the prompts of the server', () => {
   });
 });
 
+const RecipePromptSchema = Schema.Struct({
+  messages: Schema.Tuple([
+    Schema.Struct({ role: Schema.String, content: Schema.Struct({ type: Schema.String, text: Schema.String }) }),
+  ]),
+});
+
 describe('the first-playbook prompt of the server', () => {
-  it('answers the recipe get_guide reads, its workflow steps among them, and embeds the reasoning-function guide', async () => {
+  it('answers the recipe get_guide reads, a line for each type the server runs and its workflow steps among them, and embeds no one format guide', async () => {
     const { prompt, read } = await onMcp(async (session) => ({
-      prompt: Schema.decodeUnknownSync(PromptSchema)(await session.getPrompt('first-playbook')),
+      prompt: Schema.decodeUnknownSync(RecipePromptSchema)(await session.getPrompt('first-playbook')),
       read: Schema.decodeUnknownSync(TextSchema)(await session.callTool('get_guide', { guide: 'first-playbook' })),
     }));
-    const [asked, embedded] = prompt.messages;
+    const [asked] = prompt.messages;
     const recipe = read.content.map(({ text }) => text).join('');
 
     expect(asked.content.text).toBe(`Create my first playbook.\n\n${recipe}`);
     expect(recipe).toContain(
-      '\n7. Read the workflow guide with get_guide and write the workflow that owns the job the person wants done again, whose step is the function:',
+      '\n   - it interprets, judges or writes: a reasoning function\n   - it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function\n',
+    );
+    expect(recipe).toContain(
+      '\n8. Read the workflow guide with get_guide and write the workflow that owns the job, whose steps call the functions in order',
     );
     expect(recipe).toContain('publish the material they paste with publish_event');
-    expect(embedded.content.resource.uri).toBe('guide://reasoning-function');
   });
 });
 

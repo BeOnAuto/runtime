@@ -122,8 +122,8 @@ describe('episode 9: asked to send the person a draft in the chat and take their
   it('reads what an interaction function is for, calls the tool that sends and the tool that reads, and saves one interaction function', async () => {
     const seen = await meetings.onMcp(askedToSendADraft);
 
-    expect(sentenceNaming(meetings.surfaces.start, 'Its function types')).toContain(
-      'interaction exchanges information',
+    expect(sentenceNaming(meetings.surfaces.start, 'it asks a person and takes their answer')).toContain(
+      'or has a service act: an interaction function',
     );
     expect([seen.sent.structuredContent, seen.read.structuredContent]).toMatchObject([
       { outcome: 'result', text: namingTheMessage },
@@ -187,7 +187,9 @@ describe('episode 10: asked to put the replies of a thread into the weekly summa
   it('reads what a lookup function is for and the give-tools sentence, calls the tool, reads its answer, and saves one lookup function that calls it', async () => {
     const seen = await meetings.onMcp(askedForTheRepliesOfAThread);
 
-    expect(sentenceNaming(meetings.surfaces.start, 'Its function types')).toContain('lookup obtains information');
+    expect(sentenceNaming(meetings.surfaces.start, 'it reads what a connected service holds')).toContain(
+      'or what earlier runs of the playbook produced: a lookup function',
+    );
     expect(seen.recipe).toContain('To read what a tool marked reads returns, write a lookup function instead.');
     expect(seen.called.structuredContent).toMatchObject({
       outcome: 'result',

@@ -215,7 +215,7 @@ describe('a key that may only read inside playbooks, on /mcp', () => {
     ]);
     expect(commands.filter((name) => wordsIn(outcome.instructions).has(name))).toEqual([]);
     expect(outcome.instructions).toContain(
-      "The org is the caller's own: list_playbooks shows its playbooks. Before anything else, read the guide start with get_guide",
+      "The org is the caller's own: list_playbooks shows its playbooks. This connection acts as the key acme-playbook-reader in the org acme.",
     );
     expect(outcome.listed.structuredContent).toMatchObject({ playbooks: [{ id: 'alpha' }, { id: 'beta' }] });
   });

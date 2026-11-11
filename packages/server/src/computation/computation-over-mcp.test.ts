@@ -106,15 +106,13 @@ describe('a computation function that cannot work as written, over MCP', () => {
 const listingTheComputationGuide: unknown = expect.arrayContaining(['computation-function']);
 
 describe('the definition tools an agent sees', () => {
-  it('name a computation function in create_definition and its guide in get_guide, which says the language it is written in', async () => {
+  it('name a computation function in the type of create_definition and its guide in get_guide, which says the language it is written in', async () => {
     const tools = listedTools(await onAlpha((session) => session.listTools()));
     const createDefinition = tools.find(({ name }) => name === 'create_definition');
     const getGuide = tools.find(({ name }) => name === 'get_guide');
     const guide = await onAlpha((session) => session.callTool('get_guide', { guide: 'computation-function' }));
 
-    expect(createDefinition?.description).toContain(
-      '`type` is reasoning, lookup, interaction, prediction, computation,',
-    );
+    expect(JSON.stringify(createDefinition?.inputSchema)).toContain('computation calculates or transforms exactly;');
     expect(getGuide?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingTheComputationGuide } },
     });

@@ -13,7 +13,7 @@ import { payloadDigestsNamed } from '@on.auto/operations/payloads';
 import type { StatementExecutor } from '../event-store.ts';
 import { inTurn, type InlineProjection } from '../projections/inline-projection.ts';
 import type { HeldTypes, ProjectionDialect, StreamsInOrder } from '../projections/projection-dialect.ts';
-import { listingAfter, messagesInABatch, withinBytes } from '../projections/projection-fill.ts';
+import { batchesFilledFrom, listingAfter, messagesInABatch, withinBytes } from '../projections/projection-fill.ts';
 import { orderedMessagesIn, sizedPointsIn } from '../projections/projection-statements.ts';
 import {
   digestsLocked,
@@ -182,12 +182,12 @@ interface HeldBatch {
 
 const firstHeldBatch: HeldBatch = { listing: 1 };
 
-async function foldedInBatches(
+async function batchFolded(
   keeping: ReferencesKeeping,
   execute: StatementExecutor,
   { streams, fold }: BatchFolding,
   { after, listing }: HeldBatch,
-): Promise<void> {
+): Promise<HeldBatch | undefined> {
   const read = { after, count: listing, streams, types: heldTypesOf(keeping.holders) };
   const sized = await sizedPointsIn(execute, keeping.dialect.heldSizesInOrderAfter(read));
   const taken = withinBytes(sized, keeping.mostBytes);
@@ -198,10 +198,21 @@ async function foldedInBatches(
       : await orderedMessagesIn(execute, keeping.dialect.heldMessagesThrough(read, through.point));
   await fold(messages);
   const last = messages.at(-1);
-  if (last !== undefined && (taken.length < sized.length || sized.length === listing)) {
-    const next = listingAfter({ listing, most: messagesInABatch, mostBytes: keeping.mostBytes }, taken);
-    await foldedInBatches(keeping, execute, { streams, fold }, { after: last.point, listing: next });
-  }
+  return last !== undefined && (taken.length < sized.length || sized.length === listing)
+    ? {
+        after: last.point,
+        listing: listingAfter({ listing, most: messagesInABatch, mostBytes: keeping.mostBytes }, taken),
+      }
+    : undefined;
+}
+
+function foldedInBatches(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  folding: BatchFolding,
+  first: HeldBatch,
+): Promise<void> {
+  return batchesFilledFrom(first, (batch) => batchFolded(keeping, execute, folding, batch));
 }
 
 function factOf({ dialect }: ReferencesKeeping, { type, data }: OrderedMessage): TypedEvent {

@@ -1,4 +1,6 @@
-import type { InTransaction, OwnContentStore, StatementExecutor } from '../event-store.ts';
+import type { SQL } from '@event-driven-io/dumbo';
+
+import type { InTransaction, OwnContentStore, ReturningExecutor } from '../event-store.ts';
 import { formattedFor } from '../postgresql-reads/recorded-parts.ts';
 import { postgresqlContent } from './content-dialects.ts';
 import { contentStoreOn } from './content-store.ts';
@@ -19,9 +21,10 @@ export interface ContentConnections extends Querying {
   connect(): Promise<ContentConnection>;
 }
 
-export function executorOn(querying: Querying): StatementExecutor {
+export function executorOn(querying: Querying): ReturningExecutor {
   const formatted = formattedFor(async (text, values) => (await querying.query(text, values)).rows);
-  return { query: async (sql) => ({ rows: await formatted(sql) }), command: formatted };
+  const answered = async (sql: SQL) => ({ rows: await formatted(sql) });
+  return { query: answered, command: answered };
 }
 
 export function inTransactionOn(connections: ContentConnections): InTransaction {

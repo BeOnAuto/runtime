@@ -1,16 +1,17 @@
-import { listed as listedInWords } from '@on.auto/phrasing';
+import type { FunctionType } from '@on.auto/definitions';
+import { articled, capitalized, listed as listedInWords } from '@on.auto/phrasing';
 
 import type { DefinitionType, Guide } from './guide-shelf.ts';
 
 export const startGuideName = 'start';
 
-export const whatTheStartGuideSays =
+const whatTheStartGuideSays =
   'what a playbook is made of, what a workflow owns, what you do yourself, and which guide each task needs';
 
 const whatTheStartGuideIsFor =
   'Where an agent begins: what a playbook is made of, what a workflow owns, what the agent does itself, and which guide each task needs.';
 
-interface Carried {
+export interface Carried {
   readonly definitionTypes: readonly DefinitionType[];
   readonly pages: boolean;
   readonly events: boolean;
@@ -19,31 +20,123 @@ interface Carried {
 
 type Lines = (carried: Carried) => readonly string[];
 
-const purposeOfEachFunctionType: Readonly<Record<string, string>> = {
-  reasoning: 'prompts a model',
-  interaction: 'exchanges information',
-  prediction: 'forecasts from history',
-  computation: 'runs a program',
-  lookup: 'obtains information',
-  generation: 'produces assets',
-};
+const whatEachPartDoes: Readonly<Record<string, string>> = {
+  reasoning: 'it interprets, judges or writes',
+  lookup: 'it reads what a connected service holds, or what earlier runs of the playbook produced',
+  interaction: 'it asks a person and takes their answer, or has a service act',
+  prediction: "it forecasts a quantity from the playbook's own history",
+  computation: 'it calculates or transforms data exactly',
+  generation: 'it makes an image or audio',
+} satisfies Record<FunctionType, string>;
 
-function serves({ definitionTypes }: Carried, type: string): boolean {
+export function serves({ definitionTypes }: Carried, type: string): boolean {
   return definitionTypes.some((served) => served.type === type);
 }
 
-function follows({ recipes }: Carried, recipe: string): boolean {
+export function follows({ recipes }: Carried, recipe: string): boolean {
   return recipes.includes(recipe);
 }
 
-function where(holds: boolean, ...lines: readonly string[]): readonly string[] {
+export function where(holds: boolean, ...lines: readonly string[]): readonly string[] {
   return holds ? lines : [];
 }
 
-const opening: Lines = () => [
+export function inTurn(items: readonly string[], conjunction: string): string {
+  return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} ${conjunction} ${String(items.at(-1))}`;
+}
+
+export function partLinesOf({ definitionTypes }: Carried): readonly string[] {
+  return definitionTypes.flatMap(({ type, noun }) => {
+    const does = whatEachPartDoes[type];
+    return does === undefined ? [] : [`- ${does}: ${articled(noun)}`];
+  });
+}
+
+function asOneSentence(clauses: readonly string[]): readonly string[] {
+  return clauses.length === 0 ? [] : [`${capitalized(clauses.join('; '))}.`];
+}
+
+export function runningAtOnce(carried: Carried): readonly string[] {
+  return [
+    ...where(serves(carried, 'reasoning'), 'a reasoning function'),
+    ...where(serves(carried, 'computation'), 'a computation function'),
+    ...where(serves(carried, 'interaction'), 'an interaction function held for you, `deliver: agent`,'),
+  ];
+}
+
+function inTheVerbOf(subjects: readonly string[], one: string, more: string): string {
+  return `${inTurn(subjects, 'and')} ${subjects.length === 1 ? one : more}`;
+}
+
+function whenEachRuns(carried: Carried): readonly string[] {
+  const atOnce = runningAtOnce(carried);
+  const throughAService = [
+    ...where(serves(carried, 'lookup'), 'a lookup function'),
+    ...where(serves(carried, 'interaction'), 'an interaction function'),
+  ];
+  return asOneSentence([
+    ...where(atOnce.length > 0, inTheVerbOf(atOnce, 'runs at once', 'run at once')),
+    ...where(
+      throughAService.length > 0,
+      `${throughAService.join(' or ')} that goes through a service needs its connection`,
+    ),
+    ...where(serves(carried, 'prediction'), 'a prediction function needs history'),
+  ]);
+}
+
+function whatTheWorkflowOwns(carried: Carried): readonly string[] {
+  const workflows = serves(carried, 'workflow');
+  return [
+    ...where(
+      workflows,
+      'A workflow runs the parts in order and hands each one what the parts before it answered.',
+      "The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's.",
+    ),
+    ...where(
+      serves(carried, 'reasoning'),
+      `A job that is one judgement is one reasoning function${workflows ? ', and one step is enough' : ''}.`,
+    ),
+    ...whenEachRuns(carried),
+  ];
+}
+
+function changedPartsOf(carried: Carried): readonly string[] {
+  return [
+    ...where(serves(carried, 'lookup'), 'a read'),
+    ...where(serves(carried, 'computation'), 'a calculation'),
+    ...where(serves(carried, 'interaction'), 'a question', 'an act'),
+  ];
+}
+
+function whenAPlaybookChanges(carried: Carried): readonly string[] {
+  const parts = changedPartsOf(carried);
+  return where(
+    serves(carried, 'reasoning') && serves(carried, 'workflow') && parts.length > 0,
+    '',
+    `When you change a playbook that exists, keep to the same rule: where a reasoning function has come to hold ${inTurn(parts, 'or')}, give that part a function of its own type and make it a step of the workflow, once the person agrees, rather than a longer prompt.`,
+  );
+}
+
+const buildFromTheJob: Lines = (carried) => {
+  const parts = partLinesOf(carried);
+  const owned = whatTheWorkflowOwns(carried);
+  return where(
+    parts.length > 0,
+    '',
+    '## Build from the job',
+    '',
+    'Start from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:',
+    '',
+    ...parts,
+    ...where(owned.length > 0, '', owned.join(' ')),
+    ...whenAPlaybookChanges(carried),
+  );
+};
+
+const opening: Lines = (carried) => [
   '# Start here',
   '',
-  `You are the agent that builds a playbook with the person, tests what you built, and sets up what its runs act on; Auto Runtime runs the playbook, and Studio manages it. This guide says ${whatTheStartGuideSays}.`,
+  `You are the agent that builds a playbook with the person, tests what you built, and sets up what its runs act on; Auto Runtime runs the playbook, and Studio manages it. This guide says ${partLinesOf(carried).length > 0 ? 'which function type each part of a job takes, ' : ''}${whatTheStartGuideSays}.`,
 ];
 
 function formatGuidesOf({ definitionTypes }: Carried): string {
@@ -87,12 +180,18 @@ const whereToGo: Lines = (carried) => [
   'get_guide reads any of them, and its description names the recipes this connection can follow. A tool that cannot do what was asked says why and what to change.',
 ];
 
-function functionTypesSentence({ definitionTypes }: Carried): readonly string[] {
-  const inWords = definitionTypes.flatMap(({ type }) => {
-    const purpose = purposeOfEachFunctionType[type];
-    return purpose === undefined ? [] : [`${type} ${purpose}`];
-  });
-  return inWords.length === 0 ? [] : [`Its function types: ${listedInWords(inWords)}.`];
+function whatTheTypesTake(carried: Carried): readonly string[] {
+  return [
+    ...where(
+      serves(carried, 'lookup'),
+      "What the person wants kept is the output of a run, read back with a lookup of that definition's runs.",
+    ),
+    ...where(serves(carried, 'reasoning'), 'A reasoning function names a model that list_models lists.'),
+    ...where(
+      serves(carried, 'workflow'),
+      "A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.",
+    ),
+  ];
 }
 
 const whatAPlaybookIsMadeOf: Lines = (carried) => [
@@ -100,23 +199,7 @@ const whatAPlaybookIsMadeOf: Lines = (carried) => [
   '## What a playbook is made of',
   '',
   'A playbook holds work that keeps running after a conversation, in any line of business: one responsibility, such as reviewing campaign briefs or keeping a backlog of experiments ranked. It contains one brain, its reusable functions, and its workflows; runs belong to the playbook.',
-  ...where(
-    carried.definitionTypes.length > 0,
-    '',
-    [
-      ...functionTypesSentence(carried),
-      ...where(
-        serves(carried, 'lookup'),
-        'A lookup function fetches what a reasoning function interprets.',
-        "What the person wants kept is the output of a run, read back with a lookup of that definition's runs.",
-      ),
-      ...where(serves(carried, 'reasoning'), 'A reasoning function names a model that list_models lists.'),
-      ...where(
-        serves(carried, 'workflow'),
-        "A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.",
-      ),
-    ].join(' '),
-  ),
+  ...where(whatTheTypesTake(carried).length > 0, '', whatTheTypesTake(carried).join(' ')),
   ...where(
     carried.pages,
     '',
@@ -151,7 +234,7 @@ const whatYouDoYourself: Lines = (carried) => [
   '',
   "You are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.",
   '',
-  '- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never make a function to look.',
+  '- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never save a function only to see what a tool answers.',
   '- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events. A run that called a tool may have changed something, so one that did not succeed is not run again under its id.',
   `- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection${follows(carried, 'connect-a-service') ? '; the recipe connect-a-service sets out how' : ''}. A run acts on what is there and sets nothing up.`,
   "- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.",
@@ -176,6 +259,7 @@ const askingAPerson: Lines = (carried) =>
 
 const sections: readonly Lines[] = [
   opening,
+  buildFromTheJob,
   whereToGo,
   whatAPlaybookIsMadeOf,
   whatAWorkflowOwns,

@@ -12,6 +12,7 @@ export interface Schedule {
   readonly activatedBy: string;
   readonly activatedAt: number;
   readonly nextDue: number;
+  readonly heldDue: number | null;
   readonly running: string | null;
 }
 
@@ -23,6 +24,7 @@ const ScheduleRow = Schema.Struct({
   activated_by: Schema.String,
   activated_at: WholeNumber,
   next_due: WholeNumber,
+  held_due: Schema.NullOr(WholeNumber),
   running: Schema.NullOr(Schema.String),
 });
 
@@ -35,6 +37,7 @@ function scheduleOf(row: typeof ScheduleRow.Type): Schedule {
     activatedBy: row.activated_by,
     activatedAt: row.activated_at,
     nextDue: row.next_due,
+    heldDue: row.held_due,
     running: row.running,
   };
 }
@@ -45,7 +48,7 @@ export function dueSchedules(database: HostDatabase, now: number, limit: number)
       ScheduleRow,
       Effect.orDie(
         database.read(
-          statement`SELECT playbook_key, workflow, version, rule, activated_by, activated_at, next_due, running
+          statement`SELECT playbook_key, workflow, version, rule, activated_by, activated_at, next_due, held_due, running
             FROM workflow_subscriptions
             WHERE kind <> 'event' AND next_due IS NOT NULL AND next_due <= ${now}
             ORDER BY next_due, playbook_key, workflow, reference LIMIT ${limit}`,
@@ -75,7 +78,23 @@ export function scheduleMovedOn(
   return Effect.asVoid(
     Effect.orDie(
       database.write(
-        statement`UPDATE workflow_subscriptions SET next_due = ${nextDue}, running = ${running}
+        statement`UPDATE workflow_subscriptions SET next_due = ${nextDue}, running = ${running}, held_due = NULL
+          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND reference = ${trigger.reference}`,
+      ),
+    ),
+  );
+}
+
+export function scheduleHeld(
+  database: HostDatabase,
+  { playbookKey, workflow, trigger }: Pick<Schedule, 'playbookKey' | 'workflow' | 'trigger'>,
+  heldDue: number,
+  triedAgainAt: number,
+): Effect.Effect<void> {
+  return Effect.asVoid(
+    Effect.orDie(
+      database.write(
+        statement`UPDATE workflow_subscriptions SET held_due = ${heldDue}, next_due = ${triedAgainAt}
           WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND reference = ${trigger.reference}`,
       ),
     ),

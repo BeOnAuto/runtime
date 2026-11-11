@@ -1,7 +1,7 @@
 import { McpServer, createMcpHandler } from '@modelcontextprotocol/server';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { instructionsFor, type RegisterRoutes } from '../index.ts';
+import { instructionsActingAs, type RegisterRoutes } from '../index.ts';
 import { createTestHandler } from '../testing/api-calls.ts';
 import { listenOnLoopback, type Listening } from '../testing/listening.ts';
 import {
@@ -12,7 +12,13 @@ import {
   withMcpSession,
   type McpConnection,
 } from '../testing/mcp-clients.ts';
-import { acmeAdmin, operationServer, testServerInfo, type OperationServer } from '../testing/operation-server.ts';
+import {
+  acmeAdmin,
+  acmeAdminActing,
+  operationServer,
+  testServerInfo,
+  type OperationServer,
+} from '../testing/operation-server.ts';
 import { toolNamesIn } from '../testing/tool-listing.ts';
 import { advertisedSchema } from '../tools/tool-schema.ts';
 
@@ -92,7 +98,7 @@ describe.each(mcpClientKinds)('the %s client connecting to a playbook endpoint',
     expect(connected).toEqual({
       protocolVersion: expectedProtocolVersion[kind],
       serverVersion: { ...testServerInfo, title: 'Auto Runtime' },
-      instructions: `This connection acts as the key acme-admin in the org acme. ${instructionsFor('playbook', { orgTools: [], playbookTools })}`,
+      instructions: instructionsActingAs(acmeAdminActing, 'playbook', { orgTools: [], playbookTools }),
     });
   });
 

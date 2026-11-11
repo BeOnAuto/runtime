@@ -1,7 +1,7 @@
 import { isKeyHolder } from '@on.auto/identity';
 import type { CallerIdentity } from '@on.auto/operations';
 
-import { startGuideName, whatTheStartGuideSays } from '../guides/start-guide.ts';
+import { startGuideName } from '../guides/start-guide.ts';
 
 export type McpEndpoint = 'org' | 'playbook' | 'own org' | 'directory';
 
@@ -31,7 +31,10 @@ export const whatThisServerIsFor = [
   'A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.',
 ];
 
-const whereToBegin = `Before anything else, read the guide ${startGuideName} with get_guide: it says ${whatTheStartGuideSays}.`;
+const whereToBegin = `Before you build or change anything, read the guide ${startGuideName} with get_guide: it says which function type each part of a job takes.`;
+
+const buildFromTheJob =
+  'Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order.';
 
 const whenAToolCannot = 'A tool that cannot do what was asked says why and what to change.';
 
@@ -80,12 +83,16 @@ function whomTheConnectionActsAs({ caller, org }: ActingAs): string {
   return `This connection acts as ${callerInWords(caller)} in the org ${org}.`;
 }
 
-export function instructionsFor(endpoint: McpEndpoint, tools: ServedTools): string {
+function sentencesFor(endpoint: McpEndpoint, tools: ServedTools): readonly string[] {
   const names = namesOf(tools);
   const serving: Serving = { endpoint, listed: (name) => names.includes(name) };
-  return [...whatThisServerIsFor, whatTheConnectionDoes[endpoint](serving), whereToBegin, whenAToolCannot].join(' ');
+  return [whereToBegin, buildFromTheJob, ...whatThisServerIsFor, whatTheConnectionDoes[endpoint](serving)];
+}
+
+export function instructionsFor(endpoint: McpEndpoint, tools: ServedTools): string {
+  return [...sentencesFor(endpoint, tools), whenAToolCannot].join(' ');
 }
 
 export function instructionsActingAs(actingAs: ActingAs, endpoint: McpEndpoint, tools: ServedTools): string {
-  return `${whomTheConnectionActsAs(actingAs)} ${instructionsFor(endpoint, tools)}`;
+  return [...sentencesFor(endpoint, tools), whomTheConnectionActsAs(actingAs), whenAToolCannot].join(' ');
 }

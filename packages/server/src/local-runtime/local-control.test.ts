@@ -200,7 +200,7 @@ describe('restarting the process of the runtime', () => {
 describe('what a runtime on this computer tells an agent about adding a model provider', () => {
   it('names the .env it reads, how to restart it, and the first function after', () => {
     expect(providerSetupFor('/Users/ada/.auto-runtime', restartWordsFor(inATerminal))).toBe(
-      'To add one, ask the person to put a line such as ANTHROPIC_API_KEY=<their key> in /Users/ada/.auto-runtime/.env, never in this chat, then restart Auto Runtime with npx -y @on.auto/runtime@0.9.1 restart or at http://localhost:5555. Then offer a first function, as the first-playbook recipe of get_guide does; on.auto/docs has more.',
+      'To add one, ask the person to put a line such as ANTHROPIC_API_KEY=<their key> in /Users/ada/.auto-runtime/.env, never in this chat, then restart Auto Runtime with npx -y @on.auto/runtime@0.9.1 restart or at http://localhost:5555. Then offer a first playbook, as the first-playbook recipe of get_guide does; on.auto/docs has more.',
     );
   });
 
@@ -212,7 +212,7 @@ describe('what a runtime on this computer tells an agent about adding a model pr
 
   it('only asks for a restart where the auto-runtime command cannot restart it', () => {
     expect(providerSetupFor('/Users/ada/playbooks')).toContain(
-      'in /Users/ada/playbooks/.env, never in this chat, then restart Auto Runtime. Then offer a first function',
+      'in /Users/ada/playbooks/.env, never in this chat, then restart Auto Runtime. Then offer a first playbook',
     );
   });
 });

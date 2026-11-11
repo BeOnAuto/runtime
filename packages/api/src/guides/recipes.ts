@@ -1,8 +1,10 @@
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
+import { builtRecipes, everyDocumentCarriesItsPage } from './built-recipes.ts';
 import { recipesFolder } from './guide-files.ts';
-import type { Guide, Recipe } from './guide-shelf.ts';
+import { eventsGuideName, pageGuideName, type DefinitionType, type Guide, type Recipe } from './guide-shelf.ts';
 import { outlines, type RecipeOutline } from './recipe-outlines.ts';
+import type { Carried } from './start-guide.ts';
 
 interface Insertion {
   readonly after: string;
@@ -34,20 +36,6 @@ const whereInteractionIsServed: AdditionsByRecipe = {
     ],
     calls: [],
   },
-  'first-playbook': {
-    insertions: [
-      {
-        after: 'is not a model to run.',
-        words:
-          ' Where a person must approve or decide, ask once where they want to be asked: through a connection that can send them a request and read their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`; a request saved with neither lists those that can. Ask once, too, where a notice goes: a channel or their direct messages.',
-      },
-      {
-        after: 'give it tools with the give-tools recipe.',
-        words: ' They can also ask someone through a connection and take their answer with an interaction function.',
-      },
-    ],
-    calls: [],
-  },
 };
 
 const whereWorkflowsAreServed: AdditionsByRecipe = {
@@ -62,60 +50,17 @@ const whereWorkflowsAreServed: AdditionsByRecipe = {
     calls: [],
   },
   'first-playbook': {
-    insertions: [
-      {
-        after: 'the person sees answer',
-        words: ', and the workflow that owns the job they want done again, whose step it is',
-      },
-      {
-        after: 'run the function with run_definition',
-        words: ' to test it',
-      },
-      {
-        after: 'a budget and a measurable goal.',
-        words:
-          ' Then learn how its work starts: on its own at set times, on its own whenever something arrives, or only when someone asks. Where their words already say so, such as "every morning", "continuously" or "whenever a lead comes in", take that as the answer and say so rather than asking again.',
-      },
-      {
-        after: 'tell the person what it answered, in their words.',
-        words: [
-          "\n7. Read the workflow guide with get_guide and write the workflow that owns the job the person wants done again, whose step is the function: one step is enough when that step finishes the job, and a later ask changes the workflow. Where the work starts on its own, give it a `schedule` as the triggers guide says. For set times, `cron` with `time_zone` naming the person's time zone, or `every`: a run they start is given only its due time, so the function finds its material with its tools, or the workflow gives it a fixed input in `input.from`. For what arrives, `on` with a filter on an event `type` named in the past tense, such as `com.acme.lead.received`: a run is given a list holding the event, and the workflow passes the event's `data` to the function. Where the material comes from sources not yet connected, start with `on`, so that the person starts runs today with material they paste, and move to a clock once the function's tools reach the sources.",
-          "\n8. Show the person the workflow's document, and save it with create_definition, `type` workflow, once they agree.",
-          "\n9. Run the workflow with run_definition and tell the person what it answered, in their words. Where it starts on its own, tell them too when it next runs, in their own time, or what starts it. For `on`, publish the material they paste with publish_event, as an event of that type with a `source` that names where it came from and an `id` of its own, such as `test-1`: a real event's `source` and `id` would make that event a repeat, ignored when it comes. A moment later, show what its run answered with list_runs, `type` workflow, and get_run.",
-        ].join(''),
-      },
-      {
-        after: 'what they can do next:',
-        words: ' change when it runs with the schedule recipe and the triggers guide, or',
-      },
-    ],
+    insertions: [],
     calls: ['publish_event', 'list_runs', 'get_run'],
   },
 };
 
-const everyDocumentCarriesItsPage =
-  ' Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.';
+const theirPages = ` ${everyDocumentCarriesItsPage}`;
 
 const wherePagesAreServed: AdditionsByRecipe = {
-  'first-playbook': {
-    insertions: [
-      { after: 'before you write the function.', words: everyDocumentCarriesItsPage },
-      {
-        after: 'and a prompt.',
-        words:
-          ' Write its `page` in the same front matter: the judgement of each run in a sentence, and the outcomes over time.',
-      },
-      {
-        after: 'and a later ask changes the workflow.',
-        words:
-          ' Write its `page` in the same document: the outcome of each run as a headline with its key figures, and the main number of each period.',
-      },
-    ],
-    calls: [],
-  },
   'give-tools': {
     insertions: [
-      { after: 'before you write one.', words: everyDocumentCarriesItsPage },
+      { after: 'before you write one.', words: theirPages },
       { after: 'in the format of the reasoning-function guide', words: ', with its `page` in the same document' },
       { after: 'whose steps are the functions', words: ', with its `page` in the same document' },
     ],
@@ -133,22 +78,13 @@ const wherePagesAreServed: AdditionsByRecipe = {
     calls: [],
   },
   keep: {
-    insertions: [{ after: 'sets out `runs`.', words: everyDocumentCarriesItsPage }],
+    insertions: [{ after: 'sets out `runs`.', words: theirPages }],
     calls: [],
   },
 };
 
 const whereWorkflowsHavePages: AdditionsByRecipe = {
-  'first-playbook': {
-    insertions: [
-      {
-        after: 'give it tools with the give-tools recipe.',
-        words:
-          " Once it has more than one workflow, give the playbook a page with update_playbook, led by each workflow's main number.",
-      },
-    ],
-    calls: ['update_playbook'],
-  },
+  'first-playbook': { insertions: [], calls: ['update_playbook'] },
 };
 
 const whereLookupIsServed: AdditionsByRecipe = {
@@ -184,28 +120,56 @@ function withInserted(text: string, insertions: readonly Insertion[]): string {
   );
 }
 
+interface Serving {
+  readonly guides: ReadonlySet<string>;
+  readonly carried: Carried;
+}
+
+async function textOf(
+  shippedFiles: ShippedFiles,
+  { name }: RecipeOutline,
+  { carried }: Serving,
+  additions: readonly Additions[],
+): Promise<string | undefined> {
+  const built = builtRecipes.get(name);
+  if (built !== undefined) {
+    return built(carried);
+  }
+  const text = await shippedFiles.text(shippedFileIn(recipesFolder, `${name}.md`));
+  return withInserted(
+    text,
+    additions.flatMap(({ insertions }) => insertions),
+  );
+}
+
 async function recipeOf(
   shippedFiles: ShippedFiles,
   outline: RecipeOutline,
-  carried: ReadonlySet<string>,
-): Promise<Recipe> {
-  const text = await shippedFiles.text(shippedFileIn(recipesFolder, `${outline.name}.md`));
-  const additions = additionsTo(outline.name, carried);
-  return {
-    ...outline,
-    text: withInserted(
-      text,
-      additions.flatMap(({ insertions }) => insertions),
-    ),
-    calls: [...outline.calls, ...additions.flatMap(({ calls }) => calls)],
-  };
+  serving: Serving,
+): Promise<Recipe | undefined> {
+  const additions = additionsTo(outline.name, serving.guides);
+  const text = await textOf(shippedFiles, outline, serving, additions);
+  return text === undefined
+    ? undefined
+    : { ...outline, text, calls: [...outline.calls, ...additions.flatMap(({ calls }) => calls)] };
 }
 
-export function recipesFor(shippedFiles: ShippedFiles, guides: readonly Guide[]): Promise<readonly Recipe[]> {
+export async function recipesFor(
+  shippedFiles: ShippedFiles,
+  guides: readonly Guide[],
+  definitionTypes: readonly DefinitionType[],
+): Promise<readonly Recipe[]> {
   const carried = new Set(guides.map(({ name }) => name));
-  return Promise.all(
-    outlines
-      .filter(({ formatGuide }) => formatGuide === undefined || carried.has(formatGuide))
-      .map((outline) => recipeOf(shippedFiles, outline, carried)),
-  );
+  const offered = outlines.filter(({ formatGuide }) => formatGuide === undefined || carried.has(formatGuide));
+  const serving: Serving = {
+    guides: carried,
+    carried: {
+      definitionTypes,
+      pages: carried.has(pageGuideName),
+      events: carried.has(eventsGuideName),
+      recipes: offered.map(({ name }) => name),
+    },
+  };
+  const recipes = await Promise.all(offered.map((outline) => recipeOf(shippedFiles, outline, serving)));
+  return recipes.filter((recipe) => recipe !== undefined);
 }

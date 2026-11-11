@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { makeDefinitionOperations } from '../index.ts';
-import { echo } from '../testing/capabilities/echo.ts';
+import { defineCapability, makeDefinitionOperations } from '../index.ts';
+import { echo, echoDeclaration } from '../testing/capabilities/echo.ts';
 import { probe } from '../testing/capabilities/probe.ts';
 import { runContentHolders } from '../testing/harness.ts';
 import { uncheckedPages } from '../testing/page-ports.ts';
@@ -26,10 +26,34 @@ function described(name: string): string {
 }
 
 describe('the description of create_definition', () => {
-  it('names each definition type the server serves', () => {
+  it('says that each part of a job is its own function, of the type its work needs, and leaves the types to the argument', () => {
     expect(described('create_definition')).toContain(
-      '`type` is echo or probe, and `name` how workflows and tools refer to it.',
+      'update_definition changes one saved, and a name is never reused. Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it. A workflow owns one job',
     );
+  });
+});
+
+const servingReasoningAndWorkflows = makeDefinitionOperations(
+  [
+    defineCapability({ ...echoDeclaration, type: 'workflow' }),
+    defineCapability({ ...echoDeclaration, type: 'reasoning' }),
+  ],
+  uncheckedPages,
+  { holders: runContentHolders },
+).map(({ registration }) => registration);
+
+function typeOf(name: string): unknown {
+  return servingReasoningAndWorkflows.find((operation) => operation.name === name)?.input.schema['properties'];
+}
+
+describe('the type argument of create_definition', () => {
+  it('says by each part of the job which type it takes, for each type the server serves, and the other tools keep their words', () => {
+    expect(typeOf('create_definition')).toHaveProperty(['type'], {
+      type: 'string',
+      enum: ['reasoning', 'workflow'],
+      description: "By each part's job: reasoning only interprets, judges or writes; workflow runs the parts in order.",
+    });
+    expect(typeOf('update_definition')).toHaveProperty(['type', 'description'], "The definition's type");
   });
 });
 

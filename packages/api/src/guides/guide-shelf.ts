@@ -40,6 +40,8 @@ export interface ShelvedRecipe extends Recipe {
 
 export const pageGuideName = 'page';
 
+export const eventsGuideName = 'events';
+
 export interface GuideShelf {
   readonly definitionTypes: readonly DefinitionType[];
   readonly pages: boolean;

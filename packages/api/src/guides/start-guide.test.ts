@@ -9,6 +9,7 @@ import {
   servedWithEverything,
   servedWithLookupAndPages,
 } from '../testing/guide-shelves.ts';
+import { definitionTypesOf, everySetOf, functionTypes, typesNamedIn } from '../testing/served-types.ts';
 import type { GuideShelf } from './guide-shelf.ts';
 import { guideShelfFrom } from './served-guides.ts';
 import { startGuideName, startGuideOf } from './start-guide.ts';
@@ -19,11 +20,13 @@ function startOf(shelf: GuideShelf): string {
 
 const headings = (text: string): readonly string[] => text.split('\n').filter((line) => line.startsWith('## '));
 
+const sectionOf = (text: string, heading: string): string =>
+  text.split('\n## ').find((section) => section.startsWith(`${heading}\n`)) ?? '';
+
 const whereToGo = (text: string): readonly string[] =>
-  text
-    .split('\n## ')[1]
-    ?.split('\n')
-    .filter((line) => line.startsWith('- ')) ?? [];
+  sectionOf(text, 'Where to go')
+    .split('\n')
+    .filter((line) => line.startsWith('- '));
 
 describe('the guide start of a server that runs every type and keeps pages', () => {
   const text = startOf(servedWithEverything);
@@ -40,7 +43,7 @@ describe('the guide start of a server that runs every type and keeps pages', () 
 
   it('opens with what the server is and what the agent does, and says where to go for each task, the recipes it carries among them', () => {
     expect(text).toMatch(
-      /^# Start here\n\nYou are the agent that builds a playbook with the person, tests what you built, and sets up what its runs act on; Auto Runtime runs the playbook, and Studio manages it\. This guide says what a playbook is made of, what a workflow owns, what you do yourself, and which guide each task needs\.\n\n## Where to go\n/u,
+      /^# Start here\n\nYou are the agent that builds a playbook with the person, tests what you built, and sets up what its runs act on; Auto Runtime runs the playbook, and Studio manages it\. This guide says which function type each part of a job takes, what a playbook is made of, what a workflow owns, what you do yourself, and which guide each task needs\.\n\n## Build from the job\n/u,
     );
     expect(whereToGo(text)).toEqual([
       '- What the words of a playbook mean: the guide terminology.',
@@ -57,9 +60,15 @@ describe('the guide start of a server that runs every type and keeps pages', () 
     );
   });
 
-  it('says what a playbook is made of, in the words the instructions once held, and that every workflow and function takes a page', () => {
+  it('says what a playbook is made of, how a reasoning function names its model and what a workflow does, and that every workflow and function takes a page', () => {
     expect(text).toContain(
-      "## What a playbook is made of\n\nA playbook holds work that keeps running after a conversation, in any line of business: one responsibility, such as reviewing campaign briefs or keeping a backlog of experiments ranked. It contains one brain, its reusable functions, and its workflows; runs belong to the playbook.\n\nIts function types: reasoning prompts a model, interaction exchanges information, prediction forecasts from history, and computation runs a program. A reasoning function names a model that list_models lists. A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.\n\nEvery workflow and function takes a page that shows the person its results, run by run and over time.\n",
+      "## What a playbook is made of\n\nA playbook holds work that keeps running after a conversation, in any line of business: one responsibility, such as reviewing campaign briefs or keeping a backlog of experiments ranked. It contains one brain, its reusable functions, and its workflows; runs belong to the playbook.\n\nA reasoning function names a model that list_models lists. A workflow puts the playbook's functions to work in steps: it waits for input, it can start on a schedule or event, and run_definition runs it.\n\nEvery workflow and function takes a page that shows the person its results, run by run and over time.\n",
+    );
+  });
+
+  it('teaches first that each part of the job takes a function of the type its work needs, a line for each type it runs, and what the workflow owns', () => {
+    expect(sectionOf(text, 'Build from the job')).toBe(
+      "Build from the job\n\nStart from the job the person wants done again and again, not from a function. Break the job into its parts and give each part a function of the type its work needs, by what the part does, not by how it is done:\n\n- it interprets, judges or writes: a reasoning function\n- it asks a person and takes their answer, or has a service act: an interaction function\n- it forecasts a quantity from the playbook's own history: a prediction function\n- it calculates or transforms data exactly: a computation function\n\nA workflow runs the parts in order and hands each one what the parts before it answered. The order, the branches, the waits and what happens when a part fails are the workflow's, never a prompt's. A job that is one judgement is one reasoning function, and one step is enough. A reasoning function, a computation function and an interaction function held for you, `deliver: agent`, run at once; an interaction function that goes through a service needs its connection; a prediction function needs history.\n\nWhen you change a playbook that exists, keep to the same rule: where a reasoning function has come to hold a calculation, a question or an act, give that part a function of its own type and make it a step of the workflow, once the person agrees, rather than a longer prompt.\n",
     );
   });
 });
@@ -78,7 +87,7 @@ describe('what the guide start of that server says of workflows, of the agent an
 
   it("says that testing, setting up and checking are the agent's own work, done with the tools, with the connections that takes", () => {
     expect(text).toContain(
-      "## What you do yourself\n\nYou are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.\n\n- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never make a function to look.\n- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events. A run that called a tool may have changed something, so one that did not succeed is not run again under its id.\n- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection; the recipe connect-a-service sets out how. A run acts on what is there and sets nothing up.\n- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.\n- A check a run must make each time, such as that an item is still where the job expects it, is a step of the workflow that owns the job. A check made before the first run, or when something at the service changes, is yours.\n",
+      "## What you do yourself\n\nYou are the playbook's developer. Testing, setting up and checking are your work, done with the tools below, and none of it is saved as a workflow. Which tools a connection lists depends on where it acts and on what its caller may do. The caller's own org's connection lists every tool the caller may call. One that manages the org's playbooks lists the tools that manage playbooks and connections, not those that work inside a playbook. One that acts inside a playbook lists only those.\n\n- To learn what a tool answers, call it with query_connection; a tool that may change something, with execute_connection, once the person agrees; dry_run checks the arguments without calling. Never save a function only to see what a tool answers.\n- To test a function, run it with run_definition, and read its run with get_run and list_playbook_events. A run that called a tool may have changed something, so one that did not succeed is not run again under its id.\n- To set a service up for the playbook's runs, such as a team's statuses, a channel or a label, do it with the person before the first run, through the tools of the connection; the recipe connect-a-service sets out how. A run acts on what is there and sets nothing up.\n- Where setting up or testing takes tools or access the runs do not need, connect them: ask for the access with the connection, as `more` of add_connection, or add the service's own MCP server or HTTP API by hand, so that you do the work here rather than send the person into the service.\n- A check a run must make each time, such as that an item is still where the job expects it, is a step of the workflow that owns the job. A check made before the first run, or when something at the service changes, is yours.\n",
     );
   });
 
@@ -88,8 +97,9 @@ describe('what the guide start of that server says of workflows, of the agent an
     );
   });
 
-  it('has its seven sections in that order, takes 6,120 bytes, and uses no term of the internal vocabulary', () => {
+  it('has its eight sections in that order, takes 7,353 bytes, and uses no term of the internal vocabulary', () => {
     expect(headings(text)).toEqual([
+      '## Build from the job',
       '## Where to go',
       '## What a playbook is made of',
       '## What a workflow owns',
@@ -97,7 +107,7 @@ describe('what the guide start of that server says of workflows, of the agent an
       '## Connecting a service',
       '## Asking a person',
     ]);
-    expect(byteLengthOf(text)).toBe(6120);
+    expect(byteLengthOf(text)).toBe(7353);
     expect(internalTermsIn(text)).toEqual([]);
   });
 });
@@ -105,10 +115,16 @@ describe('what the guide start of that server says of workflows, of the agent an
 describe('the guide start of a server that runs lookup functions and keeps pages', () => {
   const text = startOf(servedWithLookupAndPages);
 
-  it('names the recipe keep, and says what a lookup function is for', () => {
+  it('names the recipe keep, and says what a lookup function is for and that one through a service needs its connection', () => {
     expect(whereToGo(text)).toContain('- To keep something for later, and read it back: the recipe keep.');
     expect(text).toContain(
-      "Its function types: reasoning prompts a model and lookup obtains information. A lookup function fetches what a reasoning function interprets. What the person wants kept is the output of a run, read back with a lookup of that definition's runs. A reasoning function names a model",
+      '- it reads what a connected service holds, or what earlier runs of the playbook produced: a lookup function\n',
+    );
+    expect(text).toContain(
+      'A reasoning function runs at once; a lookup function that goes through a service needs its connection.\n\nWhen you change a playbook that exists, keep to the same rule: where a reasoning function has come to hold a read, give that part',
+    );
+    expect(text).toContain(
+      "runs belong to the playbook.\n\nWhat the person wants kept is the output of a run, read back with a lookup of that definition's runs. A reasoning function names a model",
     );
   });
 });
@@ -128,6 +144,7 @@ describe('the guide start of a server that runs reasoning functions alone', () =
 
   it('says nothing of what a workflow owns, of the recipe schedule, of the events or of the types it does not run', () => {
     expect(headings(text)).toEqual([
+      '## Build from the job',
       '## Where to go',
       '## What a playbook is made of',
       '## What you do yourself',
@@ -135,8 +152,9 @@ describe('the guide start of a server that runs reasoning functions alone', () =
     ]);
     expect(text).toContain('- To write a function: the guide of its type, reasoning-function. Each says how');
     expect(text).toContain(
-      '\n\nIts function types: reasoning prompts a model. A reasoning function names a model that list_models lists.\n',
+      '\n\n- it interprets, judges or writes: a reasoning function\n\nA job that is one judgement is one reasoning function. A reasoning function runs at once.\n\n## Where to go\n',
     );
+    expect(text).toContain('\n\nA reasoning function names a model that list_models lists.\n');
     expect(text).not.toMatch(/schedule|computation|prediction|lookup|the guide events/u);
   });
 });
@@ -150,7 +168,7 @@ describe('the guide start of a server that runs no type of definition', () => {
       "- To connect a service and set it up for the playbook's runs: the recipe connect-a-service.",
       '- The filters a template may use: the guide templates.',
     ]);
-    expect(text).not.toContain('Its function types');
+    expect(text).not.toMatch(/Build from the job|which function type/u);
     expect(headings(text)).toEqual([
       '## Where to go',
       '## What a playbook is made of',
@@ -168,5 +186,49 @@ describe('the guide start of a server that runs no type of definition', () => {
       '- The filters a template may use: the guide templates. How a page is written: the guide page.',
       "- What the playbook's events hold, and how a filter names them: the guide events.",
     ]);
+  });
+});
+
+interface Started {
+  readonly types: readonly string[];
+  readonly text: string;
+}
+
+describe('the guide start of a server, whichever types it runs', () => {
+  const starts = everySetOf(functionTypes).flatMap((types) =>
+    [true, false].map((workflows) => ({
+      types,
+      text: startGuideOf({
+        definitionTypes: definitionTypesOf(types, workflows),
+        pages: workflows,
+        events: workflows,
+        recipes: ['first-playbook', 'connect-a-service', 'give-tools', 'schedule', 'keep'],
+      }).text,
+    })),
+  );
+
+  it('names no function type the server does not run', () => {
+    expect(
+      starts.flatMap(({ types, text }: Started) => typesNamedIn(text).filter((named) => !types.includes(named))),
+    ).toEqual([]);
+  });
+
+  it('gives each function type it runs its line, by what a part of the job does', () => {
+    expect(
+      starts.flatMap(({ types, text }: Started) =>
+        types.filter((type) => !new RegExp(`\\n- it [^\\n]*: an? ${type} function\\n`, 'u').test(text)),
+      ),
+    ).toEqual([]);
+  });
+
+  it('says of a server that runs only generation functions which type each part takes, and nothing of when parts run', () => {
+    const text = startGuideOf({
+      definitionTypes: definitionTypesOf(['generation'], false),
+      pages: false,
+      events: false,
+      recipes: [],
+    }).text;
+
+    expect(sectionOf(text, 'Build from the job')).toMatch(/: a generation function\n$/u);
   });
 });

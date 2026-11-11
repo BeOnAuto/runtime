@@ -1,5 +1,11 @@
 import { authenticatorFor, createApiKey, type Authenticator } from '@on.auto/identity';
-import { allPermissions, makeCatalog, makeDispatcher, type DispatcherServices } from '@on.auto/operations';
+import {
+  allPermissions,
+  makeCatalog,
+  makeDispatcher,
+  type CallerIdentity,
+  type DispatcherServices,
+} from '@on.auto/operations';
 import { Redacted, type Tracer } from 'effect';
 import type { MiddlewareHandler } from 'hono';
 
@@ -39,6 +45,16 @@ export const testIdentityIssuer = 'https://identity.example';
 export const testRetryStateKeys: RetryStateKeys = { current: Redacted.make(new Uint8Array(32).fill(7)) };
 
 export const acmeAdmin = createApiKey({ id: 'acme-admin', org: 'acme', permissions: allPermissions, playbooks: '*' });
+
+const acmeAdminCaller: CallerIdentity = {
+  id: 'acme-admin',
+  name: 'acme-admin',
+  org: 'acme',
+  permissions: allPermissions,
+  playbooks: '*',
+};
+
+export const acmeAdminActing = { caller: acmeAdminCaller, org: 'acme' };
 
 export const acmeReader = createApiKey({
   id: 'acme-reader',

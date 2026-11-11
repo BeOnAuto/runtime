@@ -3,7 +3,7 @@ import { alternatives } from '@on.auto/phrasing';
 import { Effect, Schema } from 'effect';
 
 import { isDefinitionTypeName, type Capability } from './capability.ts';
-import { inDefinitionTypeOrder } from './function-terminology.ts';
+import { inDefinitionTypeOrder, typeByEachPartsJob } from './function-terminology.ts';
 
 interface PublishedOperation {
   readonly registration: RouteRegistration<'playbook'>;
@@ -26,7 +26,7 @@ function servedTypeField(types: readonly string[], expected: string): typeof Def
 export interface KnownCapabilities {
   readonly field: typeof DefinitionTypeField;
   readonly types: readonly string[];
-  readonly typesInWords: string;
+  readonly byEachPartsJob: string | undefined;
   readonly reachesOutside: boolean;
   readonly publish: <Operation extends PublishedOperation>(operation: Operation, meaning?: string) => Operation;
   readonly capabilityOfType: (name: string) => Effect.Effect<Capability, NotFound>;
@@ -72,7 +72,7 @@ function knownOf(given: readonly Capability[], expected: string): KnownCapabilit
   return {
     field: servedTypeField(names, expected),
     types: names,
-    typesInWords: alternatives(names),
+    byEachPartsJob: typeByEachPartsJob(names),
     reachesOutside: capabilities.some(({ reachesOutside }) => reachesOutside),
     publish: (operation, meaning = typeMeaning) => ({
       ...operation,

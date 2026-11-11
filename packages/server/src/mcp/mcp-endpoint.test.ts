@@ -155,7 +155,7 @@ const connections: readonly Connection[] = [
     endpoint: 'own org',
     served: { orgTools, playbookTools: insideAPlaybookAlone },
     sentence:
-      'Before anything else, read the guide start with get_guide: it says what a playbook is made of, what a workflow owns, what you do yourself, and which guide each task needs.',
+      'Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes. Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order.',
     unnamed: [],
   },
   {
@@ -191,7 +191,7 @@ describe('the instructions an agent receives when it connects', () => {
     },
   );
 
-  it('leave each definition type to the tools that take one, which name it by the kind the terminology page gives it', async () => {
+  it('leave each definition type to the tools that take one, which name it by the kind the terminology page gives it, and create_definition by the part of a job each takes', async () => {
     server = await servingReasoning([]);
 
     const tools = await onMcp('/mcp', async (session) => listedTools(await session.listTools()));
@@ -204,6 +204,14 @@ describe('the instructions an agent receives when it connects', () => {
       properties: { type: { enum: definitionTypes.map(({ type }: Readonly<{ type: string }>) => type) } },
     });
     expect(createDefinition?.inputSchema).toMatchObject({
+      properties: {
+        type: {
+          description:
+            "By each part's job: reasoning only interprets, judges or writes; lookup reads a service or earlier runs; interaction asks a person or has a service act; prediction forecasts a quantity; computation calculates or transforms exactly; generation makes images or audio; workflow runs the parts in order.",
+        },
+      },
+    });
+    expect(tools.find(({ name }) => name === 'update_definition')?.inputSchema).toMatchObject({
       properties: { type: { description: "The definition's type" } },
     });
   });

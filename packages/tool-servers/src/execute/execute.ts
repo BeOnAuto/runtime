@@ -18,15 +18,15 @@ const sharedSentences = [
 ];
 
 const executeDescription = [
-  "Calls one tool of a connected service this playbook's functions may use, whatever its mark, on the service's own API as its tool list names the tool, with the arguments it is given, and answers what a run of a reasoning function would see.",
+  "Calls one tool of a connected service this playbook's functions may use, whatever its mark, on the service's own API as its tool list names the tool, with the arguments it is given, and answers what a run of a function would see.",
   'Use it when the person asks for what a tool that may change something does, such as sending, creating or deleting, and to set a service up for the playbook, before its runs act on it.',
   'The call is live and acts as the playbook, so it needs the permission to change the playbook; search says the mark of each tool, and dry_run what this would check.',
   ...sharedSentences,
 ].join(' ');
 
 const queryDescription = [
-  "Calls one tool marked reads of a connected service this playbook's functions may use, on the service's own API as its tool list names the tool, with the arguments it is given, and answers what a run of a reasoning function would see.",
-  'Use it to read what a tool answers, or to find an id a prompt needs; it refuses a tool not marked reads, which execute_connection calls.',
+  "Calls one tool marked reads of a connected service this playbook's functions may use, on the service's own API as its tool list names the tool, with the arguments it is given, and answers what a run of a function would see.",
+  'Use it to read what a tool answers, or to find an id a function needs; it refuses a tool not marked reads, which execute_connection calls.',
   'The call is live and acts as the playbook, so it needs the permission to change the playbook; search with only read lists the tools it calls.',
   ...sharedSentences,
 ].join(' ');

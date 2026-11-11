@@ -84,7 +84,6 @@ export const recipes: readonly RecipeCalls[] = [
       'list_playbooks',
       'create_playbook',
       'create_definition',
-      'query_connection',
       'run_definition',
       'publish_event',
       'list_runs',

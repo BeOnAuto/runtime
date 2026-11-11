@@ -114,7 +114,7 @@ function activatedRow(activating: Activating, trigger: Trigger) {
         ${activatedBy}, ${activatedAt}, ${firstDueOnActivation(activating, trigger)}, NULL)
       ON CONFLICT (playbook_key, workflow, reference) DO UPDATE SET version = excluded.version, kind = excluded.kind,
         rule = excluded.rule, activated_by = excluded.activated_by, activated_at = excluded.activated_at,
-        next_due = excluded.next_due`,
+        next_due = excluded.next_due, held_due = NULL`,
   );
 }
 
@@ -186,7 +186,7 @@ export function triggersPaused(database: HostDatabase, playbookKey: string, work
   return Effect.asVoid(
     Effect.orDie(
       database.transaction([
-        statement`UPDATE workflow_subscriptions SET next_due = NULL
+        statement`UPDATE workflow_subscriptions SET next_due = NULL, held_due = NULL
           WHERE playbook_key = ${playbookKey} AND workflow = ${workflow} AND kind <> 'event'`,
         statement`INSERT INTO workflow_pauses (playbook_key, workflow) VALUES (${playbookKey}, ${workflow})
           ON CONFLICT DO NOTHING`,

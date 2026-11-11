@@ -4,7 +4,7 @@ import { mostContentChunkBytes, sha256Of, textOfContent, textToKeep } from '@on.
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { inTransactionOf, type StatementExecutor, type TransactionalPool } from '../event-store.ts';
+import { inTransactionOf, type ReturningExecutor, type TransactionalPool } from '../event-store.ts';
 import { sqliteContentOn } from './content-store.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
@@ -14,23 +14,18 @@ function described(sql: SQL): string {
 }
 
 interface Recording {
-  readonly pool: TransactionalPool;
+  readonly pool: TransactionalPool<ReturningExecutor>;
   readonly statements: readonly string[];
 }
 
 function recordingAnswering(rowsOf: (statement: string) => readonly unknown[]): Recording {
   const statements: string[] = [];
-  const execute: StatementExecutor = {
-    query: (sql) => {
-      const statement = described(sql);
-      statements.push(statement);
-      return Promise.resolve({ rows: rowsOf(statement) });
-    },
-    command: (sql) => {
-      statements.push(described(sql));
-      return Promise.resolve();
-    },
+  const answered = (sql: SQL) => {
+    const statement = described(sql);
+    statements.push(statement);
+    return Promise.resolve({ rows: rowsOf(statement) });
   };
+  const execute: ReturningExecutor = { query: answered, command: answered };
   return {
     statements,
     pool: {

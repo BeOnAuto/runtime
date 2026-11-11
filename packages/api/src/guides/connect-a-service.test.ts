@@ -10,7 +10,7 @@ const recipeFiles = shippedFilesOnDisk(apiShippedRoots());
 
 const connectAService = readFileSync(new URL('recipes/connect-a-service.md', import.meta.url), 'utf8');
 
-const withNoFormatGuide = await recipesFor(recipeFiles, []);
+const withNoFormatGuide = await recipesFor(recipeFiles, [], []);
 
 describe('the connect-a-service recipe', () => {
   it('is offered whatever format guides are carried, since it names none, as its file has it', () => {

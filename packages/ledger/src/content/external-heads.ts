@@ -11,7 +11,7 @@ import type {
 import { randomUUIDv7, streamPrefixOfPlaybook } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import type { StatementExecutor, UnlessHeld } from '../event-store.ts';
+import type { ReturningExecutor, StatementExecutor, UnlessHeld } from '../event-store.ts';
 import { keptShelf } from './content-tables.ts';
 
 interface HeadKeeping {
@@ -59,10 +59,10 @@ function keptAs(row: typeof HeadRow.Type, putBy: string): HeadKept {
   return { kept: row.upload_id === putBy ? 'new' : 'standing', head: { bytes: row.bytes, mediaType: row.media_type } };
 }
 
-function keptBy(execute: StatementExecutor, { playbook, sha256, head, keptAt }: HeadKeeping): Effect.Effect<HeadKept> {
+function keptBy(execute: ReturningExecutor, { playbook, sha256, head, keptAt }: HeadKeeping): Effect.Effect<HeadKept> {
   const putBy = randomUUIDv7();
   return Effect.promise(async () => {
-    const { rows } = await execute.query(
+    const { rows } = await execute.command(
       SQL`INSERT INTO ${heads} (playbook_key, sha256, upload_id, bytes, chunks, media_type, kept_at, kept_in)
         VALUES (${streamPrefixOfPlaybook(playbook)}, ${sha256}, ${putBy}, ${head.bytes}, 0, ${head.mediaType}, ${keptAt}, ${keptExternally})
         ON CONFLICT (playbook_key, sha256) DO UPDATE SET kept_at =
@@ -75,13 +75,13 @@ function keptBy(execute: StatementExecutor, { playbook, sha256, head, keptAt }: 
 }
 
 function touchedBy(
-  execute: StatementExecutor,
+  execute: ReturningExecutor,
   playbook: ContentOwner,
   sha256: string,
   keptAt: number,
 ): Effect.Effect<HeadKept | undefined> {
   return Effect.promise(async () => {
-    const { rows } = await execute.query(
+    const { rows } = await execute.command(
       SQL`UPDATE ${heads} SET kept_at = CASE WHEN removing_since IS NULL THEN ${keptAt} ELSE kept_at END
         WHERE ${theDigest(playbook, sha256)} RETURNING ${headColumns}`,
     );
@@ -145,7 +145,7 @@ function readBy(execute: StatementExecutor, digest: SQL): Effect.Effect<KeptCont
   });
 }
 
-export function externalHeadsOn(execute: StatementExecutor, unlessHeld: UnlessHeld): ContentHeads {
+export function externalHeadsOn(execute: ReturningExecutor, unlessHeld: UnlessHeld): ContentHeads {
   return {
     kept: (playbook, sha256, head, keptAt) => keptBy(execute, { playbook, sha256, head, keptAt }),
     touched: (playbook, sha256, keptAt) => touchedBy(execute, playbook, sha256, keptAt),

@@ -92,9 +92,13 @@ function deferredOf(database: HostDatabase, playbookKey: string, workflow: strin
   ).pipe(Effect.map((rows) => rows.reduce((sum, { deferred }) => sum + deferred, 0)));
 }
 
+function heldForContent(refused: FailureDetail): boolean {
+  return refused.kind === 'content_unavailable';
+}
+
 function deliveryFailureOf(refused: FailureDetail): ConstructorParameters<typeof DeliveryFailed>[0] {
   const failure = { detail: refused.detail, ...codesOf(refused) };
-  return refused.kind === 'content_unavailable' ? { ...failure, held: 'content' } : failure;
+  return heldForContent(refused) ? { ...failure, held: 'content' } : failure;
 }
 
 function started(
@@ -160,7 +164,7 @@ function deferredAgain({ database }: StartingParts, deferred: Deferred, minute: 
 }
 
 function failedWhenDue(parts: StartingParts, deferred: Deferred, minute: number, failure: FailureDetail) {
-  const attempts = deferred.attempts + 1;
+  const attempts = heldForContent(failure) ? deferred.attempts : deferred.attempts + 1;
   return attempts < deliverySweeps
     ? deferredAgain(parts, deferred, minute, attempts)
     : Effect.andThen(

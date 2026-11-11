@@ -29,6 +29,16 @@ export function refusedWhile(refusing: Readonly<{ now: boolean }>): FailingStart
   return () => (refusing.now ? new StartRefused({ detail: 'The playbook refused the start' }) : null);
 }
 
+export function unreadWhile(unread: Readonly<{ now: boolean }>): FailingStart {
+  return (start) =>
+    unread.now
+      ? new StartRefused({
+          detail: `The workflow ${start.workflow} could not be read from storage just now`,
+          kind: 'content_unavailable',
+        })
+      : null;
+}
+
 export function rejectedFor(workflow: string, detail: string): FailingStart {
   return (start) => (start.workflow === workflow ? new StartRejected({ detail }) : null);
 }

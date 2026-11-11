@@ -15,7 +15,7 @@ import {
 import { streamPrefixOfPlaybook, type PlaybookAddress } from '@on.auto/operations';
 import { Clock, Effect, Schema } from 'effect';
 
-import type { OwnRemoval, StatementExecutor } from '../event-store.ts';
+import type { OwnRemoval, ReturningExecutor, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import type { ContentDialect } from './content-dialects.ts';
 import type { Shelf } from './content-tables.ts';
@@ -28,7 +28,7 @@ export interface KeptHead extends ContentKept {
 }
 
 export interface Shelved {
-  readonly execute: StatementExecutor;
+  readonly execute: ReturningExecutor;
   readonly dialect: ContentDialect;
   readonly shelf: Shelf;
 }
@@ -84,6 +84,10 @@ export function commanded({ execute }: Shelved, sql: SQL): Effect.Effect<void> {
   return Effect.asVoid(Effect.promise(() => execute.command(sql)));
 }
 
+function written({ execute }: Shelved, sql: SQL): Effect.Effect<readonly unknown[]> {
+  return Effect.promise(async () => (await execute.command(sql)).rows);
+}
+
 const headColumns = SQL.plain('upload_id, CAST(bytes AS DOUBLE PRECISION) AS bytes, chunks, media_type');
 
 export const keptInTheLedger = 'ledger';
@@ -124,7 +128,7 @@ export function keptHeadOn(shelved: Shelved, place: Key, sha256: string): Effect
 export function headTouched(shelved: Shelved, place: Key, sha256: string): Effect.Effect<KeptHead | undefined> {
   return Effect.flatMap(Clock.currentTimeMillis, (keptAt) =>
     Effect.map(
-      queried(
+      written(
         shelved,
         SQL`UPDATE ${SQL.identifier(shelved.shelf.heads)} SET kept_at = ${keptAt}
           WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger} RETURNING ${headColumns}`,

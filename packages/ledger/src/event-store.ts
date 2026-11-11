@@ -279,6 +279,10 @@ export interface StatementExecutor {
   readonly command: (sql: SQL) => Promise<unknown>;
 }
 
+export interface ReturningExecutor extends StatementExecutor {
+  readonly command: StatementExecutor['query'];
+}
+
 interface Transaction {
   readonly execute: StatementExecutor;
 }

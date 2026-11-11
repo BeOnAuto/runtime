@@ -54,7 +54,7 @@ const refusalFields = {
 };
 
 const RefusalRow = Schema.Union([
-  Schema.Struct({ ...refusalFields, trigger_kind: Schema.Null, trigger_reference: Schema.Null }),
+  Schema.Struct({ ...refusalFields, trigger_kind: Schema.Literal(''), trigger_reference: Schema.Literal('') }),
   Schema.Struct({
     ...refusalFields,
     trigger_kind: StartingTriggerSchema.fields.kind,
@@ -88,7 +88,11 @@ function refusalLoopOn(database: HostDatabase) {
 }
 
 function triggerOf(row: Row) {
-  return row.trigger_kind === null ? {} : { trigger: { kind: row.trigger_kind, reference: row.trigger_reference } };
+  return row.trigger_kind === '' ? {} : { trigger: { kind: row.trigger_kind, reference: row.trigger_reference } };
+}
+
+function triggerColumnsOf({ trigger }: Refusal) {
+  return { triggerKind: trigger?.kind ?? '', triggerReference: trigger?.reference ?? '' };
 }
 
 function refusedOf(row: Row) {
@@ -116,13 +120,16 @@ function recorded(database: HostDatabase, row: Row, at: number): Effect.Effect<v
       yield* refusalLoopOn(database)(reactionsStreamOf(row.playbook_key, row.workflow), refusal);
       yield* database.write(
         statement`UPDATE workflow_reaction_refusals SET recorded = 1
-          WHERE playbook_key = ${row.playbook_key} AND workflow = ${row.workflow} AND minute = ${row.minute}`,
+          WHERE playbook_key = ${row.playbook_key} AND workflow = ${row.workflow}
+            AND trigger_kind = ${row.trigger_kind} AND trigger_reference = ${row.trigger_reference}
+            AND minute = ${row.minute}`,
       );
     }),
   );
 }
 
-function rowOf(database: HostDatabase, playbookKey: string, workflow: string): Effect.Effect<Row | undefined> {
+function rowOf(database: HostDatabase, playbookKey: string, refusal: Refusal): Effect.Effect<Row | undefined> {
+  const { triggerKind, triggerReference } = triggerColumnsOf(refusal);
   return Effect.orDie(
     rowsOf(
       RefusalRow,
@@ -130,28 +137,27 @@ function rowOf(database: HostDatabase, playbookKey: string, workflow: string): E
         statement`SELECT playbook_key, workflow, version, minute, count, reason, recorded,
             kind, because, trigger_kind, trigger_reference
           FROM workflow_reaction_refusals
-          WHERE playbook_key = ${playbookKey} AND workflow = ${workflow}`,
+          WHERE playbook_key = ${playbookKey} AND workflow = ${refusal.workflow}
+            AND trigger_kind = ${triggerKind} AND trigger_reference = ${triggerReference}`,
       ),
     ),
   ).pipe(Effect.map(([row]) => row));
 }
 
 function counted(database: HostDatabase, playbookKey: string, refusal: Refusal, minute: number) {
-  const { workflow, version, reason, kind = null, because = null, trigger } = refusal;
-  const triggerKind = trigger?.kind ?? null;
-  const triggerReference = trigger?.reference ?? null;
+  const { workflow, version, reason, kind = null, because = null } = refusal;
+  const { triggerKind, triggerReference } = triggerColumnsOf(refusal);
   return Effect.orDie(
     database.write(
       statement`INSERT INTO workflow_reaction_refusals
           (playbook_key, workflow, version, minute, count, reason, recorded, kind, because, trigger_kind, trigger_reference)
         VALUES (${playbookKey}, ${workflow}, ${version}, ${minute}, 1, ${reason}, 0,
           ${kind}, ${because}, ${triggerKind}, ${triggerReference})
-        ON CONFLICT (playbook_key, workflow) DO UPDATE SET
+        ON CONFLICT (playbook_key, workflow, trigger_kind, trigger_reference) DO UPDATE SET
           count = CASE WHEN workflow_reaction_refusals.minute = excluded.minute
             THEN workflow_reaction_refusals.count + 1 ELSE 1 END,
           version = excluded.version, minute = excluded.minute, reason = excluded.reason, recorded = 0,
-          kind = excluded.kind, because = excluded.because,
-          trigger_kind = excluded.trigger_kind, trigger_reference = excluded.trigger_reference`,
+          kind = excluded.kind, because = excluded.because`,
     ),
   );
 }
@@ -161,7 +167,7 @@ export function refusalsOn(database: HostDatabase, now: () => number): Refusals 
     refuse: (playbookKey, refusal) =>
       Effect.gen(function* () {
         const at = now();
-        const row = yield* rowOf(database, playbookKey, refusal.workflow);
+        const row = yield* rowOf(database, playbookKey, refusal);
         if (row !== undefined && row.minute !== minuteOf(at) && row.recorded === 0) {
           yield* recorded(database, row, at);
         }
@@ -177,7 +183,8 @@ export function refusalsOn(database: HostDatabase, now: () => number): Refusals 
               statement`SELECT playbook_key, workflow, version, minute, count, reason, recorded,
                   kind, because, trigger_kind, trigger_reference
                 FROM workflow_reaction_refusals
-                WHERE recorded = 0 AND minute < ${minuteOf(at)}`,
+                WHERE recorded = 0 AND minute < ${minuteOf(at)}
+                ORDER BY minute, playbook_key, workflow, trigger_kind, trigger_reference`,
             ),
           ),
         );

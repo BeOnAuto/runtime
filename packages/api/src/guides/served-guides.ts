@@ -3,7 +3,14 @@ import { capitalized, type Noun } from '@on.auto/phrasing';
 import { shippedFileIn, type ShippedFiles } from '@on.auto/shipped-files';
 
 import { documentation } from './guide-files.ts';
-import { guideShelfOf, pageGuideName, type DefinitionType, type Guide, type GuideShelf } from './guide-shelf.ts';
+import {
+  eventsGuideName,
+  guideShelfOf,
+  pageGuideName,
+  type DefinitionType,
+  type Guide,
+  type GuideShelf,
+} from './guide-shelf.ts';
 import { withLinksResolved } from './page-links.ts';
 import { recipesFor } from './recipes.ts';
 import { withoutSiteMarkup } from './site-markup.ts';
@@ -38,7 +45,7 @@ const triggersAbout: Omit<Guide, 'text'> = {
 const eventsPage = 'reference/events.md';
 
 const eventsAbout: Omit<Guide, 'text'> = {
-  name: 'events',
+  name: eventsGuideName,
   title: 'Events',
   description:
     "The playbook's events that a workflow's trigger, a page and a prediction function take, and how a filter names them.",
@@ -118,7 +125,7 @@ export async function guideShelfFrom(
       ? [await pageGuideOf(shippedFiles, pagePage, pageAbout), await pageGuideOf(shippedFiles, glancePage, glanceAbout)]
       : []),
   ];
-  const recipes = await recipesFor(shippedFiles, pageGuides);
+  const recipes = await recipesFor(shippedFiles, pageGuides, definitionTypes);
   const start = startGuideOf({ definitionTypes, pages, events, recipes: recipes.map(({ name }) => name) });
   return guideShelfOf([start, ...pageGuides], recipes, definitionTypes);
 }

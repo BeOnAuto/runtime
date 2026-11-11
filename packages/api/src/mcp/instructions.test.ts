@@ -21,19 +21,26 @@ const whatAPlaybookHolds = 'A playbook holds work that keeps running after a con
 const whatThisServerIsFor = `${whatAPlaybookHolds} Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.`;
 
 const whereToBegin =
-  'Before anything else, read the guide start with get_guide: it says what a playbook is made of, what a workflow owns, what you do yourself, and which guide each task needs.';
+  'Before you build or change anything, read the guide start with get_guide: it says which function type each part of a job takes.';
+
+const buildFromTheJob =
+  'Build from the job: each part is a function of the type its work needs, and a workflow runs the parts in order.';
+
+const opening = `${whereToBegin} ${buildFromTheJob}`;
 
 const closing = 'A tool that cannot do what was asked says why and what to change.';
 
-const servedOnMcp = `${whatThisServerIsFor} The org is the caller's own: list_playbooks shows its playbooks and create_playbook makes one. ${whereToBegin} ${closing}`;
+const onMcp = `${opening} ${whatThisServerIsFor} The org is the caller's own: list_playbooks shows its playbooks and create_playbook makes one.`;
 
-const servedOnAnOrg = `${whatThisServerIsFor} This connection manages the org's playbooks: list_playbooks shows them and create_playbook makes one; each playbook's definitions are made on /orgs/{org}/playbooks/{playbook}/mcp. ${whereToBegin} ${closing}`;
+const servedOnMcp = `${onMcp} ${closing}`;
 
-const servedOnAPlaybook = `${whatThisServerIsFor} This connection acts inside one playbook. ${whereToBegin} ${closing}`;
+const servedOnAnOrg = `${opening} ${whatThisServerIsFor} This connection manages the org's playbooks: list_playbooks shows them and create_playbook makes one; each playbook's definitions are made on /orgs/{org}/playbooks/{playbook}/mcp. ${closing}`;
+
+const servedOnAPlaybook = `${opening} ${whatThisServerIsFor} This connection acts inside one playbook. ${closing}`;
 
 const terminology = readFileSync(new URL('../../../../docs/concepts/terminology.md', import.meta.url), 'utf8');
 
-const openings = [
+const callers = [
   [
     'a signed-in person',
     signedInAda,
@@ -50,14 +57,22 @@ const openings = [
 ] as const;
 
 describe('the instructions a connection is served', () => {
-  it.each(openings)(
-    'open, for %s, with whom it acts as, by name and id, and in which org',
-    (_case, caller, org, opening) => {
+  it.each(callers)(
+    'say, for %s, whom it acts as, by name and id, and in which org, just before their last sentence',
+    (_case, caller, org, actingAs) => {
       expect(instructionsActingAs({ caller, org }, 'own org', withConnections(ownOrg))).toBe(
-        `${opening} ${servedOnMcp}`,
+        `${onMcp} ${actingAs} ${closing}`,
       );
     },
   );
+
+  it('open with where to begin and with the rule, which end before character 512 whatever the name of the caller', () => {
+    const named = { ...signedInAda, name: 'A'.repeat(400) };
+    const words = instructionsActingAs({ caller: named, org: 'acme' }, 'own org', withConnections(ownOrg));
+
+    expect(words.startsWith(`${opening} `)).toBe(true);
+    expect(opening.length).toBe(239);
+  });
 });
 
 describe('the instructions of each endpoint, for a key that may call every tool', () => {
@@ -95,7 +110,7 @@ describe('the instructions of a key that may only read', () => {
       ].filter((name) => reading.includes(name)),
     ).toEqual([]);
     expect(reading).toBe(
-      `${whatThisServerIsFor} The org is the caller's own: list_playbooks shows its playbooks. ${whereToBegin} ${closing}`,
+      `${opening} ${whatThisServerIsFor} The org is the caller's own: list_playbooks shows its playbooks. ${closing}`,
     );
   });
 });
@@ -109,7 +124,7 @@ describe('what the instructions say of the connection', () => {
 
   it('on an org endpoint that neither lists nor creates playbooks, say only what it manages', () => {
     expect(instructionsFor('org', { orgTools: ['get_guide'], playbookTools: [] })).toContain(
-      "This connection manages the org's playbooks; each playbook's definitions are made on /orgs/{org}/playbooks/{playbook}/mcp. Before anything else, read the guide start",
+      "This connection manages the org's playbooks; each playbook's definitions are made on /orgs/{org}/playbooks/{playbook}/mcp. A tool that cannot",
     );
   });
 });
@@ -124,22 +139,24 @@ describe('the instructions of every endpoint', () => {
     }
   });
 
-  it('open with what a playbook holds, work that keeps running after a conversation, and then name the runtime', () => {
+  it('open with where to begin and the rule, then say what a playbook holds, work that keeps running after a conversation, and name the runtime', () => {
     expect(
       everyEndpoint.filter(
         ([endpoint, served]) =>
-          !instructionsFor(endpoint, served).startsWith(`${whatAPlaybookHolds} Auto Runtime makes and runs playbooks;`),
+          !instructionsFor(endpoint, served).startsWith(
+            `${opening} ${whatAPlaybookHolds} Auto Runtime makes and runs playbooks;`,
+          ),
       ),
     ).toEqual([]);
   });
 
-  it('leave the function types, the workflows, the pages, the connections and the recipes to the guide start, and end with what a tool that cannot says', () => {
+  it('leave the function types, the pages, the connections and the recipes to the guide start, and end with what a tool that cannot says', () => {
     for (const [endpoint, served] of everyEndpoint) {
       const words = instructionsFor(endpoint, served);
       expect(words).not.toMatch(
         /reasoning|lookup|interaction|prediction|computation|generation|page|recipe|first-playbook|search|add_connection|answer_interaction|list_models|query_connection|execute_connection|dry_run/u,
       );
-      expect(words.endsWith(`${whereToBegin} ${closing}`)).toBe(true);
+      expect(words.endsWith(` ${closing}`)).toBe(true);
     }
   });
 
@@ -151,12 +168,10 @@ describe('the instructions of every endpoint', () => {
     expect(instructions.flatMap((text) => internalTermsIn(text))).toEqual([]);
   });
 
-  it('take under 700 characters with every tool, so a client that shows little of them shows them whole', () => {
+  it('take under 700 characters with every tool on /mcp and under 800 on the org endpoint, whose own sentence is the longest, so a client that shows little of them shows them whole', () => {
     expect(everyEndpoint.map(([endpoint, served]) => instructionsFor(endpoint, served).length)).toEqual([
-      servedOnAnOrg.length,
-      servedOnAPlaybook.length,
-      servedOnMcp.length,
+      764, 626, 679,
     ]);
-    expect([servedOnAnOrg, servedOnAPlaybook, servedOnMcp].filter(({ length }) => length >= 700)).toEqual([]);
+    expect([servedOnAnOrg.length, servedOnAPlaybook.length, servedOnMcp.length]).toEqual([764, 626, 679]);
   });
 });

@@ -1,5 +1,5 @@
 {
-  "layout": 17,
+  "layout": 18,
   "catalog": [
     {
       "name": "activity_1",
@@ -150,44 +150,44 @@
       "sql": "CREATE INDEX ledger_messages_by_stream ON emt_messages (stream_id, global_position)"
     },
     {
-      "name": "open_requests_17",
-      "sql": "CREATE TABLE open_requests_17 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, reading TEXT, sent_conversation TEXT, sent_id TEXT, sent_at INTEGER, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, tell TEXT, taken TEXT, telling_due_at INTEGER, last_said TEXT, ending TEXT, PRIMARY KEY (playbook_key, row_key))"
+      "name": "open_requests_18",
+      "sql": "CREATE TABLE open_requests_18 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, request_id TEXT, type TEXT, function TEXT, version INTEGER, party TEXT, delivery TEXT, replies TEXT, message TEXT, answers INTEGER, answer_schema TEXT, requested_at INTEGER, expires_at INTEGER, attempts INTEGER, next_attempt_at INTEGER, standing TEXT, open INTEGER, attempt_due_at INTEGER, ending_due_at INTEGER, ended TEXT, conversation TEXT, reading TEXT, sent_conversation TEXT, sent_id TEXT, sent_at INTEGER, answerer TEXT, reply TEXT, reply_refusals INTEGER, refusals_told INTEGER, tell TEXT, taken TEXT, telling_due_at INTEGER, last_said TEXT, ending TEXT, PRIMARY KEY (playbook_key, row_key))"
     },
     {
-      "name": "open_requests_17_attempts_due",
-      "sql": "CREATE INDEX open_requests_17_attempts_due ON open_requests_17 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
+      "name": "open_requests_18_attempts_due",
+      "sql": "CREATE INDEX open_requests_18_attempts_due ON open_requests_18 (attempt_due_at) WHERE attempt_due_at IS NOT NULL"
     },
     {
-      "name": "open_requests_17_by_conversation",
-      "sql": "CREATE INDEX open_requests_17_by_conversation ON open_requests_17 (playbook_key, open, conversation, requested_at, row_key)"
+      "name": "open_requests_18_by_conversation",
+      "sql": "CREATE INDEX open_requests_18_by_conversation ON open_requests_18 (playbook_key, open, conversation, requested_at, row_key)"
     },
     {
-      "name": "open_requests_17_by_function",
-      "sql": "CREATE INDEX open_requests_17_by_function ON open_requests_17 (playbook_key, open, function, requested_at, row_key)"
+      "name": "open_requests_18_by_function",
+      "sql": "CREATE INDEX open_requests_18_by_function ON open_requests_18 (playbook_key, open, function, requested_at, row_key)"
     },
     {
-      "name": "open_requests_17_by_open",
-      "sql": "CREATE INDEX open_requests_17_by_open ON open_requests_17 (playbook_key, open, requested_at, row_key)"
+      "name": "open_requests_18_by_open",
+      "sql": "CREATE INDEX open_requests_18_by_open ON open_requests_18 (playbook_key, open, requested_at, row_key)"
     },
     {
-      "name": "open_requests_17_by_party",
-      "sql": "CREATE INDEX open_requests_17_by_party ON open_requests_17 (playbook_key, open, party, requested_at, row_key)"
+      "name": "open_requests_18_by_party",
+      "sql": "CREATE INDEX open_requests_18_by_party ON open_requests_18 (playbook_key, open, party, requested_at, row_key)"
     },
     {
-      "name": "open_requests_17_by_sent_message",
-      "sql": "CREATE INDEX open_requests_17_by_sent_message ON open_requests_17 (playbook_key, open, sent_conversation, sent_id)"
+      "name": "open_requests_18_by_sent_message",
+      "sql": "CREATE INDEX open_requests_18_by_sent_message ON open_requests_18 (playbook_key, open, sent_conversation, sent_id)"
     },
     {
-      "name": "open_requests_17_by_type",
-      "sql": "CREATE INDEX open_requests_17_by_type ON open_requests_17 (playbook_key, open, type, requested_at, row_key)"
+      "name": "open_requests_18_by_type",
+      "sql": "CREATE INDEX open_requests_18_by_type ON open_requests_18 (playbook_key, open, type, requested_at, row_key)"
     },
     {
-      "name": "open_requests_17_endings_due",
-      "sql": "CREATE INDEX open_requests_17_endings_due ON open_requests_17 (ending_due_at) WHERE ending_due_at IS NOT NULL"
+      "name": "open_requests_18_endings_due",
+      "sql": "CREATE INDEX open_requests_18_endings_due ON open_requests_18 (ending_due_at) WHERE ending_due_at IS NOT NULL"
     },
     {
-      "name": "open_requests_17_tellings_due",
-      "sql": "CREATE INDEX open_requests_17_tellings_due ON open_requests_17 (telling_due_at) WHERE telling_due_at IS NOT NULL"
+      "name": "open_requests_18_tellings_due",
+      "sql": "CREATE INDEX open_requests_18_tellings_due ON open_requests_18 (telling_due_at) WHERE telling_due_at IS NOT NULL"
     },
     {
       "name": "page_views",
@@ -331,7 +331,7 @@
     },
     {
       "name": "workflow_reaction_refusals",
-      "sql": "CREATE TABLE workflow_reaction_refusals (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, version INTEGER NOT NULL, minute BIGINT NOT NULL, count INTEGER NOT NULL, reason TEXT NOT NULL, recorded INTEGER NOT NULL DEFAULT 0, kind TEXT, because TEXT, trigger_kind TEXT, trigger_reference TEXT, PRIMARY KEY (playbook_key, workflow))"
+      "sql": "CREATE TABLE workflow_reaction_refusals (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, version INTEGER NOT NULL, minute BIGINT NOT NULL, count INTEGER NOT NULL, reason TEXT NOT NULL, recorded INTEGER NOT NULL DEFAULT 0, kind TEXT, because TEXT, trigger_kind TEXT NOT NULL, trigger_reference TEXT NOT NULL, PRIMARY KEY (playbook_key, workflow, trigger_kind, trigger_reference))"
     },
     {
       "name": "workflow_runs",
@@ -363,7 +363,7 @@
     },
     {
       "name": "workflow_subscriptions",
-      "sql": "CREATE TABLE workflow_subscriptions (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, reference TEXT NOT NULL, version BIGINT NOT NULL, kind TEXT NOT NULL, rule TEXT NOT NULL, activated_by TEXT NOT NULL, activated_at BIGINT NOT NULL, next_due BIGINT, running TEXT, PRIMARY KEY (playbook_key, workflow, reference))"
+      "sql": "CREATE TABLE workflow_subscriptions (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, reference TEXT NOT NULL, version BIGINT NOT NULL, kind TEXT NOT NULL, rule TEXT NOT NULL, activated_by TEXT NOT NULL, activated_at BIGINT NOT NULL, next_due BIGINT, running TEXT, held_due BIGINT, PRIMARY KEY (playbook_key, workflow, reference))"
     },
     {
       "name": "workflow_subscriptions_due",

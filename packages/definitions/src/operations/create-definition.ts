@@ -10,18 +10,16 @@ import { answeredDefinition } from './definition-reading.ts';
 import { savedFrom } from './saved-content.ts';
 import { SavedDefinitionSchema, withDefinitionPageInStudio } from './studio-pages.ts';
 
-function descriptionOf(typesInWords: string): string {
-  return [
-    'Saves a new function or workflow from its document, without running it.',
-    'update_definition changes one saved, and a name is never reused.',
-    `\`type\` is ${typesInWords}, and \`name\` how workflows and tools refer to it.`,
-    'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
-    "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
-    'A function needs `diagram` too; a workflow takes none.',
-    "The document's `page` key shows the person its runs; write it as the page guide says.",
-    'A document that does not fit its format is refused with the line and what is wrong.',
-  ].join(' ');
-}
+const description = [
+  'Saves a new function or workflow from its document, without running it.',
+  'update_definition changes one saved, and a name is never reused.',
+  'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
+  'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
+  "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
+  'A function needs `diagram` too; a workflow takes none.',
+  "The document's `page` key shows the person its runs; write it as the page guide says.",
+  'A document that does not fit its format is refused with the line and what is wrong.',
+].join(' ');
 
 export function defineCreateDefinition(capabilities: readonly Capability[], pages: SubjectPages) {
   const known = knownCapabilities(capabilities);
@@ -30,7 +28,7 @@ export function defineCreateDefinition(capabilities: readonly Capability[], page
     defineCommand('playbook', {
       name: 'create_definition',
       title: 'Create definition',
-      description: descriptionOf(known.typesInWords),
+      description,
       route: { method: 'POST', path: '/definitions/{type}' },
       reachesOutside: known.reachesOutside,
       successStatus: 201,
@@ -64,5 +62,6 @@ export function defineCreateDefinition(capabilities: readonly Capability[], page
           `Created ${words.named(definition.type, definition.name)}.${whatItDoes(definition)} It has been saved but has not been run yet.${pageWords(definition)}`,
       },
     }),
+    known.byEachPartsJob,
   );
 }

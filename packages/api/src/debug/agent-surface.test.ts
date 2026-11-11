@@ -30,7 +30,7 @@ function servedAt(path: string): Promise<Served> {
     headers: { authorization: `Bearer ${acmeAdmin.key}` },
   };
   return withMcpSession('current revision', connecting, async (session) => ({
-    instructions: String(session.instructions).replace(/^This connection acts as [^.]+\. /u, ''),
+    instructions: String(session.instructions).replace(/ This connection acts as [^.]+\./u, ''),
     tools: toolNamesIn(await session.listTools()).toSorted(),
     prompts: Schema.decodeUnknownSync(PromptsSchema)(await session.listPrompts())
       .prompts.map(({ name }) => name)

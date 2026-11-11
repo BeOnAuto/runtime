@@ -11,9 +11,9 @@ export const createPlaybook = defineCommand('org', {
   name: 'create_playbook',
   title: 'Create playbook',
   description: [
-    'Creates a playbook for one business responsibility, such as reviewing campaign briefs, and returns it empty.',
+    'Creates a playbook for one business responsibility, and returns it empty.',
     'Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it.',
-    'Each job it does again and again is a workflow, its functions the steps.',
+    'Each job it does again and again is a workflow, and each part of a job a function of the type that part needs.',
     'An id that is taken or retired is refused.',
     "`playbook` is the id every tool inside it takes, and `description` what it is for, in the person's words.",
   ].join(' '),

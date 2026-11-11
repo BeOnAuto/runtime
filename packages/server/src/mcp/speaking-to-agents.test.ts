@@ -49,8 +49,8 @@ const posting = [
 ].join('\n');
 
 describe('episode 1: asked "what is a playbook?"', () => {
-  it('is answered by the three sentences after the one that says whom the connection acts as, without any tool or rule', () => {
-    const answer = sentencesOf(surfaces.instructions).slice(1, 4).join(' ');
+  it('is answered by the three sentences after where to begin and the rule, without any tool', () => {
+    const answer = sentencesOf(surfaces.instructions).slice(2, 5).join(' ');
 
     expect(answer).toBe(
       'A playbook holds work that keeps running after a conversation, in any line of business. Auto Runtime makes and runs playbooks; Studio manages them; the agent is a separate client. A playbook contains one brain (its reusable functions) and workflows; runs belong to the playbook.',
@@ -171,7 +171,7 @@ describe('episode 8: asked what a gateway-style tool server offers, and then to 
     const seen = await onMcp(lookedAtOverMcp);
 
     expect(descriptionOf('search')).toContain('Searches the tools of the tool servers');
-    expect(descriptionOf('query_connection')).toContain('and answers what a run of a reasoning function would see.');
+    expect(descriptionOf('query_connection')).toContain('and answers what a run of a function would see.');
     expect(seen.found.structuredContent).toMatchObject({
       servers: [{ name: 'slack' }],
       tools: [{ server: 'slack', tool: 'search', mark: 'reads' }],
@@ -181,7 +181,7 @@ describe('episode 8: asked what a gateway-style tool server offers, and then to 
     );
     expect(seen.called.structuredContent).toMatchObject({ outcome: 'result', text: 'Found 2 rows for standups.' });
     expect(seen.after.structuredContent).toEqual(seen.before.structuredContent);
-    expect(descriptionOf('query_connection')).toContain('or to find an id a prompt needs');
+    expect(descriptionOf('query_connection')).toContain('or to find an id a function needs');
   });
 
   it('calls the tool that lists the channels and takes the id of #random from its answer, as the give-tools recipe says', async () => {

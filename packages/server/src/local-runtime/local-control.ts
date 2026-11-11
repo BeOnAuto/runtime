@@ -110,7 +110,7 @@ export function providerSetupFor(directory: string, restart = 'restart Auto Runt
   return [
     `To add one, ask the person to put a line such as ANTHROPIC_API_KEY=<their key> in ${join(directory, '.env')}, never in this chat,`,
     `then ${restart}.`,
-    'Then offer a first function, as the first-playbook recipe of get_guide does; on.auto/docs has more.',
+    'Then offer a first playbook, as the first-playbook recipe of get_guide does; on.auto/docs has more.',
   ].join(' ');
 }
 

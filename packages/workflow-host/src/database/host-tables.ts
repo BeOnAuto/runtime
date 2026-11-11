@@ -1,5 +1,20 @@
 import { statement, type ConnectionPorts, type LayoutStep, type Statement } from '@on.auto/ledger';
 
+const reactionRefusalsTable = statement`CREATE TABLE IF NOT EXISTS workflow_reaction_refusals (
+    playbook_key TEXT NOT NULL,
+    workflow TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    minute BIGINT NOT NULL,
+    count INTEGER NOT NULL,
+    reason TEXT NOT NULL,
+    recorded INTEGER NOT NULL DEFAULT 0,
+    kind TEXT,
+    because TEXT,
+    trigger_kind TEXT NOT NULL,
+    trigger_reference TEXT NOT NULL,
+    PRIMARY KEY (playbook_key, workflow, trigger_kind, trigger_reference)
+  )`;
+
 const followerTables: readonly Statement[] = [
   statement`CREATE TABLE IF NOT EXISTS workflow_followed_playbooks (
     playbook_key TEXT NOT NULL PRIMARY KEY,
@@ -51,6 +66,7 @@ const followerTables: readonly Statement[] = [
     activated_at BIGINT NOT NULL,
     next_due BIGINT,
     running TEXT,
+    held_due BIGINT,
     PRIMARY KEY (playbook_key, workflow, reference)
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_subscriptions_due ON workflow_subscriptions (next_due)
@@ -85,20 +101,7 @@ const followerTables: readonly Statement[] = [
     PRIMARY KEY (playbook_key, run_id)
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_reaction_backlog_due ON workflow_reaction_backlog (due)`,
-  statement`CREATE TABLE IF NOT EXISTS workflow_reaction_refusals (
-    playbook_key TEXT NOT NULL,
-    workflow TEXT NOT NULL,
-    version INTEGER NOT NULL,
-    minute BIGINT NOT NULL,
-    count INTEGER NOT NULL,
-    reason TEXT NOT NULL,
-    recorded INTEGER NOT NULL DEFAULT 0,
-    kind TEXT,
-    because TEXT,
-    trigger_kind TEXT,
-    trigger_reference TEXT,
-    PRIMARY KEY (playbook_key, workflow)
-  )`,
+  reactionRefusalsTable,
 ];
 
 const hostTables: readonly Statement[] = [
@@ -201,6 +204,21 @@ export const hostLayoutSteps: readonly LayoutStep[] = [
     statements: [
       statement`ALTER TABLE workflow_runs ADD COLUMN ended_time BIGINT`,
       statement`ALTER TABLE workflow_runs ADD COLUMN closed_at BIGINT`,
+    ],
+  },
+  {
+    layout: 18,
+    statements: [
+      statement`ALTER TABLE workflow_subscriptions ADD COLUMN held_due BIGINT`,
+      statement`CREATE TABLE workflow_reaction_refusals_by_workflow AS SELECT * FROM workflow_reaction_refusals`,
+      statement`DROP TABLE workflow_reaction_refusals`,
+      reactionRefusalsTable,
+      statement`INSERT INTO workflow_reaction_refusals
+          (playbook_key, workflow, version, minute, count, reason, recorded, kind, because, trigger_kind, trigger_reference)
+        SELECT playbook_key, workflow, version, minute, count, reason, recorded, kind, because,
+          COALESCE(trigger_kind, ''), COALESCE(trigger_reference, '')
+        FROM workflow_reaction_refusals_by_workflow`,
+      statement`DROP TABLE workflow_reaction_refusals_by_workflow`,
     ],
   },
 ];

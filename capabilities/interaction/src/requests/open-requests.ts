@@ -235,7 +235,7 @@ function keyOf(message: ProjectedMessage, { kind, id }: ProjectedStream): string
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 17,
+  version: 18,
   kinds: ['runs', conversationCallsKind],
   types: [
     'run_deferred',

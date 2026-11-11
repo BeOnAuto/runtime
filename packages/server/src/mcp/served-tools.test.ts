@@ -100,11 +100,11 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(tools.filter((tool) => isAddressedToTheAgent(tool)).map(({ name }) => name)).toEqual([]);
   });
 
-  it('name each type of definition in create_definition, say that a workflow owns one job the business does again and again, that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the page guide says, at 741 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
+  it('say in create_definition that each part of a job is its own function, of the type its work needs, that a workflow owns one job the business does again and again, that a function needs a diagram and a workflow takes none and that its page is a key of its document, written as the page guide says, at 722 characters in seven sentences, and leave its guide to get_guide, which lists every guide', () => {
     const description = descriptionOf('create_definition');
 
     expect(description).toContain(
-      '`type` is reasoning, lookup, interaction, prediction, computation, generation, or workflow, and `name` how workflows and tools refer to it.',
+      'Each part of a job is its own function, of the `type` its work needs, and `name` is how workflows and tools refer to it.',
     );
     expect(description).toContain(
       "`source` is the whole document in its type's format, which get_guide gives, and `overview` Markdown for the person who runs the business.",
@@ -116,7 +116,7 @@ describe('the descriptions of the tools of /mcp', () => {
     expect(description).toContain(
       'A workflow owns one job the business does again and again, and a check, a test or a setup is not one.',
     );
-    expect([description.length, sentencesOf(description)]).toEqual([741, 7]);
+    expect([description.length, sentencesOf(description)]).toEqual([722, 7]);
     expect(tools.find(({ name }) => name === 'get_guide')?.inputSchema).toMatchObject({
       properties: { guide: { enum: listingEveryFormat } },
     });
@@ -160,9 +160,15 @@ describe('the descriptions of the tools that find and connect a provider', () =>
 });
 
 describe('the descriptions that say what the instructions leave to them', () => {
-  it('name in get_guide the recipes the tools of /mcp can follow', () => {
-    expect(descriptionOf('get_guide')).toContain(
-      'It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow.',
+  it('say in get_guide that start says which function type each part of a job takes, and name the recipes the tools of /mcp can follow', () => {
+    expect(descriptionOf('get_guide')).toBe(
+      "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow.",
+    );
+  });
+
+  it('say in create_playbook that each part of a job is a function of the type that part needs, with no example of one business', () => {
+    expect(descriptionOf('create_playbook')).toContain(
+      'Creates a playbook for one business responsibility, and returns it empty. Use it when the person wants something done that should keep working after this conversation, and none of their playbooks covers it. Each job it does again and again is a workflow, and each part of a job a function of the type that part needs.',
     );
   });
 
@@ -180,14 +186,14 @@ function everyArgument(): readonly Argument[] {
 }
 
 describe('the arguments of the tools of /mcp', () => {
-  it('each have a description under 300 characters, the longest the diagram of a definition at 223', () => {
+  it('each have a description under 300 characters, the longest the type of create_definition at 299', () => {
     expect(everyArgument().length).toBeGreaterThan(60);
     expect(
       everyArgument()
         .filter((argument) => isUndescribedOrLong(argument))
         .map(({ where }) => where),
     ).toEqual([]);
-    expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBe(223);
+    expect(Math.max(...everyArgument().map(({ description }) => String(description).length))).toBe(299);
   });
 
   it('each give their constraints as keywords, an argument that takes any JSON value every JSON type', () => {

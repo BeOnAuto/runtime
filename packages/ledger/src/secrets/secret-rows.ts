@@ -3,7 +3,7 @@ import type { Claim, HeldRow, Holder, Holding, Replacement, SecretRow, SecretRow
 import { DateTime, Effect, Schema } from 'effect';
 
 import { chunksWithin } from '../connection/bound-values.ts';
-import type { StatementExecutor } from '../event-store.ts';
+import type { ReturningExecutor } from '../event-store.ts';
 import { keptSecrets } from './kept-secrets.ts';
 
 const firstVersion = 1;
@@ -37,12 +37,16 @@ function holdingOf({ kept_by, held, wrapped_key, kid }: HoldingRow): Holding {
   return { keptBy: kept_by, held, wrappedKey: wrapped_key ?? undefined, kid: kid ?? undefined };
 }
 
-function queried(execute: StatementExecutor, sql: SQL): Effect.Effect<readonly unknown[]> {
+function queried(execute: ReturningExecutor, sql: SQL): Effect.Effect<readonly unknown[]> {
   return Effect.promise(async () => (await execute.query(sql)).rows);
 }
 
-function commanded(execute: StatementExecutor, sql: SQL): Effect.Effect<void> {
+function commanded(execute: ReturningExecutor, sql: SQL): Effect.Effect<void> {
   return Effect.asVoid(Effect.promise(() => execute.command(sql)));
+}
+
+function written(execute: ReturningExecutor, sql: SQL): Effect.Effect<readonly unknown[]> {
+  return Effect.promise(async () => (await execute.command(sql)).rows);
 }
 
 function claimOpenAt(moment: string): SQL {
@@ -58,7 +62,7 @@ function stillHolding({ id, version, holding }: HeldRow): SQL {
     AND COALESCE(wrapped_key, '') = ${holding.wrappedKey ?? ''} AND COALESCE(kid, '') = ${holding.kid ?? ''}`;
 }
 
-function keptOn(execute: StatementExecutor, id: string, holding: Holding, endsWith?: string): Effect.Effect<void> {
+function keptOn(execute: ReturningExecutor, id: string, holding: Holding, endsWith?: string): Effect.Effect<void> {
   return Effect.flatMap(now, (keptAt) =>
     commanded(
       execute,
@@ -69,7 +73,7 @@ function keptOn(execute: StatementExecutor, id: string, holding: Holding, endsWi
   );
 }
 
-function readOn(execute: StatementExecutor, id: string): Effect.Effect<SecretRow | undefined> {
+function readOn(execute: ReturningExecutor, id: string): Effect.Effect<SecretRow | undefined> {
   return Effect.map(
     Effect.flatMap(now, (moment) =>
       queried(
@@ -88,14 +92,14 @@ function readOn(execute: StatementExecutor, id: string): Effect.Effect<SecretRow
 }
 
 function replacedOn(
-  execute: StatementExecutor,
+  execute: ReturningExecutor,
   { id, version }: { readonly id: string; readonly version: number },
   holding: Holding,
 ): Effect.Effect<Replacement> {
   return Effect.gen(function* () {
     const keptAt = yield* now;
     const [row] = Schema.decodeUnknownSync(VersionRows)(
-      yield* queried(
+      yield* written(
         execute,
         SQL`UPDATE ${keptSecrets}
           SET ${heldAs(holding)}, version = version + 1, kept_at = ${keptAt}, claimed_until = NULL, ends_with = NULL
@@ -106,11 +110,11 @@ function replacedOn(
   });
 }
 
-function claimedOn(execute: StatementExecutor, id: string, version: number, lastingMs: number): Effect.Effect<Claim> {
+function claimedOn(execute: ReturningExecutor, id: string, version: number, lastingMs: number): Effect.Effect<Claim> {
   return Effect.gen(function* () {
     const moment = yield* DateTime.now;
     const until = DateTime.formatIso(DateTime.addDuration(moment, lastingMs));
-    const claimed = yield* queried(
+    const claimed = yield* written(
       execute,
       SQL`UPDATE ${keptSecrets} SET claimed_until = ${until}
         WHERE id = ${id} AND version = ${version} AND NOT (${claimOpenAt(DateTime.formatIso(moment))}) RETURNING id`,
@@ -119,7 +123,7 @@ function claimedOn(execute: StatementExecutor, id: string, version: number, last
   });
 }
 
-function endingsInChunk(execute: StatementExecutor, ids: readonly string[]) {
+function endingsInChunk(execute: ReturningExecutor, ids: readonly string[]) {
   const named = SQL.merge(
     ids.map((id) => SQL`${id}`),
     ', ',
@@ -131,7 +135,7 @@ function endingsInChunk(execute: StatementExecutor, ids: readonly string[]) {
 }
 
 function endingsOn(
-  execute: StatementExecutor,
+  execute: ReturningExecutor,
   ids: readonly string[],
   mostBoundValues: number,
 ): Effect.Effect<ReadonlyMap<string, string>> {
@@ -142,9 +146,9 @@ function endingsOn(
   );
 }
 
-function forgottenOn(execute: StatementExecutor, id: string): Effect.Effect<Holding | undefined> {
+function forgottenOn(execute: ReturningExecutor, id: string): Effect.Effect<Holding | undefined> {
   return Effect.map(
-    queried(execute, SQL`DELETE FROM ${keptSecrets} WHERE id = ${id} RETURNING ${holdingColumns}`),
+    written(execute, SQL`DELETE FROM ${keptSecrets} WHERE id = ${id} RETURNING ${holdingColumns}`),
     (rows) => {
       const row = Schema.decodeUnknownSync(HoldingRows)(rows).at(0);
       return row === undefined ? undefined : holdingOf(row);
@@ -158,7 +162,7 @@ interface Asked {
 }
 
 function heldOn(
-  execute: StatementExecutor,
+  execute: ReturningExecutor,
   { keptBy, kid }: Holder,
   { limit, after }: Asked,
 ): Effect.Effect<readonly HeldRow[]> {
@@ -179,15 +183,15 @@ function heldOn(
   );
 }
 
-function reheldOn(execute: StatementExecutor, read: HeldRow, holding: Holding): Effect.Effect<boolean> {
+function reheldOn(execute: ReturningExecutor, read: HeldRow, holding: Holding): Effect.Effect<boolean> {
   return Effect.map(
-    queried(execute, SQL`UPDATE ${keptSecrets} SET ${heldAs(holding)} WHERE ${stillHolding(read)} RETURNING id`),
+    written(execute, SQL`UPDATE ${keptSecrets} SET ${heldAs(holding)} WHERE ${stillHolding(read)} RETURNING id`),
     (rows) => rows.length > 0,
   );
 }
 
 export function secretRowsOn(
-  execute: StatementExecutor,
+  execute: ReturningExecutor,
   close: () => Promise<void>,
   mostBoundValues: number,
 ): SecretRows {

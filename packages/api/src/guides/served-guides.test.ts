@@ -139,7 +139,7 @@ describe('the text of the guides of a server', () => {
 describe('the size and the words of the guides of a server', () => {
   const { guides, recipes } = served;
 
-  it('stay under 64 KiB each, the guide of interaction functions among them, and each recipe under 5 KiB', () => {
+  it('stay under 64 KiB each, the guide of interaction functions among them, and each recipe under 8 KiB', () => {
     const everyGuide = servedWithEverything.guides;
 
     expect(everyGuide.map(({ name }) => name)).toContain('interaction-function');
@@ -215,10 +215,10 @@ describe('the recipes that give a playbook tools', () => {
       'tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.',
     );
     expect(String(texts['first-playbook'])).toContain(
-      "When it should use a tool server's tools, follow the give-tools recipe: to learn what a tool answers, call it with query_connection, and never make a function to look.",
+      'For a part that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe.',
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      2716, 4120,
+      2716, 5577,
     ]);
   });
 });
@@ -231,14 +231,15 @@ describe('the recipes of a server that serves interaction functions', () => {
       "4. Ask the person what the function should do with the tools, and which of them it needs. To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute_connection gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
     );
     expect(texts['first-playbook']).toContain(
-      'give it tools with the give-tools recipe. They can also ask someone through a connection and take their answer with an interaction function.',
+      '   - it asks a person and takes their answer, or has a service act: an interaction function\n',
     );
+    expect(texts['first-playbook']).toContain('; ask a person through you, `deliver: agent`; and leave a part');
     expect([
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [4579, 3316, 3564],
-      [4120, 2716, 3564],
+      [6178, 3316, 3564],
+      [5577, 2716, 3564],
     ]);
   });
 });

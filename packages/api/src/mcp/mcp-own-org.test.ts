@@ -7,6 +7,7 @@ import { mcpClientKinds, plainTextIn, problemIn, withMcpSession, type McpSession
 import { initializeAt, messagesIn, postMcp, requestOf } from '../testing/mcp-requests.ts';
 import {
   acmeAdmin,
+  acmeAdminActing,
   acmeAlphaWriter,
   acmeReader,
   globexAdmin,
@@ -15,7 +16,7 @@ import {
 } from '../testing/operation-server.ts';
 import { danglingReferencesIn } from '../testing/self-contained.ts';
 import { guideToolName, listedTools, takingPlaybook, toolNamesIn, type ListedTool } from '../testing/tool-listing.ts';
-import { instructionsFor } from './instructions.ts';
+import { instructionsActingAs } from './instructions.ts';
 
 const orgTools = ['label_playbook', 'list_labels'];
 
@@ -93,12 +94,11 @@ describe('the tools of /mcp', () => {
     expect(tools.filter(({ outputSchema }) => outputSchema !== undefined)).toEqual([]);
   });
 
-  it("carry the instructions of the caller's own org, opened with the key the connection acts as", async () => {
+  it("carry the instructions of the caller's own org, with the key the connection acts as", async () => {
     const instructions = await asKey(acmeAdmin.key, (session) => Promise.resolve(session.instructions));
 
-    expect(instructions).toBe(
-      `This connection acts as the key acme-admin in the org acme. ${instructionsFor('own org', { orgTools, playbookTools })}`,
-    );
+    expect(instructions).toBe(instructionsActingAs(acmeAdminActing, 'own org', { orgTools, playbookTools }));
+    expect(instructions).toContain('This connection acts as the key acme-admin in the org acme.');
     expect(instructions).toContain("The org is the caller's own.");
   });
 });

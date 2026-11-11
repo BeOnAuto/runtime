@@ -1781,7 +1781,7 @@ When a server or a tool cannot be used, the reads respond as below. Each refusal
 
 `query_connection` and `execute_connection` call one tool of one tool server with the `arguments` given, as a run of a reasoning function would call it. Each returns what that run's model would see, and the document an interaction function's call reads. They take the same input and return the same fields.
 
-- `query_connection` calls only a tool marked `reads`. Use it to see what a tool returns before a function names it, or to find an id a prompt needs. It refuses a tool with any other mark as `unavailable` of the kind `tool_not_read_only`, before anything is sent, in words that say `execute_connection` calls it.
+- `query_connection` calls only a tool marked `reads`. Use it to see what a tool returns before a function names it, or to find an id a function needs. It refuses a tool with any other mark as `unavailable` of the kind `tool_not_read_only`, before anything is sent, in words that say `execute_connection` calls it.
 - `execute_connection` calls a tool whatever its mark. Use it to do what the person asked of a tool that may change something, such as sending, creating or deleting, without first creating a function.
 
 `arguments` is the object the tool's `input_schema` takes, `{}` when left out. It may be at most 256 KiB as JSON, the most a run may take as its input; larger arguments return `invalid_input` at `/arguments` before anything is called. A tool server may take less: Auto Browser, the browser of Auto Cloud, refuses a call of more than 64 KiB with HTTP 413.

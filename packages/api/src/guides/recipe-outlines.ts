@@ -6,10 +6,10 @@ export const outlines: readonly RecipeOutline[] = [
   {
     name: 'first-playbook',
     title: 'Create your first playbook',
-    description: 'Creates a playbook with a first reasoning function, and runs it once the person has agreed to it.',
+    description:
+      'Creates a playbook from the job the person wants done again and again: a function of the right type for each part and the workflow that runs them, saved and run once the person has agreed.',
     arguments: [],
-    formatGuide: 'reasoning-function',
-    calls: ['list_playbooks', 'create_playbook', 'create_definition', 'query_connection', 'run_definition'],
+    calls: ['list_playbooks', 'create_playbook', 'create_definition', 'run_definition'],
     request: () => 'Create my first playbook.',
   },
   {

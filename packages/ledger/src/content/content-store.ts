@@ -11,7 +11,7 @@ import {
 import { randomUUIDv7 } from '@on.auto/operations';
 import { Clock, Effect } from 'effect';
 
-import type { OwnContentStore, StatementExecutor, TransactionalPool } from '../event-store.ts';
+import type { OwnContentStore, ReturningExecutor, TransactionalPool } from '../event-store.ts';
 import { sqliteContent, type ContentDialect } from './content-dialects.ts';
 import {
   playbookPlaceOf,
@@ -153,7 +153,7 @@ function placedOn(
 const removalWithin: OwnContentStore['removalWithin'] = (playbook, sha256, before) => (within) =>
   keptRemovedWithin(keptShelf, within, { place: playbookPlaceOf(playbook), sha256, before });
 
-export function contentStoreOn(execute: StatementExecutor, dialect: ContentDialect): OwnContentStore {
+export function contentStoreOn(execute: ReturningExecutor, dialect: ContentDialect): OwnContentStore {
   const keeping: Shelved = { execute, dialect, shelf: keptShelf };
   return {
     content: {
@@ -168,6 +168,6 @@ export function contentStoreOn(execute: StatementExecutor, dialect: ContentDiale
   };
 }
 
-export function sqliteContentOn(pool: TransactionalPool): OwnContentStore {
+export function sqliteContentOn(pool: TransactionalPool<ReturningExecutor>): OwnContentStore {
   return contentStoreOn(pool.execute, sqliteContent);
 }
