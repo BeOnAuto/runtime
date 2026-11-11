@@ -1,11 +1,10 @@
 import type { RecordedRunFact } from '@on.auto/definitions';
-import { factReaderOf, type ProjectedMessage } from '@on.auto/operations';
-import { ConversationCallEventSchema, type TellingForm } from '@on.auto/tool-servers';
+import type { TellingForm } from '@on.auto/tool-servers';
 import { Function, Option, Schema } from 'effect';
 
 import { ReplyRuleSchema } from '../replies/reply-rule.ts';
 import { takenWords, wordsTakenOf } from '../replies/telling-words.ts';
-import { marksATakenReply, tellsALine } from './telling-calls.ts';
+import { marksATakenReply, tellsALine, type StartedTelling } from './telling-calls.ts';
 import { TellingRouteSchema, type TellingRoute } from './telling-routes.ts';
 
 const TakenSchema = Schema.Struct({
@@ -49,39 +48,27 @@ function lastTakenFormOf(telling: TellingRoute | undefined): TellingForm | undef
   return marksATakenReply(telling) ? 'mark' : undefined;
 }
 
-interface TakenColumns {
+export interface TakenColumns {
   readonly taken: string | null;
   readonly telling_due_at: number | null;
+}
+
+export function wordsAnsweredOf(rule: string | null, data: RecordedRunFact<'request_answered'>['data']) {
+  const { answer } = Option.getOrElse(answerOf(data), Function.constant({ answer: {} }));
+  return wordsTakenOf(Option.getOrElse(ruleOfRow(rule), Function.constant({})), answer);
 }
 
 export function takenColumnsOf(
   kept: Kept,
   { data, context }: RecordedRunFact<'request_answered'>,
+  reply: Taken['reply'],
   id: string,
 ): TakenColumns {
-  const { reply } = data;
-  if (reply === undefined) {
-    return { taken: null, telling_due_at: null };
-  }
-  const rule = Option.getOrElse(ruleOfRow(kept.reply), Function.constant({}));
-  const { answer } = Option.getOrElse(answerOf(data), Function.constant({ answer: {} }));
-  const taken: Taken = { fact: id, reply, words: wordsTakenOf(rule, answer) };
+  const taken: Taken = { fact: id, reply, words: wordsAnsweredOf(kept.reply, data) };
   const tells = lastTakenFormOf(tellingKept(kept)) !== undefined;
   return { taken: JSON.stringify(taken), telling_due_at: tells ? Date.parse(context.at) : null };
 }
 
-const tellingCall = factReaderOf(ConversationCallEventSchema);
-
-export function runOfATelling(message: ProjectedMessage): string | undefined {
-  const fact = tellingCall(message);
-  return fact?.type === 'telling_started' ? fact.context.runId : undefined;
-}
-
-export function toldAllOfTheTaken(kept: Kept, message: ProjectedMessage): boolean {
-  const fact = tellingCall(message);
-  return (
-    fact?.type === 'telling_started' &&
-    fact.data.about === 'taken' &&
-    fact.data.form === lastTakenFormOf(tellingKept(kept))
-  );
+export function toldAllOfTheTaken(kept: Kept, { about, form }: StartedTelling): boolean {
+  return about === 'taken' && form === lastTakenFormOf(tellingKept(kept));
 }

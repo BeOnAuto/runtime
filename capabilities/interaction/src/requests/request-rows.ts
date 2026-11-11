@@ -41,6 +41,7 @@ const OpenRequestRowSchema = Schema.Struct({
   reading: Schema.NullOr(Schema.String),
   sent_conversation: Schema.NullOr(Schema.String),
   sent_id: Schema.NullOr(Schema.String),
+  sent_at: Schema.NullOr(Schema.Int),
   answerer: Schema.NullOr(Schema.String),
   reply: Schema.NullOr(Schema.String),
   reply_refusals: Schema.Int,
@@ -49,6 +50,7 @@ const OpenRequestRowSchema = Schema.Struct({
   taken: Schema.NullOr(Schema.String),
   telling_due_at: Schema.NullOr(Schema.Int),
   last_said: Schema.NullOr(Schema.String),
+  ending: Schema.NullOr(Schema.String),
 });
 
 export type OpenRequestRow = typeof OpenRequestRowSchema.Type;

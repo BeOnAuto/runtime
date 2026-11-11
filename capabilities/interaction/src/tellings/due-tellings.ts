@@ -6,51 +6,30 @@ import { Effect, Schema } from 'effect';
 import { openRequestsName } from '../requests/open-requests.ts';
 import { DeliverySchema, requestRowFrom, type OpenRequestRow } from '../requests/request-rows.ts';
 import type { DeliveryParts } from '../schedule/delivery-parts.ts';
-import { takenFrom, takenMessageOf, tellingOfATakenRow } from './taken-rows.ts';
-import { lineCallOf, markCallOf, type TellingCall, type Told } from './telling-calls.ts';
+import { dueCallsOf } from './due-calls.ts';
+import type { TellingCall } from './telling-calls.ts';
 import { onceFor, told, type Telling } from './tellings.ts';
 
 const decodeDelivery = Schema.decodeUnknownSync(Schema.fromJsonString(DeliverySchema));
 
-export interface TakenTelling {
+export interface DueTelling {
   readonly key: string;
   readonly callsOut: true;
   readonly perform: (now: number) => Effect.Effect<void>;
 }
 
-const decodeSent = Schema.decodeUnknownSync(
-  Schema.Struct({ sent_conversation: Schema.String, sent_id: Schema.String }),
-);
-
-function sentOf(row: OpenRequestRow) {
-  const { sent_conversation: conversation, sent_id: id } = decodeSent(row);
-  return { conversation, id };
-}
-
-function callsOf(row: OpenRequestRow, toldTo: Told) {
-  const telling = tellingOfATakenRow(row.tell);
-  const said = { ...toldTo, message: takenMessageOf(takenFrom(row.taken)) };
-  return Effect.map(renderClock, (clock) =>
-    [markCallOf(telling, toldTo, clock), lineCallOf(telling, 'taken', said, clock)].filter(
-      (call) => call !== undefined,
-    ),
-  );
-}
-
 function tellingsOf(parts: DeliveryParts, kept: PlaybookProjectedRow, row: OpenRequestRow) {
   const playbook = { org: kept.org, playbook: kept.playbook };
-  const taken = takenFrom(row.taken);
   return Effect.gen(function* () {
-    const sent = sentOf(row);
     const correlationId = yield* runCorrelationIn(parts.ledger, { ...playbook, id: kept.key });
-    const calls = yield* callsOf(row, { to: row.party, sent, reply: taken.reply });
+    const { cause, conversation, calls } = dueCallsOf(row, yield* renderClock);
     const tellingOf = (call: TellingCall): Telling => ({
       playbook,
       server: decodeDelivery(row.delivery).server,
       runId: kept.key,
       definition: { definitionType: 'interaction', definitionName: row.function, definitionVersion: row.version },
-      lineage: { causationId: taken.fact, correlationId },
-      conversation: sent.conversation,
+      lineage: { causationId: cause, correlationId },
+      conversation,
       call,
     });
     yield* Effect.forEach(calls, (call) => told(parts, tellingOf(call), onceFor({ runId: kept.key, call })), {
@@ -59,7 +38,7 @@ function tellingsOf(parts: DeliveryParts, kept: PlaybookProjectedRow, row: OpenR
   });
 }
 
-export function takenTellingOf(parts: DeliveryParts, kept: PlaybookProjectedRow): TakenTelling {
+export function dueTellingOf(parts: DeliveryParts, kept: PlaybookProjectedRow): DueTelling {
   const row = requestRowFrom(kept.row);
   const playbook = { org: kept.org, playbook: kept.playbook };
   const done = { set: { telling_due_at: null }, when: [] };

@@ -14,11 +14,16 @@ interface ToldReply {
 export interface Told {
   readonly to: string;
   readonly sent: { readonly conversation: string; readonly id: string };
-  readonly reply: ToldReply;
+  readonly reply?: ToldReply;
 }
 
 export interface Said extends Told {
   readonly message: string;
+}
+
+export interface StartedTelling {
+  readonly about?: TellingAbout;
+  readonly form?: TellingForm;
 }
 
 export interface TellingCall {
@@ -37,7 +42,7 @@ const linesWhen: Readonly<Record<TellWord, readonly TellingAbout[]>> = {
 };
 
 function variablesOf({ to, sent, reply }: Told, message: string) {
-  return { to, sent: { ...sent }, message, reply: { id: reply.id, to: reply.to ?? '' } };
+  return { to, sent: { ...sent }, message, reply: { id: reply?.id ?? '', to: reply?.to ?? '' } };
 }
 
 function inputOf(written: Readonly<Record<string, Schema.Json>>, told: Told, message: string, clock: RenderClock) {

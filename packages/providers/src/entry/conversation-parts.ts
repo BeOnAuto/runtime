@@ -31,7 +31,7 @@ const ReactSchema = Schema.Struct({
 export const ConversationsSchema = Schema.Struct({
   tell: Schema.Literals(['all', 'refusals']).annotate({
     description:
-      "The provider's practice, and what a person is told through it by a function that writes no tell: all where one more message is expected, as in a chat, so a reply taken is marked and answered and a reply not taken is answered; refusals where each message costs, as in mail or a text message, so only a reply that could not be taken is answered",
+      "The provider's practice, and what a person is told through it by a function that writes no tell: all where one more message is expected, as in a chat, so a reply taken is marked and answered, a reply not taken is answered and a request that ends says so; refusals where each message costs, as in mail or a text message, so only a reply that could not be taken is answered",
   }),
   reply: ReplySchema.annotate({ description: 'How a line is posted in reply to a person' }),
   react: Schema.optionalKey(ReactSchema.annotate({ description: "How a person's message is marked" })),

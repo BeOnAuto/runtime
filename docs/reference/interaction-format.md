@@ -411,13 +411,13 @@ An answer with no list at `list`, or larger than 64 KiB, is a failed read. The r
 
 `tell` is a word, or a block that says how a line is posted.
 
-| The function writes | What the party is told                                                                                                                                                |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Nothing             | What the connection's provider says: through a chat, such as Slack or Microsoft Teams, everything below; a function whose provider says nothing is refused when saved |
-| `tell: all`         | A reply taken is marked, where the provider can mark a message, and answered with one line. A reply not taken is answered with a line that says how to answer         |
-| `tell: refusals`    | Only a reply not taken is answered. A reply taken is still marked                                                                                                     |
-| `tell: none`        | Nothing. A refused reply is still recorded                                                                                                                            |
-| The block           | Lines go through its own tool and arguments. `when` is the provider's word when left out, or `refusals`                                                               |
+| The function writes | What the party is told                                                                                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nothing             | What the connection's provider says: through a chat, such as Slack or Microsoft Teams, everything below; a function whose provider says nothing is refused when saved  |
+| `tell: all`         | A reply taken is marked, where the provider can mark a message, and answered with one line. A reply not taken is answered with a line that says why. An ending is said |
+| `tell: refusals`    | Only a reply not taken is answered. A reply taken is still marked                                                                                                      |
+| `tell: none`        | Nothing. A refused reply is still recorded                                                                                                                             |
+| The block           | Lines go through its own tool and arguments. `when` is the provider's word when left out, or `refusals`                                                                |
 
 | Key    | Required                                            | What it holds                                                                                                                                                  |
 | ------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -428,6 +428,7 @@ An answer with no list at `list`, or larger than 64 KiB, is a failed read. The r
 
 - A request keeps the `tell` it was asked with, as its provider said then.
 - A reply taken is told `Auto recorded your answer: approve.`, naming the words its rule took, or `Auto recorded your answer.` where the rule takes the whole reply. The mark and the line are made after the answer is recorded, once each, even across a restart of the runtime.
+- A request that ends with no reply taken says how, once, in Studio's words: `Answered in Auto by June Park: approve.`, for an answer given through `answer_interaction`, `Expired unanswered.` or `Cancelled unanswered.`. A line whose arguments read `sent.id` goes under the request's message. Any other starts with when the request was sent, in UTC: `The request sent 9 Nov, 09:00 UTC: Expired unanswered.`
 - Here `message` is the line, not the request's message. A reply not taken is told why, with the rule's words:
 
 | The reply                                       | The line                                                                                                                                                                                     |

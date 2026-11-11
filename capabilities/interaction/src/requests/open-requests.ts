@@ -13,7 +13,14 @@ import type { Schema } from 'effect';
 import { conversationKeyOf } from '../conversations/conversation-keys.ts';
 import { interactionFactOf, saidOfARefusal, type RecordedFactNamed } from '../facts/run-facts.ts';
 import { attemptSchedule, nextAttemptAt } from '../schedule/attempt-schedule.ts';
-import { runOfATelling, takenColumnsOf, toldAllOfTheTaken } from '../tellings/taken-rows.ts';
+import {
+  runOfATelling,
+  tellingStartedOf,
+  toldAllThatWasDue,
+  toldOfTheAnswer,
+  toldOfTheEnd,
+} from '../tellings/told-rows.ts';
+import { requestColumns, requestIndexes } from './request-columns.ts';
 import {
   attemptDueAtOf,
   deliveryOf,
@@ -73,6 +80,7 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     reading: null,
     sent_conversation: null,
     sent_id: null,
+    sent_at: null,
     answerer: request.answerer ?? null,
     reply: jsonOf(request.reply),
     reply_refusals: 0,
@@ -81,6 +89,7 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     taken: null,
     telling_due_at: null,
     last_said: null,
+    ending: null,
   });
 }
 
@@ -110,10 +119,13 @@ function afterFailure(row: OpenRequestRow, fact: Delivery<'delivery_failed' | 'd
     : { ...row, next_attempt_at: next, standing: standingUnlessDecided(row, 'retrying') };
 }
 
-function keptConversation({ data }: Delivery<'delivery_succeeded'>) {
+function keptConversation({ data, context }: Delivery<'delivery_succeeded'>) {
   const { delivered_as: deliveredAs, replies_in: repliesIn } = data;
+  const sentAt = Date.parse(context.at);
   return {
-    ...(deliveredAs === undefined ? {} : { sent_conversation: deliveredAs.conversation, sent_id: deliveredAs.id }),
+    ...(deliveredAs === undefined
+      ? {}
+      : { sent_conversation: deliveredAs.conversation, sent_id: deliveredAs.id, sent_at: sentAt }),
     ...(repliesIn === undefined
       ? {}
       : { conversation: conversationKeyOf(repliesIn), reading: repliesIn.reading ?? null }),
@@ -169,8 +181,11 @@ function endingOf(fact: Fact<'run_succeeded' | 'run_rejected' | 'run_failed'>): 
 function closed(
   row: OpenRequestRow,
   fact: Fact<'run_succeeded' | 'run_rejected' | 'run_failed'>,
+  { id }: ProjectedMessage,
 ): ProjectedRow | undefined {
-  return row.ended === null ? rowOf({ ...row, open: false, next_attempt_at: null, ended: endingOf(fact) }) : undefined;
+  const ended = endingOf(fact);
+  const told = toldOfTheEnd(row, ended, id, fact.context.at);
+  return row.ended === null ? rowOf({ ...row, open: false, next_attempt_at: null, ended, ...told }) : undefined;
 }
 
 function answered(row: OpenRequestRow, fact: Fact<'request_answered'>, { id }: ProjectedMessage): ProjectedRow {
@@ -179,7 +194,7 @@ function answered(row: OpenRequestRow, fact: Fact<'request_answered'>, { id }: P
     open: false,
     next_attempt_at: null,
     standing: standingUnlessDecided(row, 'answered'),
-    ...takenColumnsOf(row, fact, id),
+    ...toldOfTheAnswer(row, fact, id),
   });
 }
 
@@ -194,7 +209,7 @@ function changed(row: OpenRequestRow, fact: RecordedRunEvent, message: Projected
     return worked(row, message);
   }
   return fact.type === 'run_succeeded' || fact.type === 'run_rejected' || fact.type === 'run_failed'
-    ? closed(row, fact)
+    ? closed(row, fact, message)
     : undefined;
 }
 
@@ -207,8 +222,9 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
   if (kept === undefined || fact === undefined) {
     return undefined;
   }
-  if (runOfATelling(message) !== undefined) {
-    return toldAllOfTheTaken(kept, message) ? rowOf({ ...kept, telling_due_at: null }) : undefined;
+  const telling = tellingStartedOf(message);
+  if (telling !== undefined) {
+    return toldAllThatWasDue(kept, telling) ? rowOf({ ...kept, telling_due_at: null }) : undefined;
   }
   return changed(kept, fact, message);
 }
@@ -219,7 +235,7 @@ function keyOf(message: ProjectedMessage, { kind, id }: ProjectedStream): string
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 16,
+  version: 17,
   kinds: ['runs', conversationCallsKind],
   types: [
     'run_deferred',
@@ -235,51 +251,11 @@ export const openRequests: KeyedProjection = {
     'run_failed',
     'telling_started',
   ],
-  columns: [
-    { name: 'request_id', kind: 'text' },
-    { name: 'type', kind: 'text' },
-    { name: 'function', kind: 'text' },
-    { name: 'version', kind: 'integer' },
-    { name: 'party', kind: 'text' },
-    { name: 'delivery', kind: 'text' },
-    { name: 'replies', kind: 'text' },
-    { name: 'message', kind: 'text' },
-    { name: 'answers', kind: 'boolean' },
-    { name: 'answer_schema', kind: 'text' },
-    { name: 'requested_at', kind: 'integer' },
-    { name: 'expires_at', kind: 'integer' },
-    { name: 'attempts', kind: 'integer' },
-    { name: 'next_attempt_at', kind: 'integer' },
-    { name: 'standing', kind: 'text' },
-    { name: 'open', kind: 'boolean' },
-    { name: 'attempt_due_at', kind: 'integer' },
-    { name: 'ending_due_at', kind: 'integer' },
-    { name: 'ended', kind: 'text' },
-    { name: 'conversation', kind: 'text' },
-    { name: 'reading', kind: 'text' },
-    { name: 'sent_conversation', kind: 'text' },
-    { name: 'sent_id', kind: 'text' },
-    { name: 'answerer', kind: 'text' },
-    { name: 'reply', kind: 'text' },
-    { name: 'reply_refusals', kind: 'integer' },
-    { name: 'refusals_told', kind: 'integer' },
-    { name: 'tell', kind: 'text' },
-    { name: 'taken', kind: 'text' },
-    { name: 'telling_due_at', kind: 'integer' },
-    { name: 'last_said', kind: 'text' },
-  ],
-  indexes: [
-    { name: 'by_open', columns: ['open', 'requested_at', 'row_key'] },
-    { name: 'by_party', columns: ['open', 'party', 'requested_at', 'row_key'] },
-    { name: 'by_function', columns: ['open', 'function', 'requested_at', 'row_key'] },
-    { name: 'by_type', columns: ['open', 'type', 'requested_at', 'row_key'] },
-    { name: 'by_conversation', columns: ['open', 'conversation', 'requested_at', 'row_key'] },
-    { name: 'by_sent_message', columns: ['open', 'sent_conversation', 'sent_id'] },
-    { name: 'attempts_due', columns: ['attempt_due_at'], acrossPlaybooks: true, whereSet: 'attempt_due_at' },
-    { name: 'endings_due', columns: ['ending_due_at'], acrossPlaybooks: true, whereSet: 'ending_due_at' },
-    { name: 'tellings_due', columns: ['telling_due_at'], acrossPlaybooks: true, whereSet: 'telling_due_at' },
-  ],
+  columns: requestColumns,
+  indexes: requestIndexes,
   keyOf,
-  advanced: [{ column: 'telling_due_at', setBy: ['run_deferred', 'request_answered', 'telling_started'] }],
+  advanced: [
+    { column: 'telling_due_at', setBy: ['run_deferred', 'request_answered', 'run_rejected', 'telling_started'] },
+  ],
   rowAfter,
 };

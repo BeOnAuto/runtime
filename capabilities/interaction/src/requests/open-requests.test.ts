@@ -77,6 +77,7 @@ const madeOfTheRequest = {
   reading: null,
   sent_conversation: null,
   sent_id: null,
+  sent_at: null,
   answerer: null,
   reply: null,
   reply_refusals: 0,
@@ -85,6 +86,7 @@ const madeOfTheRequest = {
   taken: null,
   telling_due_at: null,
   last_said: null,
+  ending: null,
 };
 
 describe('the open request of a run', () => {

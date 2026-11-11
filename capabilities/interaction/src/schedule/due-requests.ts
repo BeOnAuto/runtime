@@ -10,7 +10,7 @@ import {
   settlementDueOf,
   type OpenRequestRow,
 } from '../requests/request-rows.ts';
-import { takenTellingOf, type TakenTelling } from '../tellings/taken-tellings.ts';
+import { dueTellingOf, type DueTelling } from '../tellings/due-tellings.ts';
 import type { DeliveryParts, DueRequest } from './delivery-parts.ts';
 import { lostAttempt, nextAttempt } from './request-attempts.ts';
 import { expiredSettlement, undeliveredSettlement } from './request-endings.ts';
@@ -111,9 +111,9 @@ function dueOf(parts: DeliveryParts, now: number, most: number, callsOut: boolea
     return requests;
   }
   const tellings = Effect.map(dueRowsOf(parts, tellingsDue, now, most), (rows) =>
-    rows.map((kept) => takenTellingOf(parts, kept)),
+    rows.map((kept) => dueTellingOf(parts, kept)),
   );
-  return Effect.zipWith(requests, tellings, (attempts: readonly DueRequestItem[], told: readonly TakenTelling[]) =>
+  return Effect.zipWith(requests, tellings, (attempts: readonly DueRequestItem[], told: readonly DueTelling[]) =>
     [...attempts, ...told].slice(0, most),
   );
 }
