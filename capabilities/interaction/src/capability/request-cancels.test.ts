@@ -129,7 +129,7 @@ describe('a cancel asked before a reply is read', () => {
           address,
           { type: 'answer', answer: { answer: { choice: 'approve' }, reply: takenReply } },
           lineage,
-          replyRule(takenReply.id, false),
+          replyRule(takenReply.id),
         ),
       ),
     );

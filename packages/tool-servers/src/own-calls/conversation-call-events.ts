@@ -67,13 +67,27 @@ const theConversation = {
 
 const ToldAsSchema = Schema.Struct({ conversation: Schema.String, id: Schema.String });
 
+const TellingAboutSchema = Schema.Literals(['taken', 'refused', 'ended']);
+
+const TellingFormSchema = Schema.Literals(['line', 'mark']);
+
 const readArguments = {
   arguments_bytes: optionalOf(sentFields.arguments_bytes),
   arguments_sha256: sentFields.arguments_sha256,
 };
 
 export const ConversationCallEventSchema = Schema.Union([
-  factOf('telling_started', Schema.Struct({ ...ofTheCall, ...sentFields }), RunContextSchema, argumentsHeld),
+  factOf(
+    'telling_started',
+    Schema.Struct({
+      ...ofTheCall,
+      ...sentFields,
+      about: Schema.optionalKey(TellingAboutSchema),
+      form: Schema.optionalKey(TellingFormSchema),
+    }),
+    RunContextSchema,
+    argumentsHeld,
+  ),
   factOf(
     'telling_succeeded',
     Schema.Struct({ ...ofTheCall, ...answeredFields, told_as: Schema.optionalKey(ToldAsSchema) }),
@@ -127,6 +141,10 @@ export type TellingEnded = Extract<ConversationCallEvent, { readonly type: 'tell
 export type ReadingRecorded = Extract<ConversationCallEvent, { readonly type: 'replies_read' | 'reading_failed' }>;
 
 export type ToldAs = typeof ToldAsSchema.Type;
+
+export type TellingAbout = typeof TellingAboutSchema.Type;
+
+export type TellingForm = typeof TellingFormSchema.Type;
 
 export type TellingFailedBecause = typeof TellingFailedBecauseSchema.Type;
 

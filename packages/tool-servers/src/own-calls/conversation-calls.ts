@@ -11,6 +11,8 @@ import {
   type ReadingFailedBecause,
   type ReadingRecorded,
   type TellingEnded,
+  type TellingAbout,
+  type TellingForm,
   type TellingStarted,
   type ToldAs,
 } from './conversation-call-events.ts';
@@ -34,6 +36,8 @@ export interface Telling {
   readonly callId: string;
   readonly runId: string;
   readonly definition: DefinitionOfTheTelling;
+  readonly about?: TellingAbout;
+  readonly form?: TellingForm;
 }
 
 function answeredOf(answered: CallAnswered) {
@@ -56,7 +60,9 @@ function tellingContextOf({ runId, definition }: Telling, recorded: Recorded): C
 }
 
 export function tellingStartedOf(telling: Telling, start: StartedFields, recorded: Recorded): ConversationCall {
-  const event: TellingStarted = { type: 'telling_started', data: { call_id: telling.callId, ...start } };
+  const { about, form } = telling;
+  const told = { ...(about === undefined ? {} : { about }), ...(form === undefined ? {} : { form }) };
+  const event: TellingStarted = { type: 'telling_started', data: { call_id: telling.callId, ...start, ...told } };
   return { event, context: tellingContextOf(telling, recorded) };
 }
 

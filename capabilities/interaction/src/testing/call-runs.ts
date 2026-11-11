@@ -13,6 +13,7 @@ import { Effect, Function, type Exit, type Schema } from 'effect';
 import { onTestFinished } from 'vitest';
 
 import { makeInteractionFunctionAdapter } from '../capability/interaction-function.ts';
+import { noConversations } from './chat-conversations.ts';
 
 export const callRunId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
@@ -61,6 +62,7 @@ export async function callRuns(options: CallRunOptions = {}): Promise<CallRuns> 
     tools: access,
     openRequests: Function.constant(Effect.succeed(0)),
     mostOpenRequests: 10,
+    conversationsOf: noConversations,
   });
   const journal = options.journal ?? recordingJournal();
   const context = contextOf(journal);

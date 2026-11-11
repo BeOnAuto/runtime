@@ -141,3 +141,15 @@ export function threadDocument({ rule = replyRuleLines, replies = threadReplies 
     'Reply **approve** or **reject**, with a note if you reject.',
   ].join('\n');
 }
+
+const tellBlock: ReadonlySet<string> = new Set([
+  '  tell:',
+  '    with:',
+  "      channel: '{{ sent.conversation }}'",
+  "      thread_ts: '{{ sent.id }}'",
+  "      text: '{{ message }}'",
+]);
+
+export function threadRepliesTelling(...tell: readonly string[]): readonly string[] {
+  return [...threadReplies.filter((line) => !tellBlock.has(line)), ...tell];
+}

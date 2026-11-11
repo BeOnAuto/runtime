@@ -48,12 +48,13 @@ The Slack app you allow depends on how your Auto is set up:
 
 Once Slack is connected, ask your agent to give a function in your playbook the Slack tools it needs, as [Give a function tools](../guides/tools.md) shows. Say what you want done, in your own words:
 
-| A playbook can                                                                          | You might ask                                                                             |
-| --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Read the history of a channel, a direct message or a group direct message, and a thread | "Summarize yesterday's thread in the support channel about the delayed order."            |
-| Look up people and channels                                                             | "Find the channel about the trade show, and the job titles of the people who post there." |
-| Send a message, and change one it sent                                                  | "Post the weekly summary in the marketing channel."                                       |
-| Add a reaction, and see the reactions on a message                                      | "Add a check mark to each question in the support channel we answered today."             |
+| A playbook can                                                                                           | You might ask                                                                             |
+| -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Read the history of a channel, a direct message or a group direct message, and a thread                  | "Summarize yesterday's thread in the support channel about the delayed order."            |
+| Look up people and channels                                                                              | "Find the channel about the trade show, and the job titles of the people who post there." |
+| Send a message, and change one it sent                                                                   | "Post the weekly summary in the marketing channel."                                       |
+| Add a reaction, and see the reactions on a message                                                       | "Add a check mark to each question in the support channel we answered today."             |
+| Ask someone to approve in a channel. Auto marks their reply when it is taken, and says so when it is not | "Ask the campaign owner in the marketing channel to approve the brief."                   |
 
 The `slack` row of [the providers Auto ships](../self-host/connections.md#the-providers-auto-ships) is the full list of what a function may do with Slack.
 

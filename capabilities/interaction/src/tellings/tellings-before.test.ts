@@ -70,7 +70,10 @@ describe('a request main told once, in a chat whose connection posts as the pers
       [waitingUntold, { reply: { id: '1699.000006' }, told: true }],
     ]);
     expect(tellingsCalled(playbook)).toEqual([
-      ['1699.000002', 'To answer, reply with one of approve, reject; what follows is kept as the note.'],
+      [
+        '1699.000002',
+        "Auto couldn't take that as an answer. Reply with approve or reject. Anything after that word is kept as the note.",
+      ],
     ]);
     expect(await playbook.runOf(waitingUntold)).toMatchObject({ output: { status: 'started' } });
   });

@@ -91,13 +91,15 @@ describe('two requests waiting in one channel with replies in both threads, or f
     ]);
   });
 
-  it('passes over a reply in a thread from anyone but its answerer, and records it nowhere', async () => {
+  it('takes no answer in a thread from anyone but its answerer, and records only who gave it', async () => {
     const { playbook, newerThread } = await deliveredInOneChannel();
     playbook.chat.reply({ channel, thread: newerThread, user: 'U0STRANGER', text: 'approve' });
 
     await playbook.performReads(Date.now() + farAhead);
 
-    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toEqual([]);
+    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+      { type: 'reply_refused', data: { reply: { sender: 'U0STRANGER' }, because: 'not_the_answerer', told: false } },
+    ]);
     expect(await outputsOf(playbook)).toMatchObject([
       { output: { status: 'started' } },
       { output: { status: 'started' } },

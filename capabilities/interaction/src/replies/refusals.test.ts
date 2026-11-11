@@ -44,7 +44,7 @@ describe('a reply from the answerer the rule cannot read', () => {
     ]);
     expect(playbook.chat.posted().at(-1)).toMatchObject({
       thread_ts: thread,
-      text: 'To answer, reply with one of approve, reject; what follows is kept as the note.',
+      text: "Auto couldn't take that as an answer. Reply with approve or reject. Anything after that word is kept as the note.",
     });
     expect(started?.causationId).toBe(refused[0]?.id);
     expect(started?.context).toMatchObject({
@@ -68,9 +68,9 @@ describe('a reply from the answerer the rule cannot read', () => {
       { because: 'not_an_answer' },
     ]);
     expect(tellingsOf(playbook)).toEqual([
-      'That reply is not an answer this request takes: note: expected at most 2,000 characters. To answer, reply with one of approve, reject; what follows is kept as the note.',
-      'A reply may hold at most 8,192 bytes.',
-      'To answer, reply with one of approve, reject; what follows is kept as the note.',
+      "Auto couldn't take that answer: note: expected at most 2,000 characters. Reply with approve or reject.",
+      'That reply is too long for Auto to take. A reply can hold up to 8 KB of text.',
+      "Auto couldn't take that as an answer. Reply with approve or reject. Anything after that word is kept as the note.",
     ]);
   });
 });
@@ -95,7 +95,9 @@ describe('a refusal whose telling does not fit the arguments of the tool', () =>
 
 describe('the refusals of one request', () => {
   it('tell the party three times at most, and record ten at most, past which a reply leaves no trace', async () => {
-    const { playbook, refused } = await refusedAfter(...Array.from({ length: 12 }, (_, index) => `maybe ${index}`));
+    const { playbook, refused } = await refusedAfter(
+      ...Array.from({ length: 6 }, (_, index) => [`maybe ${index}`, 'x'.repeat(8193)]).flat(),
+    );
 
     expect(refused).toMatchObject([
       ...Array.from({ length: 3 }, () => ({ data: { told: true } })),

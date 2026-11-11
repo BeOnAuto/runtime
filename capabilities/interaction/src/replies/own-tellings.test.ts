@@ -10,7 +10,7 @@ const newer = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b72';
 const channel = '#approvals-sales';
 
 const toldAboutThePlan: unknown = expect.stringMatching(
-  /^About the plan: To answer, reply with one of approve, reject/u,
+  /^About the plan: Auto couldn't take that as an answer\. Reply with approve or reject\./u,
 );
 
 function keyedByTheChannel(told: string): string {

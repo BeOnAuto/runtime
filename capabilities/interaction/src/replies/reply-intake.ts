@@ -1,17 +1,19 @@
 import type { Issue, PlaybookAddress } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
-import type { ReplyRefusal, ReplyRefused } from '../facts/run-facts.ts';
+import { saidOfARefusal, type ReplyRefusal, type ReplyRefused } from '../facts/run-facts.ts';
+import { toldAnsweredAlready } from '../tellings/late-tellings.ts';
 import { isPostedByThePlaybook } from '../tellings/own-messages.ts';
 import { told, type Telling } from '../tellings/tellings.ts';
 import { recordedReplyWork, type IntakeParts, type RecordedReply, type ReplyPlace } from './reply-recorder.ts';
-import { replyBoundsOfAReading, tellingInputOf, type IntakeState } from './reply-recording.ts';
+import { refusalTellingOf, replyBoundsOfAReading, type IntakeState } from './reply-recording.ts';
 import { decisionOf, type KeptRequest, type Reply, type ReplyDecision } from './reply-taking.ts';
-import { routeOfRequest, type RepliesRoute } from './request-routes.ts';
+import { routeOfRequest } from './request-routes.ts';
 
 interface Arrival {
   readonly server: string;
   readonly tool: string;
+  readonly conversation: string;
   readonly causationId: string;
 }
 
@@ -31,6 +33,10 @@ function identityOf({ id, sender }: Reply) {
   return { id, sender };
 }
 
+function answeredReplyOf(reply: Reply) {
+  return { ...identityOf(reply), ...(reply.to === undefined ? {} : { to: reply.to }) };
+}
+
 interface Taking {
   readonly request: KeptRequest;
   readonly reply: Reply;
@@ -38,8 +44,8 @@ interface Taking {
 }
 
 function taken(intake: Intake, state: IntakeState, { request, reply, answer }: Taking): Effect.Effect<IntakeState> {
-  const work = { type: 'answer', answer: { answer, reply: identityOf(reply) } } as const;
-  return recordedReplyWork(placeOf(intake), request, reply, work).pipe(
+  const work = { type: 'answer', answer: { answer, reply: answeredReplyOf(reply) } } as const;
+  return recordedReplyWork(placeOf(intake), request, reply, { work }).pipe(
     Effect.map((made): IntakeState =>
       made === undefined
         ? state
@@ -76,37 +82,33 @@ function refusalFactOf({ arrival }: Intake, { reply, because, issues }: Refusal,
   };
 }
 
-function idOfATellingAt({ delivering, replies, sentIdAt }: RepliesRoute): string | undefined {
-  return (replies.tell?.tool ?? delivering) === delivering ? sentIdAt : undefined;
-}
-
-function tellingOf(intake: Intake, request: KeptRequest, input: Telling['input'], made: RecordedReply): Telling {
-  const route = routeOfRequest(request);
+function tellingOf(intake: Intake, request: KeptRequest, call: Telling['call'], made: RecordedReply): Telling {
   return {
     playbook: intake.playbook,
-    server: route.server,
-    tool: route.replies.tell?.tool ?? route.delivering,
+    server: routeOfRequest(request).server,
     runId: request.runId,
     definition: {
       definitionType: 'interaction',
       definitionName: request.row.function,
       definitionVersion: request.row.version,
     },
-    input,
     lineage: { causationId: made.id, correlationId: made.correlationId },
-    place: { conversation: request.sent.conversation, idAt: idOfATellingAt(route) },
+    conversation: request.sent.conversation,
+    call,
   };
 }
 
 function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
   const { request, reply } = refusal;
   return Effect.gen(function* () {
-    const input = yield* tellingInputOf(intake.parts.ledger, intake.playbook, state, refusal);
+    const open = intake.candidates.filter(({ runId }) => !state.answered.has(runId)).length;
+    const input = yield* refusalTellingOf(intake.parts.ledger, intake.playbook, state, { ...refusal, open });
     if (input !== undefined && !(yield* intake.roomForATelling)) {
       return { ...state, foundAnswerer: true, unrecorded: true };
     }
     const fact = refusalFactOf(intake, refusal, input !== undefined);
-    const made = yield* recordedReplyWork(placeOf(intake), request, reply, { type: 'work', fact }).pipe(
+    const work = { work: { type: 'work', fact }, refusal: refusal.because } as const;
+    const made = yield* recordedReplyWork(placeOf(intake), request, reply, work).pipe(
       Effect.catchTag('unavailable', Effect.die),
     );
     if (made === undefined) {
@@ -116,11 +118,13 @@ function refusedReply(intake: Intake, state: IntakeState, refusal: Refusal) {
       yield* told(intake.parts, tellingOf(intake, request, input, made));
     }
     const toldNow = (state.told.get(request.runId) ?? 0) + (input === undefined ? 0 : 1);
+    const said = saidOfARefusal(refusal.because, refusal.issues);
     return {
       ...state,
       refused: state.refused + 1,
       foundAnswerer: true,
       told: new Map([...state.told, [request.runId, toldNow]]),
+      lastSaid: input === undefined ? state.lastSaid : new Map([...state.lastSaid, [request.runId, said]]),
     };
   });
 }
@@ -139,8 +143,16 @@ export function replyTaken(intake: Intake, state: IntakeState, reply: Reply): Ef
   if (state.unrecorded || decision.kind === 'nothing') {
     return Effect.succeed(state);
   }
-  const posted = { conversation: decision.request.sent.conversation, id: reply.id };
-  return Effect.flatMap(isPostedByThePlaybook(intake.parts.ledger, intake.playbook, posted), (own) =>
-    own ? Effect.succeed(state) : decided(intake, state, reply, decision),
-  );
+  const { request } = decision;
+  const posted = { conversation: intake.arrival.conversation, id: reply.id };
+  const fromTheAnswerer = decision.kind === 'take' || decision.because !== 'not_the_answerer';
+  const late = { ...intake, request, reply, causationId: intake.arrival.causationId };
+  return Effect.flatMap(isPostedByThePlaybook(intake.parts.ledger, intake.playbook, posted), (own) => {
+    if (own) {
+      return Effect.succeed(state);
+    }
+    return fromTheAnswerer && state.answered.has(request.runId)
+      ? Effect.as(toldAnsweredAlready(late, state), state)
+      : decided(intake, state, reply, decision);
+  });
 }

@@ -50,17 +50,23 @@ function replyOf(item: unknown, each: ReplyPointers): readonly Reply[] {
   return [{ id, sender, text: textAt(item, each.text), to: each.to === undefined ? undefined : textAt(item, each.to) }];
 }
 
-function isSentByThePlaybook(item: unknown, each: ReplyPointers, sent: ReadonlySet<string>): boolean {
-  return idOf(item, each).some((id) => sent.has(id));
+export interface PassedOver {
+  readonly sent: ReadonlySet<string>;
+  readonly automatic: string | undefined;
 }
 
-function listed(replies: Replies, document: unknown, answered: CallAnswered, sent: ReadonlySet<string>): ReadAnswer {
+function isPassedOver(item: unknown, each: ReplyPointers, { sent, automatic }: PassedOver): boolean {
+  const postedByAnApp = automatic !== undefined && (valueAt(item, automatic) ?? null) !== null;
+  return postedByAnApp || idOf(item, each).some((id) => sent.has(id));
+}
+
+function listed(replies: Replies, document: unknown, answered: CallAnswered, passed: PassedOver): ReadAnswer {
   const list = valueAt(document, replies.read.list);
   if (!Array.isArray(list)) {
     return failedRead('unreadable');
   }
   const { each } = replies.read;
-  const others = list.filter((item: unknown) => !isSentByThePlaybook(item, each, sent));
+  const others = list.filter((item: unknown) => !isPassedOver(item, each, passed));
   return {
     outcome: 'result',
     answered,
@@ -72,7 +78,7 @@ function listed(replies: Replies, document: unknown, answered: CallAnswered, sen
   };
 }
 
-export function readAnswerOf(replies: Replies, called: CalledOnce, sent: ReadonlySet<string>): ReadAnswer {
+export function readAnswerOf(replies: Replies, called: CalledOnce, passed: PassedOver): ReadAnswer {
   if (called.kind === 'unopened') {
     return failedRead(called.refused === 'tool_not_offered' ? 'tool_not_offered' : 'server_failure', called.detail);
   }
@@ -85,5 +91,5 @@ export function readAnswerOf(replies: Replies, called: CalledOnce, sent: Readonl
   }
   return Buffer.byteLength(JSON.stringify(document), 'utf8') > toolBounds.readAnswerBytes
     ? failedRead('too_large')
-    : listed(replies, document, called.answered, sent);
+    : listed(replies, document, called.answered, passed);
 }

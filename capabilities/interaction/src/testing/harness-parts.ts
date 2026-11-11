@@ -5,6 +5,8 @@ import { Effect, Schema } from 'effect';
 
 import { listInteractions } from '../requests/list-interactions.ts';
 import type { DueRequestItem, RequestsDue } from '../schedule/due-requests.ts';
+import type { ConversationsOf, ConversationTools } from '../tellings/telling-routes.ts';
+import { noConversations } from './chat-conversations.ts';
 
 const ListedSchema = Schema.Struct({
   status: Schema.Literal('succeeded'),
@@ -48,4 +50,10 @@ export function performedAll(items: readonly DueRequestItem[], now: number): Pro
 
 export function performedEach(times: readonly number[], perform: (now: number) => Promise<number>): Promise<void> {
   return Effect.runPromise(Effect.forEach(times, (now) => Effect.promise(() => perform(now)), { discard: true }));
+}
+
+export function conversationsDeclared(declared: ConversationTools | undefined): ConversationsOf {
+  return declared === undefined
+    ? noConversations
+    : (provider) => Effect.succeed(provider === 'chat' ? declared : undefined);
 }

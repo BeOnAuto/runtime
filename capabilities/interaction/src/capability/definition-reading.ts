@@ -8,6 +8,7 @@ import { parseInteractionDocument } from '../document/document-parsing.ts';
 import type { InteractionFunctionDefinitionDocument } from '../document/interaction-document.ts';
 import { callCheck } from './call-check.ts';
 import { wayCheck, type WayPorts } from './request-ways.ts';
+import { tellCheck, type TellCheckPorts } from './tell-check.ts';
 
 function parse(source: string): Effect.Effect<InteractionFunctionDefinitionDocument, InvalidInput> {
   return Effect.flatMap(renderClock, (clock) =>
@@ -44,13 +45,16 @@ export function summarize(document: InteractionFunctionDefinitionDocument): Defi
   };
 }
 
-export function definitionReadingOf(tools: WayPorts) {
+export function definitionReadingOf(tools: WayPorts, conversationsOf: TellCheckPorts['conversationsOf']) {
   const calls = callCheck(tools);
   const ways = wayCheck(tools);
+  const tells = tellCheck({ tools, conversationsOf });
   return {
     parse,
     check: (document: InteractionFunctionDefinitionDocument, source: string, place: PlaybookAddress) =>
-      document.shape === 'call' ? calls(document, place) : ways(document, source, place),
+      document.shape === 'call'
+        ? calls(document, place)
+        : Effect.andThen(tells(document, place), ways(document, source, place)),
     summarize,
   };
 }

@@ -216,7 +216,7 @@ Write a delivery from what the tool returns, not from memory:
    - `tool` and `with`, the reading tool and its arguments, over `sent` and the cursor `since`;
    - `read`, the pointers to the list of replies and, within each, to its id, its sender, its words and the message it answers;
    - `wait`, the floor of the reading cadence;
-   - `tell`, how the party is told when a reply was not an answer.
+   - `tell`, what the party is told of their reply: left out, as the provider of the connection says; `refusals` only when a reply was not taken; `none` never.
 
    The `reply` rule maps the words of a reply to the answer; see [Answering by reply](#answering-by-reply). [Tool blocks](#tool-blocks) gives each key, whether it is required and its default.
 
@@ -307,7 +307,7 @@ Every template is checked when the document is saved, against the names its plac
 | `deliver.with`                         | `input`, `today`, `now`, and the request's `to`, `message`, `run_id`, `function`, `expires_at` and `answer_schema` |
 | `replies.conversation`                 | `to`, `sent.conversation`, `sent.id`                                                                               |
 | `replies.with`                         | `to`, `sent.conversation`, `sent.id`, `conversation`, `since`                                                      |
-| `tell.with`                            | `to`, `sent.conversation`, `sent.id`, `message`                                                                    |
+| `tell.with`                            | `to`, `sent.conversation`, `sent.id`, `message`, `reply.id`, `reply.to`                                            |
 
 A template is rejected with its line when it does not compile, names another value, or names a property the input schema does not allow. So is a structure inside a longer text, in a template that reads no `input`; one that reads `input` is checked when the run renders it.
 
@@ -316,6 +316,7 @@ Other rules checked when saved:
 - Each pointer of `call.read`, `deliver.sent` and `replies.read` is a JSON Pointer such as `/messages`. It starts with a slash, writes `~` as `~0`, and writes a slash within a name as `~1`.
 - `read.order` is `oldest_first` or `newest_first`.
 - `wait` lies between `PT5S` and `PT1H`, and is `PT5S` when left out.
+- A function that reads replies and writes no `tell`, or `tell: all` or `tell: refusals`, is refused when its server can be asked and its provider does not say how its conversations are replied to, as a server added by hand does not: `Nothing says how a reply is answered through chat, so nobody could be told what became of theirs; write tell.with, the arguments of post_message that post under the message, or tell: none to stay silent`.
 - The server and the tool are not checked when the document is saved, but for the mark of the tool of `call` when its server can be asked: one it marks `reads` is refused, since it belongs to a lookup function. A document whose server cannot be asked just then, or does not serve the playbook, is saved. A run whose server does not serve the playbook, or whose tool its operator does not allow, is `unavailable` with the kind `tool_not_offered`.
 
 ## Tool blocks
@@ -324,11 +325,11 @@ Other rules checked when saved:
 
 A request uses the tools of one server, `deliver.server`:
 
-| Step                         | Tool                                                          |
-| ---------------------------- | ------------------------------------------------------------- |
-| Send the message             | `deliver.tool`                                                |
-| Read the replies             | `replies.tool`                                                |
-| Tell the party how to answer | `replies.tell.tool`, or `deliver.tool` when `tell` names none |
+| Step                      | Tool                                                                                                             |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Send the message          | `deliver.tool`                                                                                                   |
+| Read the replies          | `replies.tool`                                                                                                   |
+| Tell the party of a reply | The provider's own way of replying and marking, or `replies.tell.tool`, or `deliver.tool` when `tell` names none |
 
 A function with `call` uses `call.tool` on `call.server`. A run checks every tool its function names before it sends anything: the server must serve the playbook, and the operator must allow the tool. Otherwise the run is `unavailable` with the kind `tool_not_offered`.
 
@@ -372,7 +373,7 @@ The answer is the tool's structured content, else its first text block parsed as
 | `with`         | Yes                                           | The reading tool's arguments. Their templates read `to`, `sent.conversation`, `sent.id`, `conversation` and `since`                                                        |
 | `read`         | Yes                                           | Where the replies are in the reading tool's answer; see [`replies.read`](#replies-read)                                                                                    |
 | `wait`         | No; `PT5S` when left out                      | The shortest time between two reads, from `PT5S` to `PT1H`                                                                                                                 |
-| `tell`         | No; nobody is told when left out              | How the party is told that a reply was not an answer; see [`replies.tell`](#replies-tell)                                                                                  |
+| `tell`         | No; the provider's way when left out          | What the party is told of their reply: `all`, `refusals` or `none`, or how a line is posted; see [`replies.tell`](#replies-tell)                                           |
 
 - A key that renders empty, past 256 bytes or with a control character, or arguments of `with` that do not render for the request, leave it to `answer_interaction`.
 - In `with`, `conversation` is the rendered key. `since` is the id of the newest message an earlier read listed, and empty text before any. Write `'{{ since | default: "0" }}'` where the tool needs a value.
@@ -393,25 +394,53 @@ An answer with no list at `list`, or larger than 64 KiB, is a failed read. The r
 | Key      | Required | What it points to, within each message                                                            |
 | -------- | -------- | ------------------------------------------------------------------------------------------------- |
 | `id`     | Yes      | The message's identity. The newest message's becomes `since`                                      |
-| `sender` | Yes      | Who wrote it. Only a message from the answerer counts                                             |
+| `sender` | Yes      | Who wrote it. Only the answerer's answer is taken                                                 |
 | `text`   | Yes      | Its words, which the reply rule reads. A message with nothing there reads as empty and is refused |
 | `to`     | No       | The message it replies to, such as the first message of its thread                                |
 
 - A message whose `id` or `sender` is not a text or a whole number of at most 256 bytes, without a control character, is passed over.
+- A message the connection's provider marks as posted by an app, such as one with a `bot_id` in Slack, is passed over too, so Auto never answers another program.
+- A message from anyone but the answerer is passed over, unless the rule reads it as an answer and its sender answers none of the open requests it could be meant for. Then it is refused once a request, keeping who sent it and never their words.
 - A message whose `id` is one the playbook sent in the conversation, such as the first message of a thread it started, is the playbook's own and not a reply. It is passed over and not counted, so a read that finds nothing else has found nothing and records no `replies_read`.
-- A message a telling of the playbook posted is the playbook's own too, whoever the chat names as its sender, as through a connection that posts as the person who answers. The playbook knows it by the id the telling's tool answered, read at `deliver.sent.id` where the telling goes through `deliver.tool`, and neither takes nor refuses it. Unlike the request's own message, it is still counted among the replies the read found, so a read that finds only a telling records `replies_read` with one reply, none taken and none refused.
+- The message of a request that has ended is the playbook's own too. It is neither taken nor refused, though the read counts it.
+- A message a telling of the playbook posted is the playbook's own too, whoever the chat names as its sender, as through a connection that posts as the person who answers. The playbook knows it by the id the telling's tool answered and where it landed, read at `deliver.sent.id` and `deliver.sent.conversation` where the telling goes through `deliver.tool`, and neither takes nor refuses it. Unlike the request's own message, it is still counted among the replies the read found, so a read that finds only a telling records `replies_read` with one reply, none taken and none refused.
 - With `to`, a message answers the open request whose `sent.id` it names. It is passed over when it names none of them.
 - A message with nothing at `to`, or any message when `each` has no `to`, answers the conversation's one open request. It is refused when several are open.
 
 ### `replies.tell`
 
-| Key    | Required                         | What it holds                                                                          |
-| ------ | -------------------------------- | -------------------------------------------------------------------------------------- |
-| `tool` | No; `deliver.tool` when left out | The tool of `deliver.server` that sends the telling                                    |
-| `with` | Yes                              | Its arguments. Their templates read `to`, `sent.conversation`, `sent.id` and `message` |
+`tell` is a word, or a block that says how a line is posted.
 
-- Here `message` is the telling, not the request's message. It says how to answer, such as `To answer, reply with one of approve, revise; what follows is kept as the note.` After a reply the answer schema refuses, it names the problems first. After a reply that answers no single request, it asks the party to reply to the message of the one they answer. After a reply past 8 KiB, it gives the limit.
-- A request is told at most three times. Arguments that do not render are not sent; the reply is still refused.
+| The function writes | What the party is told                                                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nothing             | What the connection's provider says: through a chat, such as Slack or Microsoft Teams, everything below; a function whose provider says nothing is refused when saved |
+| `tell: all`         | A reply taken is marked, where the provider can mark a message, and answered with one line. A reply not taken is answered with a line that says how to answer         |
+| `tell: refusals`    | Only a reply not taken is answered. A reply taken is still marked                                                                                                     |
+| `tell: none`        | Nothing. A refused reply is still recorded                                                                                                                            |
+| The block           | Lines go through its own tool and arguments. `when` is the provider's word when left out, or `refusals`                                                               |
+
+| Key    | Required                                            | What it holds                                                                                                                                                  |
+| ------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `when` | No                                                  | `all` or `refusals`, as the words above                                                                                                                        |
+| `tool` | No; `deliver.tool` when left out                    | The tool of `deliver.server` that posts a line                                                                                                                 |
+| `with` | Yes                                                 | Its arguments. Their templates read `to`, `sent.conversation`, `sent.id`, `message`, and `reply.id` and `reply.to`, the reply's message and the one it answers |
+| `sent` | No; `deliver.sent.id` when `tool` is `deliver.tool` | A JSON Pointer into what the tool answered, to the message it posted                                                                                           |
+
+- A request keeps the `tell` it was asked with, as its provider said then.
+- A reply taken is told `Auto recorded your answer: approve.`, naming the words its rule took, or `Auto recorded your answer.` where the rule takes the whole reply. The mark and the line are made after the answer is recorded, once each, even across a restart of the runtime.
+- Here `message` is the line, not the request's message. A reply not taken is told why, with the rule's words:
+
+| The reply                                       | The line                                                                                                                                                                                     |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Not an answer                                   | `Auto couldn't take that as an answer. Reply with approve or revise. Anything after that word is kept as the note.` Where the rule takes the whole reply: `Reply with your answer in words.` |
+| An answer the schema refuses                    | `Auto couldn't take that answer:`, the schema's problems, then `Reply with approve or revise.`                                                                                               |
+| Past 8 KiB                                      | `That reply is too long for Auto to take. A reply can hold up to 8 KB of text.`                                                                                                              |
+| Several requests open, `each.to` names messages | `More than one request is open here. Reply in the thread of the one you're answering.`                                                                                                       |
+| Several requests open, without `each.to`        | `Two requests are open here, so Auto can't tell which one this answers. Neither was answered. Answer them in Auto, or reply here when one is left.`                                          |
+| An answer from someone else                     | `This request is waiting for someone else's answer, so Auto didn't take this reply.` Once a request, and only where the provider answers every reply, so never by mail                       |
+| After the answer, in the read that took it      | `This request was already answered, so Auto didn't take this reply.` Once                                                                                                                    |
+
+- A request is told of replies not taken at most three times, never in the same words twice running. Arguments that do not render are not sent; the reply is still refused.
 - A telling whose message the playbook cannot know is the request's last: one through a tool other than `deliver.tool`, whose answer it reads no id from, or one whose tool failed after it may have posted, such as by not answering in time. A reply after it is still refused, and nobody is told.
 
 ## Answering a request
@@ -480,7 +509,7 @@ Left out, the rule is made from the schema when the answer has one required prop
 
 How replies are taken:
 
-- A reply the rule cannot read is refused. Where the function writes `tell`, the party is told how to answer, three times at most.
+- A reply the rule cannot read is refused. Unless the function says `tell: none`, the party is told how to answer, three times at most, and a reply taken is marked and, with `tell: all`, answered; see [`replies.tell`](#replies-tell).
 - A reply in a thread answers the question the thread began with. A reply outside a thread answers the conversation's one open request, and is refused when several are open.
 - The answer is recorded as any answer is, as `request_answered`. It carries `reply`, the identity of the message that answered. It names the playbook (`playbook:` and its id) as the one that answered. The run takes it at once.
 - A reply taken once is never taken twice, and a request already answered takes no further reply.

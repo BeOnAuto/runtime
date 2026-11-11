@@ -69,10 +69,22 @@ function answeredBy(request: KeptRequest, words: string): ReplyDecision {
   return issues.length === 0 ? { kind: 'take', request, answer } : refused(request, 'invalid', issues);
 }
 
+function answersOneOf(kept: readonly KeptRequest[], { sender }: Reply): boolean {
+  return kept.some(({ row }) => row.answerer === sender);
+}
+
+function fromAnother(request: KeptRequest, reply: Reply, others: readonly KeptRequest[]): ReplyDecision {
+  const takenFromTheAnswerer = answeredBy(request, reply.text ?? '').kind === 'take';
+  return takenFromTheAnswerer && !answersOneOf(others, reply) ? refused(request, 'not_the_answerer') : nothing;
+}
+
 export function decisionOf(reply: Reply, kept: readonly KeptRequest[]): ReplyDecision {
   const { request, ambiguous } = belongingOf(reply, kept);
-  if (request === undefined || request.row.answerer !== reply.sender) {
+  if (request === undefined) {
     return nothing;
+  }
+  if (request.row.answerer !== reply.sender) {
+    return fromAnother(request, reply, ambiguous ? kept : []);
   }
   if (ambiguous) {
     return refused(request, 'ambiguous');

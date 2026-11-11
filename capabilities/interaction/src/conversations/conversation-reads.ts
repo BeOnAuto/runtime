@@ -35,13 +35,14 @@ function sentRead(
     parts,
     playbook: place.playbook,
     candidates,
-    arrival: { ...reference, causationId: place.row.last_fact },
+    arrival: { ...reference, conversation: read.request.sent.conversation, causationId: place.row.last_fact },
     roomForATelling: roomForACall,
   };
   return Effect.gen(function* () {
     const { fields: start, called: calling } = yield* parts.tools.preparedCall(call);
     const called = yield* calling;
-    const answer = readAnswerOf(route.replies, called, sentByThePlaybook(candidates));
+    const passed = { sent: sentByThePlaybook(candidates), automatic: route.telling.automatic };
+    const answer = readAnswerOf(route.replies, called, passed);
     const state = yield* Effect.reduce(
       answer.replies,
       () => carried,

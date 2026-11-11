@@ -33,6 +33,7 @@ export interface RequestDocument extends WrittenFunction {
   readonly message: ParsedTemplate;
   readonly route?: WrittenRoute;
   readonly heldForAnAgent?: HeldForAnAgent;
+  readonly repliesLine: number;
   readonly reply?: ReplyRule;
 }
 

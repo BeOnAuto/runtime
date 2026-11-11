@@ -3,6 +3,7 @@ import type { PlaybookAddress, ProjectionReader, RecordedReader, StreamWriter, U
 import type { ToolAccess } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
+import type { ReplyRefusal } from '../facts/run-facts.ts';
 import { replyRule } from '../facts/work-rules.ts';
 import { recordedWork } from '../schedule/request-ledger.ts';
 import type { KeptRequest, Reply } from './reply-taking.ts';
@@ -23,14 +24,19 @@ export interface RecordedReply extends RecordedWorkAt {
   readonly correlationId: string;
 }
 
+export interface ReplyWork {
+  readonly work: Work;
+  readonly refusal?: ReplyRefusal;
+}
+
 export function recordedReplyWork(
   { parts, playbook, causationId }: ReplyPlace,
   request: KeptRequest,
   reply: Reply,
-  work: Work,
+  { work, refusal }: ReplyWork,
 ): Effect.Effect<RecordedReply | undefined, Unavailable> {
   const address = { ...playbook, id: request.runId };
-  const rule = replyRule(reply.id, work.type === 'work');
+  const rule = replyRule(reply.id, refusal);
   return Effect.flatMap(runCorrelationIn(parts.ledger, address), (correlationId) =>
     recordedWork(parts.record, address, { work, rule }, { causationId, correlationId }).pipe(
       Effect.map((made) => (made === undefined ? undefined : { id: made.id, at: made.at, correlationId })),

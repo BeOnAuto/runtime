@@ -166,7 +166,7 @@ describe('a read whose refusals a slow provider is told of', () => {
     const slow = slowOnceStarted();
     const playbook = await waitingInOneChannel(1, slow.during);
     const [thread = ''] = playbook.chat.posted().map(({ ts }) => ts);
-    const replies = ['maybe', 'perhaps', 'approve'].map((text) =>
+    const replies = ['maybe', 'x'.repeat(8193), 'approve'].map((text) =>
       playbook.chat.reply({ channel: '#approvals-sales', thread, user: answererId, text }),
     );
     slow.start();

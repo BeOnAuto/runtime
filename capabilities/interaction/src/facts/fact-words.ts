@@ -39,6 +39,10 @@ export function deliveryEnded({ type, data }: DeliveryEnded): string {
 }
 
 export function replyRefused({ data }: ReplyRefused): string {
+  if (data.because === 'not_the_answerer') {
+    const toldThem = data.told ? 'they were told the request waits on its answerer' : 'nobody was told';
+    return `An answer from someone other than the answerer was not taken, and ${toldThem}.`;
+  }
   const told = data.told ? 'the party was told how to answer' : 'nobody was told';
   return `A reply from the party was not an answer the function takes, and ${told}.`;
 }

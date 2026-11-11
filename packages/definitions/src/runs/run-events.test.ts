@@ -285,16 +285,15 @@ const answeredInEachMode: readonly (typeof RunEventSchema.Type)[] = [
   },
 ];
 
-const keptOutside = await keptFactsWritten();
+const inAThread = { answer: {}, reply: { id: 'reply-2', sender: 'sender-1', to: 'message-1' }, answered_by: caller };
+
+const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>> = {
+  '0.46.0': baseline,
+  '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
+  '0.58.0': await keptFactsWritten(),
+  '0.59.0': [{ type: 'request_answered', data: inAThread, context: onTheRun }],
+};
 
 describe('the facts a playbook records on the stream of a run', () => {
-  recordedFactsBehaviour({
-    schema: RunEventSchema,
-    folder: new URL('.', import.meta.url),
-    releases: {
-      '0.46.0': baseline,
-      '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
-      '0.58.0': keptOutside,
-    },
-  });
+  recordedFactsBehaviour({ schema: RunEventSchema, folder: new URL('.', import.meta.url), releases });
 });

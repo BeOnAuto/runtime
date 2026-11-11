@@ -10,7 +10,9 @@ import {
   type RequestsDue,
 } from '@on.auto/interaction';
 import type { DispatcherServices } from '@on.auto/operations';
+import { conversationsOf } from '@on.auto/providers';
 import type { ToolAccess } from '@on.auto/tool-servers';
+import { Effect } from 'effect';
 
 import type { Settings } from '../settings/settings.ts';
 import { runtimeLedger } from './runtime-ledger.ts';
@@ -23,7 +25,7 @@ export interface ServedInteraction {
 
 export function interactionServedBy(
   runtime: AppRuntime<DispatcherServices>,
-  { interaction }: Pick<Settings, 'interaction'>,
+  { interaction, providers }: Pick<Settings, 'interaction' | 'providers'>,
   tools: Pick<ToolAccess, 'named' | 'configured' | 'preparedCall' | 'callOnce' | 'listServers' | 'takesConnections'>,
 ): ServedInteraction {
   const ledger = runtimeLedger(runtime);
@@ -33,6 +35,7 @@ export function interactionServedBy(
       openRequests: (playbook) =>
         ledger.countProjectedRows(openRequestsName, playbook, [{ column: 'open', equals: true }]),
       mostOpenRequests: interaction.mostOpenRequests,
+      conversationsOf: (provider) => Effect.succeed(conversationsOf(providers, provider)),
     }),
     operations: [answerInteraction, listInteractions],
     dueWorkOf: (record) => [requestsDue({ ledger, tools, record }), conversationsDue({ ledger, tools, record })],

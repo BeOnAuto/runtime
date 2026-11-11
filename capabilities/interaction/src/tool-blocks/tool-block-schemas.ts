@@ -46,17 +46,41 @@ export const ReadSchema = Schema.Struct({
   each: EachSchema,
 });
 
-export const TellSchema = Schema.Struct({
+export const tellWords = ['all', 'refusals', 'none'] as const;
+
+export type TellWord = (typeof tellWords)[number];
+
+export const TellBlockSchema = Schema.Struct({
+  when: Schema.optionalKey(
+    Schema.Literals(['all', 'refusals']).annotate({
+      description:
+        "all to tell what became of every reply and how the request ended, refusals only when a reply was not taken; the provider's default when left out, else refusals",
+    }),
+  ),
   tool: Schema.optionalKey(
     Schema.String.annotate({
-      description: 'The tool that tells the party how to answer; the delivering tool when left out',
+      description: 'The tool that posts a line to the party; the delivering tool when left out',
     }),
   ),
   with: Templates.annotate({
     description:
-      'Its arguments over to, sent.conversation, sent.id and message, written as the arguments of deliver are',
+      'Its arguments over to, sent.conversation, sent.id, message, reply.id and reply.to, written as the arguments of deliver are',
   }),
+  sent: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'A JSON Pointer into what the tool answered, to the identity of the message it posted; deliver.sent.id when the tool is the delivering tool',
+    }),
+  ),
 });
+
+const TellSchema = Schema.Union([
+  Schema.Literals(tellWords).annotate({
+    description:
+      "all to tell the party what became of every reply and how the request ended, refusals only when a reply was not taken, none never, through the provider's way of replying",
+  }),
+  TellBlockSchema,
+]).annotate({ expected: 'all, refusals or none, or the tool and with that post a line to the party' });
 
 export const RepliesSchema = Schema.Struct({
   conversation: Schema.optionalKey(
@@ -94,3 +118,9 @@ export type RepliesIn = typeof RepliesInSchema.Type;
 export type DeliverBlock = typeof DeliverBlockSchema.Type;
 
 export type Replies = typeof RepliesSchema.Type;
+
+export type TellBlock = typeof TellBlockSchema.Type;
+
+export function tellBlockOf({ tell }: Pick<Replies, 'tell'>): TellBlock | undefined {
+  return typeof tell === 'object' ? tell : undefined;
+}

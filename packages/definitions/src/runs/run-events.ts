@@ -30,7 +30,11 @@ const numbered = { number: Schema.Int };
 
 export const CancelRequestKindSchema = Schema.Literals(['requested', 'deadline', 'parent_ended']);
 
-const ReplyIdentitySchema = Schema.Struct({ id: Schema.String, sender: Schema.String });
+const ReplyIdentitySchema = Schema.Struct({
+  id: Schema.String,
+  sender: Schema.String,
+  to: Schema.optionalKey(Schema.String),
+});
 
 const AnswerOfARequestSchema = Schema.Struct({
   ...payloadFields('answer', Schema.Json),

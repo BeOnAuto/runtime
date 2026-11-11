@@ -90,16 +90,19 @@ describe('a read of replies that finds nothing to take', () => {
     expect(row?.row).toMatchObject({ open: true, reads: 1, since: null });
   });
 
-  it('passes over a reply from anyone but the answerer, and records it nowhere', async () => {
+  it('passes over what anyone but the answerer says, and records only who gave an answer it does not wait on', async () => {
     const playbook = await chatHarness();
     const [thread] = await deliveredInThread(playbook, first);
+    playbook.chat.reply({ channel: '#approvals-sales', thread, user: 'U0STRANGER', text: 'looks fine to me' });
     playbook.chat.reply({ channel: '#approvals-sales', thread, user: 'U0STRANGER', text: 'approve' });
 
     await playbook.performReads(Date.now() + farAhead);
 
-    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toEqual([]);
+    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+      { type: 'reply_refused', data: { because: 'not_the_answerer', told: false } },
+    ]);
     expect(await recordsOf(playbook.ledger, 'replies_read')).toMatchObject([
-      { data: { replies: 1, taken: 0, refused: 0 } },
+      { data: { replies: 2, taken: 0, refused: 1 } },
     ]);
     expect(await playbook.firstOpen()).toMatchObject({ standing: 'delivered' });
   });

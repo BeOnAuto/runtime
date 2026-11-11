@@ -18,13 +18,12 @@ const readingOf = (conversation: readonly string[], to: readonly string[]): read
   `    each: { id: /ts, sender: /user, text: /text${to.length === 0 ? '' : ', to: /thread_ts'} }`,
 ];
 
-export const threadReading: readonly string[] = readingOf(
-  ["  conversation: '{{ sent.conversation }}/{{ sent.id }}'"],
-  ["    ts: '{{ sent.id }}'"],
-);
+const ofAThread = readingOf(["  conversation: '{{ sent.conversation }}/{{ sent.id }}'"], ["    ts: '{{ sent.id }}'"]);
+
+export const threadReading: readonly string[] = [...ofAThread, '  tell: none'];
 
 export const toldReading: readonly string[] = [
-  ...threadReading,
+  ...ofAThread,
   '  tell:',
   '    with:',
   "      channel: '{{ sent.conversation }}'",
@@ -32,7 +31,7 @@ export const toldReading: readonly string[] = [
   "      text: '{{ message }}'",
 ];
 
-export const flatReading: readonly string[] = readingOf([], []);
+export const flatReading: readonly string[] = [...readingOf([], []), '  tell: none'];
 
 const ListedSchema = Schema.Struct({
   interactions: Schema.Array(

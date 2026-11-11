@@ -10,6 +10,7 @@ import {
   settlementDueOf,
   type OpenRequestRow,
 } from '../requests/request-rows.ts';
+import { takenTellingOf, type TakenTelling } from '../tellings/taken-tellings.ts';
 import type { DeliveryParts, DueRequest } from './delivery-parts.ts';
 import { lostAttempt, nextAttempt } from './request-attempts.ts';
 import { expiredSettlement, undeliveredSettlement } from './request-endings.ts';
@@ -83,12 +84,38 @@ function itemOf(parts: DeliveryParts, kept: PlaybookProjectedRow, dueAt: number)
   };
 }
 
+const tellingsDue = 'telling_due_at';
+
 function dueColumnOf(callsOut: boolean): string {
   return callsOut ? 'attempt_due_at' : 'ending_due_at';
 }
 
 function dueColumnsOf(callsOut: boolean | undefined): readonly string[] {
-  return callsOut === undefined ? [dueColumnOf(true), dueColumnOf(false)] : [dueColumnOf(callsOut)];
+  if (callsOut === undefined) {
+    return [dueColumnOf(true), tellingsDue, dueColumnOf(false)];
+  }
+  return callsOut ? [dueColumnOf(true), tellingsDue] : [dueColumnOf(false)];
+}
+
+function dueRowsOf(parts: DeliveryParts, column: string, now: number, most: number) {
+  return Effect.map(parts.ledger.readDueRows(openRequestsName, { column, through: now, limit: most }), (rows) =>
+    playbookRowsOf(openRequestsName, rows),
+  );
+}
+
+function dueOf(parts: DeliveryParts, now: number, most: number, callsOut: boolean) {
+  const requests = Effect.map(dueRowsOf(parts, dueColumnOf(callsOut), now, most), (rows) =>
+    rows.map((kept) => itemOf(parts, kept, now)),
+  );
+  if (!callsOut) {
+    return requests;
+  }
+  const tellings = Effect.map(dueRowsOf(parts, tellingsDue, now, most), (rows) =>
+    rows.map((kept) => takenTellingOf(parts, kept)),
+  );
+  return Effect.zipWith(requests, tellings, (attempts: readonly DueRequestItem[], told: readonly TakenTelling[]) =>
+    [...attempts, ...told].slice(0, most),
+  );
 }
 
 function soonestOf(times: readonly (number | null)[]): number | null {
@@ -99,15 +126,7 @@ function soonestOf(times: readonly (number | null)[]): number | null {
 export function requestsDue(parts: DeliveryParts): RequestsDue {
   return {
     name: 'the open requests of the playbook',
-    due: (now, most, callsOut) =>
-      Effect.map(
-        parts.ledger.readDueRows(openRequestsName, {
-          column: dueColumnOf(callsOut),
-          through: now,
-          limit: most,
-        }),
-        (rows) => playbookRowsOf(openRequestsName, rows).map((kept) => itemOf(parts, kept, now)),
-      ),
+    due: (now, most, callsOut) => dueOf(parts, now, most, callsOut),
     nextDueAt: (after, callsOut) =>
       Effect.map(
         Effect.forEach(dueColumnsOf(callsOut), (column) => parts.ledger.nextDueOf(openRequestsName, column, after)),

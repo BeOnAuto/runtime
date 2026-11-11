@@ -94,6 +94,16 @@ function refusal(id: string): Work {
   };
 }
 
+function refusalOfAnother(id: string): Work {
+  return {
+    type: 'work',
+    fact: {
+      type: 'reply_refused',
+      data: { ...ofTheReply, reply: { id, sender: 'bo' }, because: 'not_the_answerer', told: true },
+    },
+  };
+}
+
 function taking(id: string): Work {
   return { type: 'answer', answer: { answer: { choice: 'approve' }, reply: { id, sender: 'ada' } } };
 }
@@ -104,7 +114,7 @@ describe('the replies a request takes or refuses', () => {
   it('are each recorded once, refused at most ten times, and none is taken or refused once the run took an answer', async () => {
     const { playbook } = await askedThroughChat();
     const record = recording(playbook);
-    const refuse = (id: string) => record(refusal(id), replyRule(id, true));
+    const refuse = (id: string) => record(refusal(id), replyRule(id, 'not_an_answer'));
     const refusals = await Effect.runPromise(
       Effect.forEach(
         Array.from({ length: replyBounds.refusals }, (_, index) => `r-${index}`),
@@ -116,9 +126,9 @@ describe('the replies a request takes or refuses', () => {
     expect([
       await refuse('r-0'),
       await refuse('r-10'),
-      await record(taking('r-11'), replyRule('r-11', false)),
-      await record(taking('r-12'), replyRule('r-12', false)),
-      await record(refusal('r-11'), replyRule('r-11', true)),
+      await record(taking('r-11'), replyRule('r-11')),
+      await record(taking('r-12'), replyRule('r-12')),
+      await record(refusal('r-11'), replyRule('r-11', 'not_an_answer')),
     ]).toEqual([
       Result.fail(replySeen),
       Result.fail(
@@ -136,8 +146,8 @@ describe('the replies a request takes or refuses', () => {
     const record = recording(playbook);
 
     expect([
-      await record(taking('r-1'), replyRule('r-1', false)),
-      await record(refusal('r-2'), replyRule('r-2', true)),
+      await record(taking('r-1'), replyRule('r-1')),
+      await record(refusal('r-2'), replyRule('r-2', 'not_an_answer')),
     ]).toEqual([
       Result.fail(cancelledUnanswered),
       Result.fail(
@@ -145,6 +155,28 @@ describe('the replies a request takes or refuses', () => {
           detail: 'The run is being cancelled, so it records no refused reply and tells the party nothing',
         }),
       ),
+    ]);
+  });
+});
+
+describe('the answers of someone a request does not wait on', () => {
+  it('are refused once a request, and an answer of its answerer is still taken after', async () => {
+    const { playbook } = await askedThroughChat();
+    const record = recording(playbook);
+
+    expect([
+      await record(refusalOfAnother('r-1'), replyRule('r-1', 'not_the_answerer')),
+      await record(refusalOfAnother('r-2'), replyRule('r-2', 'not_the_answerer')),
+      await record(taking('r-3'), replyRule('r-3')),
+    ]).toEqual([
+      Result.void,
+      Result.fail(
+        new Conflict({
+          detail:
+            'The run has refused the answer of someone it does not wait on already, so it records no more of them',
+        }),
+      ),
+      Result.void,
     ]);
   });
 });
@@ -172,7 +204,7 @@ describe('the work of a request as its capability reads it', () => {
           context,
         },
       ]),
-    ).toEqual({ lastAttempt: 1, inFlight: null, deliveredAt: at, refusedReplies: [] });
+    ).toEqual({ lastAttempt: 1, inFlight: null, deliveredAt: at, refusedReplies: [], refusedOthers: 0 });
   });
 
   it('refuses work of its own in a shape no reader of it knows, as any unreadable fact of the run', () => {

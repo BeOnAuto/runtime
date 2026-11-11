@@ -9,6 +9,7 @@ import {
 } from '@on.auto/definitions';
 import type {
   Lineage,
+  ProjectionAdvancer,
   ProjectionReader,
   RecordedPageRequest,
   RecordedReader,
@@ -31,6 +32,7 @@ export interface RequestLedger
     StreamReader,
     Pick<RecordedReader, 'readRecorded'>,
     Pick<ProjectionReader, 'readDueRows' | 'nextDueOf'>,
+    Pick<ProjectionAdvancer, 'advanceRow'>,
     KeptContentReader {}
 
 function endedBefore(): Effect.Effect<void> {

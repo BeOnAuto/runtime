@@ -6,10 +6,11 @@ import {
   type RunContext,
 } from '@on.auto/definitions';
 import { momentVariables } from '@on.auto/definitions/tool-blocks';
-import type { Conflict, InvalidInput } from '@on.auto/operations';
+import type { Conflict, InvalidInput, PlaybookAddress } from '@on.auto/operations';
 import { Clock, Effect, type Schema } from 'effect';
 
 import type { RequestDocument } from '../document/interaction-document.ts';
+import { resolvedTelling, type ConversationTools } from '../tellings/telling-routes.ts';
 import { routeOf, toolsOf } from '../tool-blocks/routes.ts';
 import { checkedArguments, offered, roomFor, type InteractionPorts } from './request-reach.ts';
 import type { RequestRecord } from './request-record.ts';
@@ -35,6 +36,7 @@ function answeringOf(
 function requestOf(
   document: RequestDocument,
   input: Schema.Json,
+  part?: ConversationTools,
 ): Effect.Effect<RequestRecord, Conflict | InvalidInput> {
   return Effect.gen(function* () {
     const at = yield* Clock.currentTimeMillis;
@@ -55,9 +57,25 @@ function requestOf(
       expires_at: new Date(at + document.expiresMs).toISOString(),
       requested_at: now,
       ...(route === undefined ? {} : { deliver: route.deliver }),
-      ...(route?.replies === undefined ? {} : { replies: route.replies }),
+      ...(route?.replies === undefined
+        ? {}
+        : { replies: route.replies, tell: resolvedTelling(route.deliver, route.replies, part) }),
     };
   });
+}
+
+function partOf(
+  ports: InteractionPorts,
+  playbook: PlaybookAddress,
+  { route }: RequestDocument,
+): Effect.Effect<ConversationTools | undefined> {
+  if (route?.replies === undefined) {
+    return Effect.undefined;
+  }
+  const { server } = route.deliver;
+  return Effect.flatMap(ports.tools.listServers(playbook, server), (servers) =>
+    ports.conversationsOf(servers.find(({ name }) => name === server)?.provider ?? null),
+  );
 }
 
 export function asksLater(document: RequestDocument): boolean {
@@ -79,7 +97,7 @@ export function requestRun(ports: InteractionPorts) {
         return { output: {}, record: notified };
       }
       yield* roomFor(ports, playbook);
-      const record = yield* requestOf(document, admitted);
+      const record = yield* requestOf(document, admitted, yield* partOf(ports, playbook, document));
       yield* checkedArguments(record, { input: admitted, runId: context.id, functionName: context.definition.name });
       return { finishesLater: true, record };
     });

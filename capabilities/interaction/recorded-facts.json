@@ -4,5 +4,6 @@
   "src/facts/0.46.0/delivery_started.json": "1b8d8d1cdf967171b4f35bae17268f86eea3c98c8d94146f85485e770e7531d0",
   "src/facts/0.46.0/delivery_succeeded.json": "021db72f4785d94bc2ba809df0077a8baf6dee606c48705482ee99196e849ff4",
   "src/facts/0.46.0/reply_refused.json": "9f5775e5c64c226896d97c3e32f9cb08655ea94d3c3763403fb1cc64d0467263",
-  "src/facts/0.57.0/delivery_succeeded.json": "4dccd83783118108214f0841b8ed65bea370cdd1edc466bd77868072a7950bb5"
+  "src/facts/0.57.0/delivery_succeeded.json": "4dccd83783118108214f0841b8ed65bea370cdd1edc466bd77868072a7950bb5",
+  "src/facts/0.57.0/reply_refused.json": "d83ff1b2c42cb61b142a1f0e22a5009c8fec299dd4b7db13266ce4a81b9403d5"
 }

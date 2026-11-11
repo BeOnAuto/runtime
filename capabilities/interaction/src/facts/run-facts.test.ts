@@ -97,6 +97,17 @@ const readingRecorded: readonly (typeof InteractionRunFactSchema.Type)[] = [
     },
     context: onTheRun,
   },
+  {
+    type: 'reply_refused',
+    data: {
+      server: 'chat',
+      tool: 'read_replies',
+      reply: { id: 'reply-2', sender: 'sender-2' },
+      because: 'not_the_answerer',
+      told: true,
+    },
+    context: onTheRun,
+  },
 ];
 
 describe('the facts an interaction function records on its run', () => {

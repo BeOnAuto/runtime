@@ -201,6 +201,7 @@ const keyedByTheChannel = threadDocument({
     '    list: /messages',
     '    order: oldest_first',
     '    each: { id: /ts, sender: /user, text: /text, to: /thread_ts }',
+    '  tell: none',
   ],
 });
 

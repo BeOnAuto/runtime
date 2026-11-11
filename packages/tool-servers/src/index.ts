@@ -59,7 +59,9 @@ export {
   type ReadingFailedBecause,
   type ReadingRecorded,
   type TellingEnded,
+  type TellingAbout,
   type TellingFailedBecause,
+  type TellingForm,
   type TellingStarted,
   type ToldAs,
 } from './own-calls/conversation-call-events.ts';

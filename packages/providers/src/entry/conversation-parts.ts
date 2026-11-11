@@ -31,10 +31,16 @@ const ReactSchema = Schema.Struct({
 export const ConversationsSchema = Schema.Struct({
   tell: Schema.Literals(['all', 'refusals']).annotate({
     description:
-      "The provider's practice: all where one more message is expected, as in a chat; refusals where each message costs, as in mail or a text message",
+      "The provider's practice, and what a person is told through it by a function that writes no tell: all where one more message is expected, as in a chat, so a reply taken is marked and answered and a reply not taken is answered; refusals where each message costs, as in mail or a text message, so only a reply that could not be taken is answered",
   }),
   reply: ReplySchema.annotate({ description: 'How a line is posted in reply to a person' }),
   react: Schema.optionalKey(ReactSchema.annotate({ description: "How a person's message is marked" })),
+  automatic: Schema.optionalKey(
+    Schema.String.annotate({
+      description:
+        'A JSON Pointer within a message the reading tool lists, to what it holds only when an app posted it or it was sent automatically; such a message is passed over, never taken, refused or answered',
+    }),
+  ),
 }).annotate({
   description:
     "How the provider's conversations are replied to and marked, for a function that asks a person through it and reads their replies",
@@ -93,11 +99,14 @@ export function conversationIssuesOf(conversations: Conversations | undefined): 
   if (conversations === undefined) {
     return [];
   }
-  const { reply, react } = conversations;
+  const { reply, react, automatic } = conversations;
   return issuesOf([
     ...toolIssues('/conversations/reply/tool', reply.tool),
     ...argumentIssues('/conversations/reply/with', reply.with),
-    ...pointerIssues(noLines, [['/conversations/reply/sent', reply.sent]]),
+    ...pointerIssues(noLines, [
+      ['/conversations/reply/sent', reply.sent],
+      ['/conversations/automatic', automatic],
+    ]),
     ...(react === undefined
       ? []
       : [

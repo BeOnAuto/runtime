@@ -34,7 +34,14 @@ import { makeInteractionFunctionAdapter } from '../capability/interaction-functi
 import { openRequests, openRequestsName } from '../requests/open-requests.ts';
 import { requestsDue, type DueRequestItem, type RequestsDue } from '../schedule/due-requests.ts';
 import { noTools, type ToolPorts } from './fake-tools.ts';
-import { dueInBothLanes, firstOpenOf, performedAll, performedEach, savedAsAnEarlierRelease } from './harness-parts.ts';
+import {
+  conversationsDeclared,
+  dueInBothLanes,
+  firstOpenOf,
+  performedAll,
+  performedEach,
+  savedAsAnEarlierRelease,
+} from './harness-parts.ts';
 
 export const acmeAdmin: CallerIdentity = {
   id: 'acme-admin',
@@ -60,6 +67,7 @@ export interface HarnessOptions {
   readonly tools?: HarnessTools;
   readonly mostOpenRequests?: number;
   readonly others?: readonly Capability[];
+  readonly conversations?: Parameters<typeof conversationsDeclared>[0];
 }
 
 interface PlaybookRoute {
@@ -134,6 +142,7 @@ export function interactionHarness(options: HarnessOptions = {}): InteractionHar
     openRequests: (playbook) =>
       ledger.service.countProjectedRows(openRequestsName, playbook, [{ column: 'open', equals: true }]),
     mostOpenRequests: options.mostOpenRequests ?? 10_000,
+    conversationsOf: conversationsDeclared(options.conversations),
   });
   const call = callingIn(servicesOf(ledger));
   const capabilities = [capability, ...(options.others ?? [])];

@@ -1,5 +1,6 @@
 import {
   IssueSchema,
+  type Issue,
   RunContextSchema,
   factOf,
   factReaderOf,
@@ -66,7 +67,7 @@ const DeliveryRefusedSchema = Schema.Struct({
   duration_ms: Schema.Int,
 });
 
-const ReplyRefusalSchema = Schema.Literals(['not_an_answer', 'invalid', 'too_long', 'ambiguous']);
+const ReplyRefusalSchema = Schema.Literals(['not_an_answer', 'invalid', 'too_long', 'ambiguous', 'not_the_answerer']);
 
 const ReplyRefusedSchema = Schema.Struct({
   server: Schema.String,
@@ -121,3 +122,7 @@ export type DeliveryFailedBecause = typeof DeliveryFailedBecauseSchema.Type;
 export type DeliveryRefusedBecause = typeof DeliveryRefusedBecauseSchema.Type;
 
 export const interactionFactOf: FactReader<RecordedInteractionFact> = factReaderOf(InteractionRunFactSchema);
+
+export function saidOfARefusal(because: ReplyRefusal, issues: readonly Issue[] = []): string {
+  return JSON.stringify([because, issues.map(({ detail }) => detail)]);
+}

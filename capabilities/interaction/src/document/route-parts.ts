@@ -11,11 +11,15 @@ type Checked<A> = Result.Result<A, readonly DocumentIssue[]>;
 
 export type WrittenWay = WrittenRoute | typeof forAnAgent | null;
 
-export function wayOf(way: WrittenWay, lines: SourceLines): Pick<RequestDocument, 'route' | 'heldForAnAgent'> {
+export function wayOf(
+  way: WrittenWay,
+  lines: SourceLines,
+): Pick<RequestDocument, 'route' | 'heldForAnAgent' | 'repliesLine'> {
+  const repliesLine = issueAt(lines, '/replies/tell', '').line;
   if (way === null || way === forAnAgent) {
-    return { heldForAnAgent: { said: way === forAnAgent, line: issueAt(lines, '/deliver', '').line } };
+    return { heldForAnAgent: { said: way === forAnAgent, line: issueAt(lines, '/deliver', '').line }, repliesLine };
   }
-  return { route: way };
+  return { route: way, repliesLine };
 }
 
 const repliesNeedADelivery =

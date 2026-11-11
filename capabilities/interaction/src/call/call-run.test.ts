@@ -17,6 +17,7 @@ const asSystem = makeInteractionFunctionAdapter({
   tools: noTools,
   openRequests: () => Effect.succeed(0),
   mostOpenRequests: 10,
+  conversationsOf: () => Effect.undefined,
 });
 
 describe('a run of an interaction function that asks a system', () => {

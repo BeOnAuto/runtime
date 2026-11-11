@@ -2,6 +2,7 @@ import type { ProjectedRow } from '@on.auto/operations';
 import { Option, Schema } from 'effect';
 
 import { interactionType } from '../capability/interaction-type.ts';
+import { TellingRouteSchema } from '../tellings/telling-routes.ts';
 import { routeOf, type Route } from '../tool-blocks/routes.ts';
 import { SentSchema } from '../tool-blocks/tool-block-schemas.ts';
 
@@ -44,6 +45,10 @@ const OpenRequestRowSchema = Schema.Struct({
   reply: Schema.NullOr(Schema.String),
   reply_refusals: Schema.Int,
   refusals_told: Schema.Int,
+  tell: Schema.NullOr(Schema.String),
+  taken: Schema.NullOr(Schema.String),
+  telling_due_at: Schema.NullOr(Schema.Int),
+  last_said: Schema.NullOr(Schema.String),
 });
 
 export type OpenRequestRow = typeof OpenRequestRowSchema.Type;
@@ -115,6 +120,12 @@ export function deliveryOf(deliver: Schema.JsonObject | undefined): string | nul
     onNone: () => null,
     onSome: ({ server, tool, sent }) => JSON.stringify({ server, tool, ...(sent === undefined ? {} : { sent }) }),
   });
+}
+
+const readTelling = Schema.decodeUnknownOption(Schema.Struct({ tell: TellingRouteSchema }));
+
+export function tellingOf(record: unknown): string | null {
+  return Option.match(readTelling(record), { onNone: () => null, onSome: ({ tell }) => JSON.stringify(tell) });
 }
 
 const decodeDelivery = Schema.decodeUnknownSync(Schema.NullOr(Schema.fromJsonString(DeliverySchema)));

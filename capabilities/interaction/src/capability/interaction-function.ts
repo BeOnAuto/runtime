@@ -26,7 +26,7 @@ export function makeInteractionFunctionAdapter(ports: InteractionPorts): Capabil
     noun: { one: functionResourceLabels.interaction.singular, other: functionResourceLabels.interaction.plural },
     describeOutput: describeAnswer,
     mediaType: 'text/markdown',
-    ...definitionReadingOf(ports.tools),
+    ...definitionReadingOf(ports.tools, ports.conversationsOf),
     run: (document, input, context) =>
       document.shape === 'call' ? called(document, input, context) : asked(document, input, context),
     whenCancelled: 'finish',

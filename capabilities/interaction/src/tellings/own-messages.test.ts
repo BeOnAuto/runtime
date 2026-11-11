@@ -19,7 +19,8 @@ const joining = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7b';
 
 const channel = '#approvals-sales';
 
-const howToAnswer = 'To answer, reply with one of approve, reject; what follows is kept as the note.';
+const howToAnswer =
+  "Auto couldn't take that as an answer. Reply with approve or reject. Anything after that word is kept as the note.";
 
 interface Asked {
   readonly playbook: ChatHarness;
@@ -126,7 +127,7 @@ async function refusedOnceWithItsTellingAnswered(telling: FakeAnswer): Promise<C
     telling,
   );
   await readTurns(playbook, 1);
-  playbook.chat.reply({ channel, thread, user: answererId, text: 'later' });
+  playbook.chat.reply({ channel, thread, user: answererId, text: 'x'.repeat(8193) });
   await readTurns(playbook, 2, 1);
   return playbook;
 }
@@ -160,7 +161,9 @@ describe('a telling that failed', () => {
     });
 
     expect(await refusalsOf(playbook)).toMatchObject([{ told: true }, { told: true }]);
-    expect(tellingsOf(playbook)).toEqual([howToAnswer]);
+    expect(tellingsOf(playbook)).toEqual([
+      'That reply is too long for Auto to take. A reply can hold up to 8 KB of text.',
+    ]);
   });
 });
 

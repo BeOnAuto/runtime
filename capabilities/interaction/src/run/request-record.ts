@@ -2,6 +2,7 @@ import { RequestRecordSchema } from '@on.auto/definitions';
 import { Option, Schema } from 'effect';
 
 import { ReplyRuleSchema } from '../replies/reply-rule.ts';
+import { TellingRouteSchema } from '../tellings/telling-routes.ts';
 import { RepliesSchema, DeliverBlockSchema } from '../tool-blocks/tool-block-schemas.ts';
 
 const InteractionRequestSchema = Schema.Struct({
@@ -9,6 +10,7 @@ const InteractionRequestSchema = Schema.Struct({
   reply: Schema.optionalKey(ReplyRuleSchema),
   deliver: Schema.optionalKey(DeliverBlockSchema),
   replies: Schema.optionalKey(RepliesSchema),
+  tell: Schema.optionalKey(TellingRouteSchema),
 });
 
 export type RequestRecord = typeof InteractionRequestSchema.Type;

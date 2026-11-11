@@ -18,6 +18,11 @@ function partProblems(conversations: unknown) {
   return problemsOf({ ...tracker, conversations });
 }
 
+const noPointer =
+  'Expected a JSON Pointer such as /messages: it starts with a slash, writes ~ as ~0 and a slash within a name as ~1';
+
+const noToolName = 'Expected a tool name of 1 to 128 letters, digits, underscores, hyphens and dots';
+
 describe('the conversations part of an entry', () => {
   it('is taken whole, with a way to reply alone or a way to mark as well, for all or refusals', () => {
     expect([
@@ -27,20 +32,19 @@ describe('the conversations part of an entry', () => {
     ]).toEqual([[], [], []]);
   });
 
-  it('refuses a tool that is no tool name and a sent that is no pointer into the answer, each at its place', () => {
+  it('refuses a tool that is no tool name, and a sent or an automatic that is no pointer, each at its place', () => {
     expect(
       partProblems({
         tell: 'all',
         reply: { ...reply, tool: 'post message', sent: 'ts' },
         react: { ...react, tool: '' },
+        automatic: 'bot_id',
       }),
     ).toEqual([
-      ['/conversations/reply/tool', 'Expected a tool name of 1 to 128 letters, digits, underscores, hyphens and dots'],
-      [
-        '/conversations/reply/sent',
-        'Expected a JSON Pointer such as /messages: it starts with a slash, writes ~ as ~0 and a slash within a name as ~1',
-      ],
-      ['/conversations/react/tool', 'Expected a tool name of 1 to 128 letters, digits, underscores, hyphens and dots'],
+      ['/conversations/reply/tool', noToolName],
+      ['/conversations/reply/sent', noPointer],
+      ['/conversations/automatic', noPointer],
+      ['/conversations/react/tool', noToolName],
     ]);
   });
 

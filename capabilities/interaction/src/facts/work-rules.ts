@@ -1,16 +1,23 @@
 import type { RecordedWork, WorkRule } from '@on.auto/definitions';
 import { Conflict } from '@on.auto/operations';
 
-import { interactionFactOf, type DeliveryEvent } from './run-facts.ts';
+import { interactionFactOf, type DeliveryEvent, type ReplyRefusal } from './run-facts.ts';
 
 export interface InteractionWork {
   readonly lastAttempt: number;
   readonly inFlight: number | null;
   readonly deliveredAt: string | null;
   readonly refusedReplies: readonly string[];
+  readonly refusedOthers: number;
 }
 
-const nothingWorked: InteractionWork = { lastAttempt: 0, inFlight: null, deliveredAt: null, refusedReplies: [] };
+const nothingWorked: InteractionWork = {
+  lastAttempt: 0,
+  inFlight: null,
+  deliveredAt: null,
+  refusedReplies: [],
+  refusedOthers: 0,
+};
 
 function workedAfter(work: InteractionWork, recorded: RecordedWork): InteractionWork {
   const fact = interactionFactOf(recorded);
@@ -18,7 +25,12 @@ function workedAfter(work: InteractionWork, recorded: RecordedWork): Interaction
     return { ...work, lastAttempt: fact.data.number, inFlight: fact.data.number };
   }
   if (fact?.type === 'reply_refused') {
-    return { ...work, refusedReplies: [...work.refusedReplies, fact.data.reply.id] };
+    const fromAnother = fact.data.because === 'not_the_answerer' ? 1 : 0;
+    return {
+      ...work,
+      refusedReplies: [...work.refusedReplies, fact.data.reply.id],
+      refusedOthers: work.refusedOthers + fromAnother,
+    };
   }
   if (fact === undefined) {
     return work;
@@ -77,22 +89,33 @@ const refusedEnough = new Conflict({
   detail: `The run has refused ${replyBounds.refusals} replies, the most it records, so it records no more`,
 });
 
+const refusedAnotherAlready = new Conflict({
+  detail: 'The run has refused the answer of someone it does not wait on already, so it records no more of them',
+});
+
 const refusedWhileCancelling = new Conflict({
   detail: 'The run is being cancelled, so it records no refused reply and tells the party nothing',
 });
 
-export function replyRule(replyId: string, refusing: boolean): WorkRule {
+function refusalRefused(refusal: ReplyRefusal, cancelling: boolean, worked: InteractionWork): Conflict | undefined {
+  if (cancelling) {
+    return refusedWhileCancelling;
+  }
+  if (refusal === 'not_the_answerer' && worked.refusedOthers > 0) {
+    return refusedAnotherAlready;
+  }
+  return worked.refusedReplies.length >= replyBounds.refusals ? refusedEnough : undefined;
+}
+
+export function replyRule(replyId: string, refusal?: ReplyRefusal): WorkRule {
   return ({ cancel, answer, work }) => {
-    const { refusedReplies } = interactionWorkOf(work);
-    if (refusedReplies.includes(replyId) || answer?.reply?.id === replyId) {
+    const worked = interactionWorkOf(work);
+    if (worked.refusedReplies.includes(replyId) || answer?.reply?.id === replyId) {
       return replySeen;
     }
     if (answer !== null) {
       return answeredAlready;
     }
-    if (refusing && cancel !== undefined) {
-      return refusedWhileCancelling;
-    }
-    return refusing && refusedReplies.length >= replyBounds.refusals ? refusedEnough : undefined;
+    return refusal === undefined ? undefined : refusalRefused(refusal, cancel !== undefined, worked);
   };
 }

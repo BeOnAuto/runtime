@@ -42,6 +42,7 @@ export const newestFirstReplies: readonly string[] = [
   '    list: /messages',
   '    order: newest_first',
   '    each: { id: /ts, sender: /user, text: /text }',
+  '  tell: none',
 ];
 
 export function threadRepliesWith(line: string, replacement: string): string {

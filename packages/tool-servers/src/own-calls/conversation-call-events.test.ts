@@ -107,6 +107,20 @@ const ofOneReading = {
 
 const readingRecorded: readonly (typeof ConversationCallEventSchema.Type)[] = [
   {
+    type: 'telling_started',
+    data: {
+      ...ofTheCall,
+      server: 'chat',
+      connection_id: 'connection-1',
+      tool: 'post_message',
+      arguments_bytes: 80,
+      arguments_sha256: 'a1b2c3',
+      about: 'taken',
+      form: 'line',
+    },
+    context: onTheRun,
+  },
+  {
     type: 'telling_succeeded',
     data: {
       ...ofTheCall,

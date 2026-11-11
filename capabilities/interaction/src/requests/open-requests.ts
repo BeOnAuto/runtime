@@ -6,18 +6,21 @@ import {
   type RecordedRunFact,
   type RunEvent,
 } from '@on.auto/definitions';
-import type { ProjectedMessage, ProjectedRow, KeyedProjection, RunContext } from '@on.auto/operations';
+import type { KeyedProjection, ProjectedMessage, ProjectedRow, ProjectedStream, RunContext } from '@on.auto/operations';
+import { conversationCallsKind } from '@on.auto/tool-servers';
 import type { Schema } from 'effect';
 
 import { conversationKeyOf } from '../conversations/conversation-keys.ts';
-import { interactionFactOf, type RecordedFactNamed } from '../facts/run-facts.ts';
+import { interactionFactOf, saidOfARefusal, type RecordedFactNamed } from '../facts/run-facts.ts';
 import { attemptSchedule, nextAttemptAt } from '../schedule/attempt-schedule.ts';
+import { runOfATelling, takenColumnsOf, toldAllOfTheTaken } from '../tellings/taken-rows.ts';
 import {
   attemptDueAtOf,
   deliveryOf,
   endingDueAtOf,
   requestRowOf,
   settlementDueOf,
+  tellingOf,
   type OpenRequestRow,
   type UndueRequestRow,
 } from './request-rows.ts';
@@ -74,6 +77,10 @@ function requested({ data, context }: Fact<'run_deferred'>, message: ProjectedMe
     reply: jsonOf(request.reply),
     reply_refusals: 0,
     refusals_told: 0,
+    tell: tellingOf(request),
+    taken: null,
+    telling_due_at: null,
+    last_said: null,
   });
 }
 
@@ -137,10 +144,12 @@ function worked(row: OpenRequestRow, message: ProjectedMessage): ProjectedRow | 
     return attemptStarted(row, fact);
   }
   if (fact.type === 'reply_refused') {
+    const { told, because, issues } = fact.data;
     return rowOf({
       ...row,
       reply_refusals: row.reply_refusals + 1,
-      refusals_told: row.refusals_told + (fact.data.told ? 1 : 0),
+      refusals_told: row.refusals_told + (told ? 1 : 0),
+      last_said: told ? saidOfARefusal(because, issues) : row.last_said,
     });
   }
   return attemptEnded(row, fact);
@@ -164,8 +173,14 @@ function closed(
   return row.ended === null ? rowOf({ ...row, open: false, next_attempt_at: null, ended: endingOf(fact) }) : undefined;
 }
 
-function answered(row: OpenRequestRow): ProjectedRow {
-  return rowOf({ ...row, open: false, next_attempt_at: null, standing: standingUnlessDecided(row, 'answered') });
+function answered(row: OpenRequestRow, fact: Fact<'request_answered'>, { id }: ProjectedMessage): ProjectedRow {
+  return rowOf({
+    ...row,
+    open: false,
+    next_attempt_at: null,
+    standing: standingUnlessDecided(row, 'answered'),
+    ...takenColumnsOf(row, fact, id),
+  });
 }
 
 function changed(row: OpenRequestRow, fact: RecordedRunEvent, message: ProjectedMessage): ProjectedRow | undefined {
@@ -173,7 +188,7 @@ function changed(row: OpenRequestRow, fact: RecordedRunEvent, message: Projected
     return row.open && settlementDueOf(row) === undefined ? rowOf({ ...row, standing: 'cancelling' }) : undefined;
   }
   if (fact.type === 'request_answered') {
-    return answered(row);
+    return answered(row, fact, message);
   }
   if (fact.type === 'work') {
     return worked(row, message);
@@ -189,13 +204,23 @@ function rowAfter(row: ProjectedRow | undefined, message: ProjectedMessage): Pro
     return requested(fact, message);
   }
   const kept = requestRowOf(row);
-  return kept === undefined || fact === undefined ? undefined : changed(kept, fact, message);
+  if (kept === undefined || fact === undefined) {
+    return undefined;
+  }
+  if (runOfATelling(message) !== undefined) {
+    return toldAllOfTheTaken(kept, message) ? rowOf({ ...kept, telling_due_at: null }) : undefined;
+  }
+  return changed(kept, fact, message);
+}
+
+function keyOf(message: ProjectedMessage, { kind, id }: ProjectedStream): string | undefined {
+  return kind === conversationCallsKind ? runOfATelling(message) : id;
 }
 
 export const openRequests: KeyedProjection = {
   name: openRequestsName,
-  version: 14,
-  kinds: ['runs'],
+  version: 16,
+  kinds: ['runs', conversationCallsKind],
   types: [
     'run_deferred',
     'delivery_started',
@@ -208,6 +233,7 @@ export const openRequests: KeyedProjection = {
     'run_succeeded',
     'run_rejected',
     'run_failed',
+    'telling_started',
   ],
   columns: [
     { name: 'request_id', kind: 'text' },
@@ -237,6 +263,10 @@ export const openRequests: KeyedProjection = {
     { name: 'reply', kind: 'text' },
     { name: 'reply_refusals', kind: 'integer' },
     { name: 'refusals_told', kind: 'integer' },
+    { name: 'tell', kind: 'text' },
+    { name: 'taken', kind: 'text' },
+    { name: 'telling_due_at', kind: 'integer' },
+    { name: 'last_said', kind: 'text' },
   ],
   indexes: [
     { name: 'by_open', columns: ['open', 'requested_at', 'row_key'] },
@@ -247,6 +277,9 @@ export const openRequests: KeyedProjection = {
     { name: 'by_sent_message', columns: ['open', 'sent_conversation', 'sent_id'] },
     { name: 'attempts_due', columns: ['attempt_due_at'], acrossPlaybooks: true, whereSet: 'attempt_due_at' },
     { name: 'endings_due', columns: ['ending_due_at'], acrossPlaybooks: true, whereSet: 'ending_due_at' },
+    { name: 'tellings_due', columns: ['telling_due_at'], acrossPlaybooks: true, whereSet: 'telling_due_at' },
   ],
+  keyOf,
+  advanced: [{ column: 'telling_due_at', setBy: ['run_deferred', 'request_answered', 'telling_started'] }],
   rowAfter,
 };

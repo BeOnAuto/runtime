@@ -18,7 +18,7 @@ export const deliveryTemplates: TemplateSet = {
   structured: 'answer_schema',
 };
 
-export const conversationTemplates: TemplateSet = {
+export const conversationKeyTemplates: TemplateSet = {
   names: ['to', 'sent.conversation', 'sent.id'],
   what: 'the conversation key of a reading',
   sample: { to: 'ada', sent },
@@ -33,8 +33,13 @@ export const readingTemplates: TemplateSet = {
 };
 
 export const tellingTemplates: TemplateSet = {
-  names: ['to', 'sent.conversation', 'sent.id', 'message'],
+  names: ['to', 'sent.conversation', 'sent.id', 'message', 'reply.id', 'reply.to'],
   what: 'a template of a telling',
-  sample: { to: 'ada', sent, message: 'To answer, reply with one of approve, reject.' },
+  sample: {
+    to: 'ada',
+    sent,
+    message: "Auto couldn't take that as an answer. Reply with approve or reject.",
+    reply: { id: '1699.2', to: '1699.1' },
+  },
   structured: 'sent',
 };

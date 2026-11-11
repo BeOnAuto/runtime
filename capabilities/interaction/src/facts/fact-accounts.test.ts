@@ -208,6 +208,21 @@ describe('the end of a delivery that answered and kept less', () => {
 const ofTheReply = { server: 'chat', tool: 'thread_replies', reply: { id: '1699.2', sender: 'ada' } };
 
 describe('a reply the run refused', () => {
+  it('says an answer from anyone but the answerer was not taken, and whether they were told', () => {
+    const fromAnother = { ...ofTheReply, because: 'not_the_answerer' } as const;
+
+    expect([
+      ...presented({ type: 'reply_refused', data: { ...fromAnother, told: true } }),
+      ...presented({ type: 'reply_refused', data: { ...fromAnother, told: false } }),
+    ]).toMatchObject([
+      {
+        summary:
+          'An answer from someone other than the answerer was not taken, and they were told the request waits on its answerer.',
+      },
+      { summary: 'An answer from someone other than the answerer was not taken, and nobody was told.' },
+    ]);
+  });
+
   it('says whether the party was told how to answer, with the issues of an answer that did not fit', () => {
     expect([
       ...presented({ type: 'reply_refused', data: { ...ofTheReply, because: 'not_an_answer', told: true } }),

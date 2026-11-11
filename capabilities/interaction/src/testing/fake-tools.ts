@@ -25,10 +25,11 @@ export type ToolPorts = Pick<
   'named' | 'configured' | 'preparedCall' | 'callOnce' | 'listServers' | 'takesConnections'
 >;
 
-export interface FakeTools extends ToolPorts, Pick<ChatBoard, 'posted' | 'reply'> {
+export interface FakeTools extends ToolPorts, Pick<ChatBoard, 'posted' | 'reply' | 'reactions'> {
   readonly calls: () => readonly OneCall[];
   readonly answerNext: (...answers: readonly FakeAnswer[]) => void;
   readonly disallow: (tool: string) => void;
+  readonly unlist: () => void;
 }
 
 interface Refusal {
@@ -146,6 +147,7 @@ export function fakeTools(
   const calls: OneCall[] = [];
   const queued: FakeAnswer[] = [];
   const offering = { disallowed: new Set<string>() };
+  const listing: { servers: readonly ToolServer[] } = { servers: [theChat] };
   const sent = (call: OneCall): Effect.Effect<CalledOnce> => {
     const refusal = refusalOf(call.reference, offering);
     if (refusal !== undefined) {
@@ -161,19 +163,23 @@ export function fakeTools(
   return {
     configured: true,
     takesConnections: true,
-    listServers: () => Effect.succeed([theChat]),
+    listServers: () => Effect.sync(() => listing.servers),
     named: (_address, references) => namedBy(references.map((reference) => refusalOf(reference, offering))),
     preparedCall: (call) =>
       Effect.map(startOf(call), (fields) => ({ fields, called: Effect.suspend(() => sent(call)) })),
     callOnce: sent,
     calls: () => [...calls],
     posted: board.posted,
+    reactions: board.reactions,
     reply: board.reply,
     answerNext: (...answers) => {
       queued.push(...answers);
     },
     disallow: (tool) => {
       offering.disallowed.add(tool);
+    },
+    unlist: () => {
+      listing.servers = [];
     },
   };
 }

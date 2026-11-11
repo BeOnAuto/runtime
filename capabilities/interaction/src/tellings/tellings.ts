@@ -20,24 +20,19 @@ import {
   type ToolAccess,
 } from '@on.auto/tool-servers';
 import { conversationCallIdKey } from '@on.auto/tool-servers/policy';
-import { DateTime, Effect, type Schema } from 'effect';
+import { DateTime, Effect } from 'effect';
 
 import { isBoundedPart } from '../delivery/sent-messages.ts';
-
-interface TellingPlace {
-  readonly conversation: string;
-  readonly idAt: string | undefined;
-}
+import type { TellingCall } from './telling-calls.ts';
 
 export interface Telling {
   readonly playbook: PlaybookAddress;
   readonly server: string;
-  readonly tool: string;
   readonly runId: string;
   readonly definition: DefinitionOfTheTelling;
-  readonly input: Readonly<Record<string, Schema.Json>>;
   readonly lineage: Lineage;
-  readonly place: TellingPlace;
+  readonly conversation: string;
+  readonly call: TellingCall;
 }
 
 export interface TellingParts {
@@ -47,27 +42,49 @@ export interface TellingParts {
 
 const moment = Effect.map(DateTime.now, DateTime.formatIso);
 
-function toldAsOf({ conversation, idAt }: TellingPlace, called: CalledOnce): ToldAs | undefined {
-  if (idAt === undefined || called.kind !== 'answered' || called.outcome !== 'result') {
-    return undefined;
-  }
-  const id = textAt(answerDocument(called.answer), idAt);
-  return id !== undefined && isBoundedPart(id) ? { conversation, id } : undefined;
+function partOf(document: unknown, pointer: string): string | undefined {
+  const part = textAt(document, pointer);
+  return part !== undefined && isBoundedPart(part) ? part : undefined;
 }
 
-export function told({ ledger, tools }: TellingParts, telling: Telling): Effect.Effect<void> {
-  const { playbook, server, tool, runId, definition, input, lineage } = telling;
-  const callId = randomUUIDv7();
+function toldAsOf({ conversation: ofTheRequest, call }: Telling, called: CalledOnce): ToldAs | undefined {
+  if (call.idAt === undefined || called.kind !== 'answered' || called.outcome !== 'result') {
+    return undefined;
+  }
+  const document = answerDocument(called.answer);
+  const id = partOf(document, call.idAt);
+  const conversation = call.conversationAt === undefined ? ofTheRequest : partOf(document, call.conversationAt);
+  return id === undefined || conversation === undefined ? undefined : { conversation, id };
+}
+
+export function onceFor({ runId, call }: Pick<Telling, 'runId' | 'call'>): string {
+  return `${runId}-${call.about}-${call.form}`;
+}
+
+export function told({ ledger, tools }: TellingParts, telling: Telling, callId = randomUUIDv7()): Effect.Effect<void> {
+  const { playbook, server, runId, definition, call: made, lineage } = telling;
   const stream = `${streamPrefixOfPlaybook(playbook)}${conversationCallStreamOf(callId)}`;
   const by = playbookCallerOf(playbook).id;
-  const call = { ...playbook, reference: { server, tool }, input, meta: { [conversationCallIdKey]: callId } };
+  const ofTheCall = { callId, runId, definition, about: made.about, form: made.form };
+  const call = {
+    ...playbook,
+    reference: { server, tool: made.tool },
+    input: made.input,
+    meta: { [conversationCallIdKey]: callId },
+  };
   return Effect.gen(function* () {
     const { fields, called: calling } = yield* tools.preparedCall(call);
-    const started = tellingStartedOf({ callId, runId, definition }, fields, { by, at: yield* moment });
-    const { version } = yield* ledger.execute(stream, conversationCallDecider, started, lineage).pipe(Effect.orDie);
+    const started = tellingStartedOf(ofTheCall, fields, { by, at: yield* moment });
+    const version = yield* ledger.execute(stream, conversationCallDecider, started, lineage).pipe(
+      Effect.map((start) => start.version),
+      Effect.catchTag('conflict', () => Effect.undefined),
+      Effect.orDie,
+    );
+    if (version === undefined) {
+      return;
+    }
     const called = yield* calling;
-    const toldAs = toldAsOf(telling.place, called);
-    const ended = tellingEndedOf({ callId, runId, definition }, called, { by, at: yield* moment }, toldAs);
+    const ended = tellingEndedOf(ofTheCall, called, { by, at: yield* moment }, toldAsOf(telling, called));
     yield* ledger
       .execute(stream, conversationCallDecider, ended, { ...lineage, causationId: messageIdOf(stream, version) })
       .pipe(Effect.orDie);

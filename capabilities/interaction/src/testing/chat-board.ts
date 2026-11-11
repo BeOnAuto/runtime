@@ -24,9 +24,16 @@ export interface Replying {
   readonly text?: string;
 }
 
+export interface Reaction {
+  readonly channel: string;
+  readonly timestamp: string;
+  readonly name: string;
+}
+
 export interface ChatBoard {
   readonly answerOf: (call: OneCall) => BoardAnswer;
   readonly posted: () => readonly ChatMessage[];
+  readonly reactions: () => readonly Reaction[];
   readonly reply: (replying: Replying) => string;
 }
 
@@ -53,6 +60,15 @@ function threadOf(thread: string) {
 export function chatBoard(already: readonly ChatMessage[] = [], postsAs = playbookUser): ChatBoard {
   const messages: ChatMessage[] = [...already];
   const sentThroughTheTool = new Set(already.filter(({ user }) => user === playbookUser).map(({ ts }) => ts));
+  const reactions: Reaction[] = [];
+  const react = (call: OneCall): BoardAnswer => {
+    reactions.push({
+      channel: argument(call, 'channel'),
+      timestamp: argument(call, 'timestamp'),
+      name: argument(call, 'name'),
+    });
+    return answered({ ok: true });
+  };
   const nextTs = () => `1699.${String(messages.length + 1).padStart(6, '0')}`;
   const post = (call: OneCall): BoardAnswer => {
     const ts = nextTs();
@@ -78,7 +94,11 @@ export function chatBoard(already: readonly ChatMessage[] = [], postsAs = playbo
     });
   };
   return {
-    answerOf: (call) => (call.reference.tool === 'thread_replies' ? read(call) : post(call)),
+    answerOf: (call) => {
+      const answering = { thread_replies: read, add_reaction: react }[call.reference.tool] ?? post;
+      return answering(call);
+    },
+    reactions: () => [...reactions],
     posted: () => messages.filter(({ ts }) => sentThroughTheTool.has(ts)),
     reply: ({ channel, thread, user, text }) => {
       const ts = nextTs();

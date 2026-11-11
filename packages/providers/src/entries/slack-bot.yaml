@@ -12,6 +12,7 @@ failure_codes:
   rate_limited: [ratelimited, rate_limited]
 conversations:
   tell: all
+  automatic: /bot_id
   reply:
     tool: chat_postMessage
     with:

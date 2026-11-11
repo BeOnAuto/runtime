@@ -5,6 +5,7 @@ import { toolBounds, type ToolAccess, type ToolNotOffered } from '@on.auto/tool-
 import type { ToolReference } from '@on.auto/tool-servers/policy';
 import { Effect, Result, type Schema } from 'effect';
 
+import type { ConversationsOf } from '../tellings/telling-routes.ts';
 import { deliveryArgumentsOf } from '../tool-blocks/delivery-arguments.ts';
 import type { RequestRecord } from './request-record.ts';
 
@@ -12,6 +13,7 @@ export interface InteractionPorts {
   readonly tools: Pick<ToolAccess, 'named' | 'configured' | 'callOnce' | 'listServers' | 'takesConnections'>;
   readonly openRequests: (playbook: PlaybookAddress) => Effect.Effect<number>;
   readonly mostOpenRequests: number;
+  readonly conversationsOf: ConversationsOf;
 }
 
 export function offered(

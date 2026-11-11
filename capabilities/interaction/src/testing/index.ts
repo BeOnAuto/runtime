@@ -15,6 +15,7 @@ export {
   notificationDocument,
   replyRuleLines,
   threadDocument,
+  threadRepliesTelling,
   type ThreadOptions,
 } from './documents.ts';
 export { callDocument, repliesOutput, type CallOptions } from './call-documents.ts';
@@ -23,7 +24,7 @@ export { nudgedRequest, nudging } from './nudging.ts';
 export { attemptedThenStopped } from './stopped-requests.ts';
 export { broughtBeforeDeciding, recordedReply, takenReply, type RacingDelivery } from './racing-deliveries.ts';
 export { fakeTools, noTools, type FakeAnswer, type FakeTools } from './fake-tools.ts';
-export { answered, playbookUser, type ChatMessage, type Replying } from './chat-board.ts';
+export { answered, playbookUser, type ChatMessage, type Reaction, type Replying } from './chat-board.ts';
 export {
   answererId,
   chatHarness,
@@ -36,6 +37,7 @@ export {
 } from './chat-harness.ts';
 export { flatReplies } from './reading-documents.ts';
 export { chatProjections } from './chat-projections.ts';
+export { chatConversations, noConversations } from './chat-conversations.ts';
 export {
   beforeReadings,
   flatReadsNamingReplies,

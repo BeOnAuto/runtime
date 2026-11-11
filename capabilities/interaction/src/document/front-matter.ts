@@ -10,7 +10,7 @@ import {
   ReadSchema,
   RepliesSchema,
   SentSchema,
-  TellSchema,
+  TellBlockSchema,
 } from '../tool-blocks/tool-block-schemas.ts';
 
 const SectionSchema = Schema.Struct({ schema: Schema.optionalKey(Schema.JsonObject) });
@@ -40,7 +40,7 @@ const sections: readonly FrontMatterSection[] = [
   { name: 'replies', keys: Object.keys(RepliesSchema.fields) },
   { name: 'replies.read', keys: Object.keys(ReadSchema.fields) },
   { name: 'replies.read.each', keys: Object.keys(EachSchema.fields) },
-  { name: 'replies.tell', keys: Object.keys(TellSchema.fields) },
+  { name: 'replies.tell', keys: Object.keys(TellBlockSchema.fields) },
 ];
 
 export const decodeFrontMatter = Schema.decodeUnknownResult(FrontMatterSchema, { errors: 'all' });

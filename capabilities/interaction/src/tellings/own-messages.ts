@@ -1,19 +1,29 @@
 import type { PlaybookAddress, ProjectedCondition, ProjectionReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
+import { openRequestsName } from '../requests/open-requests.ts';
 import { tellingsName } from './telling-rows.ts';
 
 export type TellingsReader = Pick<ProjectionReader, 'readProjectedRows'>;
+
+function anyRow(
+  ledger: TellingsReader,
+  playbook: PlaybookAddress,
+  projection: string,
+  where: readonly ProjectedCondition[],
+): Effect.Effect<boolean> {
+  return Effect.map(
+    ledger.readProjectedRows(projection, playbook, { where, orderBy: [], order: 'asc', limit: 1 }),
+    (rows) => rows.length > 0,
+  );
+}
 
 function anyTelling(
   ledger: TellingsReader,
   playbook: PlaybookAddress,
   where: readonly ProjectedCondition[],
 ): Effect.Effect<boolean> {
-  return Effect.map(
-    ledger.readProjectedRows(tellingsName, playbook, { where, orderBy: [], order: 'asc', limit: 1 }),
-    (rows) => rows.length > 0,
-  );
+  return anyRow(ledger, playbook, tellingsName, where);
 }
 
 export interface PostedMessage {
@@ -26,10 +36,15 @@ export function isPostedByThePlaybook(
   playbook: PlaybookAddress,
   { conversation, id }: PostedMessage,
 ): Effect.Effect<boolean> {
-  return anyTelling(ledger, playbook, [
+  const told = anyTelling(ledger, playbook, [
     { column: 'conversation', equals: conversation },
     { column: 'message', equals: id },
   ]);
+  const asked = anyRow(ledger, playbook, openRequestsName, [
+    { column: 'sent_conversation', equals: conversation },
+    { column: 'sent_id', equals: id },
+  ]);
+  return Effect.flatMap(told, (byATelling) => (byATelling ? Effect.succeed(true) : asked));
 }
 
 export function toldUnknowingly(

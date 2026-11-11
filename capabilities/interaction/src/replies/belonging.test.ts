@@ -51,7 +51,7 @@ describe('a reply in a conversation with several open requests', () => {
       { data: { because: 'ambiguous', told: true } },
     ]);
     expect(playbook.chat.posted().at(-1)?.text).toBe(
-      'Several questions are open here; reply to the message of the one you answer.',
+      "Two requests are open here, so Auto can't tell which one this answers. Neither was answered. Answer them in Auto, or reply here when one is left.",
     );
   });
 
@@ -66,6 +66,23 @@ describe('a reply in a conversation with several open requests', () => {
     expect(await playbook.runOf(first)).toMatchObject({
       output: { status: 'succeeded', output: { choice: 'approve' } },
     });
+  });
+});
+
+describe('an answer naming no message among several open requests from someone the newest does not wait on', () => {
+  it('is passed over where its sender answers another of them, and refused as someone else’s where they answer none', async () => {
+    const playbook = await chatHarness(flat);
+    await playbook.askInThread(first, 'U0SAM');
+    await playbook.askInThread(second);
+    await playbook.performDue(Date.now());
+    playbook.chat.reply({ channel, user: 'U0SAM', text: 'approve' });
+    playbook.chat.reply({ channel, user: 'U0STRANGER', text: 'approve' });
+
+    await playbook.performReads(Date.now() + farAhead);
+
+    expect(await recordsOf(playbook.ledger, 'request_answered', 'reply_refused')).toMatchObject([
+      { data: { reply: { sender: 'U0STRANGER' }, because: 'not_the_answerer' } },
+    ]);
   });
 });
 

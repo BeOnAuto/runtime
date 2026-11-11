@@ -617,7 +617,7 @@
                   "tell": {
                     "type": "string",
                     "enum": ["all", "refusals"],
-                    "description": "The provider's practice: all where one more message is expected, as in a chat; refusals where each message costs, as in mail or a text message"
+                    "description": "The provider's practice, and what a person is told through it by a function that writes no tell: all where one more message is expected, as in a chat, so a reply taken is marked and answered and a reply not taken is answered; refusals where each message costs, as in mail or a text message, so only a reply that could not be taken is answered"
                   },
                   "reply": {
                     "type": "object",
@@ -654,6 +654,10 @@
                     "required": ["tool", "with"],
                     "additionalProperties": false,
                     "description": "How a person's message is marked"
+                  },
+                  "automatic": {
+                    "type": "string",
+                    "description": "A JSON Pointer within a message the reading tool lists, to what it holds only when an app posted it or it was sent automatically; such a message is passed over, never taken, refused or answered"
                   }
                 },
                 "required": ["tell", "reply"],

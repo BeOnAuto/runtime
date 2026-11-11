@@ -14,8 +14,8 @@ import { isServerName, isToolName, serverNameShape, toolNameShape } from '@on.au
 import { readDuration } from '@on.auto/workflow-engine/dsl';
 import { Result, type Schema } from 'effect';
 
-import { conversationTemplates, deliveryTemplates, readingTemplates, tellingTemplates } from './template-sets.ts';
-import type { DeliverBlock, Replies } from './tool-block-schemas.ts';
+import { conversationKeyTemplates, deliveryTemplates, readingTemplates, tellingTemplates } from './template-sets.ts';
+import { tellBlockOf, type DeliverBlock, type Replies } from './tool-block-schemas.ts';
 
 export interface WrittenRoute {
   readonly deliver: DeliverBlock;
@@ -71,7 +71,8 @@ function readArgumentIssues(replies: Replies, place: TemplatePlace): readonly Do
 
 function readingIssues(replies: Replies, place: TemplatePlace): readonly DocumentIssue[] {
   const { lines } = place;
-  const { read, tell } = replies;
+  const { read } = replies;
+  const tell = tellBlockOf(replies);
   return [
     ...nameIssues(
       lines,
@@ -82,7 +83,7 @@ function readingIssues(replies: Replies, place: TemplatePlace): readonly Documen
       isToolName,
       toolNameShape,
     ),
-    ...templateIssues(conversationTemplates, replies.conversation ?? '', {
+    ...templateIssues(conversationKeyTemplates, replies.conversation ?? '', {
       ...place,
       pointer: placeOf('replies', 'conversation'),
     }),
@@ -94,6 +95,7 @@ function readingIssues(replies: Replies, place: TemplatePlace): readonly Documen
       [placeOf('replies', 'read', 'each', 'sender'), read.each.sender],
       [placeOf('replies', 'read', 'each', 'text'), read.each.text],
       [placeOf('replies', 'read', 'each', 'to'), read.each.to],
+      [placeOf('replies', 'tell', 'sent'), tell?.sent],
     ]),
     ...waitIssues(lines, replies.wait),
   ];

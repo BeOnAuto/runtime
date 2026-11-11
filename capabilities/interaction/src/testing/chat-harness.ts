@@ -31,6 +31,7 @@ export interface ChatHarnessOptions {
   readonly recording?: (record: InteractionHarness['record']) => InteractionHarness['record'];
   readonly inTheChat?: Parameters<typeof fakeTools>[1];
   readonly postsAs?: string;
+  readonly conversations?: HarnessOptions['conversations'];
 }
 
 export const answererId = 'U024BE7LH';
@@ -40,7 +41,12 @@ export const farAhead = 3_600_000;
 export async function chatHarness(options: ChatHarnessOptions = {}): Promise<ChatHarness> {
   const chat = fakeTools(options.duringCall, options.inTheChat, options.postsAs);
   const ledger = options.ledger ?? ledgerHoldingRuns(chatProjections);
-  const playbook = interactionHarness({ ledger, tools: chat, others: options.others ?? [] });
+  const playbook = interactionHarness({
+    ledger,
+    tools: chat,
+    others: options.others ?? [],
+    ...(options.conversations === undefined ? {} : { conversations: options.conversations }),
+  });
   const record = options.recording?.(playbook.record) ?? playbook.record;
   const reads = conversationsDue({ ledger: ledger.service, tools: chat, record });
   await playbook.define('approve-brief', options.document ?? threadDocument());

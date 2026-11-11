@@ -1,7 +1,7 @@
 import { toolInWords } from '@on.auto/tool-servers';
 import type { ToolReference } from '@on.auto/tool-servers/policy';
 
-import type { Replies } from './tool-block-schemas.ts';
+import { tellBlockOf, type Replies } from './tool-block-schemas.ts';
 
 export interface RecordedBlocks {
   readonly deliver?: ToolReference | undefined;
@@ -31,6 +31,7 @@ export function toolsOf(route: Route): readonly ToolReference[] {
     return [];
   }
   const { delivery, replies } = route;
-  const tools = [delivery.tool, replies?.tool, replies?.tell?.tool].filter((tool) => tool !== undefined);
+  const telling = replies === undefined ? undefined : tellBlockOf(replies);
+  const tools = [delivery.tool, replies?.tool, telling?.tool].filter((tool) => tool !== undefined);
   return [...new Set(tools)].map((tool) => ({ server: delivery.server, tool }));
 }
