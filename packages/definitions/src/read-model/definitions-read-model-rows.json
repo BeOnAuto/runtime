@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "rows": {
+    "definitions": [
+      {
+        "key": "workflow/follow-up-leads",
+        "row": {
+          "definition_type": "workflow",
+          "name": "follow-up-leads",
+          "version": 2,
+          "status": "retired",
+          "description": "Follows up the leads of the day",
+          "input_schema": null,
+          "output_schema": null,
+          "warnings": null,
+          "shape": null,
+          "triggers": null,
+          "created_at": "2026-10-29T10:00:00.000Z",
+          "created_by_id": "key_7f3a",
+          "created_by_name": "key_7f3a",
+          "updated_at": "2026-10-29T10:00:00.000Z",
+          "paused_at": null,
+          "paused_by_id": null,
+          "paused_by_name": null,
+          "reason": null,
+          "retired_at": null,
+          "saved_position": 3
+        }
+      },
+      {
+        "key": "computation/check-totals",
+        "row": {
+          "definition_type": "computation",
+          "name": "check-totals",
+          "version": 2,
+          "status": "active",
+          "description": null,
+          "input_schema": null,
+          "output_schema": null,
+          "warnings": null,
+          "shape": null,
+          "triggers": null,
+          "created_at": "2026-10-29T10:00:00.000Z",
+          "created_by_id": "key_7f3a",
+          "created_by_name": "key_7f3a",
+          "updated_at": "2026-10-29T10:00:00.000Z",
+          "paused_at": null,
+          "paused_by_id": null,
+          "paused_by_name": null,
+          "reason": null,
+          "retired_at": null,
+          "saved_position": 5
+        }
+      },
+      {
+        "key": "workflow/close-the-month",
+        "row": {
+          "definition_type": "workflow",
+          "name": "close-the-month",
+          "version": 2,
+          "status": "paused",
+          "description": null,
+          "input_schema": null,
+          "output_schema": null,
+          "warnings": null,
+          "shape": null,
+          "triggers": null,
+          "created_at": "2026-10-29T10:00:00.000Z",
+          "created_by_id": "key_7f3a",
+          "created_by_name": "key_7f3a",
+          "updated_at": "2026-11-05T08:30:00.000Z",
+          "paused_at": "2026-11-05T08:30:00.000Z",
+          "paused_by_id": "person:user_2ada",
+          "paused_by_name": "Ada Lovelace",
+          "reason": null,
+          "retired_at": null,
+          "saved_position": 9
+        }
+      },
+      {
+        "key": "reasoning/greet-reasoning",
+        "row": {
+          "definition_type": "reasoning",
+          "name": "greet-reasoning",
+          "version": 2,
+          "status": "paused",
+          "description": "Greets each guest",
+          "input_schema": "{\"type\":\"object\"}",
+          "output_schema": "{\"type\":\"object\",\"properties\":{\"greeting\":{\"const\":\"Hello\"},\"input\":{\"type\":\"object\"}},\"required\":[\"greeting\",\"input\"]}",
+          "warnings": "[\"The greeting is never checked\"]",
+          "shape": null,
+          "triggers": null,
+          "created_at": "2026-10-01T09:00:00.000Z",
+          "created_by_id": "acme-admin",
+          "created_by_name": "acme-admin",
+          "updated_at": "2026-10-01T09:00:00.000Z",
+          "paused_at": "2026-10-01T09:00:00.000Z",
+          "paused_by_id": "acme-admin",
+          "paused_by_name": "acme-admin",
+          "reason": null,
+          "retired_at": null,
+          "saved_position": 13
+        }
+      }
+    ],
+    "definition_versions": [
+      {
+        "key": "workflow/follow-up-leads/1",
+        "row": {
+          "definition_type": "workflow",
+          "name": "follow-up-leads",
+          "version": 1,
+          "position": 1,
+          "put_in_place_by": "key_7f3a"
+        }
+      },
+      {
+        "key": "workflow/follow-up-leads/2",
+        "row": {
+          "definition_type": "workflow",
+          "name": "follow-up-leads",
+          "version": 2,
+          "position": 3,
+          "put_in_place_by": "key_7f3a"
+        }
+      },
+      {
+        "key": "computation/check-totals/1",
+        "row": {
+          "definition_type": "computation",
+          "name": "check-totals",
+          "version": 1,
+          "position": 4,
+          "put_in_place_by": "key_7f3a"
+        }
+      },
+      {
+        "key": "computation/check-totals/2",
+        "row": {
+          "definition_type": "computation",
+          "name": "check-totals",
+          "version": 2,
+          "position": 5,
+          "put_in_place_by": "key_7f3a"
+        }
+      },
+      {
+        "key": "workflow/close-the-month/1",
+        "row": {
+          "definition_type": "workflow",
+          "name": "close-the-month",
+          "version": 1,
+          "position": 6,
+          "put_in_place_by": "key_7f3a"
+        }
+      },
+      {
+        "key": "workflow/close-the-month/2",
+        "row": {
+          "definition_type": "workflow",
+          "name": "close-the-month",
+          "version": 2,
+          "position": 9,
+          "put_in_place_by": "person:user_2ada"
+        }
+      },
+      {
+        "key": "reasoning/greet-reasoning/1",
+        "row": {
+          "definition_type": "reasoning",
+          "name": "greet-reasoning",
+          "version": 1,
+          "position": 11,
+          "put_in_place_by": "acme-admin"
+        }
+      },
+      {
+        "key": "reasoning/greet-reasoning/2",
+        "row": {
+          "definition_type": "reasoning",
+          "name": "greet-reasoning",
+          "version": 2,
+          "position": 13,
+          "put_in_place_by": "acme-admin"
+        }
+      }
+    ],
+    "definition_references": [
+      {
+        "key": "workflow/follow-up-leads",
+        "rows": []
+      },
+      {
+        "key": "computation/check-totals",
+        "rows": []
+      },
+      {
+        "key": "workflow/close-the-month",
+        "rows": []
+      },
+      {
+        "key": "reasoning/greet-reasoning",
+        "rows": []
+      }
+    ]
+  }
+}

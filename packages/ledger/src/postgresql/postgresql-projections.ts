@@ -181,6 +181,9 @@ export const postgresqlProjectionDialect: ProjectionDialect = {
       ? SQL`message_metadata - 'payloadBytes'`
       : SQL`jsonb_set(message_metadata, '{payloadBytes}', to_jsonb(${payloadBytes}::bigint))`,
   booleanOf: (value) => value,
+  listed: (values) => SQL`SELECT jsonb_array_elements_text(${JSON.stringify(values)}::jsonb) AS value`,
+  storedBytesOfMessage: storedBytesOf(columnsOfTheTable('m')),
+  forUpdate: ' FOR UPDATE',
 };
 
 export function postgresqlSizesAfter(
@@ -208,5 +211,7 @@ export function postgresqlProjectionsOf(kept: KeptTables) {
       await parts.prepare(execute, (work) => work(execute));
     },
     unlessHeldOn: (connections: ContentConnections) => parts.references.unlessHeldOn(inTransactionOn(connections)),
+    readerOnThePool: (pool: ContentConnections, query: (sql: SQL) => Promise<readonly unknown[]>) =>
+      parts.readerOn({ query, command: query, inTransaction: inTransactionOn(pool) }),
   };
 }

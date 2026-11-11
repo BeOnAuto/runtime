@@ -1,18 +1,28 @@
 import {
   addressedStreamOf,
   advancedColumnsOf,
+  keepsChildRows,
   rowKeyOf,
   type AddressedStream,
-  type KeyedProjection,
   type ProjectedMessage,
   type ProjectedRow,
+  type ProjectedRows,
+  type ProjectionDeclaration,
 } from '@on.auto/operations';
 
+import { childRowsReplaced } from '../child-rows/child-row-statements.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { inTurn } from './inline-projection.ts';
 import type { MessageLane, StreamsInOrder } from './projection-dialect.ts';
 import { messagesInABatch } from './projection-fill.ts';
-import { filledMessageOf, rowFoldedOver, type ProjectionKeeping, type ReplayedMessage } from './projection-keeping.ts';
+import {
+  childRowsFoldedOver,
+  filledMessageOf,
+  noRows,
+  rowFoldedOver,
+  type ProjectionKeeping,
+  type ReplayedMessage,
+} from './projection-keeping.ts';
 import { orderedMessagesIn, rowDelete, rowsLocked, rowsWrite, type RowPlace } from './projection-statements.ts';
 
 interface RewrittenFact {
@@ -49,12 +59,14 @@ async function messagesInOrderAfter(
     .slice(0, messagesInABatch);
 }
 
-interface Folding {
-  readonly folded?: ProjectedRow | undefined;
+interface Folding<Folded> {
+  readonly folded: Folded;
   readonly after?: string;
 }
 
-function lanesOfTheRow({ kinds, keyOf }: KeyedProjection, { prefix, scope }: AddressedStream, key: string) {
+type FoldedOver<Folded> = (messages: readonly ProjectedMessage[], from: Folded) => Folded;
+
+function lanesOfTheRow({ kinds, keyOf }: ProjectionDeclaration, { prefix, scope }: AddressedStream, key: string) {
   if (keyOf === undefined) {
     return kinds.map((kind): MessageLane => ({ by: 'stream', key: `${prefix}${kind}/${key}` }));
   }
@@ -75,29 +87,37 @@ function messagesOfTheRow(
   });
 }
 
-async function foldedInOrder(
+async function foldedInOrder<Folded>(
   keeping: ProjectionKeeping,
   execute: StatementExecutor,
-  { place, lanes }: RowOfStreams,
-  { folded, after }: Folding,
-): Promise<ProjectedRow | undefined> {
+  { place, lanes, over }: RowOfStreams & { readonly over: FoldedOver<Folded> },
+  { folded, after }: Folding<Folded>,
+): Promise<Folded> {
   const messages = await messagesInOrderAfter(keeping, execute, lanes, after);
-  const row = rowFoldedOver(keeping.projection, messagesOfTheRow(keeping, messages, place), folded);
+  const row = over(messagesOfTheRow(keeping, messages, place), folded);
   const last = messages.at(-1);
   return last !== undefined && messages.length === messagesInABatch
-    ? foldedInOrder(keeping, execute, { place, lanes }, { folded: row, after: last.point })
+    ? foldedInOrder(keeping, execute, { place, lanes, over }, { folded: row, after: last.point })
     : row;
 }
 
 async function rowRefolded(
-  keeping: ProjectionKeeping,
+  { dialect, projection }: ProjectionKeeping,
   execute: StatementExecutor,
   named: AddressedStream,
   key: string,
 ): Promise<void> {
-  const { dialect, projection } = keeping;
   const place = { prefix: named.prefix, key };
-  const row = await foldedInOrder(keeping, execute, { place, lanes: lanesOfTheRow(projection, named, key) }, {});
+  const lanes = lanesOfTheRow(projection, named, key);
+  if (keepsChildRows(projection)) {
+    const keeping = { dialect, projection };
+    const over: FoldedOver<ProjectedRows> = (messages, from) => childRowsFoldedOver(projection, messages, from);
+    const rows = await foldedInOrder(keeping, execute, { place, lanes, over }, { folded: noRows });
+    await childRowsReplaced(keeping, execute, { ...place, rows });
+    return;
+  }
+  const over: FoldedOver<ProjectedRow | undefined> = (messages, from) => rowFoldedOver(projection, messages, from);
+  const row = await foldedInOrder({ dialect, projection }, execute, { place, lanes, over }, { folded: undefined });
   await execute.command(
     row === undefined
       ? rowDelete(projection, place)

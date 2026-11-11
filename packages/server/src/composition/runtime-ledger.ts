@@ -16,6 +16,7 @@ export function runtimeLedger(runtime: AppRuntime<DispatcherServices>): RuntimeL
     inRuntime(runtime, Effect.flatMap(Effect.service(Ledger), use));
   return {
     load: (stream, decider) => viaLedger((ledger) => ledger.load(stream, decider)),
+    factAt: (stream, position, eventSchema) => viaLedger((ledger) => ledger.factAt(stream, position, eventSchema)),
     execute: (stream, decider, command, lineage) =>
       viaLedger((ledger) => ledger.execute(stream, decider, command, lineage)),
     removeUnheld: (playbook, sha256) => viaLedger((ledger) => ledger.removeUnheld(playbook, sha256)),

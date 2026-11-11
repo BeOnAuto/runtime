@@ -1,15 +1,15 @@
-import type { StreamReader } from '@on.auto/operations';
+import type { ProjectionReader, StreamReader } from '@on.auto/operations';
 import { Effect, type Option, type Schema } from 'effect';
 
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { sourceToPrepare } from '../operations/definition-views.ts';
 import { payloadsKeptIn, payloadValueOf, type KeptContentReader } from '../payloads/run-payloads.ts';
-import { definitionVersionIn, type RecordedVersion } from '../registry/definition-versions.ts';
 import type { RunStreamAddress } from '../runs/run-settler.ts';
 import type { RecordedRunState } from '../runs/run-state.ts';
+import { versionOfTheRun, type VersionToPrepare } from './run-versions.ts';
 
 export interface RunOfItsCapability {
-  readonly ledger: StreamReader & KeptContentReader;
+  readonly ledger: StreamReader & ProjectionReader & KeptContentReader;
   readonly capabilities: readonly Capability[];
   readonly run: RunStreamAddress;
 }
@@ -18,19 +18,19 @@ function inputOfTheRun({ ledger, run }: RunOfItsCapability, { input }: RecordedR
   return payloadValueOf(input, payloadsKeptIn(ledger.content, run));
 }
 
-function sourceOfTheVersion({ ledger, run }: RunOfItsCapability, { source }: RecordedVersion) {
+function sourceOfTheVersion({ ledger, run }: RunOfItsCapability, { source }: VersionToPrepare) {
   return 'inline' in source ? Effect.succeed(source.inline) : payloadsKeptIn(ledger.content, run).text(source.kept);
 }
 
 export function longestRunOf(of: RunOfItsCapability, state: RecordedRunState): Effect.Effect<Option.Option<number>> {
-  const { ledger, capabilities, run: address } = of;
+  const { capabilities } = of;
   const { run } = state;
   const capability = capabilities.find(({ type }) => type === run.type);
   if (capability === undefined) {
     return Effect.succeedNone;
   }
   const version = { type: run.type, name: run.name, version: run.definition_version };
-  return Effect.flatMap(definitionVersionIn(ledger, address, version), (found) =>
+  return Effect.flatMap(versionOfTheRun(of.ledger, of.run, version), (found) =>
     found === undefined
       ? Effect.succeedNone
       : Effect.option(

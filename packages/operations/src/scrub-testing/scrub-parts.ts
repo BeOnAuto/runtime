@@ -4,7 +4,7 @@ import type {
   Context,
   FactScrub,
   Fold,
-  KeyedProjection,
+  KeptProjection,
   LedgerPorts,
   ProjectedAddress,
   ProjectedRowsQuery,
@@ -14,7 +14,7 @@ import type {
 import { RemarkFactSchema, remarkFacts, type RemarkFact } from '../projections/remark-rows.ts';
 
 export interface FactScrubEntry {
-  readonly aLedger: (projections: readonly KeyedProjection[], runOutcomes?: RunOutcomeMapping) => Promise<LedgerPorts>;
+  readonly aLedger: (projections: readonly KeptProjection[], runOutcomes?: RunOutcomeMapping) => Promise<LedgerPorts>;
 }
 
 type RecordedRemark = typeof RemarkFactSchema.Type;

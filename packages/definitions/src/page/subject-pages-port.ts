@@ -54,7 +54,7 @@ type ReadInPlace<A, E = never> = Effect.Effect<A, E, PlaybookReader | PlaybookCo
 export interface SubjectPages {
   readonly check: PageCheck;
   readonly withoutThePage: (source: string, writtenIn: Exclude<PageWrittenIn, 'playbook'>) => string;
-  readonly pageOf: (type: string, name: string) => Read<PageStanding | undefined>;
+  readonly pageOf: (type: string, name: string) => ReadInPlace<PageStanding | undefined>;
   readonly playbookPageOf: () => Read<SubjectPage | undefined>;
   readonly resultOf: (type: string, name: string, over: ResultOver) => ReadInPlace<string | undefined, InvalidInput>;
   readonly viewsOf: (subject: PageSubject) => ReadInPlace<PageViewsShown>;

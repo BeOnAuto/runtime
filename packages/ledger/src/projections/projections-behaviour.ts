@@ -1,5 +1,6 @@
-import { messageIdOf, type KeyedProjection, type Ledger, type ProjectedRowsQuery } from '@on.auto/operations';
+import { messageIdOf, type KeptProjection, type Ledger, type ProjectedRowsQuery } from '@on.auto/operations';
 import {
+  childRowsBehaviour,
   runFacts,
   runTallyRows,
   tallyDueAfterMs,
@@ -17,7 +18,7 @@ import { orgProjectionsBehaviour } from './org-projections-behaviour.ts';
 
 type AnyLedger = Ledger['Service'];
 
-export type ProjectingLedger = (projections: readonly KeyedProjection[]) => Promise<AnyLedger>;
+export type ProjectingLedger = (projections: readonly KeptProjection[]) => Promise<AnyLedger>;
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -289,4 +290,5 @@ export function projectionsBehaviour(open: ProjectingLedger): void {
   rowsAdvanced(open);
   rowsAdvancedWhileUnchanged(open);
   orgProjectionsBehaviour(open);
+  childRowsBehaviour(open);
 }

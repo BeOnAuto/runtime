@@ -4,10 +4,9 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import { definitionsListed, definitionWordsFor } from '../plain-language/definition-words.ts';
-import { isRetired, ListedDefinitionSchema } from '../registry/definition.ts';
-import { byName, listedDefinitionOf } from './answered-definitions.ts';
+import { stagedList } from '../read-model-staging/staged-lists.ts';
+import { ListedDefinitionSchema } from '../registry/definition.ts';
 import { IncludeRetiredField } from './definition-fields.ts';
-import { loadRegistry } from './registry-access.ts';
 
 export function defineListDefinitions(capabilities: readonly Capability[]) {
   const known = knownCapabilities(capabilities);
@@ -30,13 +29,8 @@ export function defineListDefinitions(capabilities: readonly Capability[]) {
       reasons: ['not_found'],
       handle: Effect.fnUntraced(function* ({ type, include_retired: includeRetired = false }) {
         const capability = yield* known.capabilityOfType(type);
-        const registry = yield* loadRegistry(capability.type);
-        const definitions = [...registry.values()].filter((definition) => includeRetired || !isRetired(definition));
-        return {
-          definitions: yield* Effect.forEach(definitions.toSorted(byName), (definition) =>
-            listedDefinitionOf(capability, definition),
-          ),
-        };
+        const listed = yield* stagedList(capability, includeRetired);
+        return { definitions: listed.map((entry) => entry.listed) };
       }),
       plainLanguage: {
         task: `list the ${words.allKinds}`,

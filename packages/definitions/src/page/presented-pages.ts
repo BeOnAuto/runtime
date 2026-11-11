@@ -1,7 +1,7 @@
 import type { PlaybookReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { loadRegistry } from '../operations/registry-access.ts';
+import { stagedRegistered } from '../read-model-staging/staged-definitions.ts';
 import type { RegisteredDefinition } from '../registry/definition-registry.ts';
 import type { PageStanding, SubjectPage } from './page-facts.ts';
 import type { PageWritten } from './page-presenting.ts';
@@ -63,7 +63,7 @@ export interface Presented extends DefinitionPage {
 }
 
 export const presentedOf = Effect.fnUntraced(function* (type: string, name: string) {
-  const stored = (yield* loadRegistry(type)).get(name);
+  const stored = yield* stagedRegistered({ reading: 'answers', read: 'definition_page' }, type, name);
   const written = yield* writtenPageOf(type, stored);
   return stored === undefined || written === undefined ? undefined : ({ ...written, stored } satisfies Presented);
 });

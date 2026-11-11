@@ -295,3 +295,6 @@ export { PageEventSchema, type PageContent, type RecordedPageEvent } from './pag
 export { withoutThePage, type DocumentWrittenIn } from './page/page-lines.ts';
 export { pageViewNameOf, playbookPageViewNameOf } from './page/page-view-names.ts';
 export { shapedViewsSchemaOf } from './shapes/shaped-views.ts';
+export { definitionsReadModel } from './read-model/definitions-read-model.ts';
+export { definitionsReadModelAt, isReadModelStage } from './read-model-staging/read-model-stage.ts';
+export type { ReadModelStage } from './read-model-staging/read-model-stage.ts';

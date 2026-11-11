@@ -2,27 +2,42 @@ import { Effect, Function } from 'effect';
 
 import type { Context } from '../ledger/context.ts';
 import { messageIdOf } from '../ledger/message-lineage.ts';
+import { streamChecksOf } from '../stream-projections/memory-checks.ts';
+import { inlineTablesOf, isStreamProjection, type StreamProjection } from '../stream-projections/stream-projection.ts';
 import {
   addressedStreamOf,
   advancedColumnsOf,
-  checkedProjection,
+  keepsChildRows,
   requireAdvancedColumns,
   rowKeyOf,
   streamPrefixOfAddress,
   type AddressedStream,
-  type DueRowsQuery,
+  type ChildRowsProjection,
+  type KeptProjection,
   type KeyedProjection,
   type ProjectedAddress,
   type ProjectedKeyedRow,
   type ProjectedMessage,
   type ProjectedRow,
-  type ProjectedRowsQuery,
-  type ProjectedValue,
+  type ProjectedRows,
   type ProjectionAdvancer,
   type ProjectionReader,
   type RowAdvance,
 } from './keyed-projection.ts';
+import {
+  childRowsReplaced,
+  childRowsUnder,
+  countIn,
+  dueOf,
+  dueRowsIn,
+  keyedRowOf,
+  nothingKept,
+  pageIn,
+  type Table,
+  type TableOf,
+} from './memory-rows.ts';
 import { conditionsMetBy } from './projected-conditions.ts';
+import { checkedProjection } from './projection-checks.ts';
 
 export interface AppendedFact {
   readonly type: string;
@@ -47,53 +62,9 @@ export interface MemoryProjections extends ProjectionReader, ProjectionAdvancer 
   readonly refold: (log: readonly LoggedFact[], rewritten: FactRewritten) => void;
 }
 
-interface Table {
-  readonly projection: KeyedProjection;
-  readonly rows: Map<string, ProjectedKeyedRow>;
-}
+type Staged = () => void;
 
-const nothingKept: ReadonlyMap<string, ProjectedKeyedRow> = new Map();
-
-function keyedRowOf({ address }: AddressedStream, key: string, row: ProjectedRow): ProjectedKeyedRow {
-  return { ...address, key, row };
-}
-
-type Ordered = ProjectedValue | undefined;
-
-function rankOf(value: Ordered): string | number | boolean {
-  return value ?? Number.NEGATIVE_INFINITY;
-}
-
-function compared(left: Ordered, right: Ordered): number {
-  const first = rankOf(left);
-  const second = rankOf(right);
-  if (first === second) {
-    return 0;
-  }
-  return first < second ? -1 : 1;
-}
-
-function tupleCompared(left: readonly Ordered[], right: readonly Ordered[]): number {
-  for (const [index, value] of left.entries()) {
-    const order = compared(value, right[index]);
-    if (order !== 0) {
-      return order;
-    }
-  }
-  return 0;
-}
-
-function rowsAt({ rows }: Table, address: ProjectedAddress): readonly ProjectedKeyedRow[] {
-  return [...rows.values()].filter((kept) => kept.org === address.org && kept.playbook === address.playbook);
-}
-
-interface Staged {
-  readonly rows: Map<string, ProjectedKeyedRow>;
-  readonly stored: string;
-  readonly kept: ProjectedKeyedRow;
-}
-
-function keyedMessages(projection: KeyedProjection, named: AddressedStream, messages: readonly ProjectedMessage[]) {
+function keyedMessages(projection: KeptProjection, named: AddressedStream, messages: readonly ProjectedMessage[]) {
   return messages
     .filter(({ type }) => projection.types.includes(type))
     .flatMap((message) => {
@@ -102,7 +73,11 @@ function keyedMessages(projection: KeyedProjection, named: AddressedStream, mess
     });
 }
 
-function staged({ projection, rows }: Table, named: AddressedStream, messages: readonly ProjectedMessage[]) {
+function stagedRows(
+  { projection, rows }: TableOf<KeyedProjection>,
+  named: AddressedStream,
+  messages: readonly ProjectedMessage[],
+): readonly Staged[] {
   const changed = new Map<string, ProjectedKeyedRow>();
   for (const { message, key } of keyedMessages(projection, named, messages)) {
     const stored = `${named.prefix}${key}`;
@@ -112,16 +87,33 @@ function staged({ projection, rows }: Table, named: AddressedStream, messages: r
       changed.set(stored, keyedRowOf(named, key, next));
     }
   }
-  return [...changed].map(([stored, kept]: readonly [string, ProjectedKeyedRow]): Staged => ({ rows, stored, kept }));
+  return [...changed].map(([stored, kept]: readonly [string, ProjectedKeyedRow]): Staged => () => {
+    rows.set(stored, kept);
+  });
 }
 
-function dueOf({ row }: ProjectedKeyedRow, column: string): readonly number[] {
-  const due = row[column];
-  return typeof due === 'number' ? [due] : [];
+function stagedChildRows(
+  table: TableOf<ChildRowsProjection>,
+  named: AddressedStream,
+  messages: readonly ProjectedMessage[],
+): readonly Staged[] {
+  const changed = new Map<string, ProjectedRows>();
+  for (const { message, key } of keyedMessages(table.projection, named, messages)) {
+    const next = table.projection.rowsAfter(changed.get(key) ?? childRowsUnder(table, named, key), message);
+    if (next !== undefined) {
+      changed.set(key, next);
+    }
+  }
+  return [...changed].map(([key, after]: readonly [string, ProjectedRows]): Staged => () => {
+    childRowsReplaced(table, named, key, after);
+  });
 }
 
-function orderedKeyOf(orderBy: readonly string[], { row, key }: ProjectedKeyedRow): readonly Ordered[] {
-  return [...orderBy.map((column) => row[column]), key];
+function staged(table: Table, named: AddressedStream, messages: readonly ProjectedMessage[]): readonly Staged[] {
+  const { projection, rows } = table;
+  return keepsChildRows(projection)
+    ? stagedChildRows({ projection, rows }, named, messages)
+    : stagedRows({ projection, rows }, named, messages);
 }
 
 export function projectedMessagesOf(
@@ -144,15 +136,15 @@ function projectedOn(tables: readonly Table[]): MemoryProjections['staged'] {
     const messages = projectedMessagesOf(stream, facts, firstPosition);
     const changes = tables.flatMap((table) => staged(table, named, messages));
     return () => {
-      for (const { rows, stored, kept } of changes) {
-        rows.set(stored, kept);
+      for (const commit of changes) {
+        commit();
       }
     };
   };
 }
 
 function messagesOfTheRow(
-  projection: KeyedProjection,
+  projection: KeptProjection,
   log: readonly LoggedFact[],
   { prefix }: AddressedStream,
   key: string,
@@ -166,6 +158,14 @@ function messagesOfTheRow(
   });
 }
 
+function foldedRows(projection: ChildRowsProjection, messages: readonly ProjectedMessage[]): ProjectedRows {
+  let rows: ProjectedRows = new Map();
+  for (const message of messages) {
+    rows = projection.rowsAfter(rows, message) ?? rows;
+  }
+  return rows;
+}
+
 function foldedRow(projection: KeyedProjection, messages: readonly ProjectedMessage[]): ProjectedRow | undefined {
   let row: ProjectedRow | undefined;
   for (const message of messages) {
@@ -174,13 +174,18 @@ function foldedRow(projection: KeyedProjection, messages: readonly ProjectedMess
   return row;
 }
 
-function standingIn(projection: KeyedProjection, kept: ProjectedKeyedRow | undefined): ProjectedRow {
+function standingIn(projection: KeptProjection, kept: ProjectedKeyedRow | undefined): ProjectedRow {
   return kept === undefined
     ? {}
     : Object.fromEntries(advancedColumnsOf(projection).map((column) => [column, kept.row[column] ?? null]));
 }
 
-function refoldedIn({ projection, rows }: Table, log: readonly LoggedFact[], named: AddressedStream, key: string) {
+function refoldedIn(table: Table, log: readonly LoggedFact[], named: AddressedStream, key: string) {
+  const { projection, rows } = table;
+  if (keepsChildRows(projection)) {
+    childRowsReplaced(table, named, key, foldedRows(projection, messagesOfTheRow(projection, log, named, key)));
+    return;
+  }
   const stored = `${named.prefix}${key}`;
   const row = foldedRow(projection, messagesOfTheRow(projection, log, named, key));
   if (row === undefined) {
@@ -226,57 +231,41 @@ function advancedIn(table: Table | undefined, { address, key, advance }: Advance
   });
 }
 
-function dueRowsIn(rows: ReadonlyMap<string, ProjectedKeyedRow>, { column, through, limit }: DueRowsQuery) {
-  return [...rows.values()]
-    .flatMap((kept) => dueOf(kept, column).map((due): readonly [number, ProjectedKeyedRow] => [due, kept]))
-    .filter(([due]) => due <= through)
-    .toSorted(([leftDue, left], [rightDue, right]) =>
-      tupleCompared(
-        [leftDue, streamPrefixOfAddress(left), left.key],
-        [rightDue, streamPrefixOfAddress(right), right.key],
-      ),
-    )
-    .slice(0, limit)
-    .map(([, kept]) => kept);
-}
-
-function pageIn(
-  table: Table,
-  address: ProjectedAddress,
-  { where, orderBy, order, after, limit }: ProjectedRowsQuery,
-): readonly ProjectedKeyedRow[] {
-  const sign = order === 'asc' ? 1 : -1;
-  const met = conditionsMetBy(table.projection, where);
-  return rowsAt(table, address)
-    .filter((kept) => met(kept))
-    .filter((kept) => after === undefined || sign * tupleCompared(orderedKeyOf(orderBy, kept), after) > 0)
-    .toSorted((left, right) => sign * tupleCompared(orderedKeyOf(orderBy, left), orderedKeyOf(orderBy, right)))
-    .slice(0, limit);
-}
-
-function countIn(table: Table, address: ProjectedAddress, where: ProjectedRowsQuery['where']): number {
-  const met = conditionsMetBy(table.projection, where);
-  return rowsAt(table, address).filter((kept) => met(kept)).length;
-}
-
-export function memoryProjections(projections: readonly KeyedProjection[]): MemoryProjections {
-  const tables: readonly Table[] = projections.map((projection) => ({
-    projection: checkedProjection(projection),
-    rows: new Map(),
-  }));
+export function memoryProjections(
+  given: readonly (KeptProjection | StreamProjection)[],
+  logOf: () => readonly LoggedFact[],
+): MemoryProjections {
+  const streamProjections = given.filter((each) => isStreamProjection(each));
+  const tables: readonly Table[] = given
+    .flatMap((each) => (isStreamProjection(each) ? inlineTablesOf(each) : [each]))
+    .map((projection) => ({ projection: checkedProjection(projection), rows: new Map() }));
   const tableNamed = (name: string): Table | undefined => tables.find(({ projection }) => projection.name === name);
   const rowsOf = (name: string): ReadonlyMap<string, ProjectedKeyedRow> => tableNamed(name)?.rows ?? nothingKept;
+  const checks = streamChecksOf({
+    tables,
+    streamProjections,
+    logOf,
+    restaged: (rebuilding, { stream, streamPosition, ...fact }) => {
+      projectedOn(rebuilding)(stream, [fact], streamPosition)();
+    },
+  });
   return {
     staged: projectedOn(tables),
     refold: refoldedOn(tables),
+    resetStreamProjection: (projection, address) =>
+      Effect.sync(() => {
+        checks.reset(projection, address);
+      }),
     advanceRow: (projection, address, key, advance) => advancedIn(tableNamed(projection), { address, key, advance }),
     readProjectedRows: (projection, address, query) =>
       Effect.sync(() => {
+        checks.verified(projection, address);
         const table = tableNamed(projection);
         return table === undefined ? [] : pageIn(table, address, query);
       }),
     countProjectedRows: (projection, address, where) =>
       Effect.sync(() => {
+        checks.verified(projection, address);
         const table = tableNamed(projection);
         return table === undefined ? 0 : countIn(table, address, where);
       }),

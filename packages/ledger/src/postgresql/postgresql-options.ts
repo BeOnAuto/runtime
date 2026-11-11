@@ -1,4 +1,4 @@
-import type { ContentHolders, KeyedProjection, RunOutcomeMapping } from '@on.auto/operations';
+import type { ContentHolders, KeptProjection, RunOutcomeMapping, StreamProjection } from '@on.auto/operations';
 import { Pool } from 'pg';
 
 import type { AppendListeners } from '../event-store.ts';
@@ -18,7 +18,9 @@ export function plainPoolsOn(connectionString: string): PostgreSQLPools {
 export interface PostgreSQLOptions extends AppendListeners {
   readonly pools: PostgreSQLPools;
   readonly runOutcomes?: RunOutcomeMapping;
-  readonly projections?: readonly KeyedProjection[];
+  readonly projections?: readonly KeptProjection[];
+  readonly streamProjections?: readonly StreamProjection[];
+  readonly mostBytesFilledAtOnce?: number;
   readonly holders?: ContentHolders;
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];

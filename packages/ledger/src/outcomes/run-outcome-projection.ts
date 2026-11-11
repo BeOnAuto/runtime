@@ -3,6 +3,7 @@ import {
   type ProjectedRow,
   type RunOutcome,
   type RunOutcomeMapping,
+  type KeptProjection,
   type KeyedProjection,
 } from '@on.auto/operations';
 import { Schema } from 'effect';
@@ -89,7 +90,7 @@ function runOutcomeProjectionOf({ types, rowAfter }: RunOutcomeMapping): KeyedPr
 
 export function keptProjections(
   runOutcomes: RunOutcomeMapping | undefined,
-  projections: readonly KeyedProjection[],
-): readonly KeyedProjection[] {
+  projections: readonly KeptProjection[],
+): readonly KeptProjection[] {
   return [...(runOutcomes === undefined ? [] : [runOutcomeProjectionOf(runOutcomes)]), ...projections];
 }

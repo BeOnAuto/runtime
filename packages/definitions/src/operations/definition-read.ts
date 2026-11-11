@@ -5,10 +5,10 @@ import type { Capability } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import { knownCapabilities } from '../capability/known-capabilities.ts';
 import type { ResultOver, SubjectPages } from '../page/subject-pages-port.ts';
-import { isRetired, type Definition, type StoredDefinition } from '../registry/definition.ts';
-import { readDefinition, withTheTextsRead } from './definition-reading.ts';
+import { stagedDefinitionRead, type DefinitionReadAt } from '../read-model-staging/staged-reads.ts';
+import { isRetired, type StoredDefinition } from '../registry/definition.ts';
+import { withTheTextsRead } from './definition-reading.ts';
 import { overOf, runOfThePage, runWithSample, viewsRead } from './page-runs.ts';
-import { triggersSince } from './registry-access.ts';
 
 interface DefinitionAsked {
   readonly type: string;
@@ -88,7 +88,7 @@ function askedRightly({ render = false, sample_output: sample, run_id: runId }: 
 
 const readOn = Effect.fnUntraced(function* (
   capability: Capability,
-  { stored, definition: read }: { readonly stored: StoredDefinition; readonly definition: Definition },
+  { stored, definition: read, triggersSince }: Pick<DefinitionReadAt, 'stored' | 'definition' | 'triggersSince'>,
   { pages, asked, refusedWithoutAPage }: Asking,
 ) {
   const { name, render = false, sample_output: sample, run_id: runId } = asked;
@@ -97,7 +97,7 @@ const readOn = Effect.fnUntraced(function* (
   const result = render ? yield* resultOfAPreview(reading, overOf(sample, run), refusedWithoutAPage) : undefined;
   const definition =
     (stored.triggers ?? []).length > 0 && stored.status === 'active'
-      ? { ...read, triggers_since: yield* triggersSince(capability.type, stored) }
+      ? { ...read, triggers_since: yield* triggersSince() }
       : read;
   const { org, playbook } = yield* PlaybookContext;
   const standing = yield* capability.standing({
@@ -127,7 +127,7 @@ export function definitionRead(
   return Effect.fnUntraced(function* (asked: DefinitionAsked) {
     yield* askedRightly(asked);
     const capability = yield* known.capabilityOfType(asked.type);
-    const read = yield* readDefinition(capability, known.types, asked.name);
+    const read = yield* stagedDefinitionRead(capability, known.types, asked.name);
     return yield* withTheTextsRead(read, readOn(capability, read, { pages, asked, refusedWithoutAPage }));
   });
 }

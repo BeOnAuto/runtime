@@ -1,6 +1,8 @@
 export {
   orgOfStreamPrefix,
+  playbookBoundProjectionReader,
   playbookOfStreamPrefix,
+  prefixedReader,
   streamPrefixOfPlaybook,
   streamPrefixOfOrg,
 } from './ledger/bound-ports.ts';
@@ -37,41 +39,23 @@ export { CancelledKindSchema, RunCancelled, type CancelledKind } from './outcome
 export { Conflict, ConflictKindSchema, resolutionOf, type ConflictKind, type Resolution } from './outcome/conflict.ts';
 export { Forbidden } from './outcome/forbidden.ts';
 export { RunUnanswered, UnansweredKindSchema, type UnansweredKind } from './outcome/unanswered-run.ts';
-export {
-  addressOfStreamPrefix,
-  addressedStreamOf,
-  advancedColumnsLeftBy,
-  advancedColumnsOf,
-  checkedProjection,
-  foldsStream,
-  projectedTableOf,
-  requireAdvancedColumns,
-  rowKeyColumn,
-  rowKeyOf,
-  scopesOf,
-  streamPrefixOfAddress,
-  type AddressedStream,
-  type AdvancedColumn,
-  type BoundProjectionReader,
-  type DueRowsQuery,
-  type KeyedProjection,
-  type OrgProjectionReader,
-  type ProjectedAddress,
-  type ProjectedColumn,
-  type ProjectedColumnKind,
-  type ProjectedIndex,
-  type ProjectedKeyedRow,
-  type ProjectedMessage,
-  type ProjectedOrder,
-  type ProjectedRow,
-  type ProjectedRowsQuery,
-  type ProjectedStream,
-  type ProjectedValue,
-  type ProjectionAdvancer,
-  type RowAdvance,
-  type ProjectionReader,
-  type StreamScope,
-} from './projections/keyed-projection.ts';
+export { addressOfStreamPrefix, addressedStreamOf, advancedColumnsLeftBy } from './projections/keyed-projection.ts';
+export { advancedColumnsOf, childKeyColumn, foldsStream } from './projections/keyed-projection.ts';
+export { checkedProjection } from './projections/projection-checks.ts';
+export { checkedStreamProjection, checkpointsOf, typesOf } from './stream-projections/stream-projection.ts';
+export type { CountedRows, GroupwiseMaximum, StreamProjection } from './stream-projections/stream-projection.ts';
+export { keepsChildRows, projectedTableOf, requireAdvancedColumns } from './projections/keyed-projection.ts';
+export { rowKeyColumn, rowKeyOf, scopesOf, streamPrefixOfAddress } from './projections/keyed-projection.ts';
+export { type AddressedStream, type AdvancedColumn } from './projections/keyed-projection.ts';
+export { type BoundProjectionReader, type ChildRowsProjection } from './projections/keyed-projection.ts';
+export { type DueRowsQuery, type KeptProjection, type KeyedProjection } from './projections/keyed-projection.ts';
+export { type OrgProjectionReader, type ProjectedAddress } from './projections/keyed-projection.ts';
+export { type ProjectedColumn, type ProjectedColumnKind, type ProjectedIndex } from './projections/keyed-projection.ts';
+export { type ProjectedKeyedRow, type ProjectedMessage, type ProjectedOrder } from './projections/keyed-projection.ts';
+export { type ProjectedRow, type ProjectedRows, type ProjectedRowsQuery } from './projections/keyed-projection.ts';
+export { type ProjectedStream, type ProjectedValue, type ProjectionAdvancer } from './projections/keyed-projection.ts';
+export { type ProjectionDeclaration, type RowAdvance, type ProjectionReader } from './projections/keyed-projection.ts';
+export { type StreamScope } from './projections/keyed-projection.ts';
 export { playbookRowsOf, type PlaybookProjectedRow } from './projections/playbook-rows.ts';
 export {
   comparedColumnOf,

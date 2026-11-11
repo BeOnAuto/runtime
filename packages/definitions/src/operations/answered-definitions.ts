@@ -75,18 +75,22 @@ function publishedDetails({ details }: StoredDefinition): Pick<Definition, 'deta
 
 const answeredApart = ['details', 'stripped', 'page', 'warnings', 'source', 'overview', 'diagram'] as const;
 
-export function listedDefinitionOf(
-  capability: Capability,
-  stored: Kept,
-  source?: string,
-): Effect.Effect<ListedDefinition> {
-  return Effect.map(warningsOf(capability, stored, source), (warnings) => ({
+export function listedWith(capability: Capability, stored: Kept, warnings: readonly string[]): ListedDefinition {
+  return {
     type: capability.type,
     media_type: capability.mediaType,
     ...Struct.omit(stored, answeredApart),
     ...(warnings.length === 0 ? {} : { warnings }),
     ...publishedDetails(stored),
-  }));
+  };
+}
+
+export function listedDefinitionOf(
+  capability: Capability,
+  stored: Kept,
+  source?: string,
+): Effect.Effect<ListedDefinition> {
+  return Effect.map(warningsOf(capability, stored, source), (warnings) => listedWith(capability, stored, warnings));
 }
 
 export function definitionOf(

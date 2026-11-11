@@ -1,6 +1,7 @@
 import {
   streamPrefixOfPlaybook,
   type Lineage,
+  type ProjectionReader,
   type StreamAges,
   type StreamReader,
   type StreamWriter,
@@ -16,7 +17,7 @@ import type { RunStreamAddress } from '../runs/run-settler.ts';
 import { endsWithinItsCall, startedRunOf, type RunStreamState } from '../runs/run-state.ts';
 import { longestRunOf } from './longest-runs.ts';
 
-export type CancelLedger = StreamReader & StreamAges & StreamWriter & KeptContentReader;
+export type CancelLedger = StreamReader & StreamAges & StreamWriter & ProjectionReader & KeptContentReader;
 
 interface CancellingParts {
   readonly ledger: CancelLedger;

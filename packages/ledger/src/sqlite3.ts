@@ -39,6 +39,8 @@ export function ledgerLayer({
   fileName,
   runOutcomes,
   projections,
+  streamProjections,
+  mostBytesFilledAtOnce,
   holders,
   layoutSteps,
   factSchemas,
@@ -50,6 +52,8 @@ export function ledgerLayer({
   return sqliteLedgerFile(fileName).ledgerLayer({
     runOutcomes,
     projections,
+    streamProjections,
+    mostBytesFilledAtOnce,
     holders,
     layoutSteps,
     factSchemas,

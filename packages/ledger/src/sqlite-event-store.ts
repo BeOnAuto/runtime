@@ -51,10 +51,11 @@ export function sqliteEventStore<Driver extends AnyDriver>(
   });
   const recorded = sqliteRecordedStoreOn(pool, listeners);
   const query = async (sql: SQL) => (await pool.execute.query(sql)).rows;
+  const statements = { query, command: (sql: SQL) => pool.execute.command(sql), inTransaction: inTransactionOf(pool) };
   return {
     ...streams,
     ...recorded,
-    ...projections.readerOn({ query, command: (sql) => pool.execute.command(sql) }),
+    ...projections.readerOn(statements),
     ...projections.scrubs.storeOver(streams, query),
     readRunOutcomes: sqliteRunOutcomesOf(kept.runOutcomes, pool.execute),
     unlessHeld: projections.references.unlessHeldOn(inTransactionOf(pool)),

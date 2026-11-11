@@ -23,7 +23,7 @@ const whilePaused = ['paused_at', 'paused_by', 'reason'] as const;
 
 const keptAcrossVersions = ['status', 'created_at', 'created_by', ...whilePaused] as const;
 
-function storedContentOf(content: DefinitionContent) {
+export function storedContentOf(content: DefinitionContent) {
   const {
     source: _source,
     source_sha256: _sourceDigest,

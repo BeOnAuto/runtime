@@ -7,6 +7,7 @@ import type { ProjectionDialect } from '../projections/projection-dialect.ts';
 import { filledMessageOf, type ProjectionKeeping } from '../projections/projection-keeping.ts';
 import { rowsRefolded } from '../projections/projection-refold.ts';
 import type { ContentReferences } from '../references/content-references.ts';
+import type { StreamProjectionParts } from '../stream-projections/stream-projection-parts.ts';
 import type { Rider } from './append-riders.ts';
 
 const defaultPartition = 'emt:default';
@@ -62,10 +63,11 @@ interface ScrubParts {
   readonly dialect: ProjectionDialect;
   readonly keepings: readonly ProjectionKeeping[];
   readonly references: Pick<ContentReferences, 'refolded'>;
+  readonly streams: Pick<StreamProjectionParts, 'scrubbed'>;
 }
 
 export function scrubWithin(
-  { dialect, keepings, references }: ScrubParts,
+  { dialect, keepings, references, streams }: ScrubParts,
   stream: string,
   scrubbed: ScrubbedData,
 ): Rider {
@@ -81,5 +83,6 @@ export function scrubWithin(
     const before = filledMessageOf({ dialect }, fact);
     await rowsRefolded(keepings, execute, { stream, before, after: { ...before, data } });
     await references.refolded(execute, stream);
+    await streams.scrubbed(execute, stream);
   };
 }

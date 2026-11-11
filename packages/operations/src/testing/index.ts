@@ -7,6 +7,15 @@ export { runFacts, runTallies, talliedContext, type RunFact } from '../run-outco
 export { runTallyRows, tallyDueAfterMs, tallyRowsOf } from '../projections/tally-rows.ts';
 export { topicFacts, topicRows, topicWaitMs, type TopicFact } from '../projections/topic-rows.ts';
 export {
+  LabelFactSchema,
+  labelFacts,
+  labelRows,
+  labelRowsByNote,
+  labelledContext,
+  type LabelFact,
+} from '../projections/label-rows.ts';
+export { labelNotes, labelReadModelOf, labelSets } from '../stream-projections/label-read-model.ts';
+export {
   RemarkFactSchema,
   remarkFacts,
   remarkRows,
@@ -14,6 +23,7 @@ export {
   type RemarkFact,
 } from '../projections/remark-rows.ts';
 export { factScrubBehaviour } from '../scrub-testing/fact-scrub-behaviour.ts';
+export { childRowsBehaviour, type ChildRowsLedger } from '../projections-testing/child-rows-behaviour.ts';
 export { unheldContentBehaviour } from '../content-testing/unheld-content-behaviour.ts';
 export {
   interleavedRemovalBehaviour,

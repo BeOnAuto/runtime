@@ -18,7 +18,8 @@ import {
   type Lineage,
   type Recorded,
   type RunOutcomeMapping,
-  type KeyedProjection,
+  type KeptProjection,
+  type StreamProjection,
   type StreamState,
 } from '../index.ts';
 import {
@@ -173,7 +174,7 @@ function messageOf(stream: string, position: number, { type, data, context }: Ap
   return { id: messageIdOf(stream, position), position, type, data, context };
 }
 
-function loggedFactsOf({ log }: Kept): readonly LoggedFact[] {
+function loggedFactsOf({ log }: Pick<Kept, 'log'>): readonly LoggedFact[] {
   return log.map(({ stream, streamPosition, type, data, context }) => ({
     stream,
     streamPosition,
@@ -223,7 +224,7 @@ interface KeptLedger {
 
 interface MemoryTables {
   readonly runOutcomes: RunOutcomeMapping | undefined;
-  readonly projections: readonly KeyedProjection[];
+  readonly projections: readonly (KeptProjection | StreamProjection)[];
   readonly holders: ContentHolders | undefined;
 }
 
@@ -249,7 +250,7 @@ function keptLedgerOf({ runOutcomes, projections, holders }: MemoryTables): Kept
       }
     },
     outcomes: memoryRunOutcomes(runOutcomes),
-    projected: memoryProjections(projections),
+    projected: memoryProjections(projections, () => loggedFactsOf({ log })),
     references,
     holders: holders ?? new Map(),
     heads: memoryContentHeads(references.heldIn),
@@ -259,7 +260,7 @@ function keptLedgerOf({ runOutcomes, projections, holders }: MemoryTables): Kept
 
 export function memoryLedger(
   runOutcomes?: RunOutcomeMapping,
-  projections: readonly KeyedProjection[] = [],
+  projections: readonly (KeptProjection | StreamProjection)[] = [],
   holders?: ContentHolders,
   store: ContentStore = memoryContentStore(),
 ): MemoryLedger {
@@ -269,6 +270,13 @@ export function memoryLedger(
   const recordedReader = memoryRecordedReader(kept.log);
   const service = Ledger.of({
     load: (stream, fold) => Effect.suspend(() => folded(fold, storedIn(kept, stream))),
+    factAt: (stream, position, eventSchema) =>
+      Effect.suspend(() => {
+        const fact = storedIn(kept, stream)[position - 1];
+        return fact === undefined || position < 1
+          ? Effect.undefined
+          : Effect.orDie(Schema.decodeUnknownEffect(Schema.toCodecJson(eventSchema))(fact));
+      }),
     ageOfLastAppend: ageOn(kept),
     execute: executedOn(kept),
     scrubFact: scrubbedOn(kept),
@@ -281,6 +289,7 @@ export function memoryLedger(
     countProjectedRows: projected.countProjectedRows,
     readDueRows: projected.readDueRows,
     nextDueOf: projected.nextDueOf,
+    resetStreamProjection: projected.resetStreamProjection,
     advanceRow: projected.advanceRow,
     content: outside.content,
     removeUnheld: references.removalOver(outside),

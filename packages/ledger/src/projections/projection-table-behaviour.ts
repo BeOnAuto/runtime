@@ -1,5 +1,8 @@
 import { messageIdOf, type ProjectedRowsQuery } from '@on.auto/operations';
 import {
+  labelFacts,
+  labelRows,
+  labelRowsByNote,
   remarkFacts,
   remarkRows,
   runFacts,
@@ -7,6 +10,7 @@ import {
   tallyRowsOf,
   topicFacts,
   topicRows,
+  type LabelFact,
   type RemarkFact,
   type RunFact,
   type TopicFact,
@@ -15,6 +19,7 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { runOutcomeTableBehaviour } from '../outcomes/run-outcome-table-behaviour.ts';
+import { streamProjectionBehaviour } from '../stream-projections/stream-projection-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
 import { projectionsBehaviour, topicsOf } from './projections-behaviour.ts';
 
@@ -210,6 +215,66 @@ function aTableOfOrgsNotThereYet(entry: LedgerEntry): void {
   });
 }
 
+function labelled(ledger: Awaited<ReturnType<typeof aLedger>>, stream: string, ...facts: readonly LabelFact[]) {
+  return Effect.runPromise(ledger.execute(stream, labelFacts, facts));
+}
+
+function labelsOf(ledger: Awaited<ReturnType<typeof aLedger>>, projection: string) {
+  return Effect.runPromise(ledger.readProjectedRows(projection, alpha, everyRow)).then((rows) =>
+    rows.map(({ key, child, row }) => [key, child, row['place'], row['set_at']]),
+  );
+}
+
+function shared(labels: readonly string[]): LabelFact {
+  return { type: 'labels_set', data: { note: 'shared', labels } };
+}
+
+async function labelledHistory(ledger: Awaited<ReturnType<typeof aLedger>>): Promise<void> {
+  await labelled(ledger, 'playbook/acme/alpha/notes/n1', shared(['urgent', 'billing']));
+  await labelled(ledger, 'playbook/acme/alpha/others/o1', {
+    type: 'label_added',
+    data: { note: 'shared', label: 'later' },
+  });
+  await labelled(ledger, 'playbook/acme/alpha/notes/n2', shared(['first']), {
+    type: 'labels_cleared',
+    data: { note: 'other' },
+  });
+  await labelled(
+    ledger,
+    'playbook/acme/alpha/notes/n1',
+    { type: 'label_added', data: { note: 'n1', label: 'late' } },
+    { type: 'label_added', data: { note: 'n1', label: 'late' } },
+  );
+}
+
+function aTableOfChildRowsNotThereYet(entry: LedgerEntry): void {
+  describe('the table of a projection that keeps several rows under a key, not there yet', () => {
+    it('is filled when the ledger opens, by its stream and in the order the facts were appended, as the appends kept it', async () => {
+      const database = await entry.aDatabase();
+      const first = await aLedger(entry, database, undefined, [labelRows, labelRowsByNote]);
+      await labelledHistory(first);
+      const kept = [await labelsOf(first, 'labels'), await labelsOf(first, 'note_labels')];
+      await entry.queried(database, 'DROP TABLE labels_1');
+      await entry.queried(database, 'DROP TABLE note_labels_1');
+
+      const next = await aLedger(entry, database, undefined, [labelRows, labelRowsByNote]);
+
+      expect([await labelsOf(next, 'labels'), await labelsOf(next, 'note_labels')]).toEqual(kept);
+      expect(kept).toEqual([
+        [
+          ['n1', 'billing', 2, 1],
+          ['n1', 'late', 3, 2],
+          ['n1', 'urgent', 1, 1],
+        ],
+        [
+          ['n1', 'late', 1, 2],
+          ['shared', 'first', 1, 1],
+        ],
+      ]);
+    });
+  });
+}
+
 export function projectionTableBehaviour(entry: LedgerEntry): void {
   runOutcomeTableBehaviour(entry);
   projectionsBehaviour((projections) => aLedger(entry, undefined, undefined, projections));
@@ -218,4 +283,6 @@ export function projectionTableBehaviour(entry: LedgerEntry): void {
   aTableNotThereYet(entry);
   aKeyedTableNotThereYet(entry);
   aTableOfOrgsNotThereYet(entry);
+  aTableOfChildRowsNotThereYet(entry);
+  streamProjectionBehaviour(entry);
 }

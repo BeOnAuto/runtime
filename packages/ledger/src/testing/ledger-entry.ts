@@ -1,4 +1,4 @@
-import type { ContentHolders, Ledger, RunOutcomeMapping, KeyedProjection } from '@on.auto/operations';
+import type { ContentHolders, Ledger, RunOutcomeMapping, KeptProjection, StreamProjection } from '@on.auto/operations';
 import type { Layer } from 'effect';
 import { onTestFinished } from 'vitest';
 
@@ -10,6 +10,11 @@ import type { LedgerServices, OpenedLedger, OpenedWith } from '../ledger-layer.t
 import type { StreamSignal } from '../signal/append-signal.ts';
 import { openLedgerWith } from './open-ledger.ts';
 
+export interface StreamKept {
+  readonly streamProjections: readonly StreamProjection[];
+  readonly mostBytesFilledAtOnce?: number;
+}
+
 export interface LedgerEntry {
   readonly mostEventsInOneAppend: number;
   readonly afterClosing: string;
@@ -18,8 +23,12 @@ export interface LedgerEntry {
   readonly ledgerOn: (
     database: string,
     runOutcomes?: RunOutcomeMapping,
-    projections?: readonly KeyedProjection[],
+    projections?: readonly KeptProjection[],
     holders?: ContentHolders,
+  ) => Layer.Layer<Exclude<LedgerServices, LedgerConnection>>;
+  readonly streamLedgerOn: (
+    database: string,
+    kept: StreamKept,
   ) => Layer.Layer<Exclude<LedgerServices, LedgerConnection>>;
   readonly ledgerOutsideOn: (
     database: string,
@@ -41,6 +50,7 @@ export interface LedgerEntry {
   readonly projectionTables: string;
   readonly projectionIndexes: string;
   readonly topicTables: string;
+  readonly labelledTables: string;
 }
 
 async function opened(layer: ReturnType<LedgerEntry['ledgerOn']>): Promise<Ledger['Service']> {
@@ -53,7 +63,7 @@ export async function aLedger(
   entry: LedgerEntry,
   database?: string,
   runOutcomes?: RunOutcomeMapping,
-  projections?: readonly KeyedProjection[],
+  projections?: readonly KeptProjection[],
 ): Promise<Ledger['Service']> {
   return opened(entry.ledgerOn(database ?? (await entry.aDatabase()), runOutcomes, projections));
 }

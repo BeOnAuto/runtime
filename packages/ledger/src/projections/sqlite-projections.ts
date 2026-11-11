@@ -166,6 +166,9 @@ const sqliteProjectionDialect: ProjectionDialect = {
       ? SQL`json_remove(message_metadata, '$.payloadBytes')`
       : SQL`json_set(message_metadata, '$.payloadBytes', ${payloadBytes})`,
   booleanOf: (value) => (value ? 1 : 0),
+  listed: (values) => SQL`SELECT value FROM json_each(${JSON.stringify(values)})`,
+  storedBytesOfMessage: storedBytesOf('m'),
+  forUpdate: '',
 };
 
 export function sqliteSizesAfter(execute: StatementExecutor): SizesAfter {

@@ -1,7 +1,7 @@
 import type { SQL } from '@event-driven-io/dumbo';
 import {
   scopesOf,
-  type KeyedProjection,
+  type ProjectionDeclaration,
   type ProjectedColumn,
   type ProjectedColumnKind,
   type ProjectedValue,
@@ -73,9 +73,12 @@ export interface ProjectionDialect {
   readonly storedData: (data: Schema.JsonObject) => Readonly<Record<string, unknown>>;
   readonly metadataMeasured: (payloadBytes: number | undefined) => SQL;
   readonly booleanOf: (value: boolean) => boolean | number;
+  readonly listed: (values: readonly string[]) => SQL;
+  readonly forUpdate: string;
+  readonly storedBytesOfMessage: string;
 }
 
-export function foldedStreamsOf(projection: KeyedProjection): FoldedStreams {
+export function foldedStreamsOf(projection: ProjectionDeclaration): FoldedStreams {
   return { scopes: scopesOf(projection), kinds: projection.kinds };
 }
 

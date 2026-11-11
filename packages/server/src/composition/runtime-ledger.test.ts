@@ -1,4 +1,5 @@
 import { textToKeep } from '@on.auto/content';
+import { RemarkFactSchema, remarkFacts, remarkedContext } from '@on.auto/operations/testing';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -20,5 +21,16 @@ describe("the ledger the server hands its capabilities, over the runtime's own",
     await runtime.dispose();
 
     expect(heads).toMatchObject([{ bytes: 17, mediaType: 'application/json' }, undefined]);
+  });
+
+  it('reads the one fact at a position of a stream, as the ledger reads it', async () => {
+    const runtime = await memoryRuntime();
+    const ledger = runtimeLedger(runtime);
+    const remarks = 'playbook/acme/alpha/remarks/r1';
+    await Effect.runPromise(ledger.execute(remarks, remarkFacts, [{ type: 'remark_made', data: { text: 'first' } }]));
+    const read = await Effect.runPromise(ledger.factAt(remarks, 1, RemarkFactSchema));
+    await runtime.dispose();
+
+    expect(read).toEqual({ type: 'remark_made', data: { text: 'first' }, context: remarkedContext });
   });
 });

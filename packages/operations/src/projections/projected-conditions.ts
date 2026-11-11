@@ -1,6 +1,8 @@
 import {
+  childKeyColumn,
+  keepsChildRows,
   rowKeyColumn,
-  type KeyedProjection,
+  type KeptProjection,
   type ProjectedColumnKind,
   type ProjectedKeyedRow,
   type ProjectedValue,
@@ -29,8 +31,12 @@ function comparisonOf(condition: ProjectedCondition): ComparedColumn {
     : { column, comparison: 'before', value: condition.before };
 }
 
-function kindOfColumn(projection: KeyedProjection, name: string): ProjectedColumnKind {
-  if (name === rowKeyColumn) {
+function isKeyColumn(projection: KeptProjection, name: string): boolean {
+  return name === rowKeyColumn || (name === childKeyColumn && keepsChildRows(projection));
+}
+
+function kindOfColumn(projection: KeptProjection, name: string): ProjectedColumnKind {
+  if (isKeyColumn(projection, name)) {
     return 'text';
   }
   const declared = projection.columns.find((column) => column.name === name);
@@ -46,7 +52,7 @@ const comparableTypes: Readonly<Record<ProjectedColumnKind, readonly string[]>> 
   boolean: [],
 };
 
-export function comparedColumnOf(projection: KeyedProjection, condition: ProjectedCondition): ComparedColumn {
+export function comparedColumnOf(projection: KeptProjection, condition: ProjectedCondition): ComparedColumn {
   const compared = comparisonOf(condition);
   const kind = kindOfColumn(projection, compared.column);
   if (compared.comparison !== 'equals' && !comparableTypes[kind].includes(typeof compared.value)) {
@@ -67,11 +73,17 @@ function holds(stored: ProjectedValue | undefined, { comparison, value }: Compar
   return comparison === 'after' ? stored > value : stored < value;
 }
 
+function valueIn({ row, key, child }: ProjectedKeyedRow, column: string): ProjectedValue | undefined {
+  if (column === rowKeyColumn) {
+    return key;
+  }
+  return column === childKeyColumn ? child : row[column];
+}
+
 export function conditionsMetBy(
-  projection: KeyedProjection,
+  projection: KeptProjection,
   where: readonly ProjectedCondition[],
 ): (kept: ProjectedKeyedRow) => boolean {
   const conditions = where.map((condition) => comparedColumnOf(projection, condition));
-  return ({ row, key }) =>
-    conditions.every((condition) => holds(condition.column === rowKeyColumn ? key : row[condition.column], condition));
+  return (kept) => conditions.every((condition) => holds(valueIn(kept, condition.column), condition));
 }

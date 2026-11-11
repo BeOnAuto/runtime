@@ -48,6 +48,7 @@ const onSQLite: LedgerEntry = {
   },
   ledgerOn: (fileName, runOutcomes, projections = [], holders) =>
     ledgerLayer({ fileName, projections, runOutcomes, holders }),
+  streamLedgerOn: (fileName, kept) => ledgerLayer({ fileName, ...kept }),
   ledgerOutsideOn: (fileName, holders, content) => ledgerLayer({ fileName, holders, content }),
   ledgerRaisingOn: (fileName, appended) => ledgerLayer({ fileName, appended }),
   storeOn: (fileName) => openedOn(fileName).store,
@@ -64,6 +65,7 @@ const onSQLite: LedgerEntry = {
   projectionTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'run_tallies_*' ORDER BY name",
   projectionIndexes: "SELECT name FROM sqlite_master WHERE type = 'index' AND name GLOB 'run_tallies_*' ORDER BY name",
   topicTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'topics_*' ORDER BY name",
+  labelledTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'label*' ORDER BY name",
 };
 
 describe('The ledger on SQLite', () => {

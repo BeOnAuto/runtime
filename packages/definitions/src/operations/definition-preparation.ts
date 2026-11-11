@@ -3,11 +3,11 @@ import { Effect } from 'effect';
 
 import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
+import { definitionToStart } from '../read-model-staging/staged-definitions.ts';
+import { stagedVersion } from '../read-model-staging/staged-versions.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
-import { findDefinition } from '../registry/registry-lookup.ts';
 import { sourceToPrepare } from './definition-views.ts';
 import type { Rejection } from './issue-pointers.ts';
-import { loadRegistry, versionOf } from './registry-access.ts';
 import { documentToRun, isDocumentLost, type DocumentLoss } from './unread-texts.ts';
 
 const refusalsToRun = {
@@ -18,13 +18,13 @@ const refusalsToRun = {
 };
 
 const runnableDefinition = Effect.fnUntraced(function* (type: string, name: string) {
-  const definition = yield* findDefinition(yield* loadRegistry(type), type, name);
+  const definition = yield* definitionToStart(type, name);
   const { status } = definition;
   return status === 'active' ? definition : yield* refusalsToRun[status](definitionResourceLabel(type), name);
 });
 
 export const pausedRefusalOf = Effect.fnUntraced(function* (type: string, name: string) {
-  const { status } = yield* findDefinition(yield* loadRegistry(type), type, name);
+  const { status } = yield* definitionToStart(type, name);
   return status === 'paused' ? refusalsToRun.paused(definitionResourceLabel(type), name) : undefined;
 });
 
@@ -61,7 +61,7 @@ export const preparedDefinition = Effect.fnUntraced(function* (capability: Capab
 });
 
 export const preparedVersion = Effect.fnUntraced(function* (capability: Capability, name: string, version: number) {
-  const definition = yield* versionOf(capability.type, name, version);
+  const definition = yield* stagedVersion(capability.type, name, version);
   return { definition, prepared: yield* preparedOf(capability, definition) };
 });
 

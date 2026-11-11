@@ -19,7 +19,7 @@ const NamingDetailsSchema = Schema.Struct({
   reads: Schema.optionalKey(Schema.Array(NamedDefinitionSchema)),
 });
 
-type NamingDetails = typeof NamingDetailsSchema.Type;
+export type NamingDetails = typeof NamingDetailsSchema.Type;
 
 const decodeNamingDetails = Schema.decodeUnknownOption(NamingDetailsSchema);
 
@@ -31,7 +31,7 @@ const byTypeThenName = Order.combineAll([
   Order.mapInput(Order.String, ({ name }: DefinitionUser) => name),
 ]);
 
-function namingDetailsOf(details: StoredDefinition['details']): NamingDetails {
+export function namingDetailsOf(details: StoredDefinition['details']): NamingDetails {
   return Option.getOrElse(decodeNamingDetails(details), () => ({}));
 }
 

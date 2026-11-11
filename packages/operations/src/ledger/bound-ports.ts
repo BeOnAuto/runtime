@@ -75,6 +75,10 @@ export function prefixedReader(ledger: StreamReader, prefix: string): StreamRead
   return {
     load: (stream, fold) =>
       wellFormed(stream).pipe(Effect.flatMap((relative) => ledger.load(`${prefix}${relative}`, fold))),
+    factAt: (stream, position, eventSchema) =>
+      wellFormed(stream).pipe(
+        Effect.flatMap((relative) => ledger.factAt(`${prefix}${relative}`, position, eventSchema)),
+      ),
   };
 }
 
@@ -170,6 +174,7 @@ function boundProjectionReader(ledger: ProjectionReader, address: ProjectedAddre
         ? ledger.readProjectedRows(projection, address, query)
         : Effect.die(new RangeError(`A read of projected rows takes a limit of 1 or more, not ${query.limit}`)),
     countProjectedRows: (projection, where) => ledger.countProjectedRows(projection, address, where),
+    resetStreamProjection: (projection) => ledger.resetStreamProjection(projection, address),
   };
 }
 

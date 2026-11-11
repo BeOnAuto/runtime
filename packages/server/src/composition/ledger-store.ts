@@ -5,7 +5,7 @@ import { Effect, Layer } from 'effect';
 
 import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { contentStoreOf, type ContentStoreSettings } from './content-store.ts';
-import { keptProjections } from './kept-projections.ts';
+import { keptProjections, keptStreamProjections } from './kept-projections.ts';
 import { factsKnownWith } from './known-holders.ts';
 import { layoutSteps } from './layout-steps.ts';
 
@@ -22,6 +22,7 @@ export function ledgerLayerOf(
   return database.ledgerLayer({
     runOutcomes: runOutcomeMapping,
     projections: keptProjections,
+    streamProjections: keptStreamProjections,
     layoutSteps,
     ...factsKnownWith(declared),
     ...(appends === undefined ? {} : { appends }),

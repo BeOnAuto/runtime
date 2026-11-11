@@ -40,9 +40,26 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
   opening: SQLiteOpening<Driver>,
   options: StoreLayerOptions = {},
 ): Layer.Layer<LedgerServices> {
-  const { runOutcomes, projections, holders, layoutSteps, factSchemas, mostBytesFilledAtOnce, appends, content } =
-    options;
-  const kept = { runOutcomes, projections, holders, layoutSteps, factSchemas, mostBytesFilledAtOnce };
+  const {
+    runOutcomes,
+    projections,
+    streamProjections,
+    holders,
+    layoutSteps,
+    factSchemas,
+    mostBytesFilledAtOnce,
+    appends,
+    content,
+  } = options;
+  const kept = {
+    runOutcomes,
+    projections,
+    streamProjections,
+    holders,
+    layoutSteps,
+    factSchemas,
+    mostBytesFilledAtOnce,
+  };
   return Layer.unwrap(
     Effect.map(Effect.context(), (context) => {
       const listeners = { ...listenersOf(options), watchFailed: watchFailuresLoggedWith(context) };

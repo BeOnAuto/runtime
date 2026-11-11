@@ -1,4 +1,4 @@
-import type { Effect } from 'effect';
+import type { Effect, Schema } from 'effect';
 
 import type { PlaybookAddress } from '../caller/playbook-context.ts';
 import type { Conflict } from '../outcome/conflict.ts';
@@ -25,6 +25,11 @@ export interface StreamReader {
     stream: string,
     fold: Fold<State, Event>,
   ) => Effect.Effect<StreamState<State>>;
+  readonly factAt: <Event extends Recorded>(
+    stream: string,
+    position: number,
+    eventSchema: Schema.ConstraintCodec<Event, unknown>,
+  ) => Effect.Effect<Event | undefined>;
 }
 
 export interface StreamAges {

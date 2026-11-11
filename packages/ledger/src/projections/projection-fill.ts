@@ -1,23 +1,32 @@
 import {
   addressedStreamOf,
+  keepsChildRows,
   projectedTableOf,
   rowKeyOf,
+  type ChildRowsProjection,
   type KeyedProjection,
-  type ProjectedRow,
+  type ProjectedMessage,
+  type ProjectionDeclaration,
 } from '@on.auto/operations';
 
-import { chunksOf } from '../connection/bound-values.ts';
+import { childRowsIn, childRowsReplaced } from '../child-rows/child-row-statements.ts';
 import type { InTransaction, StatementExecutor } from '../event-store.ts';
+import { writtenInChunks, writtenOfStreams } from './fill-writes.ts';
 import { inTurn } from './inline-projection.ts';
 import { foldedStreamsOf } from './projection-dialect.ts';
-import { filledMessageOf, replayedRow, type ProjectionKeeping, type ReplayedMessage } from './projection-keeping.ts';
+import {
+  childRowsFoldedOver,
+  filledMessageOf,
+  replayedRow,
+  type KeepingOf,
+  type ProjectionKeeping,
+} from './projection-keeping.ts';
 import {
   createdTable,
   messagesIn,
   namesIn,
   orderedMessagesIn,
   rowIn,
-  rowsWrite,
   sizedPointsIn,
   streamsIn,
   tableAnalysis,
@@ -37,7 +46,7 @@ interface FillKeeping extends ProjectionKeeping {
   readonly mostBytes: number;
 }
 
-export type NamedProjection = Pick<KeyedProjection, 'name'>;
+export type NamedProjection = Pick<ProjectionDeclaration, 'name'>;
 
 const versionDigits = /^\d+$/u;
 
@@ -50,26 +59,6 @@ export function versionOfTable({ name }: NamedProjection, table: string): number
 function isEarlierVersion({ projection }: ProjectionKeeping, table: string): boolean {
   const version = versionOfTable(projection, table);
   return version !== undefined && version < projection.version;
-}
-
-function writtenInChunks(keeping: ProjectionKeeping, execute: StatementExecutor, kept: readonly KeptRow[]) {
-  const { dialect, projection } = keeping;
-  return inTurn(chunksOf(kept, dialect.rowsInAWrite(projection.columns.length)), (rows) =>
-    execute.command(rowsWrite(dialect, projection, rows)),
-  );
-}
-
-function replayedRows(
-  keeping: ProjectionKeeping,
-  streams: readonly string[],
-  messages: readonly ReplayedMessage[],
-): readonly KeptRow[] {
-  const byStream = Map.groupBy(messages, ({ stream }) => stream);
-  return streams.flatMap((stream) => {
-    const named = addressedStreamOf(stream);
-    const row = named === undefined ? undefined : replayedRow(keeping, byStream.get(stream) ?? []);
-    return named === undefined || row === undefined ? [] : [{ prefix: named.prefix, key: named.id, row }];
-  });
 }
 
 export function withinBytes<Sized extends { readonly size: number }>(
@@ -142,7 +131,7 @@ async function batchFilled(keeping: FillKeeping, execute: StatementExecutor, bat
   );
   const streams = withinBytes(listed, keeping.mostBytes).map(({ stream }) => stream);
   const messages = streams.length === 0 ? [] : await messagesIn(execute, dialect.messagesOf(streams, projection.types));
-  await writtenInChunks(keeping, execute, replayedRows(keeping, streams, messages));
+  await writtenOfStreams(keeping, execute, streams, messages);
   return batchAfter(batch, listed, streams, keeping.mostBytes);
 }
 
@@ -165,26 +154,26 @@ function placedMessages(keeping: ProjectionKeeping, messages: readonly Ordered[]
   });
 }
 
-async function rowsBefore(
-  { dialect, projection }: ProjectionKeeping,
-  execute: StatementExecutor,
+async function rowsBefore<Kept>(
   placed: readonly PlacedMessage[],
-): Promise<ReadonlyMap<string, ProjectedRow | undefined>> {
+  readOne: (place: RowPlace) => Promise<Kept>,
+): Promise<ReadonlyMap<string, Kept>> {
   const places = new Map(placed.map(({ stored, place }) => [stored, place]));
-  const before = new Map<string, ProjectedRow | undefined>();
+  const before = new Map<string, Kept>();
   await inTurn([...places], async ([stored, place]: readonly [string, RowPlace]) => {
-    before.set(stored, await rowIn(execute, dialect, projection, place));
+    before.set(stored, await readOne(place));
   });
   return before;
 }
 
 async function keyedRowsAfter(
-  keeping: ProjectionKeeping,
+  keeping: KeepingOf<KeyedProjection>,
   execute: StatementExecutor,
   messages: readonly Ordered[],
-): Promise<readonly KeptRow[]> {
+): Promise<void> {
+  const { dialect, projection } = keeping;
   const placed = placedMessages(keeping, messages);
-  const before = await rowsBefore(keeping, execute, placed);
+  const before = await rowsBefore(placed, (place) => rowIn(execute, dialect, projection, place));
   const changed = new Map<string, KeptRow>();
   for (const { message, place, stored } of placed) {
     const row = replayedRow(keeping, [message], changed.get(stored)?.row ?? before.get(stored));
@@ -192,7 +181,44 @@ async function keyedRowsAfter(
       changed.set(stored, { ...place, row });
     }
   }
-  return [...changed.values()];
+  await writtenInChunks(keeping, execute, [...changed.values()]);
+}
+
+interface MessagesOfAKey {
+  readonly place: RowPlace;
+  readonly messages: readonly ProjectedMessage[];
+}
+
+interface CollectedOfAKey extends MessagesOfAKey {
+  readonly messages: ProjectedMessage[];
+}
+
+async function keyedChildRowsAfter(
+  keeping: KeepingOf<ChildRowsProjection>,
+  execute: StatementExecutor,
+  messages: readonly Ordered[],
+): Promise<void> {
+  const { dialect, projection } = keeping;
+  const keys = new Map<string, CollectedOfAKey>();
+  for (const { message, place, stored } of placedMessages(keeping, messages)) {
+    const ofTheKey = keys.get(stored) ?? { place, messages: [] };
+    ofTheKey.messages.push(filledMessageOf(keeping, message));
+    keys.set(stored, ofTheKey);
+  }
+  await inTurn([...keys.values()], async ({ place, messages: ofTheKey }: MessagesOfAKey) => {
+    const before = await childRowsIn(execute, dialect, projection, place);
+    await childRowsReplaced(keeping, execute, { ...place, rows: childRowsFoldedOver(projection, ofTheKey, before) });
+  });
+}
+
+function keptInOrder(
+  { dialect, projection }: ProjectionKeeping,
+  execute: StatementExecutor,
+  messages: readonly Ordered[],
+): Promise<void> {
+  return keepsChildRows(projection)
+    ? keyedChildRowsAfter({ dialect, projection }, execute, messages)
+    : keyedRowsAfter({ dialect, projection }, execute, messages);
 }
 
 interface OrderBatch {
@@ -217,7 +243,7 @@ async function batchFilledInOrder(
           execute,
           dialect.messagesInOrderThrough(after, through.point, streams, projection.types),
         );
-  await writtenInChunks(keeping, execute, await keyedRowsAfter(keeping, execute, messages));
+  await keptInOrder(keeping, execute, messages);
   const last = messages.at(-1);
   return last !== undefined && (taken.length < listed.length || listed.length === listing)
     ? {

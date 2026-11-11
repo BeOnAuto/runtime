@@ -1,14 +1,16 @@
 import { SQL } from '@event-driven-io/dumbo';
 import {
+  childKeyColumn,
   comparedColumnOf,
+  keepsChildRows,
   projectedTableOf,
-  rowKeyColumn,
-  type KeyedProjection,
+  type KeptProjection,
   type ProjectedComparison,
   type ProjectedCondition,
   type ProjectedIndex,
   type ProjectedRow,
   type ProjectedValue,
+  type ProjectionDeclaration,
   type RowAdvance,
 } from '@on.auto/operations';
 import { Schema } from 'effect';
@@ -27,6 +29,8 @@ export interface KeptRow extends RowPlace {
 }
 
 const keyColumns = ['playbook_key', 'row_key'] as const;
+
+export const childKeyColumns = [...keyColumns, childKeyColumn] as const;
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 
@@ -48,7 +52,7 @@ const OrderedMessageRows = Schema.Array(
 
 const decodeObjects = Schema.decodeUnknownSync(Schema.Array(Schema.Record(Schema.String, Schema.Unknown)));
 
-export function tableOf(projection: KeyedProjection): SQL {
+export function tableOf(projection: Pick<ProjectionDeclaration, 'name' | 'version'>): SQL {
   return SQL`${SQL.plain(projectedTableOf(projection))}`;
 }
 
@@ -58,32 +62,37 @@ function indexedColumnsOf(dialect: ProjectionDialect, index: ProjectedIndex): re
     : ['playbook_key', ...index.columns].map((column) => `${column}${dialect.playbookIndexNulls}`);
 }
 
-function indexStatement(dialect: ProjectionDialect, projection: KeyedProjection, index: ProjectedIndex): SQL {
+function indexStatement(dialect: ProjectionDialect, projection: ProjectionDeclaration, index: ProjectedIndex): SQL {
   const table = projectedTableOf(projection);
   const columns = indexedColumnsOf(dialect, index).join(', ');
   const where = index.whereSet === undefined ? '' : ` WHERE ${index.whereSet} IS NOT NULL`;
   return SQL`CREATE INDEX IF NOT EXISTS ${SQL.plain(`${table}_${index.name}`)} ON ${tableOf(projection)} (${SQL.plain(columns)})${SQL.plain(where)}`;
 }
 
-export function createdTable(dialect: ProjectionDialect, projection: KeyedProjection): readonly SQL[] {
-  const columns = projection.columns.map(({ name, kind }) => `${name} ${dialect.columnTypes[kind]}`).join(',\n      ');
+export function keyColumnsOf(projection: KeptProjection): readonly string[] {
+  return keepsChildRows(projection) ? childKeyColumns : keyColumns;
+}
+
+export function createdTable(dialect: ProjectionDialect, projection: KeptProjection): readonly SQL[] {
   const key = `${dialect.columnTypes.text} NOT NULL`;
+  const columns = [
+    ...keyColumnsOf(projection).map((name) => `${name} ${key}`),
+    ...projection.columns.map(({ name, kind }) => `${name} ${dialect.columnTypes[kind]}`),
+  ].join(',\n      ');
   return [
     SQL`CREATE TABLE IF NOT EXISTS ${tableOf(projection)} (
-      playbook_key ${SQL.plain(key)},
-      row_key ${SQL.plain(key)},
       ${SQL.plain(columns)},
-      PRIMARY KEY (playbook_key, row_key)
+      PRIMARY KEY (${SQL.plain(keyColumnsOf(projection).join(', '))})
     )`,
     ...projection.indexes.map((index) => indexStatement(dialect, projection, index)),
   ];
 }
 
-export function selectedColumns(dialect: ProjectionDialect, projection: KeyedProjection): SQL {
+export function selectedColumns(dialect: ProjectionDialect, projection: ProjectionDeclaration): SQL {
   return SQL`${SQL.plain(projection.columns.map((column) => selectedColumn(dialect, column)).join(', '))}`;
 }
 
-export function rowFrom(projection: KeyedProjection, stored: Readonly<Record<string, unknown>>): ProjectedRow {
+export function rowFrom(projection: ProjectionDeclaration, stored: Readonly<Record<string, unknown>>): ProjectedRow {
   return Object.fromEntries(projection.columns.map((column) => [column.name, valueOf(column, stored[column.name])]));
 }
 
@@ -94,7 +103,7 @@ export function rowsFrom(rows: readonly unknown[]): readonly Readonly<Record<str
 export async function rowIn(
   execute: StatementExecutor,
   dialect: ProjectionDialect,
-  projection: KeyedProjection,
+  projection: ProjectionDeclaration,
   { prefix, key }: RowPlace,
 ): Promise<ProjectedRow | undefined> {
   const { rows } = await execute.query(
@@ -104,18 +113,22 @@ export async function rowIn(
   return stored === undefined ? undefined : rowFrom(projection, stored);
 }
 
-function valuesOf(dialect: ProjectionDialect, projection: KeyedProjection, { prefix, key, row }: KeptRow): SQL {
+export function valuesOf(
+  dialect: ProjectionDialect,
+  projection: Pick<ProjectionDeclaration, 'columns'>,
+  { prefix, key, row }: KeptRow,
+): SQL {
   const values = projection.columns.map(({ name }) => SQL`${boundOf(dialect, row[name] ?? null)}`);
   return SQL`(${SQL.merge([SQL`${prefix}`, SQL`${key}`, ...values], ', ')})`;
 }
 
-function updatedColumns(projection: KeyedProjection, standing: readonly string[]): readonly string[] {
+function updatedColumns(projection: ProjectionDeclaration, standing: readonly string[]): readonly string[] {
   return projection.columns.map(({ name }) => name).filter((name) => !standing.includes(name));
 }
 
 export function rowsWrite(
   dialect: ProjectionDialect,
-  projection: KeyedProjection,
+  projection: ProjectionDeclaration,
   kept: readonly KeptRow[],
   standing: readonly string[] = [],
 ): SQL {
@@ -135,8 +148,8 @@ export function rowsWrite(
     ON CONFLICT (playbook_key, row_key) DO UPDATE SET ${updates}`;
 }
 
-export function columnOf(projection: KeyedProjection, name: string): string {
-  if (name !== rowKeyColumn && !projection.columns.some((column) => column.name === name)) {
+export function columnOf(projection: KeptProjection, name: string): string {
+  if (!keyColumnsOf(projection).includes(name) && !projection.columns.some((column) => column.name === name)) {
     throw new Error(`The projection ${projection.name} has no column ${name}`);
   }
   return name;
@@ -146,7 +159,7 @@ const operators: Readonly<Record<ProjectedComparison, string>> = { equals: '=', 
 
 export function conditionsOf(
   dialect: ProjectionDialect,
-  projection: KeyedProjection,
+  projection: KeptProjection,
   where: readonly ProjectedCondition[],
 ) {
   return SQL.merge(
@@ -160,7 +173,7 @@ export function conditionsOf(
 
 export function rowAdvance(
   dialect: ProjectionDialect,
-  projection: KeyedProjection,
+  projection: KeptProjection,
   { prefix, key }: RowPlace,
   { set, when }: RowAdvance,
 ): SQL {
@@ -185,7 +198,7 @@ function inLockOrder(places: readonly RowPlace[]): readonly RowPlace[] {
 export async function rowsLocked(
   execute: StatementExecutor,
   dialect: ProjectionDialect,
-  projection: KeyedProjection,
+  projection: ProjectionDeclaration,
   places: readonly RowPlace[],
 ): Promise<void> {
   const table = projectedTableOf(projection);
@@ -193,7 +206,7 @@ export async function rowsLocked(
   await inTurn(locks, (lock) => execute.query(lock));
 }
 
-export function rowDelete(projection: KeyedProjection, { prefix, key }: RowPlace): SQL {
+export function rowDelete(projection: ProjectionDeclaration, { prefix, key }: RowPlace): SQL {
   return SQL`DELETE FROM ${tableOf(projection)} WHERE playbook_key = ${prefix} AND row_key = ${key}`;
 }
 
@@ -201,7 +214,7 @@ export function tableDrop(name: string): SQL {
   return SQL`DROP TABLE IF EXISTS ${SQL.plain(name)}`;
 }
 
-export function tableAnalysis(projection: KeyedProjection): SQL {
+export function tableAnalysis(projection: ProjectionDeclaration): SQL {
   return SQL`ANALYZE ${tableOf(projection)}`;
 }
 

@@ -34,7 +34,11 @@ describe('a run as it was recorded', () => {
     expect(
       await Effect.runPromise(
         recordedRunInPlaybook(
-          { load: (relative, decider) => ledger.service.load(`playbook/acme/alpha/${relative}`, decider) },
+          {
+            load: (relative, decider) => ledger.service.load(`playbook/acme/alpha/${relative}`, decider),
+            factAt: (relative, position, schema) =>
+              ledger.service.factAt(`playbook/acme/alpha/${relative}`, position, schema),
+          },
           askedRunId.toUpperCase(),
         ),
       ),

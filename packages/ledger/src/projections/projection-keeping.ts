@@ -2,14 +2,19 @@ import {
   addressedStreamOf,
   advancedColumnsLeftBy,
   contextOf,
+  keepsChildRows,
   messageIdOf,
   rowKeyOf,
+  type ChildRowsProjection,
   type Context,
+  type KeptProjection,
   type KeyedProjection,
   type ProjectedMessage,
   type ProjectedRow,
+  type ProjectedRows,
 } from '@on.auto/operations';
 
+import { childRowsIn, childRowsReplaced } from '../child-rows/child-row-statements.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import {
   inlineRegistrationOf,
@@ -23,7 +28,11 @@ import { rowIn, rowsLocked, rowsWrite, type RowPlace } from './projection-statem
 
 export interface ProjectionKeeping {
   readonly dialect: ProjectionDialect;
-  readonly projection: KeyedProjection;
+  readonly projection: KeptProjection;
+}
+
+export interface KeepingOf<Projection extends KeptProjection> extends ProjectionKeeping {
+  readonly projection: Projection;
 }
 
 export interface ReplayedMessage {
@@ -38,8 +47,8 @@ function projectedOf({ type, data, context, id, position }: StoredMessage): Proj
   return { id, position, type, data, context };
 }
 
-async function keptAfter(
-  { dialect, projection }: ProjectionKeeping,
+async function rowKeptAfter(
+  { dialect, projection }: KeepingOf<KeyedProjection>,
   execute: StatementExecutor,
   place: RowPlace,
   message: StoredMessage,
@@ -52,38 +61,73 @@ async function keptAfter(
   }
 }
 
-function placeOf(projection: KeyedProjection, message: StoredMessage): RowPlace | undefined {
+async function childRowsKeptAfter(
+  keeping: KeepingOf<ChildRowsProjection>,
+  execute: StatementExecutor,
+  place: RowPlace,
+  message: StoredMessage,
+): Promise<void> {
+  const { dialect, projection } = keeping;
+  const rows = projection.rowsAfter(await childRowsIn(execute, dialect, projection, place), projectedOf(message));
+  if (rows !== undefined) {
+    await childRowsReplaced(keeping, execute, { ...place, rows });
+  }
+}
+
+function keptAfter(
+  { dialect, projection }: ProjectionKeeping,
+  execute: StatementExecutor,
+  place: RowPlace,
+  message: StoredMessage,
+): Promise<void> {
+  return keepsChildRows(projection)
+    ? childRowsKeptAfter({ dialect, projection }, execute, place, message)
+    : rowKeptAfter({ dialect, projection }, execute, place, message);
+}
+
+function placeOf(projection: KeptProjection, message: StoredMessage): RowPlace | undefined {
   const named = addressedStreamOf(message.stream);
   const key = named === undefined ? undefined : rowKeyOf(projection, projectedOf(message), named);
   return named === undefined || key === undefined ? undefined : { prefix: named.prefix, key };
 }
 
-interface PlacedMessage {
+export interface PlacedMessage {
   readonly message: StoredMessage;
   readonly place: RowPlace;
 }
 
-function placedOf({ dialect, projection }: ProjectionKeeping, messages: readonly StoredMessage[]) {
+export function placedIn(projection: KeptProjection, messages: readonly StoredMessage[]): readonly PlacedMessage[] {
   return messages.flatMap((message): readonly PlacedMessage[] => {
-    const decoded = { ...message, data: dialect.appendedData(message.data) };
-    const place = placeOf(projection, decoded);
-    return place === undefined ? [] : [{ message: decoded, place }];
+    const place = placeOf(projection, message);
+    return place === undefined ? [] : [{ message, place }];
   });
+}
+
+function placedOf({ dialect, projection }: ProjectionKeeping, messages: readonly StoredMessage[]) {
+  return placedIn(
+    projection,
+    messages.map((message) => ({ ...message, data: dialect.appendedData(message.data) })),
+  );
+}
+
+export async function keptInTurn(
+  keeping: ProjectionKeeping,
+  execute: StatementExecutor,
+  placed: readonly PlacedMessage[],
+): Promise<void> {
+  await rowsLocked(
+    execute,
+    keeping.dialect,
+    keeping.projection,
+    placed.map(({ place }) => place),
+  );
+  await inTurn(placed, ({ message, place }: PlacedMessage) => keptAfter(keeping, execute, place, message));
 }
 
 function keepingProjection(keeping: ProjectionKeeping): InlineProjection {
   return {
     types: keeping.projection.types,
-    handle: async (messages, execute) => {
-      const placed = placedOf(keeping, messages);
-      await rowsLocked(
-        execute,
-        keeping.dialect,
-        keeping.projection,
-        placed.map(({ place }) => place),
-      );
-      await inTurn(placed, ({ message, place }: PlacedMessage) => keptAfter(keeping, execute, place, message));
-    },
+    handle: (messages, execute) => keptInTurn(keeping, execute, placedOf(keeping, messages)),
   };
 }
 
@@ -107,8 +151,22 @@ export function rowFoldedOver(
   return row;
 }
 
+export const noRows: ProjectedRows = new Map();
+
+export function childRowsFoldedOver(
+  { rowsAfter }: ChildRowsProjection,
+  messages: readonly ProjectedMessage[],
+  from: ProjectedRows,
+): ProjectedRows {
+  let rows = from;
+  for (const message of messages) {
+    rows = rowsAfter(rows, message) ?? rows;
+  }
+  return rows;
+}
+
 export function replayedRow(
-  keeping: ProjectionKeeping,
+  keeping: KeepingOf<KeyedProjection>,
   messages: readonly ReplayedMessage[],
   from?: ProjectedRow,
 ): ProjectedRow | undefined {
@@ -119,9 +177,20 @@ export function replayedRow(
   );
 }
 
+export function replayedChildRows(
+  keeping: KeepingOf<ChildRowsProjection>,
+  messages: readonly ReplayedMessage[],
+): ProjectedRows {
+  return childRowsFoldedOver(
+    keeping.projection,
+    messages.map((message) => filledMessageOf(keeping, message)),
+    noRows,
+  );
+}
+
 export function projectionRegistrations(
   dialect: ProjectionDialect,
-  projections: readonly KeyedProjection[],
+  projections: readonly KeptProjection[],
 ): readonly InlineRegistration[] {
   return projections.map((projection) => inlineRegistrationOf(keepingProjection({ dialect, projection })));
 }

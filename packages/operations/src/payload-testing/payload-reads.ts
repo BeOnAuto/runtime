@@ -1,9 +1,11 @@
 import type { ContentHolders, JsonPointer } from '../held-content/content-declaration.ts';
 import {
+  keepsChildRows,
   projectedTableOf,
-  type KeyedProjection,
+  type KeptProjection,
   type ProjectedMessage,
   type ProjectedRow,
+  type ProjectedRows,
 } from '../projections/keyed-projection.ts';
 import type { RunOutcome, RunOutcomeMapping } from '../run-outcomes/run-outcomes.ts';
 import { inlineMembersOf, sampledInline, twinsOf, type SampledFact } from './payload-twins.ts';
@@ -11,7 +13,7 @@ import { inlineMembersOf, sampledInline, twinsOf, type SampledFact } from './pay
 export type { SampledFact } from './payload-twins.ts';
 
 export interface KeptTables {
-  readonly projections: readonly KeyedProjection[];
+  readonly projections: readonly KeptProjection[];
   readonly runOutcomes?: RunOutcomeMapping;
 }
 
@@ -59,7 +61,18 @@ function outcomeOf(fold: () => unknown): string {
   }
 }
 
-function keyedFold(projection: KeyedProjection): TableFold {
+function rowsFoldedBy(projection: KeptProjection, messages: readonly ProjectedMessage[]): unknown {
+  if (!keepsChildRows(projection)) {
+    return rowFolded<ProjectedRow>(messages, (row, message) => projection.rowAfter(row, message));
+  }
+  const rows = rowFolded<ProjectedRows>(
+    messages,
+    (folded, message) => projection.rowsAfter(folded ?? new Map(), message) ?? folded,
+  );
+  return rows === undefined ? undefined : [...rows];
+}
+
+function keyedFold(projection: KeptProjection): TableFold {
   const stream = { kind: String(projection.kinds.at(0)), id: 'sampled' };
   const keyOf = (message: ProjectedMessage) =>
     projection.keyOf === undefined ? stream.id : projection.keyOf(message, stream);
@@ -69,7 +82,7 @@ function keyedFold(projection: KeyedProjection): TableFold {
     folded: (messages) =>
       outcomeOf(() => ({
         keys: messages.map((message) => keyOf(message)),
-        row: rowFolded<ProjectedRow>(messages, (row, message) => projection.rowAfter(row, message)),
+        row: rowsFoldedBy(projection, messages),
       })),
   };
 }

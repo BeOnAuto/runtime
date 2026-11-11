@@ -48,7 +48,7 @@ export interface AdvancedColumn {
 
 export type StreamScope = 'playbook' | 'org';
 
-export interface KeyedProjection {
+export interface ProjectionDeclaration {
   readonly name: string;
   readonly version: number;
   readonly scopes?: readonly StreamScope[];
@@ -58,7 +58,22 @@ export interface KeyedProjection {
   readonly indexes: readonly ProjectedIndex[];
   readonly keyOf?: (message: ProjectedMessage, stream: ProjectedStream) => string | undefined;
   readonly advanced?: readonly AdvancedColumn[];
+}
+
+export interface KeyedProjection extends ProjectionDeclaration {
   readonly rowAfter: (row: ProjectedRow | undefined, message: ProjectedMessage) => ProjectedRow | undefined;
+}
+
+export type ProjectedRows = ReadonlyMap<string, ProjectedRow>;
+
+export interface ChildRowsProjection extends ProjectionDeclaration {
+  readonly rowsAfter: (rows: ProjectedRows, message: ProjectedMessage) => ProjectedRows | undefined;
+}
+
+export type KeptProjection = KeyedProjection | ChildRowsProjection;
+
+export function keepsChildRows(projection: KeptProjection): projection is ChildRowsProjection {
+  return 'rowsAfter' in projection;
 }
 
 export type ProjectedOrder = 'asc' | 'desc';
@@ -77,6 +92,7 @@ export interface ProjectedAddress extends OrgAddress {
 
 export interface ProjectedKeyedRow extends ProjectedAddress {
   readonly key: string;
+  readonly child?: string;
   readonly row: ProjectedRow;
 }
 
@@ -99,6 +115,7 @@ export interface ProjectionReader {
   ) => Effect.Effect<number>;
   readonly readDueRows: (projection: string, query: DueRowsQuery) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly nextDueOf: (projection: string, column: string, after: number) => Effect.Effect<number | null>;
+  readonly resetStreamProjection: (projection: string, address: ProjectedAddress) => Effect.Effect<void>;
 }
 
 export interface RowAdvance {
@@ -121,6 +138,7 @@ export interface BoundProjectionReader {
     query: ProjectedRowsQuery,
   ) => Effect.Effect<readonly ProjectedKeyedRow[]>;
   readonly countProjectedRows: (projection: string, where: readonly ProjectedCondition[]) => Effect.Effect<number>;
+  readonly resetStreamProjection: (projection: string) => Effect.Effect<void>;
 }
 
 export interface OrgProjectionReader extends BoundProjectionReader {
@@ -138,13 +156,7 @@ export interface OrgProjectionReader extends BoundProjectionReader {
 
 export const rowKeyColumn = 'row_key';
 
-const projectionName = /^[a-z][a-z0-9_]{0,39}$/u;
-
-const columnName = /^[a-z][a-z0-9_]{0,62}$/u;
-
-const streamKind = /^[a-z][a-z0-9-]{0,39}$/u;
-
-const keyColumns: ReadonlySet<string> = new Set(['playbook_key', rowKeyColumn]);
+export const childKeyColumn = 'child_key';
 
 export function streamPrefixOfAddress({ org, playbook }: ProjectedAddress): string {
   return playbook === undefined ? streamPrefixOfOrg({ org }) : streamPrefixOfPlaybook({ org, playbook });
@@ -184,16 +196,16 @@ export function addressedStreamOf(stream: string): AddressedStream | undefined {
 
 const playbookStreamsAlone: readonly StreamScope[] = ['playbook'];
 
-export function scopesOf({ scopes = playbookStreamsAlone }: KeyedProjection): readonly StreamScope[] {
+export function scopesOf({ scopes = playbookStreamsAlone }: ProjectionDeclaration): readonly StreamScope[] {
   return scopes;
 }
 
-export function foldsStream(projection: KeyedProjection, { scope, kind }: AddressedStream): boolean {
+export function foldsStream(projection: ProjectionDeclaration, { scope, kind }: AddressedStream): boolean {
   return scopesOf(projection).includes(scope) && projection.kinds.includes(kind);
 }
 
 export function rowKeyOf(
-  projection: KeyedProjection,
+  projection: ProjectionDeclaration,
   message: ProjectedMessage,
   stream: AddressedStream,
 ): string | undefined {
@@ -203,87 +215,15 @@ export function rowKeyOf(
   return projection.keyOf === undefined ? stream.id : projection.keyOf(message, stream);
 }
 
-export function advancedColumnsOf({ advanced = [] }: KeyedProjection): readonly string[] {
+export function advancedColumnsOf({ advanced = [] }: ProjectionDeclaration): readonly string[] {
   return advanced.map(({ column }) => column);
 }
 
-export function advancedColumnsLeftBy({ advanced = [] }: KeyedProjection, type: string): readonly string[] {
+export function advancedColumnsLeftBy({ advanced = [] }: ProjectionDeclaration, type: string): readonly string[] {
   return advanced.filter(({ setBy }) => !setBy.includes(type)).map(({ column }) => column);
 }
 
-function requireNamed(what: string, name: string, pattern: Readonly<RegExp>): void {
-  if (!pattern.test(name)) {
-    throw new Error(`The ${what} name ${name} is malformed`);
-  }
-}
-
-function requireKnownColumns(projection: KeyedProjection, columns: readonly string[]): void {
-  const known = new Set(projection.columns.map(({ name }) => name));
-  const unknown = columns.find((column) => !known.has(column));
-  if (unknown !== undefined) {
-    throw new Error(`The projection ${projection.name} has no column ${unknown}`);
-  }
-}
-
-function requireIndexedColumns(projection: KeyedProjection, { columns, whereSet }: ProjectedIndex): void {
-  const ordered = columns.filter((column) => column !== rowKeyColumn);
-  requireKnownColumns(projection, [...ordered, ...(whereSet === undefined ? [] : [whereSet])]);
-}
-
-function requireAdvancedSetByItsTypes(projection: KeyedProjection, { column, setBy }: AdvancedColumn): void {
-  const unknown = setBy.find((type) => !projection.types.includes(type));
-  if (unknown !== undefined) {
-    throw new Error(
-      `The projection ${projection.name} does not fold ${unknown}, which it says sets its advanced column ${column}`,
-    );
-  }
-}
-
-function requireAdvancedOnce(projection: KeyedProjection, columns: readonly string[]): void {
-  const repeated = columns.find((column, at) => columns.indexOf(column) < at);
-  if (repeated !== undefined) {
-    throw new Error(`The projection ${projection.name} declares its advanced column ${repeated} more than once`);
-  }
-}
-
-function requireStreamsFolded(projection: KeyedProjection): void {
-  if (scopesOf(projection).length === 0) {
-    throw new Error(`The projection ${projection.name} names neither a playbook's streams nor an org's to fold`);
-  }
-  if (projection.kinds.length === 0) {
-    throw new Error(`The projection ${projection.name} names no stream kind it folds`);
-  }
-  for (const kind of projection.kinds) {
-    requireNamed('stream kind', kind, streamKind);
-  }
-}
-
-export function checkedProjection(projection: KeyedProjection): KeyedProjection {
-  requireNamed('projection', projection.name, projectionName);
-  if (!Number.isSafeInteger(projection.version) || projection.version < 1) {
-    throw new Error(`The projection ${projection.name} has a version that is not a whole number from 1`);
-  }
-  requireStreamsFolded(projection);
-  for (const { name } of projection.columns) {
-    requireNamed('column', name, columnName);
-    if (keyColumns.has(name)) {
-      throw new Error(`The projection ${projection.name} may not name a column ${name}, which keys every row`);
-    }
-  }
-  for (const index of projection.indexes) {
-    requireNamed('index', index.name, columnName);
-    requireIndexedColumns(projection, index);
-  }
-  const advanced = advancedColumnsOf(projection);
-  requireKnownColumns(projection, advanced);
-  requireAdvancedOnce(projection, advanced);
-  for (const column of projection.advanced ?? []) {
-    requireAdvancedSetByItsTypes(projection, column);
-  }
-  return projection;
-}
-
-export function requireAdvancedColumns(projection: KeyedProjection, columns: ProjectedRow): void {
+export function requireAdvancedColumns(projection: ProjectionDeclaration, columns: ProjectedRow): void {
   const advanced = new Set(advancedColumnsOf(projection));
   const other = Object.keys(columns).find((column) => !advanced.has(column));
   if (other !== undefined) {
@@ -291,6 +231,6 @@ export function requireAdvancedColumns(projection: KeyedProjection, columns: Pro
   }
 }
 
-export function projectedTableOf({ name, version }: Pick<KeyedProjection, 'name' | 'version'>): string {
+export function projectedTableOf({ name, version }: Pick<ProjectionDeclaration, 'name' | 'version'>): string {
   return `${name}_${version}`;
 }

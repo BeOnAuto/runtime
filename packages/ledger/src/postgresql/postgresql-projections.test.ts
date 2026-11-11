@@ -43,6 +43,8 @@ function readerOf(query: Query) {
   return postgresqlProjectionsOf({ projections: [runTallyRows, topicRows] }).readerOn({
     query: formattedFor(query),
     command: formattedFor(query),
+    inTransaction: (work) =>
+      work({ query: () => Promise.resolve({ rows: [] }), command: () => Promise.resolve({ rows: [] }) }),
   });
 }
 

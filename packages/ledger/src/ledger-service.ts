@@ -22,7 +22,7 @@ import type { LedgerContent, LedgerStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
 import { runOutcomesReaderOf } from './outcomes/run-outcomes-reader.ts';
 import { recordedEventReaderOf, recordedReaderOf } from './recorded/recorded-reader.ts';
-import { streamReaderOf } from './stream-reader.ts';
+import { factReaderOf, pagedFactReaderOf, streamReaderOf } from './stream-reader.ts';
 import { retriedOnVersionConflict, type VersionConflict } from './version-conflict.ts';
 
 export type StreamLoad<Loaded> = (stream: string) => Effect.Effect<Loaded>;
@@ -92,6 +92,7 @@ export function streamPortsOf(streams: Streams): StreamReader & StreamWriter {
   const load = streamReaderOf(streams);
   return {
     load,
+    factAt: pagedFactReaderOf(streams),
     execute: (stream, decider, command, lineage) =>
       decisionLoop(
         (named: string) => load(named, decider),
@@ -118,6 +119,7 @@ export function ownContentOf(store: LedgerStore): LedgerContent {
 export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentOf(store)): Ledger['Service'] {
   return Ledger.of({
     ...streamPortsOf(store),
+    factAt: factReaderOf(store),
     scrubFact: store.scrubFact,
     ageOfLastAppend: (stream) => Effect.promise(() => store.ageOfLastAppend(stream)),
     readRecorded: recordedReaderOf(store),
@@ -128,6 +130,7 @@ export function makeLedger(store: LedgerStore, kept: LedgerContent = ownContentO
     countProjectedRows: store.countProjectedRows,
     readDueRows: store.readDueRows,
     nextDueOf: store.nextDueOf,
+    resetStreamProjection: store.resetStreamProjection,
     advanceRow: store.advanceRow,
     content: kept.content,
     removeUnheld: (playbook, sha256) =>

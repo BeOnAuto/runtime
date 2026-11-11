@@ -25,3 +25,5 @@ export { measuredPoolSettings } from './read-on-disk.ts';
 export { onTheStandingClock, standingClock, standingRenderClock, steppingClock } from './time/stepping-clock.ts';
 export { shapeNamed } from './shapes.ts';
 export { uncheckedPages } from './page-ports.ts';
+export { aGeneratedHistory } from '../read-model-testing/read-model-histories.ts';
+export { definitionsReadModelOf } from '../read-model/definitions-read-model.ts';

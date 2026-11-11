@@ -129,6 +129,7 @@ const onPostgreSQL: LedgerEntry = {
       ...(runOutcomes === undefined ? {} : { runOutcomes }),
       ...(holders === undefined ? {} : { holders }),
     }),
+  streamLedgerOn: (database, kept) => postgresqlLedgerLayer({ pools: plainPoolsOn(database), ...kept }),
   ledgerOutsideOn: (database, holders, content) =>
     postgresqlLedgerLayer({ pools: plainPoolsOn(database), holders, content }),
   ledgerRaisingOn: (database, appended) => postgresqlLedgerLayer({ pools: plainPoolsOn(database), appended }),
@@ -150,6 +151,8 @@ const onPostgreSQL: LedgerEntry = {
     "SELECT indexname AS name FROM pg_indexes WHERE indexname ~ '^run_tallies_[0-9]+_' AND indexname !~ '_pkey$' ORDER BY indexname",
   topicTables:
     "SELECT relname AS name FROM pg_class WHERE relkind IN ('r', 'p') AND relname ~ '^topics_[0-9]+$' ORDER BY relname",
+  labelledTables:
+    "SELECT relname AS name FROM pg_class WHERE relkind IN ('r', 'p') AND relname ~ '^label' ORDER BY relname COLLATE \"C\"",
 };
 
 const skipped = server === '';

@@ -15,7 +15,7 @@ import {
 } from '@on.auto/operations';
 import {
   memoryPlaybookRegistry,
-  memoryLedger,
+  type memoryLedger,
   recordingReporter,
   type MemoryLedger,
   type ReportedIncident,
@@ -23,9 +23,9 @@ import {
 import { DateTime, Effect, Layer } from 'effect';
 import { TestClock } from 'effect/testing';
 
-import { runOutcomeMapping } from '../analytics/run-outcome-mapping.ts';
 import type { RunMeter } from '../metering/run-meter.ts';
 import type { PlaybookOperation } from '../operations/definition-operations.ts';
+import { stagedLedgerOf, type ReadModelStaged, type StagedLedger } from '../read-model-testing/staged-ledger.ts';
 import { DefinitionEventSchema } from '../registry/definition-events.ts';
 import { RunEventSchema } from '../runs/run-events.ts';
 import { admittingMeter } from './recording-meter.ts';
@@ -51,6 +51,7 @@ interface Calling {
 
 export interface Harness {
   readonly ledger: MemoryLedger;
+  readonly logged: StagedLedger['logged'];
   readonly ledgerReads: () => readonly LedgerRead[];
   readonly reported: () => readonly ReportedIncident[];
   readonly dispatch: (
@@ -99,8 +100,9 @@ function ledgerReadsOf(ledger: MemoryLedger) {
 export function harness(
   meter: Layer.Layer<RunMeter> | Layer.Layer<never> = admittingMeter,
   store?: Parameters<typeof memoryLedger>[3],
+  readModel?: ReadModelStaged,
 ): Harness {
-  const ledger = memoryLedger(runOutcomeMapping, [], playbookContentHolders, store);
+  const { ledger, staged, logged } = stagedLedgerOf(playbookContentHolders, store, readModel);
   const read = ledgerReadsOf(ledger);
   const recording = recordingReporter();
   const services = Layer.mergeAll(
@@ -109,6 +111,7 @@ export function harness(
     recording.layer,
     TestClock.layer(),
     meter,
+    staged,
   );
   const dispatcher = makeDispatcher([]);
   const dispatch: Harness['dispatch'] = (operation, request) =>
@@ -127,6 +130,7 @@ export function harness(
   }
   return {
     ledger,
+    logged,
     ledgerReads: read.reads,
     reported: recording.reported,
     dispatch,

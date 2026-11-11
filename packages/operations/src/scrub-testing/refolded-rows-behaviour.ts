@@ -2,6 +2,7 @@ import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { messageIdOf, type FactScrub, type LedgerPorts } from '../index.ts';
+import { labelFacts, labelRows, LabelFactSchema } from '../projections/label-rows.ts';
 import { remarkRows } from '../projections/remark-rows.ts';
 import { topicFacts, topicRows, topicWaitMs, type TopicFact } from '../projections/topic-rows.ts';
 import { runFacts, runTallies, type RunFact } from '../run-outcomes/run-tallies.ts';
@@ -130,6 +131,35 @@ function rowsOfAnOrgKeyRefolded(entry: FactScrubEntry): void {
   });
 }
 
+function childRowsRefolded(entry: FactScrubEntry): void {
+  describe('the rows of a key of a projection that keeps several under it, which a scrubbed fact folded into', () => {
+    it('are folded again from nothing over the facts of the key, the rows the scrubbed fact no longer answers dropped', async () => {
+      const ledger = await entry.aLedger([labelRows]);
+      const notes = 'playbook/acme/alpha/notes/n1';
+      await Effect.runPromise(
+        ledger.execute(notes, labelFacts, [
+          { type: 'labels_set', data: { note: 'n1', labels: ['urgent', 'call 0123'] } },
+          { type: 'label_added', data: { note: 'n1', label: 'urgent' } },
+        ]),
+      );
+
+      await Effect.runPromise(
+        ledger.scrubFact(notes, 1, {
+          eventSchema: LabelFactSchema,
+          data: { note: 'n1', labels: ['urgent'] },
+          erasure: { type: 'label_added', data: { note: 'n1', label: 'erased' } },
+          context: erasedContext,
+        }),
+      );
+
+      expect((await rowsOf(ledger, 'labels', alpha)).map(({ key, child, row }) => [key, child, row])).toEqual([
+        ['n1', 'erased', { label: 'erased', place: 2, set_at: 3 }],
+        ['n1', 'urgent', { label: 'urgent', place: 1, set_at: 1 }],
+      ]);
+    });
+  });
+}
+
 function began(fn: string): RunFact {
   return { type: 'run_began', data: { at: '2026-10-05T09:00:00.000Z', fn } };
 }
@@ -162,5 +192,6 @@ export function refoldedRowsBehaviour(entry: FactScrubEntry): void {
   rowsOfAStreamRefolded(entry);
   rowsOfAKeyRefolded(entry);
   rowsOfAnOrgKeyRefolded(entry);
+  childRowsRefolded(entry);
   runOutcomeRefolded(entry);
 }
