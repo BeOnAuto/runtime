@@ -67,7 +67,7 @@ describe('a version that leaves the triggers of the one before unchanged', () =>
     const [, next] = await startsReaching(reacting.reactions.starts, 2);
 
     expect(refusals.map(({ reason }) => reason)).toEqual([
-      `The run its every schedule had due at ${isoAt(2)} was skipped: the run its every schedule started before still runs`,
+      `The run scheduled for ${isoAt(2)} by its every schedule was skipped: the run it started before is still running`,
     ]);
     expect([next?.version, next?.input, next?.cause]).toEqual([
       2,
@@ -96,7 +96,7 @@ describe('a version that changes an every schedule', () => {
     const [, next] = await startsReaching(reacting.reactions.starts, 2);
 
     expect(refusals.map(({ reason }) => reason)).toEqual([
-      `The run its every schedule had due at ${isoAt(3.5)} was skipped: the run its every schedule started before still runs`,
+      `The run scheduled for ${isoAt(3.5)} by its every schedule was skipped: the run it started before is still running`,
     ]);
     expect([next?.version, next?.input, next?.cause]).toEqual([
       2,

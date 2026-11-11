@@ -85,6 +85,73 @@ function recordContentMissing({
   ).pipe(Effect.annotateLogs({ org, playbook, record_id: recordId, type }));
 }
 
+const heldForWords = {
+  content: 'its content, kept outside, could not be read just now',
+  unreadable: 'this release cannot read it',
+} as const;
+
+function contentHold(note: NoteOf<'content_hold'>): Effect.Effect<void> {
+  const { org, playbook, heldFor, heldSince, heldMs, holds, heldUntil, recordId, type, lag, lagCapped } = note;
+  return Effect.logWarning(
+    `The triggers and waiting runs of a playbook are held at a record, since ${heldForWords[heldFor]}; they are tried again at held_until, and nothing behind the record is passed over. held_ms counts from the start of the playbook's hold, at this record or at an earlier one it was held at with no lift between; holds counts the tries at this record`,
+  ).pipe(
+    Effect.annotateLogs({
+      org,
+      playbook,
+      held_for: heldFor,
+      held_since: new Date(heldSince).toISOString(),
+      held_ms: heldMs,
+      holds,
+      held_until: new Date(heldUntil).toISOString(),
+      record_id: recordId,
+      type,
+      lag,
+      lag_capped: lagCapped,
+    }),
+  );
+}
+
+function contentHoldTryFailed(note: NoteOf<'content_hold_try_failed'>): Effect.Effect<void> {
+  const { org, playbook, heldFor, heldSince, heldMs, holds, retryAt } = note;
+  return Effect.logWarning(
+    'A try of the hold of the triggers and waiting runs of a playbook failed before it reached the record it is held at; it is tried again within a minute',
+  ).pipe(
+    Effect.annotateLogs({
+      org,
+      playbook,
+      held_for: heldFor,
+      held_since: new Date(heldSince).toISOString(),
+      held_ms: heldMs,
+      holds,
+      held_until: new Date(retryAt).toISOString(),
+    }),
+  );
+}
+
+function contentHoldLifted(note: NoteOf<'content_hold_lifted'>): Effect.Effect<void> {
+  const { org, playbook, heldFor, heldSince, heldMs, holds, records, more } = note;
+  return Effect.logInfo(
+    'The hold of the triggers and waiting runs of a playbook was lifted; records counts the records the pass that lifted it moved past',
+  ).pipe(
+    Effect.annotateLogs({
+      org,
+      playbook,
+      held_for: heldFor,
+      held_since: new Date(heldSince).toISOString(),
+      held_ms: heldMs,
+      holds,
+      records,
+      more_records: more,
+    }),
+  );
+}
+
+function factUnreadable({ org, playbook, recordId, type }: NoteOf<'fact_unreadable'>): Effect.Effect<void> {
+  return Effect.logError(
+    'A record of a playbook could not be read by this release, so its triggers and waiting runs are held at it until a release that reads it runs',
+  ).pipe(Effect.annotateLogs({ org, playbook, record_id: recordId, type }));
+}
+
 function runRecordPassed({ run, version, sweeps }: NoteOf<'run_record_passed'>): Effect.Effect<void> {
   return Effect.logWarning(
     `A record of a run's log was passed before the run's outputs were dispatched, after ${sweeps} sweeps held it; a listener it armed takes events once it is kept, and none recorded before`,
@@ -133,6 +200,10 @@ const loggers: { readonly [Kind in HostNote['kind']]: (note: NoteOf<Kind>) => Ef
   offer_declined: offerDeclined,
   record_unreadable: recordUnreadable,
   record_content_missing: recordContentMissing,
+  content_hold: contentHold,
+  content_hold_try_failed: contentHoldTryFailed,
+  content_hold_lifted: contentHoldLifted,
+  fact_unreadable: factUnreadable,
   run_record_passed: runRecordPassed,
   run_reloaded: runReloaded,
   payloads_read: payloadsRead,

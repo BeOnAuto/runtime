@@ -48,12 +48,23 @@ function lastTurnInWords(inputTokens: number | null): string {
 
 function adviceOn({ answeredBytes, lastInputTokens }: RejectionContext): string {
   return answeredBytes > 0
-    ? `; the tools of this run answered ${counted.format(answeredBytes)} bytes, which the model reads whole${lastTurnInWords(lastInputTokens)}, so ask the tools for a page of what they hold`
+    ? `; the tools of this run answered ${counted.format(answeredBytes)} bytes, which the model reads whole${lastTurnInWords(lastInputTokens)}, so ask the tools for a page of what they hold, or move each read into a lookup function, whose \`read\` keeps only the part the job needs`
     : '; shorten the prompt or the input of the reasoning function';
 }
 
 function unworkable(detail: string, spent: Spent = {}): Rejected {
   return Effect.fail(new Conflict({ detail, kind: 'unworkable', ...spent }));
+}
+
+const raiseTheLimit = 'raise config.max_output_tokens in the reasoning function definition';
+
+function whatToMoveOut({ calledAny, onlyRead }: Pick<ToolUse, 'calledAny' | 'onlyRead'>): string {
+  if (!calledAny) {
+    return `; ${raiseTheLimit}, or, where one answer holds several pieces of work, give each piece a function of its own`;
+  }
+  return onlyRead
+    ? `, after the run called tools that only read. Where the job always makes those reads, move each into a lookup function and hand this function what it read; or ${raiseTheLimit}`
+    : `, after the run called tools. Where the job always makes a call, move it out of this function, a read into a lookup function and an act into an interaction function; or ${raiseTheLimit}`;
 }
 
 type Repaired = NonNullable<FailedCall['repair']>;
@@ -81,7 +92,7 @@ function outputRefused(failed: FailedCall, context: RejectionContext): Rejected 
   const which = repair?.outcome === 'invalid' ? 'the corrected answer' : 'the answer';
   return finishReason === 'length'
     ? unworkable(
-        `${provider} stopped ${which} at max_output_tokens (${context.maxOutputTokens}) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition`,
+        `${provider} stopped ${which} at max_output_tokens (${context.maxOutputTokens}) before the JSON was complete${whatToMoveOut(context.use)}`,
         context.spent,
       )
     : unavailableAfter(context.use, repairedIn(detail, issues, repair), '; try again', context.spent);

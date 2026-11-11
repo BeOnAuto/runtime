@@ -54,7 +54,7 @@ describe('a run of a definition whose document its playbook keeps outside its fa
     ).toMatchObject({
       status: 'rejected',
       reason: 'conflict',
-      kind: 'unworkable',
+      because: 'function_document_missing',
       detail:
         "The reasoning function greet-reasoning at version 1 cannot run: its document is missing from the playbook's content; update it",
     });

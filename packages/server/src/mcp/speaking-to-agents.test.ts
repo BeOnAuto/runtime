@@ -195,7 +195,7 @@ describe('episode 8: asked what a gateway-style tool server offers, and then to 
     }));
 
     expect(String(prompt.messages[0]?.content.text)).toContain(
-      "When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+      "When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
     );
     expect(channelsIn(called).find(({ name }) => name === 'random')?.id).toBe('C08RNDM4Q2');
   });

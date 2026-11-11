@@ -27,14 +27,19 @@ function theFloor() {
   );
 }
 
-async function administered(statement: string): Promise<void> {
-  const client = new Client({ connectionString: server });
+async function queried(database: string, statement: string, values: readonly unknown[] = []): Promise<unknown[]> {
+  const client = new Client({ connectionString: database });
   await client.connect();
   try {
-    await client.query(statement);
+    const { rows } = await client.query<Readonly<Record<string, unknown>>>(statement, [...values]);
+    return rows;
   } finally {
     await client.end();
   }
+}
+
+async function administered(statement: string): Promise<void> {
+  await queried(server, statement);
 }
 
 async function aDatabase(): Promise<string> {
@@ -70,6 +75,64 @@ describe.skipIf(skipped)(`the layout of the database the server opens in Postgre
     ).toEqual(made);
   });
 });
+
+const place = {
+  playbook_key: 'playbook/acme/sales/',
+  cursor: 'cursor-of-the-place',
+  delivered: '["trigger_starts","close"]',
+  attempts: 3,
+  waiting: 0,
+  checked: '7',
+};
+
+const places = 'SELECT * FROM workflow_followed_playbooks';
+
+describe.skipIf(skipped)(
+  `the place a follower kept in a playbook, in a PostgreSQL database made at the floor${notice}`,
+  () => {
+    it('reads as it did once every step carried the database forward, with no hold of the follower', async () => {
+      const database = await aDatabase();
+      await aPostgreSQLDatabaseFrom(theFloor(), database);
+      await queried(
+        database,
+        'INSERT INTO workflow_followed_playbooks (playbook_key, cursor, delivered, attempts, waiting, checked) VALUES ($1, $2, $3, $4, $5, $6)',
+        Object.values(place),
+      );
+
+      const before = await queried(database, places);
+      const after = await queried(await openedOn(database), places);
+
+      expect([before, after]).toEqual([
+        [place],
+        [{ ...place, held_since: null, held_until: null, holds: 0, held_for: null }],
+      ]);
+    });
+  },
+);
+
+describe.skipIf(skipped)(
+  `a PostgreSQL database made at the floor whose first opening ended before the workflow host made its tables${notice}`,
+  () => {
+    it('is carried forward by every step all the same, each step making the table it changes, and opens as a new one', async () => {
+      const carried = await aDatabase();
+      await aPostgreSQLDatabaseFrom(theFloor(), carried);
+      const [{ tables }] = Schema.decodeUnknownSync(Schema.Tuple([Schema.Struct({ tables: Schema.String })]))(
+        await queried(
+          carried,
+          "SELECT string_agg(tablename, ', ') AS tables FROM pg_tables WHERE schemaname = current_schema() AND tablename LIKE 'workflow\\_%'",
+        ),
+      );
+      await queried(carried, `DROP TABLE ${tables}`);
+
+      const [made, carriedForward] = [
+        await structureOfThePostgreSQLDatabase(await openedOn(await aDatabase())),
+        await structureOfThePostgreSQLDatabase(await openedOn(carried)),
+      ];
+
+      expect(carriedForward).toEqual(made);
+    });
+  },
+);
 
 describe.skipIf(skipped)(`the PostgreSQL database made at the floor${notice}`, () => {
   it('is made as database-floor-postgresql.json describes it, the tables and indexes of the layout over those the store makes itself, in the layout of the floor', async () => {

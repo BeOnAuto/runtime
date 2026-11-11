@@ -18,7 +18,7 @@ const refusal: ReactionRefusal = {
   version: 3,
   refused: {
     count: 2,
-    reason: 'The run its cron schedule had due at 2026-10-01T09:00:00.000Z could not be started',
+    reason: 'The run scheduled for 2026-10-01T09:00:00.000Z by its cron schedule could not be started',
     minute: '2026-10-01T09:00:00.000Z',
     kind: 'credits_exhausted',
     because: 'free_daily_limit',

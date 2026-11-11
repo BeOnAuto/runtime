@@ -2,19 +2,22 @@ import { capitalized } from '@on.auto/phrasing';
 
 import { follows, inTurn, partLinesOf, runningAtOnce, serves, where, type Carried } from './start-guide.ts';
 
-type Built = (carried: Carried) => string | undefined;
+export interface Built {
+  readonly servedWhere: (carried: Carried) => boolean;
+  readonly text: (carried: Carried) => string;
+}
 
 export const everyDocumentCarriesItsPage =
   'Every function and workflow you write carries its `page`, which shows the person what each run achieved and what the runs add up to. Read the page guide with get_guide, and write each page in its document, as its format guide says under Its page.';
 
-const modelsOfAServer =
+export const modelsOfAServer =
   'A reasoning function needs a model the runtime can call. Hosted Auto supplies models. On a self-hosted runtime, the operator configures a model provider: https://on.auto/docs/self-host/configuration#models.';
 
-function sentences(...given: readonly (readonly string[])[]): string {
+export function sentences(...given: readonly (readonly string[])[]): string {
   return given.flat().join(' ');
 }
 
-function inSteps(steps: readonly string[]): readonly string[] {
+export function inSteps(steps: readonly string[]): readonly string[] {
   return steps.map((step, index) => `${index + 1}. ${step}`);
 }
 
@@ -227,6 +230,7 @@ function firstPlaybookText(carried: Carried): string {
   ].join('\n');
 }
 
-const firstPlaybook: Built = (carried) => (partLinesOf(carried).length === 0 ? undefined : firstPlaybookText(carried));
-
-export const builtRecipes: ReadonlyMap<string, Built> = new Map([['first-playbook', firstPlaybook]]);
+export const firstPlaybook: Built = {
+  servedWhere: (carried) => partLinesOf(carried).length > 0,
+  text: firstPlaybookText,
+};

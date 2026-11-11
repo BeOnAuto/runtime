@@ -1,6 +1,6 @@
 import { Effect, Function } from 'effect';
 
-import { followedPlaybooksOn } from '../src/follower/followed-playbooks.ts';
+import { followedPlaybooksOn, type FollowedPlaybooks } from '../src/follower/followed-playbooks.ts';
 import { passOf } from '../src/follower/playbook-pass.ts';
 import { playbookRecordsOf } from '../src/follower/playbook-records.ts';
 import {
@@ -61,21 +61,8 @@ function medianOf(times: readonly number[]): number {
   return times.toSorted((left, right) => left - right)[Math.floor(times.length / 2)] ?? 0;
 }
 
-export async function sweepCostOn(database: DatabaseSettings, playbooks: number, reacting: number): Promise<SweepCost> {
-  const opened = await hostDatabaseOpenedOn(database);
-  const followed = followedPlaybooksOn(opened);
-  await inTurn(playbooks, async (index) => {
-    await published(opened.store, { id: `e${index}`, type: 'com.measure.other' }, byAdmin, playbookKeyOf(index));
-    await Effect.runPromise(followed.follow(playbookKeyOf(index), null));
-  });
-  await inTurn(reacting, (index) =>
-    definitionRecorded(
-      opened.store,
-      { name: 'react', version: 1, triggers: [eventTrigger({ type: 'com.measure.wanted' })] },
-      playbookKeyOf(index),
-    ),
-  );
-  const pass = passOf({
+function passOver(opened: Awaited<ReturnType<typeof hostDatabaseOpenedOn>>, followed: FollowedPlaybooks) {
+  return passOf({
     database: opened,
     records: playbookRecordsOf(opened.store),
     playbooks: followed,
@@ -96,7 +83,27 @@ export async function sweepCostOn(database: DatabaseSettings, playbooks: number,
     factPayloadsOf: factPayloadsOn(opened),
     passedEarly: () => Effect.void,
     registered: [],
+    holdsUnreadable: false,
+    now: Date.now,
+    holdNotes: { tried: () => Effect.void, failed: () => Effect.void, lifted: () => Effect.void },
   });
+}
+
+export async function sweepCostOn(database: DatabaseSettings, playbooks: number, reacting: number): Promise<SweepCost> {
+  const opened = await hostDatabaseOpenedOn(database);
+  const followed = followedPlaybooksOn(opened);
+  await inTurn(playbooks, async (index) => {
+    await published(opened.store, { id: `e${index}`, type: 'com.measure.other' }, byAdmin, playbookKeyOf(index));
+    await Effect.runPromise(followed.follow(playbookKeyOf(index), null));
+  });
+  await inTurn(reacting, (index) =>
+    definitionRecorded(
+      opened.store,
+      { name: 'react', version: 1, triggers: [eventTrigger({ type: 'com.measure.wanted' })] },
+      playbookKeyOf(index),
+    ),
+  );
+  const pass = passOver(opened, followed);
   const sweeps = playbookSweepsOn(opened.store, followed);
   await Effect.runPromise(sweeps.started());
   const roundMs = await timed(sweptUntilEmpty(sweeps, pass));

@@ -91,7 +91,7 @@ function skipped({ database, refusals }: FiringParts, firing: Firing) {
       subscription.playbookKey,
       refusalOf(
         subscription,
-        `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} was skipped: the run its ${namedOf(firing)} started before still runs`,
+        `The run scheduled for ${dueAtOf(firing)} by its ${namedOf(firing)} was skipped: the run it started before is still running`,
       ),
     ),
     scheduleMovedOn(database, subscription, next, subscription.running),
@@ -105,7 +105,7 @@ function missedSaid({ refusals }: FiringParts, firing: Firing) {
         subscription.playbookKey,
         refusalOf(
           subscription,
-          `The runs its ${namedOf(firing)} had due from ${isoOf(subscription.nextDue)} to ${dueAtOf(firing)} came while the server was down, and only the latest ran`,
+          `The runs scheduled from ${isoOf(subscription.nextDue)} to ${dueAtOf(firing)} by its ${namedOf(firing)} came due while the server was down, and only the latest ran`,
         ),
       )
     : Effect.void;
@@ -150,7 +150,7 @@ function refused(parts: FiringParts, firing: Firing, failure: FailureDetail) {
       firing.subscription.playbookKey,
       refusalOf(
         firing.subscription,
-        `The run its ${namedOf(firing)} had due at ${dueAtOf(firing)} could not be started: ${failure.detail}`,
+        `The run scheduled for ${dueAtOf(firing)} by its ${namedOf(firing)} could not be started: ${failure.detail}`,
         failure,
       ),
     ),

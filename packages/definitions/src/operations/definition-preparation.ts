@@ -1,14 +1,14 @@
 import { Conflict } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import type { Capability } from '../capability/capability.ts';
+import type { Capability, PreparedDefinition } from '../capability/capability.ts';
 import { definitionResourceLabel } from '../capability/function-terminology.ts';
 import type { StoredDefinition } from '../registry/definition.ts';
 import { findDefinition } from '../registry/registry-lookup.ts';
 import { sourceToPrepare } from './definition-views.ts';
 import type { Rejection } from './issue-pointers.ts';
 import { loadRegistry, versionOf } from './registry-access.ts';
-import { documentToRun } from './unread-texts.ts';
+import { documentToRun, isDocumentLost, type DocumentLoss } from './unread-texts.ts';
 
 const refusalsToRun = {
   retired: (label: string, name: string) =>
@@ -64,3 +64,26 @@ export const preparedVersion = Effect.fnUntraced(function* (capability: Capabili
   const definition = yield* versionOf(capability.type, name, version);
   return { definition, prepared: yield* preparedOf(capability, definition) };
 });
+
+interface VersionPrepared {
+  readonly definition: VersionToRun;
+  readonly prepared: PreparedDefinition;
+}
+
+export type VersionToResume =
+  | { readonly toRun: VersionPrepared }
+  | { readonly lost: DocumentLoss; readonly definition: VersionToRun };
+
+const resumableVersion = Effect.fnUntraced(function* (capability: Capability, name: string, version: number) {
+  const resumable: VersionToResume = { toRun: yield* preparedVersion(capability, name, version) };
+  return resumable;
+});
+
+function lostVersionOf(definition: VersionToRun) {
+  return ({ detail, because }: DocumentLoss) =>
+    Effect.succeed<VersionToResume>({ lost: { detail, because }, definition });
+}
+
+export function versionToResume(capability: Capability, name: string, version: number) {
+  return Effect.catchIf(resumableVersion(capability, name, version), isDocumentLost, lostVersionOf({ name, version }));
+}

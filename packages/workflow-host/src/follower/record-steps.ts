@@ -13,17 +13,23 @@ import {
   type RecordConsumer,
 } from './consumers.ts';
 import { deliveredAll, type Mode } from './delivery-loop.ts';
-import { followedEventOf, type EventRead } from './followed-events.ts';
-import type { Progress } from './followed-playbooks.ts';
+import { followedEventOf, isDefinitionFact, type EventRead } from './followed-events.ts';
+import type { HeldFor, Progress } from './followed-playbooks.ts';
 import { relativeRecord } from './playbook-records.ts';
 import type { RunGate } from './run-gate.ts';
 
 export type PassEnd = 'caught_up' | 'more' | 'waiting';
 
+export interface Held {
+  readonly heldFor: HeldFor;
+  readonly record: Pick<RecordedEvent, 'id' | 'type'>;
+}
+
 export interface Step {
   readonly progress: Progress;
   readonly end?: PassEnd;
   readonly delivered?: boolean;
+  readonly held?: Held;
 }
 
 export interface StepParts {
@@ -35,6 +41,7 @@ export interface StepParts {
   readonly unreadable: (playbookKey: string, record: Pick<RecordedEvent, 'id' | 'type'>) => Effect.Effect<void>;
   readonly contentMissing: (playbookKey: string, record: Pick<RecordedEvent, 'id' | 'type'>) => Effect.Effect<void>;
   readonly passedEarly: (playbookKey: string, record: RecordedEvent, sweeps: number) => Effect.Effect<void>;
+  readonly holdsUnreadable: boolean;
 }
 
 export interface Stepping {
@@ -61,8 +68,27 @@ function passedOver(record: RecordedEvent): Progress {
   return { cursor: record.cursor, delivered: null, attempts: 0, waiting: false };
 }
 
-function unreadableStep(parts: StepParts, playbookKey: string, record: RecordedEvent): Effect.Effect<Step> {
+function heldAt(heldFor: HeldFor, { id, type }: Held['record']): Held {
+  return { heldFor, record: { id, type } };
+}
+
+function heldStep(progress: Progress, held: Held): Step {
+  return { progress: { ...progress, waiting: true }, end: 'waiting', held };
+}
+
+function passedAsUnreadable(parts: StepParts, playbookKey: string, record: RecordedEvent): Effect.Effect<Step> {
   return Effect.as(parts.unreadable(playbookKey, record), { progress: passedOver(record) });
+}
+
+function unreadableStep(
+  parts: StepParts,
+  stepping: Stepping,
+  progress: Progress,
+  record: RecordedEvent,
+): Effect.Effect<Step> {
+  return parts.holdsUnreadable
+    ? Effect.succeed(heldStep(progress, heldAt('unreadable', record)))
+    : passedAsUnreadable(parts, stepping.playbookKey, record);
 }
 
 function runRecordStep(parts: StepParts, stepping: Stepping, progress: Progress, record: RecordedEvent) {
@@ -142,7 +168,7 @@ function afterTheDeliveries(
 ): (delivered: { readonly progress: Progress; readonly made: boolean }) => Effect.Effect<Step> {
   return ({ progress, made }) => {
     if (content === 'held') {
-      return Effect.succeed({ progress: { ...progress, waiting: true }, end: 'waiting', delivered: made });
+      return Effect.succeed({ ...heldStep(progress, heldAt('content', record)), delivered: made });
     }
     const passed: Step = { progress: passedOver(record), delivered: made };
     return content === 'missing'
@@ -160,18 +186,20 @@ function deliveredStep(
   return Effect.flatMap(readingsOf(parts, stepping, record), ({ readings, content }) => {
     const consumers = readings.filter((reading) => reading !== 'unreadable');
     if (consumers.length < readings.length) {
-      return unreadableStep(parts, stepping.playbookKey, record);
+      return unreadableStep(parts, stepping, progress, record);
     }
     if (consumers.length === 0 && content === 'read') {
       return Effect.succeed({ progress: passedOver(record) });
     }
     return deliveredAll(consumers, progress, stepping.mode).pipe(
       Effect.withSpan(`follow ${record.type}`, followSpanOf(record)),
-      Effect.flatMap(({ made, ...delivered }) =>
-        delivered.end === undefined
-          ? afterTheDeliveries(parts, stepping, record, content)({ progress: delivered.progress, made })
-          : Effect.succeed({ ...delivered, delivered: made }),
-      ),
+      Effect.flatMap(({ made, held, ...delivered }) => {
+        if (delivered.end !== undefined) {
+          const step: Step = { ...delivered, delivered: made };
+          return Effect.succeed(held === undefined ? step : { ...step, held: heldAt(held, record) });
+        }
+        return afterTheDeliveries(parts, stepping, record, content)({ progress: delivered.progress, made });
+      }),
     );
   });
 }
@@ -193,11 +221,14 @@ export function stepOf(
       );
   if (record.stream === `${playbookKey}definitions/${parts.definitionType}`) {
     const readAgain: Effect.Effect<Step> = Effect.succeed({ progress, end: 'more' });
-    return Effect.flatMap(parts.applyDefinitionRecord(playbookKey, record), (applied) =>
-      applied === 'unreadable'
-        ? unreadableStep(parts, playbookKey, record)
-        : Effect.flatMap(stepping.wantsMore(), (more) => (more ? readAgain : step)),
-    );
+    return Effect.flatMap(parts.applyDefinitionRecord(playbookKey, record), (applied) => {
+      if (applied === 'applied') {
+        return Effect.flatMap(stepping.wantsMore(), (more) => (more ? readAgain : step));
+      }
+      return isDefinitionFact(record.type)
+        ? unreadableStep(parts, stepping, progress, record)
+        : passedAsUnreadable(parts, playbookKey, record);
+    });
   }
   return step;
 }

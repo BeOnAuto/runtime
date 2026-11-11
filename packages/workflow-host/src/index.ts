@@ -45,7 +45,7 @@ export {
   type Statement,
   type StatementValue,
 } from '@on.auto/ledger';
-export { hostLayoutSteps } from './database/host-tables.ts';
+export { hostLayoutSteps } from './database/host-layout-steps.ts';
 export type { PageEvent, ReadPage } from './pages/page-events.ts';
 export { keptDefinitionsOf } from './projector/playbook-definitions.ts';
 export type {

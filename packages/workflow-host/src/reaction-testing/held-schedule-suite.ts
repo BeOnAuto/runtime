@@ -224,7 +224,7 @@ function heldPastSeveralDueTimes(settingsOf: SettingsOf) {
       [startedAt(15)],
       [
         {
-          reason: `The runs its every schedule had due from ${isoAt(10)} to ${isoAt(15)} came while the server was down, and only the latest ran`,
+          reason: `The runs scheduled from ${isoAt(10)} to ${isoAt(15)} by its every schedule came due while the server was down, and only the latest ran`,
           kind: null,
           trigger_kind: 'every',
           count: 2,

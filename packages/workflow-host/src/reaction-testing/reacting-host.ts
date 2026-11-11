@@ -29,6 +29,19 @@ export interface ReactingOptions {
   readonly emit?: RecordedReactions['options']['emit'];
   readonly appended?: RecordedReactions['options']['appended'];
   readonly consumers?: HostOptions['consumers'];
+  readonly context?: HostOptions['context'];
+}
+
+function givenOptionsOf({
+  clock,
+  consumers,
+  context,
+}: ReactingOptions): Partial<Pick<HostOptions, 'clock' | 'consumers' | 'context'>> {
+  return {
+    ...(clock === undefined ? {} : { clock }),
+    ...(consumers === undefined ? {} : { consumers }),
+    ...(context === undefined ? {} : { context }),
+  };
 }
 
 export async function reactingHost(options: ReactingOptions = {}): Promise<ReactingHost> {
@@ -50,8 +63,7 @@ export async function reactingHost(options: ReactingOptions = {}): Promise<React
       ...(options.appended === undefined ? {} : { appended: options.appended }),
     },
     waiting: recordedWaiting().options,
-    ...(options.clock === undefined ? {} : { clock: options.clock }),
-    ...(options.consumers === undefined ? {} : { consumers: options.consumers }),
+    ...givenOptionsOf(options),
   });
   onTestFinished(() => host.stop());
   const database = await openedOn(settings);

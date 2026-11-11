@@ -1,17 +1,20 @@
 import type { StreamSignal } from '@on.auto/ledger';
 import { Effect } from 'effect';
 
+import { failedTryRetryMs, type HeldTries } from '../holds/playbook-holds.ts';
 import {
   oneWakeAtATime,
+  type FailedRounds,
   type HostWakeUp,
   type NextWake,
   type WakeSignal,
   type WakeUpParts,
+  type Woken,
 } from '../loop/host-wake-up.ts';
 import type { PlaybookSweeps } from '../sweeps/playbook-sweeps.ts';
 import { wakesOf, type Wakes } from '../sweeps/wakes.ts';
 import type { Mode } from './delivery-loop.ts';
-import type { FollowedPlaybook } from './followed-playbooks.ts';
+import type { FollowedPlaybook, HeldPlaybooks } from './followed-playbooks.ts';
 import type { Discovery } from './playbook-discovery.ts';
 import type { PassEnd } from './record-steps.ts';
 
@@ -27,6 +30,8 @@ export interface FollowerWork extends Pick<WakeUpParts, 'clock' | 'sweepEveryMs'
   readonly sweeps: PlaybookSweeps;
   readonly upkeep: Upkeep;
   readonly appended: StreamSignal;
+  readonly holds: HeldTries;
+  readonly rounds: FailedRounds;
 }
 
 interface Passing {
@@ -103,14 +108,69 @@ function swept(parts: FollowerWork, wakes: Wakes): Effect.Effect<boolean> {
   });
 }
 
-function roundOf(parts: FollowerWork, wakes: Wakes, sweep: boolean): Effect.Effect<boolean> {
+const heldPlaybooksInARound = 64;
+
+function earliestOf(one: number | null, other: number | null): number | null {
+  return one === null ? other : Math.min(one, other ?? one);
+}
+
+function heldPassed(parts: FollowerWork, wakes: Wakes, now: number): Effect.Effect<number | null> {
+  return Effect.gen(function* () {
+    const held = yield* parts.holds.heldAt(now, heldPlaybooksInARound);
+    if (held.due.length === 0) {
+      return held.nextAt;
+    }
+    yield* Effect.forEach(
+      held.due,
+      (known) => passedOnce(parts, wakes, { playbookKey: known.playbookKey, mode: 'sweep', known }),
+      { discard: true },
+    );
+    const after = yield* parts.holds.heldAt(now, heldPlaybooksInARound);
+    return yield* retriedAfter(parts, { tried: held, after, now });
+  });
+}
+
+interface Tries {
+  readonly tried: HeldPlaybooks;
+  readonly after: HeldPlaybooks;
+  readonly now: number;
+}
+
+function retriedAfter(parts: FollowerWork, { tried, after, now }: Tries): Effect.Effect<number | null> {
+  const triedNow = new Set(tried.due.map(({ playbookKey }) => playbookKey));
+  const failed = after.due.filter(({ playbookKey }) => triedNow.has(playbookKey));
+  const retryAt = now + failedTryRetryMs;
+  const moreDue = failed.length < after.due.length || after.due.length >= heldPlaybooksInARound;
+  return Effect.as(
+    Effect.forEach(failed, (held) => parts.holds.failed(held, { at: now, retryAt }), { discard: true }),
+    moreDue ? now : earliestOf(after.nextAt, failed.length === 0 ? null : retryAt),
+  );
+}
+
+interface Round {
+  readonly owed: boolean;
+  readonly heldUntil: number | null;
+}
+
+function roundOf(parts: FollowerWork, wakes: Wakes, { now, sweep }: Woken): Effect.Effect<Round> {
   return Effect.gen(function* () {
     yield* parts.upkeep.fireSchedules();
     yield* signalled(parts, wakes);
-    return sweep ? yield* swept(parts, wakes) : false;
+    const owed = sweep ? yield* swept(parts, wakes) : false;
+    const heldUntil = yield* heldPassed(parts, wakes, now);
+    yield* parts.rounds.succeeded();
+    return { owed, heldUntil };
   }).pipe(
     Effect.catchCause((cause) =>
-      Effect.as(parts.trouble('The follower of the playbooks failed; it tries again', cause), false),
+      Effect.flatMap(parts.rounds.failed(), (retryAfterMs) =>
+        Effect.as(
+          parts.trouble(
+            'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour',
+            cause,
+          ),
+          { owed: false, heldUntil: now + retryAfterMs },
+        ),
+      ),
     ),
   );
 }
@@ -143,16 +203,20 @@ function nextScheduleOf({ upkeep, trouble }: FollowerWork): Effect.Effect<number
     );
 }
 
-function nextWakeOf(parts: FollowerWork, wakes: Wakes, sweepOwed: boolean, now: number): Effect.Effect<NextWake> {
-  if (wakes.anyWoken() || sweepOwed) {
+function nextWakeOf(parts: FollowerWork, wakes: Wakes, round: Round, now: number): Effect.Effect<NextWake> {
+  if (wakes.anyWoken() || round.owed) {
     return Effect.succeed({ nextDueAt: now });
   }
-  return Effect.map(nextScheduleOf(parts), (nextDueAt) => ({ nextDueAt }));
+  return Effect.map(nextScheduleOf(parts), (nextDueAt) => ({ nextDueAt: earliestOf(nextDueAt, round.heldUntil) }));
 }
 
 export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostWakeUp {
   const wakes = wakesOf();
-  const state = { started: false, tried: false, sweepOwed: false };
+  const state: { started: boolean; tried: boolean; round: Round } = {
+    started: false,
+    tried: false,
+    round: { owed: false, heldUntil: null },
+  };
   const stopListening = parts.appended.listen((stream) => {
     wakes.woken(stream);
     signal.raised();
@@ -163,7 +227,7 @@ export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostW
       : Effect.map(startedOf(parts), (started) => {
           state.tried = true;
           state.started = started;
-          state.sweepOwed = started;
+          state.round = { ...state.round, owed: started };
         });
   return {
     wakeUp: oneWakeAtATime(({ now, sweep }) =>
@@ -171,9 +235,12 @@ export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostW
         Effect.andThen(
           Effect.suspend(() =>
             state.started
-              ? Effect.map(Effect.uninterruptible(roundOf(parts, wakes, sweep || state.sweepOwed)), (owed) => {
-                  state.sweepOwed = owed;
-                })
+              ? Effect.map(
+                  Effect.uninterruptible(roundOf(parts, wakes, { now, sweep: sweep || state.round.owed })),
+                  (round) => {
+                    state.round = round;
+                  },
+                )
               : Effect.void,
           ),
         ),
@@ -183,7 +250,7 @@ export function followerWakeUpOf(parts: FollowerWork, signal: WakeSignal): HostW
           }),
         ),
         Effect.andThen(() =>
-          state.started ? nextWakeOf(parts, wakes, state.sweepOwed, now) : Effect.succeed({ nextDueAt: null }),
+          state.started ? nextWakeOf(parts, wakes, state.round, now) : Effect.succeed({ nextDueAt: null }),
         ),
       ),
     ),

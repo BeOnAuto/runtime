@@ -162,7 +162,7 @@ const allowances: readonly Allowance[] = [
       'packages/server/src/database/database-floor-postgresql.json',
       'packages/server/src/database/database-floor-sqlite.json',
       'packages/workflow-host/README.md',
-      'packages/workflow-host/src/database/host-tables.ts',
+      'packages/workflow-host/src/database/host-layout-steps.ts',
     ],
   },
   {

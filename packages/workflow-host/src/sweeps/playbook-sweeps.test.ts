@@ -21,7 +21,7 @@ function playbookNamed(index: number): string {
 }
 
 function followedPlaybook(playbookKey: string, waiting: boolean): FollowedPlaybook {
-  return { playbookKey, cursor: null, delivered: null, attempts: waiting ? 1 : 0, waiting };
+  return { playbookKey, cursor: null, delivered: null, attempts: waiting ? 1 : 0, waiting, hold: undefined };
 }
 
 function playbooksNumbered(count: number, waiting: boolean): readonly FollowedPlaybook[] {
@@ -33,6 +33,9 @@ function followedOf({ waiting = [], followed = [] }: Ledger): FollowedPlaybooks 
     follow: () => Effect.void,
     load: () => Effect.die(new Error('The sweeps load no playbook')),
     save: () => Effect.void,
+    held: () => Effect.void,
+    lifted: () => Effect.void,
+    heldAt: () => Effect.succeed({ due: [], nextAt: null }),
     waitingForASweep: (limit) => Effect.succeed(waiting.slice(0, limit)),
     following: (after, limit) =>
       Effect.succeed(followed.filter(({ playbookKey }) => playbookKey > after).slice(0, limit)),

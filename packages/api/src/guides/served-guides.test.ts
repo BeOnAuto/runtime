@@ -205,11 +205,11 @@ describe('the recipes of a server', () => {
 });
 
 describe('the recipes that give a playbook tools', () => {
-  it('call a tool to learn what it answers, and never make a function to look, within the bound of a recipe', () => {
+  it('call a tool to learn what it answers, and never save a function only to see what it answers, within the bound of a recipe', () => {
     const texts = recipeTextsOf(served);
 
     expect(String(texts['give-tools'])).toContain(
-      "3. To learn what a tool answers, call it with the arguments its input_schema takes and read its `text`: that is what the function's model will see. Never make a function to look. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a prompt needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
+      "3. To learn what a tool answers, call it yourself with the arguments its input_schema takes and read its `text`: that is what a run of a function will get. Never save a function only to see what a tool answers. Call a tool whose `mark` is reads with query_connection. A tool whose `mark` is acts or unmarked may change something, so call it with execute_connection, and only once the person agrees. When a function needs an id, such as a channel's, call the tool that lists them and take the id from its answer, confirming the choice with the person.",
     );
     expect(String(texts['connect-a-service'])).toContain(
       'tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.',
@@ -218,7 +218,7 @@ describe('the recipes that give a playbook tools', () => {
       'For a part that reads from a service or acts on one, follow the give-tools recipe. Where that service is not connected yet, connect it with the connect-a-service recipe.',
     );
     expect([byteLengthOf(String(texts['give-tools'])), byteLengthOf(String(texts['first-playbook']))]).toEqual([
-      2716, 5577,
+      3013, 5577,
     ]);
   });
 });
@@ -228,8 +228,9 @@ describe('the recipes of a server that serves interaction functions', () => {
     const texts = recipeTextsOf(servedWithInteraction);
 
     expect(texts['give-tools']).toContain(
-      "4. Ask the person what the function should do with the tools, and which of them it needs. To act on a system, write an interaction function that calls the connection's tool with `call` instead: it answers at once and spends no model call, and its guide says how to write it from the answer execute_connection gave. Keep a reasoning function's `tools` for judgement over what the tools answer. To ask a person and take their answer, write an interaction function too: ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`; the interaction-function guide says how.\n",
+      "4. Ask the person what the playbook should do with the tools, and give each use its function:\n   - an act on a system, or a read by a tool that is not marked reads: an interaction function that calls the tool with `call`, written from the answer execute_connection gave.\n   - a question to a person: an interaction function too. Ask once where they want to be asked, then name in `deliver` the connection's tool that sends the request and in `replies` the one that reads the replies, or write `deliver: agent`.\n",
     );
+    expect(recipeTextsOf(served)['give-tools']).not.toContain('interaction');
     expect(texts['first-playbook']).toContain(
       '   - it asks a person and takes their answer, or has a service act: an interaction function\n',
     );
@@ -238,8 +239,8 @@ describe('the recipes of a server that serves interaction functions', () => {
       bytesOf(texts, 'first-playbook', 'give-tools', 'schedule'),
       bytesOf(recipeTextsOf(served), 'first-playbook', 'give-tools', 'schedule'),
     ]).toEqual([
-      [6178, 3316, 3564],
-      [5577, 2716, 3564],
+      [6178, 3661, 3564],
+      [5577, 3013, 3564],
     ]);
   });
 });

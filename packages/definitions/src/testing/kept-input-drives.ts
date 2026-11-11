@@ -3,6 +3,7 @@ import { Effect, Logger, type Schema } from 'effect';
 
 import { acmeAdmin } from './callers.ts';
 import { quietMs } from './capabilities/resumer.ts';
+import { endedByAnotherOnItsLogLine } from './ended-meanwhile.ts';
 import { toPlaybook } from './harness.ts';
 import { watchedStore } from './kept-payloads.ts';
 import { leftWithItsInputKept } from './kept-resumed-runs.ts';
@@ -29,5 +30,7 @@ export async function drivenWithItsInputKept(input: Schema.Json, held: boolean) 
     const settled = await started.run(settle(call, cancelling.signal), at);
     return { settled, logged };
   };
-  return { ...started, watched, driven, drivenCancelledWhenLogged };
+  const drivenEndedByAnotherMeanwhile = () =>
+    started.run(started.dispatch(drive, request).pipe(Effect.provide(endedByAnotherOnItsLogLine(started))), at);
+  return { ...started, watched, driven, drivenCancelledWhenLogged, drivenEndedByAnotherMeanwhile };
 }

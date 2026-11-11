@@ -51,17 +51,17 @@ function giveToolsOf({ recipes }: GuideShelf): string {
 }
 
 describe('the recipe that gives a playbook tools, on a server that serves lookup functions', () => {
-  it('sends what a tool marked reads returns to a lookup function, before what acts to an interaction function', () => {
+  it('sends a read the job always makes to a lookup function, before an act to an interaction function', () => {
     expect(giveToolsOf(servedWithLookup)).toContain(
-      'and which of them it needs. To read what a tool marked reads returns, write a lookup function instead. To act on a system, write an interaction function',
+      "4. Ask the person what the playbook should do with the tools, and give each use its function:\n   - a read the job always makes, by a tool marked reads: a lookup function, whose `call` names the `server` and the `tool`, with its arguments in `with`, written from the run's input. One lookup function for each read.\n   - an act on a system,",
     );
     expect(giveToolsOf(servedWithoutLookup)).not.toContain('lookup');
   });
 
-  it('stays within the bound of a recipe with every addition, at 3,391 bytes', () => {
+  it('stays within the bound of a recipe, at 4,094 bytes', () => {
     const bytes = new TextEncoder().encode(giveToolsOf(servedWithLookup)).byteLength;
 
-    expect([bytes, bytes <= mostRecipeBytes]).toEqual([3391, true]);
+    expect([bytes, bytes <= mostRecipeBytes]).toEqual([4094, true]);
   });
 });
 

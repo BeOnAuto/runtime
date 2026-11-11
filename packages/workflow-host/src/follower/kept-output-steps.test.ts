@@ -104,6 +104,7 @@ function partsSeeing(): { readonly parts: StepParts; readonly seen: () => Seen }
         seen.missing.push(id);
       }),
     passedEarly: () => Effect.void,
+    holdsUnreadable: false,
   };
   return { parts, seen: () => seen };
 }
@@ -147,6 +148,7 @@ describe('a run fact whose output its playbook keeps outside, while the content 
       progress: { cursor: null, delivered: JSON.stringify(['child_endings', 'call']), attempts: 0, waiting: true },
       end: 'waiting',
       delivered: true,
+      held: { heldFor: 'content', record: { id: 'record-1', type: 'run_succeeded' } },
     });
     expect(read.progress).toEqual({ cursor: 'cursor-1', delivered: null, attempts: 0, waiting: false });
     expect(seen()).toEqual({ endings: ['record-1'], events: [{ output }], missing: [] });

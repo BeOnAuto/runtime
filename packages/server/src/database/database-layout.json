@@ -1,5 +1,5 @@
 {
-  "layout": 18,
+  "layout": 19,
   "catalog": [
     {
       "name": "activity_1",
@@ -270,16 +270,24 @@
       "sql": "CREATE INDEX workflow_due_by_time ON workflow_due (next_due_at) WHERE next_due_at IS NOT NULL"
     },
     {
+      "name": "workflow_failed_rounds",
+      "sql": "CREATE TABLE workflow_failed_rounds (name TEXT NOT NULL PRIMARY KEY, rounds INTEGER NOT NULL)"
+    },
+    {
       "name": "workflow_followed_orgs",
       "sql": "CREATE TABLE workflow_followed_orgs (stream_id TEXT NOT NULL PRIMARY KEY, position BIGINT NOT NULL)"
     },
     {
       "name": "workflow_followed_playbooks",
-      "sql": "CREATE TABLE workflow_followed_playbooks (playbook_key TEXT NOT NULL PRIMARY KEY, cursor TEXT, delivered TEXT, attempts INTEGER NOT NULL DEFAULT 0, waiting INTEGER NOT NULL DEFAULT 0, checked BIGINT NOT NULL DEFAULT 0)"
+      "sql": "CREATE TABLE workflow_followed_playbooks (playbook_key TEXT NOT NULL PRIMARY KEY, cursor TEXT, delivered TEXT, attempts INTEGER NOT NULL DEFAULT 0, waiting INTEGER NOT NULL DEFAULT 0, checked BIGINT NOT NULL DEFAULT 0, held_since BIGINT, held_until BIGINT, holds INTEGER NOT NULL DEFAULT 0, held_for TEXT)"
     },
     {
       "name": "workflow_followed_playbooks_by_check",
       "sql": "CREATE INDEX workflow_followed_playbooks_by_check ON workflow_followed_playbooks (waiting, checked)"
+    },
+    {
+      "name": "workflow_followed_playbooks_held",
+      "sql": "CREATE INDEX workflow_followed_playbooks_held ON workflow_followed_playbooks (held_until) WHERE held_until IS NOT NULL"
     },
     {
       "name": "workflow_followed_scans",

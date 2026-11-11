@@ -34,7 +34,8 @@ export const outlines: readonly RecipeOutline[] = [
   {
     name: 'give-tools',
     title: 'Give the playbook tools',
-    description: 'Gives a reasoning function the tools of a tool server the playbook may use.',
+    description:
+      "Puts the tools of a connected service to work: a lookup function for a read, an interaction function for an act or a question, and a reasoning function's tools only where its model must choose.",
     arguments: [
       {
         name: 'server',
@@ -42,7 +43,6 @@ export const outlines: readonly RecipeOutline[] = [
         required: false,
       },
     ],
-    formatGuide: 'reasoning-function',
     calls: [
       'search',
       'introspect',

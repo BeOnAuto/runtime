@@ -15,6 +15,12 @@ const notice =
   server === '' ? ', skipped: set LEDGER_TEST_POSTGRESQL_URL to the URL of a PostgreSQL server to run it' : '';
 
 const putAtLayout17 = [
+  'DROP TABLE workflow_failed_rounds',
+  'DROP INDEX workflow_followed_playbooks_held',
+  'ALTER TABLE workflow_followed_playbooks DROP COLUMN held_since',
+  'ALTER TABLE workflow_followed_playbooks DROP COLUMN held_until',
+  'ALTER TABLE workflow_followed_playbooks DROP COLUMN holds',
+  'ALTER TABLE workflow_followed_playbooks DROP COLUMN held_for',
   'DROP TABLE workflow_reaction_refusals',
   'CREATE TABLE workflow_reaction_refusals (playbook_key TEXT NOT NULL, workflow TEXT NOT NULL, version INTEGER NOT NULL, minute BIGINT NOT NULL, count INTEGER NOT NULL, reason TEXT NOT NULL, recorded INTEGER NOT NULL DEFAULT 0, kind TEXT, because TEXT, trigger_kind TEXT, trigger_reference TEXT, PRIMARY KEY (playbook_key, workflow))',
   'ALTER TABLE workflow_subscriptions DROP COLUMN held_due',
@@ -94,7 +100,7 @@ async function servedOnPostgreSQL(database: string): Promise<void> {
   await opened.stop();
 }
 
-describe('the refusals of a SQLite database of layout 17, carried to 18 by the server as it opens', () => {
+describe('the refusals of a SQLite database of layout 17, carried forward by the server as it opens', () => {
   it('keep every row, each under the trigger it named, and a row with no trigger under an empty one', async () => {
     const ledger = temporaryLedger();
     onTestFinished(ledger.remove);
@@ -104,15 +110,15 @@ describe('the refusals of a SQLite database of layout 17, carried to 18 by the s
     atSeventeen.close();
 
     await (await startServer(loopbackSettingsOver(ledger), compositionRoot)).stop();
-    const atEighteen = new DatabaseSync(ledger.fileName, { readOnly: true });
-    const rows = atEighteen.prepare(refusalsRead).all();
-    atEighteen.close();
+    const carriedForward = new DatabaseSync(ledger.fileName, { readOnly: true });
+    const rows = carriedForward.prepare(refusalsRead).all();
+    carriedForward.close();
 
     expect(rows).toEqual(carried);
   });
 });
 
-describe.skipIf(server === '')(`the refusals of a PostgreSQL database of layout 17, carried to 18${notice}`, () => {
+describe.skipIf(server === '')(`the refusals of a PostgreSQL database of layout 17, carried forward${notice}`, () => {
   it('keep every row, each under the trigger it named, and a row with no trigger under an empty one', async () => {
     const database = await aPostgreSQLDatabase();
     await servedOnPostgreSQL(database);

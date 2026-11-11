@@ -18,7 +18,7 @@ describe('the recipes whose function calls a model', () => {
     const firstPlaybook = await recipeCarrying('first-playbook', 'reasoning-function', 'workflow');
 
     expect(firstPlaybook?.text).toContain(`Give that link to the person.${modelSentence}`);
-    expect(giveTools?.text).toContain(`before you write one.${modelSentence}`);
+    expect(giveTools?.text).toContain(`before you write a function of that type.${modelSentence}`);
   });
 });
 
@@ -111,11 +111,11 @@ describe('the give-tools recipe', () => {
     );
   });
 
-  it('ends, where the workflow guide is carried, with the workflow whose steps are the functions, run and its answer told', async () => {
+  it('ends, where the workflow guide is carried, with the workflow whose steps are the functions, the reads first, run and its answer told', async () => {
     const giveTools = await recipeCarrying('give-tools', 'reasoning-function', 'workflow');
 
     expect(giveTools?.text).toMatch(
-      /the function can call only the tools it names\.\n8\. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
+      /a function can call only the tools it names\.\n8\. Then, with the workflow guide, write or change the workflow that owns the job the person wants done again, whose steps are the functions: the steps that read come first, and each later step is handed what the steps before it answered\. Save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
     );
   });
 
@@ -123,13 +123,11 @@ describe('the give-tools recipe', () => {
     const giveTools = await recipeCarrying('give-tools', 'reasoning-function', 'workflow', 'page');
 
     expect(giveTools?.text).toContain(
-      `before you write one. ${everyDocumentCarriesItsPage} A reasoning function needs`,
+      `before you write a function of that type. ${everyDocumentCarriesItsPage} A reasoning function needs`,
     );
     expect(giveTools?.text).toContain(
-      'in the format of the reasoning-function guide, with its `page` in the same document, show it to the person, and save it',
+      "5. Write each function in the format of its type's guide, with its `page` in the same document, show it to the person",
     );
-    expect(giveTools?.text).toMatch(
-      /whose steps are the functions, with its `page` in the same document; save it once they agree, run it, and tell the person what it answered and what they can do next\.\n$/u,
-    );
+    expect(giveTools?.text).toContain('whose steps are the functions, with its `page` in the same document: the steps');
   });
 });

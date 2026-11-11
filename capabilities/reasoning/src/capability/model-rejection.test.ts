@@ -118,7 +118,7 @@ describe('a JSON answer that is not usable', () => {
       Exit.fail(
         new Conflict({
           detail:
-            'openai stopped the answer at max_output_tokens (200) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition',
+            'openai stopped the answer at max_output_tokens (200) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition, or, where one answer holds several pieces of work, give each piece a function of its own',
           kind: 'unworkable',
           ...spentOnTheCall,
         }),

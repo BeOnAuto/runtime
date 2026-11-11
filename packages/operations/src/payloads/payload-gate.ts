@@ -12,8 +12,8 @@ export interface PayloadGate {
 
 export const noPayloadGate: PayloadGate = { through: (call) => call };
 
-export function tryAgainAfter(failures: number, factor: number): number {
-  return Math.min(mostTryAgainMs, firstTryAgainMs * 2 ** (failures - 1)) * (0.5 + factor / 2);
+export function tryAgainAfter(failures: number, factor: number, most = mostTryAgainMs): number {
+  return Math.min(most, firstTryAgainMs * 2 ** (failures - 1)) * (0.5 + factor / 2);
 }
 
 export function payloadGateOf(): PayloadGate {

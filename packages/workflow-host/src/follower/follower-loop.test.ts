@@ -2,6 +2,7 @@ import { streamSignalOf } from '@on.auto/ledger';
 import { Effect, Function } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { firstRoundRetryMs } from '../loop/failed-rounds.ts';
 import { systemClock, type HostClock } from '../loop/host-clock.ts';
 import type { Sweep } from '../sweeps/playbook-sweeps.ts';
 import { until } from '../testing/until.ts';
@@ -9,6 +10,9 @@ import { startFollower } from './follower-loop.ts';
 import type { PassEnd } from './record-steps.ts';
 
 const anHour = 3_600_000;
+
+const failedRound =
+  'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour';
 
 const nothingToSweep: Sweep = { registries: [], playbooks: [], again: false };
 
@@ -93,6 +97,11 @@ function inTurn<A>(items: readonly A[], after: A): () => A {
   };
 }
 
+const nothingHeldAndRoundsAMinuteApart = {
+  holds: { heldAt: () => Effect.succeed({ due: [], nextAt: null }), failed: () => Effect.void },
+  rounds: { failed: () => Effect.succeed(firstRoundRetryMs), succeeded: () => Effect.void },
+};
+
 function followerWith(following: Following = {}): Watched {
   const log: string[] = [];
   const logged = (line: string) =>
@@ -134,6 +143,7 @@ function followerWith(following: Following = {}): Watched {
       nextScheduleAt: failingFirst(following.schedulesFailing ?? 0, Effect.succeed(null)),
     },
     appended,
+    ...nothingHeldAndRoundsAMinuteApart,
     clock: pace,
     pace,
     sweepEveryMs: following.sweepEveryMs ?? anHour,
@@ -220,12 +230,7 @@ describe('the follower of the playbooks, when a read fails', () => {
 
     const log = await logReaching(watched, 4);
 
-    expect(log.slice(0, 4)).toEqual([
-      'anchored',
-      'start',
-      'The follower of the playbooks failed; it tries again',
-      'sweep',
-    ]);
+    expect(log.slice(0, 4)).toEqual(['anchored', 'start', failedRound, 'sweep']);
   });
 });
 
@@ -275,14 +280,11 @@ describe('the follower of the playbooks, between its sweeps', () => {
     ]);
   });
 
-  it('leaves the sweep to the next interval after a round that failed before its sweep, rather than sweeping again at once', async () => {
+  it('wakes again within a minute after a round that failed before its sweep, leaving the sweep to the next interval rather than sweeping again at once', async () => {
     const watched = followerWith({ firesFailing: 1, startsAt: 1_000_000 });
 
     const asked = await until(watched.asked, (sleeps) => sleeps.length > 0);
 
-    expect([asked, watched.log()]).toEqual([
-      [anHour],
-      ['anchored', 'start', 'The follower of the playbooks failed; it tries again'],
-    ]);
+    expect([asked, watched.log()]).toEqual([[firstRoundRetryMs], ['anchored', 'start', failedRound]]);
   });
 });

@@ -16,6 +16,7 @@ const parts: StepParts = {
   unreadable: () => Effect.void,
   contentMissing: () => Effect.void,
   passedEarly: () => Effect.void,
+  holdsUnreadable: false,
   registered: [],
   calls: [],
 };

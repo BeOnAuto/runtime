@@ -122,6 +122,13 @@ export async function passingOn(over: (database: HostDatabase) => PassedOver) {
     contentMissing: Function.constant(Effect.void),
     factPayloadsOf: factPayloadsOn(opened),
     registered: [],
+    holdsUnreadable: false,
+    now: Date.now,
+    holdNotes: {
+      tried: Function.constant(Effect.void),
+      failed: Function.constant(Effect.void),
+      lifted: Function.constant(Effect.void),
+    },
     ...over(opened),
   });
   return { database: opened, playbooks, pass };

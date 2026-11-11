@@ -190,7 +190,9 @@ describe('episode 10: asked to put the replies of a thread into the weekly summa
     expect(sentenceNaming(meetings.surfaces.start, 'it reads what a connected service holds')).toContain(
       'or what earlier runs of the playbook produced: a lookup function',
     );
-    expect(seen.recipe).toContain('To read what a tool marked reads returns, write a lookup function instead.');
+    expect(seen.recipe).toContain(
+      'A read the job always makes, by a tool marked reads, is a lookup function: one call and no model.',
+    );
     expect(seen.called.structuredContent).toMatchObject({
       outcome: 'result',
       text: listingTheMessages,

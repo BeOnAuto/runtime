@@ -8,6 +8,7 @@ export type Mode = 'signal' | 'sweep';
 interface Delivered {
   readonly progress: Progress;
   readonly end?: 'waiting' | 'more';
+  readonly held?: 'content';
 }
 
 interface Resumption {
@@ -46,8 +47,11 @@ function deliveredOne(
     if (Result.isSuccess(done)) {
       return { progress: { ...progress, delivered: textOf(consumer.name, delivery.key), attempts: 0 } };
     }
-    const counted = mode === 'sweep' && done.failure.held === undefined;
-    const attempts = counted ? progress.attempts + 1 : progress.attempts;
+    const { held } = done.failure;
+    if (held !== undefined) {
+      return { progress: { ...progress, waiting: true }, end: 'waiting', held };
+    }
+    const attempts = mode === 'sweep' ? progress.attempts + 1 : progress.attempts;
     if (attempts < consumer.skippedAfterSweeps) {
       return { progress: { ...progress, attempts, waiting: true }, end: 'waiting' };
     }
@@ -102,7 +106,13 @@ export function deliveredAll(
       const after = offset === 0 ? resumedAfter : undefined;
       current = yield* deliveredByConsumer(mode, consumer, { ...current, after });
       if (current.end !== undefined) {
-        return { progress: current.progress, end: current.end, made: current.budget < deliveriesOfARecordInAPass };
+        const { progress: reached, end, held, budget } = current;
+        return {
+          progress: reached,
+          end,
+          made: budget < deliveriesOfARecordInAPass,
+          ...(held === undefined ? {} : { held }),
+        };
       }
     }
     return { progress: current.progress, made: current.budget < deliveriesOfARecordInAPass };

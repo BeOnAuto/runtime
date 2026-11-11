@@ -85,6 +85,9 @@ async function passing(counted: CountedRecords) {
     factPayloadsOf: factPayloadsOn(opened),
     passedEarly: () => Effect.void,
     registered: [],
+    holdsUnreadable: false,
+    now: Date.now,
+    holdNotes: { tried: () => Effect.void, failed: () => Effect.void, lifted: () => Effect.void },
   });
   return { database: opened, playbooks, pass };
 }

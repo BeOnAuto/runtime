@@ -6,24 +6,34 @@ import { claimOf, type Claim } from '../runs/run-claims.ts';
 import { attemptIsLive, stillRunning } from '../runs/run-decisions.ts';
 import { runAnswered, noRunCalled } from '../runs/run-lookup.ts';
 import {
+  endedForItsLostDocument,
   inputToRunOf,
   interruptedByItsCancel,
   nextAttemptWith,
+  type AttemptToEnd,
   type AttemptWithoutItsInput,
   type NextAttempt,
 } from './attempt-inputs.ts';
-import { preparedVersion } from './definition-preparation.ts';
+import { versionToResume, type VersionToResume, type VersionToRun } from './definition-preparation.ts';
 import { claimedAttempt, loadAttempt, loadStartedRun } from './run-access.ts';
 import { contextOf, type Called, type Prepared } from './run-contexts.ts';
 
 export type Resumed = Extract<Claim, { readonly type: 'resume' }>['run'];
 
 interface DeadAttempt {
-  readonly toRun: Prepared;
+  readonly version: VersionToResume;
   readonly given: Called;
   readonly read: Readonly<Effect.Success<ReturnType<typeof loadAttempt>>>;
   readonly cancelAsked: boolean;
   readonly correlationId: string;
+}
+
+function isLive(version: VersionToResume, quietMs: number): boolean {
+  return 'toRun' in version && attemptIsLive(quietMs, version.toRun.prepared.resumesAfterMs);
+}
+
+function definitionOf(version: VersionToResume): VersionToRun {
+  return 'toRun' in version ? version.toRun.definition : version.definition;
 }
 
 const deadAttemptOf = Effect.fnUntraced(function* (
@@ -32,29 +42,45 @@ const deadAttemptOf = Effect.fnUntraced(function* (
   id: string,
   run: Resumed,
 ) {
-  const toRun = yield* preparedVersion(capability, run.run.name, run.run.definition_version);
+  const version = yield* versionToResume(capability, run.run.name, run.run.definition_version);
   const given: Called = { ...(yield* CallLineage), capabilities };
   const read = yield* loadAttempt(id);
   const cancelAsked = run.cancel !== undefined;
-  if (!cancelAsked && !given.attemptDied && attemptIsLive(read.quietMs, toRun.prepared.resumesAfterMs)) {
+  if (!cancelAsked && !given.attemptDied && isLive(version, read.quietMs)) {
     return yield* stillRunning;
   }
-  const dead: DeadAttempt = { toRun, given, read, cancelAsked, correlationId: given.lineage?.correlationId ?? id };
+  const dead: DeadAttempt = { version, given, read, cancelAsked, correlationId: given.lineage?.correlationId ?? id };
   return dead;
 });
 
-function attemptAfterTheDead(id: string, run: Resumed, dead: DeadAttempt) {
-  const { toRun, given, read, correlationId } = dead;
+function endingAfterTheDead(id: string, run: Resumed, dead: DeadAttempt) {
+  const { version, given, read, correlationId } = dead;
   const lineage = { startId: read.lastMessageId, correlationId };
   return Effect.map(
-    contextOf(id, toRun, given, { lineage, attempt: read.attempt }),
-    (context): AttemptWithoutItsInput => ({ id, run: toRun, context, number: run.attempt }),
+    contextOf(id, { definition: definitionOf(version) }, given, { lineage, attempt: read.attempt }),
+    (context): AttemptToEnd => ({ id, context, number: run.attempt }),
   );
 }
 
-const afterTheDeadWithItsInput = Effect.fnUntraced(function* (id: string, run: Resumed, dead: DeadAttempt) {
+function endingOf(toEnd: AttemptToEnd, { version, cancelAsked }: DeadAttempt) {
+  return 'lost' in version && !cancelAsked
+    ? Effect.uninterruptible(endedForItsLostDocument(toEnd, version.lost))
+    : interruptedByItsCancel(toEnd);
+}
+
+function answeredNext(answer: Effect.Success<ReturnType<typeof endingOf>>): NextAttempt {
+  return { type: 'answered', answer };
+}
+
+const afterTheDeadWithItsInput = Effect.fnUntraced(function* (
+  id: string,
+  run: Resumed,
+  dead: DeadAttempt,
+  toRun: Prepared,
+) {
   const input = yield* inputToRunOf(run);
-  return yield* nextAttemptWith(yield* attemptAfterTheDead(id, run, dead), input);
+  const toEnd = yield* endingAfterTheDead(id, run, dead);
+  return yield* nextAttemptWith({ ...toEnd, run: toRun }, input);
 });
 
 export const resumedAttemptOf = Effect.fnUntraced(function* (
@@ -64,17 +90,14 @@ export const resumedAttemptOf = Effect.fnUntraced(function* (
   run: Resumed,
 ) {
   const dead = yield* deadAttemptOf(capabilities, capability, id, run);
-  const next: NextAttempt = dead.cancelAsked
-    ? {
-        type: 'answered',
-        answer: yield* Effect.uninterruptible(interruptedByItsCancel(yield* attemptAfterTheDead(id, run, dead))),
-      }
-    : yield* afterTheDeadWithItsInput(id, run, dead);
-  return next;
+  const { version } = dead;
+  return 'toRun' in version && !dead.cancelAsked
+    ? yield* afterTheDeadWithItsInput(id, run, dead, version.toRun)
+    : answeredNext(yield* Effect.uninterruptible(endingOf(yield* endingAfterTheDead(id, run, dead), dead)));
 });
 
-const claimedAfter = Effect.fnUntraced(function* (id: string, run: Resumed, dead: DeadAttempt) {
-  const { toRun, given, read, correlationId } = dead;
+const claimedAfter = Effect.fnUntraced(function* (id: string, run: Resumed, dead: DeadAttempt, toRun: Prepared) {
+  const { given, read, correlationId } = dead;
   const number = run.attempt + 1;
   const startId = yield* claimedAttempt(
     id,
@@ -86,9 +109,9 @@ const claimedAfter = Effect.fnUntraced(function* (id: string, run: Resumed, dead
   return claimed;
 });
 
-const claimedWithItsInput = Effect.fnUntraced(function* (id: string, run: Resumed, dead: DeadAttempt) {
+const claimedWithItsInput = Effect.fnUntraced(function* (id: string, run: Resumed, dead: DeadAttempt, toRun: Prepared) {
   const input = yield* inputToRunOf(run);
-  return yield* nextAttemptWith(yield* claimedAfter(id, run, dead), input);
+  return yield* nextAttemptWith(yield* claimedAfter(id, run, dead, toRun), input);
 });
 
 const claimedAttemptOf = Effect.fnUntraced(function* (
@@ -98,10 +121,10 @@ const claimedAttemptOf = Effect.fnUntraced(function* (
   run: Resumed,
 ) {
   const dead = yield* deadAttemptOf(capabilities, capability, id, run);
-  const next: NextAttempt = dead.cancelAsked
-    ? { type: 'answered', answer: yield* interruptedByItsCancel(yield* attemptAfterTheDead(id, run, dead)) }
-    : yield* claimedWithItsInput(id, run, dead);
-  return next;
+  const { version } = dead;
+  return 'toRun' in version && !dead.cancelAsked
+    ? yield* claimedWithItsInput(id, run, dead, version.toRun)
+    : answeredNext(yield* endingOf(yield* endingAfterTheDead(id, run, dead), dead));
 });
 
 export const nextAttemptOf = Effect.fnUntraced(function* (

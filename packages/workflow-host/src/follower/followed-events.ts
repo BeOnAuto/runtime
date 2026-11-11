@@ -29,6 +29,10 @@ const runFacts: ReadonlySet<string> = new Set(['run_started', 'run_succeeded', '
 
 const definitionFacts: ReadonlySet<string> = new Set(definitionFactTypes);
 
+export function isDefinitionFact(type: string): boolean {
+  return definitionFacts.has(type);
+}
+
 function otherRun(correlation: string | null, runId: string): string | undefined {
   return correlation === null || correlation === runId ? undefined : correlation;
 }

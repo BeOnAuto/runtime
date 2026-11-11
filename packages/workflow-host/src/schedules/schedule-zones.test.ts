@@ -77,7 +77,7 @@ describe('a workflow with a cron schedule in a time zone', () => {
       {
         workflow: 'morning',
         reason:
-          'The run its cron schedule in America/New_York had due at 2026-03-08T10:00:00.000Z was skipped: the run its cron schedule in America/New_York started before still runs',
+          'The run scheduled for 2026-03-08T10:00:00.000Z by its cron schedule in America/New_York was skipped: the run it started before is still running',
       },
     ]);
   });

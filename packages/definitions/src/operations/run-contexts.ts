@@ -54,7 +54,7 @@ function finiteOnly(milliseconds: number | undefined): number | undefined {
 
 export const contextOf = Effect.fnUntraced(function* (
   id: string,
-  { definition }: Prepared,
+  { definition }: Pick<Prepared, 'definition'>,
   given: Called,
   { lineage, attempt: before }: StartedAttempt,
 ) {

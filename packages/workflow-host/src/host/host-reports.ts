@@ -2,6 +2,7 @@ import type { TroublingReceipt } from '@on.auto/workflow-engine';
 import type { Effect } from 'effect';
 
 import type { Trouble } from '../calls/host-executor.ts';
+import type { HeldFor } from '../follower/followed-playbooks.ts';
 import type { RunAddress } from '../runs/run-address.ts';
 
 export type HostNote =
@@ -44,6 +45,48 @@ export type HostNote =
       readonly recordId: string;
       readonly type: string;
       readonly passedBy: 'reactions' | 'views';
+    }
+  | {
+      readonly kind: 'content_hold';
+      readonly org: string;
+      readonly playbook: string;
+      readonly heldFor: HeldFor;
+      readonly heldSince: number;
+      readonly heldMs: number;
+      readonly holds: number;
+      readonly heldUntil: number;
+      readonly recordId: string;
+      readonly type: string;
+      readonly lag: number;
+      readonly lagCapped: boolean;
+    }
+  | {
+      readonly kind: 'content_hold_try_failed';
+      readonly org: string;
+      readonly playbook: string;
+      readonly heldFor: HeldFor;
+      readonly heldSince: number;
+      readonly heldMs: number;
+      readonly holds: number;
+      readonly retryAt: number;
+    }
+  | {
+      readonly kind: 'content_hold_lifted';
+      readonly org: string;
+      readonly playbook: string;
+      readonly heldFor: HeldFor;
+      readonly heldSince: number;
+      readonly heldMs: number;
+      readonly holds: number;
+      readonly records: number;
+      readonly more: boolean;
+    }
+  | {
+      readonly kind: 'fact_unreadable';
+      readonly org: string;
+      readonly playbook: string;
+      readonly recordId: string;
+      readonly type: string;
     }
   | {
       readonly kind: 'record_passed_over';

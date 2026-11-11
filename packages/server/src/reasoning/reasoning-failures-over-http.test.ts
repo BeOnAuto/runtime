@@ -153,7 +153,7 @@ describe('a run of a definition the provider rejects', () => {
       body: {
         reason: 'conflict',
         detail:
-          'openai stopped the answer at max_output_tokens (300) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition',
+          'openai stopped the answer at max_output_tokens (300) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition, or, where one answer holds several pieces of work, give each piece a function of its own',
       },
     });
   });

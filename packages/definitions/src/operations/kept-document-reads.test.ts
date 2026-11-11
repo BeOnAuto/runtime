@@ -23,7 +23,8 @@ const { first } = savingAFunction;
 
 const unreadNow: unknown = expect.stringContaining('could not be read just now; ask again in a moment');
 
-const pausedUnread: unknown = expect.stringContaining('The reasoning function greet-reasoning was paused, but its');
+const pausedUnread =
+  "Saved. The reasoning function greet-reasoning was paused, but storage didn't respond, so it can't be shown yet. Refresh in a moment to check the current status.";
 
 describe('a definition whose texts its playbook keeps outside its facts, read', () => {
   it('answers its texts as read, and lists them without a read', async () => {

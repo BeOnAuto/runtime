@@ -1,4 +1,10 @@
-import { Conflict, Unavailable, type PlaybookContext, type PlaybookReader } from '@on.auto/operations';
+import {
+  Conflict,
+  Unavailable,
+  type PlaybookContext,
+  type PlaybookReader,
+  type RejectionBecause,
+} from '@on.auto/operations';
 import type { Payload } from '@on.auto/operations/payloads';
 import { capitalized } from '@on.auto/phrasing';
 import { Effect } from 'effect';
@@ -28,6 +34,22 @@ function versionCalled({ version }: VersionNamed): string {
   return `version ${version}`;
 }
 
+const documentsMissing = new Set<RejectionBecause | undefined>([
+  'workflow_document_missing',
+  'function_document_missing',
+]);
+
+const documentMissing = (type: string) =>
+  type === 'workflow' ? 'workflow_document_missing' : 'function_document_missing';
+
+export type LostDocument = Conflict & { readonly because: RejectionBecause };
+
+export type DocumentLoss = Readonly<Pick<LostDocument, 'detail' | 'because'>>;
+
+export function isDocumentLost(refused: unknown): refused is LostDocument {
+  return refused instanceof Conflict && documentsMissing.has(refused.because);
+}
+
 export function refusedToRunFor(type: string, named: VersionNamed) {
   const { name } = named;
   return ({ because }: Unread): Refused => {
@@ -39,9 +61,17 @@ export function refusedToRunFor(type: string, named: VersionNamed) {
         })
       : new Conflict({
           detail: `The ${label} ${name} at ${versionCalled(named)} cannot run: its document ${lostWords[because]}; update it`,
-          kind: 'unworkable',
+          because: documentMissing(type),
         });
   };
+}
+
+const changesOfStanding: ReadonlySet<Change> = new Set<Change>(['paused', 'resumed', 'retired', 'restored']);
+
+function changedButUnread(label: string, name: string, text: string, change: Change): string {
+  return changesOfStanding.has(change)
+    ? `Saved. The ${label} ${name} was ${change}, but storage didn't respond, so it can't be shown yet. Refresh in a moment to check the current status.`
+    : `The ${label} ${name} was ${change}, but its ${text}, which the playbook keeps outside its record, could not be read just now to answer with it; get_definition reads it again in a moment`;
 }
 
 function unreadNow(label: string, name: string, text: string, change: Change | undefined): Unavailable {
@@ -50,7 +80,7 @@ function unreadNow(label: string, name: string, text: string, change: Change | u
     detail:
       change === undefined
         ? `The ${text} of the ${label} ${name}, which the playbook keeps outside its record, could not be read just now; ask again in a moment`
-        : `The ${label} ${name} was ${change}, but its ${text}, which the playbook keeps outside its record, could not be read just now to answer with it; get_definition reads it again in a moment`,
+        : changedButUnread(label, name, text, change),
   });
 }
 

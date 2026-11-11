@@ -38,6 +38,11 @@ export interface HostWakeUp {
   readonly stop: () => Effect.Effect<void>;
 }
 
+export interface FailedRounds {
+  readonly failed: () => Effect.Effect<number>;
+  readonly succeeded: () => Effect.Effect<void>;
+}
+
 type WakeUp = HostWakeUp['wakeUp'];
 
 export function oneWakeAtATime(wakeUp: WakeUp): WakeUp {

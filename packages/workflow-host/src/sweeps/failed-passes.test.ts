@@ -17,6 +17,9 @@ const noPlaybooks: FollowedPlaybooks = {
   follow: () => Effect.void,
   load: () => Effect.die(new Error('The sweeps hand every playbook known')),
   save: () => Effect.void,
+  held: () => Effect.void,
+  lifted: () => Effect.void,
+  heldAt: () => Effect.succeed({ due: [], nextAt: null }),
   waitingForASweep: () => Effect.succeed([]),
   following: () => Effect.succeed([]),
 };
@@ -87,6 +90,8 @@ function followed(following: Following): Followed {
     sweeps: playbookSweepsOn(store, noPlaybooks),
     upkeep: { sweep: upkeep, fireSchedules: () => Effect.void, nextScheduleAt: () => Effect.succeed(null) },
     appended: streamSignalOf(),
+    holds: { heldAt: noPlaybooks.heldAt, failed: () => Effect.void },
+    rounds: { failed: () => Effect.succeed(60_000), succeeded: () => Effect.void },
     clock: systemClock,
     pace: recording.pace,
     sweepEveryMs,
@@ -169,7 +174,7 @@ describe('a sweep in which the pass over a playbook fails', () => {
     expect(passed).toEqual([alpha]);
     expect(watched.troubles()).toEqual([
       'A pass over a playbook failed; the next sweep passes the playbook again',
-      'The follower of the playbooks failed; it tries again',
+      'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour',
     ]);
   });
 });

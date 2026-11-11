@@ -30,7 +30,7 @@ function countingCalls(answers: readonly ('fail' | 'answer')[]) {
   return { call, calls: () => calls };
 }
 
-describe('the gate a process puts before its content store', () => {
+describe('the wait of the gate after failures in a row', () => {
   it('waits between half and all of a second after a failure, then twice as long after each failure in a row, at most a minute', () => {
     const waits = [1, 2, 3, 7, 8].map((failures) => [tryAgainAfter(failures, 0), tryAgainAfter(failures, 1)]);
 
@@ -44,6 +44,23 @@ describe('the gate a process puts before its content store', () => {
     expect(firstTryAgainMs).toBe(1000);
   });
 
+  it('waits at most as long as a caller names, on the same schedule, where it names a longer wait than a minute', () => {
+    const fiveMinutes = 300_000;
+
+    const waits = [7, 9, 10].map((failures) => [
+      tryAgainAfter(failures, 0, fiveMinutes),
+      tryAgainAfter(failures, 1, fiveMinutes),
+    ]);
+
+    expect(waits).toEqual([
+      [32_000, 64_000],
+      [128_000, 256_000],
+      [150_000, fiveMinutes],
+    ]);
+  });
+});
+
+describe('the gate a process puts before its content store', () => {
   it('answers unavailable without asking the store while it is closed after a failure, and asks it again once its wait is over', async () => {
     const gate = payloadGateOf();
     const store = countingCalls(['fail', 'answer']);

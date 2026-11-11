@@ -69,7 +69,7 @@ describe('a JSON answer that missed its schema and was asked for once more', () 
         _tag: 'conflict',
         kind: 'unworkable',
         detail:
-          'openai stopped the corrected answer at max_output_tokens (200) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition',
+          'openai stopped the corrected answer at max_output_tokens (200) before the JSON was complete; raise config.max_output_tokens in the reasoning function definition, or, where one answer holds several pieces of work, give each piece a function of its own',
       }),
     );
   });

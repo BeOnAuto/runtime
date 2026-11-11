@@ -246,7 +246,7 @@ describe('a run whose provider signals its request too long after its tools answ
 
     expect(ran).toEqual(
       tooLong(
-        `${tooLongByStatus}; the tools of this run answered ${answeredBytesOf(run).join()} bytes, which the model reads whole, and the provider counted 190,000 input tokens in the last turn it answered, so ask the tools for a page of what they hold. The provider said: ${said}`,
+        `${tooLongByStatus}; the tools of this run answered ${answeredBytesOf(run).join()} bytes, which the model reads whole, and the provider counted 190,000 input tokens in the last turn it answered, so ask the tools for a page of what they hold, or move each read into a lookup function, whose \`read\` keeps only the part the job needs. The provider said: ${said}`,
       ),
     );
   });
@@ -257,7 +257,7 @@ describe('a run whose provider signals its request too long after its tools answ
 
     expect([ran, await ending(await graphServer(), refusedAsTooLong())]).toEqual([
       tooLong(
-        `${tooLongByStatus}; the tools of this run answered ${answeredBytesOf(run).join()} bytes, which the model reads whole, so ask the tools for a page of what they hold`,
+        `${tooLongByStatus}; the tools of this run answered ${answeredBytesOf(run).join()} bytes, which the model reads whole, so ask the tools for a page of what they hold, or move each read into a lookup function, whose \`read\` keeps only the part the job needs`,
       ),
       tooLong(`${tooLongByStatus}; shorten the prompt or the input of the reasoning function`),
     ]);

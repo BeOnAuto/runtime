@@ -1,6 +1,6 @@
-import { statement, type ConnectionPorts, type LayoutStep, type Statement } from '@on.auto/ledger';
+import { statement, type ConnectionPorts, type Statement } from '@on.auto/ledger';
 
-const reactionRefusalsTable = statement`CREATE TABLE IF NOT EXISTS workflow_reaction_refusals (
+export const reactionRefusalsTable = statement`CREATE TABLE IF NOT EXISTS workflow_reaction_refusals (
     playbook_key TEXT NOT NULL,
     workflow TEXT NOT NULL,
     version INTEGER NOT NULL,
@@ -22,14 +22,24 @@ const followerTables: readonly Statement[] = [
     delivered TEXT,
     attempts INTEGER NOT NULL DEFAULT 0,
     waiting INTEGER NOT NULL DEFAULT 0,
-    checked BIGINT NOT NULL DEFAULT 0
+    checked BIGINT NOT NULL DEFAULT 0,
+    held_since BIGINT,
+    held_until BIGINT,
+    holds INTEGER NOT NULL DEFAULT 0,
+    held_for TEXT
   )`,
   statement`CREATE INDEX IF NOT EXISTS workflow_followed_playbooks_by_check ON workflow_followed_playbooks (waiting, checked)`,
+  statement`CREATE INDEX IF NOT EXISTS workflow_followed_playbooks_held ON workflow_followed_playbooks (held_until)
+    WHERE held_until IS NOT NULL`,
   statement`CREATE TABLE IF NOT EXISTS workflow_followed_orgs (
     stream_id TEXT NOT NULL PRIMARY KEY,
     position BIGINT NOT NULL
   )`,
   statement`CREATE TABLE IF NOT EXISTS workflow_followed_scans (name TEXT NOT NULL PRIMARY KEY)`,
+  statement`CREATE TABLE IF NOT EXISTS workflow_failed_rounds (
+    name TEXT NOT NULL PRIMARY KEY,
+    rounds INTEGER NOT NULL
+  )`,
   statement`CREATE TABLE IF NOT EXISTS workflow_passed_runs (
     run_key TEXT NOT NULL PRIMARY KEY,
     passed_through BIGINT NOT NULL
@@ -185,42 +195,6 @@ const hostTables: readonly Statement[] = [
     expires_at BIGINT NOT NULL
   )`,
   ...followerTables,
-];
-
-export const hostLayoutSteps: readonly LayoutStep[] = [
-  { layout: 9, statements: [statement`DROP TABLE IF EXISTS recall_views`] },
-  { layout: 14, statements: [] },
-  {
-    layout: 16,
-    statements: [
-      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN kind TEXT`,
-      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN because TEXT`,
-      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN trigger_kind TEXT`,
-      statement`ALTER TABLE workflow_reaction_refusals ADD COLUMN trigger_reference TEXT`,
-    ],
-  },
-  {
-    layout: 17,
-    statements: [
-      statement`ALTER TABLE workflow_runs ADD COLUMN ended_time BIGINT`,
-      statement`ALTER TABLE workflow_runs ADD COLUMN closed_at BIGINT`,
-    ],
-  },
-  {
-    layout: 18,
-    statements: [
-      statement`ALTER TABLE workflow_subscriptions ADD COLUMN held_due BIGINT`,
-      statement`CREATE TABLE workflow_reaction_refusals_by_workflow AS SELECT * FROM workflow_reaction_refusals`,
-      statement`DROP TABLE workflow_reaction_refusals`,
-      reactionRefusalsTable,
-      statement`INSERT INTO workflow_reaction_refusals
-          (playbook_key, workflow, version, minute, count, reason, recorded, kind, because, trigger_kind, trigger_reference)
-        SELECT playbook_key, workflow, version, minute, count, reason, recorded, kind, because,
-          COALESCE(trigger_kind, ''), COALESCE(trigger_reference, '')
-        FROM workflow_reaction_refusals_by_workflow`,
-      statement`DROP TABLE workflow_reaction_refusals_by_workflow`,
-    ],
-  },
 ];
 
 export function hostTablesMadeOn(connection: ConnectionPorts, tables: readonly Statement[]): Promise<void> {

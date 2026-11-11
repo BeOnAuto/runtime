@@ -124,7 +124,7 @@ describe('the due times of a schedule', () => {
       [{ schedule: { due: isoAt(1) } }, { schedule: { due: isoAt(3) } }],
       [
         {
-          reason: `The run its every schedule had due at ${isoAt(2)} was skipped: the run its every schedule started before still runs`,
+          reason: `The run scheduled for ${isoAt(2)} by its every schedule was skipped: the run it started before is still running`,
           ...uncoded,
         },
       ],
@@ -146,7 +146,7 @@ describe('a due time of a schedule', () => {
     expect([refusals, starts.map(({ input }) => input)]).toEqual([
       [
         {
-          reason: `The run its every schedule had due at ${isoAt(1)} could not be started: The playbook refused the start`,
+          reason: `The run scheduled for ${isoAt(1)} by its every schedule could not be started: The playbook refused the start`,
           ...uncoded,
         },
       ],
@@ -170,7 +170,7 @@ describe('a due time of a schedule whose run the playbook rejects', () => {
 
     expect(refusals).toEqual([
       {
-        reason: `The run its every schedule had due at ${isoAt(1)} could not be started: The org has used today’s Free credits`,
+        reason: `The run scheduled for ${isoAt(1)} by its every schedule could not be started: The org has used today’s Free credits`,
         kind: 'credits_exhausted',
         because: 'free_daily_limit',
         ...ofTheSchedule,
@@ -191,7 +191,7 @@ describe('the due times of a schedule missed while the server was down', () => {
       [{ schedule: { due: isoAt(5) } }],
       [
         {
-          reason: `The runs its every schedule had due from ${isoAt(1)} to ${isoAt(5)} came while the server was down, and only the latest ran`,
+          reason: `The runs scheduled from ${isoAt(1)} to ${isoAt(5)} by its every schedule came due while the server was down, and only the latest ran`,
           ...uncoded,
         },
       ],

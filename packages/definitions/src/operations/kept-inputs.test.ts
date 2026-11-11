@@ -14,6 +14,13 @@ function leftWithAKeptInput(held: boolean) {
   return drivenWithItsInputKept(input, held);
 }
 
+const lostInput = {
+  reason: 'conflict',
+  detail:
+    "The input this run was given, which its playbook kept outside the run's record, is missing, so no attempt of it can run; start it again with its input",
+  because: 'input_missing',
+};
+
 const inputUnavailable = {
   status: 'rejected',
   reason: 'unavailable',
@@ -40,38 +47,32 @@ describe('the next attempt of a run whose input its playbook keeps outside the r
     expect((await linksIn(started)).map(({ type }) => type)).toEqual(['run_started', 'model_call_started']);
   });
 
-  it('ends the run as failed where its input is missing, since no attempt can run without it', async () => {
+  it('ends the run as rejected where its input is missing, since no attempt can run without it', async () => {
     const started = await leftWithAKeptInput(false);
 
-    expect(await started.driven()).toMatchObject({
-      status: 'succeeded',
-      output: { next: 'answered', status: 'failed' },
-    });
+    expect(await started.driven()).toMatchObject({ status: 'rejected', ...lostInput });
     expect((await linksIn(started)).map(({ type }) => type)).toEqual([
       'run_started',
       'model_call_started',
       'attempt_resumed',
-      'run_failed',
+      'run_rejected',
     ]);
   });
 
-  it('names an incident in its failure, which its history shows and the log line of the lost input names', async () => {
+  it('records its rejection with the code of a missing input, which its history shows', async () => {
     const started = await leftWithAKeptInput(false);
     await started.driven();
     const { records } = await Effect.runPromise(
       started.ledger.service.readRecorded(alpha, { kind: 'run', run: acted.runId }, { order: 'desc', limit: 1 }),
     );
-    const anIncident: unknown = expect.stringMatching(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$/u,
-    );
 
     expect(records.map(({ type, data }) => ({ type, data }))).toEqual([
-      { type: 'run_failed', data: { incident: anIncident } },
+      { type: 'run_rejected', data: { rejection: lostInput } },
     ]);
   });
 });
 
-describe('the failure of a run whose kept input is lost, while its call is cancelled', () => {
+describe('the rejection of a run whose kept input is lost, while its call is cancelled', () => {
   it('is recorded all the same once the loss is logged, so no run is left with no ending', async () => {
     const started = await leftWithAKeptInput(false);
 
@@ -83,7 +84,7 @@ describe('the failure of a run whose kept input is lost, while its call is cance
       'run_started',
       'model_call_started',
       'attempt_resumed',
-      'run_failed',
+      'run_rejected',
     ]);
   });
 });
@@ -96,15 +97,26 @@ describe('a run with a kept input that run_definition resumes', () => {
     expect(started.watched.reads()).toBe(1);
   });
 
-  it('is unavailable while the store does not answer, and ends as failed where its input is missing', async () => {
+  it('is unavailable while the store does not answer, and ends as rejected where its input is missing', async () => {
     const unreachable = await leftWithAKeptInput(true);
     unreachable.watched.fail();
     const missing = await leftWithAKeptInput(false);
 
     expect(await unreachable.running(momentAfter(quietMs + 1))).toMatchObject(inputUnavailable);
     expect(await missing.running(momentAfter(quietMs + 1))).toMatchObject({
+      status: 'rejected',
+      ...lostInput,
+    });
+  });
+});
+
+describe('a run whose kept input is lost, which another attempt ended while this one recorded the loss', () => {
+  it('answers what the other attempt ended it with', async () => {
+    const started = await leftWithAKeptInput(false);
+
+    expect(await started.drivenEndedByAnotherMeanwhile()).toMatchObject({
       status: 'succeeded',
-      output: { status: 'failed' },
+      output: { next: 'answered', status: 'succeeded' },
     });
   });
 });
