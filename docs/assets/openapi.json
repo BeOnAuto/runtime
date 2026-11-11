@@ -1256,7 +1256,7 @@
                               "connection"
                             ],
                             "additionalProperties": false,
-                            "description": "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, or its playbooks set"
+                            "description": "A connection added, connected, broken or removed, asked for more, given the organization's own OAuth client, its playbooks set, or its signing secret set or removed"
                           },
                           {
                             "type": "object",
@@ -4700,6 +4700,39 @@
                       ],
                       "description": "Why and since when it is broken, while it is"
                     },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
                     "connect": {
                       "type": "object",
                       "properties": {
@@ -4751,7 +4784,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "The connection, and the link that approves it while there is one to open"
@@ -5268,6 +5302,39 @@
                           ],
                           "description": "Why and since when it is broken, while it is"
                         },
+                        "signing_secret": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "set_at": {
+                                  "type": "string",
+                                  "description": "When it was set, in ISO 8601 UTC"
+                                },
+                                "previous_until": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                                }
+                              },
+                              "required": [
+                                "set_at",
+                                "previous_until"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                        },
                         "more": {
                           "type": "array",
                           "items": {
@@ -5310,6 +5377,7 @@
                         "granted_scopes",
                         "credential_ends_with",
                         "broken",
+                        "signing_secret",
                         "more"
                       ],
                       "additionalProperties": false,
@@ -5814,6 +5882,39 @@
                       ],
                       "description": "Why and since when it is broken, while it is"
                     },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
                     "more": {
                       "type": "array",
                       "items": {
@@ -5856,6 +5957,7 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
+                    "signing_secret",
                     "more"
                   ],
                   "additionalProperties": false,
@@ -6355,6 +6457,39 @@
                         }
                       ],
                       "description": "Why and since when it is broken, while it is"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     }
                   },
                   "required": [
@@ -6374,7 +6509,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -6898,6 +7034,39 @@
                       ],
                       "description": "Why and since when it is broken, while it is"
                     },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
                     "connect": {
                       "type": "object",
                       "properties": {
@@ -6949,7 +7118,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "The connection, and the link that approves it while there is one to open"
@@ -7487,6 +7657,39 @@
                         }
                       ],
                       "description": "Why and since when it is broken, while it is"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     }
                   },
                   "required": [
@@ -7506,7 +7709,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -7531,6 +7735,287 @@
           },
           "409": {
             "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      }
+    },
+    "/orgs/{org}/connections/{id}/signing-secret": {
+      "post": {
+        "operationId": "set_connection_signing_secret",
+        "summary": "Set connection signing secret",
+        "description": "Sets the secret a connection's service signs what it sends with, as the Standard Webhooks specification signs a webhook, so the service may answer a request sent through it. Given secret, the one the service made, it keeps that; left out, it makes one of 32 random bytes and answers it this once, and never again. The runtime keeps the secret sealed in its secret store, and no other answer, record or history of the org ever holds it. A secret set while the connection holds one replaces it, and the one replaced verifies too for 24 hours, so the service changes over with no gap. Only a person sets it, in Studio, never a key or an agent; a removed connection is refused as conflict.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$id": "https://on.auto/schemas/runtime/set_connection_signing_secret/input",
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "secret": {
+                    "type": "string",
+                    "description": "The signing secret the service made, whsec_ and the base64 of 24 to 64 random bytes, as the Standard Webhooks specification writes one; left out, the runtime makes one"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/set_connection_signing_secret/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
+                    "secret": {
+                      "type": "string",
+                      "description": "The signing secret the runtime made, answered this once and never again"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "signing_secret"
+                  ],
+                  "additionalProperties": false,
+                  "description": "The signing secret a connection now holds, and the secret itself where the runtime made it"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
+          },
+          "409": {
+            "$ref": "#/components/responses/conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/content_too_large"
+          },
+          "415": {
+            "$ref": "#/components/responses/unsupported_media_type"
+          },
+          "422": {
+            "$ref": "#/components/responses/invalid_input"
+          },
+          "500": {
+            "$ref": "#/components/responses/internal"
+          },
+          "503": {
+            "$ref": "#/components/responses/unavailable"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "openIdConnect": [
+              "org:write"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "remove_connection_signing_secret",
+        "summary": "Remove connection signing secret",
+        "description": "Removes a connection's signing secret and the one it replaced, so its service may answer nothing more by signing what it sends. With previous, it removes only the one replaced, which otherwise verifies for 24 hours after the change, once the service signs with the new one. The runtime forgets each secret removed, and removing what the connection does not hold changes nothing.",
+        "tags": [
+          "connections"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/org"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The id of the connection"
+            }
+          },
+          {
+            "name": "previous",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Whether to remove only the signing secret a new one replaced; false when left out"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succeeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "$id": "https://on.auto/schemas/runtime/remove_connection_signing_secret/output",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The id of the connection, a UUIDv7"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "signing_secret"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Whether a connection holds a signing secret, and since when, never the secret"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/bad_request"
+          },
+          "401": {
+            "$ref": "#/components/responses/unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/forbidden_or_origin_not_allowed"
+          },
+          "404": {
+            "$ref": "#/components/responses/not_found"
+          },
+          "405": {
+            "$ref": "#/components/responses/method_not_allowed"
           },
           "413": {
             "$ref": "#/components/responses/content_too_large"
@@ -8022,6 +8507,39 @@
                       ],
                       "description": "Why and since when it is broken, while it is"
                     },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
                     "link": {
                       "type": "object",
                       "properties": {
@@ -8155,6 +8673,7 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
+                    "signing_secret",
                     "link"
                   ],
                   "additionalProperties": false,
@@ -8699,6 +9218,39 @@
                         }
                       ],
                       "description": "Why and since when it is broken, while it is"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     }
                   },
                   "required": [
@@ -8718,7 +9270,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -9287,6 +9840,39 @@
                       ],
                       "description": "Why and since when it is broken, while it is"
                     },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
                     "pattern_unmatched": {
                       "type": "boolean",
                       "enum": [
@@ -9312,7 +9898,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "The connection its credential was given to, and whether the secret given missed its pattern"
@@ -9853,6 +10440,39 @@
                       ],
                       "description": "Why and since when it is broken, while it is"
                     },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
                     "next_client_id": {
                       "type": "string",
                       "description": "For a connection under the organization's own OAuth client, the client ID given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
@@ -9875,7 +10495,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "The connection the organization's own OAuth client was given to, with its next client where it keeps one"
@@ -10613,6 +11234,39 @@
                         }
                       ],
                       "description": "Why and since when it is broken, while it is"
+                    },
+                    "signing_secret": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "set_at": {
+                              "type": "string",
+                              "description": "When it was set, in ISO 8601 UTC"
+                            },
+                            "previous_until": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null"
+                            }
+                          },
+                          "required": [
+                            "set_at",
+                            "previous_until"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     }
                   },
                   "required": [
@@ -10632,7 +11286,8 @@
                     "granted_scope",
                     "granted_scopes",
                     "credential_ends_with",
-                    "broken"
+                    "broken",
+                    "signing_secret"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"

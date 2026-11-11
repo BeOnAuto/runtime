@@ -14,6 +14,7 @@ import type {
 } from './connection-events.ts';
 import { scopesAddedTo, scopesSaid, wordsOf, type RecordedConnection } from './connection.ts';
 import type { Credential } from './credential.ts';
+import { signingRemoved, signingSet, signingShown, type KeptSigning } from './kept-signing.ts';
 
 export interface OpenLink {
   readonly token_sha256: string;
@@ -46,6 +47,7 @@ export interface KeptConnection {
   readonly algorithm: string | undefined;
   readonly clientSecretId: string | undefined;
   readonly nextClient: GivenClient | undefined;
+  readonly signing: KeptSigning | undefined;
 }
 
 export type Registry = ReadonlyMap<string, KeptConnection>;
@@ -72,6 +74,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       granted_scope: null,
       granted_scopes: null,
       broken: null,
+      signing_secret: null,
     },
     link: undefined,
     replacedLinks: new Set(),
@@ -80,6 +83,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
     algorithm: undefined,
     clientSecretId: undefined,
     nextClient: undefined,
+    signing: undefined,
   };
 }
 
@@ -163,6 +167,7 @@ function connected(kept: KeptConnection, event: ConnectionConnected): KeptConnec
     algorithm: data.algorithm,
     clientSecretId: promoted === undefined ? kept.clientSecretId : promoted.secret_id,
     nextClient: promoted === undefined ? kept.nextClient : undefined,
+    signing: kept.signing,
   };
 }
 
@@ -180,7 +185,15 @@ function withPlaybooks(kept: KeptConnection, { data }: PlaybooksSet): KeptConnec
 }
 
 function removed(kept: KeptConnection): KeptConnection {
-  return { ...kept, connection: { ...kept.connection, status: 'removed', broken: null }, link: undefined };
+  return {
+    ...kept,
+    connection: { ...kept.connection, status: 'removed', broken: null, signing_secret: null },
+    link: undefined,
+  };
+}
+
+function withSigning(kept: KeptConnection, signing: KeptSigning | undefined): KeptConnection {
+  return { ...kept, signing, connection: { ...kept.connection, signing_secret: signingShown(signing) } };
 }
 
 function evolvedConnection(
@@ -204,6 +217,12 @@ function evolvedConnection(
   }
   if (event.type === 'connection_playbooks_set') {
     return withPlaybooks(kept, event);
+  }
+  if (event.type === 'connection_signing_secret_set') {
+    return withSigning(kept, signingSet(kept.signing, event));
+  }
+  if (event.type === 'connection_signing_secret_removed') {
+    return withSigning(kept, signingRemoved(kept.signing, event));
   }
   return event.type === 'connection_broken' ? broken(kept, event) : removed(kept);
 }

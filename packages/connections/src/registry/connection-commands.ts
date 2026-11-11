@@ -2,6 +2,7 @@ import type { RecordedCaller } from '@on.auto/operations';
 import type { ClientSource } from '@on.auto/tool-servers';
 
 import type { ConnectionEntry, ConnectionType } from './connection-entry.ts';
+import type { SigningSecretsRemoved } from './connection-events.ts';
 import type { BrokenKind } from './connection.ts';
 import type { Credential } from './credential.ts';
 import type { OpenLink } from './registry.ts';
@@ -99,8 +100,22 @@ export interface ConnectionReconnection {
   readonly variablesSet: ReadonlySet<string>;
 }
 
+export interface SigningSecretSetting {
+  readonly type: 'set_signing_secret';
+  readonly connection: string;
+  readonly secret_id: string;
+}
+
+export interface SigningSecretRemoval {
+  readonly type: 'remove_signing_secret';
+  readonly connection: string;
+  readonly which: SigningSecretsRemoved;
+}
+
 export type ConnectionCommandData =
   | ConnectionAddition
+  | SigningSecretSetting
+  | SigningSecretRemoval
   | ConnectionApproval
   | CredentialGiving
   | ClientGiving

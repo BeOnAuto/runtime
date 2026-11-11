@@ -47,6 +47,8 @@ describe('the changes the facts of the connections of an org make', () => {
         'connection_broken',
         'connection_removed',
         'connection_playbooks_set',
+        'connection_signing_secret_set',
+        'connection_signing_secret_removed',
       ],
       false,
     ]);
@@ -101,5 +103,26 @@ describe('the change a start of a consent makes', () => {
       startedWith({ ...started, scope: 'files.read', says: {} }),
       startedWith(started),
     ]).toEqual([[{ kind: 'connection', connection: 'c1' }], [], []]);
+  });
+});
+
+describe('the changes a signing secret makes', () => {
+  it('name the connection by its id, set or removed, since its record then says whether it holds one', () => {
+    expect([
+      catalog.changesOf({
+        id: 'm1',
+        stream: 'connections',
+        type: 'connection_signing_secret_set',
+        data: { connection: 'c5', secret_id: 'secret-6' },
+        context,
+      }),
+      catalog.changesOf({
+        id: 'm1',
+        stream: 'connections',
+        type: 'connection_signing_secret_removed',
+        data: { connection: 'c5', which: 'previous' },
+        context,
+      }),
+    ]).toEqual([[{ kind: 'connection', connection: 'c5' }], [{ kind: 'connection', connection: 'c5' }]]);
   });
 });

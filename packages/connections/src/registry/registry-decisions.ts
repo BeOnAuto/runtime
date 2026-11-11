@@ -17,6 +17,7 @@ import { decideClientGiving } from './oauth-client-decisions.ts';
 import { decidePlaybooks, playbooksChosenOf } from './playbooks-decisions.ts';
 import { bindingRefusalOf, keptConnectionOf, linkedConnectionOf } from './registry-lookup.ts';
 import type { KeptConnection, Registry } from './registry.ts';
+import { decideOnSigning, isSigning, type CommandWithoutSigning } from './signing-decisions.ts';
 
 export type RegistryRefusal = 'not_found' | 'conflict' | 'forbidden' | 'invalid_input';
 
@@ -200,7 +201,7 @@ export function registryContextOf({ by, at }: CommandMetadata): Context {
   return { at, by };
 }
 
-export function decideOnRegistry(command: ConnectionCommand, registry: Registry): Decision {
+function decidedWithoutSigning(command: CommandWithoutSigning, registry: Registry): Decision {
   if (command.type === 'add') {
     return decideAddition(command, registry);
   }
@@ -226,4 +227,8 @@ export function decideOnRegistry(command: ConnectionCommand, registry: Registry)
     return decidePlaybooks(command, registry);
   }
   return command.type === 'break' ? decideBreaking(command, registry) : decideRemoval(command, registry);
+}
+
+export function decideOnRegistry(command: ConnectionCommand, registry: Registry): Decision {
+  return isSigning(command) ? decideOnSigning(command, registry) : decidedWithoutSigning(command, registry);
 }

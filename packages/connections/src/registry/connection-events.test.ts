@@ -208,6 +208,19 @@ const playbooksSet: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
+const signingSecrets: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_signing_secret_set',
+    data: { ...ofTheConnection, secret_id: 'secret-6', previous_until: '2026-10-30T10:00:00.000Z' },
+    context: acted,
+  },
+  {
+    type: 'connection_signing_secret_removed',
+    data: { ...ofTheConnection, which: 'previous' },
+    context: acted,
+  },
+];
+
 describe('the facts of the registry of connections', () => {
   recordedFactsBehaviour({
     schema: ConnectionEventSchema,
@@ -216,7 +229,7 @@ describe('the facts of the registry of connections', () => {
       '0.46.0': baseline,
       '0.49.0': [...askingMore, ...underTheOrgsOAuthClient],
       '0.54.0': askedThroughAClient,
-      '0.57.0': [...describedKey, ...playbooksSet],
+      '0.57.0': [...describedKey, ...playbooksSet, ...signingSecrets],
     },
   });
 });

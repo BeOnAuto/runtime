@@ -26,6 +26,21 @@ export {
   type SignedContentAddress,
 } from './addresses/content-addresses.ts';
 export {
+  isSignedByAnyOf,
+  madeSigningSecret,
+  presentedWebhookOf,
+  signingKeyBytes,
+  signingKeyOf,
+  signingSecretPrefix,
+  webhookHeaders,
+  webhookSignatureOf,
+  webhookToleranceSeconds,
+  type HeaderOf,
+  type PresentedWebhook,
+  type SigningKey,
+  type WebhookRefusal,
+} from './webhooks/standard-webhooks.ts';
+export {
   isKeyHolder,
   isRefusal,
   isSignedInPerson,

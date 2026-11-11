@@ -64,6 +64,8 @@ function askingTheCredentialsScope({ data, ...fact }: typeof ConsentStartedBefor
   return { ...fact, data: { ...data, says: {} } };
 }
 
+const SigningSecretsRemovedSchema = Schema.Literals(['previous', 'all']);
+
 export const ConsentStartedSchema = readingEarlierShapes(ConsentStartedNow, [
   earlierShapeOf(ConsentStartedBefore, askingTheCredentialsScope),
 ]);
@@ -126,6 +128,20 @@ export const ConnectionEventSchema = Schema.Union([
     Schema.Struct({ ...ofTheConnection, playbooks: Schema.NullOr(Schema.Array(Schema.String)) }),
     ActedContextSchema,
   ),
+  factOf(
+    'connection_signing_secret_set',
+    Schema.Struct({
+      ...ofTheConnection,
+      secret_id: Schema.String,
+      previous_until: Schema.optionalKey(Schema.String),
+    }),
+    ActedContextSchema,
+  ),
+  factOf(
+    'connection_signing_secret_removed',
+    Schema.Struct({ ...ofTheConnection, which: SigningSecretsRemovedSchema }),
+    ActedContextSchema,
+  ),
 ]);
 
 export type RecordedConnectionEvent = typeof ConnectionEventSchema.Type;
@@ -145,3 +161,12 @@ export type ConnectionConnected = Extract<RecordedConnectionEvent, { readonly ty
 export type ConnectionBroken = Extract<RecordedConnectionEvent, { readonly type: 'connection_broken' }>;
 
 export type PlaybooksSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_playbooks_set' }>;
+
+export type SigningSecretSet = Extract<RecordedConnectionEvent, { readonly type: 'connection_signing_secret_set' }>;
+
+export type SigningSecretRemoved = Extract<
+  RecordedConnectionEvent,
+  { readonly type: 'connection_signing_secret_removed' }
+>;
+
+export type SigningSecretsRemoved = typeof SigningSecretsRemovedSchema.Type;

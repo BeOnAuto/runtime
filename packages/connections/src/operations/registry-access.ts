@@ -20,6 +20,8 @@ import type {
   ConsentFinish,
   ConsentStart,
   CredentialGiving,
+  SigningSecretRemoval,
+  SigningSecretSetting,
 } from '../registry/connection-commands.ts';
 import { connectionsStream, registryDecider } from '../registry/registry-decider.ts';
 import { findConnection } from '../registry/registry-lookup.ts';
@@ -116,7 +118,13 @@ export const recordInRegistry = Effect.fnUntraced(function* (data: ConnectionCom
   return yield* Effect.orDie(findConnection(state, data.connection));
 });
 
-type Replacing = CredentialGiving | ClientGiving | ConsentStart | ConsentFinish;
+type Replacing =
+  | CredentialGiving
+  | ClientGiving
+  | ConsentStart
+  | ConsentFinish
+  | SigningSecretSetting
+  | SigningSecretRemoval;
 
 export const recordChangeInRegistry = Effect.fnUntraced(function* (data: Replacing) {
   const { state, decidedOn } = yield* executedInRegistry(data);

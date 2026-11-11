@@ -69,11 +69,13 @@ describe('an added connection, as the stream folds it', () => {
         granted_scope: null,
         granted_scopes: null,
         broken: null,
+        signing_secret: null,
       },
       link: { token_sha256: 'a1b2', expires_at: '2026-10-16T14:00:00.000Z' },
       replacedLinks: new Set(),
       secretId: undefined,
       algorithm: undefined,
+      signing: undefined,
     });
   });
 

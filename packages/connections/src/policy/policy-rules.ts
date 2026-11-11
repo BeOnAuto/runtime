@@ -160,6 +160,23 @@ export function adderRefusalOf(access: RuntimeAccess, caller: CallerIdentity): F
     : undefined;
 }
 
+export function signerRefusalOf(access: RuntimeAccess, caller: CallerIdentity): Forbidden | undefined {
+  if (access === 'keys') {
+    return new Forbidden({
+      detail:
+        'This runtime signs nobody in, so no person can set the signing secret of a connection: set PUBLIC_URL, or add the server to the configuration',
+    });
+  }
+  if (access === 'people' && !isSignedInPerson(caller)) {
+    return new Forbidden({ detail: 'A signing secret is set by a person in Studio, and a key cannot set one' });
+  }
+  return caller.client === undefined
+    ? undefined
+    : new Forbidden({
+        detail: 'A signing secret is set by a person in Studio and never through an agent, which would then hold it',
+      });
+}
+
 export function bindsPerson(access: RuntimeAccess): boolean {
   return access === 'people';
 }

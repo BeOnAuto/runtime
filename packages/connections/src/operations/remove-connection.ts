@@ -4,6 +4,7 @@ import { Effect, Schema } from 'effect';
 
 import { forgottenClientsOf, forgottenCredentialOf } from '../page/consent-asking.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
+import { signingSecretsHeldBy } from '../registry/kept-signing.ts';
 import { ConnectionIdField } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionNamed } from './connection-words.ts';
@@ -33,6 +34,9 @@ export function defineRemoveConnection(services: RemovalServices) {
       );
       yield* forgottenCredentialOf(kept, services);
       yield* forgottenClientsOf(kept, services);
+      yield* Effect.forEach(signingSecretsHeldBy(kept.signing), (secretId) => secrets.forget(secretId), {
+        discard: true,
+      });
       if (kept.consent !== undefined) {
         yield* secrets.forget(kept.consent.verifier_secret_id);
       }

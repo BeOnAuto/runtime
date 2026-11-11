@@ -1,8 +1,8 @@
 import type { RouteRegistration } from '@on.auto/operations';
 
 import { pageOperationsOf } from '../page/page-operations.ts';
-import { bindsPerson } from '../policy/policy-rules.ts';
 import { defineListProviders } from '../providers/list-providers.ts';
+import { signingOperationsOf } from '../signing/signing-operations.ts';
 import { defineAddConnection } from './add-connection.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { defineGetConnection, defineListConnections } from './read-connections.ts';
@@ -24,7 +24,8 @@ export function makeConnectionOperations(services: ConnectionServices): Connecti
     defineReconnectConnection(services),
     defineRemoveConnection(services),
     defineSetConnectionPlaybooks(services),
-    ...pageOperationsOf({ ...services, bindsPerson: bindsPerson(services.access) }),
+    ...signingOperationsOf(services),
+    ...pageOperationsOf(services),
     defineListProviders(services),
   ];
 }

@@ -38,6 +38,13 @@ const SaidScopeSchema = Schema.Struct({
 
 export type SaidScope = typeof SaidScopeSchema.Type;
 
+const SigningSecretSchema = Schema.Struct({
+  set_at: Schema.String.annotate({ description: 'When it was set, in ISO 8601 UTC' }),
+  previous_until: Schema.NullOr(Schema.String).annotate({
+    description: 'Until when the signing secret it replaced also verifies, in ISO 8601 UTC, or null',
+  }),
+});
+
 export const ConnectionSchema = Schema.Struct({
   id: Schema.String.annotate({ description: 'The id of the connection, a UUIDv7' }),
   name: Schema.String.annotate({ description: 'The name a function gives the connection in server/tool' }),
@@ -76,6 +83,10 @@ export const ConnectionSchema = Schema.Struct({
       'The last four characters of the secret or client secret the person gave, where it holds twelve or more, kept beside the sealed value',
   }),
   broken: Schema.NullOr(BrokenSchema).annotate({ description: 'Why and since when it is broken, while it is' }),
+  signing_secret: Schema.NullOr(SigningSecretSchema).annotate({
+    description:
+      'Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing',
+  }),
 }).annotate({ identifier: 'Connection', description: 'A tool server the org added, shared by its playbooks' });
 
 export type Connection = typeof ConnectionSchema.Type;
