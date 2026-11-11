@@ -5,10 +5,10 @@ import { serveFakeKms } from '@on.auto/secrets/served-fakes';
 import { Effect, Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
+import { sqliteLedgerDatabaseOpened } from '../testing/records/opened-ledger-database.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
-import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const page = readFileSync(new URL('../../../../docs/self-host/production.md', import.meta.url), 'utf8');
 
@@ -112,7 +112,7 @@ async function startRefusedFor(environment: Readonly<Record<string, string>>): P
   return ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    sqliteLedgerDatabase(fileName),
+    await sqliteLedgerDatabaseOpened(fileName),
     () => Promise.resolve(onTheFake),
   ).then(() => 'started', String);
 }

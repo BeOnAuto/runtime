@@ -6,10 +6,6 @@ import { mostValuesTheLedgerBindsOnSQLite } from '../connection/bound-values.ts'
 import { sqliteEventStore, type AnyDriver, type SQLiteStoreOptions } from '../sqlite-event-store.ts';
 import { secretRowsOn } from './secret-rows.ts';
 
-export interface SecretRowsOptions {
-  readonly fileName: string;
-}
-
 export function sqliteSecretRowsOn<Driver extends AnyDriver>(
   optionsOf: () => SQLiteStoreOptions<Driver>,
 ): Effect.Effect<SecretRows> {

@@ -1,8 +1,10 @@
 import { Ledger } from '@on.auto/operations';
+import type { SecretRows } from '@on.auto/secrets';
 import { Effect, ManagedRuntime, type Layer, type Result } from 'effect';
 
 import { LedgerConnection, type ConnectionPorts } from '../connection/ledger-connection.ts';
 import { LedgerChores } from '../content/content-sweep.ts';
+import type { SQLiteLedgerFile } from '../secrets/sqlite-ledger-file.ts';
 
 export interface OpenLedger {
   readonly ledger: Ledger['Service'];
@@ -45,4 +47,12 @@ export async function openChoresWith(layer: Layer.Layer<Ledger | LedgerChores>):
 
 export function outcomeOf<A, E>(effect: Effect.Effect<A, E>): Promise<Result.Result<A, E>> {
   return Effect.runPromise(Effect.result(effect));
+}
+
+export function secretRowsOfItsOpenLedger(file: SQLiteLedgerFile): Effect.Effect<SecretRows> {
+  return Effect.promise(async () => {
+    const runtime = ManagedRuntime.make(file.ledgerLayer());
+    const rows = await runtime.runPromise(Effect.andThen(Ledger, file.secretRows));
+    return { ...rows, close: () => runtime.dispose() };
+  });
 }

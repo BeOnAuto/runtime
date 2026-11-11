@@ -10,11 +10,11 @@ import { serveFakeParameterStore, type FakeParameterOperation } from '@on.auto/s
 import { Effect, Logger, Redacted, type Context } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
-import { secretStoreInFile } from '../testing/records/kept-credentials.ts';
+import { secretRowsInFile, secretStoreInFile } from '../testing/records/kept-credentials.ts';
+import { sqliteLedgerDatabaseOpened } from '../testing/records/opened-ledger-database.ts';
 import { temporaryLedger, type TemporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from './ledger-stores.ts';
-import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const account = '111122223333';
 
@@ -74,7 +74,7 @@ async function openedWith(
   const stores = await ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    sqliteLedgerDatabase(fileName),
+    await sqliteLedgerDatabaseOpened(fileName),
     () => Promise.resolve(adaptersOn(parameterStoreUrl, waits)),
   );
   onTestFinished(() => stores.secrets.close());
@@ -90,7 +90,7 @@ function secretsLineOf(lines: readonly string[]): string {
 }
 
 async function heldIn(fileName: string) {
-  const rows = await Effect.runPromise(sqliteLedgerDatabase(fileName).secretRows);
+  const rows = await secretRowsInFile(fileName);
   const held = await Effect.runPromise(
     Effect.all([rows.heldBy({ keptBy: 'aws-parameter-store' }, 10), rows.heldBy({ keptBy: 'ledger' }, 10)]),
   );

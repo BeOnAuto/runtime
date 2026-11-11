@@ -1,11 +1,12 @@
 import type { AppendObserver } from '@on.auto/ledger';
-import { ledgerLayer, sqliteSecretRows } from '@on.auto/ledger/sqlite3';
+import { sqliteLedgerFile } from '@on.auto/ledger/sqlite3';
 
 import type { LedgerDatabase } from './ledger-database.ts';
 
 export function sqliteLedgerDatabase(file: string, observer?: AppendObserver): LedgerDatabase {
+  const ledgerFile = sqliteLedgerFile(file);
   return {
-    ledgerLayer: (kept) => ledgerLayer({ ...kept, fileName: file, observer }),
-    secretRows: sqliteSecretRows({ fileName: file }),
+    ledgerLayer: (kept) => ledgerFile.ledgerLayer({ ...kept, observer }),
+    secretRows: ledgerFile.secretRows,
   };
 }

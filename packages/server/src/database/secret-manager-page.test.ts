@@ -6,10 +6,10 @@ import { Effect, Logger, Schema } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import type { AwsAdapters } from '../secrets/aws-adapters.ts';
+import { sqliteLedgerDatabaseOpened } from '../testing/records/opened-ledger-database.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
-import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const page = readFileSync(new URL('../../../../docs/self-host/secret-manager.md', import.meta.url), 'utf8');
 
@@ -129,7 +129,7 @@ async function startedUnder(environment: Readonly<Record<string, string>>) {
   const started = await ledgerStoresOpenedBy(
     context,
     readSettingsOf({ LEDGER_FILE: fileName, ...environment }),
-    sqliteLedgerDatabase(fileName),
+    await sqliteLedgerDatabaseOpened(fileName),
     () => Promise.resolve(onTheFake),
   ).then(
     async (stores) => {

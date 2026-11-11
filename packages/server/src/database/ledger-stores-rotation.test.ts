@@ -1,13 +1,13 @@
 import { sha256Of } from '@on.auto/content';
-import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { randomUUIDv7 } from '@on.auto/operations';
 import { Effect } from 'effect';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
+import { secretRowsInFile } from '../testing/records/kept-credentials.ts';
+import { sqliteLedgerDatabaseOpened } from '../testing/records/opened-ledger-database.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { ledgerStoresOpenedBy } from './ledger-stores.ts';
-import { sqliteLedgerDatabase } from './sqlite-ledger-database.ts';
 
 const [previousKey, currentKey] = [Buffer.alloc(32, 1), Buffer.alloc(32, 2)];
 
@@ -18,7 +18,7 @@ function aLedgerFile(): string {
 }
 
 async function keptUnderThePreviousKey(fileName: string): Promise<void> {
-  const rows = await Effect.runPromise(sqliteSecretRows({ fileName }));
+  const rows = await secretRowsInFile(fileName);
   const holding = {
     keptBy: 'ledger',
     held: 'a value',
@@ -42,7 +42,7 @@ describe('the stores of a ledger whose secrets the previous key cannot unwrap', 
     const opened = ledgerStoresOpenedBy(
       await Effect.runPromise(Effect.context()),
       settings,
-      sqliteLedgerDatabase(fileName),
+      await sqliteLedgerDatabaseOpened(fileName),
     );
 
     await expect(opened).rejects.toThrow(

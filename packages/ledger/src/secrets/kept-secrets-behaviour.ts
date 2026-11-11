@@ -27,7 +27,7 @@ function secretsEntryOf(entry: KeptSecretsEntry): SecretsEntry {
 }
 
 function openedOnTheLedgersDatabase(entry: KeptSecretsEntry): void {
-  it('are read on connections of their own, opened on the database the ledger made in its layout, which they leave in it', async () => {
+  it('are read on the database the ledger made in its layout, which they leave in it', async () => {
     const database = await entry.aDatabase();
     await aLedger(entry, database);
 

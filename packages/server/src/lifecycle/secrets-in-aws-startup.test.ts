@@ -1,14 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { sqliteSecretRows } from '@on.auto/ledger/sqlite3';
 import { kmsCustodian } from '@on.auto/secrets/aws';
 import { serveFakeKms, serveFakeParameterStore } from '@on.auto/secrets/served-fakes';
 import { Effect, Redacted } from 'effect';
 import { afterAll, describe, expect, it, onTestFinished } from 'vitest';
 
 import { spawnServer } from '../testing/processes/spawned-server.ts';
-import { ownKeyFactsIn } from '../testing/records/kept-credentials.ts';
+import { ownKeyFactsIn, secretRowsInFile } from '../testing/records/kept-credentials.ts';
 import { temporaryLedger } from '../testing/records/temporary-ledger.ts';
 
 const mainModule = fileURLToPath(new URL('../main.ts', import.meta.url));
@@ -79,7 +78,7 @@ function startedOnce(fileName: string): Promise<string> {
 }
 
 async function dataKeysIn(fileName: string): Promise<readonly string[]> {
-  const rows = await Effect.runPromise(sqliteSecretRows({ fileName }));
+  const rows = await secretRowsInFile(fileName);
   const held = await Effect.runPromise(rows.heldBy({ keptBy: 'ledger' }, 10));
   await rows.close();
   const proxy = { enabled: false, environment: {} };
@@ -133,7 +132,7 @@ describe('a server whose secrets a key in KMS holds, as it starts', () => {
 });
 
 async function heldInTheManager(fileName: string) {
-  const rows = await Effect.runPromise(sqliteSecretRows({ fileName }));
+  const rows = await secretRowsInFile(fileName);
   const held = await Effect.runPromise(rows.heldBy({ keptBy: 'aws-parameter-store' }, 10));
   await rows.close();
   return held;
