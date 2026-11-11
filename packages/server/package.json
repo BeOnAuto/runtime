@@ -5,7 +5,8 @@
   "license": "Elastic-2.0",
   "type": "module",
   "exports": {
-    "./openapi-document": "./src/testing/openapi/served-document-text.ts"
+    "./openapi-document": "./src/testing/openapi/served-document-text.ts",
+    "./served-to-an-agent": "./src/testing/agent-texts/served-to-an-agent.ts"
   },
   "scripts": {
     "dev": "node dev.ts",

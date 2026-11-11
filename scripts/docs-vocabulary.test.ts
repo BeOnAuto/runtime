@@ -27,6 +27,7 @@ const keptFiles: readonly string[] = [
   'packages/api/src/testing/vocabulary/old-words.test.ts',
   'scripts/docs-vocabulary.test.ts',
   `${publishedOpenApiSchema}.json`,
+  'docs/assets/agent-texts.json',
   ...frozenFormats,
 ];
 
@@ -241,7 +242,7 @@ const oldLanguageOnPages = listed
     foundIn(textOf(path) ?? '', /\bjq\b/gu).map(({ index }) => `${path}:${lineAt(textOf(path) ?? '', index)}`),
   );
 
-await test('no file git tracks or would add says an old word, outside the records, the changelog, the lockfile, the frozen formats, the old words themselves and the published schema of OpenAPI documents, but the texts it allows', () => {
+await test('no file git tracks or would add says an old word, outside the records, the changelog, the lockfile, the frozen formats, the old words themselves, the published schema of OpenAPI documents and the list of the texts an agent reads, whose every text is searched where it is written, but the texts it allows', () => {
   assert.deepEqual(findings, []);
 });
 

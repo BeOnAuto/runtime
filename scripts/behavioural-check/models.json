@@ -1,0 +1,23 @@
+{
+  "note": "The models the behavioural check asks, each through its own command-line tool on the signed-in account of the person who runs it. The prompt goes to the command on its standard input, or as its last argument. version is the command whose first line the record keeps beside the command.",
+  "models": [
+    {
+      "name": "gemini",
+      "command": ["agy", "-p"],
+      "prompt": "argument",
+      "version": ["agy", "--version"]
+    },
+    {
+      "name": "codex",
+      "command": ["codex", "exec", "-", "--sandbox", "read-only", "--skip-git-repo-check"],
+      "prompt": "stdin",
+      "version": ["codex", "--version"]
+    },
+    {
+      "name": "claude",
+      "command": ["claude", "-p", "--output-format", "text", "--model", "claude-opus-5-5", "--effort", "high"],
+      "prompt": "stdin",
+      "version": ["claude", "--version"]
+    }
+  ]
+}

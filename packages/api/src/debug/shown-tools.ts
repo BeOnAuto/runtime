@@ -131,9 +131,13 @@ function hintsOf({
 
 type ShownAnnotations = ReturnType<typeof listedOf>['annotations'];
 
+export function argumentsIn(inputSchema: unknown): readonly ShownArgument[] {
+  return argumentsOf(nodeOf(inputSchema), '');
+}
+
 export function shownToolOf(tool: ListedTool): ShownTool {
   const { name, title, description, inputSchema, annotations } = listedOf(tool);
-  return { name, title, description, hints: hintsOf(annotations), arguments: argumentsOf(nodeOf(inputSchema), '') };
+  return { name, title, description, hints: hintsOf(annotations), arguments: argumentsIn(inputSchema) };
 }
 
 function inGroupOrder(names: readonly string[]): (one: ShownTool, other: ShownTool) => number {

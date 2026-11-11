@@ -50,7 +50,7 @@ export interface AgentSurface {
   readonly shelves: readonly SurfaceShelf[];
 }
 
-interface Endpoint {
+export interface ShownEndpoint {
   readonly endpoint: McpEndpoint;
   readonly key: string;
   readonly prefix: string;
@@ -58,7 +58,7 @@ interface Endpoint {
   readonly path: string;
 }
 
-const endpoints: readonly Endpoint[] = [
+export const shownEndpoints: readonly ShownEndpoint[] = [
   { endpoint: 'own org', key: 'mcp', prefix: '', label: 'Your organization', path: '/mcp' },
   { endpoint: 'org', key: 'org', prefix: 'org-', label: 'An organization', path: '/orgs/{org}/mcp' },
   {
@@ -104,7 +104,7 @@ function promptsOf(shelf: GuideShelf, { served }: EveryTool): readonly ShownProm
   ];
 }
 
-function connectionOf({ endpoint, ...named }: Endpoint, shelf: GuideShelf, every: EveryTool): SurfaceConnection {
+function connectionOf({ endpoint, ...named }: ShownEndpoint, shelf: GuideShelf, every: EveryTool): SurfaceConnection {
   const tools = connectionListingOf(shelf, every).map((tool) => shownToolOf(tool));
   return {
     ...named,
@@ -116,7 +116,7 @@ function connectionOf({ endpoint, ...named }: Endpoint, shelf: GuideShelf, every
   };
 }
 
-type Served = readonly (readonly [Endpoint, GuideShelf])[];
+type Served = readonly (readonly [ShownEndpoint, GuideShelf])[];
 
 function shelvesOf(served: Served): readonly SurfaceShelf[] {
   const firstOnEachShelf = served.filter(
@@ -132,7 +132,7 @@ function shelvesOf(served: Served): readonly SurfaceShelf[] {
 export function agentSurfaceOf({ catalog, shelf, serverInfo, directoryListing }: DebugServing): AgentSurface {
   const directory = { catalog, shelf, ...directoryListing };
   const listings = listingsOf({ catalog }, directory);
-  const served: Served = endpoints.map((endpoint) => [
+  const served: Served = shownEndpoints.map((endpoint) => [
     endpoint,
     endpoint.endpoint === 'directory' ? directory.shelf : shelf,
   ]);

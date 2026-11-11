@@ -1,0 +1,120 @@
+{
+  "note": "Made-up jobs a person might ask for, for the behavioural check. Each brief's shape is the kind of job it is, which decides the definitions a right answer holds: J one judgement, C one calculation, R a job that reads, calculates and writes, A one that reads, judges, asks a person and then acts, P a forecast and a decision on it, and M one where the model must choose among the tools while it runs. A shape asked in two lines of business is asked in two so that the shape and not the business decides. They live here, never in served text. The briefs marked held_out are held out: nobody reads a model's answers to them while wording, and they are run only on a finished change. search_answer is what search answers for a brief that reads or acts: four tools named for no business, two marked reads and two that act.",
+  "briefs": [
+    {
+      "id": "J1",
+      "shape": "J",
+      "business": "procurement",
+      "held_out": false,
+      "search": false,
+      "text": "Each time a supplier sends us a contract, I'll paste its payment and liability clauses. Check them against our purchasing rules: payment no sooner than 30 days after invoice, liability capped at the value of the contract, and no automatic renewal. Tell me whether to sign, push back or refuse, and why."
+    },
+    {
+      "id": "J2",
+      "shape": "J",
+      "business": "teaching",
+      "held_out": true,
+      "search": false,
+      "text": "When I paste a student's essay, mark it against my rubric (thesis, evidence, structure and style, each scored 1 to 4) and write two sentences of feedback that a fifteen-year-old will understand."
+    },
+    {
+      "id": "C1",
+      "shape": "C",
+      "business": "logistics",
+      "held_out": false,
+      "search": false,
+      "text": "For each delivery run I'll give you the parcels, each with its weight in kilograms and the distance to its drop in kilometres. Work out what the run costs: 0.40 per kilogram for every 100 km, plus 12 for each drop, plus a 15% fuel surcharge on the total, rounded to the cent."
+    },
+    {
+      "id": "C2",
+      "shape": "C",
+      "business": "building",
+      "held_out": true,
+      "search": false,
+      "text": "I'll give you the rooms of a job, each with its length, width and height in metres and its number of doors and windows. Work out the paint it needs, at one litre for every 10 square metres of wall, two coats, less 2 square metres for each door or window, and what it costs at 8.50 a litre, room by room and in total."
+    },
+    {
+      "id": "R1",
+      "shape": "R",
+      "business": "a shop",
+      "held_out": false,
+      "search": true,
+      "text": "Every Monday morning, take last week's orders from our shop system, total the units sold and the revenue for each product, compare them with the week before, and write me a short summary of what sold, what slowed down and what to restock."
+    },
+    {
+      "id": "R2",
+      "shape": "R",
+      "business": "buildings",
+      "held_out": true,
+      "search": true,
+      "text": "On the first of each month, read last month's meter readings for each floor of our office from the building system, work out each floor's energy use and how it changed from the month before, and write a short note on where use went up and what might explain it."
+    },
+    {
+      "id": "A1",
+      "shape": "A",
+      "business": "support",
+      "held_out": false,
+      "search": true,
+      "text": "When a complaint comes in on our helpdesk, pull up the customer's order history, draft a reply that follows our refund policy, have our support lead approve or edit it, and then send the approved reply to the customer from the helpdesk."
+    },
+    {
+      "id": "A2",
+      "shape": "A",
+      "business": "hiring",
+      "held_out": true,
+      "search": true,
+      "text": "When a new application arrives in our applicant system, read the candidate's full application from it, judge it against the role's must-haves, ask the hiring manager whether to invite the candidate, and if they agree, send the candidate an interview invitation from the applicant system."
+    },
+    {
+      "id": "P1",
+      "shape": "P",
+      "business": "hospitality",
+      "held_out": false,
+      "search": false,
+      "text": "Every Friday, forecast next week's daily bookings at each of our sites from how bookings went in past weeks, and tell me which sites need an extra shift under our rule: one member of staff for every 25 guests expected in a day."
+    },
+    {
+      "id": "M1",
+      "shape": "M",
+      "business": "research",
+      "held_out": false,
+      "search": true,
+      "text": "When I name a company, find out what you can about it from whatever sources we have connected (who they are, what they sell, recent news, who runs it) and write a one-page profile of it."
+    }
+  ],
+  "search_answer": {
+    "servers": [
+      {
+        "name": "records",
+        "type": "mcp",
+        "record_content": true,
+        "connection": "conn_1",
+        "provider": "records",
+        "playbooks": ["*"],
+        "tool_count": 4
+      }
+    ],
+    "tools": [
+      {
+        "server": "records",
+        "tool": "list_records",
+        "summary": "Lists the records that match a filter, newest first.",
+        "mark": "reads"
+      },
+      {
+        "server": "records",
+        "tool": "get_record",
+        "summary": "Reads one record, with its fields and its history, by its id.",
+        "mark": "reads"
+      },
+      { "server": "records", "tool": "update_record", "summary": "Changes the fields of one record.", "mark": "acts" },
+      {
+        "server": "records",
+        "tool": "send_message",
+        "summary": "Sends a message to a person or a channel.",
+        "mark": "acts"
+      }
+    ],
+    "scopes": ["records"]
+  }
+}

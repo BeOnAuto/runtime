@@ -29,6 +29,15 @@ export {
   type DocumentedOperation,
 } from './openapi/openapi-document.ts';
 export { waitForeverAnnouncing } from './notebook.ts';
+export { escaped, idsIn } from './debug-pages.ts';
+export { agentTextsOf, type AgentText } from './agent-texts/agent-texts.ts';
+export {
+  originPlaceholder,
+  servedSurfaceAt,
+  type ServedGuide,
+  type ServedPrompt,
+  type ServedSurface,
+} from './agent-texts/served-surface.ts';
 export { danglingReferencesIn } from './self-contained.ts';
 export { withEveryArgumentTyped } from '../tools/tool-schema.ts';
 export {
