@@ -57,6 +57,10 @@ for attempt in $(seq 1 60); do
   sleep 1
 done
 test "$(curl --silent --fail http://127.0.0.1:$port/health)" = '{"status":"ok"}'
+for attempt in $(seq 1 10); do
+  grep --quiet 'Ready in' runtime.log && break
+  sleep 1
+done
 test "$(grep --count 'Ready in' runtime.log)" = 1
 call() {
   curl --silent --max-time 30 --output "$1" --write-out '%{http_code}' --header 'content-type: application/json' "${@:2}"
