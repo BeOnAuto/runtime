@@ -1,0 +1,17 @@
+{
+  "type": "connection_consent_started",
+  "data": {
+    "connection": "connection-1",
+    "state_sha256": "e5f6a7",
+    "verifier_secret_id": "secret-8",
+    "client_id": "gateway-client-1",
+    "client_source": "gateway",
+    "expires_at": "2026-10-29T10:10:00.000Z",
+    "scope": "messages:read messages:write",
+    "says": {}
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

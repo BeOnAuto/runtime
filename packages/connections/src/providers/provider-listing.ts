@@ -10,7 +10,7 @@ import {
   type Provider,
   type ProviderList,
 } from '@on.auto/providers';
-import type { ClientSource, HadSources, WayOAuthClient } from '@on.auto/tool-servers';
+import type { ClientSource, HadSources, WayGateway, WayOAuthClient } from '@on.auto/tool-servers';
 import type { Redacted } from 'effect';
 
 import type { ConnectionPolicy } from '../policy/connection-policy.ts';
@@ -109,12 +109,20 @@ interface OAuthClientOffered {
   readonly because?: string;
 }
 
+function gatewayOfferedOf(provider: Provider, way: CredentialWay, listing: Listing, offering: Offering): Offering {
+  const offered = consentOfferedOf(provider.entry.name, way, listing.consent);
+  if ('because' in offered) {
+    return { offered: false, because: offered.because };
+  }
+  return offering.offered ? { ...offering, ...offered } : offering;
+}
+
 function oauthClientOfferedOf(
   provider: Provider,
   way: CredentialWay,
   listing: Listing,
 ): OAuthClientOffered | undefined {
-  if (way.kind !== 'authorization') {
+  if (way.kind !== 'authorization' || way.gateway !== undefined) {
     return undefined;
   }
   if (way.oauth_client !== undefined) {
@@ -125,6 +133,9 @@ function oauthClientOfferedOf(
 }
 
 function wayOfferingOf(way: CredentialWay, offering: Offering, provider: Provider, listing: Listing) {
+  if (way.gateway !== undefined) {
+    return gatewayOfferedOf(provider, way, listing, offering);
+  }
   const oauthClient = oauthClientOfferedOf(provider, way, listing);
   if (oauthClient === undefined) {
     return offering;
@@ -132,8 +143,37 @@ function wayOfferingOf(way: CredentialWay, offering: Offering, provider: Provide
   return offering.offered ? { ...offering, ...oauthClient } : { ...offering, oauth_client: oauthClient.oauth_client };
 }
 
+export function declaredGatewayOf({ entry }: Provider): WayGateway | undefined {
+  const declared = entry.credentials.find(({ kind, gateway }) => kind === 'authorization' && gateway !== undefined);
+  return declared?.gateway === undefined ? undefined : { url: declared.gateway.url };
+}
+
+function originsOf(provider: Provider): readonly (readonly [string, string])[] {
+  const gateway = declaredGatewayOf(provider);
+  const { name } = provider.entry;
+  return gateway === undefined
+    ? []
+    : [new URL(gateway.url).origin, new URL(provider.address).origin].map((origin) => [origin, name]);
+}
+
+export function gatewayOriginsOf({ providers }: ProviderList): ReadonlyMap<string, string> {
+  return new Map(providers.flatMap((provider) => originsOf(provider)));
+}
+
+export function gatewayUnofferedOf(provider: Provider, listing: Listing): string | undefined {
+  const [because] = provider.entry.credentials
+    .filter(({ gateway }) => gateway !== undefined)
+    .map((way) => consentOfferedOf(provider.entry.name, way, listing.consent))
+    .flatMap((offered) => ('because' in offered ? [offered.because] : []));
+  return because;
+}
+
 export function isOfferedWay(provider: Provider, way: CredentialWay, listing: Listing): boolean {
-  return isListed(provider, way, listing.policy) && offeringOf(provider, listing.providerValues).offered;
+  return (
+    isListed(provider, way, listing.policy) &&
+    offeringOf(provider, listing.providerValues).offered &&
+    (way.gateway === undefined || !('because' in consentOfferedOf(provider.entry.name, way, listing.consent)))
+  );
 }
 
 function isUnderTheOrgsOAuthClientAlone(provider: Provider, way: CredentialWay, listing: Listing): boolean {

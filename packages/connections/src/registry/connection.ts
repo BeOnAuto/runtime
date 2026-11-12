@@ -38,6 +38,17 @@ const SaidScopeSchema = Schema.Struct({
 
 export type SaidScope = typeof SaidScopeSchema.Type;
 
+export const AccountSchema = Schema.Struct({
+  id: Schema.String.annotate({ description: 'The id the service gives the account' }),
+  name: Schema.optionalKey(
+    Schema.String.annotate({
+      description: 'The name of the account when the connection was connected, for a person to read',
+    }),
+  ),
+});
+
+export type Account = typeof AccountSchema.Type;
+
 const SigningSecretSchema = Schema.Struct({
   set_at: Schema.String.annotate({ description: 'When it was set, in ISO 8601 UTC' }),
   previous_until: Schema.NullOr(Schema.String).annotate({
@@ -88,6 +99,10 @@ export const ConnectionSchema = Schema.Struct({
     description:
       'Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing',
   }),
+  account: Schema.NullOr(AccountSchema).annotate({
+    description:
+      'The account at the service the connection is for, as the service named it when the connection was connected; null where it named none',
+  }),
 }).annotate({ identifier: 'Connection', description: 'A tool server the org added, shared by its playbooks' });
 
 export type Connection = typeof ConnectionSchema.Type;
@@ -100,6 +115,10 @@ export function connectionShown(connection: RecordedConnection, endsWith: string
 
 export function runsUnderTheOrgsOAuthClient({ credential }: Pick<RecordedConnection, 'credential'>): boolean {
   return credential.client_source === 'own';
+}
+
+export function connectsThroughItsGateway({ credential }: Pick<RecordedConnection, 'credential'>): boolean {
+  return credential.client_source === 'gateway';
 }
 
 export function scopesSaid(scope: string | undefined, says: Readonly<Record<string, string>>): readonly SaidScope[] {

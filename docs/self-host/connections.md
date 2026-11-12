@@ -548,6 +548,10 @@ Register your own clients instead, as the section below sets out:
 - on a runtime on a private network with a Studio of its own, served at an address other than the person's own computer: the service sends a person back only to their own computer or to the hosted Studio, so Auto's client is not offered there; a provider whose way lists another client takes that one, and a start with none is refused before the person is sent anywhere, saying that whoever runs the runtime registers a client;
 - wherever no token is to pass through Auto, and leave `auto_clients` off.
 
+### A provider that connects through a gateway
+
+A provider's way of consent may connect through a gateway: a service of Auto's cloud that makes the consent with its own app, keeps the provider's tokens itself, and hands the runtime a key of the connection's own, which every call carries. Only Auto's cloud has such a gateway, and only it can sign what the gateway takes, so a runtime you run never offers that way, and nothing turns it on: `list_providers` shows it as not offered, saying `The provider <name> connects through a service that Auto's cloud runs, which this runtime does not have`, and an agent that adds the provider anyway is refused in the same words before anything is recorded. Nobody on your runtime sees a button that cannot work, and nothing of it reaches inward, so a runtime that takes no inbound connection is the same. Where the provider's entry offers another way, such as a key of your own app, people connect that way, as the entry says.
+
 ## Register your clients
 
 A registered client is the client identity you registered with a service's authorization server: a client id with a secret, a private key, or nothing for a public client. `registered_clients`, in the `connections` section of `auto-runtime.yaml`, lists the clients you registered, one entry for each client, with the issuers it is registered at:

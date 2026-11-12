@@ -16,7 +16,7 @@ import type {
 
 export type CallRefusal = Refused<'host'> | UnansweredCall;
 
-type RequestRefusal = Refused<'host' | 'unanswered'>;
+export type RequestRefusal = Refused<'host' | 'unanswered'>;
 
 const unanswered: RequestRefusal = { refused: 'unanswered' };
 

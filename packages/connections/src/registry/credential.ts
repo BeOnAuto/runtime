@@ -19,6 +19,13 @@ import {
 } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import {
+  credentialThroughAGateway,
+  fieldsThroughAGateway,
+  gatewayPlacementIssuesOf,
+  isThroughAGateway,
+} from './gateway-credentials.ts';
+
 const credentialKinds = ['none', 'reference', 'secret', 'client_credentials', 'authorization'] as const;
 
 export const CredentialKindSchema = Schema.Literals(credentialKinds);
@@ -163,6 +170,10 @@ const fieldsOfEachKind: Readonly<Record<CredentialKind, TakenFields>> = {
   },
 };
 
+function fieldsTakenBy(credential: CredentialFields): TakenFields {
+  return isThroughAGateway(credential) ? fieldsThroughAGateway : fieldsOfEachKind[credential.kind];
+}
+
 const placesOtherThanAHeader: Readonly<Record<Exclude<Placement, 'header'>, string>> = {
   query: 'a query parameter',
   security: 'a security scheme of the document, which says how the value is sent',
@@ -183,20 +194,16 @@ function fieldsTakenInWords({ required, optional }: TakenFields): string {
 }
 
 function presenceIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
-  const taken = fieldsOfEachKind[credential.kind];
+  const taken = fieldsTakenBy(credential);
   const { required, optional } = taken;
+  const named = isThroughAGateway(credential) ? credentialThroughAGateway : credentialOfKind(credential.kind);
   return everyFieldButTheScheme.flatMap((field): readonly FieldIssue[] => {
     const given = credential[field] !== undefined;
     if (!given && required.includes(field)) {
-      return [{ path: [field], issue: `Expected ${field}, which ${credentialOfKind(credential.kind)} takes` }];
+      return [{ path: [field], issue: `Expected ${field}, which ${named} takes` }];
     }
     return given && !required.includes(field) && !optional.includes(field)
-      ? [
-          {
-            path: [field],
-            issue: `Expected no ${field}: ${credentialOfKind(credential.kind)} takes ${fieldsTakenInWords(taken)}`,
-          },
-        ]
+      ? [{ path: [field], issue: `Expected no ${field}: ${named} takes ${fieldsTakenInWords(taken)}` }]
       : [];
   });
 }
@@ -218,8 +225,9 @@ function nameIssuesOf({ name, in: placement }: CredentialFields): readonly Field
     : [];
 }
 
-function schemeIssueOf({ kind, in: placement }: CredentialFields, scheme: string): string | undefined {
-  if (!fieldsOfEachKind[kind].optional.includes('scheme')) {
+function schemeIssueOf(credential: CredentialFields, scheme: string): string | undefined {
+  const { kind, in: placement } = credential;
+  if (!fieldsOfEachKind[kind].optional.includes('scheme') && !isThroughAGateway(credential)) {
     return `Expected no scheme: ${credentialOfKind(kind)} places no value in a header for the runtime to write a scheme before`;
   }
   if (placement !== undefined && placement !== 'header') {
@@ -264,6 +272,7 @@ export const credentialDescription = `${credentialledHow}; leave it out for an M
 export function credentialFieldIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
   return [
     ...presenceIssuesOf(credential),
+    ...gatewayPlacementIssuesOf(credential),
     ...variableIssuesOf(credential),
     ...nameIssuesOf(credential),
     ...schemeIssuesOf(credential),
@@ -278,8 +287,8 @@ export function takesAClientId(kind: CredentialKind): boolean {
 
 const kindsPlacingNoValue: ReadonlySet<CredentialKind> = new Set(['none', 'authorization']);
 
-export function placesNoValue(kind: CredentialKind): boolean {
-  return kindsPlacingNoValue.has(kind);
+export function placesNoValue(credential: Pick<CredentialFields, 'kind' | 'client_source'>): boolean {
+  return kindsPlacingNoValue.has(credential.kind) && !isThroughAGateway(credential);
 }
 
 export const CredentialSchema = CredentialFieldsSchema.annotate({ description: credentialledHow }).check(

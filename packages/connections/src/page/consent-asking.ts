@@ -1,18 +1,21 @@
 import {
-  keptTokensIn,
   type ConsentServer,
   type HadSources,
-  type KeptTokens,
   type OwnClient,
   type SecretReadingFailure,
   type StartAsked,
+  type WayGateway,
 } from '@on.auto/tool-servers';
 import { Effect, Function, Option } from 'effect';
 
 import { returnAddressOf, studioBaseFor } from '../links/connect-page.ts';
 import type { ConnectionServices } from '../operations/connection-services.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
-import { runsUnderTheOrgsOAuthClient, type RecordedConnection } from '../registry/connection.ts';
+import {
+  connectsThroughItsGateway,
+  runsUnderTheOrgsOAuthClient,
+  type RecordedConnection,
+} from '../registry/connection.ts';
 import {
   clientChangedOf,
   isOpenConsent,
@@ -22,22 +25,26 @@ import {
   type KeptWithLink,
 } from '../registry/registry-lookup.ts';
 import {
-  clientSecretsHeldBy,
   clientSecretsReleasedOf,
   heldClientOf,
   signingInClientOf,
   type GivenClient,
   type KeptConnection,
 } from '../registry/registry.ts';
-import { unavailableWords, unrevokedWordsOf, type ConsentNamed } from './consent-words.ts';
+import { gatewayOf, throughItsGateway } from './connection-gateways.ts';
+import type { ConsentNamed } from './consent-words.ts';
 
 export type ConsentAsked = Omit<StartAsked, 'state' | 'studioBase'>;
 
 const ownClientGone = { gone: 'own_client' } as const;
 
-export type OwnClientUnheld = SecretReadingFailure | typeof ownClientGone;
+const gatewayGone = { gone: 'gateway' } as const;
 
-type ClientAsking = Pick<ConnectionServices, 'policy' | 'pages' | 'resolve'> & {
+export type ClientUnheld = SecretReadingFailure | typeof ownClientGone | typeof gatewayGone;
+
+type Asking = Pick<ConnectionServices, 'policy' | 'pages' | 'resolve' | 'providers'>;
+
+type ClientAsking = Asking & {
   readonly secrets: Pick<ConnectionServices['secrets'], 'read'>;
 };
 
@@ -52,12 +59,14 @@ export type Sources = Pick<HadSources, 'sourceOf'>;
 
 export type FinishedConsent = Effect.Success<ReturnType<ConsentServices['consent']['finish']>>;
 
-export function namedOf({ name, provider, credential, status }: RecordedConnection): ConsentNamed {
+export function namedOf(connection: RecordedConnection): ConsentNamed {
+  const { name, provider, credential, status } = connection;
   return {
     name,
     issuer: Option.getOrThrow(Option.fromNullishOr(credential.issuer)),
     provider,
     connected: status === 'connected',
+    throughAGateway: connectsThroughItsGateway(connection),
   };
 }
 
@@ -67,7 +76,11 @@ function serverOf({ type, entry, provider }: RecordedConnection): ConsentServer 
     : { type };
 }
 
-function wayOf({ credential }: Pick<RecordedConnection, 'credential'>, scope: string | undefined): ConsentAsked['way'] {
+function wayOf(
+  { credential }: Pick<RecordedConnection, 'credential'>,
+  scope: string | undefined,
+  gateway?: WayGateway,
+): ConsentAsked['way'] {
   return {
     issuer: Option.getOrThrow(Option.fromNullishOr(credential.issuer)),
     scope,
@@ -78,6 +91,7 @@ function wayOf({ credential }: Pick<RecordedConnection, 'credential'>, scope: st
     pkce: credential.pkce,
     clients: credential.clients,
     oauth_client: credential.client_source === 'own' ? credential.client_source : undefined,
+    ...(gateway === undefined ? {} : { gateway }),
   };
 }
 
@@ -86,15 +100,19 @@ const noSources: Sources = { sourceOf: Function.constUndefined };
 const theOrgsOAuthClientAlone: Sources = { sourceOf: Function.constant('own') };
 
 export function sourcesFor(
-  connection: Pick<RecordedConnection, 'credential'>,
-  { consent, pages }: Pick<ConnectionServices, 'consent' | 'pages'>,
+  connection: Pick<RecordedConnection, 'provider' | 'credential'>,
+  { consent, pages, providers }: Pick<ConnectionServices, 'consent' | 'pages' | 'providers'>,
 ): Effect.Effect<Sources> {
   if (connection.credential.kind !== 'authorization') {
     return Effect.succeed(noSources);
   }
-  return runsUnderTheOrgsOAuthClient(connection)
-    ? Effect.succeed(theOrgsOAuthClientAlone)
-    : consent.hadSources(studioBaseFor(pages));
+  if (runsUnderTheOrgsOAuthClient(connection)) {
+    return Effect.succeed(theOrgsOAuthClientAlone);
+  }
+  const had = consent.hadSources(studioBaseFor(pages));
+  return connectsThroughItsGateway(connection)
+    ? Effect.map(had, (sources) => throughItsGateway(gatewayOf(connection, providers), sources))
+    : had;
 }
 
 export function isCoveredHere(
@@ -128,14 +146,14 @@ export function returnAddressFor(
   return runsUnderTheOrgsOAuthClient(connection) ? { return_address: returnAddressOf(pages) } : {};
 }
 
-function consentAskedOf(
+export function consentAskedOf(
   connection: RecordedConnection,
-  services: Pick<ConnectionServices, 'policy' | 'pages' | 'resolve'>,
+  services: Asking,
   scope: string | undefined = connection.credential.scope,
 ): ConsentAsked {
   return {
     server: serverOf(connection),
-    way: wayOf(connection, scope),
+    way: wayOf(connection, scope, gatewayOf(connection, services.providers)),
     returnAddress: returnAddressOf(services.pages),
     reaches: reachesUnder(services.policy, services.resolve),
   };
@@ -143,6 +161,19 @@ function consentAskedOf(
 
 export function forgottenVerifierOf({ consent }: KeptConnection, { secrets }: ConsentServices): Effect.Effect<void> {
   return consent === undefined ? Effect.void : secrets.forget(consent.verifier_secret_id);
+}
+
+export function verifierOf<E>(
+  { connection, consent }: KeptWithConsent,
+  { secrets }: Pick<ConsentServices, 'secrets'>,
+  unread: (detail: string) => E,
+) {
+  return secrets.read(consent.verifier_secret_id).pipe(
+    Effect.mapError(({ detail }) => unread(detail)),
+    Effect.flatMap((row) =>
+      row === undefined ? Effect.fail(noOpenConsent(connection.name)) : Effect.succeed(row.value),
+    ),
+  );
 }
 
 export function openConsentOf(
@@ -157,9 +188,7 @@ export function openConsentOf(
   return issue === undefined ? Effect.succeed<KeptWithConsent>(kept) : Effect.fail(issue);
 }
 
-type Forgetting = Pick<ConnectionServices, 'secrets' | 'consent' | 'policy' | 'pages'>;
-
-function ownClientOf(
+export function ownClientOf(
   given: GivenClient | undefined,
   { secrets }: Pick<ClientAsking, 'secrets'>,
 ): Effect.Effect<OwnClient | undefined, SecretReadingFailure> {
@@ -176,8 +205,11 @@ function consentAskedUnder(
   kept: KeptConnection,
   services: ClientAsking,
   scope: string | undefined,
-): Effect.Effect<ConsentAsked, OwnClientUnheld> {
+): Effect.Effect<ConsentAsked, ClientUnheld> {
   const asked = consentAskedOf(kept.connection, services, scope);
+  if (connectsThroughItsGateway(kept.connection) && asked.way.gateway === undefined) {
+    return Effect.fail(gatewayGone);
+  }
   if (!runsUnderTheOrgsOAuthClient(kept.connection)) {
     return Effect.succeed(asked);
   }
@@ -189,7 +221,7 @@ function consentAskedUnder(
 export function consentAskedUnderItsClient(
   kept: KeptConnection,
   services: ClientAsking,
-): Effect.Effect<ConsentAsked, OwnClientUnheld> {
+): Effect.Effect<ConsentAsked, ClientUnheld> {
   return consentAskedUnder(heldClientOf(kept), kept, services, kept.connection.credential.scope);
 }
 
@@ -197,87 +229,28 @@ export function consentAskedForASignIn(
   kept: KeptConnection,
   services: ClientAsking,
   scope: string | undefined,
-): Effect.Effect<ConsentAsked, OwnClientUnheld> {
+): Effect.Effect<ConsentAsked, ClientUnheld> {
   return consentAskedUnder(signingInClientOf(kept), kept, services, scope);
 }
 
-function revokedWith(kept: KeptConnection, tokens: KeptTokens, services: Forgetting): Effect.Effect<void> {
-  const { connection } = kept;
-  const { credential } = connection;
-  const client = {
-    client_id: Option.getOrThrow(Option.fromNullishOr(credential.client_id)),
-    client_source: Option.getOrThrow(Option.fromNullishOr(credential.client_source)),
-  };
-  return ownClientOf(heldClientOf(kept), services).pipe(
-    Effect.flatMap((ownClient) =>
-      services.consent
-        .revoke({ ...consentAskedOf(connection, services), ownClient, client, tokens })
-        .pipe(
-          Effect.catch((failure) =>
-            Effect.logWarning(unrevokedWordsOf(namedOf(connection), failure, client.client_source)),
-          ),
-        ),
-    ),
-    Effect.catch(({ detail }) => Effect.logWarning(unavailableWords.ownClientUnrevoked(connection.name, detail))),
-  );
-}
-
-function tokensRevokedOf(kept: KeptConnection, services: Forgetting): Effect.Effect<void> {
-  const { connection, secretId } = kept;
-  if (connection.credential.kind !== 'authorization' || secretId === undefined) {
-    return Effect.void;
-  }
-  return services.secrets.read(secretId).pipe(
-    Effect.map((row) => Option.flatMap(Option.fromNullishOr(row), ({ value }) => keptTokensIn(value))),
-    Effect.flatMap(
-      Option.match({
-        onNone: () => Effect.void,
-        onSome: (tokens) => revokedWith(kept, tokens, services),
-      }),
-    ),
-    Effect.catch(({ detail }) => Effect.logWarning(unavailableWords.tokensUnread(connection.name, detail))),
-  );
-}
-
-function secretForgottenOf(
+export function secretForgottenOf(
   { secretId }: KeptConnection,
-  { secrets }: Pick<Forgetting, 'secrets'>,
+  { secrets }: Pick<ConnectionServices, 'secrets'>,
 ): Effect.Effect<void> {
   return secretId === undefined ? Effect.void : secrets.forget(secretId);
 }
 
-export function forgottenCredentialOf(kept: KeptConnection, services: Forgetting): Effect.Effect<void> {
-  return Effect.andThen(tokensRevokedOf(kept, services), secretForgottenOf(kept, services));
-}
-
-function forgottenEach(secretIds: readonly string[], { secrets }: Pick<Forgetting, 'secrets'>): Effect.Effect<void> {
+function forgottenEach(
+  secretIds: readonly string[],
+  { secrets }: Pick<ConnectionServices, 'secrets'>,
+): Effect.Effect<void> {
   return Effect.forEach(secretIds, (secretId) => secrets.forget(secretId), { discard: true });
-}
-
-export function forgottenClientsOf(kept: KeptConnection, services: Pick<Forgetting, 'secrets'>): Effect.Effect<void> {
-  return forgottenEach(clientSecretsHeldBy(kept), services);
 }
 
 export function releasedClientsForgottenOf(
   before: KeptConnection,
   after: KeptConnection,
-  services: Pick<Forgetting, 'secrets'>,
+  services: Pick<ConnectionServices, 'secrets'>,
 ): Effect.Effect<void> {
   return forgottenEach(clientSecretsReleasedOf(before, after), services);
-}
-
-function isTheSameClient(before: RecordedConnection, after: RecordedConnection): boolean {
-  const [was, is] = [before.credential, after.credential];
-  return was.issuer === is.issuer && was.client_id === is.client_id && was.client_source === is.client_source;
-}
-
-export function replacedCredentialOf(
-  before: KeptConnection,
-  after: KeptConnection,
-  services: Forgetting,
-): Effect.Effect<void> {
-  const tokensReplaced = isTheSameClient(before.connection, after.connection)
-    ? secretForgottenOf(before, services)
-    : forgottenCredentialOf(before, services);
-  return Effect.andThen(tokensReplaced, releasedClientsForgottenOf(before, after, services));
 }

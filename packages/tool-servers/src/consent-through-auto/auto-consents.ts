@@ -29,7 +29,7 @@ const clientGone: ConsentRefusal = { refused: 'client_gone' };
 
 const verifierBytes = 32;
 
-function handoffVerifier(): { readonly verifier: string; readonly challenge: string } {
+export function handoffVerifier(): { readonly verifier: string; readonly challenge: string } {
   const verifier = randomBytes(verifierBytes).toString('base64url');
   return { verifier, challenge: createHash('sha256').update(verifier).digest('base64url') };
 }

@@ -17,11 +17,19 @@ import {
   type EntryChecking,
 } from '../entries/entry-checks.ts';
 import type { AdditionGiven } from '../operations/connection-fields.ts';
-import { policyRefusalOf } from '../policy/policy-rules.ts';
+import { gatewayRefusalOf, policyRefusalOf } from '../policy/policy-rules.ts';
 import { credentialFieldIssuesOf } from '../registry/credential.ts';
 import type { Credential } from '../registry/credential.ts';
 import type { Providing } from '../serving/placed-credentials.ts';
-import { isOfferedWay, oauthClientForOf, waysInOrderOf, type Listing } from './provider-listing.ts';
+import {
+  declaredGatewayOf,
+  gatewayOriginsOf,
+  gatewayUnofferedOf,
+  isOfferedWay,
+  oauthClientForOf,
+  waysInOrderOf,
+  type Listing,
+} from './provider-listing.ts';
 
 export interface GivenAddition extends AdditionInput {
   readonly placeholders: Readonly<Record<string, string>> | null;
@@ -57,6 +65,11 @@ function namedHere(providers: ProviderList, provider: string): Result.Result<Pro
   );
 }
 
+function unofferedGatewayOf(named: Provider, addition: GivenAddition, listing: Listing): readonly Issue[] {
+  const because = addition.credential.client_source === 'gateway' ? gatewayUnofferedOf(named, listing) : undefined;
+  return because === undefined ? [] : [{ pointer: theProvider, detail: because }];
+}
+
 function givenToProvider(
   provider: string,
   given: AdditionGiven,
@@ -64,17 +77,23 @@ function givenToProvider(
 ): Result.Result<GivenAddition, readonly Issue[]> {
   const { name, placeholders, entry = {}, credential } = given;
   return Result.flatMap(namedHere(listing.providers, provider), (named) =>
-    additionOfProvider(
-      { ...named.entry, credentials: waysInOrderOf(named, listing) },
-      {
-        name,
-        placeholders,
-        kind: credential?.kind,
-        oauthClientFor: oauthClientForOf(named, listing, credential?.oauth_client),
-        canBeGiven: (way) => isOfferedWay(named, way, listing),
-        playbooks: entry.playbooks,
-        allowed: entry.allowed,
-        record_content: entry.record_content,
+    Result.flatMap(
+      additionOfProvider(
+        { ...named.entry, credentials: waysInOrderOf(named, listing) },
+        {
+          name,
+          placeholders,
+          kind: credential?.kind,
+          oauthClientFor: oauthClientForOf(named, listing, credential?.oauth_client),
+          canBeGiven: (way) => isOfferedWay(named, way, listing),
+          playbooks: entry.playbooks,
+          allowed: entry.allowed,
+          record_content: entry.record_content,
+        },
+      ),
+      (addition) => {
+        const unoffered = unofferedGatewayOf(named, addition, listing);
+        return unoffered.length === 0 ? Result.succeed(addition) : Result.fail(unoffered);
       },
     ),
   );
@@ -99,10 +118,16 @@ type ListingServices = Omit<AdditionServices, 'consent'> & { readonly consent: C
 
 const handlingMoney: Pick<Providing, 'handles_money'> = { handles_money: true };
 
+function gatewayProvidedBy(provider: Provider): Pick<Providing, 'gateway'> {
+  const gateway = declaredGatewayOf(provider);
+  return gateway === undefined ? {} : { gateway };
+}
+
 function providedBy(provider: Provider): Omit<Providing, 'documents' | 'values'> {
   const { entry } = provider;
   const consenting = entry.credentials.find(({ kind }) => kind === 'authorization');
   return {
+    ...gatewayProvidedBy(provider),
     documentServer: documentServerOf(provider),
     type: entry.type,
     marks: entry.marks,
@@ -187,6 +212,13 @@ export function checkedAdditionOf(
   );
 }
 
+export function gatewayRefusalOfTheAddition(
+  addition: GivenAddition,
+  { providers }: Pick<ProviderServices, 'providers'>,
+): Forbidden | undefined {
+  return gatewayRefusalOf(addition, gatewayOriginsOf(providers));
+}
+
 export function refusalOfTheAddition(
   addition: GivenAddition,
   policy: Listing['policy'],
@@ -194,7 +226,8 @@ export function refusalOfTheAddition(
   services: ProviderServices,
 ): Forbidden | Conflict | undefined {
   return (
-    policyRefusalOf(policy, addition, providingOf(addition, services)?.documentServer) ??
+    policyRefusalOf(policy, addition, providingOf(addition, services)) ??
+    gatewayRefusalOfTheAddition(addition, services) ??
     (fileEntries.includes(addition.name) ? conflictAsTakenByTheFile(addition.name) : undefined)
   );
 }

@@ -11,7 +11,8 @@ import {
 } from '@on.auto/tool-servers';
 import { DateTime, Effect, Option, type Context } from 'effect';
 
-import { consentAskedUnderItsClient, type ConsentAsked, type OwnClientUnheld } from '../page/consent-asking.ts';
+import { consentAskedUnderItsClient, type ClientUnheld, type ConsentAsked } from '../page/consent-asking.ts';
+import { connectsThroughItsGateway } from '../registry/connection.ts';
 import { placesNoValue, type Credential } from '../registry/credential.ts';
 import { byTheRuntime, connectionsStreamOfOrg, registryDecider } from '../registry/registry-decider.ts';
 import type { KeptConnection } from '../registry/registry.ts';
@@ -72,11 +73,26 @@ function refusedWordsOf({ kind, variable }: Credential, answered: string): strin
     : servingWords.keyRefused(answered);
 }
 
+interface Refusing {
+  readonly kind: BrokenKind;
+  readonly reasonOf: (answered: string) => string;
+}
+
+function refusingOf({ connection }: KeptConnection): Refusing {
+  const { credential, name } = connection;
+  if (connectsThroughItsGateway(connection)) {
+    return { kind: 'consent_ended', reasonOf: () => servingWords.consentEnded(name) };
+  }
+  return {
+    kind: credential.kind === 'none' ? 'credential_wanted' : 'credential_refused',
+    reasonOf: (answered) => refusedWordsOf(credential, answered),
+  };
+}
+
 export function credentialRefusedOf(serving: Serving, context: Context.Context<never>): ConnectionServer['refused'] {
-  const { credential } = serving.kept.connection;
-  const kind = credential.kind === 'none' ? 'credential_wanted' : 'credential_refused';
+  const { kind, reasonOf } = refusingOf(serving.kept);
   return (answered) => {
-    const reason = refusedWordsOf(credential, answered);
+    const reason = reasonOf(answered);
     return Effect.provideContext(Effect.as(recordedBreak(serving, kind, reason), reason), context);
   };
 }
@@ -146,11 +162,11 @@ function referencedOf({ kept, services }: Serving): Given {
 }
 
 export function givenOf(serving: Serving): Given {
-  const { kind } = serving.kept.connection.credential;
-  if (placesNoValue(kind)) {
+  const { credential } = serving.kept.connection;
+  if (placesNoValue(credential)) {
     return Effect.undefined;
   }
-  return kind === 'reference'
+  return credential.kind === 'reference'
     ? referencedOf(serving)
     : Effect.map(keptSecretOf(serving), ({ value }) => ({ value, algorithm: serving.kept.algorithm }));
 }
@@ -187,7 +203,7 @@ export function consentAuthOf(
 ): Effect.Effect<ConsentAuth | undefined, ConnectionUnready> {
   const { connection } = serving.kept;
   const { credential } = connection;
-  if (credential.kind !== 'authorization') {
+  if (credential.kind !== 'authorization' || connectsThroughItsGateway(connection)) {
     return Effect.undefined;
   }
   return Effect.gen(function* () {
@@ -210,7 +226,7 @@ export function consentAuthOf(
   });
 }
 
-function ownClientUnservedOf(serving: Serving, unheld: OwnClientUnheld): Effect.Effect<never, ConnectionUnready> {
+function ownClientUnservedOf(serving: Serving, unheld: ClientUnheld): Effect.Effect<never, ConnectionUnready> {
   return 'detail' in unheld
     ? unavailableNow(serving, unheld)
     : brokenWith(serving, 'credential_gone', servingWords.ownClientGone(serving.kept.connection.name));

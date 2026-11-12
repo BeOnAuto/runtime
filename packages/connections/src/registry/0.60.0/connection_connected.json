@@ -1,0 +1,22 @@
+{
+  "type": "connection_connected",
+  "data": {
+    "connection": "connection-1",
+    "secret_id": "secret-9",
+    "client_id": "gateway-client-1",
+    "client_source": "gateway",
+    "scope": "messages:read messages:write",
+    "account": {
+      "id": "A0001",
+      "name": "Test Account"
+    },
+    "connected_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

@@ -68,3 +68,33 @@ describe('the entry of a provider whoever runs the runtime adds', () => {
     ).toEqual([[byItsAddress], [byItsAddress]]);
   });
 });
+
+describe('a provider whoever runs the runtime adds that names a gateway', () => {
+  it('is refused at its gateway, since only an entry the runtime ships has a document beside it to place the key by', () => {
+    const throughAGateway = {
+      ...notes,
+      credentials: [
+        {
+          kind: 'authorization',
+          issuer: 'https://notes.example.com',
+          gateway: {
+            url: 'https://gateway.notes.example.com/connections',
+            audiences: {
+              connections: 'https://gateway.notes.example.com',
+              calls: 'https://gateway.notes.example.com/api',
+            },
+          },
+          in: 'security',
+          name: 'connection_key',
+        },
+      ],
+    };
+
+    expect(addedProblemsOf(throughAGateway)).toEqual([
+      [
+        '/credentials/0/gateway',
+        'Expected no gateway: only an entry the runtime ships names one, since the document beside it says the header its key is sent in, and a provider whoever runs the runtime adds names its document by its address',
+      ],
+    ]);
+  });
+});

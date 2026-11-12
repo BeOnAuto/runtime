@@ -11,7 +11,7 @@ import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
-import { BrokenKindSchema } from './connection.ts';
+import { AccountSchema, BrokenKindSchema } from './connection.ts';
 import { CredentialSchema, type Credential } from './credential.ts';
 
 const ofTheConnection = { connection: Schema.String };
@@ -37,6 +37,21 @@ function clientIssuesOf({ provider, credential }: Credentialled): readonly Schem
             'Expected clients, which a credential of consent given by hand holds, each a client the runtime makes for itself: metadata_document or dynamic',
         },
       ];
+}
+
+function gatewayIssuesOf({ provider, credential }: Credentialled): readonly Schema.FilterIssue[] {
+  return provider === null && credential.client_source === 'gateway'
+    ? [
+        {
+          path: ['credential', 'client_source'],
+          issue: "Expected a provider, whose entry alone names the gateway a connection's consent is made through",
+        },
+      ]
+    : [];
+}
+
+function additionIssuesOf(added: Credentialled): readonly Schema.FilterIssue[] {
+  return [...clientIssuesOf(added), ...gatewayIssuesOf(added)];
 }
 
 const startedFields = {
@@ -84,7 +99,7 @@ export const ConnectionEventSchema = Schema.Union([
       credential: CredentialSchema,
       says: Schema.Record(Schema.String, Schema.String),
       added_by: RecordedCallerSchema,
-    }).check(Schema.makeFilter(clientIssuesOf)),
+    }).check(Schema.makeFilter(additionIssuesOf)),
     ActedContextSchema,
   ),
   factOf(
@@ -114,6 +129,7 @@ export const ConnectionEventSchema = Schema.Union([
       client_id: Schema.optionalKey(Schema.String),
       client_source: Schema.optionalKey(ClientSourceSchema),
       scope: Schema.optionalKey(Schema.String),
+      account: Schema.optionalKey(AccountSchema),
       connected_by: RecordedCallerSchema,
     }),
     ActedContextSchema,

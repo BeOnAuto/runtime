@@ -7,6 +7,7 @@ import type {
   RevocationFailure,
   WayRefusal,
 } from '@on.auto/tool-servers';
+import { Option } from 'effect';
 
 import { invalidAddition } from '../entries/entry-checks.ts';
 import { unansweredWordsOf } from './unanswered-words.ts';
@@ -16,7 +17,37 @@ export interface ConsentNamed {
   readonly issuer: string;
   readonly provider: string | null;
   readonly connected: boolean;
+  readonly throughAGateway: boolean;
 }
+
+export function notReachedHereWords(provider: string): string {
+  return `The provider ${provider} connects through a service that Auto's cloud runs, which this runtime does not have`;
+}
+
+export const gatewayWords = {
+  notReachedHere: ({ provider }: ConsentNamed) =>
+    notReachedHereWords(Option.getOrThrow(Option.fromNullishOr(provider))),
+  startRefused: ({ name }: ConsentNamed) => `The gateway of the connection ${name} refused to start its consent`,
+  handleRefused: 'Expected a handle its gateway takes; it refused this one',
+  beganThroughIt: (name: string) =>
+    `Expected handle: the consent of the connection ${name} began through its gateway, which answers a handle, not a code`,
+  noLongerNamed: (name: string) =>
+    `The provider of the connection ${name} no longer names the gateway it is connected through; whoever runs this runtime names it again before the connection is connected or removed`,
+  noGatewayNamed:
+    'its provider no longer names the gateway it is connected through, which whoever runs this runtime names again before the connection is removed',
+  keyUnended: (name: string, why: string) =>
+    `The key of the connection ${name} could not be ended at its gateway, so the connection is not removed: ${why}`,
+  keyUnendedForNow: (name: string, why: string) =>
+    `The key of the connection ${name} could not be ended at its gateway, so the connection is not removed; try again shortly: ${why}`,
+  keyUnread: (name: string, detail: string) =>
+    `The key of the connection ${name} cannot be read now, so it cannot be ended at its gateway and the connection is not removed; try again shortly: ${detail}`,
+  keyNoLongerHeld:
+    'The key of a connection made through a gateway was not ended there, since this runtime no longer holds it; the connection is removed, and nothing here holds the key any more',
+  oldKeyUnended:
+    'The key a connection held before it was connected again was not confirmed ended at its gateway; nothing here holds it any more',
+  newerKeyUnended:
+    'The key a connection was connected again with while it was being removed was not confirmed ended at its gateway; nothing here holds it any more',
+} as const;
 
 type ConflictingRefusal = Extract<
   ConsentRefusal,
@@ -32,6 +63,7 @@ type ConflictingRefusal = Extract<
       | 'client_gone'
       | 'studio_elsewhere'
       | 'start_refused'
+      | 'handoff_unread'
       | 'no_scope'
       | 'malformed_scope';
   }
@@ -96,6 +128,8 @@ const conflictsOf: Readonly<Record<Unnamed, (named: ConsentNamed) => string>> = 
     `The authorization server of the connection ${name} takes none of the clients this runtime has for it, ${notAsAdded}`,
   client_gone: ({ name }) =>
     `The client the connection ${name} was made with is no longer registered, so the person starts the consent again`,
+  handoff_unread: ({ name }) =>
+    `The gateway of the connection ${name} handed over an account or a scope this runtime does not take, so the connection is not connected and the person starts again`,
   start_refused: ({ name }) =>
     `Auto's consent service did not start the consent of the connection ${name}: Auto has no client at its authorization server, or the service does not send people back to the Studio its link opens, so whoever runs this runtime registers a client`,
   studio_elsewhere: ({ name }) =>

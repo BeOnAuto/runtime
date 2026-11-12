@@ -30,6 +30,7 @@ export interface ConsentRequests extends TokenRequests {
   readonly namedWay: (asked: WayAsked) => Effect.Effect<NamedWay, WayRefusal>;
   readonly start: (asked: StartAsked) => Effect.Effect<StartedConsent, ConsentRefusal>;
   readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
+  readonly fetchFor: Requests['fetchFor'];
 }
 
 interface Consenting {
@@ -90,6 +91,7 @@ export function consentRequests(options: LoadedOptions): ConsentRequests {
     namedWay: (asked) => consenting.server.namedWay(asked),
     start: (asked) => started(asked, consenting),
     finish: (asked) => finished(asked, consenting),
+    fetchFor: requests.fetchFor,
     ...tokenRequestsOf(
       requests,
       { requestMs: bounds.requestMs, renewalSpreadMs: options.renewalSpreadMs },

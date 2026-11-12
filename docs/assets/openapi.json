@@ -4501,7 +4501,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -4761,6 +4762,31 @@
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
                     "connect": {
                       "type": "object",
                       "properties": {
@@ -4813,7 +4839,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "The connection, and the link that approves it while there is one to open"
@@ -5127,7 +5154,8 @@
                                 "auto",
                                 "metadata_document",
                                 "dynamic",
-                                "own"
+                                "own",
+                                "gateway"
                               ],
                               "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                             },
@@ -5387,6 +5415,31 @@
                           ],
                           "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                         },
+                        "account": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "The id the service gives the account"
+                                },
+                                "name": {
+                                  "type": "string",
+                                  "description": "The name of the account when the connection was connected, for a person to read"
+                                }
+                              },
+                              "required": [
+                                "id"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                        },
                         "more": {
                           "type": "array",
                           "items": {
@@ -5430,6 +5483,7 @@
                         "credential_ends_with",
                         "broken",
                         "signing_secret",
+                        "account",
                         "more"
                       ],
                       "additionalProperties": false,
@@ -5731,7 +5785,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -5991,6 +6046,31 @@
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
                     "more": {
                       "type": "array",
                       "items": {
@@ -6034,6 +6114,7 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
+                    "account",
                     "more"
                   ],
                   "additionalProperties": false,
@@ -6331,7 +6412,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -6590,6 +6672,31 @@
                         }
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     }
                   },
                   "required": [
@@ -6610,7 +6717,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -6931,7 +7039,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -7191,6 +7300,31 @@
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
                     "connect": {
                       "type": "object",
                       "properties": {
@@ -7243,7 +7377,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "The connection, and the link that approves it while there is one to open"
@@ -7579,7 +7714,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -7838,6 +7974,31 @@
                         }
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     }
                   },
                   "required": [
@@ -7858,7 +8019,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -8452,7 +8614,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -8712,6 +8875,31 @@
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
                     "link": {
                       "type": "object",
                       "properties": {
@@ -8770,7 +8958,8 @@
                         "auto",
                         "metadata_document",
                         "dynamic",
-                        "own"
+                        "own",
+                        "gateway"
                       ],
                       "description": "For a connection connected by consent, the source of the client a start would take now, by the rule the start takes it by: auto where it would begin through Auto's consent service, own where it runs under the organization's own OAuth client. Left out where the runtime has no client the way takes"
                     },
@@ -8886,6 +9075,7 @@
                     "credential_ends_with",
                     "broken",
                     "signing_secret",
+                    "account",
                     "link"
                   ],
                   "additionalProperties": false,
@@ -9228,7 +9418,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -9487,6 +9678,31 @@
                         }
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     }
                   },
                   "required": [
@@ -9507,7 +9723,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -9873,7 +10090,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -10133,6 +10351,31 @@
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
                     "pattern_unmatched": {
                       "type": "boolean",
                       "enum": [
@@ -10159,7 +10402,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "The connection its credential was given to, and whether the secret given missed its pattern"
@@ -10497,7 +10741,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -10757,6 +11002,31 @@
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
                     },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
                     "next_client_id": {
                       "type": "string",
                       "description": "For a connection under the organization's own OAuth client, the client ID given while it holds tokens, which its next sign-in takes and which it runs under once that sign-in connects it"
@@ -10780,7 +11050,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "The connection the organization's own OAuth client was given to, with its next client where it keeps one"
@@ -10932,7 +11203,8 @@
                         "auto",
                         "metadata_document",
                         "dynamic",
-                        "own"
+                        "own",
+                        "gateway"
                       ],
                       "description": "The source of the client the consent was started with; auto where it began through Auto's consent service, whose finish takes a handle in place of a code, and own where it began under the organization's own OAuth client"
                     }
@@ -11061,7 +11333,7 @@
                   {
                     "type": "object",
                     "additionalProperties": false,
-                    "description": "The finish of a consent begun through Auto's consent service",
+                    "description": "The finish of a consent begun through Auto's consent service or a gateway",
                     "properties": {
                       "token": {
                         "type": "string",
@@ -11077,7 +11349,7 @@
                       "handle": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "The handle Auto's consent service sent the person back with, which its tokens are handed over for"
+                        "description": "The handle Auto's consent service or the connection's gateway sent the person back with, which its tokens or its key are handed over for"
                       }
                     },
                     "required": [
@@ -11316,7 +11588,8 @@
                             "auto",
                             "metadata_document",
                             "dynamic",
-                            "own"
+                            "own",
+                            "gateway"
                           ],
                           "description": "For authorization, the source of the client the connection was made with, once connected; own from the start where it runs under the organization's own OAuth client, whose client ID and client secret the person gives on the page"
                         },
@@ -11575,6 +11848,31 @@
                         }
                       ],
                       "description": "Whether its service may sign what it sends to this runtime, and since when, never the secret; null where it has none, and so receives nothing"
+                    },
+                    "account": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "The id the service gives the account"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The name of the account when the connection was connected, for a person to read"
+                            }
+                          },
+                          "required": [
+                            "id"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     }
                   },
                   "required": [
@@ -11595,7 +11893,8 @@
                     "granted_scopes",
                     "credential_ends_with",
                     "broken",
-                    "signing_secret"
+                    "signing_secret",
+                    "account"
                   ],
                   "additionalProperties": false,
                   "description": "A tool server the org added, shared by its playbooks"
@@ -11780,7 +12079,8 @@
                                   "auto",
                                   "metadata_document",
                                   "dynamic",
-                                  "own"
+                                  "own",
+                                  "gateway"
                                 ],
                                 "description": "For authorization whose oauth_client is optional, the source of the client a start takes without the organization's own, as read_link names it"
                               },

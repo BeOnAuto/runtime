@@ -1,0 +1,33 @@
+{
+  "type": "connection_added",
+  "data": {
+    "connection": "connection-1",
+    "name": "messages",
+    "server_type": "openapi",
+    "provider": "messages",
+    "placeholders": {},
+    "entry": {
+      "document": "https://gateway.messages.example.com/openapi.json"
+    },
+    "credential": {
+      "kind": "authorization",
+      "name": "connection_key",
+      "in": "security",
+      "issuer": "https://messages.example.com",
+      "scope": "messages:read messages:write",
+      "client_source": "gateway"
+    },
+    "says": {
+      "messages:read": "Read the messages of the workspace.",
+      "messages:write": "Post messages in the workspace."
+    },
+    "added_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

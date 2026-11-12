@@ -154,7 +154,7 @@ function readWithAnyValue(
   input: AdditionInput,
   checking: EntryChecking,
 ): Result.Result<ServerSettings, readonly Issue[]> {
-  return readAddition(input, checking, placesNoValue(input.credential.kind) ? undefined : anyValue);
+  return readAddition(input, checking, placesNoValue(input.credential) ? undefined : anyValue);
 }
 
 function readingIssuesOf(input: AdditionInput, checking: EntryChecking): readonly Issue[] {

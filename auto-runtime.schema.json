@@ -673,7 +673,7 @@
                         "type": "array",
                         "items": {
                           "type": "string",
-                          "enum": ["registered", "auto", "metadata_document", "dynamic", "own"]
+                          "enum": ["registered", "auto", "metadata_document", "dynamic", "own", "gateway"]
                         },
                         "minItems": 1,
                         "description": "The client sources whose connections the service limits so, where it limits some apps and not others; left out, every connection"
@@ -1186,6 +1186,48 @@
                       "minItems": 1,
                       "maxItems": 16,
                       "description": "For authorization, the error codes beside invalid_grant with which the token endpoint refuses a refresh because the consent has ended, so that the connection is broken rather than failing"
+                    },
+                    "gateway": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "description": "The https URL where the start, the hand-off and the end of a connection made through it are asked"
+                        },
+                        "audiences": {
+                          "type": "object",
+                          "properties": {
+                            "connections": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "The aud of the note the gateway takes with the start, the hand-off and the end of a connection"
+                            },
+                            "calls": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "The aud of the note the gateway takes with a call"
+                            }
+                          },
+                          "required": ["connections", "calls"],
+                          "additionalProperties": false
+                        },
+                        "claims": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": ["name", "playbook_name"]
+                          },
+                          "description": "The display names the note may carry beside the ids: name, the person's, and playbook_name, the playbook's; ids alone where it is left out"
+                        }
+                      },
+                      "required": ["url", "audiences"],
+                      "additionalProperties": false,
+                      "description": "For authorization, the gateway a connection is made through: it makes the consent with its own client, keeps the vendor's tokens, and hands the runtime a key of the connection's own, sent under the security scheme name names"
+                    },
+                    "permissions": {
+                      "type": "string",
+                      "enum": ["application", "delegated"],
+                      "description": "For authorization, whether a connection made this way acts as the app, application, or as the person who connects, delegated; delegated where it is left out"
                     },
                     "instructions": {
                       "type": "string",

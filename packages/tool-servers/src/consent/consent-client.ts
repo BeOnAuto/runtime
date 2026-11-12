@@ -75,7 +75,14 @@ export interface FinishedConsent {
   readonly client: ChosenClient;
   readonly tokens: Redacted.Redacted;
   readonly scope: string | undefined;
+  readonly account?: { readonly id: string; readonly name?: string } | undefined;
   readonly revoked: Effect.Effect<void>;
+}
+
+export interface GatewayEndAsked {
+  readonly way: ConsentWay;
+  readonly reaches: Reaches;
+  readonly key: Redacted.Redacted;
 }
 
 export type ConsentStep = 'ping' | 'resource_metadata' | 'authorization_server_metadata' | 'registration' | 'token';
@@ -110,12 +117,15 @@ export type ConsentRefusal =
   | { readonly refused: 'code' }
   | { readonly refused: 'studio_elsewhere' }
   | { readonly refused: 'start_refused' }
+  | { readonly refused: 'handoff_unread' }
   | { readonly refused: 'no_scope' }
   | { readonly refused: 'malformed_scope' }
   | { readonly refused: 'registration_unavailable'; readonly detail: string }
   | { readonly refused: 'registration_refused'; readonly detail: string };
 
 export type Refused<Refusal extends ConsentRefusal['refused']> = Extract<ConsentRefusal, { readonly refused: Refusal }>;
+
+export type GatewayEndRefusal = Refused<'host' | 'unanswered' | 'no_client'>;
 
 export interface WayAsked {
   readonly url: string;
@@ -226,6 +236,7 @@ export interface ConsentClientOptions extends Omit<ClientsHad, 'serviceClients'>
   readonly requestMs?: number;
   readonly requestTimeout?: (ms: number) => AbortSignal;
   readonly renewalSpreadMs?: number;
+  readonly gatewayEndPauseMs?: number;
 }
 
 export interface ConsentClient extends ConsentTokenSources {
@@ -234,6 +245,8 @@ export interface ConsentClient extends ConsentTokenSources {
   readonly start: (asked: StartAsked) => Effect.Effect<StartedConsent, ConsentRefusal>;
   readonly finish: (asked: FinishAsked) => Effect.Effect<FinishedConsent, ConsentRefusal>;
   readonly revoke: (asked: RevokeAsked) => Effect.Effect<void, RevocationFailure>;
+  readonly end: (asked: GatewayEndAsked) => Effect.Effect<void, GatewayEndRefusal>;
+  readonly endTried: (asked: GatewayEndAsked, unended: string) => Effect.Effect<void>;
 }
 
 export interface LoadedOptions extends ConsentClientOptions, Omit<RegistrationKeeping, 'registrations'> {

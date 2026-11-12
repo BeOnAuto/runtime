@@ -1,7 +1,7 @@
 import { isFilledAround, placeholdersIn, textsAroundPlaceholders } from '@on.auto/config';
 import { Schema, type Redacted } from 'effect';
 
-const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic', 'own'] as const;
+const clientSources = ['registered', 'auto', 'metadata_document', 'dynamic', 'own', 'gateway'] as const;
 
 export const ClientSourceSchema = Schema.Literals(clientSources);
 
@@ -26,6 +26,8 @@ export const ClientIdSchema = Schema.String.check(Schema.isMinLength(1));
 const defaultClientSources: readonly WayClientSource[] = ['registered'];
 
 const theOrgsOAuthClientAlone: readonly ClientSource[] = ['own'];
+
+const itsGatewayAlone: readonly ClientSource[] = ['gateway'];
 
 export type RegisteredCredential =
   | { readonly kind: 'client_secret'; readonly clientSecret: Redacted.Redacted }
@@ -59,6 +61,11 @@ export interface ClientsHad {
   readonly registeredClients: readonly RegisteredClient[];
   readonly publicUrl: string | undefined;
   readonly serviceClients: readonly ServiceClient[];
+  readonly gateways?: boolean | undefined;
+}
+
+export interface WayGateway {
+  readonly url: string;
 }
 
 export interface WayOfClients {
@@ -67,6 +74,7 @@ export interface WayOfClients {
   readonly clients?: readonly WayClientSource[] | undefined;
   readonly pkce?: WayPkce | undefined;
   readonly oauth_client?: WayOAuthClient | undefined;
+  readonly gateway?: WayGateway | undefined;
 }
 
 export interface HadSources {
@@ -138,6 +146,10 @@ export function takesNoPkce({ pkce }: WayOfClients): boolean {
 
 export function runsUnderTheOrgsOAuthClient({ oauth_client: oauthClient }: WayOfClients): boolean {
   return oauthClient === WayOAuthClientSchema.literal;
+}
+
+export function connectsThroughAGateway({ gateway }: WayOfClients): boolean {
+  return gateway !== undefined;
 }
 
 function bindsItsCodeAt({ credential }: RegisteredClient, way: WayOfClients): boolean {
@@ -219,10 +231,16 @@ function isHad(source: ClientSource, way: WayOfClients, had: ClientsHad): boolea
   if (source === 'auto') {
     return serviceClientFor(had.serviceClients, way) !== undefined;
   }
+  if (source === 'gateway') {
+    return had.gateways === true;
+  }
   return source !== 'metadata_document' || metadataDocumentOf(had.publicUrl) !== undefined;
 }
 
 function clientSourcesOf(way: WayOfClients): readonly ClientSource[] {
+  if (connectsThroughAGateway(way)) {
+    return itsGatewayAlone;
+  }
   if (runsUnderTheOrgsOAuthClient(way)) {
     return theOrgsOAuthClientAlone;
   }

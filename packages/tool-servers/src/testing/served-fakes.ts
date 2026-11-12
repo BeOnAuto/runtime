@@ -10,6 +10,17 @@ export type { FakeConsentService } from '../consent-testing/fake-consent-answers
 export type { FakeConsentServiceOptions } from '../consent-testing/fake-consent-store.ts';
 export { servedForConsent, servedThroughAuto } from '../consent-testing/consent-servers.ts';
 export type { ServiceListing, ThroughAuto } from '../consent-testing/auto-consents.ts';
+export {
+  gatewayClientId,
+  gatewayDocumentOf,
+  serveFakeGateway,
+  testAccount,
+  type Allowed,
+  type FakeGateway,
+  type FakeGatewayOptions,
+  type GatewayStep,
+  type SeenGatewayRequest,
+} from '../consent-testing/fake-gateway.ts';
 export { fakeApiKey, openFakeToolRun, type FakeToolRun } from './fake-tool-run.ts';
 export { toolAccessBehaviour } from '../access-testing/tool-access-behaviour.ts';
 export {

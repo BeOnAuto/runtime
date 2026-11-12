@@ -1,6 +1,6 @@
 import type { Issue } from '@on.auto/operations';
 import { alternatives } from '@on.auto/phrasing';
-import type { WayOAuthClient } from '@on.auto/tool-servers';
+import type { ClientSource, WayOAuthClient } from '@on.auto/tool-servers';
 import { Option, Result } from 'effect';
 
 import type { CredentialWay, WayKind } from '../entry/credential-ways.ts';
@@ -30,7 +30,7 @@ export interface ProviderCredential extends WayAddresses, Partial<Readonly<Recor
   readonly parameters?: Readonly<Record<string, string>>;
   readonly pkce?: NonNullable<CredentialWay['pkce']>;
   readonly clients?: NonNullable<CredentialWay['clients']>;
-  readonly client_source?: WayOAuthClient;
+  readonly client_source?: Extract<ClientSource, 'own' | 'gateway'>;
 }
 
 export interface ProviderConnectionEntry {
@@ -95,8 +95,37 @@ function placedAddressesOf(way: CredentialWay, values: Values): Partial<Record<W
 
 const underTheOrgsOAuthClient: Pick<ProviderCredential, 'client_source'> = { client_source: 'own' };
 
-function clientSourceOf({ kind, oauth_client: required }: CredentialWay, asked: WayOAuthClient | undefined) {
+const throughItsGateway: Pick<ProviderCredential, 'client_source'> = { client_source: 'gateway' };
+
+function clientSourceOf({ kind, oauth_client: required, gateway }: CredentialWay, asked: WayOAuthClient | undefined) {
+  if (gateway !== undefined) {
+    return throughItsGateway;
+  }
   return kind === 'authorization' && (asked !== undefined || required !== undefined) ? underTheOrgsOAuthClient : {};
+}
+
+function oauthClientRefusalOf(
+  provider: string,
+  way: CredentialWay,
+  asked: WayOAuthClient | undefined,
+): readonly Issue[] {
+  return way.gateway === undefined || asked === undefined
+    ? []
+    : [
+        {
+          pointer: '/credential/oauth_client',
+          detail: `Expected no oauth_client: the provider ${provider} connects through a gateway, which makes the consent with a client of its own`,
+        },
+      ];
+}
+
+function chosenOf(
+  provider: string,
+  way: CredentialWay,
+  oauthClient: WayOAuthClient | undefined,
+): Result.Result<CredentialWay, readonly Issue[]> {
+  const refusal = oauthClientRefusalOf(provider, way, oauthClient);
+  return refusal.length === 0 ? Result.succeed(way) : Result.fail(refusal);
 }
 
 function keyFieldsOf(way: CredentialWay): Partial<Record<KeyFieldName, string>> {
@@ -174,14 +203,17 @@ export function additionOfProvider(
     onFailure: (placing) =>
       Result.fail([...placing, ...Result.getFailure(way).pipe(Option.getOrElse((): readonly Issue[] => []))]),
     onSuccess: (values) =>
-      Result.map(way, (chosen) => ({
-        name: given.name ?? provider.name,
-        type: provider.type,
-        entry: { ...serverOf(provider, values), ...perConnectionOf(given) },
-        credential: credentialOf(chosen, values, given.oauthClientFor?.(chosen)),
-        provider: provider.name,
-        placeholders,
-        ...(chosen.says === undefined ? {} : { says: chosen.says }),
-      })),
+      Result.flatMap(way, (offered) => {
+        const oauthClient = given.oauthClientFor?.(offered);
+        return Result.map(chosenOf(provider.name, offered, oauthClient), (chosen) => ({
+          name: given.name ?? provider.name,
+          type: provider.type,
+          entry: { ...serverOf(provider, values), ...perConnectionOf(given) },
+          credential: credentialOf(chosen, values, oauthClient),
+          provider: provider.name,
+          placeholders,
+          ...(chosen.says === undefined ? {} : { says: chosen.says }),
+        }));
+      }),
   });
 }

@@ -75,8 +75,9 @@ export function decideStart(command: ConsentStart & CommandMetadata, registry: R
 }
 
 function finishedOf(kept: KeptWithLink, command: ConsentFinish & CommandMetadata): Decision {
-  const { connection, secret_id, client_id, client_source, scope, connected_by } = command;
+  const { connection, secret_id, client_id, client_source, scope, account, connected_by } = command;
   const granted = scope === undefined ? {} : { scope };
+  const named = account === undefined ? {} : { account };
   if (!isOpenConsent(kept, command.at)) {
     return Result.fail(noOpenConsent(kept.connection.name));
   }
@@ -88,7 +89,7 @@ function finishedOf(kept: KeptWithLink, command: ConsentFinish & CommandMetadata
     { type: 'connection_approved', data: { connection } },
     {
       type: 'connection_connected',
-      data: { connection, secret_id, client_id, client_source, ...granted, connected_by },
+      data: { connection, secret_id, client_id, client_source, ...granted, ...named, connected_by },
     },
   ]);
 }

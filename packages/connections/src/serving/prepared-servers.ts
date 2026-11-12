@@ -3,8 +3,9 @@ import { Effect, Option, Result } from 'effect';
 
 import { documentTextOf } from '../documents/kept-documents.ts';
 import { entryIssuesOf, readAddition } from '../entries/entry-checks.ts';
-import { reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
+import { gatewayRefusalOf, reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { providingOf } from '../providers/provider-additions.ts';
+import { gatewayOriginsOf } from '../providers/provider-listing.ts';
 import { consentAuthOf, credentialRefusedOf, givenOf, notAllowed } from './given-credentials.ts';
 import type { Serving } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
@@ -24,7 +25,9 @@ export function preparedServer(serving: Serving): Effect.Effect<ConnectionServer
   const { document } = connection;
   const checking = { org: serving.org, modelProviders, providing: providingOf(connection, serving.services) };
   return Effect.gen(function* () {
-    const refusal = useRefusalOf(policy, connection, checking.providing?.documentServer);
+    const refusal =
+      useRefusalOf(policy, connection, checking.providing) ??
+      gatewayRefusalOf(connection, gatewayOriginsOf(serving.services.providers));
     if (refusal !== undefined) {
       return yield* Effect.fail(notAllowed(refusal.detail));
     }

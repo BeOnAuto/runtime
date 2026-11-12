@@ -228,6 +228,50 @@ export const campaigns: ProviderEntry = decodeEntry({
   ],
 });
 
+interface GatewayPlaces {
+  readonly url: string;
+  readonly document: string;
+}
+
+const gatewayOfMessages: GatewayPlaces = {
+  url: 'https://gateway.messages.example.com/connections',
+  document: 'https://gateway.messages.example.com/openapi.json',
+};
+
+export function messagesThrough({ url, document }: GatewayPlaces = gatewayOfMessages): ProviderEntry {
+  const { origin } = new URL(url);
+  return decodeEntry({
+    name: 'messages',
+    title: 'Messages',
+    description: 'Read and post the messages of a workspace, as the app added to it.',
+    website: 'https://developer.messages.example.com',
+    type: 'openapi',
+    document,
+    credentials: [
+      {
+        kind: 'authorization',
+        issuer: 'https://messages.example.com',
+        scope: 'messages:read messages:write',
+        says: {
+          'messages:read': 'Read the messages of the workspace.',
+          'messages:write': 'Post messages in the workspace.',
+        },
+        gateway: {
+          url,
+          audiences: { connections: origin, calls: `${origin}/api` },
+          claims: ['name', 'playbook_name'],
+        },
+        permissions: 'application',
+        in: 'security',
+        name: 'connection_key',
+        description: 'Add the app to your workspace.',
+      },
+    ],
+  });
+}
+
+export const messages: ProviderEntry = messagesThrough();
+
 export function providerOf(entry: unknown, documentServer?: string): Provider {
   const decoded = decodeEntry(entry);
   return { entry: decoded, address: addressOf(decoded, documentServer) };

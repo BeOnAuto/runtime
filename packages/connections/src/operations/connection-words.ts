@@ -14,6 +14,10 @@ const connectionNoun: Noun = { one: 'connection', other: 'connections' };
 
 const mostNamed = 20;
 
+export function removalAttempted(id: string): string {
+  return `remove the connection ${quoted(id)}`;
+}
+
 export function connectionNamed({ name }: Pick<Connection, 'name'>): string {
   return `the connection ${quoted(name)}`;
 }

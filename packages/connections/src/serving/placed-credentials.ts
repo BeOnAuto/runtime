@@ -8,6 +8,7 @@ import {
   type ServerEntryFields,
   type ShippedDocument,
   type ToolServerSettingsContext,
+  type WayGateway,
 } from '@on.auto/tool-servers';
 import { JsonPointer, Option, Redacted, Result, Schema } from 'effect';
 
@@ -195,6 +196,7 @@ export interface Providing {
   readonly marks?: ServerEntryFields['marks'];
   readonly failure_codes?: ServerEntryFields['failure_codes'];
   readonly ending_codes?: readonly string[] | undefined;
+  readonly gateway?: WayGateway;
   readonly handles_money?: true;
 }
 

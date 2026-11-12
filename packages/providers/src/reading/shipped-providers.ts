@@ -63,8 +63,17 @@ const decodeEntry = Schema.decodeUnknownResult(ProviderEntrySchema, { errors: 'a
 
 const formatIssues = SchemaIssue.makeFormatterStandardSchemaV1();
 
+const SecuritySchemeSchema = Schema.Struct({
+  type: Schema.optionalKey(Schema.String),
+  in: Schema.optionalKey(Schema.String),
+  name: Schema.optionalKey(Schema.String),
+});
+
 const DocumentServersSchema = Schema.Struct({
   servers: Schema.optionalKey(Schema.Array(Schema.Struct({ url: Schema.String }))),
+  components: Schema.optionalKey(
+    Schema.Struct({ securitySchemes: Schema.optionalKey(Schema.Record(Schema.String, SecuritySchemeSchema)) }),
+  ),
 });
 
 type DocumentServers = typeof DocumentServersSchema.Type;
@@ -120,14 +129,54 @@ function isServerWrittenOut(url: string): boolean {
   return isPinnableUrl(url) && placeholdersIn(url).length === 0;
 }
 
+const keyOfAGateway =
+  'Expected the name of a security scheme of the document, of type apiKey in a header other than Authorization, which the key a gateway hands over is sent under';
+
+const gatewayBesideItsDocument =
+  'Expected a document beside the entries, whose security scheme says the header the key a gateway hands over is sent in';
+
+const headerOfTheNote = 'authorization';
+
+function isAKeyInAHeader(servers: DocumentServers, name: string): boolean {
+  const schemes = servers.components?.securitySchemes ?? {};
+  const scheme = Object.hasOwn(schemes, name) ? schemes[name] : undefined;
+  return (
+    scheme?.type === 'apiKey' &&
+    scheme.in === 'header' &&
+    scheme.name !== undefined &&
+    scheme.name.toLowerCase() !== headerOfTheNote
+  );
+}
+
+function gatewayKeyProblemsOf({ credentials }: ProviderEntry, servers: DocumentServers): readonly Problem[] {
+  return credentials.flatMap(({ gateway, name }, index) =>
+    gateway === undefined || isAKeyInAHeader(servers, String(name))
+      ? []
+      : [{ pointer: `/credentials/${String(index)}/name`, detail: keyOfAGateway }],
+  );
+}
+
+function gatewaysWithNoDocumentBesideOf({ credentials }: ProviderEntry): readonly Problem[] {
+  return credentials.flatMap(({ gateway }, index) =>
+    gateway === undefined
+      ? []
+      : [{ pointer: `/credentials/${String(index)}/gateway`, detail: gatewayBesideItsDocument }],
+  );
+}
+
 async function documentOfTheEntry(entry: ProviderEntry, entries: Entries): Promise<Read<DocumentRead>> {
   const written = entry.document;
   if (written === undefined || isAddress(written)) {
-    return Result.succeed({});
+    const unplaced = gatewaysWithNoDocumentBesideOf(entry);
+    return unplaced.length === 0 ? Result.succeed({}) : Result.fail(unplaced);
   }
   const document = await documentBesideTheEntries(entries, written);
   if (document === undefined) {
     return documentProblem(`Expected ${written} beside the entries, an OpenAPI document in JSON`);
+  }
+  const keyProblems = gatewayKeyProblemsOf(entry, document.servers);
+  if (keyProblems.length > 0) {
+    return Result.fail(keyProblems);
   }
   const shipped: Shipped = [written, document.shipped];
   if (entry.base_url !== undefined) {

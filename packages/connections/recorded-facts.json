@@ -18,5 +18,9 @@
   "src/registry/0.57.0/connection_playbooks_set.json": "da3427b1f9cd68825aec12dc6cda33c65a685cce5488f9bd33903f7a0c49932a",
   "src/registry/0.57.0/connection_signing_secret_removed.json": "57fbf766f2db5aa3204f9aefa1fa35c7ce188d7f6418bcabde3fa62cbd60dfdb",
   "src/registry/0.57.0/connection_signing_secret_set.json": "5fb2ef0a2d5155555678ae822d6af4d2a6b8e238370dbbac282f3fb7e123883f",
-  "src/registry/0.59.0/connection_added.json": "940e82e32be9934722fc025e7a642573c9a57e13670c6923f7f08e9e82b49ec4"
+  "src/registry/0.59.0/connection_added.json": "940e82e32be9934722fc025e7a642573c9a57e13670c6923f7f08e9e82b49ec4",
+  "src/registry/0.59.0/connection_connected.json": "83bf76069f684842edf746d851cc073bbc83dde277aa469c94f480783b5bc6c8",
+  "src/registry/0.60.0/connection_added.json": "4f5e5aa90e45f0583535757fb3cb90e2a1fbe482a46c3b463043d32e82a282e4",
+  "src/registry/0.60.0/connection_connected.json": "e5134de35d2c0d36d936d86d2e8fa3a6ae7be6d229c74458473e8784f06adb67",
+  "src/registry/0.60.0/connection_consent_started.json": "7a485d22b6e8bcbde5181362770f61a302050c830748a9c564c0d3f5d3dfe635"
 }

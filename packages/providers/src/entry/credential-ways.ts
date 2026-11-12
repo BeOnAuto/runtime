@@ -3,6 +3,8 @@ import { WayClientSourceSchema, WayPkceSchema, isScope, wayClientSources } from 
 import { Schema } from 'effect';
 
 import { keyWayFields, keyWayIssuesOf } from '../keys/key-fields.ts';
+import { endingIssuesOf } from './ending-codes.ts';
+import { GatewaySchema, PermissionsSchema, gatewayIssuesOf, wayThroughAGateway } from './gateway-ways.ts';
 import { ScopeGroupSchema, ScopeWordsSchema, groupIssuesOf, notScopes, wordsIssuesOf } from './scope-groups.ts';
 import { wayAddresses, type WayAddress } from './templates.ts';
 
@@ -24,6 +26,8 @@ export const wayFields = {
   says: ScopeWordsSchema,
   more: Schema.Array(ScopeGroupSchema).check(Schema.isMinLength(1)),
   ending_codes: Schema.Array(NamedSchema).check(Schema.isMinLength(1), Schema.isMaxLength(16)),
+  gateway: GatewaySchema,
+  permissions: PermissionsSchema,
 };
 
 export const WayKindSchema = Schema.Literals(['secret', 'client_credentials', 'none', 'authorization']);
@@ -62,6 +66,8 @@ const CredentialWayFieldsSchema = Schema.Struct({
         'For authorization, the error codes beside invalid_grant with which the token endpoint refuses a refresh because the consent has ended, so that the connection is broken rather than failing',
     }),
   ),
+  gateway: Schema.optionalKey(wayFields.gateway),
+  permissions: Schema.optionalKey(wayFields.permissions),
   ...keyWayFields,
   description: Schema.optionalKey(NamedSchema),
 });
@@ -95,6 +101,8 @@ const everyField: readonly Field[] = [
   'says',
   'more',
   'ending_codes',
+  'gateway',
+  'permissions',
   'instructions',
   'key_page',
   'example',
@@ -117,9 +125,24 @@ const fieldsOfEachKind: Readonly<Record<WayKind, TakenFields>> = {
       'oauth_client',
       'more',
       'ending_codes',
+      'gateway',
+      'permissions',
     ],
   },
 };
+
+const fieldsThroughAGateway: TakenFields = {
+  required: ['issuer', 'gateway', 'in', 'name'],
+  optional: ['scope', 'says', 'permissions'],
+};
+
+function fieldsTakenBy(way: CredentialWayFields): TakenFields {
+  return way.kind === 'authorization' && way.gateway !== undefined ? fieldsThroughAGateway : fieldsOfEachKind[way.kind];
+}
+
+function wayInWords(way: CredentialWayFields): string {
+  return way.kind === 'authorization' && way.gateway !== undefined ? wayThroughAGateway : articled(`${way.kind} way`);
+}
 
 const parametersTheRequestSets: ReadonlySet<string> = new Set([
   'response_type',
@@ -155,14 +178,15 @@ function takenInWords({ required, optional }: TakenFields): string {
 }
 
 function presenceIssuesOf(way: CredentialWayFields): readonly WayIssue[] {
-  const taken = fieldsOfEachKind[way.kind];
+  const taken = fieldsTakenBy(way);
+  const named = wayInWords(way);
   return everyField.flatMap((field): readonly WayIssue[] => {
     const given = way[field] !== undefined;
     if (!given && taken.required.includes(field)) {
-      return [{ path: [field], issue: `Expected ${field}, which ${articled(`${way.kind} way`)} takes` }];
+      return [{ path: [field], issue: `Expected ${field}, which ${named} takes` }];
     }
     return given && !taken.required.includes(field) && !taken.optional.includes(field)
-      ? [{ path: [field], issue: `Expected no ${field}: ${articled(`${way.kind} way`)} takes ${takenInWords(taken)}` }]
+      ? [{ path: [field], issue: `Expected no ${field}: ${named} takes ${takenInWords(taken)}` }]
       : [];
   });
 }
@@ -254,44 +278,17 @@ function oauthClientIssuesOf({ oauth_client: oauthClient, clients }: CredentialW
       ];
 }
 
-const endingOfEveryGrant = 'invalid_grant';
-
-const neverEnding: ReadonlySet<string> = new Set([
-  'invalid_request',
-  'invalid_client',
-  'unauthorized_client',
-  'unsupported_grant_type',
-  'invalid_scope',
-  'server_error',
-  'temporarily_unavailable',
-]);
-
-const endingCode = /^[\w.-]{1,64}$/u;
-
-function endingCodeIssueOf(codes: readonly string[], code: string, index: number): string | undefined {
-  if (code === endingOfEveryGrant) {
-    return `Expected no ${endingOfEveryGrant}, which ends a consent at every token endpoint already`;
-  }
-  if (neverEnding.has(code)) {
-    return `Expected no ${code}, an error of OAuth that never says a consent has ended`;
-  }
-  if (!endingCode.test(code)) {
-    return 'Expected an error code of at most 64 letters, digits, underscores, dots and hyphens';
-  }
-  return codes.indexOf(code) < index ? `Expected ${code} once in ending_codes` : undefined;
-}
-
-function endingIssuesOf({ ending_codes: codes = [] }: CredentialWayFields): readonly WayIssue[] {
-  return codes.flatMap((code, index) => {
-    const issue = endingCodeIssueOf(codes, code, index);
-    return issue === undefined ? [] : [{ path: ['ending_codes', String(index)], issue }];
-  });
-}
-
 function wayIssuesOf(way: CredentialWayFields): readonly EntryIssue[] {
   const issues = [...presenceIssuesOf(way), ...wordsIssuesOf(way.scope, way.says), ...keyWayIssuesOf(way)];
   return way.kind === 'authorization'
-    ? [...issues, ...consentIssuesOf(way), ...oauthClientIssuesOf(way), ...groupIssuesOf(way), ...endingIssuesOf(way)]
+    ? [
+        ...issues,
+        ...consentIssuesOf(way),
+        ...oauthClientIssuesOf(way),
+        ...groupIssuesOf(way),
+        ...endingIssuesOf(way),
+        ...gatewayIssuesOf(way),
+      ]
     : issues;
 }
 export const CredentialWaySchema = CredentialWayFieldsSchema.check(Schema.makeFilter(wayIssuesOf));

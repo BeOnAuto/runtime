@@ -5,6 +5,8 @@ export {
   fixtureProviders,
   keyMadeAt,
   ledgers,
+  messages,
+  messagesThrough,
   metrics,
   providerListOf,
   providerOf,

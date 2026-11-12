@@ -146,8 +146,16 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
 const documentByItsAddress =
   "Expected the https URL of the OpenAPI document, or an http URL on a loopback address: a provider whoever runs the runtime adds names its document by its address, since the documents beside the entries are the runtime's own";
 
-export const AddedProviderEntrySchema = ProviderEntrySchema.check(
-  Schema.makeFilter((entry: ProviderEntry) =>
-    isADocumentBesideTheEntries(entry.document) ? [{ path: ['document'], issue: documentByItsAddress }] : [],
-  ),
-);
+const gatewayOfAnAddedProvider =
+  'Expected no gateway: only an entry the runtime ships names one, since the document beside it says the header its key is sent in, and a provider whoever runs the runtime adds names its document by its address';
+
+function addedIssuesOf({ document: written, credentials }: ProviderEntry): readonly EntryIssue[] {
+  return [
+    ...(isADocumentBesideTheEntries(written) ? [{ path: ['document'], issue: documentByItsAddress }] : []),
+    ...credentials.flatMap(({ gateway }, index) =>
+      gateway === undefined ? [] : [{ path: ['credentials', index, 'gateway'], issue: gatewayOfAnAddedProvider }],
+    ),
+  ];
+}
+
+export const AddedProviderEntrySchema = ProviderEntrySchema.check(Schema.makeFilter(addedIssuesOf));

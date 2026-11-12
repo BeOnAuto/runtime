@@ -53,7 +53,7 @@ interface ClientChoosing extends Omit<ClientsHad, 'serviceClients'>, Registratio
   readonly registrations: ClientRegistrations;
 }
 
-export type ServerSource = Exclude<ClientSource, 'auto'>;
+export type ServerSource = Exclude<ClientSource, 'auto' | 'gateway'>;
 
 export type MadeSource = Exclude<WayClientSource, 'registered'>;
 
@@ -252,7 +252,7 @@ function clientChoice(choosing: ClientChoosing): ClientChoice {
 }
 
 export function isServerSource(source: ClientSource): source is ServerSource {
-  return source !== 'auto';
+  return source !== 'auto' && source !== 'gateway';
 }
 
 export interface Requesting extends ClientChoosing {

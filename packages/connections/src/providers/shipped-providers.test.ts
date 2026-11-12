@@ -91,7 +91,11 @@ function withTheClientId(addition: ProviderAddition): AdditionInput {
 
 function settingsOf(addition: ProviderAddition): ServerSettings {
   const { kind } = addition.credential;
-  const read = readAddition(withTheClientId(addition), checking, placesNoValue(kind) ? undefined : standIn);
+  const read = readAddition(
+    withTheClientId(addition),
+    checking,
+    placesNoValue(addition.credential) ? undefined : standIn,
+  );
   const settings = Option.getOrThrow(Option.liftPredicate(Result.getOrThrow(read), isConnectionServerSettings));
   return kind === 'authorization' ? { ...settings, auth: authOfTheConsent(addition) } : settings;
 }

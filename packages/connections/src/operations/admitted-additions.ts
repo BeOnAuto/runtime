@@ -5,7 +5,12 @@ import { Effect, Option } from 'effect';
 import { describedAdditionOf, type DescribedAddition } from '../entries/described-entries.ts';
 import { credentialUnnamedOf, takesConsentOf, wayRefusalOf, type WayRefused } from '../page/consent-words.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
-import { checkedAdditionOf, refusalOfTheAddition, type GivenAddition } from '../providers/provider-additions.ts';
+import {
+  checkedAdditionOf,
+  gatewayRefusalOfTheAddition,
+  refusalOfTheAddition,
+  type GivenAddition,
+} from '../providers/provider-additions.ts';
 import type { AdditionGiven } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { refusedInTheDirectoryListing } from './money-refused.ts';
@@ -112,10 +117,12 @@ export function admittedAdditionOf(
     }
     yield* refusedInTheDirectoryListing(admitting.providers, checked);
     const asked = yield* askedHowItAuthenticates(checked, given, admitting);
-    return yield* describedAdditionOf(
+    const described = yield* describedAdditionOf(
       asked,
       { org, modelProviders, providing: undefined },
       { fetch: yield* fetchOfTheCall(admitting.fetch), reaches: reachesUnder(policy, admitting.resolve) },
     );
+    const servedAtAGateway = gatewayRefusalOfTheAddition(described, admitting);
+    return servedAtAGateway === undefined ? described : yield* Effect.fail(servedAtAGateway);
   });
 }

@@ -5,6 +5,7 @@ import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { connectedForItsAccount, throughAGateway } from '../testing/gateway-facts.ts';
 import { ConnectionEventSchema } from './connection-events.ts';
 
 const decoded = Schema.decodeUnknownResult(ConnectionEventSchema);
@@ -268,7 +269,8 @@ describe('the facts of the registry of connections', () => {
       '0.49.0': [...askingMore, ...underTheOrgsOAuthClient],
       '0.54.0': askedThroughAClient,
       '0.57.0': [...describedKey, ...playbooksSet, ...signingSecrets],
-      '0.59.0': givenItsDocument,
+      '0.59.0': [...givenItsDocument, ...connectedForItsAccount],
+      '0.60.0': throughAGateway,
     },
   });
 });

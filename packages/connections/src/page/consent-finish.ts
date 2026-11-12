@@ -1,4 +1,4 @@
-import { defineHttpOperation, type NotFound } from '@on.auto/operations';
+import { defineHttpOperation, OrgContext, type NotFound } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
 import { tokenSha256Of } from '../links/link-token.ts';
@@ -6,14 +6,7 @@ import { ConnectionIdField, TokenField } from '../operations/connection-fields.t
 import { actedNow, loadRegistry, recordChangeInRegistry, recordedCaller } from '../operations/registry-access.ts';
 import { ConnectionSchema, connectionShown } from '../registry/connection.ts';
 import { finishedConnectionOf } from '../registry/consent-decisions.ts';
-import { noOpenConsent, type KeptWithConsent } from '../registry/registry-lookup.ts';
-import {
-  namedOf,
-  openConsentOf,
-  replacedCredentialOf,
-  type ConsentServices,
-  type FinishedConsent,
-} from './consent-asking.ts';
+import { namedOf, openConsentOf, verifierOf, type ConsentServices, type FinishedConsent } from './consent-asking.ts';
 import {
   askedForASignIn,
   finishRefusalOf,
@@ -23,6 +16,7 @@ import {
   type ConsentRefused,
   type Returned,
 } from './consent-refusals.ts';
+import { replacedCredentialOf } from './forgotten-credentials.ts';
 
 const GivenField = Schema.String.check(Schema.isMinLength(1));
 
@@ -47,19 +41,22 @@ const FinishingSchema = Schema.Union([
   Schema.Struct({
     ...returnedFields,
     handle: GivenField.annotate({
-      description: "The handle Auto's consent service sent the person back with, which its tokens are handed over for",
+      description:
+        "The handle Auto's consent service or the connection's gateway sent the person back with, which its tokens or its key are handed over for",
     }),
-  }).annotate({ description: "The finish of a consent begun through Auto's consent service" }),
+  }).annotate({ description: "The finish of a consent begun through Auto's consent service or a gateway" }),
 ]);
 
 type Finishing = typeof FinishingSchema.Type;
 
 type LinkUse = Parameters<typeof finishedConnectionOf>[1];
 
+type OpenConsent = Parameters<typeof verifierOf>[0];
+
 interface Recording {
   readonly use: LinkUse;
   readonly stateSha256: string;
-  readonly kept: KeptWithConsent;
+  readonly kept: OpenConsent;
 }
 
 function returnedOf(finishing: Finishing): Returned {
@@ -71,24 +68,18 @@ function returnedFieldsOf(finishing: Finishing) {
 }
 
 function redeemedOf(
-  kept: KeptWithConsent,
+  kept: OpenConsent,
   finishing: Finishing,
   services: ConsentServices,
 ): Effect.Effect<FinishedConsent, ConsentRefused | NotFound> {
-  const { consent, secrets } = services;
-  const { client_id: clientId, client_source: clientSource, verifier_secret_id: verifierSecretId } = kept.consent;
+  const { client_id: clientId, client_source: clientSource } = kept.consent;
   const named = namedOf(kept.connection);
   return Effect.gen(function* () {
-    const verifier = yield* secrets
-      .read(verifierSecretId)
-      .pipe(Effect.mapError(({ detail }) => verifierUnreadOf(named, detail)));
-    if (verifier === undefined) {
-      return yield* Effect.fail(noOpenConsent(kept.connection.name));
-    }
+    const verifier = yield* verifierOf(kept, services, (detail) => verifierUnreadOf(named, detail));
     const asked = yield* askedForASignIn(kept, services, kept.consent.scope);
     const client = { client_id: clientId, client_source: clientSource };
-    return yield* consent
-      .finish({ ...asked, client, ...returnedFieldsOf(finishing), verifier: verifier.value })
+    return yield* services.consent
+      .finish({ ...asked, client, ...returnedFieldsOf(finishing), verifier })
       .pipe(Effect.mapError((refusal) => finishRefusalOf(named, refusal, returnedOf(finishing))));
   });
 }
@@ -100,6 +91,7 @@ const recordedWith = Effect.fnUntraced(function* (
 ) {
   const { client_id: clientId, client_source: clientSource } = finished.client;
   const granted = finished.scope === undefined ? {} : { scope: finished.scope };
+  const named = finished.account === undefined ? {} : { account: finished.account };
   return yield* recordChangeInRegistry({
     type: 'finish',
     ...use,
@@ -109,6 +101,7 @@ const recordedWith = Effect.fnUntraced(function* (
     client_id: clientId,
     client_source: clientSource,
     ...granted,
+    ...named,
   });
 });
 
@@ -123,8 +116,25 @@ function connectedWith(finished: FinishedConsent, recording: Recording, { secret
   }).pipe(Effect.onError(() => finished.revoked));
 }
 
-export function defineFinishConsent(services: ConsentServices) {
+const finishedConnection = Effect.fnUntraced(function* (finishing: Finishing, services: ConsentServices) {
   const { bindsPerson } = services;
+  const use = { connection: finishing.id, token_sha256: tokenSha256Of(finishing.token), bindsPerson };
+  const acted = yield* actedNow;
+  const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry, use, acted));
+  const stateSha256 = tokenSha256Of(finishing.state);
+  const kept = yield* openConsentOf(linked, { at: acted.at, stateSha256 }, services);
+  const began = kept.consent.client_source === 'auto' || kept.consent.client_source === 'gateway' ? 'handle' : 'code';
+  const wrongShape = wrongShapeOf(namedOf(kept.connection), began, returnedOf(finishing));
+  if (wrongShape !== undefined) {
+    return yield* Effect.fail(wrongShape);
+  }
+  const finished = yield* redeemedOf(kept, finishing, services);
+  const { before, after } = yield* connectedWith(finished, { use, stateSha256, kept }, services);
+  yield* replacedCredentialOf(before, after, services);
+  return connectionShown(after.connection, null);
+});
+
+export function defineFinishConsent(services: ConsentServices) {
   return defineHttpOperation('org', 'command', {
     name: 'finish',
     title: 'Finish consent',
@@ -141,20 +151,10 @@ export function defineFinishConsent(services: ConsentServices) {
     outputSchema: ConnectionSchema,
     reasons: ['not_found', 'forbidden', 'conflict', 'invalid_input', 'unavailable'],
     handle: Effect.fnUntraced(function* (finishing) {
-      const use = { connection: finishing.id, token_sha256: tokenSha256Of(finishing.token), bindsPerson };
-      const acted = yield* actedNow;
-      const linked = yield* Effect.fromResult(finishedConnectionOf(yield* loadRegistry, use, acted));
-      const stateSha256 = tokenSha256Of(finishing.state);
-      const kept = yield* openConsentOf(linked, { at: acted.at, stateSha256 }, services);
-      const began = kept.consent.client_source === 'auto' ? 'handle' : 'code';
-      const wrongShape = wrongShapeOf(namedOf(kept.connection), began, returnedOf(finishing));
-      if (wrongShape !== undefined) {
-        return yield* Effect.fail(wrongShape);
-      }
-      const finished = yield* redeemedOf(kept, finishing, services);
-      const { before, after } = yield* connectedWith(finished, { use, stateSha256, kept }, services);
-      yield* replacedCredentialOf(before, after, services);
-      return connectionShown(after.connection, null);
+      const { org } = yield* OrgContext;
+      return yield* finishedConnection(finishing, services).pipe(
+        Effect.annotateLogs({ org, connection: finishing.id }),
+      );
     }),
   });
 }

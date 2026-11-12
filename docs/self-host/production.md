@@ -197,6 +197,8 @@ Pin a full version, such as `docker.on.auto/onauto/runtime:0.9.1`, and upgrade o
 
 Upgrades go forward only. An older release cannot open a ledger upgraded by a newer one. Start the newer release again, or restore the backup taken before the upgrade.
 
+One boundary is Auto's cloud's alone, since only it makes a connection through a gateway: once an org holds such a connection, no release before the one that reads it can be run for that org again. An earlier release cannot read that connection's facts, and since it reads an org's connections together, it fails every connection of that org, not that one alone.
+
 At startup, the server checks the database layout, every recorded fact type, and the newest fact of each type. It refuses a layout older than it can migrate, an unknown fact type, or a fact shape it cannot read. The error identifies the layout or the facts and their positions.
 
 An unknown fact type may belong to an extension that is no longer installed. Restore that extension in `extensions` first; see [Extensions](configuration.md#extensions).

@@ -12,6 +12,7 @@ import {
 } from '@on.auto/outbound';
 import { articled, listed } from '@on.auto/phrasing';
 import { wayAddresses } from '@on.auto/providers';
+import type { WayGateway } from '@on.auto/tool-servers';
 import { Effect } from 'effect';
 
 import type { ConnectionEntry, ConnectionType } from '../registry/connection-entry.ts';
@@ -27,6 +28,11 @@ export interface Addition {
   readonly credential: Credential;
 }
 
+export interface Provided {
+  readonly documentServer: string | undefined;
+  readonly gateway?: WayGateway | undefined;
+}
+
 function allowing(items: readonly string[], none: string): string {
   return items.length === 0 ? none : listed(items);
 }
@@ -36,9 +42,16 @@ function matches(pattern: string, host: string): boolean {
   return lowered.startsWith('*.') ? host.endsWith(lowered.slice(1)) : host === lowered;
 }
 
-function hostsOf({ type, entry, credential }: Addition, documentServer: string | undefined): readonly string[] {
-  const server = type === 'mcp' ? [entry.url] : [entry.document, entry.base_url, documentServer];
-  const addresses = [...server, ...wayAddresses.map((field) => credential[field])];
+function consentAddressesOf(credential: Credential, provided: Provided | undefined): readonly (string | undefined)[] {
+  return credential.client_source === 'gateway'
+    ? [provided?.gateway?.url]
+    : wayAddresses.map((field) => credential[field]);
+}
+
+function hostsOf(addition: Addition, provided: Provided | undefined): readonly string[] {
+  const { type, entry, credential } = addition;
+  const server = type === 'mcp' ? [entry.url] : [entry.document, entry.base_url, provided?.documentServer];
+  const addresses = [...server, ...consentAddressesOf(credential, provided)];
   return addresses.flatMap((address) => {
     const parsed = address === undefined ? null : URL.parse(address);
     return parsed === null ? [] : [parsed.hostname];
@@ -104,22 +117,48 @@ export function reachesUnder(
 function hostRefusal(
   allowedHosts: readonly string[] | null,
   addition: Addition,
-  documentServer: string | undefined,
+  provided: Provided | undefined,
 ): Forbidden | undefined {
-  const refused = hostsOf(addition, documentServer).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
+  const refused = hostsOf(addition, provided).find((host) => hostRefusalOf(allowedHosts, host) !== undefined);
   return refused === undefined ? undefined : hostRefusalOf(allowedHosts, refused);
 }
 
 function reservedHostRefusal(
   policy: ConnectionPolicy,
   addition: Addition,
-  documentServer: string | undefined,
+  provided: Provided | undefined,
 ): Forbidden | undefined {
-  const refusals = hostsOf(addition, documentServer).flatMap((host) => {
+  const refusals = hostsOf(addition, provided).flatMap((host) => {
     const kind = allowsReserved(policy, host) ? undefined : reservedHostKindOf(host);
     return kind === undefined ? [] : [reservedRefusalOf(host, kind)];
   });
   return refusals[0];
+}
+
+function originsOf({ type, entry }: Addition): readonly string[] {
+  const addresses = type === 'mcp' ? [entry.url] : [entry.document, entry.base_url];
+  return addresses.flatMap((address) => {
+    const parsed = address === undefined ? null : URL.parse(address);
+    return parsed === null ? [] : [parsed.origin];
+  });
+}
+
+export function gatewayRefusalOf(
+  addition: Addition,
+  gatewayOrigins: ReadonlyMap<string, string>,
+): Forbidden | undefined {
+  if (addition.provider !== null) {
+    return undefined;
+  }
+  const [reached] = originsOf(addition).flatMap((origin) => {
+    const provider = gatewayOrigins.get(origin);
+    return provider === undefined ? [] : [{ origin, provider }];
+  });
+  return reached === undefined
+    ? undefined
+    : new Forbidden({
+        detail: `A connection given by hand may not reach ${reached.origin}, which the provider ${reached.provider} connects through; add the provider ${reached.provider} instead`,
+      });
 }
 
 const variablesRule = 'A reference may name only a variable the operator lists in connections.variables';
@@ -184,11 +223,11 @@ export function bindsPerson(access: RuntimeAccess): boolean {
 function rulesRefusalOf(
   policy: ConnectionPolicy,
   addition: Addition,
-  documentServer: string | undefined,
+  provided: Provided | undefined,
 ): Forbidden | undefined {
   return (
-    hostRefusal(policy.allowedHosts, addition, documentServer) ??
-    reservedHostRefusal(policy, addition, documentServer) ??
+    hostRefusal(policy.allowedHosts, addition, provided) ??
+    reservedHostRefusal(policy, addition, provided) ??
     kindRefusal(policy.credentialKinds, addition) ??
     referenceRefusal(policy.variables, addition)
   );
@@ -205,18 +244,18 @@ export function addingRefusalOf({ peopleMayAdd }: ConnectionPolicy): Forbidden |
 export function policyRefusalOf(
   policy: ConnectionPolicy,
   addition: Addition,
-  documentServer: string | undefined,
+  provided: Provided | undefined,
 ): Forbidden | undefined {
-  return addingRefusalOf(policy) ?? rulesRefusalOf(policy, addition, documentServer);
+  return addingRefusalOf(policy) ?? rulesRefusalOf(policy, addition, provided);
 }
 
 export function useRefusalOf(
   policy: ConnectionPolicy,
   addition: Addition,
-  documentServer: string | undefined,
+  provided: Provided | undefined,
 ): Forbidden | undefined {
   return policy.peopleMayAdd
-    ? rulesRefusalOf(policy, addition, documentServer)
+    ? rulesRefusalOf(policy, addition, provided)
     : new Forbidden({
         detail: 'This runtime uses no connection: its operator sets up its tool servers itself',
       });
