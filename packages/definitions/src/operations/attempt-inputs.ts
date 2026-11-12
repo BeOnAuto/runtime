@@ -1,15 +1,20 @@
-import { Unavailable } from '@on.auto/operations';
+import { Unavailable, type UnavailableKind } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { inputOf, type PayloadAsRead } from '../payloads/run-payloads.ts';
 import type { RecordedRunState } from '../runs/run-state.ts';
-import type { RunDetail } from '../runs/run.ts';
+import type { RunDetail, RunRejection } from '../runs/run.ts';
 import { answeredWith, type AttemptOfARun } from './attempt-endings.ts';
 import type { DocumentLoss } from './unread-texts.ts';
 
 export type AttemptWithoutItsInput = Omit<AttemptOfARun, 'input'>;
 
 export type AttemptToEnd = Pick<AttemptOfARun, 'id' | 'context' | 'number'>;
+
+export interface AttemptRefusal {
+  readonly detail: string;
+  readonly kind: UnavailableKind;
+}
 
 export type NextAttempt =
   | { readonly type: 'answered'; readonly answer: RunDetail }
@@ -55,6 +60,11 @@ export const endedForItsLostDocument = Effect.fnUntraced(function* (
   const rejection = { reason: 'conflict', detail, because } as const;
   return yield* answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, number);
 });
+
+export function endedAsRefused({ id, context, number }: AttemptToEnd, { detail, kind }: AttemptRefusal) {
+  const rejection: RunRejection = { reason: 'unavailable', detail, kind };
+  return answeredWith(id, context, { type: 'run_rejected', data: { rejection } }, number);
+}
 
 export function nextAttemptWith(attempt: AttemptWithoutItsInput, input: PayloadAsRead) {
   return 'read' in input

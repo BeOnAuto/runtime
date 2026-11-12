@@ -1,7 +1,7 @@
 import { defineCommand } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
-import { attemptEnded, nextAttemptOf, type Capability } from '../index.ts';
+import { attemptEnded, nextAttemptOf, nextAttemptRefused, type AttemptRefusal, type Capability } from '../index.ts';
 import { modelCallAnswered } from '../journal-testing/model-calls.ts';
 
 export const answeredFirstCall = {
@@ -31,5 +31,19 @@ export function drivingAShell(capabilities: readonly Capability[], capability: C
         );
         return { next: next.type, status: ended.status, input: next.attempt.input };
       }),
+  });
+}
+
+export function refusingAShell(capabilities: readonly Capability[], capability: Capability, refusal: AttemptRefusal) {
+  return defineCommand('playbook', {
+    name: 'refuse_run',
+    title: 'Refuse run',
+    description: 'Refuses the next attempt of a started run as a shell does, before it is made.',
+    route: { method: 'POST', path: '/refuse' },
+    inputSchema: Schema.Struct({ run_id: Schema.String }),
+    outputSchema: Schema.Struct({ status: Schema.String }),
+    reasons: ['not_found', 'conflict', 'invalid_input', 'unavailable', 'cancelled', 'unanswered'],
+    handle: ({ run_id: id }) =>
+      Effect.map(nextAttemptRefused(capabilities, capability, id, refusal), ({ status }) => ({ status })),
   });
 }

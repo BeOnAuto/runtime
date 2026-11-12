@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { linksIn } from '../journal-testing/run-links.ts';
 import { quietMs } from '../testing/capabilities/resumer.ts';
 import { drivenWithItsInputKept } from '../testing/kept-input-drives.ts';
-import { acted, momentAfter } from '../testing/resumed-runs.ts';
+import { acted, askedOfTheRun, momentAfter } from '../testing/resumed-runs.ts';
+import { refusingAShell } from '../testing/shell-drives.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -69,6 +70,33 @@ describe('the next attempt of a run whose input its playbook keeps outside the r
 
     expect(records.map(({ type, data }) => ({ type, data }))).toEqual([
       { type: 'run_rejected', data: { rejection: lostInput } },
+    ]);
+  });
+});
+
+describe('the next attempt of a run whose kept input the store does not give, refused by a shell', () => {
+  it('ends the run with the refusal the shell gives, reading nothing while the store does not answer', async () => {
+    const started = await leftWithAKeptInput(true);
+    started.watched.fail();
+    const { capability } = started.resuming;
+    const refusal = {
+      detail: 'Its input could not be read for a day, so it ends',
+      kind: 'content_unavailable',
+    } as const;
+    const readsBefore = started.watched.reads();
+
+    const ended = await started.call(
+      refusingAShell([capability], capability, refusal),
+      { ...askedOfTheRun, attemptDied: true },
+      momentAfter(quietMs + 1),
+    );
+
+    expect(ended).toMatchObject({ status: 'rejected', reason: 'unavailable', ...refusal });
+    expect(started.watched.reads()).toBe(readsBefore);
+    expect((await linksIn(started)).map(({ type }) => type)).toEqual([
+      'run_started',
+      'model_call_started',
+      'run_rejected',
     ]);
   });
 });

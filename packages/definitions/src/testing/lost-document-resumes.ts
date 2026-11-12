@@ -14,7 +14,7 @@ const toAlpha = toPlaybook('acme', 'alpha');
 
 const longerThanAFactHolds = 'step '.repeat(mostInlinePayloadBytes / 4);
 
-export async function leftWithItsDocumentLost() {
+async function leftWithItsDocumentKept() {
   const watched = watchedStore();
   const resuming = resumer();
   const operations = definitionOperationsFor([resuming.capability]);
@@ -25,7 +25,6 @@ export async function leftWithItsDocumentLost() {
   );
   await definitions.run(defined.pipe(Effect.provideService(PayloadsOutside, true)));
   await definitions.run(Effect.orDie(definitions.ledger.service.execute(stream, runDecider, startOfTheStep)));
-  watched.lose();
   const asked = { type: 'resumer', name: 'step', input: {}, run_id: acted.runId };
   const asking = (attemptDied?: true) =>
     definitions.dispatch(operations.runDefinition, {
@@ -36,4 +35,16 @@ export async function leftWithItsDocumentLost() {
   const cancelled = () =>
     definitions.call(operations.cancelRun, toAlpha(acmeAdmin, { run_id: acted.runId }), twoHoursLater);
   return { ...definitions, resuming, watched, asking, running, cancelled };
+}
+
+export async function leftWithItsDocumentLost() {
+  const left = await leftWithItsDocumentKept();
+  left.watched.lose();
+  return left;
+}
+
+export async function leftWithItsDocumentUnread() {
+  const left = await leftWithItsDocumentKept();
+  left.watched.fail();
+  return left;
 }

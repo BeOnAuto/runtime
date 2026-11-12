@@ -112,6 +112,7 @@ export {
 export { InputReceiptSchema, inputTimeOf, receiptOf, type InputReceipt } from './machine/input-receipt.ts';
 export { InstantSchema, clampedAt } from './machine/instant.ts';
 export {
+  mostAdmissionWaitMs,
   mostCallArgumentsBytes,
   mostEmittedEventBytes,
   mostEmittedEventSize,
