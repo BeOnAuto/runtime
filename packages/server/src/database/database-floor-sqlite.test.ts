@@ -87,6 +87,64 @@ describe('the place a follower kept in a playbook, in a SQLite database made at 
   });
 });
 
+const head = {
+  playbook_key: 'playbook/acme/sales/',
+  sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+  upload_id: '019a7f3e-5c2b-7a10-8000-000000000001',
+  bytes: 4,
+  chunks: 1,
+  media_type: 'text/plain',
+};
+
+const theTimeOfStep12: unknown = expect.any(Number);
+
+function headsIn(file: string): readonly unknown[] {
+  const database = new DatabaseSync(file, { readOnly: true });
+  try {
+    return database.prepare('SELECT * FROM recorded_content_heads').all();
+  } finally {
+    database.close();
+  }
+}
+
+function headKeptIn(file: string): void {
+  const database = new DatabaseSync(file);
+  try {
+    database
+      .prepare(
+        'INSERT INTO recorded_content_heads (playbook_key, sha256, upload_id, bytes, chunks, media_type) VALUES (?, ?, ?, ?, ?, ?)',
+      )
+      .run(...Object.values(head));
+  } finally {
+    database.close();
+  }
+}
+
+describe('the head of a content a playbook kept, in a SQLite database made at the floor', () => {
+  it('reads as it did once every step carried the database forward, with no expiry of its content and no erasure of its bytes', async () => {
+    const ledger = aLedgerOfTheTest();
+    aDatabaseFrom(theSQLiteFloor(), ledger.fileName);
+    headKeptIn(ledger.fileName);
+
+    const before = headsIn(ledger.fileName);
+    const after = headsIn(await openedOn(ledger));
+
+    expect([before, after]).toEqual([
+      [head],
+      [
+        {
+          ...head,
+          kept_at: theTimeOfStep12,
+          kept_in: 'ledger',
+          removing_since: null,
+          expires_at: null,
+          erased_at: null,
+        },
+      ],
+    ]);
+  });
+});
+
 function hostTablesDroppedIn(file: string): void {
   const database = new DatabaseSync(file);
   try {

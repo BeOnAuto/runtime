@@ -31,7 +31,10 @@ const firstContentTable = 'CREATE TABLE IF NOT EXISTS recorded_content_chunks';
 
 const theContentTables = [firstContentTable, 'CREATE TABLE IF NOT EXISTS recorded_content_heads'];
 
-const theContentIndexes = ['CREATE INDEX IF NOT EXISTS recorded_content_heads_by_upload ON recorded_content_heads'];
+const theContentIndexes = [
+  'CREATE INDEX IF NOT EXISTS recorded_content_heads_by_upload ON recorded_content_heads',
+  'CREATE INDEX IF NOT EXISTS recorded_content_heads_expiring ON recorded_content_heads',
+];
 
 describe("the ledger's own schema on PostgreSQL", () => {
   it("creates the playbook's indexes, the tables of the content it keeps and their indexes, then the tables of its kept secrets and of the webhooks it received, each only when missing", async () => {
@@ -39,6 +42,7 @@ describe("the ledger's own schema on PostgreSQL", () => {
     const found = executorFinding([
       ...contentTableNames,
       'recorded_content_heads_by_upload',
+      'recorded_content_heads_expiring',
       'kept_secrets',
       'webhooks_received',
       'webhooks_received_kept_until',

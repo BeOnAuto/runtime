@@ -63,6 +63,8 @@ function headTableOf({ heads, placeColumns }: Shelf): ContentTable {
       kept_at BIGINT NOT NULL DEFAULT 0,
       kept_in TEXT NOT NULL DEFAULT 'ledger',
       removing_since BIGINT,
+      expires_at BIGINT,
+      erased_at BIGINT,
       PRIMARY KEY (${namesOf(key)})
     )`,
   };
@@ -83,7 +85,19 @@ function uploadIndexOf({ heads, placeColumns }: Shelf): PlaybookIndex {
   };
 }
 
-const contentIndexes: readonly PlaybookIndex[] = shelves.map((shelf) => uploadIndexOf(shelf));
+function expiringIndexOf({ heads }: Shelf): PlaybookIndex {
+  const name = `${heads}_expiring`;
+  return {
+    name,
+    create: () =>
+      SQL`CREATE INDEX IF NOT EXISTS ${SQL.identifier(name)} ON ${SQL.identifier(heads)} (expires_at) WHERE expires_at IS NOT NULL`,
+  };
+}
+
+const contentIndexes: readonly PlaybookIndex[] = shelves.flatMap((shelf) => [
+  uploadIndexOf(shelf),
+  expiringIndexOf(shelf),
+]);
 
 const NameRows = Schema.Array(Schema.Struct({ name: Schema.String }));
 

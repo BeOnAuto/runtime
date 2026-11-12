@@ -110,6 +110,51 @@ describe.skipIf(skipped)(
   },
 );
 
+const head = {
+  playbook_key: 'playbook/acme/sales/',
+  sha256: '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+  upload_id: '019a7f3e-5c2b-7a10-8000-000000000001',
+  bytes: '4',
+  chunks: 1,
+  media_type: 'text/plain',
+};
+
+const heads = 'SELECT * FROM recorded_content_heads';
+
+const theTimeOfStep12: unknown = expect.any(String);
+
+describe.skipIf(skipped)(
+  `the head of a content a playbook kept, in a PostgreSQL database made at the floor${notice}`,
+  () => {
+    it('reads as it did once every step carried the database forward, with no expiry of its content and no erasure of its bytes', async () => {
+      const database = await aDatabase();
+      await aPostgreSQLDatabaseFrom(theFloor(), database);
+      await queried(
+        database,
+        'INSERT INTO recorded_content_heads (playbook_key, sha256, upload_id, bytes, chunks, media_type) VALUES ($1, $2, $3, $4, $5, $6)',
+        Object.values(head),
+      );
+
+      const before = await queried(database, heads);
+      const after = await queried(await openedOn(database), heads);
+
+      expect([before, after]).toEqual([
+        [head],
+        [
+          {
+            ...head,
+            kept_at: theTimeOfStep12,
+            kept_in: 'ledger',
+            removing_since: null,
+            expires_at: null,
+            erased_at: null,
+          },
+        ],
+      ]);
+    });
+  },
+);
+
 describe.skipIf(skipped)(
   `a PostgreSQL database made at the floor whose first opening ended before the workflow host made its tables${notice}`,
   () => {

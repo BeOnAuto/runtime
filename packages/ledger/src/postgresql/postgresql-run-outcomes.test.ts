@@ -56,7 +56,8 @@ const indexes = [
   'ledger_messages_by_id',
 ].map((name) => ({ name }));
 
-const ownTables = 'recorded_content_heads_by_upload kept_secrets webhooks_received webhooks_received_kept_until';
+const ownTables =
+  'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until';
 
 const contentAndSecrets = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({ name }));
 

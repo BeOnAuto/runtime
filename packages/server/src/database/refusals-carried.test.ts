@@ -26,6 +26,9 @@ const putAtLayout17 = [
   'ALTER TABLE workflow_subscriptions DROP COLUMN held_due',
   "INSERT INTO workflow_reaction_refusals (playbook_key, workflow, version, minute, count, reason, recorded, kind, because, trigger_kind, trigger_reference) VALUES ('playbook/acme/alpha/', 'close', 3, 60000, 2, 'Refused by its schedule', 1, 'credits_exhausted', 'free_daily_limit', 'cron', '/schedule/cron')",
   "INSERT INTO workflow_reaction_refusals (playbook_key, workflow, version, minute, count, reason, recorded) VALUES ('playbook/acme/alpha/', 'listen', 1, 120000, 1, 'Refused a listen task', 1)",
+  'DROP INDEX recorded_content_heads_expiring',
+  'ALTER TABLE recorded_content_heads DROP COLUMN erased_at',
+  'ALTER TABLE recorded_content_heads DROP COLUMN expires_at',
   'UPDATE ledger_layout SET layout = 17',
 ];
 

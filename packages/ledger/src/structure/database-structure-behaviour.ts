@@ -12,10 +12,14 @@ const structureReads: Readonly<Record<Dialect, StructureRead>> = {
   postgresql: postgresqlStructureOf,
 };
 
+export function structureIn(entry: LedgerEntry, database: string): Promise<DatabaseStructure> {
+  return entry.executedOn(database, structureReads[entry.layout.dialect]);
+}
+
 async function aDatabaseMadeBy(entry: LedgerEntry, statements: readonly string[]): Promise<DatabaseStructure> {
   const database = await entry.aDatabase();
   await inTurn(statements, (statement) => entry.queried(database, statement));
-  return entry.executedOn(database, structureReads[entry.layout.dialect]);
+  return structureIn(entry, database);
 }
 
 const variants: readonly string[] = [

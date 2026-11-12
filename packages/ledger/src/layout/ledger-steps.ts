@@ -1,6 +1,19 @@
 import { statement } from '../connection/statement.ts';
 import type { LayoutStep } from './layout-steps.ts';
 
+const headsBeforeLayout21 = statement`CREATE TABLE IF NOT EXISTS recorded_content_heads (
+    playbook_key TEXT NOT NULL,
+    sha256 TEXT NOT NULL,
+    upload_id TEXT NOT NULL,
+    bytes BIGINT NOT NULL,
+    chunks INTEGER NOT NULL,
+    media_type TEXT NOT NULL,
+    kept_at BIGINT NOT NULL DEFAULT 0,
+    kept_in TEXT NOT NULL DEFAULT 'ledger',
+    removing_since BIGINT,
+    PRIMARY KEY (playbook_key, sha256)
+  )`;
+
 export const ledgerLayoutSteps: readonly LayoutStep[] = [
   {
     layout: 7,
@@ -34,4 +47,12 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
     statements: [statement`DROP TABLE IF EXISTS memories_1`],
   },
   { layout: 20, statements: [] },
+  {
+    layout: 21,
+    statements: [
+      headsBeforeLayout21,
+      statement`ALTER TABLE recorded_content_heads ADD COLUMN expires_at BIGINT`,
+      statement`ALTER TABLE recorded_content_heads ADD COLUMN erased_at BIGINT`,
+    ],
+  },
 ];
