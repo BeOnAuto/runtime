@@ -106,6 +106,31 @@ describe('a read the playbook made in a conversation, as the playbook events sho
   });
 });
 
+const fileOfTheThread = { uri: 'file:///thread.json', mimeType: 'application/json', text: '{"messages":[]}' };
+
+const answeredInAFile = {
+  content: [
+    { type: 'text', text: 'Read the thread.' },
+    { type: 'resource', resource: fileOfTheThread },
+  ],
+};
+
+const keptWithAFile: Readonly<Record<string, string>> = {
+  ...kept,
+  [answered.result_sha256]: JSON.stringify(answeredInAFile),
+};
+
+describe('a read whose tool answered its replies in a file, as the playbook events show it', () => {
+  it('shows the answer a reader reads of it, the text of the file after the line before it', () => {
+    const read = shown(
+      { type: 'replies_read', data: { ...thePlace, ...answered, replies: 0, taken: 0, refused: 0 } },
+      (sha256) => keptWithAFile[sha256],
+    );
+
+    expect(read?.data).toMatchObject({ result: answeredInAFile, answer: 'Read the thread.\n{"messages":[]}' });
+  });
+});
+
 describe('a read the playbook could not make in a conversation, as the playbook events show it', () => {
   it('says why, with no answer where no call was answered and the wait a server asked for', () => {
     const notOffered = shown(

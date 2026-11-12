@@ -16,7 +16,7 @@ const numbered = { number: Schema.Int };
 
 const sent = Struct.omit(CallSentSchema.fields, ['read_only']);
 
-const answered = Struct.omit(CallAnsweredSchema.fields, ['is_error', 'shown_bytes']);
+const answered = Struct.omit(CallAnsweredSchema.fields, ['is_error', 'shown_bytes', 'shown_format']);
 
 const DeliveryFailedBecauseSchema = Schema.Literals([
   'tool_error',

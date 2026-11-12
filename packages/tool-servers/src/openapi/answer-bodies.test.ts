@@ -1,7 +1,16 @@
 import { documentsReadInProcess, pdfOfPages, wordDocumentOf } from '@on.auto/documents/testing';
 import { describe, expect, it } from 'vitest';
 
-import { accessTo, answerOf, apiKey, called, closedAfter, fakeApi, keyed } from '../api-testing/api-calls.ts';
+import {
+  accessTo,
+  answerOf,
+  apiKey,
+  blockTextsOf,
+  called,
+  closedAfter,
+  fakeApi,
+  keyed,
+} from '../api-testing/api-calls.ts';
 import { fakeFileTexts } from '../api-testing/fake-api-files.ts';
 import { measured, toolBounds } from '../bounds/call-bounds.ts';
 import type { CallSettled } from '../clients/server-client.ts';
@@ -29,7 +38,7 @@ function readInProcess(named?: string): AnsweredFile {
 }
 
 function textOf(settled: CallSettled): unknown {
-  return 'result' in settled ? settled.result.content.map(({ text }) => text) : settled;
+  return 'result' in settled ? blockTextsOf(settled.result) : settled;
 }
 
 async function textsOf(...responses: readonly Readonly<Response>[]): Promise<readonly unknown[]> {
@@ -41,7 +50,7 @@ async function textsOf(...responses: readonly Readonly<Response>[]): Promise<rea
 
 async function answeredText(response: Readonly<Response>): Promise<string> {
   const settled = await settledOf(response, answering, undefined, readInProcess());
-  return 'result' in settled ? settled.result.content.map(({ text = '' }) => text).join('') : '';
+  return 'result' in settled ? blockTextsOf(settled.result).join('') : '';
 }
 
 async function namedText(headers: Readonly<Record<string, string>>, callNames?: string): Promise<unknown> {

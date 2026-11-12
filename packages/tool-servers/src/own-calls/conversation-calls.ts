@@ -41,7 +41,7 @@ export interface Telling {
 }
 
 function answeredOf(answered: CallAnswered) {
-  return Struct.omit(answered, ['is_error', 'shown_bytes']);
+  return Struct.omit(answered, ['is_error', 'shown_bytes', 'shown_format']);
 }
 
 function endOf(end: CalledOnce | undefined) {

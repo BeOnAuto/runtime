@@ -124,3 +124,43 @@ describe('an answer that carries no id of the server', () => {
     });
   });
 });
+
+const fileOfRows = { uri: 'file:///rows.json', mimeType: 'application/json', text: '{"rows":2}' };
+
+const keptWithAFile: Readonly<Record<string, string>> = {
+  'kept-result': JSON.stringify({
+    content: [
+      { type: 'text', text: 'Read rows.json.' },
+      { type: 'resource', resource: fileOfRows },
+    ],
+  }),
+};
+
+describe('an answer that carries a file', () => {
+  it('shows the answer a reader reads of it, the text of the file after the line before it, and the format the call names', () => {
+    const [answered] = handCallPresenter.present(
+      {
+        id: '1f0e8d7c-6b5a-5d4c-8b3a-291817161515',
+        causationId: null,
+        correlationId: null,
+        stream: 'tool-calls/0199b7e2-4c1d-7a3e-8f5b-6d2c1e0f9a8c',
+        version: 2,
+        globalPosition: 5,
+        type: 'tool_call_answered',
+        data: {
+          is_error: false,
+          result_bytes: 112,
+          result_sha256: 'kept-result',
+          shown_format: 2,
+          duration_ms: 12,
+          jsonrpc_id: 2,
+        },
+        context: { at: '2026-10-08T09:00:00.000Z', by: 'acme-builder' },
+        recordedAt: '2026-10-08T09:00:00.000Z',
+      },
+      (sha256) => keptWithAFile[sha256],
+    );
+
+    expect(answered?.data).toMatchObject({ shown_format: 2, answer: 'Read rows.json.\n{"rows":2}' });
+  });
+});

@@ -265,7 +265,7 @@ A run checks its tools after it confirms that its model is offered, and before i
 - Parts of a tool's input schema that the provider may refuse or not enforce are added to the run's `warnings`, such as `graph__search inputSchema#/properties/query/maxLength`. Tools are not sent as strict structured outputs, so the rules for JSON output schemas do not apply to them.
 - The model keeps the function's output format. It may call several tools in one step, and call tools over several steps, before it answers.
 - Each call carries the run id in the request's metadata, under `auto.on/run_id`.
-- A tool's text content reaches the model as text. Structured content reaches it only when there is no text. Other content reaches it as a one-line placeholder.
+- A tool's text content reaches the model as text, and so does the text of an embedded resource, such as a file the tool returns, in the order the tool gave them. Structured content reaches it only when no part of the result holds text. A resource link reaches it as its fields in JSON: its `uri`, its `name`, and the title, description, media type and size the tool gave. Other content, such as an image, audio or an embedded resource that holds binary data, reaches it as a one-line placeholder that names its type.
 - A result the server marks `isError`, such as a policy denial, reaches the model as a tool error it may recover from.
 - A server's own instructions never reach the model. Error text is scrubbed of the server's secrets and of minted tokens.
 
@@ -317,7 +317,7 @@ Each call adds two events to the run's history, appended as they happen:
 
 1. `tool_call_started`, recorded before the call is sent. It has the call's number, the id the model gave it, the server, the tool and the size of its arguments. It has `read_only: true` when the tool is marked `reads`, and the SHA-256 digest of the arguments when they are kept.
 2. Then one of:
-   - `tool_call_answered`, when the tool answered: `is_error`, the size of the result and its digest when it is kept, `shown_bytes` when the model read less than all of it, the duration and the JSON-RPC id.
+   - `tool_call_answered`, when the tool answered: `is_error`, the size of the result and its digest when it is kept, `shown_bytes` when the model read less than all of it, `shown_format`, the format the model was shown the result in, the duration and the JSON-RPC id. A run performed again shows its model each result exactly as the first attempt did, in the format its event names.
    - `tool_call_failed`, when it did not: `because` (`arguments_refused`, `server_failure`, `timed_out`, `too_large` for a result larger than the transport reads, `cancelled`, or `interrupted` for a call whose attempt ended before it answered, which the run makes again; see [A run performed again](#a-run-performed-again)), the failure message, the duration and the JSON-RPC id.
 
 Either event carries the server's own request id when the server's `request_id` setting says where to find it. The arguments and the result are kept in full, scrubbed of secrets, unless the operator sets `record_content: false` for the server. A run's history, from `list_playbook_events` given its `run_id`, shows each one when it is at most 2 KiB, and its size otherwise. `get_event` reads them in full.

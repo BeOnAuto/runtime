@@ -12,7 +12,7 @@ import type { CallAnswered, CallEnded, CallFailed, CallStarted, SentCallFailedBe
 
 export type StartedFields = Omit<CallStarted, 'call_id' | 'read_only'>;
 
-export type AnsweredFields = Omit<CallAnswered, 'is_error' | 'shown_bytes' | 'duration_ms'>;
+export type AnsweredFields = Omit<CallAnswered, 'is_error' | 'shown_bytes' | 'shown_format' | 'duration_ms'>;
 
 export interface CallJournal {
   readonly started: (fact: CallStarted) => Effect.Effect<number | undefined>;

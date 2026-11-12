@@ -92,7 +92,7 @@ To save it, call `create_definition` with `type: "lookup"`, the `name` `thread-r
 Write the call from what the tool returns, not from memory:
 
 1. Call `search` with `only: read` to see the tools this playbook may use that only read, each with its mark. Call `introspect` for the `input_schema` a tool takes.
-2. Call the tool with `query_connection`, with the arguments its `input_schema` takes, and read its `answer`. `query_connection` calls only a tool marked `reads` and refuses any other. The answer is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
+2. Call the tool with `query_connection`, with the arguments its `input_schema` takes, and read its `answer`. `query_connection` calls only a tool marked `reads` and refuses any other. The answer is the document `read` points into: the tool's structured content, else the text of every text block and every embedded resource that holds text, such as a file, in the tool's order and joined by a newline, parsed as JSON where that text is JSON, else that text.
 3. Write `call`:
    - `server` and `tool`, as `search` names them;
    - `with`, the arguments;

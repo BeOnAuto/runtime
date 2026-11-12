@@ -88,7 +88,7 @@ Create Markdown under the relevant directory and add its route to `docs/nav.json
 
 Use relative Markdown links inside pages, such as `../concepts/functions.md`. They work in the repository, the standalone preview and the composed website. Do not link to the website's own guides: the standalone preview does not have them, and its build fails on a dead link. Keep assets in `docs/assets/` and refer to them relatively. Do not place secrets or account information in public examples.
 
-Describe the checkout's implemented behavior precisely. Mark a planned capability in a section of its own, and keep current API identifiers in executable examples. Inspect `structuredContent` when consuming MCP results; the first text block is a human-readable summary, not a JSON envelope.
+Describe the checkout's implemented behavior precisely. Mark a planned capability in a section of its own, and keep current API identifiers in executable examples. Inspect `structuredContent` when consuming MCP results; the first text block is a human-readable summary, not a JSON envelope. A tool server's answer is read by the declared `type` of each content block, an embedded resource as text or a blob by which of `text` or `blob` it holds: describe it in those terms, never by a list of media types.
 
 ## Publication contract
 

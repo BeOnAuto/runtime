@@ -123,6 +123,7 @@ describe('the facts of a call', () => {
           is_error: false,
           result_bytes: Buffer.byteLength(textAnswer('Found 2 rows for acme.')),
           result_sha256: digest(textAnswer('Found 2 rows for acme.')),
+          shown_format: 2,
           duration_ms: aNumber,
           jsonrpc_id: aNumber,
         },

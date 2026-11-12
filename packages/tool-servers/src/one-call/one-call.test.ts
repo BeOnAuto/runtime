@@ -47,6 +47,7 @@ describe('one call of a tool', () => {
         is_error: false,
         result_bytes: 95,
         result_sha256: aDigest,
+        shown_format: 2,
         duration_ms: aNumber,
         jsonrpc_id: aNumber,
       },

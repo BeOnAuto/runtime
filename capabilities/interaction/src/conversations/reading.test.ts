@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   answered,
+  answeredInAFile,
   answererId,
   chatHarness,
   conversationRows,
@@ -74,6 +75,38 @@ describe('the replies of a conversation, read once for every open request in it'
     expect((await conversationRows(flat.ledger)).map(({ key }) => key)).toEqual([
       'chat/thread_replies/#approvals-sales',
     ]);
+  });
+});
+
+describe('the replies of a conversation a tool answered in a file', () => {
+  it('takes a reply from replies its tool answered in a file, read as the text of the file, and none from a blob', async () => {
+    const fromAFile = await chatHarness();
+    const [thread] = await deliveredInThread(fromAFile, first);
+    const reply = {
+      ts: '1699.000002',
+      channel: '#approvals-sales',
+      user: answererId,
+      text: 'Approve',
+      thread_ts: thread,
+    };
+    fromAFile.chat.answerNext(answeredInAFile({ messages: [reply] }));
+    const fromABlob = await chatHarness();
+    await deliveredInThread(fromABlob, first);
+    const blob = { uri: 'file:///answer.json', mimeType: 'application/json', blob: 'eyJtZXNzYWdlcyI6W119' };
+    fromABlob.chat.answerNext({
+      outcome: 'result',
+      answer: { content: [{ type: 'resource', resource: blob }] },
+      detail: '',
+      retryAfterMs: null,
+    });
+
+    await fromAFile.performReads(Date.now() + farAhead);
+    await fromABlob.performReads(Date.now() + farAhead);
+
+    expect(await recordsOf(fromAFile.ledger, 'request_answered')).toMatchObject([
+      { data: { answer: { choice: 'approve' }, reply: { id: '1699.000002', sender: answererId } } },
+    ]);
+    expect(await recordsOf(fromABlob.ledger, 'reading_failed')).toMatchObject([{ data: { because: 'unreadable' } }]);
   });
 });
 

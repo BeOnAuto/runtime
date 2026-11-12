@@ -86,6 +86,7 @@ export interface Reasoning {
   readonly images?: ReasoningFunctionAdapterOptions['images'];
   readonly admit?: ReasoningFunctionAdapterOptions['languageModel']['admit'];
   readonly cancelledAfter?: number;
+  readonly reading?: ReasoningFunctionAdapterOptions['reading'];
 }
 
 export function reasoningOf(
@@ -96,6 +97,7 @@ export function reasoningOf(
     images,
     admit,
     cancelledAfter: cancelledAt = Number.POSITIVE_INFINITY,
+    reading,
   }: Reasoning,
   ...replies: readonly ScriptedReply[]
 ): ReasoningRun {
@@ -105,7 +107,13 @@ export function reasoningOf(
     cancelledAt,
   );
   const languageModel = admit === undefined ? scripted.languageModel : { ...scripted.languageModel, admit };
-  const capability = reasoningAdapter({ languageModel, tools, content, ...(images === undefined ? {} : { images }) });
+  const capability = reasoningAdapter({
+    languageModel,
+    tools,
+    content,
+    ...(images === undefined ? {} : { images }),
+    ...(reading === undefined ? {} : { reading }),
+  });
   const prepared = (source: string): PreparedDefinition => Effect.runSync(capability.prepare(source));
   return {
     capability,

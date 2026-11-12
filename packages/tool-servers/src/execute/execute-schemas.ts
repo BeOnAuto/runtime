@@ -35,7 +35,7 @@ export const ExecutedSchema = Schema.Struct({
   answer: Schema.optionalKey(
     Schema.Json.annotate({
       description:
-        "The document a call's read points into: the structured content, else the first text block parsed as JSON, else that text, scrubbed of the server's secrets; absent when the tool answered neither, and when it takes more than 64 KiB as JSON",
+        "The document a call's read points into: the structured content, else the text of every text block and every embedded resource that holds text, in the tool's order and joined by a newline, parsed as JSON where that text is JSON, else that text, scrubbed of the server's secrets; absent when the tool answered neither, and when it takes more than 64 KiB as JSON",
     }),
   ),
   result_bytes: Schema.NullOr(Schema.Int).annotate({

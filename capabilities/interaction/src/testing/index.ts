@@ -25,7 +25,14 @@ export { nudgedRequest, nudging } from './nudging.ts';
 export { attemptedThenStopped } from './stopped-requests.ts';
 export { broughtBeforeDeciding, recordedReply, takenReply, type RacingDelivery } from './racing-deliveries.ts';
 export { fakeTools, noTools, type FakeAnswer, type FakeTools } from './fake-tools.ts';
-export { answered, playbookUser, type ChatMessage, type Reaction, type Replying } from './chat-board.ts';
+export {
+  answered,
+  answeredInAFile,
+  playbookUser,
+  type ChatMessage,
+  type Reaction,
+  type Replying,
+} from './chat-board.ts';
 export {
   answererId,
   chatHarness,

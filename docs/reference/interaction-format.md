@@ -175,7 +175,7 @@ Such a function makes no request, sends no message and asks no model. So it has 
 Write a call from what the tool returns, not from memory:
 
 1. Call `search` to see the tool servers this playbook may use, the tools each offers and the mark of each. Call `introspect` for the `input_schema` a tool takes.
-2. `introspect` gives what a tool takes, not what it answers, and a call may change something. So look for a call that changes nothing: a tool that takes each id once changes nothing when it is called again with an id it has already taken. Once the person agrees, call it with `execute_connection`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else its first text block parsed as JSON, else that text.
+2. `introspect` gives what a tool takes, not what it answers, and a call may change something. So look for a call that changes nothing: a tool that takes each id once changes nothing when it is called again with an id it has already taken. Once the person agrees, call it with `execute_connection`, with the arguments its `input_schema` takes, and read its `answer`. That is the document `read` points into: the tool's structured content, else the text of every text block and every embedded resource that holds text, such as a file, in the tool's order and joined by a newline, parsed as JSON where that text is JSON, else that text.
 3. Write `call`:
    - `server` and `tool`, as `search` names them;
    - `with`, the arguments;
@@ -344,7 +344,7 @@ A function with `call` uses `call.tool` on `call.server`. A run checks every too
 | `with`   | No; `{}` when left out             | The tool's arguments, named as its `input_schema` names them. Their templates read `input`, `today` and `now`     |
 | `read`   | No; the whole answer when left out | A JSON Pointer to the part of the tool's answer the run returns, such as `/messages`. An empty pointer is refused |
 
-The answer is the tool's structured content, else its first text block parsed as JSON, else that text.
+The answer is the tool's structured content, else the text of every text block and every embedded resource that holds text, such as a file, in the tool's order and joined by a newline, parsed as JSON where that text is JSON, else that text.
 
 ### `deliver`
 

@@ -53,6 +53,18 @@ export function answered(document: unknown): BoardAnswer {
   };
 }
 
+export function answeredInAFile(document: unknown): BoardAnswer {
+  const text = JSON.stringify(document);
+  return {
+    outcome: 'result',
+    answer: {
+      content: [{ type: 'resource', resource: { uri: 'file:///answer.json', mimeType: 'application/json', text } }],
+    },
+    detail: '',
+    retryAfterMs: null,
+  };
+}
+
 function threadOf(thread: string) {
   return thread === '' ? {} : { thread_ts: thread };
 }

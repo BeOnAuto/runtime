@@ -34,6 +34,10 @@ const toolCall = { number: 1, call_id: 'call-1', server: 'crm', tool: 'find_cont
 
 const modelCall = { number: 2 };
 
+const ofTheAnswer = { result_bytes: 512, result_sha256: 'd4e5f6', shown_bytes: 256, duration_ms: 140 };
+
+const toolCallAnswered = { number: 1, is_error: false, ...ofTheAnswer, jsonrpc_id: 7, server_request_id: 'request-1' };
+
 const baseline: readonly (typeof RunEventSchema.Type)[] = [
   {
     type: 'run_started',
@@ -80,20 +84,7 @@ const baseline: readonly (typeof RunEventSchema.Type)[] = [
     },
     context: onTheRun,
   },
-  {
-    type: 'tool_call_answered',
-    data: {
-      number: 1,
-      is_error: false,
-      result_bytes: 512,
-      result_sha256: 'd4e5f6',
-      shown_bytes: 256,
-      duration_ms: 140,
-      jsonrpc_id: 7,
-      server_request_id: 'request-1',
-    },
-    context: onTheRun,
-  },
+  { type: 'tool_call_answered', data: toolCallAnswered, context: onTheRun },
   {
     type: 'tool_call_failed',
     data: {
@@ -291,7 +282,10 @@ const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>
   '0.46.0': baseline,
   '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
   '0.58.0': await keptFactsWritten(),
-  '0.59.0': [{ type: 'request_answered', data: inAThread, context: onTheRun }],
+  '0.59.0': [
+    { type: 'request_answered', data: inAThread, context: onTheRun },
+    { type: 'tool_call_answered', data: { ...toolCallAnswered, shown_format: 2 }, context: onTheRun },
+  ],
 };
 
 describe('the facts a playbook records on the stream of a run', () => {

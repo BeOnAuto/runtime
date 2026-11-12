@@ -16,7 +16,7 @@ const ofTheCall = { call_id: Schema.String };
 
 const sentFields = Struct.omit(CallSentSchema.fields, ['read_only']);
 
-const answeredFields = Struct.omit(CallAnsweredSchema.fields, ['is_error', 'shown_bytes']);
+const answeredFields = Struct.omit(CallAnsweredSchema.fields, ['is_error', 'shown_bytes', 'shown_format']);
 
 function optionalOf<Field extends Schema.Top>(field: Field) {
   return Schema.optionalKey(field);

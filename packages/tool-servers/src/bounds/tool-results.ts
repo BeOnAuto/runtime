@@ -2,11 +2,43 @@ import { Option, Schema } from 'effect';
 
 const metaField = '_meta';
 
-const ContentBlockSchema = Schema.Struct({
-  type: Schema.String,
-  text: Schema.optionalKey(Schema.String),
+const TextContentSchema = Schema.Struct({ type: Schema.Literal('text'), text: Schema.String });
+
+const ImageContentSchema = Schema.Struct({ type: Schema.Literal('image'), mimeType: Schema.String });
+
+const AudioContentSchema = Schema.Struct({ type: Schema.Literal('audio'), mimeType: Schema.String });
+
+const ResourceLinkSchema = Schema.Struct({
+  type: Schema.Literal('resource_link'),
+  uri: Schema.String,
+  name: Schema.String,
+  title: Schema.optionalKey(Schema.String),
+  description: Schema.optionalKey(Schema.String),
   mimeType: Schema.optionalKey(Schema.String),
+  size: Schema.optionalKey(Schema.Number),
 });
+
+const resourceContentsFields = { uri: Schema.String, mimeType: Schema.optionalKey(Schema.String) };
+
+const TextResourceContentsSchema = Schema.Struct({ ...resourceContentsFields, text: Schema.String });
+
+const BlobResourceContentsSchema = Schema.Struct({ ...resourceContentsFields, blob: Schema.String });
+
+const EmbeddedResourceSchema = Schema.Struct({
+  type: Schema.Literal('resource'),
+  resource: Schema.Union([TextResourceContentsSchema, BlobResourceContentsSchema]),
+});
+
+const OtherContentSchema = Schema.Struct({ type: Schema.String, mimeType: Schema.optionalKey(Schema.Unknown) });
+
+const ContentBlockSchema = Schema.Union([
+  TextContentSchema,
+  ImageContentSchema,
+  AudioContentSchema,
+  ResourceLinkSchema,
+  EmbeddedResourceSchema,
+  OtherContentSchema,
+]);
 
 const AnswerSchema = Schema.Struct({
   content: Schema.Array(ContentBlockSchema),
@@ -114,17 +146,51 @@ export function metaValueOf(result: ToolResult, key: string): unknown {
   return result[metaField]?.[key];
 }
 
-function placeholderOf({ type, mimeType }: ContentBlock): string {
-  return mimeType === undefined ? `[${type} content, not shown]` : `[${type} content (${mimeType}), not shown]`;
+const isTextContent = Schema.is(TextContentSchema);
+
+const isResourceLink = Schema.is(ResourceLinkSchema);
+
+const isEmbeddedResource = Schema.is(EmbeddedResourceSchema);
+
+const isTextResourceContents = Schema.is(TextResourceContentsSchema);
+
+interface Unshown {
+  readonly type: string;
+  readonly mimeType?: unknown;
 }
 
-function isText(block: ContentBlock): block is ContentBlock & { readonly text: string } {
-  return block.type === 'text' && block.text !== undefined;
+function placeholderOf({ type, mimeType }: Unshown): string {
+  return typeof mimeType === 'string' ? `[${type} content (${mimeType}), not shown]` : `[${type} content, not shown]`;
+}
+
+function textCarriedBy(block: ContentBlock): string | undefined {
+  if (isTextContent(block)) {
+    return block.text;
+  }
+  return isEmbeddedResource(block) && isTextResourceContents(block.resource) ? block.resource.text : undefined;
+}
+
+function shownWithoutText(block: ContentBlock): string {
+  if (isResourceLink(block)) {
+    return JSON.stringify(block);
+  }
+  return isEmbeddedResource(block) ? placeholderOf({ ...block.resource, type: block.type }) : placeholderOf(block);
+}
+
+function shownOf(block: ContentBlock): string {
+  return textCarriedBy(block) ?? shownWithoutText(block);
+}
+
+function textsCarriedIn(content: readonly ContentBlock[]): readonly string[] {
+  return content.flatMap((block) => {
+    const text = textCarriedBy(block);
+    return text === undefined ? [] : [text];
+  });
 }
 
 export function resultText({ content, structuredContent }: ToolResult): string {
-  const hasText = content.some((block) => isText(block));
-  const blocks = content.map((block) => (isText(block) ? block.text : placeholderOf(block)));
+  const hasText = textsCarriedIn(content).length > 0;
+  const blocks = content.map((block) => shownOf(block));
   const lines = hasText || structuredContent === undefined ? blocks : [JSON.stringify(structuredContent), ...blocks];
   return lines.length === 0 ? nothing : lines.join('\n');
 }
@@ -133,8 +199,12 @@ export function answerDocument({ content, structuredContent }: ToolAnswer): Sche
   if (structuredContent !== undefined) {
     return structuredContent;
   }
-  const text = content.find((block) => isText(block))?.text;
-  return text === undefined ? undefined : Option.getOrElse(decodeJsonText(text), () => text);
+  const texts = textsCarriedIn(content);
+  if (texts.length === 0) {
+    return undefined;
+  }
+  const text = texts.join('\n');
+  return Option.getOrElse(decodeJsonText(text), () => text);
 }
 
 export function errorTextForModel(text: string, scrub: (text: string) => string): string {

@@ -1,6 +1,7 @@
 import { Effect } from 'effect';
 import { afterEach } from 'vitest';
 
+import { resultText, type ToolResult } from '../bounds/tool-results.ts';
 import type { CalledOnce } from '../one-call/called-once.ts';
 import { describedAccess } from '../testing/reporting-access.ts';
 import { serveFakeApi, type FakeApiOptions, type FakeApiServer } from '../testing/served-fakes.ts';
@@ -30,6 +31,10 @@ export async function accessTo(entry: Readonly<Record<string, unknown>>) {
   );
   closing.push(reporting.access.close);
   return reporting.access;
+}
+
+export function blockTextsOf({ content }: ToolResult): readonly string[] {
+  return content.map((block) => resultText({ content: [block] }));
 }
 
 export function closedAfter(close: () => Promise<void>): void {

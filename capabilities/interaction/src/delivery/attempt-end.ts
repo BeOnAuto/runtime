@@ -28,7 +28,7 @@ function detailOf(detail: string) {
 }
 
 function answerFieldsOf(answered: CallAnswered) {
-  return Struct.omit(answered, ['is_error', 'shown_bytes', 'duration_ms']);
+  return Struct.omit(answered, ['is_error', 'shown_bytes', 'shown_format', 'duration_ms']);
 }
 
 function failureFieldsOf(fields: CallAnswered | CallFailed) {

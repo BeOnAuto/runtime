@@ -49,6 +49,7 @@ describe('a call recorded on its run', () => {
           is_error: false,
           result_bytes: 95,
           result_sha256: aDigest,
+          shown_format: 2,
           jsonrpc_id: aNumber,
           duration_ms: aNumber,
         },

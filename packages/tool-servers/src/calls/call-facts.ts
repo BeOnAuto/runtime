@@ -28,11 +28,19 @@ export const CallSentSchema = Schema.Struct({
 
 export const CallStartedSchema = Schema.Struct({ call_id: Schema.String, ...CallSentSchema.fields });
 
+export const shownFormat = 2;
+
 export const CallAnsweredSchema = Schema.Struct({
   is_error: Schema.Boolean,
   result_bytes: Schema.Int,
   result_sha256: Schema.optionalKey(Schema.String),
   shown_bytes: Schema.optionalKey(Schema.Int),
+  shown_format: Schema.optionalKey(
+    Schema.Literal(shownFormat).annotate({
+      description:
+        'The format under which the answer was read into text, and under which its shown_bytes was counted: 2 reads the text of an embedded resource as a text block is read; a call recorded without it was read in format 1, which read text blocks alone',
+    }),
+  ),
   duration_ms: Schema.Int,
   jsonrpc_id: JsonRpcIdSchema,
   server_request_id: Schema.optionalKey(Schema.NullOr(Schema.String)),

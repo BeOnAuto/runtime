@@ -1,7 +1,7 @@
 import { admission } from '../bounds/call-bounds.ts';
 import { answerOf, onlyReads } from '../bounds/tool-results.ts';
 import { imageCallOf, imagesKeptOutOf, imagesOfTheCall } from '../images/answered-images.ts';
-import type { CallAnswered, CallEnded, CallFailed, CallStarted } from './call-facts.ts';
+import { shownFormat, type CallAnswered, type CallEnded, type CallFailed, type CallStarted } from './call-facts.ts';
 import {
   callReplyOf,
   failureCounted,
@@ -100,6 +100,7 @@ async function settledOf(sent: ForwardedOnce, recording: Recording, shownBytes?:
     is_error: done.outcome === 'tool_error',
     ...(await answeredFields(done, recording)),
     ...(shownBytes === undefined ? {} : { shown_bytes: shownBytes }),
+    shown_format: shownFormat,
     duration_ms: durationMs,
   };
   return { sent: true, answered: true, done, fact };

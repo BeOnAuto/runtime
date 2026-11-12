@@ -45,6 +45,21 @@ describe('a recorded reading without a reply rule', () => {
   });
 });
 
+describe('a message whose tool answered where it landed in a file', () => {
+  it('keeps what the message was delivered as from the text of the file', () => {
+    const { reply: _rule, ...unruled } = record;
+    const file = {
+      uri: 'file:///posted.json',
+      mimeType: 'application/json',
+      text: '{"channel":"C0123","ts":"1699.1"}',
+    };
+
+    expect(keptOf(unruled, { content: [{ type: 'resource', resource: file }] }, standingRenderClock)).toEqual({
+      delivered_as: { conversation: 'C0123', id: '1699.1' },
+    });
+  });
+});
+
 describe('the conversation key of a recorded reading', () => {
   it('keeps no place to read when it cannot be rendered, and says so', () => {
     expect(keptOf(record, posted, standingRenderClock)).toEqual({

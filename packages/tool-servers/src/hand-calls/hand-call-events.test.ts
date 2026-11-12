@@ -48,10 +48,27 @@ const baseline: readonly (typeof HandCallEventSchema.Type)[] = [
   },
 ];
 
+const shownInAFormat: readonly (typeof HandCallEventSchema.Type)[] = [
+  {
+    type: 'tool_call_answered',
+    data: {
+      is_error: false,
+      result_bytes: 512,
+      result_sha256: 'd4e5f6',
+      shown_bytes: 256,
+      shown_format: 2,
+      duration_ms: 140,
+      jsonrpc_id: 7,
+      server_request_id: 'request-1',
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the tool calls a person makes by hand', () => {
   recordedFactsBehaviour({
     schema: HandCallEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline },
+    releases: { '0.46.0': baseline, '0.59.0': shownInAFormat },
   });
 });

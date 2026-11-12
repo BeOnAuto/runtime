@@ -94,6 +94,38 @@ describe('a call that answered', () => {
   });
 });
 
+const jsonFile = { type: 'resource', resource: { uri: 'file:///messages.json', text: JSON.stringify({ messages }) } };
+
+const pdf = { type: 'resource', resource: { uri: 'file:///terms.pdf', mimeType: 'application/pdf', blob: 'JVBERi0K' } };
+
+describe('a call whose answer carries a file', () => {
+  it('reads the text of the file as it reads a text block, after the blocks before it, and never a blob', () => {
+    expect([
+      endedWith(documentOf('/messages'), answering({ content: [jsonFile] })),
+      endedWith(documentOf(), answering({ content: [{ type: 'text', text: 'Read messages.json.' }, jsonFile, pdf] })),
+      endedWith(
+        documentOf('/messages'),
+        answering({ content: [{ type: 'text', text: 'Read messages.json.' }, jsonFile] }),
+      ),
+      endedWith(documentOf(), answering({ content: [pdf] })),
+    ]).toEqual([
+      Exit.succeed({ output: messages, record: { server: 'chat', tool: 'thread', read: '/messages' } }),
+      Exit.succeed({
+        output: `Read messages.json.\n${JSON.stringify({ messages })}`,
+        record: { server: 'chat', tool: 'thread' },
+      }),
+      rejectedWith({
+        kind: 'unworkable',
+        detail: 'The thread tool of chat answered text that is not JSON, which holds nothing at /messages',
+      }),
+      rejectedWith({
+        kind: 'unworkable',
+        detail: 'The thread tool of chat answered neither structured content nor text, so there is nothing to read',
+      }),
+    ]);
+  });
+});
+
 describe('a call whose answer cannot be read', () => {
   it('is unworkable when the answer has no document, or nothing at read, in a structure or in a text', () => {
     expect([
