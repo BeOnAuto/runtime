@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import {
   inTransactionOn,
   postgresqlContentOn,
+  postgresqlPlanOf,
   type ContentConnection,
   type ContentConnections,
 } from './postgresql-content.ts';
@@ -136,5 +137,29 @@ describe('a transaction on PostgreSQL', () => {
 
     await expect(failed).rejects.toThrow('The connection dropped');
     expect(asked.slice(-3).map(({ text }) => text)).toEqual(['DELETE FROM notes', 'ROLLBACK', 'released']);
+  });
+});
+
+const step = { 'QUERY PLAN': 'Index Scan using recorded_content_heads_expiring on recorded_content_heads' };
+
+function answeringThePlan(text: string): readonly unknown[] {
+  return text.startsWith('EXPLAIN') ? [step] : [];
+}
+
+describe('the plan of a statement on PostgreSQL', () => {
+  it('is what PostgreSQL explains of it once its sequential scans and its sorts are switched off', async () => {
+    const { connections, asked } = connectionsAnswering(answeringThePlan);
+
+    const plan = await postgresqlPlanOf(
+      connections,
+      SQL`SELECT sha256 FROM recorded_content_heads WHERE expires_at <= ${1}`,
+    );
+
+    expect(plan).toBe(JSON.stringify([step]));
+    expect(asked.map(({ text, values }) => [text, values])).toEqual([
+      ['SET enable_seqscan = off', []],
+      ['SET enable_sort = off', []],
+      ['EXPLAIN SELECT sha256 FROM recorded_content_heads WHERE expires_at <= $1', [1]],
+    ]);
   });
 });

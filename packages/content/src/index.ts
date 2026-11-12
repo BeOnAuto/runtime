@@ -5,8 +5,12 @@ export type {
   ContentOwner,
   ContentStore,
   Digested,
+  ErasureTimes,
+  ExpiredContent,
+  ExpiredErased,
   HeadKept,
   HeadMarked,
+  HeadToKeep,
   KeptContentHead,
   RecordedContent,
   RemovalTimes,
@@ -14,6 +18,7 @@ export type {
   UnheldRemoval,
 } from './content/recorded-content.ts';
 export { mostContentChunkBytes } from './content/content-chunks.ts';
+export { expiryOf, requireABatch } from './content/content-expiry.ts';
 export {
   bytesIn,
   contentPartOf,

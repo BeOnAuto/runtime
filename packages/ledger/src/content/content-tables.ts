@@ -1,4 +1,5 @@
 import { SQL } from '@event-driven-io/dumbo';
+import type { KeptContentHead } from '@on.auto/content';
 import { Schema } from 'effect';
 
 import type { StatementExecutor } from '../event-store.ts';
@@ -11,6 +12,8 @@ export interface Shelf {
   readonly placeColumns: readonly string[];
   readonly chunkMissing: (sha256: string, index: number) => Error;
 }
+
+export const keptInTheLedger = 'ledger';
 
 export const keptShelf: Shelf = {
   chunks: 'recorded_content_chunks',
@@ -123,4 +126,51 @@ export async function createdContentTables(execute: StatementExecutor, dialect: 
     ),
   );
   await createMissingIndexes(execute, contentIndexes, indexed);
+}
+
+export function expiryOfThePut(expiresAt: number | undefined): SQL {
+  return SQL`CAST(${expiresAt ?? null} AS BIGINT)`;
+}
+
+export function laterExpiry(standing: SQL, put: SQL): SQL {
+  return SQL`CASE WHEN ${standing} IS NULL OR ${put} IS NULL THEN NULL WHEN ${standing} < ${put} THEN ${put} ELSE ${standing} END`;
+}
+
+export function expiryKept(standing: SQL, expiresAt: number | undefined): SQL {
+  return expiresAt === undefined ? SQL`NULL` : laterExpiry(standing, expiryOfThePut(expiresAt));
+}
+
+export function expiryKeptOver(table: string): SQL {
+  const heads = SQL.identifier(table);
+  const put = SQL`excluded.expires_at`;
+  return SQL`CASE WHEN ${heads}.erased_at IS NOT NULL THEN ${put} ELSE ${laterExpiry(SQL`${heads}.expires_at`, put)} END`;
+}
+
+export function dueBy(now: number): SQL {
+  return SQL`expires_at IS NOT NULL AND expires_at <= ${now}`;
+}
+
+export const keptHeadColumns = SQL.plain(
+  'CAST(bytes AS DOUBLE PRECISION) AS bytes, media_type, CAST(kept_at AS DOUBLE PRECISION) AS kept_at, CAST(expires_at AS DOUBLE PRECISION) AS expires_at, CAST(erased_at AS DOUBLE PRECISION) AS erased_at',
+);
+
+const KeptHeadRows = Schema.Array(
+  Schema.Struct({
+    bytes: Schema.Number,
+    media_type: Schema.String,
+    kept_at: Schema.Number,
+    expires_at: Schema.NullOr(Schema.Number),
+    erased_at: Schema.NullOr(Schema.Number),
+  }),
+);
+
+function keptHeadOf({ bytes, media_type, kept_at, expires_at, erased_at }: (typeof KeptHeadRows.Type)[number]) {
+  const kept: KeptContentHead = { bytes, mediaType: media_type, keptAt: kept_at };
+  const expiring = expires_at === null ? kept : { ...kept, expiresAt: expires_at };
+  return erased_at === null ? expiring : { ...expiring, erasedAt: erased_at };
+}
+
+export function keptHeadIn(rows: readonly unknown[]): KeptContentHead | undefined {
+  const row = Schema.decodeUnknownSync(KeptHeadRows)(rows).at(0);
+  return row === undefined ? undefined : keptHeadOf(row);
 }

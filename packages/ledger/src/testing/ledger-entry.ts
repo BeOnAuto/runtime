@@ -8,7 +8,7 @@ import type { LayoutDialect } from '../layout/layout-dialects.ts';
 import type { LayoutCarrying } from '../layout/layout-steps.ts';
 import type { LedgerServices, OpenedLedger, OpenedWith } from '../ledger-layer.ts';
 import type { StreamSignal } from '../signal/append-signal.ts';
-import { openLedgerWith } from './open-ledger.ts';
+import { openChoresWith, openLedgerWith, type OpenChores } from './open-ledger.ts';
 
 export interface StreamKept {
   readonly streamProjections: readonly StreamProjection[];
@@ -44,8 +44,13 @@ export interface LedgerEntry {
   readonly carriedOn: (database: string, carrying: LayoutCarrying) => Promise<void>;
   readonly definitionStreamsIndexed: (database: string) => Promise<boolean>;
   readonly planOf: (database: string, read: (store: RecordedStore) => Promise<unknown>) => Promise<string>;
+  readonly statementPlanOf: (database: string, statement: Parameters<StatementExecutor['query']>[0]) => Promise<string>;
   readonly throughTheKindIndex: string;
   readonly throughTheIdIndex: string;
+  readonly throughTheExpiringIndex: string;
+  readonly stepsOfAScanOrASort: readonly string[];
+  readonly throughTheUploadIndex: string;
+  readonly updatesCountingOf: (table: string, column: string) => readonly string[];
   readonly outcomeTables: string;
   readonly projectionTables: string;
   readonly projectionIndexes: string;
@@ -85,11 +90,42 @@ export async function aLedgerOutside(
   return opened(entry.ledgerOutsideOn(database ?? (await entry.aDatabase()), holders, content));
 }
 
+async function openedErasing(layer: Parameters<typeof openChoresWith>[0]): Promise<OpenChores> {
+  const chores = await openChoresWith(layer);
+  onTestFinished(chores.dispose);
+  return chores;
+}
+
+export async function anErasingLedger(
+  entry: LedgerEntry,
+  holders: ContentHolders,
+  database?: string,
+): Promise<OpenChores> {
+  return openedErasing(entry.ledgerOn(database ?? (await entry.aDatabase()), undefined, [], holders));
+}
+
+export async function anErasingLedgerOutside(
+  entry: LedgerEntry,
+  holders: ContentHolders,
+  content: NonNullable<OpenedWith['content']>,
+  database?: string,
+): Promise<OpenChores> {
+  return openedErasing(entry.ledgerOutsideOn(database ?? (await entry.aDatabase()), holders, content));
+}
+
 export async function aStore(entry: LedgerEntry): Promise<LedgerStore> {
   const store = entry.storeOn(await entry.aDatabase());
   onTestFinished(() => store.close());
   await store.migrate();
   return store;
+}
+
+export function sqliteUpdatesCountingOf(table: string, column: string): readonly string[] {
+  return [
+    'CREATE TABLE IF NOT EXISTS counted_updates (column_name TEXT NOT NULL)',
+    `CREATE TRIGGER counted_updates_of_${column} AFTER UPDATE OF ${column} ON ${table}
+      BEGIN INSERT INTO counted_updates (column_name) VALUES ('${column}'); END`,
+  ];
 }
 
 export const tallies = 'org/acme/tallies';

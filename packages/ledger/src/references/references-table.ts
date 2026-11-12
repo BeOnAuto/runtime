@@ -134,7 +134,7 @@ export async function digestsWithoutAHead(
   await inTurn(chunksOf([...new Set(digests)], digestsInAStatement), async (chunk) => {
     const { rows } = await execute.query(
       SQL`SELECT sha256 FROM ${headsTable}
-        WHERE playbook_key = ${prefix} AND removing_since IS NULL
+        WHERE playbook_key = ${prefix} AND removing_since IS NULL AND erased_at IS NULL
           AND sha256 IN (${SQL.merge(
             chunk.map((sha256) => SQL`${sha256}`),
             ', ',

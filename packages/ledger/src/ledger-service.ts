@@ -113,6 +113,8 @@ export function ownContentOf(store: LedgerStore): LedgerContent {
     content: store.content,
     removedKeptBefore: (playbook, sha256, before) =>
       Effect.promise(() => store.unlessHeld(playbook, sha256, store.removalWithin(playbook, sha256, before))),
+    eraseExpired: (most) =>
+      Effect.flatMap(Clock.currentTimeMillis, (now) => Effect.promise(() => store.eraseExpired(now, most))),
   };
 }
 

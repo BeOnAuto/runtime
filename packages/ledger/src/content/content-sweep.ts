@@ -1,10 +1,11 @@
 import { SQL } from '@event-driven-io/dumbo';
-import { uuidV7TimeOf } from '@on.auto/operations';
-import { Context, Effect } from 'effect';
+import type { ExpiredErased } from '@on.auto/content';
+import { randomUUIDv7, uuidV7TimeOf } from '@on.auto/operations';
+import { Context, Effect, Schema } from 'effect';
 
-import type { StatementExecutor } from '../event-store.ts';
+import type { OwnContentStore, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
-import { shelves, type Shelf } from './content-tables.ts';
+import { dueBy, keptInTheLedger, keptShelf, shelves, type Shelf } from './content-tables.ts';
 
 export const unnamedChunksLastMs = 3_600_000;
 
@@ -14,16 +15,13 @@ export interface ContentSweeping {
 
 export interface ChorePorts {
   readonly sweepOrphans: (now: number) => Effect.Effect<number>;
+  readonly eraseExpired: (most: number) => Effect.Effect<ExpiredErased>;
   readonly endWaits: Effect.Effect<void>;
 }
 
 export class LedgerChores extends Context.Service<LedgerChores, ChorePorts>()('@on.auto/ledger/LedgerChores') {}
 
-function sweptShelf(
-  execute: StatementExecutor,
-  { chunks, heads, placeColumns }: Shelf,
-  before: string,
-): Promise<unknown> {
+export function unnamedChunksSwept({ chunks, heads, placeColumns }: Shelf, before: string): SQL {
   const sameUpload = SQL.merge(
     [...placeColumns, 'upload_id'].map(
       (column) =>
@@ -31,10 +29,12 @@ function sweptShelf(
     ),
     ' AND ',
   );
-  return execute.command(
-    SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE substr(upload_id, 1, 8) || substr(upload_id, 10, 4) < ${before}
-      AND NOT EXISTS (SELECT 1 FROM ${SQL.identifier(heads)} WHERE ${sameUpload})`,
-  );
+  return SQL`DELETE FROM ${SQL.identifier(chunks)} WHERE substr(upload_id, 1, 8) || substr(upload_id, 10, 4) < ${before}
+      AND NOT EXISTS (SELECT 1 FROM ${SQL.identifier(heads)} WHERE ${sameUpload})`;
+}
+
+function sweptShelf(execute: StatementExecutor, shelf: Shelf, before: string): Promise<unknown> {
+  return execute.command(unnamedChunksSwept(shelf, before));
 }
 
 export function contentSweepOn(execute: StatementExecutor): ContentSweeping['sweepContent'] {
@@ -54,4 +54,48 @@ export function orphansSweptOf({ sweepContent }: ContentSweeping): ChorePorts['s
         Effect.as(now + unnamedChunksLastMs),
       ),
     );
+}
+
+const heads = SQL.identifier(keptShelf.heads);
+
+const ExpiredRows = Schema.Array(
+  Schema.Struct({ playbook_key: Schema.String, sha256: Schema.String, upload_id: Schema.String }),
+);
+
+const ErasedRows = Schema.Array(Schema.Struct({ upload_id: Schema.String }));
+
+type Expired = (typeof ExpiredRows.Type)[number];
+
+export function ownExpiredRead(now: number, most: number): SQL {
+  return SQL`SELECT playbook_key, sha256, upload_id FROM ${heads}
+    WHERE ${dueBy(now)} AND kept_in = ${keptInTheLedger}
+    ORDER BY expires_at LIMIT ${most}`;
+}
+
+async function erasedOnce(execute: StatementExecutor, expired: Expired, now: number): Promise<number> {
+  const { playbook_key, sha256, upload_id } = expired;
+  const { rows } = await execute.query(
+    SQL`UPDATE ${heads} SET erased_at = ${now}, expires_at = NULL, upload_id = ${randomUUIDv7()}
+      WHERE playbook_key = ${playbook_key} AND sha256 = ${sha256} AND upload_id = ${upload_id}
+        AND kept_in = ${keptInTheLedger} AND ${dueBy(now)}
+      RETURNING upload_id`,
+  );
+  const erased = Schema.decodeUnknownSync(ErasedRows)(rows);
+  await inTurn(erased.length > 0 ? [upload_id] : [], (upload) =>
+    execute.command(
+      SQL`DELETE FROM ${SQL.identifier(keptShelf.chunks)} WHERE playbook_key = ${playbook_key} AND upload_id = ${upload}`,
+    ),
+  );
+  return erased.length;
+}
+
+export function ownExpiredErasedOn(execute: StatementExecutor): OwnContentStore['eraseExpired'] {
+  return async (now, most): Promise<ExpiredErased> => {
+    const expired = Schema.decodeUnknownSync(ExpiredRows)((await execute.query(ownExpiredRead(now, most))).rows);
+    const erasures: number[] = [];
+    await inTurn(expired, async (head) => {
+      erasures.push(await erasedOnce(execute, head, now));
+    });
+    return { erased: erasures.reduce((total, erased) => total + erased, 0), more: expired.length === most };
+  };
 }

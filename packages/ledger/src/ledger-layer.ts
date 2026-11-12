@@ -1,4 +1,4 @@
-import { keptOutside, type ContentStore } from '@on.auto/content';
+import { keptOutside, requireABatch, type ContentStore } from '@on.auto/content';
 import { Ledger } from '@on.auto/operations';
 import { Context, Effect, Layer, Semaphore } from 'effect';
 
@@ -52,12 +52,15 @@ export function ledgerLayerOver(
       const store = signalledOn(opened.store, appends);
       yield* Effect.promise(() => store.migrate());
       const orphansSwept = orphansSweptOf(sweptWith(store, content));
-      const ledger = makeLedger(store, contentOf(store, content));
+      const kept = contentOf(store, content);
+      const ledger = makeLedger(store, kept);
       return Context.make(Ledger, ledger).pipe(
         Context.add(LedgerConnection, { ...opened.connection, content: ledger.content }),
         Context.add(LedgerLog, store.log),
         Context.add(LedgerChores, {
           sweepOrphans: (now: number) => sweeping.withPermit(orphansSwept(now)),
+          eraseExpired: (most: number) =>
+            Effect.andThen(requireABatch(most), sweeping.withPermit(kept.eraseExpired(most))),
           endWaits: Effect.sync(() => {
             store.endWaits();
           }),

@@ -56,13 +56,34 @@ export interface ContentHead {
   readonly mediaType: string;
 }
 
+export interface HeadToKeep extends ContentHead {
+  readonly expiresAt?: number;
+}
+
 export interface KeptContentHead extends ContentHead {
   readonly keptAt: number;
+  readonly expiresAt?: number;
+  readonly erasedAt?: number;
+}
+
+export interface ErasureTimes {
+  readonly now: number;
+  readonly staleBefore: number;
+}
+
+export interface ExpiredContent {
+  readonly playbook: ContentOwner;
+  readonly sha256: string;
+}
+
+export interface ExpiredErased {
+  readonly erased: number;
+  readonly more: boolean;
 }
 
 export type HeadKept =
   | { readonly kept: 'new' | 'standing'; readonly head: ContentHead }
-  | { readonly kept: 'removing'; readonly since: number };
+  | { readonly kept: 'removing'; readonly since: number; readonly expiresAt?: number };
 
 export type HeadMarked =
   | { readonly marked: false; readonly answer: UnheldRemoval }
@@ -75,10 +96,18 @@ export interface RemovalTimes {
 }
 
 export interface ContentHeads {
-  readonly kept: (playbook: ContentOwner, sha256: string, head: ContentHead, keptAt: number) => Effect.Effect<HeadKept>;
-  readonly touched: (playbook: ContentOwner, sha256: string, keptAt: number) => Effect.Effect<HeadKept | undefined>;
+  readonly kept: (playbook: ContentOwner, sha256: string, head: HeadToKeep, keptAt: number) => Effect.Effect<HeadKept>;
+  readonly touched: (
+    playbook: ContentOwner,
+    sha256: string,
+    keptAt: number,
+    expiresAt?: number,
+  ) => Effect.Effect<HeadKept | undefined>;
   readonly marked: (playbook: ContentOwner, sha256: string, times: RemovalTimes) => Effect.Effect<HeadMarked>;
   readonly cleared: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
   readonly unmarked: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<void>;
   readonly read: (playbook: ContentOwner, sha256: string) => Effect.Effect<KeptContentHead | undefined>;
+  readonly expired: (times: ErasureTimes, most: number) => Effect.Effect<readonly ExpiredContent[]>;
+  readonly erasing: (playbook: ContentOwner, sha256: string, times: ErasureTimes) => Effect.Effect<number | undefined>;
+  readonly erased: (playbook: ContentOwner, sha256: string, since: number) => Effect.Effect<boolean>;
 }

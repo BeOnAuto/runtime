@@ -4,7 +4,7 @@ import { describe, onTestFinished } from 'vitest';
 
 import { sqliteLayout, sqliteLedgerOpened, sqliteReceivedWebhooksOn, sqliteSecretRowsOn } from './index.ts';
 import { sqliteLayoutCarried } from './layout/sqlite-schema.ts';
-import { definitionStreamsIndexed, executedOn, planOf, queried } from './recorded/sqlite-checks.ts';
+import { definitionStreamsIndexed, executedOn, planOf, queried, statementPlanOf } from './recorded/sqlite-checks.ts';
 import { ledgerLayer, sqliteLedgerFile } from './sqlite3.ts';
 import { databaseStructureBehaviour } from './structure/database-structure-behaviour.ts';
 import {
@@ -21,6 +21,7 @@ import {
   logBehaviour,
   receivedWebhooksOfItsOpenLedger,
   secretRowsOfItsOpenLedger,
+  sqliteUpdatesCountingOf,
   type LedgerEntry,
 } from './testing/index.ts';
 import { temporaryDatabase } from './testing/temporary-database.ts';
@@ -59,8 +60,14 @@ const onSQLite: LedgerEntry = {
   carriedOn,
   definitionStreamsIndexed,
   planOf,
+  statementPlanOf,
   throughTheKindIndex: 'USING INDEX ledger_first_messages_by_kind',
   throughTheIdIndex: 'USING INDEX ledger_messages_by_id',
+  throughTheExpiringIndex:
+    'SEARCH recorded_content_heads USING INDEX recorded_content_heads_expiring (expires_at>? AND expires_at<?)',
+  stepsOfAScanOrASort: ['SCAN recorded_content_heads', 'TEMP B-TREE'],
+  throughTheUploadIndex: 'USING COVERING INDEX recorded_content_heads_by_upload',
+  updatesCountingOf: sqliteUpdatesCountingOf,
   outcomeTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'run_outcomes_*' ORDER BY name",
   projectionTables: "SELECT name FROM sqlite_master WHERE type = 'table' AND name GLOB 'run_tallies_*' ORDER BY name",
   projectionIndexes: "SELECT name FROM sqlite_master WHERE type = 'index' AND name GLOB 'run_tallies_*' ORDER BY name",

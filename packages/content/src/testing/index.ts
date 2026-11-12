@@ -8,7 +8,17 @@ export {
   type PausedStep,
 } from './paused-store.ts';
 export { keptTextOf } from './kept-text.ts';
-export type { ContentEntry, ContentStoreUnderTest } from './content-entry.ts';
+export type {
+  ContentEntry,
+  ContentStoreUnderTest,
+  ErasingContent,
+  ErasingContentTwice,
+  ExpiringContentEntry,
+  ExpiringStoreUnderTest,
+  InterleavedErasureEntry,
+} from './content-entry.ts';
+export { expiringContentBehaviour } from './expiring-content-behaviour.ts';
+export { interleavedErasureBehaviour } from './interleaved-erasure-behaviour.ts';
 export { recordedContentBehaviour } from './recorded-content-behaviour.ts';
 export {
   alpha,

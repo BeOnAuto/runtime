@@ -18,6 +18,7 @@ export interface ContentToKeep {
   readonly stream: ReadableStream<Uint8Array>;
   readonly mediaType: string;
   readonly expected?: ExpectedContent;
+  readonly expiresAt?: number;
 }
 
 export function contentOfText(text: string, mediaType: string): StreamedContent {

@@ -74,6 +74,6 @@ export { sqliteSecretRowsOn } from './secrets/sqlite-secret-rows.ts';
 export { sqliteReceivedWebhooksOn } from './webhooks/sqlite-received-webhooks.ts';
 export type { ReceivedWebhooks, WebhookReceipt } from './webhooks/received-webhooks.ts';
 export { recordedReaderOf } from './recorded/recorded-reader.ts';
-export { sqliteDefinitionStreamsIndexed, sqlitePlanOf } from './recorded/sqlite-plans.ts';
+export { sqliteDefinitionStreamsIndexed, sqlitePlanOf, sqliteStatementPlanOf } from './recorded/sqlite-plans.ts';
 export { isVersionConflict, retriedOnVersionConflict, VersionConflict } from './version-conflict.ts';
 export { streamAppends, streamSignalOf, type StreamAppended, type StreamSignal } from './signal/append-signal.ts';

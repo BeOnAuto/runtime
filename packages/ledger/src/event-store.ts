@@ -1,5 +1,5 @@
 import type { SQL } from '@event-driven-io/dumbo';
-import type { ContentHeads, ContentOwner, RecordedContent, UnheldRemoval } from '@on.auto/content';
+import type { ContentHeads, ContentOwner, ExpiredErased, KeptOutside, UnheldRemoval } from '@on.auto/content';
 import type {
   Context,
   FactScrubber,
@@ -12,7 +12,7 @@ import type {
   RunOutcomeSelection,
   RunOutcomeWindow,
 } from '@on.auto/operations';
-import type { Effect, Schema } from 'effect';
+import type { Schema } from 'effect';
 
 import type { LogPorts } from './log/ledger-log.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
@@ -244,9 +244,10 @@ type Within<A> = (execute: StatementExecutor) => Promise<A>;
 export type OwnRemoval = Exclude<UnheldRemoval, 'held'>;
 
 export interface OwnContentStore {
-  readonly content: RecordedContent;
+  readonly content: KeptOutside['content'];
   readonly removalWithin: (playbook: ContentOwner, sha256: string, before: number) => Within<OwnRemoval>;
   readonly sweepContent: (before: number) => Promise<void>;
+  readonly eraseExpired: (now: number, most: number) => Promise<ExpiredErased>;
   readonly externalHeadsWith: (unlessHeld: UnlessHeld) => ContentHeads;
 }
 
@@ -256,10 +257,7 @@ interface UnheldRemovalStore {
   readonly unlessHeld: UnlessHeld;
 }
 
-export interface LedgerContent {
-  readonly content: RecordedContent;
-  readonly removedKeptBefore: (playbook: ContentOwner, sha256: string, before: number) => Effect.Effect<UnheldRemoval>;
-}
+export type LedgerContent = Pick<KeptOutside, 'content' | 'removedKeptBefore' | 'eraseExpired'>;
 
 export interface LedgerStore
   extends

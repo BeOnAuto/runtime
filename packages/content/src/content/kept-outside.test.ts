@@ -265,6 +265,24 @@ function failedDeletesLetGo(): void {
   });
 }
 
+function erasedThenRemoved(): void {
+  it('waits, put while a removal deletes what is left of a content whose bytes were erased, then keeps it as new', async () => {
+    const { content, removedKeptBefore, eraseExpired, paused } = outsideOf();
+    await at(keptAt, content.put(alpha, { ...textToKeep(note, json), expiresAt: keptAt + 1 }));
+    await at(keptAt + 1, eraseExpired(10));
+    const deleting = paused.pausedDelete();
+
+    const removal = resultOf(removedKeptBefore(alpha, noteDigest, Date.now()));
+    await deleting.reached;
+    const put = resultOf(content.put(alpha, textToKeep(note, 'text/plain')));
+    const settledBefore = await settledWithin(put, 300);
+    deleting.release();
+
+    expect([settledBefore, await removal, (await put).mediaType]).toEqual([false, 'removed', 'text/plain']);
+    expect(await resultOf(content.getHead(alpha, noteDigest))).not.toHaveProperty('erasedAt');
+  });
+}
+
 describe('the content kept outside the ledger, removed by its head', () => {
   removedByItsHead();
   touchedByItsPuts();
@@ -277,4 +295,5 @@ describe('a put of a content outside the ledger that meets its removal', () => {
   putWhileRemoved();
   refusedOnceItWaited();
   stoppedRemovalsFinished();
+  erasedThenRemoved();
 });

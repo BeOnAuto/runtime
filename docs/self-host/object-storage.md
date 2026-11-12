@@ -75,7 +75,7 @@ The credentials need these permissions:
 | `s3:ListBucket`                 | The bucket                   | List the bucket; the check at start needs it too |
 | `s3:ListBucketMultipartUploads` | The bucket                   | List unfinished uploads                          |
 
-Several servers may share a bucket and a prefix, as they share the ledger's database.
+Several servers may share a bucket and a prefix, as they share the ledger's database. Keep their clocks within seconds of each other, as NTP or your platform's time service does: a server takes another server's removal of content that has run for ten minutes by its own clock for one that stopped, and finishes it.
 
 ### Versioning and lifecycle
 

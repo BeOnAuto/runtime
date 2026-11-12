@@ -52,6 +52,10 @@ function answeringTheRemovedUpload(statement: string): readonly unknown[] {
   return statement.startsWith('DELETE FROM recorded_content_heads') ? [{ upload_id: 'u1' }] : [];
 }
 
+function answeringTheHeadWritten(statement: string): readonly unknown[] {
+  return statement.startsWith('INSERT INTO recorded_content_heads') ? [{ upload_id: 'mine' }] : [];
+}
+
 function answeringAHeadThatStands(statement: string): readonly unknown[] {
   return statement.startsWith('SELECT 1 AS standing') ? [{ standing: 1 }] : [];
 }
@@ -75,7 +79,7 @@ function headOf(uploadId: string) {
 
 describe('the writes of a recorded content', () => {
   it('write its chunks first, each on its own, its head last, read back the head they wrote, and answer what the put took where a removal took the head first', async () => {
-    const recording = recordingFinding([]);
+    const recording = recordingAnswering(answeringTheHeadWritten);
 
     const kept = await Effect.runPromise(
       sqliteContentOn(recording.pool).content.put(alpha, textToKeep(largerThanTwoChunks, 'text/plain')),
@@ -117,6 +121,27 @@ describe('the writes of a recorded content', () => {
     expect([kindsOf(small), kindsOf(expected)]).toEqual([
       ['UPDATE recorded_content_heads SET'],
       ['UPDATE recorded_content_heads SET'],
+    ]);
+  });
+});
+
+describe('the writes of a recorded content whose head the first statement did not write', () => {
+  it('write the head again by the rule over what stands, in a second statement, where the first wrote nothing, as for a head whose content was erased', async () => {
+    const recording = recordingFinding([]);
+
+    await Effect.runPromise(
+      sqliteContentOn(recording.pool).content.put(alpha, textToKeep(largerThanTwoChunks, 'text/plain')),
+    );
+
+    expect(kindsOf(recording).slice(3)).toEqual([
+      'INSERT INTO recorded_content_heads',
+      'INSERT INTO recorded_content_heads',
+      'SELECT upload_id, CAST(bytes',
+      'DELETE FROM recorded_content_chunks',
+    ]);
+    expect(recording.statements.slice(3, 5)).toEqual([
+      expect.stringMatching(/WHERE recorded_content_heads\.erased_at IS NULL RETURNING upload_id$/u),
+      expect.stringContaining('erased_at = NULL'),
     ]);
   });
 });

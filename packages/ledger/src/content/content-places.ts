@@ -18,7 +18,7 @@ import { Clock, Effect, Schema } from 'effect';
 import type { OwnRemoval, ReturningExecutor, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import type { ContentDialect } from './content-dialects.ts';
-import type { Shelf } from './content-tables.ts';
+import { expiryKept, keptHeadColumns, keptHeadIn, keptInTheLedger, type Shelf } from './content-tables.ts';
 
 export type Key = readonly (readonly [column: string, value: string])[];
 
@@ -35,10 +35,6 @@ export interface Shelved {
 
 const HeadRows = Schema.Array(
   Schema.Struct({ upload_id: Schema.String, bytes: Schema.Number, chunks: Schema.Number, media_type: Schema.String }),
-);
-
-const KeptHeadRows = Schema.Array(
-  Schema.Struct({ bytes: Schema.Number, media_type: Schema.String, kept_at: Schema.Number }),
 );
 
 const StoredBytes = Schema.Union([Schema.Uint8Array, Schema.instanceOf(ArrayBuffer)]);
@@ -90,8 +86,6 @@ function written({ execute }: Shelved, sql: SQL): Effect.Effect<readonly unknown
 
 const headColumns = SQL.plain('upload_id, CAST(bytes AS DOUBLE PRECISION) AS bytes, chunks, media_type');
 
-export const keptInTheLedger = 'ledger';
-
 function headIn(rows: readonly unknown[], sha256: string): KeptHead | undefined {
   const head = Schema.decodeUnknownSync(HeadRows)(rows).at(0);
   return head === undefined
@@ -104,7 +98,7 @@ export function headOf(shelved: Shelved, place: Key, sha256: string): Effect.Eff
     queried(
       shelved,
       SQL`SELECT ${headColumns} FROM ${SQL.identifier(shelved.shelf.heads)}
-        WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger}`,
+        WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger} AND erased_at IS NULL`,
     ),
     (rows) => headIn(rows, sha256),
   );
@@ -114,24 +108,27 @@ export function keptHeadOn(shelved: Shelved, place: Key, sha256: string): Effect
   return Effect.map(
     queried(
       shelved,
-      SQL`SELECT CAST(bytes AS DOUBLE PRECISION) AS bytes, media_type, CAST(kept_at AS DOUBLE PRECISION) AS kept_at
-        FROM ${SQL.identifier(shelved.shelf.heads)}
+      SQL`SELECT ${keptHeadColumns} FROM ${SQL.identifier(shelved.shelf.heads)}
         WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger}`,
     ),
-    (rows) =>
-      Schema.decodeUnknownSync(KeptHeadRows)(rows)
-        .map(({ bytes, media_type, kept_at }) => ({ bytes, mediaType: media_type, keptAt: kept_at }))
-        .at(0),
+    keptHeadIn,
   );
 }
 
-export function headTouched(shelved: Shelved, place: Key, sha256: string): Effect.Effect<KeptHead | undefined> {
+export function headTouched(
+  shelved: Shelved,
+  place: Key,
+  sha256: string,
+  expiresAt: number | undefined,
+): Effect.Effect<KeptHead | undefined> {
   return Effect.flatMap(Clock.currentTimeMillis, (keptAt) =>
     Effect.map(
       written(
         shelved,
-        SQL`UPDATE ${SQL.identifier(shelved.shelf.heads)} SET kept_at = ${keptAt}
-          WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger} RETURNING ${headColumns}`,
+        SQL`UPDATE ${SQL.identifier(shelved.shelf.heads)}
+          SET kept_at = ${keptAt}, expires_at = ${expiryKept(SQL`expires_at`, expiresAt)}
+          WHERE ${matching(place)} AND sha256 = ${sha256} AND kept_in = ${keptInTheLedger} AND erased_at IS NULL
+          RETURNING ${headColumns}`,
       ),
       (rows) => headIn(rows, sha256),
     ),

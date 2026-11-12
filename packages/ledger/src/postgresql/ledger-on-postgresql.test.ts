@@ -1,7 +1,7 @@
 import { Client, Pool } from 'pg';
 import { describe, expect, it, onTestFinished } from 'vitest';
 
-import { executorOn } from '../content/postgresql-content.ts';
+import { executorOn, postgresqlPlanOf } from '../content/postgresql-content.ts';
 import { postgresqlLayout } from '../layout/layout-dialects.ts';
 import { definitionStreamsPlan } from '../postgresql-reads/index-checks.ts';
 import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded.ts';
@@ -76,6 +76,24 @@ async function definitionStreamsIndexed(database: string): Promise<boolean> {
   }
 }
 
+const statementPlanOf: LedgerEntry['statementPlanOf'] = async (database, statement) => {
+  const client = new Client({ connectionString: database });
+  await client.connect();
+  try {
+    return await postgresqlPlanOf(client, statement);
+  } finally {
+    await client.end();
+  }
+};
+
+const updatesCountingOf: LedgerEntry['updatesCountingOf'] = (table, column) => [
+  'CREATE TABLE IF NOT EXISTS counted_updates (column_name TEXT NOT NULL)',
+  `CREATE OR REPLACE FUNCTION counted_update() RETURNS trigger LANGUAGE plpgsql
+    AS $$ BEGIN INSERT INTO counted_updates (column_name) VALUES (TG_ARGV[0]); RETURN NULL; END $$`,
+  `CREATE TRIGGER counted_updates_of_${column} AFTER UPDATE OF ${column} ON ${table}
+    FOR EACH ROW EXECUTE FUNCTION counted_update('${column}')`,
+];
+
 const planOf: LedgerEntry['planOf'] = async (database, read) => {
   const asked: { readonly text: string; readonly values: readonly unknown[] }[] = [];
   await read(
@@ -142,8 +160,13 @@ const onPostgreSQL: LedgerEntry = {
   carriedOn,
   definitionStreamsIndexed,
   planOf,
+  statementPlanOf,
   throughTheKindIndex: `Index Cond: (("substring"(stream_id, '^(?:[^/]*/){4}'::text) = ANY`,
   throughTheIdIndex: 'Index Cond: (message_id = ',
+  throughTheExpiringIndex: 'recorded_content_heads_expiring',
+  stepsOfAScanOrASort: ['Seq Scan', 'Sort'],
+  throughTheUploadIndex: 'Index Scan using recorded_content_heads_by_upload',
+  updatesCountingOf,
   outcomeTables:
     "SELECT relname AS name FROM pg_class WHERE relkind IN ('r', 'p') AND relname ~ '^run_outcomes_[0-9]+$' ORDER BY relname",
   projectionTables:

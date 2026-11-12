@@ -3,6 +3,7 @@ import {
   sha256Digest,
   type ContentOwner,
   type Digested,
+  type KeptContentHead,
   type RecordedContent,
   type Sha256Digest,
   type StreamedContent,
@@ -12,7 +13,7 @@ import { Clock, Effect, Function, Option, Schema } from 'effect';
 import { keptContentGraceMs } from '../held-content/unheld-removal.ts';
 import type { Unavailable } from '../outcome/unavailable.ts';
 import { noPayloadCache, type PayloadCache } from './payload-cache.ts';
-import type { PayloadErased } from './payload-erased.ts';
+import { PayloadErased } from './payload-erased.ts';
 import { noPayloadGate, type PayloadGate } from './payload-gate.ts';
 import { PayloadMissing, type PayloadMissingBecause } from './payload-missing.ts';
 import { unreachable, waitedFor } from './payload-waits.ts';
@@ -67,10 +68,26 @@ function answered<A>(asked: Effect.Effect<A>, sha256: string): Effect.Effect<A, 
   return Effect.catchDefect(asked, (defect) => unreachable(notReadNow, sha256, defect));
 }
 
+function goneOnPurpose(head: KeptContentHead | undefined, now: number): boolean {
+  return head?.erasedAt !== undefined || (head?.expiresAt !== undefined && head.expiresAt <= now);
+}
+
+function erased({ org, playbook }: ContentOwner, sha256: string): PayloadErased {
+  return new PayloadErased({
+    org,
+    playbook,
+    sha256,
+    message: `The payload kept under ${sha256} expired and was erased`,
+  });
+}
+
 function notFoundTwice({ owner, content }: PayloadSource, sha256: string): Effect.Effect<never, PayloadNotRead> {
   return Effect.gen(function* () {
     const head = yield* answered(content.getHead(owner, sha256), sha256);
     const now = yield* Clock.currentTimeMillis;
+    if (goneOnPurpose(head, now)) {
+      return yield* Effect.fail(erased(owner, sha256));
+    }
     if (head !== undefined && head.keptAt >= now - keptContentGraceMs) {
       return yield* unreachable(
         notReadNow,

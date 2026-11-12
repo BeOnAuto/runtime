@@ -1,4 +1,4 @@
-import type { SQL } from '@event-driven-io/dumbo';
+import { SQL } from '@event-driven-io/dumbo';
 
 import type { InTransaction, OwnContentStore, ReturningExecutor } from '../event-store.ts';
 import { formattedFor } from '../postgresql-reads/recorded-parts.ts';
@@ -46,4 +46,11 @@ export function inTransactionOn(connections: ContentConnections): InTransaction 
 
 export function postgresqlContentOn(connections: ContentConnections): OwnContentStore {
   return contentStoreOn(executorOn(connections), postgresqlContent);
+}
+
+export async function postgresqlPlanOf(querying: Querying, statement: SQL): Promise<string> {
+  const execute = executorOn(querying);
+  await execute.command(SQL`SET enable_seqscan = off`);
+  await execute.command(SQL`SET enable_sort = off`);
+  return JSON.stringify((await execute.query(SQL`EXPLAIN ${statement}`)).rows);
 }

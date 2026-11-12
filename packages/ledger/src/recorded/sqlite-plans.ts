@@ -26,3 +26,8 @@ export async function sqlitePlanOf(
   const plans = await execute.batchQuery(asked.map((sql) => SQL`EXPLAIN QUERY PLAN ${sql}`));
   return JSON.stringify(plans);
 }
+
+export async function sqliteStatementPlanOf(execute: SQLExecutor, statement: SQL): Promise<string> {
+  const { rows } = await execute.query(SQL`EXPLAIN QUERY PLAN ${statement}`);
+  return JSON.stringify(rows);
+}

@@ -2,7 +2,7 @@ import { SQL, dumbo, type SQLExecutor } from '@event-driven-io/dumbo';
 import { sqlite3EventStoreDriver } from '@event-driven-io/emmett-sqlite/sqlite3';
 
 import type { RecordedStore } from '../event-store.ts';
-import { sqliteDefinitionStreamsIndexed, sqlitePlanOf } from './sqlite-plans.ts';
+import { sqliteDefinitionStreamsIndexed, sqlitePlanOf, sqliteStatementPlanOf } from './sqlite-plans.ts';
 
 export async function executedOn<A>(fileName: string, work: (execute: SQLExecutor) => Promise<A>): Promise<A> {
   const pool = dumbo(sqlite3EventStoreDriver.mapToDumboOptions({ fileName }));
@@ -23,4 +23,8 @@ export function definitionStreamsIndexed(fileName: string): Promise<boolean> {
 
 export function planOf(fileName: string, read: (store: RecordedStore) => Promise<unknown>): Promise<string> {
   return executedOn(fileName, (execute) => sqlitePlanOf(execute, read));
+}
+
+export function statementPlanOf(fileName: string, statement: SQL): Promise<string> {
+  return executedOn(fileName, (execute) => sqliteStatementPlanOf(execute, statement));
 }

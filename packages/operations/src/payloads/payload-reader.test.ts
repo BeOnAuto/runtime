@@ -1,4 +1,10 @@
-import { contentOfBytes, contentOfText, notTheBytesOfItsDigest, sha256Of } from '@on.auto/content';
+import {
+  contentOfBytes,
+  contentOfText,
+  notTheBytesOfItsDigest,
+  sha256Of,
+  type KeptContentHead,
+} from '@on.auto/content';
 import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -28,6 +34,7 @@ import {
   type ReadContent,
 } from '../payload-testing/payload-samples.ts';
 import { payloadCacheWithin } from './payload-cache.ts';
+import { PayloadErased } from './payload-erased.ts';
 import { payloadKept } from './payload-keeping.ts';
 import { mostPayloadBytesReadAtOnce, payloadReaderOf } from './payload-reader.ts';
 import { payloadWaitOf } from './payload-waits.ts';
@@ -148,6 +155,29 @@ describe('a payload whose bytes are not kept', () => {
       missingOf(sha256Of(notText), 'not_its_kind', notItsKind),
       missingOf(notJson.sha256, 'not_its_kind', notItsKind),
     ]);
+  });
+});
+
+describe('a payload whose bytes were erased once it expired', () => {
+  it('is erased, never missing, where the store finds nothing twice and its head records its erasure or an expiry passed, kept within the hour or not', async () => {
+    const heads: readonly KeptContentHead[] = [
+      { ...headOf(now - keptContentGraceMs - 1), erasedAt: now - 1 },
+      { ...headOf(now), expiresAt: now },
+      { ...headOf(now - keptContentGraceMs - 1), expiresAt: now + 1 },
+    ];
+
+    const failures = await Promise.all(
+      heads.map((head) =>
+        failureAt(now, readerOver(askedOf({ reads: [undefined], head }).content).text(digestedOf(json))),
+      ),
+    );
+
+    const erased = new PayloadErased({
+      ...alpha,
+      sha256: json.sha256,
+      message: `The payload kept under ${json.sha256} expired and was erased`,
+    });
+    expect(failures).toEqual([erased, erased, missingOf(json.sha256, 'not_held', notHeld)]);
   });
 });
 

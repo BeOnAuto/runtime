@@ -12,7 +12,7 @@ export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';
 export { ledgerStepsBehaviour } from '../layout/ledger-steps-behaviour.ts';
 export { recordedFactsBehaviour } from '../recorded-facts/recorded-facts-behaviour.ts';
 export type { RecordedFacts } from '../recorded-facts/recorded-facts.ts';
-export type { LedgerEntry } from './ledger-entry.ts';
+export { sqliteUpdatesCountingOf, type LedgerEntry } from './ledger-entry.ts';
 export { unreachableDatabase, type UnreachableDatabase } from './unreachable-database.ts';
 export { valuesListOf } from './values-list.ts';
 export { receivedWebhooksOfItsOpenLedger, secretRowsOfItsOpenLedger } from './open-ledger.ts';

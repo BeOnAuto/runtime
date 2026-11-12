@@ -54,7 +54,7 @@ export function payloadsHeaded(
   });
   return Effect.forEach(digests, (sha256) =>
     Effect.flatMap(heads.read(playbook, sha256), (head) =>
-      head === undefined
+      head === undefined || head.erasedAt !== undefined
         ? Effect.die(
             new Error(
               `A fact names the payload ${sha256} of ${streamPrefixOfPlaybook(playbook)}, which the playbook's content does not keep; a payload is put before the fact that names it is appended`,

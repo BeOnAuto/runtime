@@ -3,7 +3,7 @@ import type { SecretRows } from '@on.auto/secrets';
 import { Effect, ManagedRuntime, type Layer, type Result } from 'effect';
 
 import { LedgerConnection, type ConnectionPorts } from '../connection/ledger-connection.ts';
-import { LedgerChores } from '../content/content-sweep.ts';
+import { LedgerChores, type ChorePorts } from '../content/content-sweep.ts';
 import type { SQLiteLedgerFile } from '../secrets/sqlite-ledger-file.ts';
 import type { ReceivedWebhooks } from '../webhooks/received-webhooks.ts';
 
@@ -18,6 +18,7 @@ export interface OpenConnection extends OpenLedger {
 
 export interface OpenChores extends OpenLedger {
   readonly sweptAt: (now: number) => Promise<number>;
+  readonly eraseExpired: ChorePorts['eraseExpired'];
   readonly waitsEnded: () => Promise<void>;
 }
 
@@ -41,6 +42,7 @@ export async function openChoresWith(layer: Layer.Layer<Ledger | LedgerChores>):
   return {
     ledger,
     sweptAt: (now) => runtime.runPromise(chores.sweepOrphans(now)),
+    eraseExpired: chores.eraseExpired,
     waitsEnded: () => runtime.runPromise(chores.endWaits),
     dispose: () => runtime.dispose(),
   };

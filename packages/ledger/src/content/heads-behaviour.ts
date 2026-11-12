@@ -3,6 +3,8 @@ import { interleavedRemovalBehaviour, unheldContentBehaviour } from '@on.auto/op
 import { describe } from 'vitest';
 
 import { aLedgerOutside, type LedgerEntry } from '../testing/ledger-entry.ts';
+import { erasedPutsBehaviour } from './erased-puts-behaviour.ts';
+import { expiredHeadsBehaviour } from './expired-heads-behaviour.ts';
 import { headsStepBehaviour } from './heads-step-behaviour.ts';
 import { switchedStoresBehaviour } from './switched-stores-behaviour.ts';
 
@@ -16,4 +18,6 @@ export function headsBehaviour(entry: LedgerEntry): void {
   });
   switchedStoresBehaviour(entry);
   headsStepBehaviour(entry);
+  expiredHeadsBehaviour(entry);
+  erasedPutsBehaviour(entry);
 }

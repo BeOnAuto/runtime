@@ -26,6 +26,11 @@ export { factScrubBehaviour } from '../scrub-testing/fact-scrub-behaviour.ts';
 export { childRowsBehaviour, type ChildRowsLedger } from '../projections-testing/child-rows-behaviour.ts';
 export { unheldContentBehaviour } from '../content-testing/unheld-content-behaviour.ts';
 export {
+  erasedContentBehaviour,
+  type ErasedContentEntry,
+  type ErasingLedger,
+} from '../content-testing/erased-content-behaviour.ts';
+export {
   interleavedRemovalBehaviour,
   type InterleavedRemovalEntry,
 } from '../content-testing/interleaved-removal-behaviour.ts';

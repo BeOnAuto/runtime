@@ -1,4 +1,4 @@
-import { keptOutside, type ContentHeads, type ContentStore } from '@on.auto/content';
+import { keptOutside, type ContentHeads, type ContentStore, type KeptOutside } from '@on.auto/content';
 import { memoryContentHeads, memoryContentStore } from '@on.auto/content/testing';
 import { Clock, Effect, Layer, Result, Schema } from 'effect';
 
@@ -38,6 +38,7 @@ export interface MemoryLedger {
   readonly service: Ledger['Service'];
   readonly layer: Layer.Layer<Ledger>;
   readonly streamNames: () => readonly string[];
+  readonly eraseExpired: KeptOutside['eraseExpired'];
 }
 
 interface Appended {
@@ -294,5 +295,6 @@ export function memoryLedger(
     content: outside.content,
     removeUnheld: references.removalOver(outside),
   });
-  return { service, layer: Layer.succeed(Ledger, service), streamNames: () => [...kept.streams.keys()] };
+  const streamNames = () => [...kept.streams.keys()];
+  return { service, layer: Layer.succeed(Ledger, service), streamNames, eraseExpired: outside.eraseExpired };
 }
