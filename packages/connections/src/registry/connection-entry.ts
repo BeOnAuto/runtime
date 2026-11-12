@@ -1,3 +1,4 @@
+import { sha256Of } from '@on.auto/content';
 import { ServerEntrySchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
@@ -6,8 +7,10 @@ const { type, url, document, base_url, headers, query_params, allowed, playbooks
 
 const neverASecret = 'never a secret or a reference';
 
+export const mostDocumentTextBytes = 16_384;
+
 export const ConnectionTypeSchema = type.schema.pick(['mcp', 'openapi']).annotate({
-  description: 'mcp for a remote MCP server, given url; openapi for an HTTP API, given document',
+  description: 'mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text',
 });
 
 export type ConnectionType = typeof ConnectionTypeSchema.Type;
@@ -15,7 +18,9 @@ export type ConnectionType = typeof ConnectionTypeSchema.Type;
 export const ConnectionEntrySchema = Schema.Struct({
   url: url.annotate({ description: 'The https URL of the MCP server' }),
   document: document.annotate({ description: 'The https URL of the OpenAPI document of the HTTP API' }),
-  base_url: base_url.annotate({ description: "The https URL the API's calls go to, in place of its document's" }),
+  base_url: base_url.annotate({
+    description: "The https URL the API's calls go to, in place of its document's; required with document_text",
+  }),
   headers: headers.annotate({ description: `Headers sent with each request, ${neverASecret}` }),
   query_params: query_params.annotate({ description: `Query parameters sent with each call, ${neverASecret}` }),
   allowed: allowed.annotate({ description: 'The tools a function may name; every tool when left out' }),
@@ -27,6 +32,29 @@ export const ConnectionEntrySchema = Schema.Struct({
 }).annotate({ description: 'The tool server, without its credential' });
 
 export type ConnectionEntry = typeof ConnectionEntrySchema.Type;
+
+const documentFields = {
+  sha256: Schema.String.annotate({ description: 'The SHA-256 of its text in UTF-8, in hexadecimal' }),
+  bytes: Schema.Int.annotate({ description: 'The size of its text in UTF-8, in bytes' }),
+  tool_count: Schema.Int.annotate({
+    description: 'The number of tools it offers, as the runtime read it when the connection was added',
+  }),
+};
+
+export const ConnectionDocumentSchema = Schema.Struct(documentFields).annotate({
+  description:
+    'The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text',
+});
+
+export type ConnectionDocument = typeof ConnectionDocumentSchema.Type;
+
+export function connectionDocumentOf(text: string, toolCount: number): ConnectionDocument {
+  return { sha256: sha256Of(text), bytes: bytesOfText(text), tool_count: toolCount };
+}
+
+export function bytesOfText(text: string): number {
+  return new TextEncoder().encode(text).byteLength;
+}
 
 export function entryServing(
   { playbooks: _servedBefore, ...entry }: ConnectionEntry,

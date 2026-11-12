@@ -4123,7 +4123,7 @@
                       "mcp",
                       "openapi"
                     ],
-                    "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                    "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                   },
                   "entry": {
                     "type": "object",
@@ -4138,7 +4138,7 @@
                       },
                       "base_url": {
                         "type": "string",
-                        "description": "The https URL the API's calls go to, in place of its document's"
+                        "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                       },
                       "headers": {
                         "type": "object",
@@ -4175,6 +4175,10 @@
                       "request_id": {
                         "type": "string",
                         "description": "The header or result metadata key of the server's id of a call"
+                      },
+                      "document_text": {
+                        "type": "string",
+                        "description": "The OpenAPI document itself, version 3.0 or 3.1, as JSON or YAML of at most 16,384 bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret"
                       }
                     },
                     "additionalProperties": false,
@@ -4296,7 +4300,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -4336,7 +4340,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -4377,6 +4381,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -4898,7 +4926,7 @@
                             "mcp",
                             "openapi"
                           ],
-                          "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                          "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                         },
                         "provider": {
                           "anyOf": [
@@ -4938,7 +4966,7 @@
                             },
                             "base_url": {
                               "type": "string",
-                              "description": "The https URL the API's calls go to, in place of its document's"
+                              "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                             },
                             "headers": {
                               "type": "object",
@@ -4979,6 +5007,30 @@
                           },
                           "additionalProperties": false,
                           "description": "The tool server, without its credential"
+                        },
+                        "document": {
+                          "type": "object",
+                          "properties": {
+                            "sha256": {
+                              "type": "string",
+                              "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                            },
+                            "bytes": {
+                              "type": "integer",
+                              "description": "The size of its text in UTF-8, in bytes"
+                            },
+                            "tool_count": {
+                              "type": "integer",
+                              "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                            }
+                          },
+                          "required": [
+                            "sha256",
+                            "bytes",
+                            "tool_count"
+                          ],
+                          "additionalProperties": false,
+                          "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                         },
                         "credential": {
                           "type": "object",
@@ -5478,7 +5530,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -5518,7 +5570,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -5559,6 +5611,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -6054,7 +6130,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -6094,7 +6170,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -6135,6 +6211,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -6630,7 +6730,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -6670,7 +6770,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -6711,6 +6811,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -7254,7 +7378,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -7294,7 +7418,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -7335,6 +7459,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -8103,7 +8251,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -8143,7 +8291,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -8184,6 +8332,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -8815,7 +8987,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -8855,7 +9027,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -8896,6 +9068,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -9436,7 +9632,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -9476,7 +9672,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -9517,6 +9713,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -10036,7 +10256,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -10076,7 +10296,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -10117,6 +10337,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -10831,7 +11075,7 @@
                         "mcp",
                         "openapi"
                       ],
-                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                      "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                     },
                     "provider": {
                       "anyOf": [
@@ -10871,7 +11115,7 @@
                         },
                         "base_url": {
                           "type": "string",
-                          "description": "The https URL the API's calls go to, in place of its document's"
+                          "description": "The https URL the API's calls go to, in place of its document's; required with document_text"
                         },
                         "headers": {
                           "type": "object",
@@ -10912,6 +11156,30 @@
                       },
                       "additionalProperties": false,
                       "description": "The tool server, without its credential"
+                    },
+                    "document": {
+                      "type": "object",
+                      "properties": {
+                        "sha256": {
+                          "type": "string",
+                          "description": "The SHA-256 of its text in UTF-8, in hexadecimal"
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "description": "The size of its text in UTF-8, in bytes"
+                        },
+                        "tool_count": {
+                          "type": "integer",
+                          "description": "The number of tools it offers, as the runtime read it when the connection was added"
+                        }
+                      },
+                      "required": [
+                        "sha256",
+                        "bytes",
+                        "tool_count"
+                      ],
+                      "additionalProperties": false,
+                      "description": "The OpenAPI document given in document_text when the connection was added, kept by the runtime, which reads it from the connection and from no address; never its text"
                     },
                     "credential": {
                       "type": "object",
@@ -11422,7 +11690,7 @@
                             "mcp",
                             "openapi"
                           ],
-                          "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+                          "description": "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
                         },
                         "credentials": {
                           "type": "array",

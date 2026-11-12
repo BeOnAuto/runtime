@@ -39,4 +39,5 @@ export interface ConnectionServices {
   readonly access: RuntimeAccess;
   readonly consent: ConsentClient;
   readonly resolve?: Resolve;
+  readonly fetch: typeof globalThis.fetch;
 }

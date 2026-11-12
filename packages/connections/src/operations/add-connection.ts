@@ -8,7 +8,7 @@ import { AddedSchema, AdditionSchema } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { addedWordsOf, additionAttempted, linkOffering } from './connection-words.ts';
 import { additionLinkIssuedFor } from './more-asked.ts';
-import { additionOf, recordInRegistry, recordedCaller } from './registry-access.ts';
+import { recordedAdditionOf } from './recorded-additions.ts';
 
 const description = [
   "Starts connecting a person's account at a service, by the name of a provider that search lists, or a server given by hand as name, type, entry and credential.",
@@ -53,11 +53,8 @@ export function defineAddConnection({
         studioBase,
       });
       const { token, ...link } = yield* additionLinkIssuedFor(given, input.more, { ...serving, pages });
-      const addition = additionOf(given, link, yield* recordedCaller);
-      const kept = yield* recordInRegistry(addition).pipe(
-        Effect.catchTags({ not_found: Effect.die, forbidden: Effect.die, invalid_input: Effect.die }),
-      );
-      const connect = connectOf(pages, { org, connection: addition.connection, token }, link.expires_at);
+      const kept = yield* recordedAdditionOf(given, link);
+      const connect = connectOf(pages, { org, connection: kept.connection.id, token }, link.expires_at);
       return { ...kept.connection, credential_ends_with: null, connect };
     }),
     plainLanguage: {

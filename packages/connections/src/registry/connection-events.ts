@@ -10,7 +10,7 @@ import {
 import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
+import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { BrokenKindSchema } from './connection.ts';
 import { CredentialSchema, type Credential } from './credential.ts';
 
@@ -80,6 +80,7 @@ export const ConnectionEventSchema = Schema.Union([
       provider: Schema.NullOr(Schema.String),
       placeholders: Schema.NullOr(Schema.Record(Schema.String, Schema.String)),
       entry: ConnectionEntrySchema,
+      document: Schema.optionalKey(ConnectionDocumentSchema),
       credential: CredentialSchema,
       says: Schema.Record(Schema.String, Schema.String),
       added_by: RecordedCallerSchema,

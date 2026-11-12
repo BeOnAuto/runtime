@@ -43,23 +43,27 @@ export function connectedByConsent(name: string): Conflict {
   });
 }
 
-function decideAddition({ link, ...added }: ConnectionAddition, registry: Registry): Decision {
-  const { connection, name } = added;
+export function additionRefusalOf(name: string, registry: Registry): Conflict | undefined {
   const kept = [...registry.values()].filter((each) => each.connection.status !== 'removed');
   if (kept.some((each) => each.connection.name === name)) {
-    return Result.fail(new Conflict({ detail: `There is already a connection ${name} in this org`, kind: 'taken' }));
+    return new Conflict({ detail: `There is already a connection ${name} in this org`, kind: 'taken' });
   }
   return kept.length >= mostConnectionsOfAnOrg
-    ? Result.fail(
-        new Conflict({
-          detail: `The org holds ${mostConnectionsOfAnOrg} connections, the most it may; remove one before adding another`,
-          kind: 'connections_full',
-        }),
-      )
-    : Result.succeed([
+    ? new Conflict({
+        detail: `The org holds ${mostConnectionsOfAnOrg} connections, the most it may; remove one before adding another`,
+        kind: 'connections_full',
+      })
+    : undefined;
+}
+
+function decideAddition({ link, ...added }: ConnectionAddition, registry: Registry): Decision {
+  const refusal = additionRefusalOf(added.name, registry);
+  return refusal === undefined
+    ? Result.succeed([
         { type: 'connection_added', data: addedData(added) },
-        { type: 'connection_link_issued', data: { connection, ...link } },
-      ]);
+        { type: 'connection_link_issued', data: { connection: added.connection, ...link } },
+      ])
+    : Result.fail(refusal);
 }
 
 function addedData({
@@ -69,6 +73,7 @@ function addedData({
   provider,
   placeholders,
   entry,
+  document,
   credential,
   says,
   added_by: addedBy,
@@ -80,6 +85,7 @@ function addedData({
     provider,
     placeholders,
     entry,
+    ...(document === undefined ? {} : { document }),
     credential,
     says,
     added_by: addedBy,

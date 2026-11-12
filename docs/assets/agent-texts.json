@@ -980,7 +980,7 @@
       ]
     },
     {
-      "sha256": "7dfbe5cef40d2818e87cddcfa4406047d54aa5ba30e514b90b2fa40a944ad0f0",
+      "sha256": "b511da313fc7894bcdcb34b7f34977bef1eb872ab836e9adc1d885f6be54ccb2",
       "tier": 1,
       "received": [
         {
@@ -993,7 +993,7 @@
         }
       ],
       "lines": [
-        "mcp for a remote MCP server, given url; openapi for an HTTP API, given document"
+        "mcp for a remote MCP server, given url; openapi for an HTTP API, given document or document_text"
       ]
     },
     {
@@ -1048,7 +1048,7 @@
       ]
     },
     {
-      "sha256": "81d55df6cd52fd7e49dabec2206ccd708f9c43ad4b2895dc318d01fd6f28939e",
+      "sha256": "231fa4c34f2f1f366a5de64e427d7e0e41cf460c80a47071212224806b947072",
       "tier": 1,
       "received": [
         {
@@ -1061,7 +1061,7 @@
         }
       ],
       "lines": [
-        "The https URL the API's calls go to, in place of its document's"
+        "The https URL the API's calls go to, in place of its document's; required with document_text"
       ]
     },
     {
@@ -1164,6 +1164,23 @@
       ],
       "lines": [
         "The header or result metadata key of the server's id of a call"
+      ]
+    },
+    {
+      "sha256": "49baa355ece0a908c02295601dcb0e1936cd542f37d1f33d25e3c967e02fff2a",
+      "tier": 1,
+      "received": [
+        {
+          "as": "tool add_connection: argument entry.document_text",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "The OpenAPI document itself, version 3.0 or 3.1, as JSON or YAML of at most 16,384 bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret"
       ]
     },
     {

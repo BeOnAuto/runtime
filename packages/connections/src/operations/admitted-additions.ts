@@ -1,18 +1,18 @@
-import type { Conflict, Forbidden, InvalidInput, Unavailable } from '@on.auto/operations';
+import { CallFetch, type Conflict, type Forbidden, type InvalidInput, type Unavailable } from '@on.auto/operations';
 import type { NamedWay, WayRefusal } from '@on.auto/tool-servers';
 import { Effect, Option } from 'effect';
 
+import { describedAdditionOf, type DescribedAddition } from '../entries/described-entries.ts';
 import { credentialUnnamedOf, takesConsentOf, wayRefusalOf, type WayRefused } from '../page/consent-words.ts';
 import { reachesUnder } from '../policy/policy-rules.ts';
 import { checkedAdditionOf, refusalOfTheAddition, type GivenAddition } from '../providers/provider-additions.ts';
-import type { Credential, CredentialKind } from '../registry/credential.ts';
 import type { AdditionGiven } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { refusedInTheDirectoryListing } from './money-refused.ts';
 
 type Admitting = Pick<
   ConnectionServices,
-  'policy' | 'fileEntries' | 'modelProviders' | 'providers' | 'providerValues' | 'consent' | 'resolve'
+  'policy' | 'fileEntries' | 'modelProviders' | 'providers' | 'providerValues' | 'consent' | 'resolve' | 'fetch'
 > & {
   readonly org: string;
   readonly studioBase: string;
@@ -20,7 +20,9 @@ type Admitting = Pick<
 
 type WayNaming = Pick<ConnectionServices, 'policy' | 'consent' | 'resolve'>;
 
-type KindGiven = CredentialKind | 'left_out';
+type Credential = GivenAddition['credential'];
+
+type KindGiven = Credential['kind'] | 'left_out';
 
 interface Asked {
   readonly addition: GivenAddition;
@@ -90,10 +92,17 @@ function askedHowItAuthenticates(
   );
 }
 
+function fetchOfTheCall(own: Admitting['fetch']): Effect.Effect<Admitting['fetch']> {
+  return Effect.map(
+    Effect.serviceOption(CallFetch),
+    Option.getOrElse(() => own),
+  );
+}
+
 export function admittedAdditionOf(
   given: AdditionGiven,
   admitting: Admitting,
-): Effect.Effect<GivenAddition, InvalidInput | Forbidden | Conflict | WayRefused | Unavailable> {
+): Effect.Effect<DescribedAddition, InvalidInput | Forbidden | Conflict | WayRefused | Unavailable> {
   const { org, modelProviders, policy, fileEntries } = admitting;
   return Effect.gen(function* () {
     const checked = yield* checkedAdditionOf(given, { org, modelProviders }, admitting);
@@ -102,6 +111,11 @@ export function admittedAdditionOf(
       return yield* Effect.fail(refusal);
     }
     yield* refusedInTheDirectoryListing(admitting.providers, checked);
-    return yield* askedHowItAuthenticates(checked, given, admitting);
+    const asked = yield* askedHowItAuthenticates(checked, given, admitting);
+    return yield* describedAdditionOf(
+      asked,
+      { org, modelProviders, providing: undefined },
+      { fetch: yield* fetchOfTheCall(admitting.fetch), reaches: reachesUnder(policy, admitting.resolve) },
+    );
   });
 }

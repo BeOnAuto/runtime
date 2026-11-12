@@ -3,6 +3,7 @@ import {
   failureCodesOf,
   marksOf,
   readEntry,
+  shippedDocumentOf,
   type Environment,
   type ServerEntryFields,
   type ShippedDocument,
@@ -177,6 +178,7 @@ interface Named {
   readonly name: string;
   readonly type: ConnectionType;
   readonly provider: string | null;
+  readonly documentText?: string | undefined;
 }
 
 const handlingMoney: Pick<Providing, 'handles_money'> = { handles_money: true };
@@ -211,20 +213,43 @@ function operatorEnvironmentOf(providing: Providing | undefined): Environment {
   );
 }
 
-function documentsOf(providing: Providing | undefined): NonNullable<ToolServerSettingsContext['documents']> {
+type DocumentsPlace = NonNullable<ToolServerSettingsContext['documents']>;
+
+const documentTextKey = 'document_text';
+
+function documentsOf(providing: Providing | undefined): DocumentsPlace {
   return providing === undefined ? { kind: 'directory', path: '.' } : { kind: 'shipped', byName: providing.documents };
 }
 
+interface DocumentRead {
+  readonly written: Pick<ServerEntryFields, 'document'>;
+  readonly documents: DocumentsPlace;
+}
+
+function documentReadOf(documentText: string | undefined, providing: Providing | undefined): DocumentRead {
+  return documentText === undefined
+    ? { written: {}, documents: documentsOf(providing) }
+    : {
+        written: { document: documentTextKey },
+        documents: {
+          kind: 'shipped',
+          byName: new Map([[documentTextKey, shippedDocumentOf(new TextEncoder().encode(documentText))]]),
+        },
+      };
+}
+
 export function readPlaced(
-  { name, type, provider }: Named,
+  { name, type, provider, documentText }: Named,
   { written, environment, placedValues }: Placed,
   reading: Reading,
 ) {
   const { org, modelProviders, providing } = reading;
+  const document = documentReadOf(documentText, providing);
   const read = readEntry(
     name,
     {
       ...written,
+      ...document.written,
       ...marksOf(providing?.marks),
       ...failureCodesOf(providing?.failure_codes),
       ...moneyOf(providing),
@@ -232,7 +257,7 @@ export function readPlaced(
       org,
     },
     { ...operatorEnvironmentOf(providing), ...environment },
-    { modelProviders, documents: documentsOf(providing), placedValues },
+    { modelProviders, documents: document.documents, placedValues },
   );
   return Result.map(read, (settings) => ({ ...settings, provider }));
 }

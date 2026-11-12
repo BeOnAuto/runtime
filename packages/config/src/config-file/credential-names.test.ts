@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { clientIdWrittenOut, credentialProblems } from '../index.ts';
+import { clientIdWrittenOut, credentialProblems, credentialShapesIn } from '../index.ts';
 import { configured, problemsIn } from '../testing/config-files.ts';
 
 const secret = 'sk-proj-0123456789abcdefghijklmnop';
@@ -40,6 +40,17 @@ describe('a key that names prose', () => {
     );
     expect(problemsIn(described.replace('X-Token', `'Bearer ${secret}'`))).toBe(
       `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:61 example_rules.ways[0].name: ${writtenOut}`,
+    );
+  });
+
+  it('is not searched for a key in its words in the setting that names it', () => {
+    const { environment } = configured(described.replace('Token from', `Paste ${secret} from`));
+
+    expect(environment['EXAMPLE_RULES']).toBe(
+      JSON.stringify({
+        credential_kinds: ['secret'],
+        ways: [{ name: 'X-Token', description: `Paste ${secret} from the settings of your account` }],
+      }),
     );
   });
 
@@ -165,6 +176,45 @@ describe('the default of a reference', () => {
       `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:51 example_servers.graph.headers.x-api-key: ${asDefault}`,
       `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:46 example_servers.graph.headers.link: ${asDefault}`,
       `The configuration file auto-runtime.yaml is invalid: auto-runtime.yaml:1:46 example_servers.graph.headers.link: ${writtenOut}`,
+    ]);
+  });
+});
+
+describe('a value judged by its shape alone, wherever it is held', () => {
+  it('is refused at its place for the shape of a credential, never for the name it is given, and prose is not judged', () => {
+    const held = {
+      password: 'the one the person types',
+      paths: { '/items': { get: { parameters: [{ name: 'key', example: secret }] } } },
+      description: 'Token from the settings of your account',
+      servers: [{ url: `https://api.example.com/?api_key=${secret}` }],
+    };
+
+    expect(credentialShapesIn(held, '', ['description'])).toEqual([
+      { pointer: '/paths/~1items/get/parameters/0/example', detail: writtenOut },
+      { pointer: '/servers/0/url', detail: writtenOut },
+    ]);
+  });
+
+  it('judges what a key named as prose holds where it holds no text, as any other value', () => {
+    const held = { properties: { title: { type: 'string', example: secret }, summary: [secret] } };
+
+    expect(credentialShapesIn(held, '', ['title', 'summary'])).toEqual([
+      { pointer: '/properties/title/example', detail: writtenOut },
+      { pointer: '/properties/summary/0', detail: writtenOut },
+    ]);
+  });
+
+  it('refuses prose that holds a key anywhere in its words, and takes prose that only speaks of keys', () => {
+    const held = {
+      description: `Lists the items; send ${secret} with each call`,
+      summary: '-----BEGIN RSA PRIVATE KEY----- is how the file starts',
+      title: 'Bearer token from the settings page, which begins sk- or ghp_ and is kept by the person',
+      items: { description: 'The task-0123456789abcdefghijklmnop of the order' },
+    };
+
+    expect(credentialShapesIn(held, '', ['description', 'summary', 'title'])).toEqual([
+      { pointer: '/description', detail: writtenOut },
+      { pointer: '/summary', detail: writtenOut },
     ]);
   });
 });

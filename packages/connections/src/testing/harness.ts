@@ -1,4 +1,11 @@
-import { allPermissions, makeDispatcher, type CallerIdentity, type Outcome, type Runnable } from '@on.auto/operations';
+import {
+  allPermissions,
+  CallFetch,
+  makeDispatcher,
+  type CallerIdentity,
+  type Outcome,
+  type Runnable,
+} from '@on.auto/operations';
 import {
   memoryLedger,
   memoryPlaybookRegistry,
@@ -13,7 +20,13 @@ import { makeConnectionOperations, type ConnectionOperations } from '../operatio
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
 import { ConnectionEventSchema, type RecordedConnectionEvent } from '../registry/connection-events.ts';
 import { connectionsStreamOfOrg } from '../registry/registry-decider.ts';
-import { harnessConsentOf, keptSecrets, type KeptSecrets, type HarnessConsenting } from './harness-services.ts';
+import {
+  documentsOffTheLoopback,
+  harnessConsentOf,
+  keptSecrets,
+  type HarnessConsenting,
+  type KeptSecrets,
+} from './harness-services.ts';
 
 const firstMoment = '2026-10-15T14:00:00.000Z';
 
@@ -65,6 +78,7 @@ export const fixtureServing = {
   providerValues: new Map<string, Redacted.Redacted>(),
   pages: harnessPages,
   resolve: publicEverywhere,
+  fetch: documentsOffTheLoopback,
 };
 
 export const loopbackPolicy = connectionPolicyOf({ allowed_hosts: ['127.0.0.1'] });
@@ -102,7 +116,10 @@ export interface Harness {
 
 type ConnectionServices = Parameters<typeof makeConnectionOperations>[0];
 
-export interface HarnessOptions extends Partial<Omit<ConnectionServices, 'secrets'>>, HarnessConsenting {}
+export interface HarnessOptions extends Partial<Omit<ConnectionServices, 'secrets'>>, HarnessConsenting {
+  readonly callFetch?: typeof globalThis.fetch;
+  readonly ledger?: MemoryLedger;
+}
 
 function loggingInto(log: (line: string) => void) {
   return Logger.layer([Logger.map(Logger.formatJson, log)]);
@@ -124,6 +141,7 @@ function composedOf(
     access: 'people',
     consent,
     resolve: publicEverywhere,
+    fetch: documentsOffTheLoopback,
     ...given,
   };
 }
@@ -141,28 +159,52 @@ function dispatchedAt<R>(
   );
 }
 
-export function harness({ beforeKeeping, mostSecretCharacters, consenting, ...given }: HarnessOptions = {}): Harness {
-  const ledger = memoryLedger();
-  const secrets = keptSecrets({ beforeKeeping, mostSecretCharacters });
-  const consent = harnessConsentOf(ledger.service, secrets, consenting);
-  const logged: string[] = [];
-  const services = Layer.mergeAll(
+const collecting = {
+  initialState: [],
+  evolve: (facts: readonly RecordedConnectionEvent[], fact: RecordedConnectionEvent) => [...facts, fact],
+  eventSchema: ConnectionEventSchema,
+};
+
+function callFetchOf(callFetch: typeof globalThis.fetch | undefined): Layer.Layer<never> {
+  return callFetch === undefined ? Layer.empty : Layer.succeed(CallFetch, callFetch);
+}
+
+function servicesOver(
+  ledger: MemoryLedger,
+  log: (line: string) => void,
+  callFetch: typeof globalThis.fetch | undefined,
+) {
+  return Layer.mergeAll(
     ledger.layer,
     Layer.provide(memoryPlaybookRegistry([]), ledger.layer),
     recordingReporter().layer,
     TestClock.layer(),
-    loggingInto((line) => {
+    loggingInto(log),
+    callFetchOf(callFetch),
+  );
+}
+
+export function harness({
+  beforeKeeping,
+  mostSecretCharacters,
+  consenting,
+  callFetch,
+  ledger = memoryLedger(),
+  ...given
+}: HarnessOptions = {}): Harness {
+  const secrets = keptSecrets({ beforeKeeping, mostSecretCharacters });
+  const consent = harnessConsentOf(ledger.service, secrets, consenting);
+  const logged: string[] = [];
+  const services = servicesOver(
+    ledger,
+    (line) => {
       logged.push(line);
-    }),
+    },
+    callFetch,
   );
   const composed = composedOf(given, { secrets, consent });
   const operations = makeConnectionOperations(composed);
   const dispatcher = makeDispatcher([]);
-  const collecting = {
-    initialState: [],
-    evolve: (facts: readonly RecordedConnectionEvent[], fact: RecordedConnectionEvent) => [...facts, fact],
-    eventSchema: ConnectionEventSchema,
-  };
   return {
     ledger,
     consent,

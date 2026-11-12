@@ -42,6 +42,42 @@ const serversOffTheLoopback: ConsentClientOptions['fetch'] = (...[address, init]
     : answeredAsAServerTakingASecret(request);
 };
 
+export const billingDocumentUrl = 'https://billing.example.com/openapi.json';
+
+export const billingDocument = {
+  openapi: '3.1.0',
+  info: { title: 'Billing', version: '2' },
+  servers: [{ url: 'https://api.billing.example.com/v2' }],
+  paths: {
+    '/invoices': {
+      get: { operationId: 'list_invoices', summary: 'Lists the invoices of the account.' },
+    },
+  },
+  components: {
+    securitySchemes: {
+      apiKey: { type: 'apiKey', in: 'header', name: 'X-Billing-Key' },
+      apiKeyAuth: { type: 'apiKey', in: 'header', name: 'X-Billing-Auth' },
+      clients: { type: 'oauth2' },
+    },
+  },
+};
+
+const documentsAt: ReadonlyMap<string, string> = new Map([[billingDocumentUrl, JSON.stringify(billingDocument)]]);
+
+function answeredOffTheLoopback({ url }: Readonly<Request>): Response {
+  const document = documentsAt.get(url);
+  return document === undefined
+    ? new Response(null, { status: 404 })
+    : new Response(document, { headers: { 'content-type': 'application/json' } });
+}
+
+export const documentsOffTheLoopback: typeof globalThis.fetch = (...[address, init]: readonly [unknown, unknown?]) => {
+  const request = new Request(String(address), Object.assign({}, init));
+  return loopbackHostOf(new URL(request.url).hostname)
+    ? globalThis.fetch(request)
+    : Promise.resolve(answeredOffTheLoopback(request));
+};
+
 export function keptSecrets({
   beforeKeeping = () => Promise.resolve(),
   mostSecretCharacters = 64,

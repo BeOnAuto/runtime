@@ -39,12 +39,14 @@ const writtenByTheCaller: readonly string[] = ['/entry/playbooks', '/entry/allow
 const namedByTheServer: Credential = { kind: 'authorization' };
 
 function givenByHand(given: AdditionGiven): GivenAddition {
+  const { document_text: documentText, ...entry } = Option.getOrThrow(Option.fromNullishOr(given.entry));
   return {
     name: Option.getOrThrow(Option.fromNullishOr(given.name)),
     type: Option.getOrThrow(Option.fromNullishOr(given.type)),
     provider: null,
     placeholders: null,
-    entry: Option.getOrThrow(Option.fromNullishOr(given.entry)),
+    entry,
+    ...(documentText === undefined ? {} : { documentText }),
     credential: given.credential ?? namedByTheServer,
   };
 }

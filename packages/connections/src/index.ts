@@ -16,6 +16,7 @@ export { registeredClientSecrets } from './registered-clients/registered-clients
 export type { RuntimeAccess } from './policy/policy-rules.ts';
 export { ConnectionSchema, type Connection } from './registry/connection.ts';
 export { connectionChanges } from './registry/connection-changes.ts';
+export { ConnectionDocumentEventSchema, isConnectionDocumentStreamOfOrg } from './documents/document-streams.ts';
 export { ConnectionEventSchema } from './registry/connection-events.ts';
 export { byTheRuntime, connectionsStream, connectionsStreamOfOrg } from './registry/registry-decider.ts';
 export { makeConnectionSource } from './serving/connection-source.ts';

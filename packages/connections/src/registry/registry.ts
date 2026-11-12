@@ -56,6 +56,7 @@ export const initialRegistry: Registry = new Map();
 
 function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
   const { connection: id, name, server_type: type, provider, placeholders, entry, credential, says, added_by } = data;
+  const { document } = data;
   return {
     connection: {
       id,
@@ -64,6 +65,7 @@ function addedConnection({ data, context }: ConnectionAdded): KeptConnection {
       provider,
       placeholders,
       entry,
+      ...(document === undefined ? {} : { document }),
       credential,
       status: 'pending',
       added_by,

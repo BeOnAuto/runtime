@@ -1,3 +1,6 @@
+import { Buffer } from 'node:buffer';
+import { createHash } from 'node:crypto';
+
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -221,6 +224,41 @@ const signingSecrets: readonly (typeof ConnectionEventSchema.Type)[] = [
   },
 ];
 
+const documentText = JSON.stringify({
+  openapi: '3.1.0',
+  info: { title: 'Ledgers', version: '1' },
+  paths: { '/entries': { get: { operationId: 'list_entries', summary: 'Lists the entries of the ledger.' } } },
+});
+
+const givenItsDocument: readonly (typeof ConnectionEventSchema.Type)[] = [
+  {
+    type: 'connection_added',
+    data: {
+      ...ofTheConnection,
+      name: 'ledgers',
+      server_type: 'openapi',
+      provider: null,
+      placeholders: null,
+      entry: { base_url: 'https://api.ledgers.example.com/v1' },
+      document: {
+        sha256: createHash('sha256').update(documentText).digest('hex'),
+        bytes: Buffer.byteLength(documentText),
+        tool_count: 1,
+      },
+      credential: {
+        kind: 'secret',
+        name: 'X-Ledgers-Key',
+        in: 'header',
+        instructions: 'Make a key under [Settings, API keys](https://ledgers.example.com/settings/keys).',
+        key_page: 'https://ledgers.example.com/settings/keys',
+      },
+      says: {},
+      added_by: caller,
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the registry of connections', () => {
   recordedFactsBehaviour({
     schema: ConnectionEventSchema,
@@ -230,6 +268,7 @@ describe('the facts of the registry of connections', () => {
       '0.49.0': [...askingMore, ...underTheOrgsOAuthClient],
       '0.54.0': askedThroughAClient,
       '0.57.0': [...describedKey, ...playbooksSet, ...signingSecrets],
+      '0.59.0': givenItsDocument,
     },
   });
 });

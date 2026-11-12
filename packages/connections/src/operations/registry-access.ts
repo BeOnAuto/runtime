@@ -11,8 +11,8 @@ import {
 } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
+import type { DescribedAddition } from '../entries/described-entries.ts';
 import { tokenSha256OfPage } from '../links/link-token.ts';
-import type { GivenAddition } from '../providers/provider-additions.ts';
 import type {
   ClientGiving,
   ConnectionAddition,
@@ -89,7 +89,7 @@ export const actedNow = Effect.gen(function* () {
 });
 
 export function additionOf(
-  { name, type, provider, placeholders, entry, credential, says = {} }: GivenAddition,
+  { name, type, provider, placeholders, entry, document, credential, says = {} }: DescribedAddition,
   link: OpenLink,
   addedBy: RecordedCaller,
 ): ConnectionAddition {
@@ -101,6 +101,7 @@ export function additionOf(
     provider,
     placeholders,
     entry,
+    ...(document === undefined ? {} : { document }),
     credential,
     says,
     added_by: addedBy,

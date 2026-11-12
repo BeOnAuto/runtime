@@ -9,9 +9,9 @@ import {
 } from '@on.auto/connections';
 import { accessModeOf } from '@on.auto/identity';
 
+import { outboundFetch } from '../composition/outbound-fetch.ts';
 import { runtimeLedger } from '../composition/runtime-ledger.ts';
 import { consentClientOf, servedClientMetadataDocumentOf } from '../composition/served-consent.ts';
-import type { LedgerDatabase } from '../database/ledger-database.ts';
 import { ledgerStoresOpenedBy, type LedgerStores } from '../database/ledger-stores.ts';
 import { licenseServedBy, type ServedLicense } from '../licensing/served-license.ts';
 import { ownKeysOf, secretsKeptBy, type OwnKeysRead } from '../secrets/own-keys.ts';
@@ -73,6 +73,7 @@ function connectionServicesOf(settings: ServingSettings, { secrets, consent, pag
     variables: settings.connectionVariables,
     pages,
     access: accessOf(settings),
+    fetch: outboundFetch,
   };
 }
 
@@ -96,7 +97,7 @@ function sourceServedBy(
 export async function storesAndConnectionsOf(
   runtime: Parameters<typeof licenseServedBy>[0],
   settings: Settings,
-  database: LedgerDatabase,
+  database: Parameters<typeof ledgerStoresOpenedBy>[2],
   ownOrigin: () => string,
 ): Promise<StoresAndConnections> {
   const stores = await ledgerStoresOpenedBy(runtime.context, settings, database);

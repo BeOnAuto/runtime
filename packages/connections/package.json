@@ -9,6 +9,7 @@
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
+    "measure:loads": "node measure/measure-loads.ts",
     "lint": "oxlint -c ../../.oxlintrc.json",
     "typecheck": "tsc",
     "test": "vitest run --coverage"

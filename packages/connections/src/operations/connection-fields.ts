@@ -3,7 +3,8 @@ import { keyFieldNames, keyFields } from '@on.auto/providers';
 import { ClientSourceSchema, WayOAuthClientSchema, givenByTheProvider } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
-import { ConnectionEntrySchema, ConnectionTypeSchema } from '../registry/connection-entry.ts';
+import { AddedEntrySchema, documentIssuesOf } from '../entries/document-fields.ts';
+import { ConnectionTypeSchema } from '../registry/connection-entry.ts';
 import { ConnectionSchema } from '../registry/connection.ts';
 import {
   CredentialFieldsSchema,
@@ -99,7 +100,7 @@ const AdditionFieldsSchema = Schema.Struct({
     Schema.Record(Schema.String, Schema.String).annotate({ description: "With provider, its placeholders' values" }),
   ),
   type: Schema.optionalKey(ConnectionTypeSchema),
-  entry: Schema.optionalKey(ConnectionEntrySchema),
+  entry: Schema.optionalKey(AddedEntrySchema),
   credential: Schema.optionalKey(AddedCredentialSchema),
   more: Schema.optionalKey(
     Schema.String.annotate({
@@ -117,7 +118,7 @@ const givenByHand = ['name', 'type', 'entry'] as const;
 
 const credentialOfAnApiByHand = 'Expected credential, which an HTTP API given by hand takes, or provider';
 
-const serverFields = ['url', 'document', 'base_url', 'headers', 'query_params', 'request_id'] as const;
+const serverFields = ['url', 'document', 'document_text', 'base_url', 'headers', 'query_params', 'request_id'] as const;
 
 const placedByTheProvider = ['variable', 'name', 'in', 'scheme', 'issuer', 'scope', ...keyFieldNames] as const;
 
@@ -223,6 +224,7 @@ function handModeIssuesOf(given: AdditionGiven): readonly ModeIssue[] {
     ...givenByHand
       .filter((field) => given[field] === undefined)
       .map((field) => ({ path: [field], issue: `Expected ${field}, which a server given by hand takes, or provider` })),
+    ...documentIssuesOf(given),
     ...missingCredentialIssuesOf(given),
     ...(placeholders === undefined
       ? []

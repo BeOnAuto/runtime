@@ -2,7 +2,7 @@ import { RecordedCallerSchema } from '@on.auto/operations';
 import { scopesIn } from '@on.auto/providers';
 import { Schema } from 'effect';
 
-import { ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
+import { ConnectionDocumentSchema, ConnectionEntrySchema, ConnectionTypeSchema } from './connection-entry.ts';
 import { CredentialSchema } from './credential.ts';
 
 const ConnectionStatusSchema = Schema.Literals(['pending', 'connected', 'broken', 'removed']);
@@ -56,6 +56,7 @@ export const ConnectionSchema = Schema.Struct({
     description: "The values given for the provider's placeholders, or null",
   }),
   entry: ConnectionEntrySchema,
+  document: Schema.optionalKey(ConnectionDocumentSchema),
   credential: CredentialSchema,
   status: ConnectionStatusSchema.annotate({
     description: 'pending until it is approved and its credential given, connected, broken or removed',

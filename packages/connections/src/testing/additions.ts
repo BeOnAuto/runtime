@@ -1,6 +1,7 @@
 import type { CallerIdentity, Outcome } from '@on.auto/operations';
 import { Schema } from 'effect';
 
+import { billingDocumentUrl } from './harness-services.ts';
 import { ada, operationNamed, type Harness } from './harness.ts';
 
 export const crmKeyHelp = {
@@ -27,7 +28,7 @@ export const crmWithTenant = {
 export const billing = {
   name: 'billing',
   type: 'openapi',
-  entry: { document: 'https://billing.example.com/openapi.json', base_url: 'https://api.billing.example.com/v2' },
+  entry: { document: billingDocumentUrl, base_url: 'https://api.billing.example.com/v2' },
   credential: { kind: 'client_credentials', issuer: 'https://auth.billing.example.com', client_id: 'acme' },
 } as const;
 

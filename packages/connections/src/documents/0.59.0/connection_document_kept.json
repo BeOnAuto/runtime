@@ -1,0 +1,12 @@
+{
+  "type": "connection_document_kept",
+  "data": {
+    "text": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"Ledgers\",\"version\":\"1\"},\"paths\":{\"/entries\":{\"get\":{\"operationId\":\"list_entries\",\"summary\":\"Lists the entries of the ledger.\"}}}}",
+    "sha256": "12fe0445fa0547202e360e1fa76122bd707bb9c3a0ba1dbd5017574f46955e6b",
+    "bytes": 165
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

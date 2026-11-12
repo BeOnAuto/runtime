@@ -1,4 +1,4 @@
-import { ConnectionEventSchema, RegistrationEventSchema } from '@on.auto/connections';
+import { ConnectionDocumentEventSchema, ConnectionEventSchema, RegistrationEventSchema } from '@on.auto/connections';
 import {
   DefinitionEventSchema,
   EventPublishedSchema,
@@ -25,6 +25,7 @@ export const knownFactSchemas = [
   EventPublishedSchema,
   ReactionRefusedSchema,
   ConnectionEventSchema,
+  ConnectionDocumentEventSchema,
   RegistrationEventSchema,
   HandCallEventSchema,
   ConversationCallEventSchema,

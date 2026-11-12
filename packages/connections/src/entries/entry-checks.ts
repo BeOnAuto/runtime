@@ -19,6 +19,7 @@ export interface AdditionInput {
   readonly type: ConnectionType;
   readonly provider: string | null;
   readonly entry: ConnectionEntry;
+  readonly documentText?: string | undefined;
   readonly credential: Credential;
 }
 
@@ -56,7 +57,7 @@ const heldReference =
 
 const fileOnly = `${pinnedUrlShape}: a connection reads its document from the network, never from the runtime’s disk`;
 
-const anyValue: GivenValue = { value: Redacted.make('a value the person gives'), algorithm: undefined };
+const anyValue: GivenValue = { value: Redacted.make('user:a value the person gives'), algorithm: undefined };
 
 const anyClientId = 'a client id the person gives';
 
@@ -149,9 +150,19 @@ function withAnyClientId(credential: Credential): Credential {
     : credential;
 }
 
+function readWithAnyValue(
+  input: AdditionInput,
+  checking: EntryChecking,
+): Result.Result<ServerSettings, readonly Issue[]> {
+  return readAddition(input, checking, placesNoValue(input.credential.kind) ? undefined : anyValue);
+}
+
 function readingIssuesOf(input: AdditionInput, checking: EntryChecking): readonly Issue[] {
-  const given = placesNoValue(input.credential.kind) ? undefined : anyValue;
-  return Result.match(readAddition(input, checking, given), { onSuccess: () => [], onFailure: (read) => read });
+  return Result.match(readWithAnyValue(input, checking), { onSuccess: () => [], onFailure: (read) => read });
+}
+
+export function settingsOfTheAddition(input: AdditionInput, checking: EntryChecking): ServerSettings {
+  return Result.getOrThrow(readWithAnyValue({ ...input, credential: withAnyClientId(input.credential) }, checking));
 }
 
 function isOfTheClientId({ pointer }: Issue): boolean {

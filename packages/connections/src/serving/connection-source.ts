@@ -1,27 +1,16 @@
 import {
-  isConnectionServerSettings,
   servedFieldsOf,
-  type ConnectionServer,
   type ConnectionServing,
   type ConnectionSource,
-  type ConnectionUnready,
   type OrgConnection,
 } from '@on.auto/tool-servers';
-import { Effect, Option, Result } from 'effect';
+import { Effect, Option } from 'effect';
 
-import { entryIssuesOf, readAddition } from '../entries/entry-checks.ts';
-import { reachesUnder, useRefusalOf } from '../policy/policy-rules.ts';
 import { providingOf } from '../providers/provider-additions.ts';
 import { connectionsFold, connectionsStreamOfOrg } from '../registry/registry-decider.ts';
 import { newestFirst } from '../registry/registry.ts';
-import {
-  connectedAtOf,
-  consentAuthOf,
-  credentialRefusedOf,
-  givenOf,
-  loggedCauses,
-  notAllowed,
-} from './given-credentials.ts';
+import { connectedAtOf, loggedCauses } from './given-credentials.ts';
+import { preparedServer } from './prepared-servers.ts';
 import type { Serving, ServingServices } from './serving-services.ts';
 import { servingWords } from './serving-words.ts';
 
@@ -36,43 +25,6 @@ function servingOf({ org, kept, services }: Serving): ConnectionServing {
     ...servedFieldsOf(entry),
     ...(handlesMoney === undefined ? {} : { handles_money: handlesMoney }),
   };
-}
-
-function unchecked(name: string, issues: ReturnType<typeof entryIssuesOf>): ConnectionUnready {
-  return notAllowed(
-    servingWords.unchecked(
-      name,
-      issues.map(({ detail }) => detail),
-    ),
-  );
-}
-
-function preparedServer(serving: Serving): Effect.Effect<ConnectionServer, ConnectionUnready> {
-  const { policy, modelProviders } = serving.services;
-  const { connection } = serving.kept;
-  const checking = { org: serving.org, modelProviders, providing: providingOf(connection, serving.services) };
-  return Effect.gen(function* () {
-    const refusal = useRefusalOf(policy, connection, checking.providing?.documentServer);
-    if (refusal !== undefined) {
-      return yield* Effect.fail(notAllowed(refusal.detail));
-    }
-    const issues = entryIssuesOf(connection, checking);
-    if (issues.length > 0) {
-      return yield* Effect.fail(unchecked(connection.name, issues));
-    }
-    const given = yield* givenOf(serving);
-    const auth = yield* consentAuthOf(serving, checking.providing);
-    const read = readAddition(connection, checking, given);
-    if (Result.isFailure(read)) {
-      return yield* Effect.fail(unchecked(connection.name, read.failure));
-    }
-    const settings = Option.getOrThrow(Option.liftPredicate(read.success, isConnectionServerSettings));
-    return {
-      settings: auth === undefined ? settings : { ...settings, auth },
-      reaches: reachesUnder(policy, serving.services.resolve),
-      refused: credentialRefusedOf(serving, yield* Effect.context()),
-    };
-  });
 }
 
 function orgConnectionOf(serving: Serving): OrgConnection {

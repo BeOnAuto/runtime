@@ -1,0 +1,34 @@
+{
+  "type": "connection_added",
+  "data": {
+    "connection": "connection-1",
+    "name": "ledgers",
+    "server_type": "openapi",
+    "provider": null,
+    "placeholders": null,
+    "entry": {
+      "base_url": "https://api.ledgers.example.com/v1"
+    },
+    "document": {
+      "sha256": "12fe0445fa0547202e360e1fa76122bd707bb9c3a0ba1dbd5017574f46955e6b",
+      "bytes": 165,
+      "tool_count": 1
+    },
+    "credential": {
+      "kind": "secret",
+      "name": "X-Ledgers-Key",
+      "in": "header",
+      "instructions": "Make a key under [Settings, API keys](https://ledgers.example.com/settings/keys).",
+      "key_page": "https://ledgers.example.com/settings/keys"
+    },
+    "says": {},
+    "added_by": {
+      "id": "key_7f3a",
+      "name": "key_7f3a"
+    }
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "key_7f3a"
+  }
+}

@@ -6,8 +6,8 @@ import {
   type SourcedEntry,
   type SourceUnderTest,
 } from '@on.auto/tool-servers/served-fakes';
-import { describedAccess } from '@on.auto/tool-servers/testing';
-import { Option, Redacted } from 'effect';
+import { describedAccess, fakeApiToolNames } from '@on.auto/tool-servers/testing';
+import { Option, Predicate, Redacted, Schema } from 'effect';
 import { expect } from 'vitest';
 
 import { connectionPolicyOf } from '../policy/connection-policy.ts';
@@ -83,13 +83,46 @@ function byReference(credential: CredentialUnderTest): Placing {
   };
 }
 
+type Entry = SourcedEntry['bare'];
+
+const decodeDocument = Schema.decodeUnknownSync(Schema.fromJsonString(Schema.Record(Schema.String, Schema.Unknown)));
+
+const decodePaths = Schema.decodeUnknownSync(
+  Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Unknown)),
+);
+
+const decodeServers = Schema.decodeUnknownSync(Schema.Tuple([Schema.Struct({ url: Schema.String })]));
+
+function isOffered(operation: unknown): boolean {
+  return Predicate.hasProperty(operation, 'operationId') && fakeApiToolNames.includes(String(operation.operationId));
+}
+
+async function givenItsDocument({ bare }: SourcedEntry): Promise<Entry> {
+  const { document, ...besideIt } = bare;
+  const address = String(document);
+  const written = decodeDocument(await (await fetch(address)).text());
+  const offered = Object.entries(decodePaths(written['paths'])).filter(
+    ([, item]: readonly [string, Readonly<Record<string, unknown>>]) =>
+      Object.values(item).some((operation) => isOffered(operation)),
+  );
+  const [server] = decodeServers(written['servers']);
+  const document_text = JSON.stringify({
+    ...written,
+    servers: [{ url: 'https://elsewhere.example.com/v1' }],
+    paths: Object.fromEntries(offered),
+  });
+  return { ...besideIt, document_text, base_url: new URL(server.url, address).href };
+}
+
 async function connectedThrough(
-  { type, bare, credential }: SourcedEntry,
+  served: SourcedEntry,
   placingOf: (c: CredentialUnderTest) => Placing,
+  entryOf: (served: SourcedEntry) => Promise<Entry> = ({ bare }) => Promise.resolve(bare),
 ) {
   const h = harness({ policy });
-  const placing = placingOf(credential);
-  const { id, token } = await added(h, { name: 'graph', type, entry: bare, credential: placing.credential });
+  const placing = placingOf(served.credential);
+  const entry = await entryOf(served);
+  const { id, token } = await added(h, { name: 'graph', type: served.type, entry, credential: placing.credential });
   const giving = placing.giving === undefined ? 'approve' : 'give_credential';
   await h.call(operationNamed(h.operations, giving), ada, { id, token, ...placing.giving });
   return makeConnectionSource({
@@ -102,12 +135,16 @@ async function connectedThrough(
   });
 }
 
-function aConnection(kind: string, placingOf: (credential: CredentialUnderTest) => Placing): SourceUnderTest {
+function aConnection(
+  kind: string,
+  placingOf: (credential: CredentialUnderTest) => Placing,
+  entryOf?: (served: SourcedEntry) => Promise<Entry>,
+): SourceUnderTest {
   return {
     kind,
     recorded: { connection_id: expect.any(String) },
     accessTo: async (served, options) =>
-      describedAccess({}, { ...options, connections: await connectedThrough(served, placingOf) }),
+      describedAccess({}, { ...options, connections: await connectedThrough(served, placingOf, entryOf) }),
   };
 }
 
@@ -139,4 +176,14 @@ const withItsClientId = aConnection('a connection given its client id on the pag
 
 for (const underTest of serversUnderTest.filter(({ kind }) => kind.includes('client credentials'))) {
   toolAccessBehaviour(underTest, withItsClientId);
+}
+
+const givenItsDocumentOnThePage = aConnection(
+  'a connection given its document in document_text, whose servers name another host',
+  givenOnThePage,
+  givenItsDocument,
+);
+
+for (const underTest of serversUnderTest.filter(({ kind }) => kind.startsWith('an HTTP API'))) {
+  toolAccessBehaviour(underTest, givenItsDocumentOnThePage);
 }
