@@ -40,7 +40,7 @@ interface Passing {
   readonly known: FollowedPlaybook | undefined;
 }
 
-function passedOnce(parts: FollowerWork, wakes: Wakes, { playbookKey, mode, known }: Passing) {
+function passedOnce(parts: FollowerWork, wakes: Wakes, { playbookKey, mode, known }: Passing): Effect.Effect<boolean> {
   const seen = known === undefined ? parts.discovery.playbookSeen(playbookKey) : Effect.void;
   return Effect.andThen(seen, () => parts.pass(playbookKey, mode, known)).pipe(
     Effect.tap((end) =>
@@ -50,11 +50,13 @@ function passedOnce(parts: FollowerWork, wakes: Wakes, { playbookKey, mode, know
         }
       }),
     ),
+    Effect.as(true),
     Effect.catchCause((cause) =>
       Effect.andThen(
         parts.trouble('A pass over a playbook failed; the next sweep passes the playbook again', cause),
         Effect.sync(() => {
           parts.sweeps.passAgain(playbookKey);
+          return false;
         }),
       ),
     ),
@@ -114,31 +116,46 @@ function earliestOf(one: number | null, other: number | null): number | null {
   return one === null ? other : Math.min(one, other ?? one);
 }
 
-function heldPassed(parts: FollowerWork, wakes: Wakes, now: number): Effect.Effect<number | null> {
+interface TriedPass {
+  readonly playbookKey: string;
+  readonly through: boolean;
+}
+
+function failedOf(tries: readonly TriedPass[]): ReadonlySet<string> {
+  return new Set(tries.filter((tried: TriedPass) => !tried.through).map((tried: TriedPass) => tried.playbookKey));
+}
+
+function failedPassesOf(parts: FollowerWork, wakes: Wakes, held: HeldPlaybooks): Effect.Effect<ReadonlySet<string>> {
+  const tried = Effect.forEach(held.due, (known) =>
+    Effect.map(
+      passedOnce(parts, wakes, { playbookKey: known.playbookKey, mode: 'sweep', known }),
+      (through): TriedPass => ({ playbookKey: known.playbookKey, through }),
+    ),
+  );
+  return Effect.map(tried, failedOf);
+}
+
+function heldPassed(parts: FollowerWork, wakes: Wakes): Effect.Effect<number | null> {
   return Effect.gen(function* () {
-    const held = yield* parts.holds.heldAt(now, heldPlaybooksInARound);
+    const held = yield* parts.holds.heldAt(parts.clock.now(), heldPlaybooksInARound);
     if (held.due.length === 0) {
       return held.nextAt;
     }
-    yield* Effect.forEach(
-      held.due,
-      (known) => passedOnce(parts, wakes, { playbookKey: known.playbookKey, mode: 'sweep', known }),
-      { discard: true },
-    );
+    const failedPasses = yield* failedPassesOf(parts, wakes, held);
+    const now = parts.clock.now();
     const after = yield* parts.holds.heldAt(now, heldPlaybooksInARound);
-    return yield* retriedAfter(parts, { tried: held, after, now });
+    return yield* retriedAfter(parts, { failedPasses, after, now });
   });
 }
 
 interface Tries {
-  readonly tried: HeldPlaybooks;
+  readonly failedPasses: ReadonlySet<string>;
   readonly after: HeldPlaybooks;
   readonly now: number;
 }
 
-function retriedAfter(parts: FollowerWork, { tried, after, now }: Tries): Effect.Effect<number | null> {
-  const triedNow = new Set(tried.due.map(({ playbookKey }) => playbookKey));
-  const failed = after.due.filter(({ playbookKey }) => triedNow.has(playbookKey));
+function retriedAfter(parts: FollowerWork, { failedPasses, after, now }: Tries): Effect.Effect<number | null> {
+  const failed = after.due.filter(({ playbookKey }) => failedPasses.has(playbookKey));
   const retryAt = now + failedTryRetryMs;
   const moreDue = failed.length < after.due.length || after.due.length >= heldPlaybooksInARound;
   return Effect.as(
@@ -157,7 +174,7 @@ function roundOf(parts: FollowerWork, wakes: Wakes, { now, sweep }: Woken): Effe
     yield* parts.upkeep.fireSchedules();
     yield* signalled(parts, wakes);
     const owed = sweep ? yield* swept(parts, wakes) : false;
-    const heldUntil = yield* heldPassed(parts, wakes, now);
+    const heldUntil = yield* heldPassed(parts, wakes);
     yield* parts.rounds.succeeded();
     return { owed, heldUntil };
   }).pipe(

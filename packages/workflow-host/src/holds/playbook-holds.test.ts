@@ -179,6 +179,32 @@ describe('a hold, at a moment', () => {
       false,
     ]);
   });
+
+  it('holds no longer than its reason ever waits, so a clock that went back an hour does not hold it an hour', () => {
+    const hold: Hold = { heldFor: 'content', since: now - 1000, until: now + 60_000, holds: 9 };
+
+    expect([isHeldAt({ hold }, now), isHeldAt({ hold }, now - 1), isHeldAt({ hold }, now - 3_600_000)]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+  });
+});
+
+describe('the hold of a playbook a later release held for a reason this release does not know', () => {
+  const later: Hold = { heldFor: 'a reason of a later release', since: now - 5000, until: now, holds: 4 };
+
+  it('is held again for this release’s own reason, its tries started again and its beginning kept', () => {
+    const kept = keptAfter({ ...followed, hold: later }, heldReach, 1);
+
+    expect(kept.holds).toEqual([{ heldFor: 'content', since: now - 5000, until: now + 1000, holds: 1 }]);
+  });
+
+  it('is lifted, said with the reason it was held for', () => {
+    const kept = keptAfter({ ...followed, hold: later }, { end: 'caught_up', records: 2 });
+
+    expect(kept.lifted).toEqual([{ hold: later, at: now, records: 2, more: false }]);
+  });
 });
 
 describe('a fact the follower cannot read', () => {

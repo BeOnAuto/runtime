@@ -25,15 +25,17 @@ const recordsInAPage = 1000;
 
 export const pageReadBounds = { outputs: 100, bytes: 8 * 1_048_576 } as const;
 
-interface PassedOver {
+export interface RecordAt {
   readonly record: string;
+  readonly type: string;
+  readonly point: Point;
+}
+
+interface PassedOver extends RecordAt {
   readonly reason: 'unreadable';
 }
 
-interface ContentMissing {
-  readonly record: string;
-  readonly type: string;
-}
+type ContentMissing = RecordAt;
 
 export interface ReadPage {
   readonly events: readonly PageEvent[];
@@ -116,11 +118,12 @@ interface Placed {
 
 function placedRead(playbookKey: string, record: StoredRecord, payloads: PayloadReader) {
   return Effect.map(eventRead(factOf(playbookKey, record), payloads), ({ event, missing }): Placed => {
+    const at: RecordAt = { record: record.id, type: record.type, point: record.point };
     const placed =
       event === undefined || !hasAMoment(event)
-        ? { record: record.id, reason: 'unreadable' as const }
+        ? { ...at, reason: 'unreadable' as const }
         : { point: record.point, recordedAt: record.recordedAt, record: record.id, event };
-    return missing ? { placed, missing: { record: record.id, type: record.type } } : { placed };
+    return missing ? { placed, missing: at } : { placed };
   });
 }
 

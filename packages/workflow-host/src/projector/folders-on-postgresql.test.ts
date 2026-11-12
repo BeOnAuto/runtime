@@ -5,6 +5,7 @@ import { describe, onTestFinished } from 'vitest';
 
 import { foldersSuite } from '../folder-testing/folders-suite.ts';
 import { laggingSuite } from '../folder-testing/lagging-suite.ts';
+import { missingOutputsSuite } from '../folder-testing/missing-outputs-suite.ts';
 import { onPostgreSQLAt, type SettingsOf } from '../testing/host-files.ts';
 
 const server = process.env['LEDGER_TEST_POSTGRESQL_URL'] ?? '';
@@ -38,4 +39,5 @@ const onPostgreSQL: SettingsOf = async () => {
 describe.skipIf(skipped)(`the folders of the projector on PostgreSQL${notice}`, () => {
   foldersSuite(onPostgreSQL);
   laggingSuite(onPostgreSQL);
+  missingOutputsSuite(onPostgreSQL);
 });

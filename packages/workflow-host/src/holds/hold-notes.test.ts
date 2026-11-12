@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Hold } from '../follower/followed-playbooks.ts';
 import { recordingReports } from '../testing/recording-reports.ts';
 import { holdNotesBy } from './hold-notes.ts';
+import type { TriedHold } from './playbook-holds.ts';
 
 const now = Date.parse('2026-11-11T09:00:00.000Z');
 
@@ -21,7 +22,7 @@ function notesOf(work: (notes: ReturnType<typeof holdNotesBy>) => Effect.Effect<
 
 describe('the notes of a playbook’s hold', () => {
   it('say each try, with what the hold is for, how long it has lasted, its tries, when it is tried again and the lag behind it', () => {
-    const hold: Hold = { heldFor: 'content', since: now - 300_000, until: now + 60_000, holds: 12 };
+    const hold: TriedHold = { heldFor: 'content', since: now - 300_000, until: now + 60_000, holds: 12 };
 
     const notes = notesOf((holds) => holds.tried(playbookKey, { hold, first: false, record, lag, at: now }));
 
@@ -44,7 +45,7 @@ describe('the notes of a playbook’s hold', () => {
   });
 
   it('say the record this release cannot read at the first try held for it, and only then', () => {
-    const hold: Hold = { heldFor: 'unreadable', since: now, until: now + 1000, holds: 1 };
+    const hold: TriedHold = { heldFor: 'unreadable', since: now, until: now + 1000, holds: 1 };
 
     const notes = notesOf((holds) =>
       Effect.andThen(
@@ -66,7 +67,7 @@ describe('the notes of a playbook’s hold', () => {
 
 describe('the notes of a playbook’s hold, as it begins and lifts', () => {
   it('say the first try held for the content alone', () => {
-    const hold: Hold = { heldFor: 'content', since: now, until: now + 1000, holds: 1 };
+    const hold: TriedHold = { heldFor: 'content', since: now, until: now + 1000, holds: 1 };
 
     const notes = notesOf((holds) => holds.tried(playbookKey, { hold, first: true, record, lag, at: now }));
 

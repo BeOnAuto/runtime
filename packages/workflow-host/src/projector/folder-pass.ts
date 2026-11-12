@@ -6,7 +6,7 @@ import type { FactPayloads } from '../follower/followed-events.ts';
 import { playbookOfKey } from '../follower/record-steps.ts';
 import type { HostNote } from '../host/host-reports.ts';
 import { comparePoints, earliestOf, type Point } from '../pages/history-points.ts';
-import { readPage, typesToRead, type ReadPage } from '../pages/page-events.ts';
+import { readPage, typesToRead, type ReadPage, type RecordAt } from '../pages/page-events.ts';
 import type { FoldedChanges, Folder, PassedChange, PassedRow } from './folder.ts';
 import { hasFreeSlot, reconciledRows, type DefinitionsKept } from './reconciled-rows.ts';
 
@@ -18,10 +18,20 @@ export interface Resting {
 export interface FolderParts extends DefinitionsKept {
   readonly note: (note: HostNote) => Effect.Effect<void>;
   readonly resting: Resting;
-  readonly firstSeen: (record: string) => boolean;
+  readonly firstFolded: (record: RecordAt) => boolean;
   readonly trouble: (what: string) => Effect.Effect<void>;
   readonly definitionTypes: readonly string[];
   readonly factPayloadsOf: FactPayloads;
+}
+
+export interface FoldedThrough {
+  readonly types: readonly string[];
+  readonly checkpoint: Point | undefined;
+}
+
+export interface FolderRows {
+  readonly folded: readonly FoldedThrough[];
+  readonly passWith: (parts: FolderParts) => FolderPass;
 }
 
 export interface LiveRead {
@@ -57,12 +67,12 @@ interface Passing<Row extends PassedRow, Change extends PassedChange<Row>> {
 function noted(parts: FolderParts, playbook: string, page: ReadPage): Effect.Effect<void> {
   return Effect.andThen(
     Effect.forEach(
-      page.passedOver.filter(({ record }) => parts.firstSeen(record)),
+      page.passedOver.filter((passed) => parts.firstFolded(passed)),
       ({ record, reason }) => parts.note({ kind: 'record_passed_over', playbook, record, reason }),
       { discard: true },
     ),
     Effect.forEach(
-      page.contentMissing.filter(({ record }) => parts.firstSeen(record)),
+      page.contentMissing.filter((missing) => parts.firstFolded(missing)),
       ({ record, type }) =>
         parts.note({
           kind: 'record_content_missing',
@@ -234,39 +244,47 @@ function canBuildFrom<Row extends PassedRow, Change extends PassedChange<Row>>(
   );
 }
 
-export function folderPassOf<Row extends PassedRow, Change extends PassedChange<Row>>(
+function folderPassOver<Row extends PassedRow, Change extends PassedChange<Row>>(
+  passing: Passing<Row, Change>,
+  reconciled: readonly Row[],
+): FolderPass {
+  const { folder, parts, playbook } = passing;
+  const state = { rows: reconciled, sharing: true, again: false };
+  return {
+    live: () => (state.sharing ? liveOf(passing, state.rows) : undefined),
+    foldShared: (page) =>
+      Effect.gen(function* () {
+        const result = yield* folder.fold(
+          state.rows.filter((row) => isLive(row) && isAwake(passing, row)),
+          page,
+          parts.database,
+        );
+        yield* troubled(passing, result);
+        const after = yield* applied(passing, { rows: state.rows, pages: 0 }, result.changes);
+        state.rows = folder.definitionTypes.some((type) => page.definitionsSeen.has(type))
+          ? yield* reconciledRows(folder, parts, playbook)
+          : after.rows;
+        state.sharing = !(result.again || (result.complete && page.atTheEnd));
+        state.again = result.again;
+      }),
+    rebuild: (pages) =>
+      Effect.map(rebuilt(passing, { rows: state.rows, pages }, state.again), (done) => {
+        state.rows = done.pass.rows;
+        state.again = done.again;
+        return done.pass.pages;
+      }),
+    again: () => state.again,
+    canBuild: () => canBuildFrom(passing, state.rows),
+  };
+}
+
+export function folderRowsOf<Row extends PassedRow, Change extends PassedChange<Row>>(
   folder: Folder<Row, Change>,
-  parts: FolderParts,
+  kept: DefinitionsKept,
   playbook: string,
-): Effect.Effect<FolderPass, DatabaseFailed> {
-  const passing: Passing<Row, Change> = { folder, parts, playbook };
-  return Effect.map(reconciledRows(folder, parts, playbook), (reconciled) => {
-    const state = { rows: reconciled, sharing: true, again: false };
-    return {
-      live: () => (state.sharing ? liveOf(passing, state.rows) : undefined),
-      foldShared: (page) =>
-        Effect.gen(function* () {
-          const result = yield* folder.fold(
-            state.rows.filter((row) => isLive(row) && isAwake(passing, row)),
-            page,
-            parts.database,
-          );
-          yield* troubled(passing, result);
-          const after = yield* applied(passing, { rows: state.rows, pages: 0 }, result.changes);
-          state.rows = folder.definitionTypes.some((type) => page.definitionsSeen.has(type))
-            ? yield* reconciledRows(folder, parts, playbook)
-            : after.rows;
-          state.sharing = !(result.again || (result.complete && page.atTheEnd));
-          state.again = result.again;
-        }),
-      rebuild: (pages) =>
-        Effect.map(rebuilt(passing, { rows: state.rows, pages }, state.again), (done) => {
-          state.rows = done.pass.rows;
-          state.again = done.again;
-          return done.pass.pages;
-        }),
-      again: () => state.again,
-      canBuild: () => canBuildFrom(passing, state.rows),
-    };
-  });
+): Effect.Effect<FolderRows, DatabaseFailed> {
+  return Effect.map(reconciledRows(folder, kept, playbook), (reconciled) => ({
+    folded: reconciled.map((row) => ({ types: typesToRead(folder.typesOf(row)), checkpoint: row.checkpoint })),
+    passWith: (parts) => folderPassOver({ folder, parts, playbook }, reconciled),
+  }));
 }

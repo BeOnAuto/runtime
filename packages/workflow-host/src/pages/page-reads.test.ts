@@ -110,7 +110,7 @@ describe('a page of facts whose kept outputs cannot all be read', () => {
       { output_bytes: JSON.stringify(output).length },
     ]);
     expect([missing.contentMissing, erased.contentMissing]).toEqual([
-      [{ record: 'record-1', type: 'run_succeeded' }],
+      [{ record: 'record-1', type: 'run_succeeded', point: ['000001'] }],
       [],
     ]);
     expect(unavailable).toMatchObject({ _tag: 'unavailable' });

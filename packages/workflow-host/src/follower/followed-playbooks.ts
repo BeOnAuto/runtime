@@ -1,4 +1,5 @@
 import { statement } from '@on.auto/ledger';
+import { mostTryAgainMs } from '@on.auto/operations/payloads';
 import { Effect, Schema } from 'effect';
 
 import { rowsOf, WholeNumber, type HostDatabase } from '../database/host-database.ts';
@@ -13,10 +14,27 @@ export interface Progress {
 export type HeldFor = 'content' | 'unreadable';
 
 export interface Hold {
-  readonly heldFor: HeldFor;
+  readonly heldFor: string;
   readonly since: number;
   readonly until: number;
   readonly holds: number;
+}
+
+const mostUnreadableWaitMs = 5 * 60_000;
+
+const mostWaitsMs: ReadonlyMap<string, number> = new Map<HeldFor, number>([
+  ['content', mostTryAgainMs],
+  ['unreadable', mostUnreadableWaitMs],
+]);
+
+const longestWaitMs = Math.max(...mostWaitsMs.values());
+
+export function mostWaitOf(heldFor: string): number {
+  return mostWaitsMs.get(heldFor) ?? longestWaitMs;
+}
+
+export function isDueAt({ heldFor, until }: Pick<Hold, 'heldFor' | 'until'>, now: number): boolean {
+  return until <= now || until - now > mostWaitOf(heldFor);
 }
 
 export interface FollowedPlaybook extends Progress {
@@ -53,7 +71,7 @@ const PlaybookRow = Schema.Struct({
   held_since: Schema.NullOr(WholeNumber),
   held_until: Schema.NullOr(WholeNumber),
   holds: WholeNumber,
-  held_for: Schema.NullOr(Schema.Literals(['content', 'unreadable'])),
+  held_for: Schema.NullOr(Schema.String),
 });
 
 type ReadRow = typeof PlaybookRow.Type;
@@ -62,7 +80,7 @@ const HeldRow = Schema.Struct({
   ...PlaybookRow.fields,
   held_since: WholeNumber,
   held_until: WholeNumber,
-  held_for: Schema.Literals(['content', 'unreadable']),
+  held_for: Schema.String,
 });
 
 type HeldRead = typeof HeldRow.Type;
@@ -70,6 +88,10 @@ type HeldRead = typeof HeldRow.Type;
 function heldPlaybookOf(row: HeldRead): HeldPlaybook {
   const { held_for: heldFor, held_since: since, held_until: until, holds } = row;
   return { ...followedOf(row), hold: { heldFor, since, until, holds } };
+}
+
+function isDueRow({ held_for: heldFor, held_until: until }: HeldRead, now: number): boolean {
+  return isDueAt({ heldFor, until }, now);
 }
 
 function holdOf({ held_for: heldFor, held_since: since, held_until: until, holds }: ReadRow): Hold | undefined {
@@ -152,8 +174,9 @@ function heldPlaybooksAt(database: HostDatabase, now: number, limit: number): Ef
     ),
   ).pipe(
     Effect.map((rows) => {
-      const due = rows.filter(({ held_until: until }) => until <= now);
-      return { due: due.map((row) => heldPlaybookOf(row)), nextAt: rows.at(due.length)?.held_until ?? null };
+      const due = rows.filter((row) => isDueRow(row, now));
+      const next = rows.find((row) => !isDueRow(row, now));
+      return { due: due.map((row) => heldPlaybookOf(row)), nextAt: next?.held_until ?? null };
     }),
   );
 }

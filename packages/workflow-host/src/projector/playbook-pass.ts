@@ -3,11 +3,13 @@ import { Effect } from 'effect';
 
 import type { DatabaseFailed, HostDatabase } from '../database/host-database.ts';
 import type { HostNote } from '../host/host-reports.ts';
-import { comparePoints, earliestOf, type Point } from '../pages/history-points.ts';
+import { comparePoints, earliestOf, isAfter, type Point } from '../pages/history-points.ts';
+import type { RecordAt } from '../pages/page-events.ts';
 import { factPayloadsIn } from '../runs/run-payloads.ts';
 import {
-  folderPassOf,
+  folderRowsOf,
   readFor,
+  type FoldedThrough,
   type FolderParts,
   type FolderPass,
   type LiveRead,
@@ -70,34 +72,43 @@ function sharedSteps(
   });
 }
 
-function folderPartsOf({
-  database,
-  settings,
-  definitions,
-  note,
-  resting,
-  firstSeen,
-  trouble,
-  factPayloadsOf,
-}: PassParts): FolderParts {
+function isFoldedBy({ type, point }: RecordAt, { types, checkpoint }: FoldedThrough): boolean {
+  return types.includes(type) && !isAfter(point, checkpoint);
+}
+
+function firstFoldedOf(
+  folded: readonly FoldedThrough[],
+  firstSeen: PassParts['firstSeen'],
+): FolderParts['firstFolded'] {
+  return (record) => !folded.some((row) => isFoldedBy(record, row)) && firstSeen(record.record);
+}
+
+function folderPartsOf(
+  { database, settings, definitions, note, resting, firstSeen, trouble, factPayloadsOf }: PassParts,
+  folded: readonly FoldedThrough[],
+): FolderParts {
   return {
     factPayloadsOf: factPayloadsOf ?? factPayloadsIn(database.content),
     database,
     definitions,
     note,
     resting,
-    firstSeen,
+    firstFolded: firstFoldedOf(folded, firstSeen),
     trouble,
     definitionTypes: [...new Set(settings.folders.flatMap((some) => some((folder) => folder.definitionTypes)))],
   };
 }
 
 export function playbookPass(parts: PassParts, playbook: string): Effect.Effect<boolean, DatabaseFailed | Unavailable> {
-  const folderParts = folderPartsOf(parts);
   return Effect.gen(function* () {
-    const passes = yield* Effect.forEach(parts.settings.folders, (some) =>
-      some((folder) => folderPassOf(folder, folderParts, playbook)),
+    const rows = yield* Effect.forEach(parts.settings.folders, (some) =>
+      some((folder) => folderRowsOf(folder, parts, playbook)),
     );
+    const folderParts = folderPartsOf(
+      parts,
+      rows.flatMap(({ folded }) => folded),
+    );
+    const passes = rows.map(({ passWith }) => passWith(folderParts));
     const shared = yield* sharedSteps(folderParts, playbook, passes, parts.settings.pagesPerWake);
     const left = yield* Effect.reduce(
       passes,

@@ -14,9 +14,25 @@ export interface FollowerPartsOf {
   readonly starts: () => readonly string[];
 }
 
-export function followerPartsOf(time: Readonly<{ now: number }>, unread: Readonly<{ now: boolean }>): FollowerPartsOf {
+export interface MovingTime {
+  readonly now: () => number;
+  readonly moved: (milliseconds: number) => void;
+}
+
+export interface Trying {
+  readonly unread: Readonly<{ now: boolean }>;
+  readonly takesMs: Readonly<{ now: number }>;
+}
+
+export function followerPartsOf(time: MovingTime, { unread, takesMs }: Trying): FollowerPartsOf {
   const reports = recordingReports();
-  const reactions = recordedReactions({ failure: unreadWhile(unread) });
+  const unreadNow = unreadWhile(unread);
+  const reactions = recordedReactions({
+    failure: (start) => {
+      time.moved(takesMs.now);
+      return unreadNow(start);
+    },
+  });
   return {
     options: {
       machine: testMachine,
@@ -27,7 +43,7 @@ export function followerPartsOf(time: Readonly<{ now: number }>, unread: Readonl
       mostCallsAtOnce: 4,
       reactions: reactions.options,
       waiting: recordedWaiting().options,
-      clock: { now: () => time.now, sleep: Effect.sleep },
+      clock: { now: time.now, sleep: Effect.sleep },
       closesEndedRuns: false,
     },
     notes: reports.notes,

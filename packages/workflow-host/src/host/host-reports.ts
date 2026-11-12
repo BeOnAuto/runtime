@@ -64,7 +64,7 @@ export type HostNote =
       readonly kind: 'content_hold_try_failed';
       readonly org: string;
       readonly playbook: string;
-      readonly heldFor: HeldFor;
+      readonly heldFor: string;
       readonly heldSince: number;
       readonly heldMs: number;
       readonly holds: number;
@@ -74,7 +74,7 @@ export type HostNote =
       readonly kind: 'content_hold_lifted';
       readonly org: string;
       readonly playbook: string;
-      readonly heldFor: HeldFor;
+      readonly heldFor: string;
       readonly heldSince: number;
       readonly heldMs: number;
       readonly holds: number;

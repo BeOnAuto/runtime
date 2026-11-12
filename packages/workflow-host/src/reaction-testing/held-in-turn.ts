@@ -7,7 +7,7 @@ import type { FollowerWork } from '../follower/follower-wake-up.ts';
 import { followedPlaybooksKnowingHolds, heldTriesOn } from '../holds/known-holds.ts';
 import type { HoldNotes } from '../holds/playbook-holds.ts';
 import { failedRoundsOn } from '../loop/failed-rounds.ts';
-import { systemClock } from '../loop/host-clock.ts';
+import { skippingClock } from '../loop/host-clock.ts';
 import { openedOn, type SettingsOf } from '../testing/host-files.ts';
 
 export const failingFirst = Array.from(
@@ -23,7 +23,7 @@ interface InTurn {
   readonly failedTries: readonly string[];
 }
 
-function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks): InTurn {
+function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks, dueBy: number): InTurn {
   const passed: string[] = [];
   const failedTries: string[] = [];
   const quietly = Function.constant(Effect.void);
@@ -59,7 +59,7 @@ function workInTurnOn(database: HostDatabase, playbooks: FollowedPlaybooks): InT
     appended: streamSignalOf(),
     holds: heldTriesOn(playbooks, holdNotes),
     rounds: failedRoundsOn(database, 'follower'),
-    clock: systemClock,
+    clock: skippingClock(dueBy),
     sweepEveryMs: 1000,
     trouble: quietly,
   };
@@ -85,5 +85,5 @@ export async function heldInTurnOn(settingsOf: SettingsOf, dueBy: number): Promi
       { discard: true },
     ),
   );
-  return workInTurnOn(database, playbooks);
+  return workInTurnOn(database, playbooks, dueBy);
 }

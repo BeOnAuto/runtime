@@ -2,12 +2,14 @@ import type { RecordedEvent } from '@on.auto/operations';
 import { mostTryAgainMs, PayloadsOutside, tryAgainAfter } from '@on.auto/operations/payloads';
 import { Context, Effect, Random } from 'effect';
 
-import type {
-  FollowedPlaybook,
-  FollowedPlaybooks,
-  HeldFor,
-  HeldPlaybook,
-  Hold,
+import {
+  isDueAt,
+  mostWaitOf,
+  type FollowedPlaybook,
+  type FollowedPlaybooks,
+  type HeldFor,
+  type HeldPlaybook,
+  type Hold,
 } from '../follower/followed-playbooks.ts';
 import type { Held, PassEnd } from '../follower/record-steps.ts';
 import type { HostContext } from '../loop/forked-fibers.ts';
@@ -27,8 +29,10 @@ export interface PassReached {
   readonly held?: HeldAtARecord;
 }
 
+export type TriedHold = Hold & { readonly heldFor: HeldFor };
+
 export interface HoldTried {
-  readonly hold: Hold;
+  readonly hold: TriedHold;
   readonly first: boolean;
   readonly record: Pick<RecordedEvent, 'id' | 'type'>;
   readonly lag: Lag;
@@ -61,11 +65,7 @@ export interface HoldNotes {
   readonly lifted: (playbookKey: string, lifted: HoldLifted) => Effect.Effect<void>;
 }
 
-const mostUnreadableWaitMs = 5 * 60_000;
-
 export const failedTryRetryMs = mostTryAgainMs;
-
-const mostWaitMs: Readonly<Record<HeldFor, number>> = { content: mostTryAgainMs, unreadable: mostUnreadableWaitMs };
 
 export interface HoldParts {
   readonly playbooks: Pick<FollowedPlaybooks, 'held' | 'lifted'>;
@@ -78,7 +78,7 @@ export function holdsUnreadableIn({ context }: { readonly context?: HostContext 
 }
 
 export function isHeldAt({ hold }: Pick<FollowedPlaybook, 'hold'>, now: number): boolean {
-  return hold !== undefined && now < hold.until;
+  return hold !== undefined && !isDueAt(hold, now);
 }
 
 function triesBefore({ hold }: FollowedPlaybook, { heldFor }: HeldAtARecord, moved: boolean): number {
@@ -95,10 +95,10 @@ function heldAgain(
   const at = parts.now();
   const holds = triesBefore(followed, held, moved) + 1;
   return Effect.flatMap(Random.next, (factor) => {
-    const hold: Hold = {
+    const hold = {
       heldFor: held.heldFor,
       since: before?.since ?? at,
-      until: at + Math.ceil(tryAgainAfter(holds, factor, mostWaitMs[held.heldFor])),
+      until: at + Math.ceil(tryAgainAfter(holds, factor, mostWaitOf(held.heldFor))),
       holds,
     };
     const tried: HoldTried = { hold, first: holds === 1, record: held.record, lag: held.lag, at };

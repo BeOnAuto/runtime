@@ -1,5 +1,5 @@
 import { messageIdOf } from '@on.auto/operations';
-import { Effect, Function } from 'effect';
+import { Effect, Function, Option } from 'effect';
 import { expect, it, onTestFinished } from 'vitest';
 
 import { followerWakeUpOf } from '../follower/follower-wake-up.ts';
@@ -43,9 +43,7 @@ function triedAgainAfterFailedRounds(settingsOf: SettingsOf) {
     expect([firstDueAt - failedAt, secondDueAt - firstDueAt, thirdDueAt - secondDueAt - 1]).toEqual([
       60_000, 120_000, 60_000,
     ]);
-    expect(follower.troubles()).toContain(
-      'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour',
-    );
+    expect(follower.troubles()).toContain(roundFailed);
     expect((await follower.place())?.hold).toMatchObject({ holds: 3, heldFor: 'content' });
   });
 }
@@ -70,6 +68,59 @@ function triedAgainAfterAFailedTry(settingsOf: SettingsOf) {
   });
 }
 
+const aMinute = 60_000;
+
+const anHour = 60 * aMinute;
+
+const roundFailed =
+  'The follower of the playbooks failed; it tries again in a minute, twice as long after each round that fails in a row, at most an hour';
+
+function triedAfterTheClockWentBack(settingsOf: SettingsOf) {
+  it('tries its hold at the first wake after the clock went back an hour, not an hour later, and lifts it once the content is read', async () => {
+    const { follower, heldDueAt, unread } = await heldFollowerOn(settingsOf);
+
+    unread.now = false;
+    const dueAt = await follower.woken(heldDueAt - anHour, false);
+
+    expect([follower.starts(), dueAt]).toEqual([[messageIdOf(`${alpha}events/s1`, 1)], null]);
+    expect((await follower.place())?.hold).toBeUndefined();
+  });
+}
+
+function triedForAReasonOfALaterRelease(settingsOf: SettingsOf) {
+  it('reads a hold a later release wrote for a reason this release does not know, tries it at its time and lifts it once the content is read, saying the reason it was held for', async () => {
+    const { follower, heldDueAt, unread } = await heldFollowerOn(settingsOf);
+    const held = await follower.place();
+    await follower.heldAs({
+      ...Option.getOrThrow(Option.fromNullishOr(held?.hold)),
+      heldFor: 'a reason of a later release',
+    });
+
+    unread.now = false;
+    await follower.woken(heldDueAt, false);
+
+    expect(follower.starts()).toEqual([messageIdOf(`${alpha}events/s1`, 1)]);
+    expect(follower.notes().filter(({ kind }) => kind === 'content_hold_lifted')).toMatchObject([
+      { org: 'acme', playbook: 'alpha', heldFor: 'a reason of a later release' },
+    ]);
+    expect(follower.troubles()).not.toContain(roundFailed);
+  });
+}
+
+function heldAgainByATryThatTookAMinute(settingsOf: SettingsOf) {
+  it('holds a playbook again from the clock after a try that took a minute, reads the hold as that try wrote it and says no try failed', async () => {
+    const { follower, heldDueAt } = await heldFollowerOn(settingsOf);
+
+    follower.startsTake(aMinute);
+    const dueAt = await follower.woken(heldDueAt, false);
+    const hold = (await follower.place())?.hold;
+
+    expect(follower.notes().filter(({ kind }) => kind === 'content_hold_try_failed')).toEqual([]);
+    expect(hold).toMatchObject({ holds: 2 });
+    expect([Number(hold?.until) - heldDueAt > aMinute, dueAt]).toEqual([true, hold?.until]);
+  });
+}
+
 function triedInTurn(settingsOf: SettingsOf) {
   it('tries every hold due over the wakes that follow, though the 64 due first fail at every try, and is next due when their next tries are', async () => {
     const inTurn = await heldInTurnOn(settingsOf, startedAt);
@@ -91,4 +142,7 @@ export function heldWakeSuite(settingsOf: SettingsOf): void {
   triedAgainAfterFailedRounds(settingsOf);
   triedAgainAfterAFailedTry(settingsOf);
   triedInTurn(settingsOf);
+  triedAfterTheClockWentBack(settingsOf);
+  triedForAReasonOfALaterRelease(settingsOf);
+  heldAgainByATryThatTookAMinute(settingsOf);
 }
