@@ -32,6 +32,7 @@ export function watchedLedger(): WatchedLedger {
     service,
     layer: Layer.succeed(Ledger, service),
     streamNames: kept.streamNames,
+    eraseExpired: kept.eraseExpired,
     asked: () => [...asked],
     failNextAppendTo: (stream) => {
       failing.add(stream);
