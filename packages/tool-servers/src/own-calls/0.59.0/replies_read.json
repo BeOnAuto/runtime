@@ -1,0 +1,27 @@
+{
+  "type": "replies_read",
+  "data": {
+    "call_id": "call-1",
+    "server": "chat",
+    "connection_id": "connection-1",
+    "tool": "read_replies",
+    "conversation": "thread-1",
+    "reading": "3f1c9a7be2d04c6e8a5b7d9f1e3c5a7b9d1f3e5c7a9b1d3f5e7c9a1b3d5f7e9c",
+    "since": "2026-10-29T09:00:00.000Z",
+    "arguments_bytes": 40,
+    "arguments_sha256": "b1c2d3",
+    "result_bytes": 900,
+    "result_sha256": "e4f5a6",
+    "duration_ms": 70,
+    "jsonrpc_id": 5,
+    "server_request_id": "request-2",
+    "replies": 3,
+    "taken": 1,
+    "refused": 1,
+    "woken": true
+  },
+  "context": {
+    "at": "2026-10-29T10:00:00.000Z",
+    "by": "runtime"
+  }
+}

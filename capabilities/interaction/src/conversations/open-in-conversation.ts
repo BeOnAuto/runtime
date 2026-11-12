@@ -34,8 +34,8 @@ export interface OpenInConversation {
 }
 
 export function openInConversation(
-  parts: ConversationParts,
-  { playbook, key }: ConversationPlace,
+  parts: { readonly ledger: Pick<ConversationParts['ledger'], 'readProjectedRows'> },
+  { playbook, key }: Pick<ConversationPlace, 'playbook' | 'key'>,
 ): Effect.Effect<OpenInConversation> {
   return Effect.map(
     parts.ledger.readProjectedRows(openRequestsName, playbook, {

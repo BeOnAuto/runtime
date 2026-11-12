@@ -664,6 +664,341 @@
                 "additionalProperties": false,
                 "description": "How the provider's conversations are replied to and marked, for a function that asks a person through it and reads their replies"
               },
+              "events": {
+                "type": "object",
+                "properties": {
+                  "destinations": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": ["webhook", "websocket", "queue"],
+                          "description": "How the service sends: webhook, an HTTP request to the runtime's address; websocket, down a socket the runtime opens to the service; queue, into a queue the runtime reads"
+                        },
+                        "per": {
+                          "type": "string",
+                          "enum": ["subscription", "app"],
+                          "description": "For webhook and queue, how sending is arranged: subscription, by a call Auto makes for each place requests wait in; app, once on the app at the vendor, for everyone who connects through it"
+                        },
+                        "topic": {
+                          "type": "string",
+                          "description": "Per subscription, the topic, as WebSub names the unit one subscribes to: a Liquid template over with, the arguments of the call that delivered a request, and sent.conversation and sent.id, rendering the place one subscription serves, such as a repository or a chat"
+                        },
+                        "subscribe": {
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string",
+                              "description": "A tool of the connection that makes the call, named as the server lists it"
+                            },
+                            "with": {
+                              "type": "object",
+                              "description": "Beside tool, its arguments, written as the arguments of a function's deliver are"
+                            },
+                            "method": {
+                              "type": "string",
+                              "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                              "description": "Beside url, the method of an HTTP request sent with the connection's own credential"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "Beside method, the https URL of the request, written out up to its host, a Liquid template"
+                            },
+                            "body": {
+                              "type": "object",
+                              "description": "Beside method and url, the JSON body of the request, written as with is"
+                            },
+                            "subscribed": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into what the call answered, to the id of the subscription it made"
+                                },
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer to when the subscription lapses, where the answer says"
+                                },
+                                "secret": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer to the secret the service made for the subscription, where it makes one"
+                                }
+                              },
+                              "required": ["id"],
+                              "additionalProperties": false,
+                              "description": "Where what the call answered names the subscription it made"
+                            }
+                          },
+                          "required": ["subscribed"],
+                          "additionalProperties": false,
+                          "description": "The call that subscribes, a tool of the connection or an HTTP request"
+                        },
+                        "renew": {
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string",
+                              "description": "A tool of the connection that makes the call, named as the server lists it"
+                            },
+                            "with": {
+                              "type": "object",
+                              "description": "Beside tool, its arguments, written as the arguments of a function's deliver are"
+                            },
+                            "method": {
+                              "type": "string",
+                              "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                              "description": "Beside url, the method of an HTTP request sent with the connection's own credential"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "Beside method, the https URL of the request, written out up to its host, a Liquid template"
+                            },
+                            "body": {
+                              "type": "object",
+                              "description": "Beside method and url, the JSON body of the request, written as with is"
+                            },
+                            "renewed": {
+                              "type": "object",
+                              "properties": {
+                                "expires_at": {
+                                  "type": "string",
+                                  "description": "A JSON Pointer into what the call answered, to when the subscription lapses now"
+                                }
+                              },
+                              "required": ["expires_at"],
+                              "additionalProperties": false
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "The call that renews a subscription before it lapses"
+                        },
+                        "unsubscribe": {
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string",
+                              "description": "A tool of the connection that makes the call, named as the server lists it"
+                            },
+                            "with": {
+                              "type": "object",
+                              "description": "Beside tool, its arguments, written as the arguments of a function's deliver are"
+                            },
+                            "method": {
+                              "type": "string",
+                              "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"],
+                              "description": "Beside url, the method of an HTTP request sent with the connection's own credential"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "Beside method, the https URL of the request, written out up to its host, a Liquid template"
+                            },
+                            "body": {
+                              "type": "object",
+                              "description": "Beside method and url, the JSON body of the request, written as with is"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "The call that removes a subscription, without which none is made"
+                        },
+                        "lease_seconds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Per subscription, the most seconds a subscription lasts before it lapses, as WebSub's lease"
+                        },
+                        "needs": {
+                          "type": "string",
+                          "description": "Per subscription, the group of more of the entry's authorization way whose scopes subscribing takes, where the way's own scope does not cover it"
+                        },
+                        "verify": {
+                          "type": "object",
+                          "properties": {
+                            "scheme": {
+                              "type": "string",
+                              "enum": ["hmac", "standard-webhooks", "bearer", "jwt"],
+                              "description": "How a delivery proves it is the service's: hmac, a keyed hash of what it sends, in a header; standard-webhooks, signed as the Standard Webhooks specification signs a webhook; bearer, the secret itself, in a header; jwt, a JSON Web Token in a header, signed with the secret"
+                            },
+                            "secret": {
+                              "type": "string",
+                              "enum": ["subscription", "app"],
+                              "description": "Which secret proves it: subscription, the subscription's own, which Auto makes or the service answers when Auto subscribes; app, the app's own, set once on the app at the vendor"
+                            },
+                            "hash": {
+                              "type": "string",
+                              "enum": ["sha256", "sha384", "sha512"],
+                              "description": "For hmac, the hash function it keys"
+                            },
+                            "signed_payload": {
+                              "type": "string",
+                              "description": "For hmac, what is signed: {payload}, the body as sent, joined to {timestamp} and {id} where the service signs them, as in v0:{timestamp}:{payload}"
+                            },
+                            "signature": {
+                              "type": "string",
+                              "description": "For hmac, the header that carries the signature, as $request.header.<name>"
+                            },
+                            "prefix": {
+                              "type": "string",
+                              "minLength": 1,
+                              "description": "What the signature or the token starts with before its value, such as sha256= or Bearer and a space"
+                            },
+                            "encoding": {
+                              "type": "string",
+                              "enum": ["hex", "base64"],
+                              "description": "For hmac, how the signature is written"
+                            },
+                            "timestamp": {
+                              "type": "string",
+                              "description": "For hmac, the header or the field of the body that holds when the service sent the delivery"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "For hmac, the header or the field of the body that holds the id of the delivery, the same on a retry"
+                            },
+                            "token": {
+                              "type": "string",
+                              "description": "For bearer and jwt, the header that carries it, as $request.header.<name>"
+                            },
+                            "alg": {
+                              "type": "string",
+                              "enum": ["HS256", "HS384", "HS512"],
+                              "description": "For jwt, the algorithm the token is signed with, as JSON Web Algorithms names it"
+                            }
+                          },
+                          "required": ["scheme", "secret"],
+                          "additionalProperties": false
+                        },
+                        "handshake": {
+                          "type": "object",
+                          "properties": {
+                            "when": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "minItems": 1
+                              },
+                              "description": "The arrival with which the service checks the address, as wake.when names an arrival"
+                            },
+                            "challenge": {
+                              "type": "string",
+                              "description": "Where the challenge the runtime answers is"
+                            },
+                            "response": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "string",
+                                "enum": ["challenge", "hmac"]
+                              },
+                              "description": "The fields of a JSON answer, each the challenge as it came or its hmac under the destination's secret, by the hash and encoding of its proof; left out, the challenge alone is answered as text"
+                            },
+                            "signed": {
+                              "type": "boolean",
+                              "description": "Whether the service proves the handshake as it proves a delivery, so that it is answered once proven; false where it comes before any secret exists, as WebSub's verification of intent does"
+                            }
+                          },
+                          "required": ["when", "challenge", "signed"],
+                          "additionalProperties": false,
+                          "description": "How the service checks the address before it sends, as WebSub verifies intent"
+                        },
+                        "wake": {
+                          "type": "object",
+                          "properties": {
+                            "when": {
+                              "type": "object",
+                              "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "minItems": 1
+                              },
+                              "description": "The arrivals that make Auto read now: each a runtime expression, a header or a field, with the values it may equal, every one of which holds"
+                            },
+                            "subscription": {
+                              "type": "string",
+                              "description": "Per subscription, where an arrival names the subscription it is for, so that only the conversations waiting through that subscription are read"
+                            },
+                            "conversation": {
+                              "type": "string",
+                              "description": "Where an arrival names the conversation it is about, as the answer of a request's delivery names it in sent.conversation, so that only the conversations waiting there are read"
+                            },
+                            "automatic": {
+                              "type": "string",
+                              "description": "Where an arrival holds something only when an app posted the message it is about, which then makes Auto read nothing, as the automatic of conversations passes such a message over"
+                            }
+                          },
+                          "required": ["when"],
+                          "additionalProperties": false,
+                          "description": "Which arrivals make Auto read the conversations that wait, through the reading it does"
+                        },
+                        "connection": {
+                          "type": "object",
+                          "properties": {
+                            "account": {
+                              "type": "string",
+                              "description": "Where an arrival names the vendor's account it happened in, such as a workspace, so that Auto finds the connections made in it"
+                            },
+                            "user": {
+                              "type": "string",
+                              "description": "Where an arrival names the vendor's user it is for, where the service sends for each person"
+                            }
+                          },
+                          "required": ["account"],
+                          "additionalProperties": false,
+                          "description": "For a destination of the app, where an arrival names whose connection it is for"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": ["azure-event-hubs", "google-cloud-pubsub", "amazon-eventbridge"],
+                          "description": "For queue, the queue the service delivers into, by its vendor's name for it"
+                        },
+                        "open": {
+                          "type": "object",
+                          "properties": {
+                            "tool": {
+                              "type": "string",
+                              "description": "A tool of the connection that answers the socket's address, named as the server lists it"
+                            },
+                            "address": {
+                              "type": "string",
+                              "description": "Beside tool, a JSON Pointer into its answer, to the socket's address"
+                            },
+                            "url": {
+                              "type": "string",
+                              "description": "The socket's wss address, written out whole"
+                            }
+                          },
+                          "additionalProperties": false,
+                          "description": "How the runtime finds the address of the socket it opens"
+                        },
+                        "credential": {
+                          "type": "string",
+                          "pattern": "^[a-z][a-z0-9_]{0,63}$",
+                          "description": "For websocket, the value of the app that opens the socket, named as the vendor names it, such as app_level_token"
+                        },
+                        "acknowledge": {
+                          "type": "string",
+                          "description": "For websocket, where a message names the id the runtime acknowledges it by"
+                        },
+                        "heartbeat_seconds": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "For websocket, how often the service asks the runtime to send it a heartbeat, in seconds"
+                        }
+                      },
+                      "required": ["type", "wake"],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "description": "The ways the service sends what happens where a request waits, one of each type, in the order the runtime tries them, the first it can take serving"
+                  }
+                },
+                "required": ["destinations"],
+                "additionalProperties": false
+              },
               "placeholders": {
                 "type": "object",
                 "additionalProperties": {

@@ -171,10 +171,32 @@ const readingRecorded: readonly (typeof ConversationCallEventSchema.Type)[] = [
   },
 ];
 
+const readWhenWoken: readonly (typeof ConversationCallEventSchema.Type)[] = [
+  {
+    type: 'replies_read',
+    data: {
+      ...ofTheCall,
+      ...ofOneReading,
+      arguments_bytes: 40,
+      arguments_sha256: 'b1c2d3',
+      result_bytes: 900,
+      result_sha256: 'e4f5a6',
+      duration_ms: 70,
+      jsonrpc_id: 5,
+      server_request_id: 'request-2',
+      replies: 3,
+      taken: 1,
+      refused: 1,
+      woken: true,
+    },
+    context: acted,
+  },
+];
+
 describe('the facts of the calls the runtime makes to tell a conversation and read its replies', () => {
   recordedFactsBehaviour({
     schema: ConversationCallEventSchema,
     folder: new URL('.', import.meta.url),
-    releases: { '0.46.0': baseline, '0.57.0': readingRecorded },
+    releases: { '0.46.0': baseline, '0.57.0': readingRecorded, '0.59.0': readWhenWoken },
   });
 });

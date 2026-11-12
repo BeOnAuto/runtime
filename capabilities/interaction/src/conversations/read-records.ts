@@ -14,6 +14,7 @@ import type { ToolReference } from '@on.auto/tool-servers/policy';
 import { DateTime, Effect } from 'effect';
 
 import { routeOfRequest } from '../replies/request-routes.ts';
+import { isWoken, type ConversationRow } from './conversation-rows.ts';
 import { failedRead, type ReadAnswer } from './read-answers.ts';
 import type { ConversationTurn, OneRead, ReadDone } from './turn-parts.ts';
 
@@ -28,12 +29,13 @@ export interface ReadRecord {
   readonly since: string | null;
 }
 
-function readFactOf(record: ReadRecord, conversation: string, recorded: Recorded): ConversationCall {
+function readFactOf(record: ReadRecord, row: ConversationRow, recorded: Recorded): ConversationCall {
   const { start, called, detail, answer, state, callId, reading, since } = record;
-  const read = { callId, start, conversation, ...(reading === undefined ? {} : { reading }), since };
+  const read = { callId, start, conversation: row.conversation, ...(reading === undefined ? {} : { reading }), since };
   if (answer.outcome === 'result') {
     const { taken, refused } = state;
-    return repliesReadOf({ ...read, answered: answer.answered, replies: answer.considered, taken, refused }, recorded);
+    const found = { answered: answer.answered, replies: answer.considered, taken, refused, woken: isWoken(row) };
+    return repliesReadOf({ ...read, ...found }, recorded);
   }
   return readingFailedOf(
     {
@@ -55,7 +57,7 @@ export function recordedRead(
   const stream = `${streamPrefixOfPlaybook(playbook)}${conversationCallStreamOf(record.callId)}`;
   return Effect.gen(function* () {
     const at = DateTime.formatIso(yield* DateTime.now);
-    const fact = readFactOf(record, row.conversation, { by: playbookCallerOf(playbook).id, at });
+    const fact = readFactOf(record, row, { by: playbookCallerOf(playbook).id, at });
     yield* ledger
       .execute(stream, conversationCallDecider, fact, { causationId: row.last_fact, correlationId: null })
       .pipe(Effect.orDie);

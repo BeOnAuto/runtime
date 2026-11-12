@@ -42,6 +42,10 @@ export interface Cadence {
   readonly waited_after: string | null;
 }
 
+export function isWoken({ due_at: dueAt, next_read_at: nextReadAt }: ConversationRow): boolean {
+  return dueAt !== null && nextReadAt !== null && dueAt < nextReadAt;
+}
+
 export function advancedOf(cadence: Cadence): ProjectedRow {
   const { open, active_at: activeAt, reads, next_read_at: next, next_reading: nextReading } = cadence;
   return {

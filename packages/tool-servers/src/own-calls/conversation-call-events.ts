@@ -110,6 +110,7 @@ export const ConversationCallEventSchema = Schema.Union([
       replies: Schema.Int,
       taken: Schema.Int,
       refused: Schema.Int,
+      woken: Schema.optionalKey(Schema.Literal(true)),
     }),
     ActedContextSchema,
     argumentsAndResultHeld,

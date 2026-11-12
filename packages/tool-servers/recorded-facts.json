@@ -10,5 +10,6 @@
   "src/own-calls/0.57.0/reading_failed.json": "de789161d9de902c4c96ea1a26b1744b7f1adff9acc2490994f3fcb2624fd591",
   "src/own-calls/0.57.0/replies_read.json": "270bb1272b9fc1432d561bcb2c2331fc4040e76b6a3cde93fc59b067542bcad0",
   "src/own-calls/0.57.0/telling_started.json": "1cc0a16307112f726dbf045c3eb231f62512e83d63d176c8e57f9e1a505ce3c8",
-  "src/own-calls/0.57.0/telling_succeeded.json": "0ed3c3d954568c2f1c635f5ff66b0be1d8083f2e4adbb2cba1ee877091dcf51f"
+  "src/own-calls/0.57.0/telling_succeeded.json": "0ed3c3d954568c2f1c635f5ff66b0be1d8083f2e4adbb2cba1ee877091dcf51f",
+  "src/own-calls/0.59.0/replies_read.json": "ff50ba29c2ebb0fd7f1cf8b664c0df67d038d8fdcb39f6e12e87ed95f2ea242d"
 }

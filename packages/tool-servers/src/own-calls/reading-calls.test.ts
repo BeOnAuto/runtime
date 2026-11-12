@@ -23,6 +23,11 @@ const ofOneReading = {
   since: '1699.3',
 };
 
+function dataOfARead(woken?: boolean) {
+  const found = { ...ofOneReading, answered, replies: 1, taken: 1, refused: 0 };
+  return repliesReadOf(woken === undefined ? found : { ...found, woken }, recorded).event.data;
+}
+
 describe('a read of one reading of a conversation', () => {
   it('records the reading it read beside the conversation, so the cursor it moves is that reading’s', () => {
     const read = repliesReadOf({ ...ofOneReading, answered, replies: 1, taken: 0, refused: 0 }, recorded);
@@ -32,5 +37,14 @@ describe('a read of one reading of a conversation', () => {
       { conversation: 'C0123', reading, since: '1699.3', replies: 1 },
       { conversation: 'C0123', reading, since: '1699.3', because: 'timed_out' },
     ]);
+  });
+
+  it('says that a wake caused the read where one did, and says nothing of a read the timer made', () => {
+    expect([dataOfARead(true), dataOfARead(false), dataOfARead()]).toMatchObject([
+      { woken: true },
+      { replies: 1 },
+      { replies: 1 },
+    ]);
+    expect([dataOfARead(false), dataOfARead()].map((data) => 'woken' in data)).toEqual([false, false]);
   });
 });

@@ -103,6 +103,7 @@ export interface RepliesRead extends ReadPlace {
   readonly replies: number;
   readonly taken: number;
   readonly refused: number;
+  readonly woken?: boolean;
 }
 
 export interface ReadingFailed extends ReadPlace {
@@ -141,7 +142,14 @@ export function repliesReadOf(read: RepliesRead, recorded: Recorded): Conversati
   const { replies, taken, refused } = read;
   const event: ReadingRecorded = {
     type: 'replies_read',
-    data: { ...ofTheRead(read), ...answeredOf(read.answered), replies, taken, refused },
+    data: {
+      ...ofTheRead(read),
+      ...answeredOf(read.answered),
+      replies,
+      taken,
+      refused,
+      ...(read.woken === true ? { woken: true } : {}),
+    },
   };
   return { event, context: recorded };
 }

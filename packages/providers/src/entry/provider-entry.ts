@@ -1,6 +1,8 @@
 import { failureCodeIssuesOf, markIssuesOf, ServerEntrySchema, serverNameProblems } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
+import { EventsSchema } from '../events/event-destinations.ts';
+import { eventIssuesOf } from '../events/event-entries.ts';
 import { conversationIssuesOf, ConversationsSchema } from './conversation-parts.ts';
 import { CredentialWaySchema } from './credential-ways.ts';
 import { placementIssuesOf } from './entry-placeholders.ts';
@@ -59,6 +61,7 @@ const ProviderEntryFieldsSchema = Schema.Struct({
       'For openapi, an API that answers a failure in a JSON answer of a successful status: the pointers to whether the call succeeded and to the code of its failure, and the codes that mean a refused credential, a lacking scope or a limited rate',
   }),
   conversations: Schema.optionalKey(ConversationsSchema),
+  events: Schema.optionalKey(EventsSchema),
   placeholders: Schema.optionalKey(
     PlaceholdersSchema.annotate({
       description:
@@ -134,6 +137,7 @@ export const ProviderEntrySchema = ProviderEntryFieldsSchema.check(
     ...markedIssuesOf(entry),
     ...codedIssuesOf(entry),
     ...conversationIssuesOf(entry.conversations),
+    ...eventIssuesOf(entry),
     ...placementIssuesOf(entry),
     ...writtenIssuesOf(entry),
   ]),

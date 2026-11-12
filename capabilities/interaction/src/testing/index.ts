@@ -38,6 +38,7 @@ export {
 } from './chat-harness.ts';
 export { flatReplies } from './reading-documents.ts';
 export { chatProjections } from './chat-projections.ts';
+export { wakesHeard, type HeardWake, type WakesHeard } from './wakes-heard.ts';
 export { chatConversations, noConversations } from './chat-conversations.ts';
 export {
   beforeReadings,
