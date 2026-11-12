@@ -32,11 +32,15 @@ export type { AnsweredOnce, CallAnswer, CalledOnce, UnopenedOnce } from './one-c
 export type { OneCall, RunCall } from './one-call/one-call.ts';
 export {
   answerDocument,
+  marksMeant,
   onlyReads,
+  ToolMarkSchema,
   type MarkedBy,
   type ToolAnnotations,
   type ToolMark,
 } from './bounds/tool-results.ts';
+export { markedTool } from './listing/tool-marks.ts';
+export { allowsTool } from './names/tool-reference.ts';
 export type { NamingCheck } from './org-servers/org-naming.ts';
 export type { PreparedCall } from './access/call-ways.ts';
 export {
@@ -142,6 +146,7 @@ export { keptTokensIn, type KeptTokens } from './consent-tokens/kept-tokens.ts';
 export { defineSearch } from './search/search.ts';
 export { requestCarriersAmong, type RequestCarrier } from './search/request-carriers.ts';
 export { unavailableInWords } from './search/search-words.ts';
+export { summaryOf } from './search/search-scoring.ts';
 export type { ServerTool, ToolServer } from './listing/tool-server.ts';
 export { defineSearchInOrg, type PlaybookLookup } from './search/search-in-org.ts';
 export type { OfferedGroup, OfferedProvider, ProviderOffering } from './search/found-providers.ts';

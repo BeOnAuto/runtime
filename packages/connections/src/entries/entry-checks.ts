@@ -161,8 +161,15 @@ function readingIssuesOf(input: AdditionInput, checking: EntryChecking): readonl
   return Result.match(readWithAnyValue(input, checking), { onSuccess: () => [], onFailure: (read) => read });
 }
 
+export function readWithAStandIn(
+  input: AdditionInput,
+  checking: EntryChecking,
+): Result.Result<ServerSettings, readonly Issue[]> {
+  return readWithAnyValue({ ...input, credential: withAnyClientId(input.credential) }, checking);
+}
+
 export function settingsOfTheAddition(input: AdditionInput, checking: EntryChecking): ServerSettings {
-  return Result.getOrThrow(readWithAnyValue({ ...input, credential: withAnyClientId(input.credential) }, checking));
+  return Result.getOrThrow(readWithAStandIn(input, checking));
 }
 
 function isOfTheClientId({ pointer }: Issue): boolean {

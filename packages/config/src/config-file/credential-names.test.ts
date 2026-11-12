@@ -217,4 +217,15 @@ describe('a value judged by its shape alone, wherever it is held', () => {
       { pointer: '/summary', detail: writtenOut },
     ]);
   });
+
+  it('refuses prose that holds a token of sections whose last is its secret, and takes prose that names its prefix alone', () => {
+    const held = {
+      description: 'Send xoxb-1-secret with each call',
+      summary: 'A bot token begins xoxb- and its user token xoxp-, as xoxb-… shows',
+    };
+
+    expect(credentialShapesIn(held, '', ['description', 'summary'])).toEqual([
+      { pointer: '/description', detail: writtenOut },
+    ]);
+  });
 });

@@ -11,7 +11,6 @@ import {
   NextClientIdField,
   TokenField,
 } from '../operations/connection-fields.ts';
-import type { ConnectionServices } from '../operations/connection-services.ts';
 import {
   actedNow,
   allowedToChoose,
@@ -36,6 +35,7 @@ import {
   sourcesFor,
   type Sources,
 } from './consent-asking.ts';
+import { linkedToolsOf, LinkedToolsField, type LinkReading } from './linked-tools.ts';
 
 const LinkSchema = Schema.Struct({ id: ConnectionIdField, token: TokenField });
 
@@ -80,12 +80,11 @@ const LinkedSchema = Schema.Struct({
         'The client the caller who asked for this link called through, add_connection for the link of an addition and reconnect_connection for a new one, as the token of that call named it: its client ID, its name and the domain of its client ID metadata document. Left out where the call named none, as a call with an API key, or with a session of a page, names none',
     }),
   ),
+  tools: LinkedToolsField,
 }).annotate({
   identifier: 'LinkedConnection',
   description: 'The connection an open link names, and when the link expires',
 });
-
-type LinkReading = Pick<ConnectionServices, 'consent' | 'pages' | 'providers'>;
 
 type Linked = KeptWithLink['connection'];
 
@@ -134,6 +133,12 @@ function moreOfTheLink({ group }: AskedOfTheLink) {
   return group === undefined ? {} : { more: { name: group.name, for: group.for } };
 }
 
+function openConsentOf(kept: KeptWithLink, at: string) {
+  return isOpenConsent(kept, at)
+    ? { consent: { started_at: kept.consent.started_at, expires_at: kept.consent.expires_at } }
+    : {};
+}
+
 export function defineReadLink(reading: LinkReading) {
   return defineHttpOperation('org', 'query', {
     name: 'read_link',
@@ -144,6 +149,7 @@ export function defineReadLink(reading: LinkReading) {
       "A link add_connection or reconnect_connection gave for a group of more names the group, and the connection's asked_scopes hold the scopes its consent asks beside those asked before.",
       "A connection under the organization's own OAuth client, its credential's client_source own, holds its credential's client_id once give_client gave the client, and until then the page asks for the client before the sign-in, showing return_address, the address the client registers as an authorized redirect URI, and answers next_client_id while it keeps a client given as its next.",
       'asked_by names the client the link was asked through, where the call that gave it named one.',
+      'For an HTTP API given its OpenAPI document whole, tools names each tool that document offers, with its summary and its mark, read from the document the runtime keeps, or is null where that document cannot be read.',
       'A token that is unknown, used up, expired or replaced is answered as not found.',
     ].join(' '),
     route: { method: 'GET', path: '/connections/{id}/link/{token}' },
@@ -161,9 +167,6 @@ export function defineReadLink(reading: LinkReading) {
       );
       const sources = yield* sourcesFor(kept.connection, reading);
       const asked = yield* Effect.fromResult(askedOfTheLink(kept, reading.providers, sources));
-      const started = isOpenConsent(kept, acted.at)
-        ? { consent: { started_at: kept.consent.started_at, expires_at: kept.consent.expires_at } }
-        : {};
       const source = sourceOfAStartOf(kept.connection, asked.scope, sources);
       const shown = connectionShown(kept.connection, null);
       return {
@@ -174,11 +177,12 @@ export function defineReadLink(reading: LinkReading) {
           asked.says,
         ),
         link: { expires_at: kept.link.expires_at, ...moreOfTheLink(asked) },
-        ...started,
+        ...openConsentOf(kept, acted.at),
         ...source,
         ...returnAddressFor(kept.connection, reading),
         ...nextClientOf(kept),
         ...askedByOf(kept),
+        ...(yield* linkedToolsOf(kept.connection, reading)),
       };
     }),
   });

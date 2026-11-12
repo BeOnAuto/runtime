@@ -36,6 +36,7 @@ const keysWrittenInProse: readonly RegExp[] = [
   /(?<![\w-])AIza[\w-]{35}(?![\w-])/u,
   /(?<![\w-])gh[opsu]_\w{20,}/u,
   /(?<![\w-])abk_[a-z0-9-]+_[\w-]{43}(?![\w-])/u,
+  /(?<![\w-])xox[abprs]-(?:[0-9A-Za-z]+-)+[0-9A-Za-z]{6,}/u,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----/u,
 ];
 

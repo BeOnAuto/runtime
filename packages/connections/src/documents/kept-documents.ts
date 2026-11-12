@@ -1,4 +1,4 @@
-import { Caller, OrgWriter, type StreamReader } from '@on.auto/operations';
+import { Caller, OrgReader, OrgWriter, type StreamReader } from '@on.auto/operations';
 import { DateTime, Effect } from 'effect';
 
 import type { ConnectionDocument } from '../registry/connection-entry.ts';
@@ -48,3 +48,8 @@ export function documentTextOf(registry: StreamReader, org: string, named: Docum
     textOf(state, named),
   );
 }
+
+export const readableDocumentText = Effect.fnUntraced(function* (document: ConnectionDocument) {
+  const { state } = yield* (yield* OrgReader).load(documentStreamOf(document.sha256), documentFold);
+  return state !== undefined && isTheDocumentOf(state, document) ? state.text : undefined;
+});

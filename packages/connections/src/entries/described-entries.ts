@@ -161,7 +161,7 @@ function refusalOfTheDocument(
   };
 }
 
-function apiOf({ servers: [described] }: ToolServers): DescribedApi['api'] {
+export function apiOf({ servers: [described] }: ToolServers): DescribedApi['api'] {
   return Option.getOrThrow(Option.filter(Option.fromNullishOr(described), isDescribedApi)).api;
 }
 
