@@ -1031,7 +1031,7 @@
       ]
     },
     {
-      "sha256": "6124aa9d52f48d25113b12e6995e9a1918891aa6d6ad6ff25e2ea2412b9a4d5d",
+      "sha256": "9e1df38f0b313b9ec33403c4c85ac976c4ab19ecdf67cd69691253070c85a029",
       "tier": 1,
       "received": [
         {
@@ -1044,7 +1044,7 @@
         }
       ],
       "lines": [
-        "The https URL of the OpenAPI document of the HTTP API"
+        "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
       ]
     },
     {
@@ -1167,7 +1167,7 @@
       ]
     },
     {
-      "sha256": "49baa355ece0a908c02295601dcb0e1936cd542f37d1f33d25e3c967e02fff2a",
+      "sha256": "7914468a24fd90d5fd5bc9971a4e2a69c569627c2aec04b5610c2b63fbd1e0b9",
       "tier": 1,
       "received": [
         {
@@ -1180,7 +1180,7 @@
         }
       ],
       "lines": [
-        "The OpenAPI document itself, version 3.0 or 3.1, as JSON or YAML of at most 16,384 bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret"
+        "The OpenAPI document itself, written from the service's documentation for the calls the job needs: version 3.0 or 3.1, JSON or YAML of at most 16,384 bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret"
       ]
     },
     {
@@ -1201,7 +1201,7 @@
       ]
     },
     {
-      "sha256": "031124401b865c5bae9aa75068982468087d30942181c81e5e831ef452569d28",
+      "sha256": "f83f5ac3ab8c16c53bdeae067911943969349af484cb5d20b51b6b036717b362",
       "tier": 1,
       "received": [
         {
@@ -1214,7 +1214,7 @@
         }
       ],
       "lines": [
-        "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+        "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
       ]
     },
     {
@@ -1337,7 +1337,7 @@
       ]
     },
     {
-      "sha256": "14bf6339280309446b5bd12c5f822a4fa6a511350c59959360e5a676a4eee7c3",
+      "sha256": "c4fed6cb3bf18a8d735e9a090789c8df7a2013ac6134f0aead3abe94bdeec27c",
       "tier": 1,
       "received": [
         {
@@ -1350,7 +1350,7 @@
         }
       ],
       "lines": [
-        "For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://acme.example/keys) as an Admin, with read access. It starts with `acme_`."
+        "For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://app.example/keys) as an Admin, with read access. It is 40 characters."
       ]
     },
     {
@@ -1371,7 +1371,7 @@
       ]
     },
     {
-      "sha256": "b42456d0b0fa9a7fb6568ef46b2a7359c4417e22b2c18f9ccab364520d16a8e9",
+      "sha256": "c82bdaa2d3fa68c8623ada43b263967f3164c33047d4d6ce28497457a3124791",
       "tier": 1,
       "received": [
         {
@@ -1384,11 +1384,11 @@
         }
       ],
       "lines": [
-        "For secret, the key with … in place of its characters, such as acme_…"
+        "For secret, the key with … in place of its characters"
       ]
     },
     {
-      "sha256": "a8b0c7872bc8c177487291e28a3a140b7258c1ef76a84462cef1c617e229ed4c",
+      "sha256": "2e3db7d782b67d28df8ac7550477f24f438cb7a0aa6407b90feff8b8bb877caf",
       "tier": 1,
       "received": [
         {
@@ -1401,7 +1401,7 @@
         }
       ],
       "lines": [
-        "For secret, the regular expression from ^ to $ the key matches, such as ^acme_\\w+$; a key that misses it is kept"
+        "For secret, the regular expression from ^ to $ the key matches, from its documentation; a key that misses it is kept"
       ]
     },
     {
@@ -3873,7 +3873,7 @@
       ]
     },
     {
-      "sha256": "fe76c0be37bfb0bc858f660e09a87422878db8d62e342b81d360a1ca7e69e381",
+      "sha256": "e6ef8390d310fdc45afbcfabe79c6de180257243bc25f1642783cc8aeaebcbb4",
       "tier": 3,
       "received": [
         {
@@ -3889,15 +3889,16 @@
         "",
         "# Connect a service",
         "",
-        "A playbook's runs act on the services connected to the org, and expect what they act on to be there already: a team with the statuses work moves between, a channel, a label, a folder, a project. A run does not set a service up, nor does it check that one is set up. You do, here, with the person, before the first run, and you ask for the access that takes when you ask for the connection.",
+        "A playbook's runs act on the services connected to the org, and expect what they act on to be there already: a channel, a folder, a label, a field, the stages work moves through. A run does not set a service up, nor does it check that one is set up. You do, here, with the person, before the first run, and you ask for the access that takes when you ask for the connection.",
         "",
         "1. Before you connect anything, work out two things with the person: what the playbook's functions and workflows will do at the service, run by run, and what must exist there first for that to work. Name each thing, and whether it is there already.",
-        "2. Call search with `terms` for both kinds of work: the tools the playbook's functions will call, and the tools that create what must exist. Where the person named a server, give its name as `server`. Call introspect for the input_schema of a tool before writing its arguments.",
-        "3. When no server offers them, and search answers `providers`, call add_connection with the name of the provider that serves what the person wants, and in the same call ask for what setting the service up needs: where search lists a group of `more` under the provider that covers it, name it in `more`, so the person approves once. Where none of the provider's tools can make what must exist, and the service has an HTTP API or an MCP server that can, add that too, by hand: for an MCP server, `authorization` first, the credential's `kind` alone, and where the runtime answers that the server offers no consent or that it cannot connect it by consent, how it takes its key, never the key. Give the person each link add_connection answers, on which they approve it, signing in or giving the key. Where search answers no `providers`, tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.",
-        "4. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it. Where search says a server's connection is `connection_broken` and its words say to reconnect it, call reconnect_connection with its `connection` as `id` and give the person the link it answers, rather than removing the connection and adding it again. Where the service is connected already and lacks the access setting it up takes, list_connections offers the groups the connection may still be granted; ask for one with reconnect_connection, given its name as `more`, and give the person that link.",
-        "5. Once list_connections says a connection is connected, read what the service holds with query_connection, and tell the person what you found and what you would reuse.",
-        "6. Show the person what you would create and change. Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up or to check that it is set up: that is your work, with these tools, before the first run and whenever something there changes.",
-        "7. Keep the ids you read, such as the team's and each status's, for the functions that use them. Then tell the person what is set up and what the connection can do, and give the playbook its tools with the give-tools recipe.",
+        "2. Call search with `terms` for both kinds of work: the tools the playbook's functions will call, and the tools that create what must exist. Put the service's name in `terms` too: search finds a provider by the words of its name, title and description. Where the person named a server, give its name as `server`. Call introspect for the input_schema of a tool before writing its arguments.",
+        "3. When no server offers them, and search answers `providers`, call add_connection with the name of the provider that serves what the person wants, and in the same call ask for what setting the service up needs: where search lists a group of `more` under the provider that covers it, name it in `more`, so the person approves once. Where none of the provider's tools can make what must exist, and the service has an HTTP API or an MCP server that can, add that too, by hand, as step 4 says. Give the person each link add_connection answers, on which they approve it, signing in or giving the key. Where search's answer to a call without `server` has no `providers` at all, no connection can be added here: tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.",
+        "4. Where search lists `providers` but none serves the service, or its provider's tools cannot do what is needed, connect what the service itself offers, by hand, in this order. Where its own documentation names an MCP server, add that, leaving its credential out, since the server says how it authenticates; where add_connection refuses it with an error at `/credential` saying the server names no way of its own to authenticate, call it again with the credential saying how the server takes its key, never the key. Otherwise add its HTTP API, of `type` `openapi`. Give `document` only where the service's documentation states the address of its OpenAPI document. Otherwise write that document yourself from the documentation, describing the calls the job needs and their parameters, and give it as `document_text`, with `base_url`, the address the documentation gives for those calls; the credential says where the key goes, the header or query parameter the documentation names, and with `instructions` and `key_page` where the person makes it. Where the documentation gives no address for those calls, tell the person the service cannot be connected this way. Never guess an address, never ask the person for one, and never ask them to host a file or to write anything technical: the person pastes the key on the page and approves. Where add_connection refuses the document, its words name the place to correct; correct it and call again.",
+        "5. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it. Where search says a server's connection is `connection_broken` and its words say to reconnect it, call reconnect_connection with its `connection` as `id` and give the person the link it answers, rather than removing the connection and adding it again. Where the service is connected already and lacks the access setting it up takes, list_connections offers the groups the connection may still be granted; ask for one with reconnect_connection, given its name as `more`, and give the person that link.",
+        "6. Once list_connections says a connection is connected, read what the service holds with query_connection, and tell the person what you found and what you would reuse. For an HTTP API whose document you wrote, read with one of its calls first and tell the person what came back: a call the document declares as GET or HEAD is marked reads, which query_connection calls; any other may change something, so call it with execute_connection, once the person agrees. Where the service answers that first read by saying a path or a parameter is wrong, correct the document: read the connection with list_connections, remove it with remove_connection, and add it again with what list_connections answered for it, its `name`, `type`, `credential` and its whole `entry`, with the document corrected in `document_text`; then tell the person they will approve it and paste the key once more, or make a new key where the service shows a key only once.",
+        "7. Show the person what you would create and change. Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up or to check that it is set up: that is your work, with these tools, before the first run and whenever something there changes.",
+        "8. Keep the ids you read of what must exist, for the functions that use them. Then tell the person what is set up and what the connection can do, and give the playbook its tools with the give-tools recipe.",
         ""
       ]
     },
@@ -9216,7 +9217,7 @@
       ]
     },
     {
-      "sha256": "ba78fa40b4bb0fb8f0db832ecb7e1115a1c48ce609ecba51ada3be6f8eaf6046",
+      "sha256": "c9b179c5f6fd91daa14f1ad56598bd07940a2a9f04cf2558c06c752ea40460d5",
       "tier": 3,
       "received": [
         {
@@ -9232,15 +9233,16 @@
       "lines": [
         "# Connect a service",
         "",
-        "A playbook's runs act on the services connected to the org, and expect what they act on to be there already: a team with the statuses work moves between, a channel, a label, a folder, a project. A run does not set a service up, nor does it check that one is set up. You do, here, with the person, before the first run, and you ask for the access that takes when you ask for the connection.",
+        "A playbook's runs act on the services connected to the org, and expect what they act on to be there already: a channel, a folder, a label, a field, the stages work moves through. A run does not set a service up, nor does it check that one is set up. You do, here, with the person, before the first run, and you ask for the access that takes when you ask for the connection.",
         "",
         "1. Before you connect anything, work out two things with the person: what the playbook's functions and workflows will do at the service, run by run, and what must exist there first for that to work. Name each thing, and whether it is there already.",
-        "2. Call search with `terms` for both kinds of work: the tools the playbook's functions will call, and the tools that create what must exist. Where the person named a server, give its name as `server`. Call introspect for the input_schema of a tool before writing its arguments.",
-        "3. When no server offers them, and search answers `providers`, call add_connection with the name of the provider that serves what the person wants, and in the same call ask for what setting the service up needs: where search lists a group of `more` under the provider that covers it, name it in `more`, so the person approves once. Where none of the provider's tools can make what must exist, and the service has an HTTP API or an MCP server that can, add that too, by hand: for an MCP server, `authorization` first, the credential's `kind` alone, and where the runtime answers that the server offers no consent or that it cannot connect it by consent, how it takes its key, never the key. Give the person each link add_connection answers, on which they approve it, signing in or giving the key. Where search answers no `providers`, tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.",
-        "4. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it. Where search says a server's connection is `connection_broken` and its words say to reconnect it, call reconnect_connection with its `connection` as `id` and give the person the link it answers, rather than removing the connection and adding it again. Where the service is connected already and lacks the access setting it up takes, list_connections offers the groups the connection may still be granted; ask for one with reconnect_connection, given its name as `more`, and give the person that link.",
-        "5. Once list_connections says a connection is connected, read what the service holds with query_connection, and tell the person what you found and what you would reuse.",
-        "6. Show the person what you would create and change. Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up or to check that it is set up: that is your work, with these tools, before the first run and whenever something there changes.",
-        "7. Keep the ids you read, such as the team's and each status's, for the functions that use them. Then tell the person what is set up and what the connection can do, and give the playbook its tools with the give-tools recipe.",
+        "2. Call search with `terms` for both kinds of work: the tools the playbook's functions will call, and the tools that create what must exist. Put the service's name in `terms` too: search finds a provider by the words of its name, title and description. Where the person named a server, give its name as `server`. Call introspect for the input_schema of a tool before writing its arguments.",
+        "3. When no server offers them, and search answers `providers`, call add_connection with the name of the provider that serves what the person wants, and in the same call ask for what setting the service up needs: where search lists a group of `more` under the provider that covers it, name it in `more`, so the person approves once. Where none of the provider's tools can make what must exist, and the service has an HTTP API or an MCP server that can, add that too, by hand, as step 4 says. Give the person each link add_connection answers, on which they approve it, signing in or giving the key. Where search's answer to a call without `server` has no `providers` at all, no connection can be added here: tell the person that whoever runs this server sets tool servers up in its settings file, `auto-runtime.yaml`, under `tool_servers`; the server reads them when it starts again, and nothing more can be done here until then.",
+        "4. Where search lists `providers` but none serves the service, or its provider's tools cannot do what is needed, connect what the service itself offers, by hand, in this order. Where its own documentation names an MCP server, add that, leaving its credential out, since the server says how it authenticates; where add_connection refuses it with an error at `/credential` saying the server names no way of its own to authenticate, call it again with the credential saying how the server takes its key, never the key. Otherwise add its HTTP API, of `type` `openapi`. Give `document` only where the service's documentation states the address of its OpenAPI document. Otherwise write that document yourself from the documentation, describing the calls the job needs and their parameters, and give it as `document_text`, with `base_url`, the address the documentation gives for those calls; the credential says where the key goes, the header or query parameter the documentation names, and with `instructions` and `key_page` where the person makes it. Where the documentation gives no address for those calls, tell the person the service cannot be connected this way. Never guess an address, never ask the person for one, and never ask them to host a file or to write anything technical: the person pastes the key on the page and approves. Where add_connection refuses the document, its words name the place to correct; correct it and call again.",
+        "5. When a server says it cannot be asked just now, tell the person why, in its words; whoever runs the server can look into it. Where search says a server's connection is `connection_broken` and its words say to reconnect it, call reconnect_connection with its `connection` as `id` and give the person the link it answers, rather than removing the connection and adding it again. Where the service is connected already and lacks the access setting it up takes, list_connections offers the groups the connection may still be granted; ask for one with reconnect_connection, given its name as `more`, and give the person that link.",
+        "6. Once list_connections says a connection is connected, read what the service holds with query_connection, and tell the person what you found and what you would reuse. For an HTTP API whose document you wrote, read with one of its calls first and tell the person what came back: a call the document declares as GET or HEAD is marked reads, which query_connection calls; any other may change something, so call it with execute_connection, once the person agrees. Where the service answers that first read by saying a path or a parameter is wrong, correct the document: read the connection with list_connections, remove it with remove_connection, and add it again with what list_connections answered for it, its `name`, `type`, `credential` and its whole `entry`, with the document corrected in `document_text`; then tell the person they will approve it and paste the key once more, or make a new key where the service shows a key only once.",
+        "7. Show the person what you would create and change. Once they agree, make each change with execute_connection and read it back with query_connection. Where no connected tool can make a change, tell the person exactly what to change in the service and where, and read it back once they say it is done. Never make a function or workflow to set a service up or to check that it is set up: that is your work, with these tools, before the first run and whenever something there changes.",
+        "8. Keep the ids you read of what must exist, for the functions that use them. Then tell the person what is set up and what the connection can do, and give the playbook its tools with the give-tools recipe.",
         ""
       ]
     },

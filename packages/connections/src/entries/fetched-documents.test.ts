@@ -25,6 +25,12 @@ async function recordedAfter(h: Harness, input: unknown): Promise<Recorded> {
   return { outcome, facts: (await h.facts()).length };
 }
 
+const whereTheDocumentComesFrom = {
+  pointer: '/entry/document',
+  detail:
+    "Give document only where the service's own documentation states that address; otherwise write the OpenAPI document from that documentation, describing the calls the job needs, and give it in document_text, with base_url",
+};
+
 function cannotBeReadNow(why: string) {
   return {
     outcome: {
@@ -81,10 +87,13 @@ describe('the refusal of a document by its address', () => {
     const { outcome, facts } = await recordedAfter(harness({ fetch: served(fetched) }), billing);
 
     expect([issuesIn(outcome), facts]).toEqual([
-      ['$ref', 'in'].map((member) => ({
-        pointer: '/entry/document',
-        detail: `At /paths/~1invoices/get/parameters/0/${member} of the document: not what the runtime reads there in an OpenAPI document of version 3.0 or 3.1`,
-      })),
+      [
+        ...['$ref', 'in'].map((member) => ({
+          pointer: '/entry/document',
+          detail: `At /paths/~1invoices/get/parameters/0/${member} of the document: not what the runtime reads there in an OpenAPI document of version 3.0 or 3.1`,
+        })),
+        whereTheDocumentComesFrom,
+      ],
       0,
     ]);
     expect(JSON.stringify(outcome)).not.toContain('fetched-word-41');
@@ -97,6 +106,7 @@ describe('the refusal of a document by its address, of what its address answered
 
     expect(issuesIn(await adding(h, billing))).toEqual([
       { pointer: '/entry/document', detail: 'The document is neither JSON nor YAML' },
+      whereTheDocumentComesFrom,
     ]);
   });
 
@@ -156,6 +166,7 @@ describe('the refusal of a document by its address that offers no tool', () => {
         pointer: '/entry/document',
         detail: 'The document offers no tool the runtime can call: it leaves out each of its 3 operations',
       },
+      whereTheDocumentComesFrom,
     ]);
     expect(JSON.stringify(outcome)).not.toMatch(/list_|X-Account/u);
   });

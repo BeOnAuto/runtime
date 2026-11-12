@@ -9,6 +9,7 @@ describe('an operation of an HTTP API that no tool is offered for', () => {
       {
         operation: 'sessionState (GET /sessions)',
         because: 'it needs the header X-Session, which a function cannot send; the headers of the entry can give it',
+        header: 'X-Session',
       },
       {
         operation: 'filtered (GET /filtered)',
@@ -87,6 +88,7 @@ describe('an operation of an HTTP API that needs a header', () => {
       {
         operation: 'GET /b',
         because: 'it needs the header X-Account, which a function cannot send; the headers of the entry can give it',
+        header: 'X-Account',
       },
       { operation: 'GET /c', because: 'it needs the cookie session, which a function cannot send' },
     ]);

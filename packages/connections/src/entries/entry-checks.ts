@@ -55,7 +55,7 @@ const heldCredentialAsClientId: ClientIdWords = {
 const heldReference =
   "Holds a reference to an environment variable, which a connection's entry never holds: a reference credential names the variable";
 
-const fileOnly = `${pinnedUrlShape}: a connection reads its document from the network, never from the runtime’s disk`;
+const fileOnly = `${pinnedUrlShape}: a connection reads its document from the network, never from the runtime’s disk, or takes the document itself in document_text`;
 
 const anyValue: GivenValue = { value: Redacted.make('user:a value the person gives'), algorithm: undefined };
 

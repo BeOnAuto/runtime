@@ -38,6 +38,8 @@ type Refused = InvalidInput | Forbidden | Unavailable;
 
 const operationNoun = { one: 'operation', other: 'operations' };
 
+const ofTheAddress = '/entry/document';
+
 function isDescribedByHand({ provider, type }: GivenAddition): boolean {
   return provider === null && type === 'openapi';
 }
@@ -47,7 +49,7 @@ function isDescribedApi(server: Linked): server is DescribedApi {
 }
 
 function documentPointerOf({ documentText }: GivenAddition): string {
-  return documentText === undefined ? '/entry/document' : '/entry/document_text';
+  return documentText === undefined ? ofTheAddress : '/entry/document_text';
 }
 
 function issuePointerOf(addition: GivenAddition, written: string): string {
@@ -84,13 +86,31 @@ function reached(
   );
 }
 
-function leftOutWordsOf({ operation, because }: LeftOutOperation): string {
-  return `The document offers no tool for the operation ${operation}: ${because}`;
+function headerWordsOf(header: string): string {
+  return `. Where ${header} takes the same value on every call, give that value in entry.headers; where ${header} carries the key, name it in the credential, as a secret in a header, and the person gives its value on the page; a function never sends it, so no value of it goes in a function's arguments or its prompt`;
+}
+
+function leftOutWordsOf({ operation, because, header }: LeftOutOperation): string {
+  const words = `The document offers no tool for the operation ${operation}: ${because}`;
+  return header === undefined ? words : `${words}${headerWordsOf(header)}`;
+}
+
+const whereTheDocumentComesFrom =
+  "Give document only where the service's own documentation states that address; otherwise write the OpenAPI document from that documentation, describing the calls the job needs, and give it in document_text, with base_url";
+
+function advisedFor({ documentText }: GivenAddition, issues: readonly Issue[]): readonly Issue[] {
+  const atTheAddress = documentText === undefined && issues.some(({ pointer }) => pointer === ofTheAddress);
+  return atTheAddress ? [...issues, { pointer: ofTheAddress, detail: whereTheDocumentComesFrom }] : issues;
 }
 
 function refusedFor(addition: GivenAddition, details: readonly string[]): InvalidInput {
   const pointer = documentPointerOf(addition);
-  return invalidAddition(details.map((detail): Issue => ({ pointer, detail })));
+  return invalidAddition(
+    advisedFor(
+      addition,
+      details.map((detail): Issue => ({ pointer, detail })),
+    ),
+  );
 }
 
 function noToolWordsOf({ documentText }: GivenAddition, leftOut: readonly LeftOutOperation[]): readonly string[] {
@@ -130,7 +150,13 @@ function refusalOfTheDocument(
       return invalidAddition(issues);
     }
     return (
-      passingFailureOf(document, answered()) ?? invalidAddition(issues.map((issue) => withoutFetchedValues(issue)))
+      passingFailureOf(document, answered()) ??
+      invalidAddition(
+        advisedFor(
+          addition,
+          issues.map((issue) => withoutFetchedValues(issue)),
+        ),
+      )
     );
   };
 }

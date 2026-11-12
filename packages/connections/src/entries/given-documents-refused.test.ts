@@ -241,7 +241,21 @@ const refusedByItsReader = [
     ),
     refusedAt(
       ofTheDocument,
-      expect.stringMatching(/^The document offers no tool for the operation list_accounts \(GET \/accounts\): /u),
+      "The document offers no tool for the operation list_accounts (GET /accounts): it needs the header X-Account, which a function cannot send; the headers of the entry can give it. Where X-Account takes the same value on every call, give that value in entry.headers; where X-Account carries the key, name it in the credential, as a secret in a header, and the person gives its value on the page; a function never sends it, so no value of it goes in a function's arguments or its prompt",
+    ),
+  ],
+  [
+    'whose one operation needs a cookie',
+    textOf(
+      withPaths({
+        '/accounts': {
+          get: { operationId: 'list_accounts', parameters: [{ name: 'session', in: 'cookie', required: true }] },
+        },
+      }),
+    ),
+    refusedAt(
+      ofTheDocument,
+      'The document offers no tool for the operation list_accounts (GET /accounts): it needs the cookie session, which a function cannot send',
     ),
   ],
   [

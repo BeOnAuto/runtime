@@ -4134,7 +4134,7 @@
                       },
                       "document": {
                         "type": "string",
-                        "description": "The https URL of the OpenAPI document of the HTTP API"
+                        "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                       },
                       "base_url": {
                         "type": "string",
@@ -4178,7 +4178,7 @@
                       },
                       "document_text": {
                         "type": "string",
-                        "description": "The OpenAPI document itself, version 3.0 or 3.1, as JSON or YAML of at most 16,384 bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret"
+                        "description": "The OpenAPI document itself, written from the service's documentation for the calls the job needs: version 3.0 or 3.1, JSON or YAML of at most 16,384 bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret"
                       }
                     },
                     "additionalProperties": false,
@@ -4200,7 +4200,7 @@
                       "variable": {
                         "type": "string",
                         "minLength": 1,
-                        "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                        "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                       },
                       "name": {
                         "type": "string",
@@ -4243,7 +4243,7 @@
                       },
                       "instructions": {
                         "type": "string",
-                        "description": "For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://acme.example/keys) as an Admin, with read access. It starts with `acme_`.",
+                        "description": "For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://app.example/keys) as an Admin, with read access. It is 40 characters.",
                         "minLength": 1,
                         "maxLength": 1000
                       },
@@ -4253,12 +4253,12 @@
                       },
                       "example": {
                         "type": "string",
-                        "description": "For secret, the key with … in place of its characters, such as acme_…",
+                        "description": "For secret, the key with … in place of its characters",
                         "maxLength": 100
                       },
                       "pattern": {
                         "type": "string",
-                        "description": "For secret, the regular expression from ^ to $ the key matches, such as ^acme_\\w+$; a key that misses it is kept"
+                        "description": "For secret, the regular expression from ^ to $ the key matches, from its documentation; a key that misses it is kept"
                       }
                     },
                     "required": [
@@ -4336,7 +4336,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -4422,7 +4422,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -4962,7 +4962,7 @@
                             },
                             "document": {
                               "type": "string",
-                              "description": "The https URL of the OpenAPI document of the HTTP API"
+                              "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                             },
                             "base_url": {
                               "type": "string",
@@ -5048,7 +5048,7 @@
                             "variable": {
                               "type": "string",
                               "minLength": 1,
-                              "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                              "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                             },
                             "name": {
                               "type": "string",
@@ -5566,7 +5566,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -5652,7 +5652,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -6166,7 +6166,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -6252,7 +6252,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -6766,7 +6766,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -6852,7 +6852,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -7414,7 +7414,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -7500,7 +7500,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -8287,7 +8287,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -8373,7 +8373,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -9023,7 +9023,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -9109,7 +9109,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -9668,7 +9668,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -9754,7 +9754,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -10292,7 +10292,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -10378,7 +10378,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",
@@ -11111,7 +11111,7 @@
                         },
                         "document": {
                           "type": "string",
-                          "description": "The https URL of the OpenAPI document of the HTTP API"
+                          "description": "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it"
                         },
                         "base_url": {
                           "type": "string",
@@ -11197,7 +11197,7 @@
                         "variable": {
                           "type": "string",
                           "minLength": 1,
-                          "description": "For reference, the variable of the runtime that holds the value, such as CRM_API_KEY"
+                          "description": "For reference, the variable of the runtime that holds the value, one that connections.variables lists"
                         },
                         "name": {
                           "type": "string",

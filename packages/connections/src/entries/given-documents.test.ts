@@ -244,3 +244,27 @@ describe('the host of the base_url of an HTTP API given its document in document
     expect(await adding(h, ledgers)).toMatchObject({ status: 'succeeded' });
   });
 });
+
+describe('a call of the document given in document_text that needs a header', () => {
+  it('is taken where the header a call needs is given in the entry, or carries the key as the credential', async () => {
+    const needingAnAccount = withPaths({
+      '/accounts': {
+        get: {
+          operationId: 'list_accounts',
+          parameters: [{ name: 'X-Account', in: 'header', required: true, schema: { type: 'string' } }],
+        },
+      },
+    });
+    const inTheEntry = givenAs(needingAnAccount, {
+      entry: { base_url: ledgersBase, document_text: textOf(needingAnAccount), headers: { 'X-Account': 'north' } },
+    });
+    const asTheCredential = givenAs(needingAnAccount, {
+      credential: { kind: 'secret', name: 'X-Account', in: 'header', ...ledgersKeyHelp },
+    });
+
+    expect([await adding(harness(), inTheEntry), await adding(harness(), asTheCredential)]).toMatchObject([
+      { status: 'succeeded', output: { document: { tool_count: 1 } } },
+      { status: 'succeeded', output: { document: { tool_count: 1 } } },
+    ]);
+  });
+});

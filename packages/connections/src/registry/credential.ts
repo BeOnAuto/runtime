@@ -31,7 +31,8 @@ export const CredentialFieldsSchema = Schema.Struct({
   kind: CredentialKindSchema,
   variable: Schema.optionalKey(
     NamedSchema.annotate({
-      description: 'For reference, the variable of the runtime that holds the value, such as CRM_API_KEY',
+      description:
+        'For reference, the variable of the runtime that holds the value, one that connections.variables lists',
     }),
   ),
   name: Schema.optionalKey(
@@ -203,7 +204,12 @@ function presenceIssuesOf(credential: CredentialFields): readonly FieldIssue[] {
 function variableIssuesOf({ variable }: CredentialFields): readonly FieldIssue[] {
   return variable === undefined || variableNamePattern.test(variable)
     ? []
-    : [{ path: ['variable'], issue: 'Expected the name of a variable, such as CRM_API_KEY' }];
+    : [
+        {
+          path: ['variable'],
+          issue: 'Expected the name of a variable: letters, digits and underscores, not starting with a digit',
+        },
+      ];
 }
 
 function nameIssuesOf({ name, in: placement }: CredentialFields): readonly FieldIssue[] {

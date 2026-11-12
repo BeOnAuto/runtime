@@ -17,7 +17,10 @@ export type ConnectionType = typeof ConnectionTypeSchema.Type;
 
 export const ConnectionEntrySchema = Schema.Struct({
   url: url.annotate({ description: 'The https URL of the MCP server' }),
-  document: document.annotate({ description: 'The https URL of the OpenAPI document of the HTTP API' }),
+  document: document.annotate({
+    description:
+      "The https URL of the OpenAPI document of the HTTP API, where the service's own documentation states it",
+  }),
   base_url: base_url.annotate({
     description: "The https URL the API's calls go to, in place of its document's; required with document_text",
   }),

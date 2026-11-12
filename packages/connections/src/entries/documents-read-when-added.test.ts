@@ -42,8 +42,16 @@ async function noneRecordedAfter(h: Harness, input: unknown): Promise<Outcome> {
   return outcome;
 }
 
-function refusedAt(pointer: string, detail: string): readonly [{ readonly pointer: string; readonly detail: string }] {
-  return [{ pointer, detail }];
+const whereTheDocumentComesFrom = {
+  pointer: '/entry/document',
+  detail:
+    "Give document only where the service's own documentation states that address; otherwise write the OpenAPI document from that documentation, describing the calls the job needs, and give it in document_text, with base_url",
+} as const;
+
+function refusedAt(pointer: string, detail: string): readonly { readonly pointer: string; readonly detail: string }[] {
+  return pointer === whereTheDocumentComesFrom.pointer
+    ? [{ pointer, detail }, whereTheDocumentComesFrom]
+    : [{ pointer, detail }];
 }
 
 describe('an HTTP API given by hand the address of its document', () => {

@@ -7,6 +7,13 @@ import { securityProblemsOf, type Presented, type SecuredEntry } from './securit
 
 const key = Redacted.make('billing-api-key-7c1d4e9a');
 
+function givenByTheEntry(header: string) {
+  return {
+    because: `it needs the header ${header}, which a function cannot send; the headers of the entry can give it`,
+    header,
+  };
+}
+
 const schemes: Schema.JsonObject = {
   headerKey: { type: 'apiKey', in: 'header', name: 'X-Api-Key' },
   queryKey: { type: 'apiKey', in: 'query', name: 'api_key' },
@@ -111,10 +118,7 @@ describe('a header an operation of an HTTP API needs, which its security places'
     };
 
     expect(credentialsOf(paths, presented(['bearer'])).leftOut).toEqual([
-      {
-        operation: 'b (GET /b)',
-        because: 'it needs the header x-api-key, which a function cannot send; the headers of the entry can give it',
-      },
+      { operation: 'b (GET /b)', ...givenByTheEntry('x-api-key') },
     ]);
   });
 
@@ -148,10 +152,7 @@ describe('the headers an operation of an HTTP API needs beyond what its security
     expect(credentialsOf(paths, presented(['headerKey', 'bearer']))).toEqual({
       offered: [['a', [{ kind: 'header', name: 'X-Api-Key', value: key }]]],
       leftOut: [
-        {
-          operation: 'b (GET /b)',
-          because: 'it needs the header X-Tenant, which a function cannot send; the headers of the entry can give it',
-        },
+        { operation: 'b (GET /b)', ...givenByTheEntry('X-Tenant') },
         {
           operation: 'c (GET /c)',
           because:

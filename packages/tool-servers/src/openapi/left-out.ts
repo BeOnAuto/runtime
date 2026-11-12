@@ -92,31 +92,31 @@ function isUnsent(parameter: Parameter, sentHeaders: ReadonlySet<string>): boole
   );
 }
 
-function unsentWords({ in: place, name }: Parameter): string {
+export interface LeftOutReason {
+  readonly because: string;
+  readonly header?: string;
+}
+
+function unsentReasonOf({ in: place, name }: Parameter): LeftOutReason {
   if (place === 'cookie') {
-    return `it needs the cookie ${name}, which a function cannot send`;
+    return { because: `it needs the cookie ${name}, which a function cannot send` };
   }
   return runtimeHeaders.has(name.toLowerCase())
-    ? `it needs the header ${name}, which the runtime sets itself and neither a function nor the headers of the entry can give`
-    : `it needs the header ${name}, which a function cannot send; the headers of the entry can give it`;
+    ? {
+        because: `it needs the header ${name}, which the runtime sets itself and neither a function nor the headers of the entry can give`,
+      }
+    : {
+        because: `it needs the header ${name}, which a function cannot send; the headers of the entry can give it`,
+        header: name,
+      };
 }
 
-function neededBecause(sent: readonly Parameter[], sentHeaders: ReadonlySet<string>): string | undefined {
+function neededReasonOf(sent: readonly Parameter[], sentHeaders: ReadonlySet<string>): LeftOutReason | undefined {
   const needed = sent.find((each) => isUnsent(each, sentHeaders));
-  return needed === undefined ? undefined : unsentWords(needed);
+  return needed === undefined ? undefined : unsentReasonOf(needed);
 }
 
-export function leftOutBecause(
-  method: Method,
-  parameters: readonly Placed<Parameter>[],
-  body: BodyOf,
-  { components, sentHeaders }: OperationContext,
-): string | undefined {
-  const sent = parameters.map(({ value }) => value);
-  const unsendable = methodBecause(method, body) ?? serializedBecause(sent) ?? neededBecause(sent, sentHeaders);
-  if (unsendable !== undefined) {
-    return unsendable;
-  }
+function becauseOf(sent: readonly Parameter[], body: BodyOf, components: Components): string | undefined {
   const objectQuery = sent.find((each) => each.in === 'query' && isObjectSchema(each.schema, components));
   if (objectQuery !== undefined) {
     return `its query parameter ${objectQuery.name} is an object, which a call does not send in a query`;
@@ -130,4 +130,19 @@ export function leftOutBecause(
   ];
   const shared = sharedNameOf(inputs);
   return shared === undefined ? undefined : `two of its inputs are named ${shared}`;
+}
+
+export function leftOutReasonOf(
+  method: Method,
+  parameters: readonly Placed<Parameter>[],
+  body: BodyOf,
+  { components, sentHeaders }: OperationContext,
+): LeftOutReason | undefined {
+  const sent = parameters.map(({ value }) => value);
+  const unsendable = methodBecause(method, body) ?? serializedBecause(sent);
+  if (unsendable !== undefined) {
+    return { because: unsendable };
+  }
+  const because = becauseOf(sent, body, components);
+  return neededReasonOf(sent, sentHeaders) ?? (because === undefined ? undefined : { because });
 }

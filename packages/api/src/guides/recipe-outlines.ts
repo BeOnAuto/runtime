@@ -26,6 +26,7 @@ export const outlines: readonly RecipeOutline[] = [
       'add_connection',
       'list_connections',
       'reconnect_connection',
+      'remove_connection',
       'query_connection',
       'execute_connection',
     ],

@@ -77,16 +77,14 @@ const AddedCredentialSchema = Schema.Struct({
   ),
   instructions: Schema.optionalKey(
     keyFields.instructions(
-      'For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://acme.example/keys) as an Admin, with read access. It starts with `acme_`.',
+      'For secret, Markdown without HTML the page shows the person: where the key is made, with a link, the plan or role and permissions it needs, and its format, as: Make a key under [Settings, API keys](https://app.example/keys) as an Admin, with read access. It is 40 characters.',
     ),
   ),
   key_page: Schema.optionalKey(keyFields.key_page('For secret, the https page where the person makes the key')),
-  example: Schema.optionalKey(
-    keyFields.example('For secret, the key with … in place of its characters, such as acme_…'),
-  ),
+  example: Schema.optionalKey(keyFields.example('For secret, the key with … in place of its characters')),
   pattern: Schema.optionalKey(
     keyFields.pattern(
-      'For secret, the regular expression from ^ to $ the key matches, such as ^acme_\\w+$; a key that misses it is kept',
+      'For secret, the regular expression from ^ to $ the key matches, from its documentation; a key that misses it is kept',
     ),
   ),
 }).annotate({ description: credentialDescription });

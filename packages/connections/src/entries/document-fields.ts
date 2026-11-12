@@ -13,7 +13,7 @@ export const AddedEntrySchema = Schema.Struct({
   ...ConnectionEntrySchema.fields,
   document_text: Schema.optionalKey(
     Schema.String.annotate({
-      description: `The OpenAPI document itself, version 3.0 or 3.1, as JSON or YAML of at most ${mostDocumentTextBytes.toLocaleString('en-US')} bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret`,
+      description: `The OpenAPI document itself, written from the service's documentation for the calls the job needs: version 3.0 or 3.1, JSON or YAML of at most ${mostDocumentTextBytes.toLocaleString('en-US')} bytes, in place of document; its calls go to base_url alone, never to an address inside it; never a secret`,
     }),
   ),
 }).annotate({ description: 'The tool server, without its credential' });

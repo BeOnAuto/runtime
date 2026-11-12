@@ -26,7 +26,7 @@ import {
 import { keepsItsSegments } from './api-requests.ts';
 import { documentBounds } from './document-reading.ts';
 import { bytesOf, componentsOf, inputSchemaOf, oversizedBecause, type Components } from './input-schemas.ts';
-import { leftOutBecause, requiredHeadersOf } from './left-out.ts';
+import { leftOutReasonOf, requiredHeadersOf, type LeftOutReason } from './left-out.ts';
 import { headersPlacedBy, requirementOf, type Placement, type Presented } from './security-schemes.ts';
 
 interface PathInput {
@@ -52,9 +52,8 @@ export interface ApiOperation {
   readonly answers: AnswerSchemas;
 }
 
-export interface LeftOutOperation {
+export interface LeftOutOperation extends LeftOutReason {
   readonly operation: string;
-  readonly because: string;
 }
 
 export interface DerivedTools {
@@ -161,8 +160,8 @@ function offeredOf(located: Located, inputSchema: Schema.JsonObject, sent: Sent)
   };
 }
 
-function leftOut(located: Located, because: string): Derived {
-  return { kind: 'left_out', leftOut: { operation: namedOperation(located), because } };
+function leftOut(located: Located, reason: LeftOutReason): Derived {
+  return { kind: 'left_out', leftOut: { operation: namedOperation(located), ...reason } };
 }
 
 function derivedAt(read: ReadDocument, { components, presented }: Context, located: Located): Deriving<Derived> {
@@ -177,15 +176,15 @@ function derivedAt(read: ReadDocument, { components, presented }: Context, locat
   const unnamed = requiredHeadersOf(parameters.success).filter((header) => !presented.headers.has(header));
   const requirement = requirementOf(read.document, located.operation.value, presented, new Set(unnamed));
   const placed = headersPlacedBy(requirement).map((name) => name.toLowerCase());
-  const because = leftOutBecause(located.method, parameters.success, body.success, {
+  const reason = leftOutReasonOf(located.method, parameters.success, body.success, {
     components,
     sentHeaders: new Set([...presented.headers, ...placed]),
   });
-  if (because !== undefined) {
-    return Result.succeed(leftOut(located, because));
+  if (reason !== undefined) {
+    return Result.succeed(leftOut(located, reason));
   }
   if (requirement.kind === 'unmet') {
-    return Result.succeed(leftOut(located, requirement.because));
+    return Result.succeed(leftOut(located, { because: requirement.because }));
   }
   const answers = answersOf(read, located.operation, components.definitions);
   const sent = { parameters: parameters.success, body: body.success, credentials: requirement.placements, answers };
@@ -193,7 +192,7 @@ function derivedAt(read: ReadDocument, { components, presented }: Context, locat
     const oversized = oversizedBecause(inputSchema);
     return oversized === undefined
       ? { kind: 'offered', offered: offeredOf(located, inputSchema.schema, sent) }
-      : leftOut(located, oversized);
+      : leftOut(located, { because: oversized });
   });
 }
 
