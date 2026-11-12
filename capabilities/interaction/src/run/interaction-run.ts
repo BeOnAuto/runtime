@@ -33,10 +33,15 @@ function answeringOf(
   }));
 }
 
+interface ProvidedPart {
+  readonly provider?: string;
+  readonly part?: ConversationTools;
+}
+
 function requestOf(
   document: RequestDocument,
   input: Schema.Json,
-  part?: ConversationTools,
+  { provider, part }: ProvidedPart = {},
 ): Effect.Effect<RequestRecord, Conflict | InvalidInput> {
   return Effect.gen(function* () {
     const at = yield* Clock.currentTimeMillis;
@@ -60,6 +65,7 @@ function requestOf(
       ...(route?.replies === undefined
         ? {}
         : { replies: route.replies, tell: resolvedTelling(route.deliver, route.replies, part) }),
+      ...(provider === undefined ? {} : { provider }),
     };
   });
 }
@@ -68,14 +74,17 @@ function partOf(
   ports: InteractionPorts,
   playbook: PlaybookAddress,
   { route }: RequestDocument,
-): Effect.Effect<ConversationTools | undefined> {
+): Effect.Effect<ProvidedPart> {
   if (route?.replies === undefined) {
-    return Effect.undefined;
+    return Effect.succeed({});
   }
   const { server } = route.deliver;
-  return Effect.flatMap(ports.tools.listServers(playbook, server), (servers) =>
-    ports.conversationsOf(servers.find(({ name }) => name === server)?.provider ?? null),
-  );
+  return Effect.gen(function* () {
+    const servers = yield* ports.tools.listServers(playbook, server);
+    const provider = servers.find(({ name }) => name === server)?.provider ?? undefined;
+    const part = yield* ports.conversationsOf(provider ?? null);
+    return { ...(provider === undefined ? {} : { provider }), ...(part === undefined ? {} : { part }) };
+  });
 }
 
 export function asksLater(document: RequestDocument): boolean {

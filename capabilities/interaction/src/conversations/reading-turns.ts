@@ -4,15 +4,19 @@ import { Clock, Effect } from 'effect';
 import { readingsOfTheTurn, roomForACall } from '../readings/turn-readings.ts';
 import { turnRead, type TurnDone } from '../readings/turn-reads.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
-import { replyWaitMsOf } from './cadence.ts';
+import { readFloorMsOf } from './cadence.ts';
 import { advanced, cadenceOf, resting, type ConversationParts, type ConversationPlace } from './conversation-parts.ts';
-import type { Cadence } from './conversation-rows.ts';
+import { isWoken, type Cadence } from './conversation-rows.ts';
 import { openInConversation, type OpenInConversation } from './open-in-conversation.ts';
 import { cadenceAfter } from './read-cadence.ts';
 
 interface ReadEnd {
   readonly floorMs: number;
   readonly now: number;
+}
+
+function keepsTheTimer(place: ConversationPlace, done: TurnDone, open: boolean): boolean {
+  return open && isWoken(place.row) && !done.state.foundAnswerer && done.retryAfterMs === null;
 }
 
 function cadenceAfterTurn(
@@ -24,10 +28,14 @@ function cadenceAfterTurn(
   if (done.nothingSent) {
     return { ...resting(place), next_reading: done.nextReading };
   }
+  const open = more || kept.some(({ runId }) => !done.state.answered.has(runId));
+  if (keepsTheTimer(place, done, open)) {
+    return { ...cadenceOf(place), open, next_reading: done.nextReading, waited_after: done.waitedAfter };
+  }
   return cadenceAfter(place.row, {
     now,
     floorMs,
-    open: more || kept.some(({ runId }) => !done.state.answered.has(runId)),
+    open,
     foundAnswerer: done.state.foundAnswerer,
     retryAfterMs: done.retryAfterMs,
     waitedAfter: done.waitedAfter,
@@ -42,7 +50,8 @@ export function readNow(parts: ConversationParts, place: ConversationPlace, now:
     if (oldest === undefined) {
       return yield* advanced(parts, place, resting(place));
     }
-    const floorMs = replyWaitMsOf(routeOfRequest(oldest).replies);
+    const route = routeOfRequest(oldest);
+    const floorMs = readFloorMsOf(route.replies, route.telling.readLimit);
     const firstRead = place.row.active_at + floorMs;
     if (place.row.reads === 0 && now < firstRead) {
       return yield* advanced(parts, place, { ...cadenceOf(place), open: true, next_read_at: firstRead });

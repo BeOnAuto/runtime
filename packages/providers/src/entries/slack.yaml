@@ -28,6 +28,38 @@ conversations:
         channel: '{{ sent.conversation }}'
         timestamp: '{{ reply.id }}'
         name: white_check_mark
+  read_limit:
+    quota: 1
+    window_seconds: 60
+    clients: [auto]
+events:
+  destinations:
+    - type: webhook
+      per: app
+      verify:
+        scheme: hmac
+        secret: app
+        hash: sha256
+        signed_payload: 'v0:{timestamp}:{payload}'
+        signature: $request.header.X-Slack-Signature
+        prefix: v0=
+        encoding: hex
+        timestamp: $request.header.X-Slack-Request-Timestamp
+      handshake:
+        when:
+          $request.body#/type: [url_verification]
+        challenge: $request.body#/challenge
+        response:
+          challenge: challenge
+        signed: true
+      wake:
+        when:
+          $request.body#/type: [event_callback]
+          $request.body#/event/type: [message]
+        conversation: $request.body#/event/channel
+        automatic: $request.body#/event/bot_id
+      connection:
+        account: $request.body#/team_id
 credentials:
   - kind: authorization
     issuer: https://mcp.slack.com

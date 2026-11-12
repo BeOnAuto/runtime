@@ -1,5 +1,6 @@
 import type { RenderClock } from '@on.auto/definitions/template';
 import { pointerIssues, templatesIssues, type TemplateSet } from '@on.auto/definitions/tool-blocks';
+import { ClientSourceSchema } from '@on.auto/tool-servers';
 import { isToolName, toolNameShape } from '@on.auto/tool-servers/policy';
 import { JsonPointer, Schema } from 'effect';
 
@@ -28,6 +29,24 @@ const ReactSchema = Schema.Struct({
   with: ArgumentsSchema.annotate({ description: `Its arguments, ${writtenAsDeliverIs}` }),
 });
 
+const ReadLimitSchema = Schema.Struct({
+  quota: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)).annotate({
+    description: 'The most reads of a conversation the service takes in one window',
+  }),
+  window_seconds: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1), Schema.isLessThanOrEqualTo(86_400)).annotate({
+    description: 'The window, in seconds, from 1 to 86400',
+  }),
+  clients: Schema.optionalKey(
+    Schema.Array(ClientSourceSchema).check(Schema.isMinLength(1)).annotate({
+      description:
+        'The client sources whose connections the service limits so, where it limits some apps and not others; left out, every connection',
+    }),
+  ),
+}).annotate({
+  description:
+    "How often the service lets the replies of a conversation be read, as a rate limit's quota and window: at most quota reads in each window. The runtime reads a conversation no sooner than the window divided by the quota after its last read, on its timer and when the service tells it of a message alike",
+});
+
 export const ConversationsSchema = Schema.Struct({
   tell: Schema.Literals(['all', 'refusals']).annotate({
     description:
@@ -35,6 +54,7 @@ export const ConversationsSchema = Schema.Struct({
   }),
   reply: ReplySchema.annotate({ description: 'How a line is posted in reply to a person' }),
   react: Schema.optionalKey(ReactSchema.annotate({ description: "How a person's message is marked" })),
+  read_limit: Schema.optionalKey(ReadLimitSchema),
   automatic: Schema.optionalKey(
     Schema.String.annotate({
       description:

@@ -60,6 +60,21 @@ describe('the telling a request is asked with', () => {
   });
 });
 
+describe('the read limit a request keeps', () => {
+  it('is the provider’s quota and window, whatever the function tells, and none where the provider declares none', () => {
+    const limited = { ...chatConversations, read_limit: { quota: 1, window_seconds: 60 } };
+    const readLimit = { quota: 1, windowSeconds: 60 };
+
+    expect([
+      resolvedTelling(deliver, replies, limited).readLimit,
+      resolvedTelling(deliver, { ...replies, tell: 'none' }, limited).readLimit,
+      resolvedTelling(deliver, { ...replies, tell: ownLine }, limited).readLimit,
+      resolvedTelling(deliver, replies, chatConversations).readLimit,
+      resolvedTelling(deliver, replies).readLimit,
+    ]).toEqual([readLimit, readLimit, readLimit, undefined, undefined]);
+  });
+});
+
 describe('the telling of a request asked before a request kept one', () => {
   it('is its own tell block for refusals alone, or nothing where it wrote none', () => {
     expect([

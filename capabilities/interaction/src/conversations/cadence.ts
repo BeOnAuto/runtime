@@ -1,5 +1,6 @@
 import { readDuration } from '@on.auto/workflow-engine/dsl';
 
+import type { ReadLimit } from '../tellings/telling-routes.ts';
 import type { Replies } from '../tool-blocks/tool-block-schemas.ts';
 
 export const firstReadWaitMs = 5000;
@@ -37,4 +38,9 @@ export function waitBefore({ read, floorMs, retryAfterMs }: NextWait): number {
 export function replyWaitMsOf({ wait }: Pick<Replies, 'wait'>): number {
   const reading = wait === undefined ? undefined : readDuration(wait);
   return reading !== undefined && 'milliseconds' in reading ? reading.milliseconds : firstReadWaitMs;
+}
+
+export function readFloorMsOf(replies: Pick<Replies, 'wait'>, limit: ReadLimit | undefined): number {
+  const apartMs = limit === undefined ? 0 : Math.ceil((limit.windowSeconds * 1000) / limit.quota);
+  return Math.max(replyWaitMsOf(replies), apartMs);
 }

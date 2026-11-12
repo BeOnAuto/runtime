@@ -71,3 +71,25 @@ describe('the conversations part of an entry', () => {
     ]);
   });
 });
+
+describe('the read limit of a conversations part', () => {
+  it('takes a read limit of a quota and a window, and refuses one of no reads, no window or a window past a day', () => {
+    expect([
+      partProblems({ tell: 'all', reply, read_limit: { quota: 1, window_seconds: 60 } }),
+      partProblems({ tell: 'all', reply, read_limit: { quota: 0, window_seconds: 0 } }),
+      partProblems({ tell: 'all', reply, read_limit: { quota: 1.5, window_seconds: 86_401 } }),
+      partProblems({ tell: 'all', reply, read_limit: { quota: 1, window_seconds: 60, clients: [] } }),
+    ]).toEqual([
+      [],
+      [
+        ['/conversations/read_limit/quota', 'Expected a value greater than or equal to 1'],
+        ['/conversations/read_limit/window_seconds', 'Expected a value greater than or equal to 1'],
+      ],
+      [
+        ['/conversations/read_limit/quota', 'Expected an integer'],
+        ['/conversations/read_limit/window_seconds', 'Expected a value less than or equal to 86400'],
+      ],
+      [['/conversations/read_limit/clients', 'Expected a value with a length of at least 1']],
+    ]);
+  });
+});

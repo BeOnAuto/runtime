@@ -655,6 +655,34 @@
                     "additionalProperties": false,
                     "description": "How a person's message is marked"
                   },
+                  "read_limit": {
+                    "type": "object",
+                    "properties": {
+                      "quota": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "The most reads of a conversation the service takes in one window"
+                      },
+                      "window_seconds": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 86400,
+                        "description": "The window, in seconds, from 1 to 86400"
+                      },
+                      "clients": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "enum": ["registered", "auto", "metadata_document", "dynamic", "own"]
+                        },
+                        "minItems": 1,
+                        "description": "The client sources whose connections the service limits so, where it limits some apps and not others; left out, every connection"
+                      }
+                    },
+                    "required": ["quota", "window_seconds"],
+                    "additionalProperties": false,
+                    "description": "How often the service lets the replies of a conversation be read, as a rate limit's quota and window: at most quota reads in each window. The runtime reads a conversation no sooner than the window divided by the quota after its last read, on its timer and when the service tells it of a message alike"
+                  },
                   "automatic": {
                     "type": "string",
                     "description": "A JSON Pointer within a message the reading tool lists, to what it holds only when an app posted it or it was sent automatically; such a message is passed over, never taken, refused or answered"

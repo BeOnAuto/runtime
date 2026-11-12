@@ -1,7 +1,7 @@
 import type { PlaybookAddress, ProjectedKeyedRow, ProjectionAdvancer, ProjectionReader } from '@on.auto/operations';
 import { Effect } from 'effect';
 
-import { replyWaitMsOf } from '../conversations/cadence.ts';
+import { readFloorMsOf } from '../conversations/cadence.ts';
 import { conversationRowFrom, conversationsName } from '../conversations/conversation-rows.ts';
 import { openInConversation } from '../conversations/open-in-conversation.ts';
 import { routeOfRequest } from '../replies/request-routes.ts';
@@ -91,8 +91,10 @@ function broughtForward(parts: WakeParts, playbook: PlaybookAddress, waiting: Wa
     if (oldest === undefined) {
       return;
     }
-    const dueAt = now + replyWaitMsOf(routeOfRequest(oldest).replies);
-    if (dueAt < waiting.dueAt) {
+    const route = routeOfRequest(oldest);
+    const floorMs = readFloorMsOf(route.replies, route.telling.readLimit);
+    const dueAt = now + floorMs;
+    if (dueAt < waiting.dueAt && dueAt + floorMs <= waiting.nextReadAt) {
       yield* parts.ledger.advanceRow(conversationsName, playbook, waiting.key, {
         set: { due_at: dueAt },
         when: [

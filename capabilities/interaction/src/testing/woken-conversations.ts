@@ -23,6 +23,7 @@ export async function readOnce(runId: string): Promise<ReadOnce> {
   await playbook.askInThread(runId);
   await playbook.performDue(Date.now());
   await playbook.performReads(Date.now() + farAhead);
+  await playbook.performReads(Date.now() + 2 * farAhead);
   const readAt = Date.now();
   const wake = connectionWake({ ledger: playbook.ledger.service });
   const [thread] = playbook.chat.posted().map(({ ts }) => ts);

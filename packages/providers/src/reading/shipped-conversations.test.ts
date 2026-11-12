@@ -2,7 +2,16 @@ import { shippedFilesOnDisk } from '@on.auto/shipped-files/on-disk';
 import { Option, Result, Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { conversationsOf, providersShippedRoots, readProviders, type Conversations, type Provider } from '../index.ts';
+import { ProviderEntrySchema } from '../entry/provider-entry.ts';
+import {
+  conversationsOf,
+  joinedProviders,
+  providersShippedRoots,
+  readProviders,
+  type Conversations,
+  type Provider,
+} from '../index.ts';
+import { tracker } from '../testing/index.ts';
 
 const shipped = Result.getOrThrow(await readProviders(shippedFilesOnDisk(providersShippedRoots())));
 
@@ -93,6 +102,46 @@ describe('the conversations parts of the shipped providers', () => {
       undefined,
       undefined,
       undefined,
+    ]);
+  });
+});
+
+describe('the read limits of the shipped providers', () => {
+  it('limit the reads of Slack as the person, through the clients Auto lends, to one a minute, as Slack limits an app outside its Marketplace', () => {
+    expect(declaring.map(({ entry }) => [entry.name, entry.conversations?.read_limit])).toEqual([
+      ['microsoft-teams', undefined],
+      ['slack', { quota: 1, window_seconds: 60, clients: ['auto'] }],
+      ['slack-bot', undefined],
+    ]);
+  });
+
+  it('are answered with the part for a connection signed in through a client they name, and left out for any other', () => {
+    expect([
+      conversationsOf(shipped, 'slack', 'auto')?.read_limit,
+      conversationsOf(shipped, 'slack', 'registered')?.read_limit,
+      conversationsOf(shipped, 'slack')?.read_limit,
+      conversationsOf(shipped, 'slack', 'registered')?.reply.tool,
+    ]).toEqual([{ quota: 1, window_seconds: 60, clients: ['auto'] }, undefined, undefined, 'chat_postMessage']);
+  });
+
+  it('are answered for every client where they name none', () => {
+    const chat = Schema.decodeUnknownSync(ProviderEntrySchema)({
+      ...tracker,
+      name: 'team-chat',
+      conversations: {
+        tell: 'all',
+        reply: { tool: 'post_message', with: { text: '{{ message }}' }, sent: '/ts' },
+        read_limit: { quota: 2, window_seconds: 10 },
+      },
+    });
+    const limited = joinedProviders(shipped, [chat]);
+
+    expect([
+      conversationsOf(limited, 'team-chat')?.read_limit,
+      conversationsOf(limited, 'team-chat', 'own')?.read_limit,
+    ]).toEqual([
+      { quota: 2, window_seconds: 10 },
+      { quota: 2, window_seconds: 10 },
     ]);
   });
 });

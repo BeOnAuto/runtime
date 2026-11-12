@@ -20,13 +20,18 @@ const LineSchema = Schema.Struct({
 
 const MarkSchema = Schema.Struct({ tool: Schema.String, with: Templates });
 
+const ReadLimitSchema = Schema.Struct({ quota: Schema.Int, windowSeconds: Schema.Int });
+
 export const TellingRouteSchema = Schema.Struct({
   when: Schema.Literals(tellWords),
   line: Schema.optionalKey(LineSchema),
   mark: Schema.optionalKey(MarkSchema),
   automatic: Schema.optionalKey(Schema.String),
   tellsOthers: Schema.optionalKey(Schema.Boolean),
+  readLimit: Schema.optionalKey(ReadLimitSchema),
 });
+
+export type ReadLimit = typeof ReadLimitSchema.Type;
 
 export type TellingRoute = typeof TellingRouteSchema.Type;
 
@@ -41,6 +46,7 @@ export interface ConversationTools {
   };
   readonly react?: { readonly tool: string; readonly with: Readonly<Record<string, Schema.Json>> };
   readonly automatic?: string;
+  readonly read_limit?: { readonly quota: number; readonly window_seconds: number };
 }
 
 export type ConversationsOf = (provider: string | null) => Effect.Effect<ConversationTools | undefined>;
@@ -61,14 +67,20 @@ function lineOf(block: TellBlock, { tool: delivering, sent: pointers }: Deliveri
   };
 }
 
-function passedOverBy(part: ConversationTools | undefined): Pick<TellingRoute, 'automatic'> {
-  return part?.automatic === undefined ? {} : { automatic: part.automatic };
+function readAs(part: ConversationTools | undefined): Pick<TellingRoute, 'automatic' | 'readLimit'> {
+  const limit = part?.read_limit;
+  return {
+    ...(part?.automatic === undefined ? {} : { automatic: part.automatic }),
+    ...(limit === undefined ? {} : { readLimit: { quota: limit.quota, windowSeconds: limit.window_seconds } }),
+  };
 }
 
-function ofTheProvider(part: ConversationTools | undefined): Pick<TellingRoute, 'mark' | 'automatic' | 'tellsOthers'> {
+function ofTheProvider(
+  part: ConversationTools | undefined,
+): Pick<TellingRoute, 'mark' | 'automatic' | 'readLimit' | 'tellsOthers'> {
   return {
     ...(part?.react === undefined ? {} : { mark: part.react }),
-    ...passedOverBy(part),
+    ...readAs(part),
     ...(part?.tell === 'all' ? { tellsOthers: true } : {}),
   };
 }
@@ -76,7 +88,7 @@ function ofTheProvider(part: ConversationTools | undefined): Pick<TellingRoute, 
 export function resolvedTelling(deliver: DeliverBlock, replies: Replies, part?: ConversationTools): TellingRoute {
   const { tell } = replies;
   if (tell === 'none') {
-    return { ...toldNothing, ...passedOverBy(part) };
+    return { ...toldNothing, ...readAs(part) };
   }
   if (typeof tell === 'object') {
     const line = lineOf(tell, deliver);

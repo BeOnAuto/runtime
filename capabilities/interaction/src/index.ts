@@ -2,6 +2,13 @@ export type { ConversationLedger, ConversationParts } from './conversations/conv
 export { conversations, conversationsName } from './conversations/conversation-rows.ts';
 export { conversationsDue } from './conversations/conversations-due.ts';
 export { connectionWake, type ConnectionWake, type WakeParts, type WokenConnection } from './wakes/connection-wakes.ts';
+export {
+  requestPlaceFacts,
+  requestPlaceOf,
+  type PlaceParts,
+  type RequestPlace,
+  type WaitingPlace,
+} from './wakes/request-places.ts';
 export type { InteractionFunctionDefinitionDocument } from './document/interaction-document.ts';
 export { requestsDue, type RequestsDue } from './schedule/due-requests.ts';
 export type { DeliveryParts } from './schedule/delivery-parts.ts';

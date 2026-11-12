@@ -74,14 +74,14 @@ describe('a wake and the timed read of the same conversation', () => {
     expect(await recordsOf(waiting.playbook.ledger, 'request_answered')).toHaveLength(1);
   });
 
-  it('leave the conversation as it is where the timed read is due sooner, and that read says no wake caused it', async () => {
+  it('leave the conversation as it is where the timed read is due within the shortest wait of the woken one, and that read says no wake caused it', async () => {
     const waiting = await readOnce(runId);
     const before = await waiting.row();
     waiting.approve();
 
-    await waiting.wake(waiting.readAt + 2 * fiveSeconds);
+    await waiting.wake(waiting.readAt + 2 * fiveSeconds + 2000);
     const after = await waiting.row();
-    await waiting.playbook.performReads(waiting.readAt + 2 * fiveSeconds);
+    await waiting.playbook.performReads(waiting.readAt + 4 * fiveSeconds);
     const [read] = await recordsOf(waiting.playbook.ledger, 'replies_read');
 
     expect(after).toEqual(before);

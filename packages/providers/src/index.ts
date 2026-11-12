@@ -23,6 +23,7 @@ export { isPinnableTemplate, pinnedTemplateShape } from './entry/entry-values.ts
 export { ConversationsSchema, conversationTemplates, type Conversations } from './entry/conversation-parts.ts';
 export {
   conversationsOf,
+  eventDestinationOf,
   documentServerOf,
   joinedProviders,
   providerNamed,
