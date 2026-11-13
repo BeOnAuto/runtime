@@ -39,6 +39,7 @@ export {
   type ToolAnnotations,
   type ToolMark,
 } from './bounds/tool-results.ts';
+export { rendersDescription } from './listing/card-words.ts';
 export { markedTool } from './listing/tool-marks.ts';
 export { allowsTool } from './names/tool-reference.ts';
 export type { NamingCheck } from './org-servers/org-naming.ts';

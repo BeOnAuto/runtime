@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import { connectOf, studioBaseFor } from '../links/connect-page.ts';
 import { adderRefusalOf } from '../policy/policy-rules.ts';
 import { admittedAdditionOf } from './admitted-additions.ts';
-import { AddedSchema, AdditionSchema } from './connection-fields.ts';
+import { AddedSchema, AdditionSchema, rendersFieldOf } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { addedWordsOf, additionAttempted, linkOffering } from './connection-words.ts';
 import { additionLinkIssuedFor } from './more-asked.ts';
@@ -55,7 +55,12 @@ export function defineAddConnection({
       const { token, ...link } = yield* additionLinkIssuedFor(given, input.more, { ...serving, pages });
       const kept = yield* recordedAdditionOf(given, link);
       const connect = connectOf(pages, { org, connection: kept.connection.id, token }, link.expires_at);
-      return { ...kept.connection, credential_ends_with: null, connect };
+      return {
+        ...kept.connection,
+        credential_ends_with: null,
+        ...rendersFieldOf(serving.providers, kept.connection.provider),
+        connect,
+      };
     }),
     plainLanguage: {
       task: 'add a connection',

@@ -6,21 +6,10 @@ import type { ReadonlyDeep } from './readonly-deep.ts';
 import { attempted } from './render-failures.ts';
 import type { RenderedMessage, RenderState } from './rendered-message.ts';
 import { slackMessageOfCard } from './slack-cards.ts';
+import { slackLimits } from './slack-limits.ts';
 import { isList, isRecord } from './written-values.ts';
 
 type WrittenCard = Parameters<typeof toCard>[0];
-
-const slackLimits = {
-  tables: 1,
-  charts: 2,
-  fields: 10,
-  tableRows: 100,
-  tableColumns: 20,
-  chartLabel: 20,
-  chartTitle: 50,
-  chartSeries: 12,
-  chartPoints: 20,
-};
 
 function isElement(value: unknown): boolean {
   if (!isRecord(value) || typeof value['type'] !== 'string') {

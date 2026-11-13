@@ -27,6 +27,7 @@ export {
   documentServerOf,
   joinedProviders,
   providerNamed,
+  rendersOf,
   type Provider,
   type ProviderList,
 } from './reading/provider-list.ts';

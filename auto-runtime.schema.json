@@ -692,6 +692,11 @@
                 "additionalProperties": false,
                 "description": "How the provider's conversations are replied to and marked, for a function that asks a person through it and reads their replies"
               },
+              "renders": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The name of the render target a message sent through the provider can be written for, where it can be a card the run turns into the layout the provider shows"
+              },
               "events": {
                 "type": "object",
                 "properties": {

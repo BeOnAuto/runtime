@@ -113,25 +113,25 @@ const listings: readonly Listing[] = [
   {
     endpoint: 'own org',
     path: '/mcp',
-    most: 64_100,
+    most: 64_200,
     servingWith: (extra) => ({ operations: ownOrgToolsFilled(extra) }),
   },
   {
     endpoint: 'directory',
     path: '/directory',
-    most: 61_700,
+    most: 61_800,
     servingWith: (extra) => ({ operations: [], directoryOperations: ownOrgToolsFilled(extra) }),
   },
   {
     endpoint: 'org',
     path: '/orgs/acme/mcp',
-    most: 24_200,
+    most: 24_300,
     servingWith: (extra) => ({ operations: orgToolsFilled(14, extra, longestArgument) }),
   },
   {
     endpoint: 'playbook',
     path: '/orgs/acme/playbooks/alpha/mcp',
-    most: 42_400,
+    most: 42_500,
     servingWith: (extra) => ({ operations: playbookToolsFilled(32, extra, longestArgument) }),
   },
 ];

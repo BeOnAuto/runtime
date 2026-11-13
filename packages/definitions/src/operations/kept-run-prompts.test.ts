@@ -1,4 +1,5 @@
-import { Effect } from 'effect';
+import { PayloadOffloading } from '@on.auto/operations/payloads';
+import { Effect, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { acmeAdmin, recordedAdmin } from '../testing/callers.ts';
@@ -107,5 +108,30 @@ describe('a run whose prompt its playbook keeps outside the run', () => {
 
     expect(answered).toMatchObject({ status: 'succeeded', output: { ...succeeded, record: asStored } });
     expect(answered).not.toHaveProperty('output.record.prompt');
+  });
+});
+
+function ranWith(record: Schema.JsonObject) {
+  return toAlpha(acmeAdmin, { type: 'prompted', name: 'ask', input: { record }, run_id: runId });
+}
+
+describe('a run whose prompt was kept outside it while its playbook kept large values outside', () => {
+  it('is read whole once the switch is off, so turning it off takes no prompt from the run', async () => {
+    const definitions = harness(admittingMeter, watchedStore().store);
+    await definitions.call(
+      createDefinition,
+      toAlpha(acmeAdmin, { type: 'prompted', name: 'ask', source: '{"greeting": "Hi"}' }),
+    );
+    await definitions.run(
+      definitions.dispatch(runDefinition, ranWith({ prompt })).pipe(Effect.provideService(PayloadOffloading, true)),
+    );
+
+    const read = await definitions.run(
+      definitions
+        .dispatch(getRun, toAlpha(acmeAdmin, { run_id: runId }))
+        .pipe(Effect.provideService(PayloadOffloading, false)),
+    );
+
+    expect(read).toMatchObject({ status: 'succeeded', output: { ...succeeded, record: { greeting: 'Hi', prompt } } });
   });
 });

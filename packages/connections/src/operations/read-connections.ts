@@ -3,7 +3,7 @@ import { Effect, Schema } from 'effect';
 
 import { ConnectionSchema } from '../registry/connection.ts';
 import { newestFirst, type KeptConnection } from '../registry/registry.ts';
-import { ConnectionIdField, GroupOfMoreSchema } from './connection-fields.ts';
+import { ConnectionIdField, GroupOfMoreSchema, RendersField } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { connectionsListed } from './connection-words.ts';
 import { moreOfferedTo } from './more-asked.ts';
@@ -14,6 +14,7 @@ type Reading = Pick<ConnectionServices, 'secrets' | 'providers' | 'consent' | 'p
 
 const ListedConnectionSchema = Schema.Struct({
   ...ConnectionSchema.fields,
+  renders: RendersField,
   more: Schema.Array(GroupOfMoreSchema).annotate({
     description:
       'The groups of scopes its way names that it does not hold and a client here can ask; empty where there is none',

@@ -20,8 +20,15 @@ function consideredOn({ tools }: AvailableServer, { only }: SearchAsked): readon
 }
 
 export function searchedServer(server: ToolServer, asked: SearchAsked): SearchedServer {
-  const { name, type, record_content, connection, provider } = server;
-  const fields = { name, type, record_content, ...(connection === undefined ? {} : { connection }), provider };
+  const { name, type, record_content, connection, provider, renders } = server;
+  const fields = {
+    name,
+    type,
+    record_content,
+    ...(connection === undefined ? {} : { connection }),
+    provider,
+    ...(renders === undefined ? {} : { renders }),
+  };
   return 'unavailable' in server
     ? { ...fields, unavailable: server.unavailable, because: server.because }
     : { ...fields, tool_count: consideredOn(server, asked).length };

@@ -666,7 +666,7 @@
       ]
     },
     {
-      "sha256": "6c0abdc412257e36c2aa08cff5c90a0cd05677050d7ec01db9441f8a731afdaf",
+      "sha256": "fa5a1f63e4acc3f5a27b1846f4ae4e62f1700e657b1d8096597e7e0d6cdf5466",
       "tier": 1,
       "received": [
         {
@@ -679,7 +679,7 @@
         }
       ],
       "lines": [
-        "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why. Each server names the playbooks it serves. With `terms` naming a service, `providers` lists those a person may connect that no server serves yet."
+        "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why; one that sends cards says so. Each server names the playbooks it serves. With `terms` naming a service, `providers` lists those a person may connect that no server serves yet."
       ]
     },
     {
@@ -3670,7 +3670,7 @@
       ]
     },
     {
-      "sha256": "e77e240ad0712057ed7be003552070049a1aa65d9224fa7012fc186e8f895c1c",
+      "sha256": "c76328c39ac9b79354f94287f6eed05862b47bbbc6fb808be9144af03833806c",
       "tier": 1,
       "received": [
         {
@@ -3682,11 +3682,11 @@
         }
       ],
       "lines": [
-        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow."
+        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow."
       ]
     },
     {
-      "sha256": "bf22e3e7592712b6cc9fe7055aa910cffe64ae774dab683b81c2b11584b19df2",
+      "sha256": "4b03afb3300d588b5de16e42f2739df75f91b32bb1248da6f51546c1a8e90dfb",
       "tier": 1,
       "received": [
         {
@@ -3700,7 +3700,7 @@
         }
       ],
       "lines": [
-        "The guide to read: start, terminology, a definition format, or a recipe for a common task"
+        "The guide to read: start, terminology, a definition format, a card format, or a recipe for a common task"
       ]
     },
     {
@@ -5174,7 +5174,7 @@
       ]
     },
     {
-      "sha256": "6a14f7421b119e39ca2cb731a9fafbdd5b6effabb522200cb3dcdde75b5d9487",
+      "sha256": "d4fa83cd0771cf66bfaf08e54b8e23e8c193d56e4a16f7c8e109fc2af65ce1be",
       "tier": 2,
       "received": [
         {
@@ -5259,6 +5259,8 @@
         "## Asking a person",
         "",
         "Where a person must approve or decide, ask once where they want to be asked: through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`. An interaction function makes the request and waits; answer_interaction answers one held for an agent, once the person says what to answer; the interaction-function guide says how.",
+        "",
+        "A message to a person can be a card with fields, a table, a chart and link buttons where its connection supports it, and the connection's tools say when it does.",
         ""
       ]
     },
@@ -5395,7 +5397,7 @@
       ]
     },
     {
-      "sha256": "cb991d33cdf8282c3d9018bf4fe4e742e16e9064e0a865b8cc4663324451454e",
+      "sha256": "171beee6d9094b558445904e02b6bf3e17fa1b388a53c6ecaee05bb2e7c09153",
       "tier": 3,
       "received": [
         {
@@ -5821,6 +5823,7 @@
         "",
         "- The output and the record may be at most 1 MiB together; see [Runs and results](https://on.auto/docs/reference/http#runs-and-results). When the prompt does not fit beside the answer, the record keeps the start of the instructions and of the message, and sets `truncated: true`.",
         "- The record contains no credentials. It also leaves out the provider options, which the definition already contains.",
+        "- A prompt of more than 16,384 bytes as JSON may be kept outside the run, in the playbook's stored content. `get_run` still answers `prompt`. Where it cannot read it, it answers `prompt_sha256` and `prompt_bytes`, its SHA-256 and its size, in its place, and the run is answered all the same. `get_event` shows the prompt beside its SHA-256 and size.",
         "- A run rejected after one of its model calls ended keeps a record with only `usage`, `duration_ms` and `cost_usd`, added up over the model calls that ended, and the playbook's analytics count its tokens. That holds for every ending: an answer that does not match the schema or is cut off, content the model refused, a model that kept calling tools in the last step, an answer too large for the 1 MiB, and a run stopped by a call's deadline, by its bound or by failing tool servers. A count the provider did not report is `null`.",
         "- A rejection that comes before any model call ended records no usage, since none is known.",
         "",
@@ -5937,7 +5940,7 @@
       ]
     },
     {
-      "sha256": "8e8f62b8ee4b9a3e266f630b069afa96380dc1328879a376eecb5e01ef424a96",
+      "sha256": "246518c4e3a4334363b6d3b827db5dde0e6e1570efdf0d41389d698c3d8763ea",
       "tier": 3,
       "received": [
         {
@@ -5962,6 +5965,8 @@
         "| Asks an agent | Renders the same request and holds it for an agent, `deliver: agent`, which reads it with `list_interactions` and answers it with `answer_interaction` | The same, answered by the person in a conversation with their agent |",
         "",
         "Use one where a person must decide or supply something, or a service must act. It is not for reading what a tool marked reads returns, which is a lookup function's work, and no model reads the answer: judging or wording it is a reasoning function's.",
+        "",
+        "A message to a person can be a card, with fields, a table, a chart and link buttons, instead of a text: write `render` in the front matter, and read the guide [`render-slack`](https://on.auto/docs/reference/render-slack) first.",
         "",
         "A run that asks a person renders the message from its input. Then it waits until the request is answered, expires or is cancelled, without using server resources. The answer is checked against the document's answer schema, and becomes the run's output. A function without an answer schema sends a **notification**, which needs no answer and goes through a connection.",
         "",
@@ -6180,7 +6185,7 @@
         "",
         "- `input`, `today` and `now`, as the message does. Here `today` and `now` are the request's own moment, so every attempt sends the same arguments.",
         "- The request's `to`, `message`, `run_id`, `function`, `expires_at` and `answer_schema`. `to` is the party the request goes to, which the templates may use as the tool's address or not.",
-        "- `rendered`, only for a function with `render`: the Slack blocks of its card, as a list, as Rendering the message as a card sets out.",
+        "- `rendered`, only for a function with `render`: the blocks of its card, as a list, as Rendering the message as a card sets out.",
         "",
         "A template holds no `${`, since a document is never filled from the environment.",
         "",
@@ -6205,63 +6210,10 @@
         "",
         "## Rendering the message as a card",
         "",
-        "A request sent through a connection may write `render: slack`, the only target. The body is then a card in YAML, in place of a Liquid text, and the run turns it into Slack blocks.",
-        "",
-        "````markdown",
-        "---",
-        "to: '{{ input.owner }}'",
-        "expires: P2D",
-        "render: slack",
-        "deliver:",
-        "  server: chat",
-        "  tool: post_message",
-        "  with: { channel: '{{ to }}', blocks: '{{ rendered }}', text: '{{ message }}' }",
-        "input:",
-        "  schema:",
-        "    { type: object, required: [owner, review], properties: { owner: { type: string }, review: { type: string } } }",
-        "---",
-        "root: card",
-        "elements:",
-        "  card:",
-        "    type: Card",
-        "    props: { title: Campaign brief review }",
-        "    children: [review]",
-        "  review:",
-        "    type: Text",
-        "    props: { content: { $state: /input/review } }",
-        "````",
-        "",
-        "In `deliver.with`, `rendered` is the list of Slack blocks and `message` the plain text of the same card. `'{{ rendered }}'` alone is sent as the list; among other text it is refused.",
-        "",
-        "### The card",
-        "",
-        "`root` is the id of the first element, a `Card`. `elements` maps an id to an element with `type`, `props` and `children`, a list of ids. Group with `Section`, not another `Card`. The body is no template; quote a text with a comma or colon inside `{ }`. The types, from the `@json-render/chat` catalog:",
-        "",
-        "- `Card`: optional `title`, `subtitle` and `imageUrl`; it needs a title, an image or a child.",
-        "- `Section`, `Divider`, `Actions`, `Fields`: no props. `Fields` holds `Field` elements, at most 10; `Actions` holds `LinkButton` elements.",
-        "- `Text`: `content`, markdown, and `style`, optional: `plain`, `bold` or `muted`.",
-        "- `Field`: `label` and `value`. `LinkButton`: `label` and `url`. `Image`: `url` and `alt`.",
-        "- `Table`: `headers`, `rows` with a cell for each header, optional `align` and `caption`. One a card, 100 rows, 20 columns.",
-        "- `Chart`: `title`, and `chart`: `{ type: pie, segments: [{ label, value }] }` or `{ type: bar, line or area, categories, series: [{ name, values }] }`, a value for each category. Two a card, 12 series, 20 categories, labels of 20 characters.",
-        "",
-        "`Button` is refused, since a click is not an answer; use a `LinkButton`.",
-        "",
-        "A value in `props` may read the run, with `{ $state: /input/<field> }` or `{ $template: 'Due ${/today}' }`; an element may write `repeat: { statePath: /input/items }`. A path starts with `/input`, the run's input, `/today`, the UTC day as `2026-11-01`, or `/now`, the request's moment in ISO 8601. They are fixed when the request is made, so every attempt sends the same card.",
-        "",
-        "### Refused when saved",
+        "A request sent through a connection may write `render: slack`, the only target, so that its body is a card in YAML instead of a Liquid text. The run turns the card into Slack blocks and offers them to `deliver.with` as `rendered`, with the card's plain text as `message`. [Cards for Slack](https://on.auto/docs/reference/render-slack), the `render-slack` guide, holds the components, their props, the limits, the example and what is refused. The rules that involve other keys are checked when the function is saved:",
         "",
         "- `render` names another target, or is written with `call`, with no `deliver`, or with `deliver: agent`.",
         "- `deliver.with` reads no `rendered`, or the function has no `render` and reads it.",
-        "- The body is not YAML, has an alias or a repeated key, writes `state`, or is not a mapping of `root`, naming an element, and `elements`.",
-        "- An element is not a mapping, has a `type` not above, `props` that are not a mapping, or `children` that are not ids under `elements`.",
-        "- A prop holds `$bindState` or `$bindItem`.",
-        "- A path does not start with `/input`, `/today` or `/now`, or names a property `input.schema` does not allow.",
-        "- The props do not fit the type, such as an `Image` without `alt`, in an element with no expression and no `repeat`; the run checks the others.",
-        "",
-        "### Refused when run",
-        "",
-        "- A card that cannot be made ends the run `invalid_input`, with an issue for each problem: the root is not a `Card`, a prop read from the input does not fit (so list in `required` what the card reads), a row or series has the wrong length, a `Field` is outside `Fields`, the card is empty, or a limit above is passed.",
-        "- Plain text over 8 KiB, or blocks over 32 KiB as JSON, end it `conflict`, kind `unworkable`.",
         "",
         "## Fields",
         "",
@@ -6726,6 +6678,209 @@
         "## Availability",
         "",
         "Interaction functions are available in every runtime. A request reaches a person through the tools of the tool servers the operator configures and of the org's connections, or is held for an agent. See [Functions and availability](https://on.auto/docs/concepts/functions#availability).",
+        ""
+      ]
+    },
+    {
+      "sha256": "32d5a000b4aa9ca15ff8dc992e87caf526439f44bdfe53d9ebbc3d1c1a91e6ea",
+      "tier": 3,
+      "received": [
+        {
+          "as": "guide render-slack",
+          "on": [
+            "/mcp",
+            "/orgs/{org}/mcp",
+            "/orgs/{org}/playbooks/{playbook}/mcp",
+            "/directory"
+          ]
+        }
+      ],
+      "lines": [
+        "# Cards for Slack",
+        "",
+        "A message to a person can be a card with text, fields, a table, a chart and link buttons. Write `render: slack` in the front matter of an interaction function. The body after the front matter is then a card in YAML, not a Liquid text, and the run turns it into the list of Slack blocks and offers it to `deliver.with` as `rendered`. This guide holds everything about the card. The `interaction-function` guide holds the other keys of the function: `to`, `expires`, `deliver`, `replies`, `input` and `output`.",
+        "",
+        "## An example",
+        "",
+        "This function tells a team how the week's orders went. It takes no answer, so it is a notification.",
+        "",
+        "```markdown",
+        "---",
+        "description: Tell a team how the week's orders went",
+        "to: '{{ input.channel }}'",
+        "expires: P1D",
+        "render: slack",
+        "deliver:",
+        "  server: chat",
+        "  tool: post_message",
+        "  with: { channel: '{{ to }}', blocks: '{{ rendered }}', text: '{{ message }}' }",
+        "input:",
+        "  schema:",
+        "    type: object",
+        "    required: [channel, week, summary, totals, lateOrders, reportUrl]",
+        "    properties:",
+        "      channel: { type: string }",
+        "      week: { type: string }",
+        "      summary: { type: string }",
+        "      totals:",
+        "        type: array",
+        "        items:",
+        "          type: object",
+        "          required: [label, value]",
+        "          properties: { label: { type: string }, value: { type: string } }",
+        "      lateOrders: { type: array, items: { type: array, items: { type: string } } }",
+        "      reportUrl: { type: string }",
+        "---",
+        "root: card",
+        "elements:",
+        "  card:",
+        "    type: Card",
+        "    props: { title: { $template: 'Orders, week of ${/input/week}' } }",
+        "    children: [summary, totals, late, links]",
+        "  summary:",
+        "    type: Text",
+        "    props: { content: { $state: /input/summary } }",
+        "  totals:",
+        "    type: Fields",
+        "    repeat: { statePath: /input/totals }",
+        "    children: [total]",
+        "  total:",
+        "    type: Field",
+        "    props: { label: { $item: label }, value: { $item: value } }",
+        "  late:",
+        "    type: Table",
+        "    props: { headers: [Order, Customer, Days late], rows: { $state: /input/lateOrders } }",
+        "  links:",
+        "    type: Actions",
+        "    children: [report]",
+        "  report:",
+        "    type: LinkButton",
+        "    props: { label: Open the report, url: { $state: /input/reportUrl } }",
+        "```",
+        "",
+        "## In the front matter",
+        "",
+        "- `render: slack` is the only value that renders. It is refused with `call`, with no `deliver`, and with `deliver: agent`, since an agent reads text.",
+        "- `deliver.with` must read `rendered`, and a function with no `render` must not. In it, `rendered` is the list of Slack blocks and `message` is the plain text of the same card. `'{{ rendered }}'` alone is sent as the list; among other text it is refused.",
+        "- `deliver` names the tool of a connection that sends a message with blocks, as the `interaction-function` guide sets out. Read what the tool takes with `introspect` first.",
+        "- A card asks a question like any request: add `output` and `replies` as the `interaction-function` guide sets out. The reader answers by replying, since a click is no answer, so end the card with a `Text` that says how to reply.",
+        "- List in `input.schema.required` every field the card reads, so a request that lacks one is refused when it starts.",
+        "",
+        "## The card",
+        "",
+        "`root` is the id of the first element, which is a `Card`. `elements` maps an id to an element with `type`, `props` and `children`, a list of ids. Every id in `children` names an element under `elements`. Group with a `Section`, never with another `Card`. The body is YAML and no template: quote a text that holds a comma or a colon inside `{ }`, and write no alias or `state`.",
+        "",
+        "A prop may read the run instead of holding a value:",
+        "",
+        "- `{ $state: /input/<field> }` is the value at that path.",
+        "- `{ $template: 'Due ${/input/date}' }` fills each `${path}` into the text.",
+        "- `repeat: { statePath: /input/items }` on an element, beside `props` and `children`, shows its `children` once for each item of the list. In those children, `{ $item: <field> }` is that item's field.",
+        "- A path starts with `/input`, the run's input, `/today`, the UTC day such as `2026-11-01`, or `/now`, the moment of the request in ISO 8601. They are fixed when the request is made, so every attempt sends the same card.",
+        "- `$bindState` and `$bindItem` take an answer from the reader, which a message cannot: they are refused.",
+        "",
+        "## Components",
+        "",
+        "Write `type` as one of these. Each prop is shown as it is written in YAML: `[x]` is a list of x, `{ a, b? }` a mapping whose `b` is optional, and `a | b` one of the words.",
+        "",
+        "### Card",
+        "",
+        "Root of a message. Title renders as the card header, subtitle as secondary text. Takes `children`, a list of element ids.",
+        "",
+        "- `title`, optional: `text`",
+        "- `subtitle`, optional: `text`",
+        "- `imageUrl`, optional: `URL`",
+        "",
+        "### Section",
+        "",
+        "Groups related elements. Takes `children`, a list of element ids.",
+        "",
+        "- No props: write `props: {}` or leave it out.",
+        "",
+        "### Text",
+        "",
+        "A paragraph of markdown text. Use muted for footnotes. No `children`.",
+        "",
+        "- `content`, required: `non-empty text`",
+        "- `style`, optional: `plain | bold | muted`",
+        "",
+        "### Fields",
+        "",
+        "Grid of label and value pairs. Children are Field elements. Takes `children`, a list of element ids.",
+        "",
+        "- No props: write `props: {}` or leave it out.",
+        "",
+        "### Field",
+        "",
+        "One label and value pair inside Fields. Good for KPIs. No `children`.",
+        "",
+        "- `label`, required: `non-empty text`",
+        "- `value`, required: `text or number`",
+        "",
+        "### Table",
+        "",
+        "Table for row data. Every row has one cell per header. Right-align numeric columns. No `children`.",
+        "",
+        "- `headers`, required: `[text] (1 or more)`",
+        "- `rows`, required: `[[text or number]]`",
+        "- `align`, optional: `[left | center | right]`",
+        "- `caption`, optional: `text`",
+        "",
+        "### Chart",
+        "",
+        "Chart. pie for shares of a whole, bar, line or area for series over categories. No `children`.",
+        "",
+        "- `title`, required: `non-empty text`",
+        "- `chart`, required: `{ type: pie, segments: [{ label: non-empty text, value: number above 0 }] (1 or more) } or { type: bar | line | area, categories: [non-empty text] (1 or more), series: [{ name: non-empty text, values: [number] }] (1 or more), xLabel?: text, yLabel?: text }`",
+        "",
+        "### Divider",
+        "",
+        "Separator between groups. No `children`.",
+        "",
+        "- No props: write `props: {}` or leave it out.",
+        "",
+        "### Image",
+        "",
+        "Image from a public https URL. No `children`.",
+        "",
+        "- `url`, required: `URL`",
+        "- `alt`, required: `non-empty text`",
+        "",
+        "### Actions",
+        "",
+        "Row of Button and LinkButton elements. Takes `children`, a list of element ids.",
+        "",
+        "- No props: write `props: {}` or leave it out.",
+        "",
+        "### LinkButton",
+        "",
+        "Button that opens a URL. No `children`.",
+        "",
+        "- `label`, required: `non-empty text`",
+        "- `url`, required: `URL`",
+        "",
+        "## Refused",
+        "",
+        "- `Button`: A click is not taken as an answer, so remove the Button; to send the reader somewhere, write a LinkButton with a label and a url.",
+        "- Anything else a Slack message cannot show. The run names the element and says to write only text, image, divider, fields, table, chart and link buttons.",
+        "",
+        "## Limits",
+        "",
+        "- Tables in a card: 1",
+        "- Charts in a card: 2",
+        "- Field elements in one Fields: 10",
+        "- Rows in a Table: 100",
+        "- Columns in a Table: 20",
+        "- Characters in a chart label: 20",
+        "- Characters in a Chart title: 50",
+        "- Series in a chart: 12",
+        "- Categories in a chart: 20",
+        "- The plain text of the card, `message`: 8 KiB",
+        "- The blocks, as JSON: 32 KiB",
+        "",
+        "## What is refused when",
+        "",
+        "- When the function is saved: a `render` that is not `slack`; a body that is not YAML, or not a mapping of `root` and `elements`; an element that is not a mapping, has a `type` not listed above, or has `children` that are not ids under `elements`; a path that does not start with `/input`, `/today` or `/now`, or names a property `input.schema` does not allow; props that do not fit the type, in an element with no expression and no `repeat`.",
+        "- When it runs: a card that cannot be made ends the run `invalid_input` with an issue for each problem, such as a root that is not a `Card`, a value read from the input that does not fit its prop, a row with the wrong number of cells, a series with the wrong number of values, a `Field` outside `Fields`, an empty card, or a limit passed. Text or blocks over the limits end it `conflict`, kind `unworkable`.",
         ""
       ]
     },
@@ -9419,7 +9574,7 @@
       ]
     },
     {
-      "sha256": "d45f11be1b819ba5694a4109ed18a2b6aa64e98865f1049a9a7e5a8728dc8fbe",
+      "sha256": "94cfe3f40d8a13765c6a824cfbbc354f5e310875b51d6f6da448601353ce8af6",
       "tier": 1,
       "received": [
         {
@@ -9430,7 +9585,7 @@
         }
       ],
       "lines": [
-        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown."
+        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown."
       ]
     },
     {
@@ -9479,7 +9634,7 @@
       ]
     },
     {
-      "sha256": "c307d2a7e27d16ddb9a57c5de5582a3fdc01af401d36fde414829ee746e874fd",
+      "sha256": "bb2b105d178956badcad1864fcb10551c6b745bd872bea5074863511f8321ff4",
       "tier": 1,
       "received": [
         {
@@ -9490,11 +9645,11 @@
         }
       ],
       "lines": [
-        "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why."
+        "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why; one that sends cards says so."
       ]
     },
     {
-      "sha256": "9ef0d003783c6f92521399fc505ee0a4ae58a4ed4aeeef3a7f8304639e0e70b0",
+      "sha256": "abc98eae2ad4a88961f1a1c6849d6d852817091a63e13149d87d4064c10d2abf",
       "tier": 1,
       "received": [
         {
@@ -9505,7 +9660,7 @@
         }
       ],
       "lines": [
-        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes give-tools, schedule and keep, which the tools listed here can follow."
+        "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes give-tools, schedule and keep, which the tools listed here can follow."
       ]
     },
     {
@@ -9564,7 +9719,7 @@
       ]
     },
     {
-      "sha256": "2cf932b8c9a3a976af59024df7faaa7fc249f7baa722f4fa0c91d693af6cb6f8",
+      "sha256": "cd861934997ecce70d84d220c9f36e687413d1d53b263911770842e2a6fd7cd6",
       "tier": 2,
       "received": [
         {
@@ -9646,6 +9801,8 @@
         "## Asking a person",
         "",
         "Where a person must approve or decide, ask once where they want to be asked: through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`. An interaction function makes the request and waits; answer_interaction answers one held for an agent, once the person says what to answer; the interaction-function guide says how.",
+        "",
+        "A message to a person can be a card with fields, a table, a chart and link buttons where its connection supports it, and the connection's tools say when it does.",
         ""
       ]
     },

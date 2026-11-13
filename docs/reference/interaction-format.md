@@ -16,6 +16,8 @@ An interaction function is a definition of the type `interaction`. It takes one 
 
 Use one where a person must decide or supply something, or a service must act. It is not for reading what a tool marked reads returns, which is a lookup function's work, and no model reads the answer: judging or wording it is a reasoning function's.
 
+A message to a person can be a card, with fields, a table, a chart and link buttons, instead of a text: write `render` in the front matter, and read the guide [`render-slack`](render-slack.md) first.
+
 A run that asks a person renders the message from its input. Then it waits until the request is answered, expires or is cancelled, without using server resources. The answer is checked against the document's answer schema, and becomes the run's output. A function without an answer schema sends a **notification**, which needs no answer and goes through a connection.
 
 ## How a request reaches its party
@@ -234,7 +236,7 @@ The templates of `deliver.with` read:
 
 - `input`, `today` and `now`, as the message does. Here `today` and `now` are the request's own moment, so every attempt sends the same arguments.
 - The request's `to`, `message`, `run_id`, `function`, `expires_at` and `answer_schema`. `to` is the party the request goes to, which the templates may use as the tool's address or not.
-- `rendered`, only for a function with `render`: the Slack blocks of its card, as a list, as Rendering the message as a card sets out.
+- `rendered`, only for a function with `render`: the blocks of its card, as a list, as [Rendering the message as a card](#rendering-the-message-as-a-card) sets out.
 
 A template holds no `${`, since a document is never filled from the environment.
 
@@ -259,64 +261,10 @@ A request sent through a tool is attempted at once. After a failed attempt it is
 
 ## Rendering the message as a card
 
-A request sent through a connection may write `render: slack`, the only target. The body is then a card in YAML, in place of a Liquid text, and the run turns it into Slack blocks.
-
-<!-- prettier-ignore -->
-````markdown
----
-to: '{{ input.owner }}'
-expires: P2D
-render: slack
-deliver:
-  server: chat
-  tool: post_message
-  with: { channel: '{{ to }}', blocks: '{{ rendered }}', text: '{{ message }}' }
-input:
-  schema:
-    { type: object, required: [owner, review], properties: { owner: { type: string }, review: { type: string } } }
----
-root: card
-elements:
-  card:
-    type: Card
-    props: { title: Campaign brief review }
-    children: [review]
-  review:
-    type: Text
-    props: { content: { $state: /input/review } }
-````
-
-In `deliver.with`, `rendered` is the list of Slack blocks and `message` the plain text of the same card. `'{{ rendered }}'` alone is sent as the list; among other text it is refused.
-
-### The card
-
-`root` is the id of the first element, a `Card`. `elements` maps an id to an element with `type`, `props` and `children`, a list of ids. Group with `Section`, not another `Card`. The body is no template; quote a text with a comma or colon inside `{ }`. The types, from the `@json-render/chat` catalog:
-
-- `Card`: optional `title`, `subtitle` and `imageUrl`; it needs a title, an image or a child.
-- `Section`, `Divider`, `Actions`, `Fields`: no props. `Fields` holds `Field` elements, at most 10; `Actions` holds `LinkButton` elements.
-- `Text`: `content`, markdown, and `style`, optional: `plain`, `bold` or `muted`.
-- `Field`: `label` and `value`. `LinkButton`: `label` and `url`. `Image`: `url` and `alt`.
-- `Table`: `headers`, `rows` with a cell for each header, optional `align` and `caption`. One a card, 100 rows, 20 columns.
-- `Chart`: `title`, and `chart`: `{ type: pie, segments: [{ label, value }] }` or `{ type: bar, line or area, categories, series: [{ name, values }] }`, a value for each category. Two a card, 12 series, 20 categories, labels of 20 characters.
-
-`Button` is refused, since a click is not an answer; use a `LinkButton`.
-
-A value in `props` may read the run, with `{ $state: /input/<field> }` or `{ $template: 'Due ${/today}' }`; an element may write `repeat: { statePath: /input/items }`. A path starts with `/input`, the run's input, `/today`, the UTC day as `2026-11-01`, or `/now`, the request's moment in ISO 8601. They are fixed when the request is made, so every attempt sends the same card.
-
-### Refused when saved
+A request sent through a connection may write `render: slack`, the only target, so that its body is a card in YAML instead of a Liquid text. The run turns the card into Slack blocks and offers them to `deliver.with` as `rendered`, with the card's plain text as `message`. [Cards for Slack](render-slack.md), the `render-slack` guide, holds the components, their props, the limits, the example and what is refused. The rules that involve other keys are checked when the function is saved:
 
 - `render` names another target, or is written with `call`, with no `deliver`, or with `deliver: agent`.
 - `deliver.with` reads no `rendered`, or the function has no `render` and reads it.
-- The body is not YAML, has an alias or a repeated key, writes `state`, or is not a mapping of `root`, naming an element, and `elements`.
-- An element is not a mapping, has a `type` not above, `props` that are not a mapping, or `children` that are not ids under `elements`.
-- A prop holds `$bindState` or `$bindItem`.
-- A path does not start with `/input`, `/today` or `/now`, or names a property `input.schema` does not allow.
-- The props do not fit the type, such as an `Image` without `alt`, in an element with no expression and no `repeat`; the run checks the others.
-
-### Refused when run
-
-- A card that cannot be made ends the run `invalid_input`, with an issue for each problem: the root is not a `Card`, a prop read from the input does not fit (so list in `required` what the card reads), a row or series has the wrong length, a `Field` is outside `Fields`, the card is empty, or a limit above is passed.
-- Plain text over 8 KiB, or blocks over 32 KiB as JSON, end it `conflict`, kind `unworkable`.
 
 ## Fields
 
@@ -331,7 +279,7 @@ A value in `props` may read the run, with `{ $state: /input/<field> }` or `{ $te
 | `replies`       | Only with the tool of `deliver`, its `sent` and `output.schema`: how the replies to the message are read, with `conversation`, `tool`, `with`, `read`, `wait` and `tell`; see [`replies`](#replies)                                                                                                                           |
 | `input.schema`  | Optional JSON Schema of the input                                                                                                                                                                                                                                                                                             |
 | `output.schema` | Optional JSON Schema of the answer. The answer must match it and is the run's output. A function without it is a notification: it takes no answer and succeeds once its request is delivered                                                                                                                                  |
-| `render`        | Optional, `slack` only: the body is a card in YAML, as Rendering the message as a card sets out. Refused with `call` and `deliver: agent`                                                                                                                                                                                     |
+| `render`        | Optional, `slack` only: the body is a card in YAML, as [Rendering the message as a card](#rendering-the-message-as-a-card) sets out. Refused with `call` and `deliver: agent`                                                                                                                                                 |
 | `reply`         | Optional, only with `output.schema`: the reply rule; see [Answering by reply](#answering-by-reply)                                                                                                                                                                                                                            |
 | `page`          | Optional [page](page-format.md) that presents its runs                                                                                                                                                                                                                                                                        |
 

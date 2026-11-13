@@ -11,7 +11,7 @@ import {
   type MoreAskedBy,
 } from '../providers/asking-more.ts';
 import type { Connection, RecordedConnection } from '../registry/connection.ts';
-import type { GroupOfMore } from './connection-fields.ts';
+import { rendersFieldOf, type GroupOfMore } from './connection-fields.ts';
 import type { ConnectionServices } from './connection-services.ts';
 import { moreHeldAlready, moreUncovered } from './connection-words.ts';
 import { foundConnection } from './registry-access.ts';
@@ -22,6 +22,7 @@ type Holding = Pick<RecordedConnection, 'name' | 'provider' | 'credential' | 'as
 
 interface WithMore extends Connection {
   readonly more: readonly GroupOfMore[];
+  readonly renders?: string;
 }
 
 const askableMore = Effect.fnUntraced(function* (
@@ -70,8 +71,8 @@ export const additionLinkIssuedFor = Effect.fnUntraced(function* (
   return { ...(yield* issuedLink), more };
 });
 
-function withMore(connection: Connection, more: readonly GroupOfMore[]): WithMore {
-  return { ...connection, more };
+function withMore(connection: Connection, more: readonly GroupOfMore[], providers: MoreAsking['providers']): WithMore {
+  return { ...connection, ...rendersFieldOf(providers, connection.provider), more };
 }
 
 interface Asking {
@@ -86,7 +87,7 @@ function askingOf(connection: Connection, { providers }: MoreAsking): Asking {
 export const moreOfferedTo = Effect.fnUntraced(function* (connections: readonly Connection[], services: MoreAsking) {
   const asking = connections.map((connection) => askingOf(connection, services));
   if (asking.every(({ asked }) => asked.length === 0)) {
-    return connections.map((connection) => withMore(connection, []));
+    return connections.map((connection) => withMore(connection, [], services.providers));
   }
   const sources = yield* services.consent.hadSources(studioBaseFor(services.pages));
   return asking.map(({ connection, asked }) =>
@@ -95,6 +96,7 @@ export const moreOfferedTo = Effect.fnUntraced(function* (connections: readonly 
       asked
         .filter(({ scope }) => isCoveredHere(connection, scope, sources))
         .map(({ group }) => ({ name: group.name, for: group.for })),
+      services.providers,
     ),
   );
 });

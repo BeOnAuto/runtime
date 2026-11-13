@@ -213,7 +213,7 @@ const extras = [
   'auto-runtime.example.yaml',
   'docs/concepts/terminology.md',
   ...readdirSync(join(repository, 'docs', 'reference'))
-    .filter((name) => name.endsWith('-format.md'))
+    .filter((name) => name.endsWith('-format.md') || name.startsWith('render-'))
     .map((name) => `docs/reference/${name}`),
   ...['template.md', 'triggers.md', 'events.md'].map((name) => `docs/reference/${name}`),
   'packages/definitions/lib',

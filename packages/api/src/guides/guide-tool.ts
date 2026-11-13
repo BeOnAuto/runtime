@@ -12,7 +12,7 @@ export const guideToolName = 'get_guide';
 export const guideToolDescription = [
   "Reads one of the playbook's guides.",
   'Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs.',
-  'A format guide says how to write that type of definition, with its examples and bounds, and a recipe how its task is done.',
+  'A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done.',
   '`guide` names one of them, and the answer is its whole text in Markdown.',
 ].join(' ');
 
@@ -34,7 +34,7 @@ function descriptionFollowing(recipes: Followed): string {
 const guideToolTitle = 'Get guide';
 
 export const guideArgumentDescription =
-  'The guide to read: start, terminology, a definition format, or a recipe for a common task';
+  'The guide to read: start, terminology, a definition format, a card format, or a recipe for a common task';
 
 const strictly: SchemaAST.ParseOptions = { onExcessProperty: 'error', errors: 'all' };
 

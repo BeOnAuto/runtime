@@ -1,0 +1,23 @@
+{
+  "type": "run_succeeded",
+  "data": {
+    "output": {
+      "greeting": "Hi",
+      "answer": null
+    },
+    "record": {
+      "greeting": "Hi",
+      "duration_ms": 2100,
+      "prompt_sha256": "cb048ffbddae08ce3590e7832b533346e935d8abc748043068f029cf55e9b820",
+      "prompt_bytes": 17067
+    }
+  },
+  "context": {
+    "at": "2026-10-01T09:00:00.000Z",
+    "by": "acme-admin",
+    "runId": "019a3c4e-7d2e-7c1a-9b3f-2f1e0d9c8b7a",
+    "definitionType": "prompted",
+    "definitionName": "greet",
+    "definitionVersion": 1
+  }
+}

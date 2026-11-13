@@ -3529,7 +3529,7 @@
       "get": {
         "operationId": "search_in_org",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why. Each server names the playbooks it serves. With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why; one that sends cards says so. Each server names the playbooks it serves. With `terms` naming a service, `providers` lists those a person may connect that no server serves yet.",
         "tags": [
           "tool-servers"
         ],
@@ -3630,6 +3630,10 @@
                                 ],
                                 "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
                               },
+                              "renders": {
+                                "type": "string",
+                                "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
+                              },
                               "playbooks": {
                                 "type": "array",
                                 "items": {
@@ -3686,6 +3690,10 @@
                                   }
                                 ],
                                 "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
+                              },
+                              "renders": {
+                                "type": "string",
+                                "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
                               },
                               "playbooks": {
                                 "type": "array",
@@ -3943,6 +3951,10 @@
                     "server": {
                       "type": "string",
                       "description": "The name of the connection, which a function writes before the slash"
+                    },
+                    "renders": {
+                      "type": "string",
+                      "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
                     },
                     "tools": {
                       "type": "array",
@@ -4787,6 +4799,10 @@
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                     },
+                    "renders": {
+                      "type": "string",
+                      "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
+                    },
                     "connect": {
                       "type": "object",
                       "properties": {
@@ -5440,6 +5456,10 @@
                           ],
                           "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
                         },
+                        "renders": {
+                          "type": "string",
+                          "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
+                        },
                         "more": {
                           "type": "array",
                           "items": {
@@ -6070,6 +6090,10 @@
                         }
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "renders": {
+                      "type": "string",
+                      "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
                     },
                     "more": {
                       "type": "array",
@@ -7324,6 +7348,10 @@
                         }
                       ],
                       "description": "The account at the service the connection is for, as the service named it when the connection was connected; null where it named none"
+                    },
+                    "renders": {
+                      "type": "string",
+                      "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
                     },
                     "connect": {
                       "type": "object",
@@ -23652,7 +23680,7 @@
       "get": {
         "operationId": "search",
         "summary": "Search tools",
-        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why.",
+        "description": "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection. It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts. A server that cannot be asked says why; one that sends cards says so.",
         "tags": [
           "tool-servers"
         ],
@@ -23746,6 +23774,10 @@
                                 ],
                                 "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
                               },
+                              "renders": {
+                                "type": "string",
+                                "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
+                              },
                               "tool_count": {
                                 "type": "integer",
                                 "description": "How many of its tools the operator allows that this search considered, after only"
@@ -23794,6 +23826,10 @@
                                   }
                                 ],
                                 "description": "The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand"
+                              },
+                              "renders": {
+                                "type": "string",
+                                "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
                               },
                               "unavailable": {
                                 "type": "string",
@@ -25839,7 +25875,7 @@
       "get": {
         "operationId": "get_guide",
         "summary": "Get guide",
-        "description": "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown.",
+        "description": "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown.",
         "tags": [
           "guides"
         ],
@@ -25848,7 +25884,7 @@
             "name": "guide",
             "in": "path",
             "required": true,
-            "description": "The guide to read: start, terminology, a definition format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), triggers (Triggers), events (Events), page (Page format), glance (Glance format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
+            "description": "The guide to read: start, terminology, a definition format, a card format, or a recipe for a common task; one of start (Start here), terminology (Terminology), reasoning-function (Reasoning function format), lookup-function (Lookup function format), interaction-function (Interaction function format), render-slack (Cards for Slack), prediction-function (Prediction function format), computation-function (Computation function format), generation-function (Generation function format), workflow (Workflow format), templates (Templates), triggers (Triggers), events (Events), page (Page format), glance (Glance format), first-playbook (Create your first playbook), connect-a-service (Connect a service), give-tools (Give the playbook tools), schedule (Run a workflow on a schedule), keep (Keep something for later)",
             "schema": {
               "type": "string",
               "enum": [
@@ -25857,6 +25893,7 @@
                 "reasoning-function",
                 "lookup-function",
                 "interaction-function",
+                "render-slack",
                 "prediction-function",
                 "computation-function",
                 "generation-function",

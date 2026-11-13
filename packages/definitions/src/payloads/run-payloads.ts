@@ -84,7 +84,7 @@ export function outputOf(
   return output === undefined ? Effect.undefined : readUnlessInHand(output, written);
 }
 
-function recordWithItsPrompt(record: RecordOfARun, prompt: Payload<Schema.Json>): RecordOfARun {
+export function recordWithItsPrompt(record: RecordOfARun, prompt: Payload<Schema.Json>): RecordOfARun {
   return {
     ...Struct.omit(record, ['prompt', 'prompt_sha256', 'prompt_bytes']),
     ...payloadMembers('prompt', prompt),

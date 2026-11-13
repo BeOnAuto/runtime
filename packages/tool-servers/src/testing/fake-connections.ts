@@ -15,6 +15,7 @@ export interface FakeConnection {
   readonly id: string;
   readonly name: string;
   readonly provider?: string;
+  readonly renders?: string;
   readonly entry: Readonly<Record<string, unknown>>;
   readonly environment?: Environment;
   readonly reaches?: ConnectionServer['reaches'];
@@ -72,7 +73,10 @@ export function pendingWords(name: string): string {
   return `Nobody has approved the connection ${name} yet; the person who added it opens its link, or reconnects it for a new link`;
 }
 
-function settingsOf(org: string, { name, entry, environment = {}, auth }: FakeConnection): ConnectionServerSettings {
+function settingsOf(
+  org: string,
+  { name, entry, environment = {}, auth, renders }: FakeConnection,
+): ConnectionServerSettings {
   const read = Effect.runSync(
     readToolServerSettings(
       { ...environment, TOOL_SERVERS: JSON.stringify({ [name]: { ...entry, org } }) },
@@ -80,7 +84,7 @@ function settingsOf(org: string, { name, entry, environment = {}, auth }: FakeCo
     ),
   );
   const settings = Option.getOrThrow(Arr.head(read.servers.filter((server) => isConnectionServerSettings(server))));
-  return auth === undefined ? settings : { ...settings, auth };
+  return { ...settings, ...(auth === undefined ? {} : { auth }), ...(renders === undefined ? {} : { renders }) };
 }
 
 function unreadyOf(name: string, standing: Standing): ConnectionUnready | undefined {
@@ -141,7 +145,7 @@ function brokenByItsServer(held: Held, { id, name }: FakeConnection, answered: s
 
 function listedOf(held: Held, kept: Kept): OrgConnection {
   const { id, name, provider = null } = kept.connection;
-  const { type, orgs, playbooks, allowed, record_content, request_id, handles_money } = kept.settings;
+  const { type, orgs, playbooks, allowed, record_content, request_id, handles_money, renders } = kept.settings;
   const serving = {
     name,
     type,
@@ -152,6 +156,7 @@ function listedOf(held: Held, kept: Kept): OrgConnection {
     record_content,
     request_id,
     ...(handles_money === undefined ? {} : { handles_money }),
+    ...(renders === undefined ? {} : { renders }),
   };
   const unready = unreadyOf(name, standingOf(held, id));
   return unready === undefined

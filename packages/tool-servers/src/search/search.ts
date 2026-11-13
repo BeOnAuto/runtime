@@ -10,7 +10,7 @@ import { searchAttempted, searchTask, searched } from './search-words.ts';
 export const searchSentences = [
   "Searches the tools of the tool servers this playbook's functions may use, named in a function's tools as server/tool or server/* and called by query_connection or execute_connection.",
   'It lists the servers, and every tool while they offer at most 100, or with `terms` the tools that match, best first, each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts.',
-  'A server that cannot be asked says why.',
+  'A server that cannot be asked says why; one that sends cards says so.',
 ];
 
 export function noServerNamed(server: string, holder: string): InvalidInput {

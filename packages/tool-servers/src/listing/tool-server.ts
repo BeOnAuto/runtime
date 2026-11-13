@@ -26,6 +26,7 @@ export interface ServerFields {
   readonly connection?: string;
   readonly provider: string | null;
   readonly handles_money?: true;
+  readonly renders?: string;
 }
 
 export interface AvailableServer extends ServerFields {

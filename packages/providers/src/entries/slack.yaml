@@ -10,6 +10,7 @@ failure_codes:
   key_refused: [invalid_auth, not_authed, token_revoked, token_expired, account_inactive]
   scope_lacking: [missing_scope]
   rate_limited: [ratelimited, rate_limited]
+renders: slack
 conversations:
   tell: all
   automatic: /bot_id

@@ -54,6 +54,15 @@ describe('the fields of an entry', () => {
   });
 });
 
+describe('the render target of an entry', () => {
+  it('is a name, or left out', () => {
+    expect(problemsOf({ ...tracker, renders: 'cards' })).toEqual([]);
+    expect(problemsOf({ ...tracker, renders: '' })).toEqual([
+      ['/renders', 'Expected a value with a length of at least 1'],
+    ]);
+  });
+});
+
 describe('the marks of an entry', () => {
   it('are taken for the tools named, each a tool name, once, in one mark alone', () => {
     expect(problemsOf({ ...ledgers, marks: { reads: ['ledgers.query'], acts: ['ledgers.post'] } })).toEqual([]);

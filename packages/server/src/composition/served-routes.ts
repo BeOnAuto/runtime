@@ -14,6 +14,7 @@ import {
 } from '@on.auto/api';
 import { inTheDirectoryListing, type Capability } from '@on.auto/definitions';
 import type { ContentAddressKey } from '@on.auto/identity';
+import { renderCompanionGuides } from '@on.auto/interaction';
 import {
   makeCatalog,
   makeDispatcher,
@@ -58,8 +59,11 @@ export async function routesFor(
     shippedFiles,
   }: ServedCatalog,
 ): Promise<readonly RegisterRoutes[]> {
-  const shelf = await guideShelfFrom(shippedFiles, capabilities, { pages });
-  const directoryShelf = await guideShelfFrom(shippedFiles, inTheDirectoryListing(capabilities), { pages });
+  const shelf = await guideShelfFrom(shippedFiles, capabilities, { pages, companions: renderCompanionGuides });
+  const directoryShelf = await guideShelfFrom(shippedFiles, inTheDirectoryListing(capabilities), {
+    pages,
+    companions: renderCompanionGuides,
+  });
   const directoryListing = { catalog: directoryCatalog, shelf: directoryShelf };
   const debugStyle = await readDebugStyle(shippedFiles);
   return [

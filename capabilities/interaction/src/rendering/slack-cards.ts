@@ -13,15 +13,14 @@ import { jsonOf } from './json-values.ts';
 import type { ReadonlyDeep } from './readonly-deep.ts';
 import { attempted } from './render-failures.ts';
 import type { RenderedMessage } from './rendered-message.ts';
+import { slackShows } from './slack-limits.ts';
 
 type Child = ReadonlyDeep<CardChild>;
 type Chart = ReadonlyDeep<ChartDefinition>;
 type Issues = readonly string[];
 
 function unsupported(what: string): Result.Result<never, Issues> {
-  return Result.fail([
-    `Slack cannot show ${what} here: write only text, image, divider, fields, table, chart and link buttons`,
-  ]);
+  return Result.fail([`Slack cannot show ${what} here: write only ${slackShows}`]);
 }
 
 function linkButtonsOf(children: ReadonlyDeep<CardChild & { type: 'actions' }>['children']) {

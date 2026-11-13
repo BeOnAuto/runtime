@@ -32,9 +32,22 @@ const everyType = [reasoning, computation, prediction, workflow];
 
 const interaction = capabilityOf('interaction', 'interaction function', { name: 'interaction-function' });
 
+const cards = {
+  type: 'interaction',
+  name: 'render-slack',
+  title: 'Cards for Slack',
+  description: 'How to write a message to Slack as a card.',
+  page: 'reference/render-slack.md',
+};
+
 export const served = await guideShelfFrom(guideFiles, everyType, { pages: false });
 
 export const servedWithInteraction = await guideShelfFrom(guideFiles, [...everyType, interaction], { pages: false });
+
+export const servedWithCards = await guideShelfFrom(guideFiles, [...everyType, interaction], {
+  pages: false,
+  companions: [cards],
+});
 
 export const servedForReasoningAndWorkflows = await guideShelfFrom(guideFiles, [reasoning, workflow], { pages: false });
 

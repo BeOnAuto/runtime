@@ -131,7 +131,7 @@ describe('the descriptions of the tools of /mcp', () => {
 });
 
 describe('the descriptions of the tools that find and connect a provider', () => {
-  it('name in search the providers that match a service and no server serves yet, and the mark of each tool, at 584 characters', () => {
+  it('name in search the providers that match a service and no server serves yet, and the mark of each tool, at 614 characters', () => {
     const searching = descriptionOf('search');
 
     expect(searching).toContain(
@@ -140,7 +140,7 @@ describe('the descriptions of the tools that find and connect a provider', () =>
     expect(searching).toContain(
       'each marked reads if it only reads, acts if it may change something, or unmarked, counted as acts.',
     );
-    expect(searching).toHaveLength(584);
+    expect(searching).toHaveLength(614);
   });
 
   it("open add_connection with a person's account at a service that search lists, say that once approved the connection's tools serve the org's playbooks, say an MCP server given by hand says how it authenticates and a secret given by hand how its key is made, and end it with what the call does not grant, at 797 characters", () => {
@@ -160,7 +160,7 @@ describe('the descriptions of the tools that find and connect a provider', () =>
 describe('the descriptions that say what the instructions leave to them', () => {
   it('say in get_guide that start says which function type each part of a job takes, and name the recipes the tools of /mcp can follow', () => {
     expect(descriptionOf('get_guide')).toBe(
-      "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow.",
+      "Reads one of the playbook's guides. Use it before building: the guide start says which function type each part of a job takes, and which guide each task needs. A format guide says how to write that type of definition, or a message as a card, with its examples and bounds, and a recipe how its task is done. `guide` names one of them, and the answer is its whole text in Markdown. It holds the recipes first-playbook, connect-a-service, give-tools, schedule and keep, which the tools listed here can follow.",
     );
   });
 

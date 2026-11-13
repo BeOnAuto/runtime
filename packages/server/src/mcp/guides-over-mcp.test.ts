@@ -35,6 +35,7 @@ const guideNames = [
   'reasoning-function',
   'lookup-function',
   'interaction-function',
+  'render-slack',
   'prediction-function',
   'computation-function',
   'generation-function',

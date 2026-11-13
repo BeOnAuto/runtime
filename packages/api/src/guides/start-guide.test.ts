@@ -6,6 +6,8 @@ import {
   guideFiles,
   served,
   servedForReasoning,
+  servedWithCards,
+  servedWithInteraction,
   servedWithEverything,
   servedWithLookupAndPages,
 } from '../testing/guide-shelves.ts';
@@ -179,7 +181,7 @@ describe('the guide start of a server that runs no type of definition', () => {
   });
 
   it('is built from the types, the pages, the events and the recipes it is given, and nothing is read from a page', () => {
-    const built = startGuideOf({ definitionTypes: [], pages: true, events: true, recipes: [] });
+    const built = startGuideOf({ definitionTypes: [], pages: true, events: true, cards: false, recipes: [] });
 
     expect(built.name).toBe('start');
     expect(whereToGo(built.text)).toEqual([
@@ -203,6 +205,7 @@ describe('the guide start of a server, whichever types it runs', () => {
         definitionTypes: definitionTypesOf(types, workflows),
         pages: workflows,
         events: workflows,
+        cards: false,
         recipes: ['first-playbook', 'connect-a-service', 'give-tools', 'schedule', 'keep'],
       }).text,
     })),
@@ -227,9 +230,34 @@ describe('the guide start of a server, whichever types it runs', () => {
       definitionTypes: definitionTypesOf(['generation'], false),
       pages: false,
       events: false,
+      cards: false,
       recipes: [],
     }).text;
 
     expect(sectionOf(text, 'Build from the job')).toMatch(/: a generation function\n$/u);
+  });
+});
+
+const cardSentence =
+  "A message to a person can be a card with fields, a table, a chart and link buttons where its connection supports it, and the connection's tools say when it does.";
+
+describe('the guide start of a server whose interaction functions can write a card', () => {
+  const text = startOf(servedWithCards);
+
+  it('ends its section on asking a person with one sentence on cards, naming no service and no render target', () => {
+    expect(sectionOf(text, 'Asking a person')).toMatch(/the interaction-function guide says how\.\n\n/u);
+    expect(sectionOf(text, 'Asking a person')).toMatch(/\n\nA message to a person can be a card[^\n]*\n$/u);
+    expect(text).toContain(`\n\n${cardSentence}\n`);
+    expect(text.split(cardSentence)).toHaveLength(2);
+    expect(text).not.toMatch(/slack|render-/iu);
+  });
+});
+
+describe('the guide start of a server whose interaction functions can write no card', () => {
+  it('says nothing of cards, whether it serves interaction functions or not', () => {
+    expect([startOf(servedWithInteraction), startOf(served)].map((text) => text.includes('card'))).toEqual([
+      false,
+      false,
+    ]);
   });
 });

@@ -2,6 +2,7 @@ import { PlaybookIdSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { marksMeant, ToolMarkSchema } from '../bounds/tool-results.ts';
+import { rendersDescription } from '../listing/card-words.ts';
 import { UnavailableBecauseSchema } from '../listing/tool-server.ts';
 import { serverNamePattern } from '../names/tool-reference.ts';
 import { searchBounds, termsWithinTheirBound } from './search-terms.ts';
@@ -59,6 +60,7 @@ const serverFields = {
     description:
       'The name of the provider the server is made from, by a person or by whoever runs this server; null for a server given by hand',
   }),
+  renders: Schema.optionalKey(Schema.String.annotate({ description: rendersDescription })),
 };
 
 const searchedFields = {

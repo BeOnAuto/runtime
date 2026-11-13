@@ -198,6 +198,7 @@ export interface Providing {
   readonly ending_codes?: readonly string[] | undefined;
   readonly gateway?: WayGateway;
   readonly handles_money?: true;
+  readonly renders?: string;
 }
 
 interface Reading {

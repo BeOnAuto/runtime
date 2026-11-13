@@ -18,7 +18,9 @@ export interface Carried {
   readonly recipes: readonly string[];
 }
 
-type Lines = (carried: Carried) => readonly string[];
+export type StartCarried = Carried & { readonly cards: boolean };
+
+type Lines = (carried: StartCarried) => readonly string[];
 
 const whatEachPartDoes: Readonly<Record<string, string>> = {
   reasoning: 'it interprets, judges or writes',
@@ -263,6 +265,9 @@ const connectingAService: Lines = () => [
   "search finds the provider of a service by its words, and add_connection connects it to the org's playbooks; the person approves on the page it links. Where no provider or server matches, add_connection can still take the service's own MCP server or HTTP API, given by hand; a service with neither cannot be connected.",
 ];
 
+const aCardMessage =
+  "A message to a person can be a card with fields, a table, a chart and link buttons where its connection supports it, and the connection's tools say when it does.";
+
 const askingAPerson: Lines = (carried) =>
   where(
     serves(carried, 'interaction'),
@@ -270,6 +275,7 @@ const askingAPerson: Lines = (carried) =>
     '## Asking a person',
     '',
     'Where a person must approve or decide, ask once where they want to be asked: through a connection that sends them a request and reads their reply, such as a chat, an email provider or a ticketing app, or through you, `deliver: agent`. An interaction function makes the request and waits; answer_interaction answers one held for an agent, once the person says what to answer; the interaction-function guide says how.',
+    ...where(carried.cards, '', aCardMessage),
   );
 
 const sections: readonly Lines[] = [
@@ -283,7 +289,7 @@ const sections: readonly Lines[] = [
   askingAPerson,
 ];
 
-export function startGuideOf(carried: Carried): Guide {
+export function startGuideOf(carried: StartCarried): Guide {
   return {
     name: startGuideName,
     title: 'Start here',

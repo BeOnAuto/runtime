@@ -16,6 +16,7 @@ import {
 import { outputPayloadOf, payloadMembers, type Payload } from '@on.auto/operations/payloads';
 import { DateTime, Effect, Schema, Struct } from 'effect';
 
+import { recordWritten } from '../payloads/payload-writing.ts';
 import {
   outputsAsGiven,
   outputsKeptIn,
@@ -26,9 +27,8 @@ import {
   type WrittenOutput,
 } from '../payloads/settled-outputs.ts';
 import { jsonBytesOf, payloadBytesOf, withinResultBytes, withinResultLimit } from './recorded-size.ts';
-import type { RunResult } from './run-commands.ts';
 import { runStreamNameOf, settledOnLatest, settledOnRead, type SettledOn } from './run-decider.ts';
-import { AnsweredRecordSchema, type Settlement } from './run-events.ts';
+import { AnsweredRecordSchema, type RunFinished, type Settlement } from './run-events.ts';
 import { runOf } from './run-lookup.ts';
 import { causeOf, type RunRejection, type SettledRun } from './run.ts';
 
@@ -65,7 +65,7 @@ const decodeOutput = Schema.decodeUnknownEffect(Schema.Json);
 
 const decodeRecord = Schema.decodeUnknownEffect(AnsweredRecordSchema);
 
-const failure: RunResult = { type: 'run_failed', data: {} };
+const failure: RunFinished = { type: 'run_failed', data: {} };
 
 function rejectionOf(settlement: SettledRejection): RunRejection {
   if (settlement.reason === 'invalid_input') {
@@ -104,7 +104,7 @@ function rejectionOf(settlement: SettledRejection): RunRejection {
   return { reason, detail, kind };
 }
 
-function rejectedWith(settlement: SettledRejection): Effect.Effect<RunResult> {
+function rejectedWith(settlement: SettledRejection): Effect.Effect<RunFinished> {
   const { record } = settlement;
   const rejection = rejectionOf(settlement);
   return record === undefined
@@ -136,12 +136,17 @@ function outputChecked(output: Payload<Schema.Json>): Effect.Effect<Payload<Sche
     : Effect.succeed(output);
 }
 
-function succeededWith(output: Payload<Schema.Json>, given: Schema.JsonObject): Effect.Effect<RunResult> {
+function succeededWith(
+  output: Payload<Schema.Json>,
+  given: Schema.JsonObject,
+  written: WrittenOutput,
+): Effect.Effect<RunFinished> {
   return Effect.gen(function* () {
     const checked = yield* outputChecked(output);
     const record = yield* Effect.orDie(decodeRecord(given));
     yield* withinResultBytes(payloadBytesOf(checked) + jsonBytesOf(record));
-    return { type: 'run_succeeded', data: { ...payloadMembers('output', checked), record } };
+    const kept = yield* recordWritten(record, written);
+    return { type: 'run_succeeded', data: { ...payloadMembers('output', checked), record: kept.record } };
   });
 }
 
@@ -149,7 +154,7 @@ function resultOf(settlement: Settlement, written: WrittenOutput): Effect.Effect
   if (settlement.status === 'succeeded') {
     return Effect.suspend(() =>
       Effect.flatMap(written(outputPayloadOf({ data: settlement })), ({ payload, inHand }) =>
-        Effect.map(succeededWith(payload, settlement.record ?? {}), (result) => ({ result, inHand })),
+        Effect.map(succeededWith(payload, settlement.record ?? {}, written), (result) => ({ result, inHand })),
       ),
     );
   }

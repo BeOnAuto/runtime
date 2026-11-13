@@ -44,6 +44,7 @@ interface ServedBy {
   readonly connection: string | null;
   readonly provider: string | null;
   readonly handles_money?: true;
+  readonly renders?: string;
 }
 
 export interface McpServerSettings extends ServedBy {

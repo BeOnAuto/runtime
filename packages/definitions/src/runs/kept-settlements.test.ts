@@ -77,7 +77,11 @@ describe('a workflow’s run settled again after it ended with an output its pla
   });
 });
 
-const promptKept = keptArmOf({ message: 'm'.repeat(17_000), truncated: false });
+const prompt = { message: 'm'.repeat(17_000), truncated: false };
+
+const promptKept = keptArmOf(prompt);
+
+const answeredWithItsPrompt: Settlement = { status: 'succeeded', output: { score: 1 }, record: { model: 'x', prompt } };
 
 async function endedKeeping(settlement: Settlement, keepsOutside: boolean) {
   const handed = await withHandOn();
@@ -93,7 +97,35 @@ async function endedKeeping(settlement: Settlement, keepsOutside: boolean) {
   return { settled, ending: records.at(-1) };
 }
 
-describe('a run settled with a record that names its prompt by a digest', () => {
+describe('a run settled with a record that holds a large prompt, by the settler that keeps outputs', () => {
+  it('keeps the prompt outside the run’s ending where payloads are kept outside, and in its record where they are not', async () => {
+    const [keeping, inline] = [
+      await endedKeeping(answeredWithItsPrompt, true),
+      await endedKeeping(answeredWithItsPrompt, false),
+    ];
+
+    expect([keeping.ending?.data, inline.ending?.data]).toEqual([
+      {
+        output: { score: 1 },
+        record: { model: 'x', prompt_sha256: promptKept.sha256, prompt_bytes: promptKept.bytes },
+      },
+      { output: { score: 1 }, record: { model: 'x', prompt } },
+    ]);
+  });
+
+  it('counts the text of the prompt against what a run may record, wherever it would be kept, and breaks down past it', async () => {
+    const tooLarge: Settlement = {
+      status: 'succeeded',
+      output: { score: 1 },
+      record: { prompt: { message: 'm'.repeat(1_048_576), truncated: false } },
+    };
+
+    const { settled, ending } = await endedKeeping(tooLarge, true);
+
+    expect(Exit.isFailure(settled)).toBe(true);
+    expect(ending?.type).toBe('run_failed');
+  });
+
   it('breaks down where the record names a prompt by a digest, which only the runtime keeps outside a run', async () => {
     const named: Settlement = {
       status: 'succeeded',

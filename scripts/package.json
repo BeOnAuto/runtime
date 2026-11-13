@@ -7,6 +7,7 @@
   "devDependencies": {
     "@on.auto/api": "workspace:*",
     "@on.auto/definitions": "workspace:*",
+    "@on.auto/interaction": "workspace:*",
     "@on.auto/providers": "workspace:*",
     "@on.auto/reasoning": "workspace:*",
     "@on.auto/server": "workspace:*",

@@ -1,6 +1,11 @@
 import { PlaybookIdSchema } from '@on.auto/operations';
-import { keyFieldNames, keyFields } from '@on.auto/providers';
-import { ClientSourceSchema, WayOAuthClientSchema, givenByTheProvider } from '@on.auto/tool-servers';
+import { keyFieldNames, keyFields, rendersOf, type ProviderList } from '@on.auto/providers';
+import {
+  ClientSourceSchema,
+  WayOAuthClientSchema,
+  givenByTheProvider,
+  rendersDescription,
+} from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { AddedEntrySchema, documentIssuesOf } from '../entries/document-fields.ts';
@@ -17,8 +22,16 @@ export const ClientSourceField = ClientSourceSchema;
 
 export const ExpiresAtField = Schema.String.annotate({ description: 'When the link expires, in ISO 8601 UTC' });
 
+export const RendersField = Schema.optionalKey(Schema.String.annotate({ description: rendersDescription }));
+
+export function rendersFieldOf(providers: ProviderList, provider: string | null): { readonly renders?: string } {
+  const renders = rendersOf(providers, provider);
+  return renders === undefined ? {} : { renders };
+}
+
 export const AddedSchema = Schema.Struct({
   ...ConnectionSchema.fields,
+  renders: RendersField,
   connect: Schema.optionalKey(
     Schema.Struct({
       url: Schema.String.annotate({ description: "Studio's page, where the person approves the connection" }),

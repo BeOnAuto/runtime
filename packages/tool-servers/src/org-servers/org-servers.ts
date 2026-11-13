@@ -20,6 +20,7 @@ export type Served = Pick<
   | 'connection'
   | 'provider'
   | 'handles_money'
+  | 'renders'
 >;
 
 export type Linked = { readonly link: ServerLink } | { readonly refused: Unusable };

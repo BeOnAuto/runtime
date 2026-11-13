@@ -4,6 +4,7 @@ import {
   PayloadOffloading,
   jsonPayloadText,
   payloadChosen,
+  payloadIfAny,
   payloadKept,
   textPayloadText,
   type Payload,
@@ -11,6 +12,9 @@ import {
   type PayloadToKeep,
 } from '@on.auto/operations/payloads';
 import { Effect, type Schema } from 'effect';
+
+import type { RecordOfARun } from '../runs/run-events.ts';
+import { recordWithItsPrompt } from './run-payloads.ts';
 
 export interface WrittenAs<Value> {
   readonly payload: Payload<Value>;
@@ -83,4 +87,23 @@ export function payloadWrittenIn(
 
 export function textWritten(text: string): Effect.Effect<WrittenAs<string>, never, PlaybookWriter | PlaybookContext> {
   return writtenKeeping(text, textPayloadText, playbookPayloadKept);
+}
+
+interface RecordWritten {
+  readonly record: RecordOfARun;
+  readonly inHand: ReadonlyMap<string, Schema.Json>;
+}
+
+export function recordWritten<Services>(
+  record: RecordOfARun,
+  written: (payload: Payload<Schema.Json>) => Effect.Effect<PayloadWritten, never, Services>,
+): Effect.Effect<RecordWritten, never, Services> {
+  const prompt = payloadIfAny<'prompt', Schema.Json>(record, 'prompt');
+  if (prompt === undefined) {
+    return Effect.succeed({ record, inHand: new Map() });
+  }
+  return Effect.map(written(prompt), ({ payload, inHand }) => ({
+    record: 'kept' in payload ? recordWithItsPrompt(record, payload) : record,
+    inHand,
+  }));
 }

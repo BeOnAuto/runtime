@@ -12,6 +12,7 @@ export function serverFieldsOf({
   connection,
   provider,
   handles_money: handlesMoney,
+  renders,
 }: Served): ServerFields {
   return {
     name,
@@ -21,6 +22,7 @@ export function serverFieldsOf({
     ...(connection === null ? {} : { connection }),
     provider,
     ...(handlesMoney === true ? { handles_money: handlesMoney } : {}),
+    ...(renders === undefined ? {} : { renders }),
   };
 }
 

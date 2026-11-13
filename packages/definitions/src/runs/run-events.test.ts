@@ -283,7 +283,7 @@ const stoppedAtALimit = { reason: 'conflict', detail: 'It stopped at a limit', k
 const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>> = {
   '0.46.0': baseline,
   '0.57.0': [...actingForAPerson, ...askedToApproveAnAction, ...declinedASignInAtAStep, ...answeredInEachMode],
-  '0.58.0': await keptFactsWritten(),
+  ...(await keptFactsWritten()),
   '0.59.0': [
     { type: 'request_answered', data: inAThread, context: onTheRun },
     { type: 'tool_call_answered', data: { ...toolCallAnswered, shown_format: 2 }, context: onTheRun },

@@ -61,6 +61,12 @@ const ProviderEntryFieldsSchema = Schema.Struct({
       'For openapi, an API that answers a failure in a JSON answer of a successful status: the pointers to whether the call succeeded and to the code of its failure, and the codes that mean a refused credential, a lacking scope or a limited rate',
   }),
   conversations: Schema.optionalKey(ConversationsSchema),
+  renders: Schema.optionalKey(
+    NamedSchema.annotate({
+      description:
+        'The name of the render target a message sent through the provider can be written for, where it can be a card the run turns into the layout the provider shows',
+    }),
+  ),
   events: Schema.optionalKey(EventsSchema),
   placeholders: Schema.optionalKey(
     PlaceholdersSchema.annotate({

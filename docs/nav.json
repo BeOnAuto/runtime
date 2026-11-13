@@ -139,6 +139,10 @@
         "link": "/reference/interaction-format"
       },
       {
+        "text": "Cards for Slack",
+        "link": "/reference/render-slack"
+      },
+      {
         "text": "Prediction function format",
         "link": "/reference/prediction-format"
       },

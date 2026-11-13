@@ -63,6 +63,10 @@ export function conversationsOf(
   return conversations === undefined ? undefined : limitedFor(conversations, signedInThrough);
 }
 
+export function rendersOf({ providers }: ProviderList, provider: string | null): string | undefined {
+  return providers.find(({ entry }) => entry.name === provider)?.entry.renders;
+}
+
 export function eventDestinationOf(
   { providers }: ProviderList,
   provider: string | null,

@@ -134,6 +134,7 @@ function providedBy(provider: Provider): Omit<Providing, 'documents' | 'values'>
     ...failureCodesOf(entry.failure_codes),
     ...(consenting?.ending_codes === undefined ? {} : { ending_codes: consenting.ending_codes }),
     ...(entry.handles_money === true ? handlingMoney : {}),
+    ...(entry.renders === undefined ? {} : { renders: entry.renders }),
   };
 }
 

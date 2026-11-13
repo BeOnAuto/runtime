@@ -5,7 +5,7 @@ import { Effect, Logger, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { keptArmOf } from '../testing/kept-payloads.ts';
-import { payloadWritten, payloadWrittenIn } from './payload-writing.ts';
+import { payloadWritten, payloadWrittenIn, recordWritten } from './payload-writing.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -95,6 +95,24 @@ describe('a value written as a payload while the store of its content takes none
 
     await outside(payloadWrittenIn(failing, alpha)({ inline: large }).pipe(Effect.provide(warnings)));
 
+    expect(warned.join('\n')).toContain(
+      `The payload of ${kept.bytes} bytes under ${kept.sha256} could not be kept just now, so it is recorded inline in its fact`,
+    );
+  });
+});
+
+describe('the prompt of a record written while the store of its content takes none', () => {
+  it('stays in the record, member for member, and a warning names the bytes and the digest it could not keep', async () => {
+    const warned: string[] = [];
+    const warnings = Logger.layer([Logger.map(Logger.formatSimple, (line: string) => warned.push(line))]);
+    const failing = { put: () => Effect.die(new Error('The bucket did not answer')) };
+    const record = { model: 'm', prompt: large, duration_ms: 5 };
+
+    const written = await outside(
+      recordWritten(record, payloadWrittenIn(failing, alpha)).pipe(Effect.provide(warnings)),
+    );
+
+    expect(JSON.stringify(written.record)).toBe(JSON.stringify(record));
     expect(warned.join('\n')).toContain(
       `The payload of ${kept.bytes} bytes under ${kept.sha256} could not be kept just now, so it is recorded inline in its fact`,
     );

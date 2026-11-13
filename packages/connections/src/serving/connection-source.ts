@@ -16,14 +16,15 @@ import { servingWords } from './serving-words.ts';
 
 function servingOf({ org, kept, services }: Serving): ConnectionServing {
   const { name, type, provider, entry } = kept.connection;
-  const handlesMoney = providingOf(kept.connection, services)?.handles_money;
+  const providing = providingOf(kept.connection, services);
   return {
     name,
     type,
     provider,
     orgs: [org],
     ...servedFieldsOf(entry),
-    ...(handlesMoney === undefined ? {} : { handles_money: handlesMoney }),
+    ...(providing?.handles_money === undefined ? {} : { handles_money: providing.handles_money }),
+    ...(providing?.renders === undefined ? {} : { renders: providing.renders }),
   };
 }
 
