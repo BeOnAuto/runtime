@@ -14,7 +14,7 @@
     "test": "vitest run --coverage"
   },
   "dependencies": {
-    "@hono/node-server": "2.1.4",
+    "@hono/node-server": "2.1.6",
     "@modelcontextprotocol/server": "2.3.1",
     "@on.auto/content": "workspace:*",
     "@on.auto/definitions": "workspace:*",
