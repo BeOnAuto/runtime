@@ -3,7 +3,12 @@ import { standingRenderClock } from '@on.auto/definitions/testing';
 import { Option, Result } from 'effect';
 
 import { parseInteractionDocument } from '../document/document-parsing.ts';
-import type { InteractionFunctionDefinitionDocument, RequestDocument } from '../document/interaction-document.ts';
+import type {
+  InteractionFunctionDefinitionDocument,
+  RenderedRequestDocument,
+  RequestDocument,
+  TextRequestDocument,
+} from '../document/interaction-document.ts';
 
 export const delivering: readonly string[] = [
   "to: '{{ input.owner }}'",
@@ -71,8 +76,24 @@ function isRequest(document: InteractionFunctionDefinitionDocument): document is
   return document.shape === 'request';
 }
 
-export function requestDocumentOf(source: string): RequestDocument {
+function isTextRequest(document: RequestDocument): document is TextRequestDocument {
+  return document.render === undefined;
+}
+
+function isRenderedRequest(document: RequestDocument): document is RenderedRequestDocument {
+  return document.render !== undefined;
+}
+
+function requestOf(source: string): RequestDocument {
   return Option.getOrThrow(
     Option.liftPredicate(Result.getOrThrow(parseInteractionDocument(source, standingRenderClock)), isRequest),
   );
+}
+
+export function requestDocumentOf(source: string): TextRequestDocument {
+  return Option.getOrThrow(Option.liftPredicate(requestOf(source), isTextRequest));
+}
+
+export function renderedDocumentOf(source: string): RenderedRequestDocument {
+  return Option.getOrThrow(Option.liftPredicate(requestOf(source), isRenderedRequest));
 }

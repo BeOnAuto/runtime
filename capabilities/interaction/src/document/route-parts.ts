@@ -63,7 +63,7 @@ export function routeIn(
     return wayWithoutATool(written, lines);
   }
   const shape = replies === undefined ? [] : readingIssues(deliver, written, lines);
-  const compiled = compiledToolBlock({ deliver, replies }, reading, inputSchema);
+  const compiled = compiledToolBlock({ deliver, replies }, reading, inputSchema, written.render !== undefined);
   if (shape.length > 0) {
     return Result.fail([...shape, ...(Result.isFailure(compiled) ? compiled.failure : [])]);
   }

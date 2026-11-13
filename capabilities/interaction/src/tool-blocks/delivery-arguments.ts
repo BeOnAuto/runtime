@@ -27,6 +27,7 @@ export function deliveryVariablesOf(record: RequestRecord, { input, runId, funct
     function: functionName,
     expires_at: record.expires_at,
     answer_schema: record.answer_schema ?? null,
+    ...(record.rendered === undefined ? {} : { rendered: record.rendered }),
   };
 }
 

@@ -1,30 +1,19 @@
-import { issueAt, type DocumentParts, type SourceLines, type ValueContract } from '@on.auto/definitions/document';
-import type { ParsedTemplate } from '@on.auto/definitions/template';
+import { issueAt, type DocumentParts } from '@on.auto/definitions/document';
 import type { DocumentReading } from '@on.auto/definitions/tool-blocks';
 import { Result } from 'effect';
 
-import type { ReplyRule } from '../replies/reply-rule.ts';
 import type { InteractionFrontMatter } from './front-matter.ts';
 import type { RequestDocument } from './interaction-document.ts';
+import { bodyOf } from './render-parts.ts';
 import { fromOf, replyOf } from './reply-parts.ts';
-import { routeIn, wayOf, type WrittenWay } from './route-parts.ts';
-import { contractOf, expiresOf, issuesOf, messageOf, toOf, type Checked } from './written-parts.ts';
+import { assembledRequest, type CheckedParts } from './request-assembly.ts';
+import { routeIn } from './route-parts.ts';
+import { contractOf, expiresOf, issuesOf, toOf, type Checked } from './written-parts.ts';
 
 interface Asked {
   readonly to: string;
   readonly expires: string;
 }
-
-type CheckedParts = {
-  readonly route: Checked<WrittenWay>;
-  readonly expires: Checked<number>;
-  readonly input: Checked<ValueContract>;
-  readonly output: Checked<ValueContract>;
-  readonly to: Checked<ParsedTemplate>;
-  readonly from: Checked<ParsedTemplate | null>;
-  readonly message: Checked<ParsedTemplate>;
-  readonly reply: Checked<ReplyRule | null>;
-};
 
 function partsOf(
   written: InteractionFrontMatter,
@@ -43,7 +32,7 @@ function partsOf(
     output,
     to: toOf(asked.to, lines, inputSchema),
     from: fromOf(written.from, lines, inputSchema),
-    message: messageOf(parts, inputSchema),
+    body: bodyOf(written, parts, lines, inputSchema),
     reply: Result.isFailure(output)
       ? Result.succeed(null)
       : replyOf(
@@ -54,29 +43,6 @@ function partsOf(
           },
           lines,
         ),
-  };
-}
-
-type DoneParts = { readonly [Part in keyof CheckedParts]: Result.Result.Success<CheckedParts[Part]> };
-
-function documentOfParts(
-  written: InteractionFrontMatter,
-  { expires, lines }: { readonly expires: string; readonly lines: SourceLines },
-  done: DoneParts,
-): RequestDocument {
-  const { route, input, output, to, from, message, reply } = done;
-  return {
-    shape: 'request',
-    ...(written.description === undefined ? {} : { description: written.description }),
-    ...wayOf(route, lines),
-    to,
-    ...(from === null ? {} : { from }),
-    expires,
-    expiresMs: done.expires,
-    input,
-    output,
-    message,
-    ...(reply === null ? {} : { reply }),
   };
 }
 
@@ -96,7 +62,7 @@ export function requestFrom(
     const unasked = (['to', 'expires'] as const).filter((key) => written[key] === undefined);
     return Result.fail([
       ...unasked.map((key) => issueAt(lines, `/${key}`, unaskedWords[key])),
-      ...issuesOf(() => messageOf(parts)),
+      ...issuesOf(() => bodyOf(written, parts, lines)),
     ]);
   }
   const checked = partsOf(written, { to, expires }, reading, parts);
@@ -107,10 +73,10 @@ export function requestFrom(
     ...issuesOf(() => checked.output),
     ...issuesOf(() => checked.to),
     ...issuesOf(() => checked.from),
-    ...issuesOf(() => checked.message),
+    ...issuesOf(() => checked.body),
     ...issuesOf(() => checked.reply),
   ];
   return found.length > 0
     ? Result.fail(found)
-    : Result.map(Result.all(checked), (done) => documentOfParts(written, { expires, lines }, done));
+    : Result.map(Result.all(checked), (done) => assembledRequest(written, { expires, lines }, done));
 }

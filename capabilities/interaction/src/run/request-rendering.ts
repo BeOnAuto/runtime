@@ -1,9 +1,14 @@
+import { Buffer } from 'node:buffer';
+
 import { refusingForbiddenCharacters } from '@on.auto/definitions';
 import { renderClock, type ParsedTemplate } from '@on.auto/definitions/template';
 import { renderedText, unrenderableFor, unworkable, type TextFailure } from '@on.auto/definitions/tool-blocks';
-import type { Conflict, InvalidInput } from '@on.auto/operations';
+import { InvalidInput, type Conflict } from '@on.auto/operations';
 import { Effect, Result, Schema } from 'effect';
 
+import type { RenderedBody } from '../document/interaction-document.ts';
+import { renderedCard } from '../rendering/card-rendering.ts';
+import type { RenderState } from '../rendering/rendered-message.ts';
 import { interactionBounds } from './run-bounds.ts';
 
 export interface RenderedPart {
@@ -71,3 +76,43 @@ export function checkedAnswerer(answerer: string): Effect.Effect<string, Conflic
 }
 
 export const messagePart = { pointer: '', what: 'The message', mostBytes: interactionBounds.messageBytes };
+
+export interface RenderedRequest {
+  readonly message: string;
+  readonly rendered: Schema.Json;
+}
+
+function unrenderable(issues: readonly string[]): InvalidInput {
+  return new InvalidInput({
+    detail: 'The message cannot be rendered with this input',
+    issues: issues.map((detail) => ({ pointer: '', detail })),
+  });
+}
+
+export function renderedRequest(
+  { target, card }: RenderedBody,
+  state: RenderState,
+): Effect.Effect<RenderedRequest, Conflict | InvalidInput> {
+  return Result.match(renderedCard(target, card, state), {
+    onSuccess: ({ payload, text }) => {
+      if (Buffer.byteLength(text, 'utf8') > interactionBounds.messageBytes) {
+        return Effect.fail(
+          unworkable(
+            '',
+            `${messagePart.what} renders to more than the ${messagePart.mostBytes} bytes a request may hold`,
+          ),
+        );
+      }
+      const bytes = Buffer.byteLength(JSON.stringify(payload), 'utf8');
+      return bytes > interactionBounds.renderedBytes
+        ? Effect.fail(
+            unworkable(
+              '',
+              `The rendered message takes ${bytes} bytes, more than the ${interactionBounds.renderedBytes} a request may hold; show less of the input`,
+            ),
+          )
+        : Effect.succeed({ message: text, rendered: payload });
+    },
+    onFailure: (issues) => Effect.fail(unrenderable(issues)),
+  });
+}

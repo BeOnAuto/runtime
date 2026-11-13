@@ -14,7 +14,15 @@ import { resolvedTelling, type ConversationTools } from '../tellings/telling-rou
 import { routeOf, toolsOf } from '../tool-blocks/routes.ts';
 import { checkedArguments, offered, roomFor, type InteractionPorts } from './request-reach.ts';
 import type { RequestRecord } from './request-record.ts';
-import { checkedAnswerer, checkedParty, fromPart, messagePart, renderedPart, toPart } from './request-rendering.ts';
+import {
+  checkedAnswerer,
+  checkedParty,
+  fromPart,
+  messagePart,
+  renderedPart,
+  renderedRequest,
+  toPart,
+} from './request-rendering.ts';
 
 type Variables = Readonly<Record<string, Schema.Json>>;
 
@@ -38,6 +46,19 @@ interface ProvidedPart {
   readonly part?: ConversationTools;
 }
 
+function messageOf(
+  document: RequestDocument,
+  variables: Variables,
+  { input, now }: { readonly input: Schema.Json; readonly now: string },
+): Effect.Effect<Pick<RequestRecord, 'message' | 'rendered'>, Conflict | InvalidInput> {
+  if (document.render === undefined) {
+    return Effect.map(renderedPart({ ...messagePart, template: document.message }, variables), (message) => ({
+      message,
+    }));
+  }
+  return renderedRequest(document.render, { input, today: now.slice(0, 10), now });
+}
+
 function requestOf(
   document: RequestDocument,
   input: Schema.Json,
@@ -48,7 +69,7 @@ function requestOf(
     const now = new Date(at).toISOString();
     const variables = momentVariables(input, now);
     const to = yield* Effect.flatMap(renderedPart({ ...toPart, template: document.to }, variables), checkedParty);
-    const message = yield* renderedPart({ ...messagePart, template: document.message }, variables);
+    const message = yield* messageOf(document, variables, { input, now });
     const answerSchema = document.output.schema?.document;
     const answering =
       answerSchema === undefined
@@ -57,7 +78,7 @@ function requestOf(
     const { route } = document;
     return {
       to,
-      message,
+      ...message,
       ...answering,
       expires_at: new Date(at + document.expiresMs).toISOString(),
       requested_at: now,

@@ -18,6 +18,18 @@ export const deliveryTemplates: TemplateSet = {
   structured: 'answer_schema',
 };
 
+const renderedSample = [
+  { type: 'section', text: { type: 'mrkdwn', text: 'Please review the brief.' } },
+  { type: 'divider' },
+];
+
+export const renderedDeliveryTemplates: TemplateSet = {
+  ...deliveryTemplates,
+  names: [...deliveryTemplates.names, 'rendered'],
+  sample: { ...deliveryTemplates.sample, rendered: renderedSample },
+  structured: 'rendered',
+};
+
 export const conversationKeyTemplates: TemplateSet = {
   names: ['to', 'sent.conversation', 'sent.id'],
   what: 'the conversation key of a reading',

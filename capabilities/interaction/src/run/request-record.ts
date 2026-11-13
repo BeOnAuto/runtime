@@ -12,6 +12,7 @@ const InteractionRequestSchema = Schema.Struct({
   replies: Schema.optionalKey(RepliesSchema),
   tell: Schema.optionalKey(TellingRouteSchema),
   provider: Schema.optionalKey(Schema.String),
+  rendered: Schema.optionalKey(Schema.Json),
 });
 
 export type RequestRecord = typeof InteractionRequestSchema.Type;

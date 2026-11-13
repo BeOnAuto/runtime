@@ -8,7 +8,7 @@ import { contractOf, issuesOf, type Checked } from './written-parts.ts';
 
 const writesACall = /^call:/mu;
 
-const keysOfARequest = ['to', 'expires', 'deliver', 'replies', 'from', 'reply'] as const;
+const keysOfARequest = ['to', 'expires', 'deliver', 'replies', 'from', 'reply', 'render'] as const;
 
 const noMessage =
   'A function with call sends no message: leave the body after the front matter empty, and say what the function does in description';

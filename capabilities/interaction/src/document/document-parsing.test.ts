@@ -18,7 +18,7 @@ function documentWith(frontMatter: readonly string[], body = 'Approve {{ input.c
 
 const essentials = ["to: '{{ input.owner }}'", 'expires: P2D'];
 
-const keys = 'description, call, to, from, expires, deliver, replies, input, output, reply';
+const keys = 'description, call, to, from, expires, deliver, replies, input, output, reply, render';
 
 describe('an interaction function definition', () => {
   it('reads its party, expiry, schemas and message, and is for an agent with deliver: agent', () => {

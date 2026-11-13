@@ -1,6 +1,7 @@
 export const interactionBounds = {
   toBytes: 256,
   messageBytes: 8192,
+  renderedBytes: 32_768,
   answerBytes: 65_536,
   answerDepth: 512,
   claimBytes: 256,

@@ -26,6 +26,7 @@ const FrontMatterSchema = Schema.Struct({
   input: Schema.optionalKey(SectionSchema),
   output: Schema.optionalKey(SectionSchema),
   reply: Schema.optionalKey(WrittenRuleSchema),
+  render: Schema.optionalKey(Schema.String),
 });
 
 export type InteractionFrontMatter = typeof FrontMatterSchema.Type;
