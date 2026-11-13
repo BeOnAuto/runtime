@@ -7,13 +7,15 @@ catalog:
   vitest: 5.0.3
   '@vitest/coverage-v8': 5.0.3
   effect: 4.0.0
-  hono: 4.13.13
+  hono: 4.13.16
   jose: 6.2.12
 
 minimumReleaseAge: 10080
 minimumReleaseAgeStrict: false
 minimumReleaseAgeExclude:
   - effect@4.0.0
+  # Renovate security update: hono@4.13.16
+  - hono@4.13.16
 trustPolicy: no-downgrade
 blockExoticSubdeps: true
 
