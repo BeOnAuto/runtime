@@ -2,12 +2,20 @@ import type { SQL } from '@event-driven-io/dumbo';
 
 import type { Dialect } from '../connection/ledger-connection.ts';
 import { sqlOf, type Statement } from '../connection/statement.ts';
+import type { StatementExecutor } from '../event-store.ts';
+import type { LayoutDialect } from './layout-dialects.ts';
 import { factsReadBy, type FactSchemaRead, type FactsRead } from './ledger-facts-refused.ts';
 import { ledgerLayout, ledgerLayoutFloor } from './ledger-layout.ts';
 
 export type StatementInEachDialect = Readonly<Record<Dialect, Statement>>;
 
-export type StepStatement = Statement | StatementInEachDialect;
+export type StepSQL = Statement | StatementInEachDialect;
+
+export interface StepInCode {
+  readonly inCode: (execute: StatementExecutor, dialect: LayoutDialect) => Promise<void>;
+}
+
+export type StepStatement = StepSQL | StepInCode;
 
 export interface LayoutStep {
   readonly layout: number;
@@ -36,12 +44,28 @@ export function layoutCarryingBy({
   return factSchemas === undefined ? carrying : { ...carrying, facts: factsReadBy(factSchemas) };
 }
 
-function isOneStatement(statement: StepStatement): statement is Statement {
+function isOneStatement(statement: StepSQL): statement is Statement {
   return 'strings' in statement;
 }
 
-export function sqlOn(dialect: Dialect, statement: StepStatement): SQL {
+export function sqlOn(dialect: Dialect, statement: StepSQL): SQL {
   return sqlOf(isOneStatement(statement) ? statement : statement[dialect]);
+}
+
+function isInCode(statement: StepStatement): statement is StepInCode {
+  return 'inCode' in statement;
+}
+
+export async function stepStatementTaken(
+  execute: StatementExecutor,
+  dialect: LayoutDialect,
+  statement: StepStatement,
+): Promise<void> {
+  if (isInCode(statement)) {
+    await statement.inCode(execute, dialect);
+    return;
+  }
+  await execute.command(sqlOn(dialect.dialect, statement));
 }
 
 function theStepTo(layout: number, steps: readonly LayoutStep[]): LayoutStep {

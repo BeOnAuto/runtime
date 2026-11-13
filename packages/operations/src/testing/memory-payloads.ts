@@ -1,10 +1,11 @@
 import type { ContentHeads } from '@on.auto/content';
-import { Effect, type SchemaAST } from 'effect';
+import { Effect, Schema, type SchemaAST } from 'effect';
 
 import { contentHoldersOf, type ContentHolders } from '../held-content/content-declaration.ts';
 import { payloadsNamed } from '../held-content/held-digests.ts';
 import { streamPrefixOfPlaybook } from '../ledger/bound-ports.ts';
-import type { TypedEvent } from '../ledger/decider.ts';
+import type { Context } from '../ledger/context.ts';
+import type { Fold, Recorded, StreamState, TypedEvent } from '../ledger/decider.ts';
 import { addressedStreamOf } from '../projections/keyed-projection.ts';
 import type { AppendedFact } from '../projections/memory-projections.ts';
 
@@ -14,7 +15,7 @@ function payloadBytesNamed(holders: ContentHolders, { type, data }: TypedEvent):
   return named.length === 0 ? undefined : named.reduce((total, { bytes }) => total + bytes, 0);
 }
 
-export function measuredBy(schema: { readonly ast: SchemaAST.AST }): (fact: AppendedFact) => AppendedFact {
+function measuredBy(schema: { readonly ast: SchemaAST.AST }): (fact: AppendedFact) => AppendedFact {
   const declared = contentHoldersOf([schema]);
   return ({ type, data, context }) => {
     const payloadBytes = payloadBytesNamed(declared, { type, data });
@@ -63,4 +64,48 @@ export function payloadsHeaded(
         : Effect.void,
     ),
   ).pipe(Effect.asVoid);
+}
+
+const EncodedFactSchema = Schema.Struct({ type: Schema.String, data: Schema.Unknown });
+
+const encodedFactOf = Schema.decodeUnknownSync(EncodedFactSchema);
+
+export function folded<State, Event extends Recorded>(
+  fold: Fold<State, Event>,
+  stored: readonly AppendedFact[],
+): Effect.Effect<StreamState<State>> {
+  const decodeEvent = Schema.decodeUnknownEffect(Schema.toCodecJson(fold.eventSchema));
+  return Effect.forEach(stored, ({ type, data, context }) => Effect.orDie(decodeEvent({ type, data, context }))).pipe(
+    Effect.map((events: readonly Event[]) => ({
+      state: foldedOver(fold, fold.initialState, events),
+      version: events.length,
+    })),
+  );
+}
+
+export function foldedOver<State, Event extends Recorded>(
+  fold: Fold<State, Event>,
+  from: State,
+  events: readonly Event[],
+): State {
+  let state = from;
+  for (const event of events) {
+    state = fold.evolve(state, event);
+  }
+  return state;
+}
+
+export function encodedWith<Event extends Recorded>(
+  eventSchema: Schema.ConstraintCodec<Event, unknown>,
+  context: Context,
+): (event: Event) => Effect.Effect<AppendedFact> {
+  const encodeEvent = Schema.encodeUnknownEffect(Schema.toCodecJson(eventSchema));
+  const measured = measuredBy(eventSchema);
+  return (event) =>
+    Effect.orDie(encodeEvent(event)).pipe(
+      Effect.map((encoded) => {
+        const { type, data } = encodedFactOf(encoded);
+        return measured({ type, data, context });
+      }),
+    );
 }

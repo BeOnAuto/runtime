@@ -20,4 +20,11 @@ describe('the entries of the package', () => {
     expect(payloads.packages).toEqual(['@on.auto/content', 'effect']);
     expect(payloads.files.filter((file) => file.startsWith('dispatch/'))).toEqual([]);
   });
+
+  it('keep the judgement of the names of definitions to its own file and what it names of a conflict and a fact, reaching no package', () => {
+    const names = modulesReachedFrom(source, 'definition-names/name-judgement.ts');
+
+    expect(names.packages).toEqual([]);
+    expect(names.files.filter((file) => file.startsWith('dispatch/'))).toEqual([]);
+  });
 });

@@ -182,8 +182,14 @@ function heldBackUntilItCommits(): void {
 
 const claimed = Schema.decodeUnknownSync(Schema.Struct({ name: Schema.String }));
 
+function definitionKeyOfTheStream(stream: string): string | undefined {
+  const segments = stream.split('/');
+  return segments.length > 3 ? `${segments.slice(0, 3).join('/')}/` : undefined;
+}
+
 const names: DefinitionNames = {
   types: ['named'],
+  definitionKeyOf: ({ stream }) => definitionKeyOfTheStream(stream),
   nameAfter: (_held, { data }: ProjectedMessage) => ({
     playbookKey: alpha,
     definitionType: 'reasoning',

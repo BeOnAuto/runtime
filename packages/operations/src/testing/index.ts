@@ -1,5 +1,5 @@
 export { memoryPlaybookRegistry } from './memory-playbook-registry.ts';
-export { memoryLedger, type MemoryLedger } from './memory-ledger.ts';
+export { memoryLedger, memoryLedgerWith, type MemoryLedger, type MemoryLedgerOptions } from './memory-ledger.ts';
 export { nothingKept } from '../reading/kept-content.ts';
 export { recordingReporter, type RecordingReporter, type ReportedIncident } from './recording-reporter.ts';
 export { recordingTracer, type RecordedSpan, type RecordingTracer } from './recording-tracer.ts';
@@ -23,6 +23,11 @@ export {
   type RemarkFact,
 } from '../projections/remark-rows.ts';
 export { factScrubBehaviour } from '../scrub-testing/fact-scrub-behaviour.ts';
+export {
+  namesAtThePortBehaviour,
+  type NamesAtThePort,
+  type NamesAtThePortEntry,
+} from '../names-testing/names-behaviour.ts';
 export { childRowsBehaviour, type ChildRowsLedger } from '../projections-testing/child-rows-behaviour.ts';
 export { unheldContentBehaviour } from '../content-testing/unheld-content-behaviour.ts';
 export {

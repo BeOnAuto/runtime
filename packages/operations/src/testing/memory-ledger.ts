@@ -1,7 +1,8 @@
-import { keptOutside, type ContentHeads, type ContentStore, type KeptOutside } from '@on.auto/content';
-import { memoryContentHeads, memoryContentStore } from '@on.auto/content/testing';
+import { keptOutside, type ContentStore, type KeptOutside } from '@on.auto/content';
+import { memoryContentStore } from '@on.auto/content/testing';
 import { Clock, Effect, Layer, Result, Schema } from 'effect';
 
+import type { DefinitionNames } from '../definition-names/name-judgement.ts';
 import {
   Conflict,
   Ledger,
@@ -13,32 +14,23 @@ import {
   notTheShapeOf,
   recordingOf,
   type ContentHolders,
-  type Context,
-  type Fold,
   type Lineage,
-  type Recorded,
   type RunOutcomeMapping,
   type KeptProjection,
   type StreamProjection,
-  type StreamState,
 } from '../index.ts';
-import {
-  memoryProjections,
-  type AppendedFact,
-  type LoggedFact,
-  type MemoryProjections,
-} from '../projections/memory-projections.ts';
-import { memoryRunOutcomes, type MemoryRunOutcomes } from '../run-outcomes/memory-run-outcomes.ts';
+import type { AppendedFact, LoggedFact } from '../projections/memory-projections.ts';
 import { memoryAppendedReader, type MemoryAppends } from './memory-appended.ts';
-import { measuredBy, payloadsHeaded, requireHeldAsMeasured } from './memory-payloads.ts';
+import { encodedWith, folded, foldedOver, payloadsHeaded, requireHeldAsMeasured } from './memory-payloads.ts';
 import { memoryRecordedReader, type MemoryRecord } from './memory-recorded.ts';
-import { memoryReferences, type MemoryReferences } from './memory-references.ts';
+import { keptTablesOf, type KeptTables, type MemoryTables } from './memory-tables.ts';
 
 export interface MemoryLedger {
   readonly service: Ledger['Service'];
   readonly layer: Layer.Layer<Ledger>;
   readonly streamNames: () => readonly string[];
   readonly eraseExpired: KeptOutside['eraseExpired'];
+  readonly names: KeptTables['names']['held'];
 }
 
 interface Appended {
@@ -47,60 +39,32 @@ interface Appended {
   readonly lineage: Lineage;
 }
 
-interface Kept {
+interface Kept extends KeptTables {
   readonly streams: Map<string, readonly AppendedFact[]>;
   readonly appendedAt: Map<string, number>;
   readonly log: readonly MemoryRecord[];
   readonly logged: (records: readonly MemoryRecord[]) => void;
   readonly rewritten: (stream: string, position: number, fact: AppendedFact) => void;
-  readonly outcomes: MemoryRunOutcomes;
-  readonly projected: MemoryProjections;
-  readonly references: MemoryReferences;
-  readonly holders: ContentHolders;
-  readonly heads: ContentHeads;
-}
-
-const EncodedFactSchema = Schema.Struct({ type: Schema.String, data: Schema.Unknown });
-
-const encodedFactOf = Schema.decodeUnknownSync(EncodedFactSchema);
-
-function folded<State, Event extends Recorded>(
-  fold: Fold<State, Event>,
-  stored: readonly AppendedFact[],
-): Effect.Effect<StreamState<State>> {
-  const decodeEvent = Schema.decodeUnknownEffect(Schema.toCodecJson(fold.eventSchema));
-  return Effect.forEach(stored, ({ type, data, context }) => Effect.orDie(decodeEvent({ type, data, context }))).pipe(
-    Effect.map((events: readonly Event[]) => ({
-      state: foldedOver(fold, fold.initialState, events),
-      version: events.length,
-    })),
-  );
-}
-
-function foldedOver<State, Event extends Recorded>(
-  fold: Fold<State, Event>,
-  from: State,
-  events: readonly Event[],
-): State {
-  let state = from;
-  for (const event of events) {
-    state = fold.evolve(state, event);
-  }
-  return state;
 }
 
 function storedIn({ streams }: Pick<Kept, 'streams'>, stream: string): readonly AppendedFact[] {
   return streams.get(stream) ?? [];
 }
 
-function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: number): void {
+function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: number): Conflict | undefined {
   const version = storedIn(kept, stream).length;
   const commits = [
     kept.references.staged(stream, stored),
     kept.outcomes.staged(stream, stored, version + 1),
     kept.projected.staged(stream, stored, version + 1),
   ];
-  for (const commit of commits) {
+  const names = kept.names.staged(
+    stored.map((fact, index) => ({ ...messageOf(stream, version + index + 1, fact), stream })),
+  );
+  if ('refused' in names) {
+    return names.refused;
+  }
+  for (const commit of [...commits, names.commit]) {
     commit();
   }
   kept.logged(
@@ -119,26 +83,12 @@ function appendedTo(kept: Kept, { stream, stored, lineage }: Appended, at: numbe
   );
   kept.streams.set(stream, [...storedIn(kept, stream), ...stored]);
   kept.appendedAt.set(stream, at);
+  return undefined;
 }
 
 function ageOn({ appendedAt }: Kept): Ledger['Service']['ageOfLastAppend'] {
   return (stream) =>
     Effect.map(Clock.currentTimeMillis, (now) => now - (appendedAt.get(stream) ?? Number.NEGATIVE_INFINITY));
-}
-
-function encodedWith<Event extends Recorded>(
-  eventSchema: Schema.ConstraintCodec<Event, unknown>,
-  context: Context,
-): (event: Event) => Effect.Effect<AppendedFact> {
-  const encodeEvent = Schema.encodeUnknownEffect(Schema.toCodecJson(eventSchema));
-  const measured = measuredBy(eventSchema);
-  return (event) =>
-    Effect.orDie(encodeEvent(event)).pipe(
-      Effect.map((encoded) => {
-        const { type, data } = encodedFactOf(encoded);
-        return measured({ type, data, context });
-      }),
-    );
 }
 
 function executedOn(kept: Kept): Ledger['Service']['execute'] {
@@ -166,7 +116,10 @@ function executedOn(kept: Kept): Ledger['Service']['execute'] {
         requireHeldAsMeasured(kept.holders, stream, stored);
       });
       yield* payloadsHeaded(kept.heads, kept.holders, stream, stored);
-      appendedTo(kept, { stream, stored, lineage }, yield* Clock.currentTimeMillis);
+      const refused = appendedTo(kept, { stream, stored, lineage }, yield* Clock.currentTimeMillis);
+      if (refused !== undefined) {
+        return yield* Effect.fail(refused);
+      }
       return { state: foldedOver(decider, state, events), version: version + events.length, decidedOn: state };
     });
 }
@@ -223,17 +176,10 @@ interface KeptLedger {
   readonly appends: MemoryAppends;
 }
 
-interface MemoryTables {
-  readonly runOutcomes: RunOutcomeMapping | undefined;
-  readonly projections: readonly (KeptProjection | StreamProjection)[];
-  readonly holders: ContentHolders | undefined;
-}
-
-function keptLedgerOf({ runOutcomes, projections, holders }: MemoryTables): KeptLedger {
+function keptLedgerOf(tables: MemoryTables): KeptLedger {
   const log: MemoryRecord[] = [];
   const streams = new Map<string, readonly AppendedFact[]>();
   const appends = memoryAppendedReader(log);
-  const references = memoryReferences(holders);
   const kept: Kept = {
     streams,
     appendedAt: new Map(),
@@ -250,13 +196,17 @@ function keptLedgerOf({ runOutcomes, projections, holders }: MemoryTables): Kept
         }
       }
     },
-    outcomes: memoryRunOutcomes(runOutcomes),
-    projected: memoryProjections(projections, () => loggedFactsOf({ log })),
-    references,
-    holders: holders ?? new Map(),
-    heads: memoryContentHeads(references.heldIn),
+    ...keptTablesOf(tables, () => loggedFactsOf({ log })),
   };
   return { kept, appends };
+}
+
+export interface MemoryLedgerOptions {
+  readonly runOutcomes?: RunOutcomeMapping | undefined;
+  readonly projections?: readonly (KeptProjection | StreamProjection)[];
+  readonly holders?: ContentHolders | undefined;
+  readonly store?: ContentStore;
+  readonly definitionNames?: DefinitionNames;
 }
 
 export function memoryLedger(
@@ -265,7 +215,17 @@ export function memoryLedger(
   holders?: ContentHolders,
   store: ContentStore = memoryContentStore(),
 ): MemoryLedger {
-  const { kept, appends } = keptLedgerOf({ runOutcomes, projections, holders });
+  return memoryLedgerWith({ runOutcomes, projections, holders, store });
+}
+
+export function memoryLedgerWith({
+  runOutcomes,
+  projections = [],
+  holders,
+  store = memoryContentStore(),
+  definitionNames,
+}: MemoryLedgerOptions): MemoryLedger {
+  const { kept, appends } = keptLedgerOf({ runOutcomes, projections, holders, definitionNames });
   const { projected, references } = kept;
   const outside = keptOutside(kept.heads, store);
   const recordedReader = memoryRecordedReader(kept.log);
@@ -296,5 +256,11 @@ export function memoryLedger(
     removeUnheld: references.removalOver(outside),
   });
   const streamNames = () => [...kept.streams.keys()];
-  return { service, layer: Layer.succeed(Ledger, service), streamNames, eraseExpired: outside.eraseExpired };
+  return {
+    service,
+    layer: Layer.succeed(Ledger, service),
+    streamNames,
+    eraseExpired: outside.eraseExpired,
+    names: kept.names.held,
+  };
 }

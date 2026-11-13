@@ -5,7 +5,7 @@ import { inTurn } from '../projections/inline-projection.ts';
 import type { NamedProjection } from '../projections/projection-fill.ts';
 import type { LayoutDialect } from './layout-dialects.ts';
 import { layoutFound, layoutKeptIn, layoutTable, type FoundLayout } from './layout-found.ts';
-import { sqlOn, stepsFrom, type LayoutCarrying, type LayoutStep } from './layout-steps.ts';
+import { stepStatementTaken, stepsFrom, type LayoutCarrying, type LayoutStep } from './layout-steps.ts';
 import { requireTheFactsRead } from './ledger-facts-refused.ts';
 import { ledgerLayoutRefused } from './ledger-layout-refused.ts';
 
@@ -52,7 +52,7 @@ async function stepTakenIn(execute: StatementExecutor, dialect: LayoutDialect, s
   if ((await layoutKeptIn(execute)) >= step.layout) {
     return;
   }
-  await inTurn(step.statements, (statement) => execute.command(sqlOn(dialect.dialect, statement)));
+  await inTurn(step.statements, (statement) => stepStatementTaken(execute, dialect, statement));
   await execute.command(SQL`UPDATE ${SQL.identifier(layoutTable)} SET layout = ${step.layout}`);
 }
 

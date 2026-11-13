@@ -56,8 +56,13 @@ function claimOf({ data }: ProjectedMessage) {
   };
 }
 
+function definitionKeyOfTheStream(stream: string): string {
+  return `${stream.split('/').slice(0, 3).join('/')}/`;
+}
+
 const names: DefinitionNames = {
   types: ['named'],
+  definitionKeyOf: ({ stream }) => definitionKeyOfTheStream(stream),
   nameAfter: (_held, message) => claimOf(message),
   takenBy: (claimed) => new Conflict({ detail: `${claimed.name} is held by another definition`, kind: 'taken' }),
 };
