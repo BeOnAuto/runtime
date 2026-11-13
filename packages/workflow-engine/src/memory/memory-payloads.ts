@@ -3,6 +3,7 @@ import { textBytesOf, type PayloadToKeep } from '@on.auto/operations/payloads';
 import { Effect } from 'effect';
 
 import type { HeldContent } from '../machine/held-contents.ts';
+import { mostInlineHeldValueBytes } from '../machine/limits.ts';
 import { ContentUnavailable } from '../run-log/content-unavailable.ts';
 import type { RunPayloads } from '../run-log/run-payloads.ts';
 
@@ -16,7 +17,7 @@ export interface MemoryPayloads extends RunPayloads<ContentUnavailable> {
   readonly keeps: () => readonly (readonly string[])[];
   readonly failNext: (call: PayloadCall) => void;
   readonly lose: (sha256: string, as: LostAs) => void;
-  readonly switchTo: (payloadOffloading: boolean) => void;
+  readonly switchTo: (payloadOffloading: boolean, payloadSizeThreshold?: number) => void;
 }
 
 function unavailable(call: PayloadCall): ContentUnavailable {
@@ -43,18 +44,35 @@ function contentIn({ texts, lost }: KeptTexts, sha256: string): HeldContent {
   return text === undefined ? { kind: 'missing' } : { kind: 'read', text };
 }
 
-export function memoryPayloads(payloadOffloading = false): MemoryPayloads {
-  const switched = { payloadOffloading };
+type Switched = Pick<MemoryPayloads, 'payloadOffloading' | 'payloadSizeThreshold' | 'switchTo'>;
+
+function switchedOf(payloadOffloading: boolean, payloadSizeThreshold: number): Switched {
+  const now = { payloadOffloading, payloadSizeThreshold };
+  return {
+    get payloadOffloading() {
+      return now.payloadOffloading;
+    },
+    get payloadSizeThreshold() {
+      return now.payloadSizeThreshold;
+    },
+    switchTo: (keeping, threshold = now.payloadSizeThreshold) => {
+      now.payloadOffloading = keeping;
+      now.payloadSizeThreshold = threshold;
+    },
+  };
+}
+
+export function memoryPayloads(
+  payloadOffloading = false,
+  payloadSizeThreshold = mostInlineHeldValueBytes,
+): MemoryPayloads {
   const texts = new Map<string, string>();
   const lost = new Map<string, LostAs>();
   const kept: KeptTexts = { texts, lost };
   const failing = new Set<PayloadCall>();
   const reads: (readonly string[])[] = [];
   const keeps: (readonly string[])[] = [];
-  return {
-    get payloadOffloading() {
-      return switched.payloadOffloading;
-    },
+  const calls: Omit<MemoryPayloads, keyof Switched> = {
     read: (_runId, asked) =>
       Effect.suspend(() => {
         if (failing.delete('read')) {
@@ -84,8 +102,6 @@ export function memoryPayloads(payloadOffloading = false): MemoryPayloads {
     lose: (sha256, as) => {
       lost.set(sha256, as);
     },
-    switchTo: (keeping) => {
-      switched.payloadOffloading = keeping;
-    },
   };
+  return Object.assign(switchedOf(payloadOffloading, payloadSizeThreshold), calls);
 }

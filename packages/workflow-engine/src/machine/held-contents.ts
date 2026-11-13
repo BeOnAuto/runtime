@@ -3,6 +3,7 @@ import { Data } from 'effect';
 import { jsonOfText, type Json } from '../dsl/json.ts';
 import type { HeldValue, KeptValue } from './held-value.ts';
 import { heldValueOf, reachableValueIds } from './held-values.ts';
+import { mostInlineHeldValueBytes } from './limits.ts';
 import type { RunState } from './run-state.ts';
 
 export type HeldContent =
@@ -16,10 +17,16 @@ export interface RunAtHand {
   readonly contents: HeldContents;
   readonly format: number | null;
   readonly payloadOffloading: boolean;
+  readonly payloadSizeThreshold: number;
 }
 
 export function nothingAtHand(): RunAtHand {
-  return { contents: new Map(), format: null, payloadOffloading: false };
+  return {
+    contents: new Map(),
+    format: null,
+    payloadOffloading: false,
+    payloadSizeThreshold: mostInlineHeldValueBytes,
+  };
 }
 
 export interface LostContent {

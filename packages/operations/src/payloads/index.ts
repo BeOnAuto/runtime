@@ -20,6 +20,7 @@ export {
 } from './payload-fields.ts';
 export {
   PayloadOffloading,
+  PayloadSizeThreshold,
   jsonPayloadText,
   payloadChosen,
   textBytesOf,

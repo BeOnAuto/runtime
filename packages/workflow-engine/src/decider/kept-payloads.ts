@@ -5,7 +5,6 @@ import type { PerformedOutput, RunOutput, StartCall } from '../dispatch/run-outp
 import { jsonBytesOf, type Json } from '../dsl/json.ts';
 import { isKept } from '../machine/held-contents.ts';
 import type { HeldValue } from '../machine/held-value.ts';
-import { mostInlineHeldValueBytes } from '../machine/limits.ts';
 import type { RunState } from '../machine/run-state.ts';
 
 export interface Keeping {
@@ -18,6 +17,7 @@ export interface Keeping {
 interface Decided {
   readonly outputs: readonly PerformedOutput[];
   readonly payloadOffloading: boolean;
+  readonly payloadSizeThreshold: number;
 }
 
 interface PayloadTable {
@@ -54,15 +54,20 @@ function payloadTable(): PayloadTable {
   };
 }
 
-function heldAfter(table: PayloadTable, before: RunState, [id, held]: readonly [string, HeldValue]): HeldValue {
-  const isNew = !Object.hasOwn(before.machine.values, id);
-  return isKept(held) || !isNew || held.bytes <= mostInlineHeldValueBytes ? held : table.hold(held.value, held.bytes);
+interface Kept {
+  readonly table: PayloadTable;
+  readonly threshold: number;
 }
 
-function startedWith(table: PayloadTable, call: StartCall): RunOutput {
+function heldAfter({ table, threshold }: Kept, before: RunState, [id, held]: readonly [string, HeldValue]): HeldValue {
+  const isNew = !Object.hasOwn(before.machine.values, id);
+  return isKept(held) || !isNew || held.bytes <= threshold ? held : table.hold(held.value, held.bytes);
+}
+
+function startedWith({ table, threshold }: Kept, call: StartCall): RunOutput {
   const { arguments: given, ...started } = call;
   const bytes = jsonBytesOf(given);
-  if (bytes <= mostInlineHeldValueBytes) {
+  if (bytes <= threshold) {
     return call;
   }
   const { sha256 } = table.keep(given, bytes);
@@ -73,18 +78,23 @@ function keptBefore(before: RunState): ReadonlySet<string> {
   return new Set(Object.values(before.machine.values).flatMap((held) => (isKept(held) ? [held.sha256] : [])));
 }
 
-export function keepingOf(before: RunState, after: RunState, { outputs, payloadOffloading }: Decided): Keeping {
+export function keepingOf(
+  before: RunState,
+  after: RunState,
+  { outputs, payloadOffloading, payloadSizeThreshold }: Decided,
+): Keeping {
   if (!payloadOffloading) {
     return { state: after, outputs, kept: [], payloads: [] };
   }
   const table = payloadTable();
+  const keeping: Kept = { table, threshold: payloadSizeThreshold };
   const values = Object.fromEntries(
     Object.entries(after.machine.values).map((entry: readonly [string, HeldValue]) => [
       entry[0],
-      heldAfter(table, before, entry),
+      heldAfter(keeping, before, entry),
     ]),
   );
-  const recorded = outputs.map((output) => (output.kind === 'start_call' ? startedWith(table, output) : output));
+  const recorded = outputs.map((output) => (output.kind === 'start_call' ? startedWith(keeping, output) : output));
   const held = keptBefore(before);
   return {
     state: { ...after, machine: { ...after.machine, values } },

@@ -8,11 +8,12 @@ import { Layer } from 'effect';
 import { meterLayerOver, unlicensed, type MeterComposing } from '../licensing/meter-layer.ts';
 import type { ServerServices } from '../server-options/composed-options.ts';
 import type { Served } from '../server-options/server-options.ts';
-import { loggingIncidentReporter, payloadsSharedInTheProcess } from './process-layers.ts';
+import { loggingIncidentReporter, payloadOffloadingOf, payloadsSharedInTheProcess } from './process-layers.ts';
 
 export function applicationLayer(
   ledger: Layer.Layer<LedgerServices>,
   meter: MeterComposing = unlicensed,
+  payloads?: Parameters<typeof payloadOffloadingOf>[0],
 ): Layer.Layer<ServerServices> {
   return Layer.mergeAll(
     ledger,
@@ -21,6 +22,7 @@ export function applicationLayer(
     loggingIncidentReporter,
     liveAttemptsLayer.pipe(Layer.provide(loggingIncidentReporter)),
     payloadsSharedInTheProcess(),
+    payloads === undefined ? Layer.empty : payloadOffloadingOf(payloads),
   );
 }
 

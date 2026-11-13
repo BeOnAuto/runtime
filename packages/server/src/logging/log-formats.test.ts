@@ -96,6 +96,7 @@ describe('the server with LOG_FORMAT=pretty', () => {
       expect.stringMatching(/^WARN {2}Local mode is on: /u),
       'INFO  The ledger is kept in the file :memory: ledger_file=:memory:',
       "INFO  Content is kept in the ledger's database content_store=ledger",
+      'INFO  Payload offloading is on: a payload larger than 16384 bytes is kept as content, and its record names it by its SHA-256 and its size payload_offloading=true payload_size_threshold_bytes=16384',
       expect.stringMatching(
         /^INFO {2}Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the server made at this start, and 0 sealed under the previous key were sealed again under it secrets_kid=[\da-f]{16} secrets_resealed=0 secrets_key_from=start$/u,
       ),

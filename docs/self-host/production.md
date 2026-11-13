@@ -152,7 +152,7 @@ Reasoning functions, workflows and the forecasts of prediction functions run in 
 
 Run one server. With a restart policy and a durable ledger, one server is the simplest shape that keeps every operation working, since it both runs the workflows and serves every request.
 
-Several servers can share one PostgreSQL database and one bucket, but only one of them runs the workflows at a time. The others stand by, and one takes the workflows over within about three seconds if that server stops or dies. A server standing by refuses workflow starts and `send_run_event` as `unavailable` (`503`), and nothing outside the logs says which server holds the claim. [How several servers share the workflows](workflows.md#how-several-servers-share-the-workflows) describes the claim.
+Several servers can share one PostgreSQL database and one bucket, with the same `CONTENT_STORE_URL` and the same [payload offloading](configuration.md#payload-offloading) settings, but only one of them runs the workflows at a time. The others stand by, and one takes the workflows over within about three seconds if that server stops or dies. A server standing by refuses workflow starts and `send_run_event` as `unavailable` (`503`), and nothing outside the logs says which server holds the claim. [How several servers share the workflows](workflows.md#how-several-servers-share-the-workflows) describes the claim.
 
 So a load balancer cannot route those operations to the right server. Choose the shape by what your callers do:
 

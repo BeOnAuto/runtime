@@ -180,13 +180,27 @@ describe.each(stores)('a run of a playbook that turned keeping on, or lost a kep
     const opened = await store.open();
     const { server, runId } = await waitingWithItsAnswerKept(opened);
     await server.stop();
-    await opened.rows(`DELETE FROM recorded_content_heads WHERE sha256 = '${answerDigest}'`);
 
     const second = await servedOn(opened);
+    await opened.rows(`DELETE FROM recorded_content_heads WHERE sha256 = '${answerDigest}'`);
     await eventSent(second, runId);
 
     expect(await second.settled(runId)).toMatchObject({ status: 'rejected', rejection: { reason: 'unavailable' } });
   });
+
+  it.skipIf(store.skipped)(
+    'does not start again once the kept answer is gone from its store, and says so',
+    async () => {
+      const opened = await store.open();
+      const { server } = await waitingWithItsAnswerKept(opened);
+      await server.stop();
+      await opened.rows(`DELETE FROM recorded_content_heads WHERE sha256 = '${answerDigest}'`);
+
+      await expect(servedOn(opened)).rejects.toThrow(
+        /its records name content this server cannot find\. Content is kept in the ledger's database, since CONTENT_STORE_URL is not set, but 1 of the \d+ it looked for is not there/u,
+      );
+    },
+  );
 });
 
 describe.each(stores)('a trigger, a listener and a page given the output a run keeps outside, on $name', (store) => {

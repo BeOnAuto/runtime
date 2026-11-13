@@ -20,6 +20,7 @@ import {
   expiryKept,
   expiryKeptOver,
   expiryOfThePut,
+  keptExternally,
   keptHeadColumns,
   keptHeadIn,
   keptShelf,
@@ -36,8 +37,6 @@ interface HeadKeeping {
 const heads = SQL.identifier(keptShelf.heads);
 
 const chunks = SQL.identifier(keptShelf.chunks);
-
-const keptExternally = 'external';
 
 const markedAloneBy = '';
 

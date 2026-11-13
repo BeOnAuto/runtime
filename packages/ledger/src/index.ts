@@ -21,7 +21,8 @@ export {
 } from './connection/statement.ts';
 export { chunksWithin, sqliteMostBoundValues } from './connection/bound-values.ts';
 export { StatementsFailed } from './connection/appends-with.ts';
-export { LedgerChores, type ChorePorts } from './content/content-sweep.ts';
+export { LedgerChores, type ChorePorts, type HeldContentFound } from './content/content-sweep.ts';
+export { HeldContentUnchecked } from './references/held-heads.ts';
 export type {
   DefinitionName,
   DefinitionNames,

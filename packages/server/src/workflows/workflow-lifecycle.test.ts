@@ -68,6 +68,7 @@ describe('main with workflows', () => {
     expect(startUpLines.slice(1)).toEqual([
       `INFO The ledger is kept in the file ${ledger.fileName}`,
       "INFO Content is kept in the ledger's database",
+      'INFO Payload offloading is on: a payload larger than 16384 bytes is kept as content, and its record names it by its SHA-256 and its size',
       expect.stringMatching(
         /^INFO Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the file \S+\/secrets\.key holds, and 0 sealed under the previous key were sealed again under it$/u,
       ),

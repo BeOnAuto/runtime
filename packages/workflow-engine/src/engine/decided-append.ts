@@ -38,8 +38,8 @@ export function appendedDecision<Unavailable>(
 ): Attempt<Unavailable> {
   return Effect.gen(function* () {
     const { contents, format } = run;
-    const payloadOffloading = stores.payloads.payloadOffloading;
-    const decision = decider.decision(input, run.state, { contents, format, payloadOffloading });
+    const { payloadOffloading, payloadSizeThreshold } = stores.payloads;
+    const decision = decider.decision(input, run.state, { contents, format, payloadOffloading, payloadSizeThreshold });
     const [event, ...more] = decision.events;
     if (event === undefined) {
       return Result.succeed(nothingAppended(run, decision));

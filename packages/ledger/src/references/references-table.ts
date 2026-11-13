@@ -7,6 +7,7 @@ import { keptShelf } from '../content/content-tables.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
+import type { HeldHead } from './held-heads.ts';
 
 export const contentReferences = { name: 'content_references', version: 1 };
 
@@ -171,4 +172,28 @@ export async function isHeldIn(execute: StatementExecutor, prefix: string, sha25
     SQL`SELECT 1 AS held FROM ${table} WHERE playbook_key = ${prefix} AND sha256 = ${sha256} AND held > 0 LIMIT 1`,
   );
   return rows.length > 0;
+}
+
+const HeldHeadRows = Schema.Array(
+  Schema.Struct({ playbook_key: Schema.String, sha256: Schema.String, kept_in: Schema.NullOr(Schema.String) }),
+);
+
+export async function firstHeldHeads(
+  read: (sql: SQL) => Promise<readonly unknown[]>,
+  most: number,
+): Promise<readonly HeldHead[]> {
+  const rows = await read(
+    SQL`SELECT held.playbook_key, held.sha256, heads.kept_in
+      FROM (
+        SELECT DISTINCT playbook_key, sha256 FROM ${table} WHERE held > 0 ORDER BY playbook_key, sha256 LIMIT ${most}
+      ) AS held
+      LEFT JOIN ${headsTable} AS heads ON heads.playbook_key = held.playbook_key AND heads.sha256 = held.sha256
+      WHERE heads.erased_at IS NULL
+      ORDER BY held.playbook_key, held.sha256`,
+  );
+  return Schema.decodeUnknownSync(HeldHeadRows)(rows).map(({ playbook_key: playbookKey, sha256, kept_in: keptIn }) => ({
+    playbookKey,
+    sha256,
+    keptIn: keptIn ?? undefined,
+  }));
 }

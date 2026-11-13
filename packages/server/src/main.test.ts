@@ -67,6 +67,7 @@ const ledgerKept = `The ledger is kept in the file ${ledger.fileName}`;
 const keptIn: readonly unknown[] = [
   ledgerKept,
   "Content is kept in the ledger's database",
+  'Payload offloading is on: a payload larger than 16384 bytes is kept as content, and its record names it by its SHA-256 and its size',
   expect.stringMatching(
     /^Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the file \S+\/secrets\.key holds, and 0 sealed under the previous key were sealed again under it$/u,
   ),

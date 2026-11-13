@@ -210,7 +210,10 @@ export function postgresqlProjectionsOf(kept: KeptTables) {
       await postgresqlSchemaCreated(execute);
       await parts.prepare(execute, (work) => work(execute));
     },
-    unlessHeldOn: (connections: ContentConnections) => parts.references.unlessHeldOn(inTransactionOn(connections)),
+    holdsOn: (connections: ContentConnections, read: (sql: SQL) => Promise<readonly unknown[]>) => ({
+      unlessHeld: parts.references.unlessHeldOn(inTransactionOn(connections)),
+      heldHeads: parts.references.heldHeadsOn(read),
+    }),
     readerOnThePool: (pool: ContentConnections, query: (sql: SQL) => Promise<readonly unknown[]>) =>
       parts.readerOn({ query, command: query, inTransaction: inTransactionOn(pool) }),
   };

@@ -21,7 +21,7 @@ export {
 } from './host/run-requests.ts';
 export { openWorkflowHost, type HostOptions, type WorkflowHost } from './host/workflow-host.ts';
 export { openWorkflowStore, type WorkflowStore } from './host/workflow-store.ts';
-export { hostPayloadCacheBytes } from './runs/run-payloads.ts';
+export { HeldValueSizeThreshold, hostPayloadCacheBytes } from './runs/run-payloads.ts';
 export type {
   CapabilityDatabase,
   CapabilityFactory,

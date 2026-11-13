@@ -11,6 +11,7 @@ import {
   StateFormatSchema,
   keptValuesReached,
   loadedRunOf,
+  mostInlineHeldValueBytes,
   snapshotFromChunks,
   stateFormatKeepingPayloads,
   stateInCurrentFormat,
@@ -140,6 +141,7 @@ describe.each(['format-12', 'format-11-to-12', 'format-12-switched-off'])('the n
       contents,
       format: atSnapshot.format,
       payloadOffloading: next.payloadOffloading,
+      payloadSizeThreshold: mostInlineHeldValueBytes,
     });
 
     expect(keptValuesReached(atSnapshot.state).every(({ sha256 }) => contents.has(sha256))).toBe(true);
@@ -149,7 +151,12 @@ describe.each(['format-12', 'format-11-to-12', 'format-12-switched-off'])('the n
 
   it('is not decided without those texts: a decision given none of them dies rather than guess', () => {
     const nothing = new Map<string, HeldContent>();
-    const given = { contents: nothing, format: atSnapshot.format, payloadOffloading: next.payloadOffloading };
+    const given = {
+      contents: nothing,
+      format: atSnapshot.format,
+      payloadOffloading: next.payloadOffloading,
+      payloadSizeThreshold: mostInlineHeldValueBytes,
+    };
 
     expect(keptValuesReached(atSnapshot.state).length).toBeGreaterThan(0);
     expect(() => machine.decision(next.input, atSnapshot.state, given)).toThrow(HeldContentNotGiven);

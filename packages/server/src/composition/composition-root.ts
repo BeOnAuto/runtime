@@ -103,8 +103,9 @@ export function compositionRootWith(
       ...(signers === undefined ? {} : { signers }),
       ...(features === undefined ? {} : { features }),
     };
+    const services = applicationLayer(ledgerLayer, meter, settings.payloads);
     return {
-      services: made.computation.closedLastOf(made.registry.closedFirstOf(applicationLayer(ledgerLayer, meter))),
+      services: made.computation.closedLastOf(made.registry.closedFirstOf(services)),
       serve: servedWith({ modelAccessOf, wiring, clock, settings, telemetry, shippedFiles, database, made }),
     };
   });

@@ -4,6 +4,7 @@ import type { AppendSignal, LedgerServices } from '@on.auto/ledger';
 import { Effect, Layer } from 'effect';
 
 import type { LedgerDatabase } from '../database/ledger-database.ts';
+import { withItsContentFound } from '../database/ledger-of-content-not-found.ts';
 import { contentStoreOf, type ContentStoreSettings } from './content-store.ts';
 import { keptProjections, keptStreamProjections } from './kept-projections.ts';
 import { factsKnownWith } from './known-holders.ts';
@@ -36,16 +37,19 @@ interface LedgerOpeningOfTheServer {
 }
 
 export function ledgerLayerFor(
-  settings: ContentStoreSettings,
+  settings: ContentStoreSettings & Parameters<typeof withItsContentFound>[1],
   database: LedgerDatabase,
   opening: LedgerOpeningOfTheServer,
 ): Layer.Layer<LedgerServices> {
   const composing = contentStoreOf(settings);
   return composing === undefined
-    ? ledgerLayerOf(database, opening)
+    ? withItsContentFound(ledgerLayerOf(database, opening), settings)
     : Layer.unwrap(
-        Effect.flatMap(composing, ({ reached, store }) =>
-          Effect.as(reached, ledgerLayerOf(database, { ...opening, content: store })),
+        Effect.flatMap(composing, ({ reached, store, unreachableBy }) =>
+          Effect.as(
+            reached,
+            withItsContentFound(ledgerLayerOf(database, { ...opening, content: store }), settings, unreachableBy),
+          ),
         ),
       );
 }

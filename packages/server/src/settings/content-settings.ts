@@ -1,7 +1,10 @@
 import type { Environment } from '@on.auto/config';
 import { contentLocationOf, type ContentLocation } from '@on.auto/object-storage/location';
-import { Config, ConfigProvider, Effect, Option } from 'effect';
+import { mostShownFieldBytes } from '@on.auto/operations';
+import { mostInlinePayloadBytes } from '@on.auto/operations/payloads';
+import { Config, ConfigProvider, Effect, Option, Schema } from 'effect';
 
+import { countOf } from '../function-settings/counted-settings.ts';
 import { InvalidSettingsError } from './invalid-settings-error.ts';
 
 export type ContentSettings =
@@ -75,4 +78,69 @@ export function readContentSettings(environment: Environment): Effect.Effect<Con
       region: Option.getOrUndefined(region),
     };
   });
+}
+
+export interface PayloadSettings {
+  readonly offloading: boolean;
+  readonly sizeThresholdBytes: number;
+}
+
+const leastPayloadSizeThresholdBytes = mostShownFieldBytes;
+
+const mostPayloadSizeThresholdBytes = 65_536;
+
+const defaultPayloadSizeThresholdBytes = mostInlinePayloadBytes;
+
+export const defaultPayloadSettings: PayloadSettings = {
+  offloading: true,
+  sizeThresholdBytes: defaultPayloadSizeThresholdBytes,
+};
+
+const offloadingSetting = 'PAYLOAD_OFFLOADING';
+
+const thresholdSetting = 'PAYLOAD_SIZE_THRESHOLD_BYTES';
+
+export const payloadVariables: readonly string[] = [offloadingSetting, thresholdSetting];
+
+export const PayloadSizeThresholdBytes = Schema.Int.check(
+  Schema.isBetween({ minimum: leastPayloadSizeThresholdBytes, maximum: mostPayloadSizeThresholdBytes }),
+);
+
+const switchValues: ReadonlyMap<string, boolean> = new Map([
+  ['', defaultPayloadSettings.offloading],
+  ['true', true],
+  ['false', false],
+]);
+
+function writtenIn(environment: Environment, setting: string): string {
+  return (environment[setting] ?? '').trim();
+}
+
+function offloadingIn(environment: Environment): boolean | undefined {
+  return switchValues.get(writtenIn(environment, offloadingSetting).toLowerCase());
+}
+
+function thresholdIn(environment: Environment): number {
+  const written = writtenIn(environment, thresholdSetting);
+  return written === '' ? defaultPayloadSizeThresholdBytes : countOf(written);
+}
+
+function isWithinItsBounds(threshold: number): boolean {
+  return threshold >= leastPayloadSizeThresholdBytes && threshold <= mostPayloadSizeThresholdBytes;
+}
+
+export function readPayloadSettings(environment: Environment): Effect.Effect<PayloadSettings, InvalidSettingsError> {
+  const offloading = offloadingIn(environment);
+  const sizeThresholdBytes = thresholdIn(environment);
+  const problems = [
+    ...(offloading === undefined ? [`${offloadingSetting}: Expected true or false`] : []),
+    ...(isWithinItsBounds(sizeThresholdBytes)
+      ? []
+      : [
+          `${thresholdSetting}: Expected a whole number from ${leastPayloadSizeThresholdBytes} to ${mostPayloadSizeThresholdBytes}, such as ${defaultPayloadSizeThresholdBytes}`,
+        ]),
+  ];
+  return offloading === undefined || problems.length > 0
+    ? Effect.fail(new InvalidSettingsError({ message: `The payload settings are invalid. ${problems.join('; ')}` }))
+    : Effect.succeed({ offloading, sizeThresholdBytes });
 }

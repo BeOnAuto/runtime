@@ -6,8 +6,16 @@ import { inlineRegistrationOf, inTurn, type InlineRegistration } from '../projec
 import type { ProjectionDialect } from '../projections/projection-dialect.ts';
 import { mostBytesInABatch, versionOfTable, type NamedProjection } from '../projections/projection-fill.ts';
 import { namesIn, tableDrop } from '../projections/projection-statements.ts';
+import type { HeldHeads } from './held-heads.ts';
 import { keepingReferences, referencesFilled, referencesRefolded, type ReferencesKeeping } from './references-folds.ts';
-import { contentReferences, digestsLocked, isHeldIn, referencesCreated, referencesTable } from './references-table.ts';
+import {
+  contentReferences,
+  digestsLocked,
+  firstHeldHeads,
+  isHeldIn,
+  referencesCreated,
+  referencesTable,
+} from './references-table.ts';
 
 export interface ContentReferences {
   readonly named: readonly NamedProjection[];
@@ -15,6 +23,7 @@ export interface ContentReferences {
   readonly prepare: (execute: StatementExecutor, inTransaction: InTransaction) => Promise<void>;
   readonly refolded: (execute: StatementExecutor, stream: string) => Promise<void>;
   readonly unlessHeldOn: (inTransaction: InTransaction) => UnlessHeld;
+  readonly heldHeadsOn: (read: (sql: SQL) => Promise<readonly unknown[]>) => HeldHeads;
 }
 
 function isEarlierVersion(table: string): boolean {
@@ -59,6 +68,7 @@ function referencesKept(keeping: ReferencesKeeping): ContentReferences {
         await digestsLocked(execute, keeping.dialect, prefix, [sha256]);
         return (await isHeldIn(execute, prefix, sha256)) ? 'held' : within(execute);
       }),
+    heldHeadsOn: (read) => (most) => firstHeldHeads(read, most),
   };
 }
 
@@ -68,6 +78,7 @@ const noReferences: ContentReferences = {
   prepare: () => Promise.resolve(),
   refolded: () => Promise.resolve(),
   unlessHeldOn: () => () => Promise.reject(noHoldersKnown()),
+  heldHeadsOn: () => () => Promise.reject(noHoldersKnown()),
 };
 
 export function contentReferencesOf(

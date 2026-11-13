@@ -6,7 +6,7 @@ import { errorType } from '../dsl/raised-error.ts';
 import { coldEngineOn, keptAnswer, pauseEnded, waitingOnItsPause } from '../kept-testing/kept-drivers.ts';
 import type { RunState } from '../machine/run-state.ts';
 import { testMachine, testWorkflowMachine } from '../pool-testing/test-sandbox.ts';
-import { NoPayloadStore } from '../run-log/run-payloads.ts';
+import { NoPayloadStore, noPayloadStore } from '../run-log/run-payloads.ts';
 import { drivenRunId } from '../testing/run-history.ts';
 import { workflowEngineOf } from './engine.ts';
 
@@ -15,6 +15,7 @@ function endingOf(state: RunState, content: { readonly kind: 'missing' | 'erased
     contents: new Map([[keptAnswer, content]]),
     format: 12,
     payloadOffloading: true,
+    payloadSizeThreshold: noPayloadStore.payloadSizeThreshold,
   }).events;
 }
 

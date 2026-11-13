@@ -2,7 +2,7 @@ import { setTimeout } from 'node:timers/promises';
 
 import type { Environment } from '@on.auto/config';
 
-import { ledgerOfAnotherVersionIn } from '../database/ledger-of-another-version.ts';
+import { ledgerRefusalIn } from '../database/ledger-refusals.ts';
 import { type RunningServer, type ServerOptions } from '../server-options/server-options.ts';
 import { firstStartNotice } from '../usage-ping/usage-ping.ts';
 import { startServer } from './lifecycle.ts';
@@ -60,7 +60,7 @@ function startupFailureLineOf(failure: unknown): string {
 }
 
 function ledgerRefusalLineOf(failure: unknown): string | undefined {
-  const refusal = ledgerOfAnotherVersionIn(failure);
+  const refusal = ledgerRefusalIn(failure);
   return refusal === undefined ? undefined : startupFailureLineOf(refusal.message);
 }
 

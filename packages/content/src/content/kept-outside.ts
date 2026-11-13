@@ -13,6 +13,7 @@ import type {
   ExpiredErased,
   HeadKept,
   HeadToKeep,
+  KeptContentHead,
   RecordedContent,
   UnheldRemoval,
 } from './recorded-content.ts';
@@ -28,6 +29,7 @@ export const erasureDeletesWithinMs = removalLastsMs / 2;
 
 export interface KeptOutside {
   readonly content: RecordedContent;
+  readonly found: (playbook: ContentOwner, sha256: string) => Effect.Effect<boolean>;
   readonly removedKeptBefore: (playbook: ContentOwner, sha256: string, before: number) => Effect.Effect<UnheldRemoval>;
   readonly eraseExpired: (most: number) => Effect.Effect<ExpiredErased>;
 }
@@ -200,19 +202,40 @@ function expiredErased(outside: Outside, most: number): Effect.Effect<ExpiredEra
   });
 }
 
-function readAsHeld<Read extends { readonly mediaType: string }>(
+interface Resolved<A> {
+  readonly erased: Effect.Effect<A>;
+  readonly stored: (head: KeptContentHead | undefined) => Effect.Effect<A>;
+}
+
+function resolvedThroughItsHead<A>(
   { heads }: Outside,
+  playbook: ContentOwner,
+  sha256: string,
+  { erased, stored }: Resolved<A>,
+): Effect.Effect<A> {
+  return Effect.flatMap(heads.read(playbook, sha256), (head) => (head?.erasedAt === undefined ? stored(head) : erased));
+}
+
+function readAsHeld<Read extends { readonly mediaType: string }>(
+  outside: Outside,
   playbook: ContentOwner,
   sha256: string,
   stored: Effect.Effect<Read | undefined>,
 ): Effect.Effect<Read | undefined> {
-  return Effect.flatMap(heads.read(playbook, sha256), (head) =>
-    head?.erasedAt === undefined
-      ? Effect.map(stored, (read) =>
-          read === undefined ? read : { ...read, mediaType: head?.mediaType ?? read.mediaType },
-        )
-      : Effect.undefined,
-  );
+  return resolvedThroughItsHead(outside, playbook, sha256, {
+    erased: Effect.undefined,
+    stored: (head) =>
+      Effect.map(stored, (read) =>
+        read === undefined ? read : { ...read, mediaType: head?.mediaType ?? read.mediaType },
+      ),
+  });
+}
+
+function foundAsRead(outside: Outside, playbook: ContentOwner, sha256: string): Effect.Effect<boolean> {
+  return resolvedThroughItsHead(outside, playbook, sha256, {
+    erased: Effect.succeed(true),
+    stored: () => outside.store.holds(playbook, sha256),
+  });
 }
 
 export function keptOutside(heads: ContentHeads, store: ContentStore): KeptOutside {
@@ -225,6 +248,7 @@ export function keptOutside(heads: ContentHeads, store: ContentStore): KeptOutsi
       getPart: (playbook, sha256, asked) =>
         readAsHeld(outside, playbook, sha256, store.readPart(playbook, sha256, asked)),
     },
+    found: (playbook, sha256) => foundAsRead(outside, playbook, sha256),
     removedKeptBefore: (playbook, sha256, before) => removedKeptBefore({ ...outside, playbook, sha256 }, before),
     eraseExpired: (most) => expiredErased(outside, most),
   };

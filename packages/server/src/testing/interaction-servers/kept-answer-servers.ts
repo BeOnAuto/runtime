@@ -82,7 +82,7 @@ const workflows = [
 ] as const;
 
 export function servedOn(store: OpenStore, keeping = true): Promise<InteractionServer> {
-  return interactionServerOn(store.environment, { ...store.served, ...(keeping ? { keptOutside: true } : {}) });
+  return interactionServerOn(store.environment, { ...store.served, keptOutside: keeping });
 }
 
 export async function playbookOn(store: OpenStore, keeping = true): Promise<InteractionServer> {

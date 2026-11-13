@@ -2,7 +2,8 @@ import type { AccessMode, SignInSettings, StudioSettings } from '@on.auto/identi
 import type { Incident } from '@on.auto/operations';
 import { Cause, Effect, Layer } from 'effect';
 
-import type { ContentSettings } from '../settings/content-settings.ts';
+import { contentPlaceOf } from '../settings/content-place.ts';
+import type { ContentSettings, PayloadSettings } from '../settings/content-settings.ts';
 import {
   resolvedLedgerFile,
   whereTheLedgerIsKept,
@@ -124,25 +125,38 @@ export function logLedger(ledger: LedgerSettings): Effect.Effect<void> {
     : ledgerFileLine(kept, resolvedLedgerFile(ledger.file));
 }
 
-function objectStorageLine(bucket: string, prefix: string, endpoint: string | undefined): Effect.Effect<void> {
-  const under = prefix === '' ? '' : ` under ${prefix}/`;
-  const host = endpoint === undefined ? undefined : new URL(endpoint).host;
-  return Effect.logInfo(
-    `Content is kept on object storage, in the bucket ${bucket}${under}, on ${host ?? 'the S3 endpoint of its region'}`,
-  ).pipe(
-    Effect.annotateLogs({
-      content_store: 'object-storage',
-      content_bucket: bucket,
-      content_prefix: prefix,
-      ...(host === undefined ? {} : { content_endpoint: host }),
-    }),
-  );
+function contentAnnotationsOf(content: ContentSettings): Readonly<Record<string, string>> {
+  if (content.store === 'ledger') {
+    return { content_store: 'ledger' };
+  }
+  const { location, endpoint } = content;
+  return {
+    content_store: 'object-storage',
+    content_bucket: location.bucket,
+    content_prefix: location.prefix,
+    ...(endpoint === undefined ? {} : { content_endpoint: new URL(endpoint).host }),
+  };
 }
 
 export function logContentStore(content: ContentSettings): Effect.Effect<void> {
-  return content.store === 'ledger'
-    ? Effect.logInfo("Content is kept in the ledger's database").pipe(Effect.annotateLogs({ content_store: 'ledger' }))
-    : objectStorageLine(content.location.bucket, content.location.prefix, content.endpoint);
+  return Effect.logInfo(`Content is kept ${contentPlaceOf(content)}`).pipe(
+    Effect.annotateLogs(contentAnnotationsOf(content)),
+  );
+}
+
+function payloadOffloadingLine({ offloading, sizeThresholdBytes }: PayloadSettings): string {
+  return offloading
+    ? `Payload offloading is on: a payload larger than ${sizeThresholdBytes} bytes is kept as content, and its record names it by its SHA-256 and its size`
+    : 'Payload offloading is off: a new payload stays inline in its record, whatever its size';
+}
+
+export function logPayloadOffloading(payloads: PayloadSettings): Effect.Effect<void> {
+  return Effect.logInfo(payloadOffloadingLine(payloads)).pipe(
+    Effect.annotateLogs({
+      payload_offloading: payloads.offloading,
+      payload_size_threshold_bytes: payloads.sizeThresholdBytes,
+    }),
+  );
 }
 
 const causeNotFormattable = Effect.logError('Unexpected error whose cause could not be formatted');

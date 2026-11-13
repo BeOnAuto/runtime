@@ -23,6 +23,10 @@ export const PayloadOffloading = Context.Reference<boolean>('@on.auto/operations
   defaultValue: () => false,
 });
 
+export const PayloadSizeThreshold = Context.Reference<number>('@on.auto/operations/PayloadSizeThreshold', {
+  defaultValue: () => mostInlinePayloadBytes,
+});
+
 const utf8 = new TextEncoder();
 
 export function textBytesOf(text: string): number {
@@ -41,9 +45,10 @@ export function payloadChosen<Value>(
   value: Value,
   { text, mediaType }: PayloadText,
   keepsOutside: boolean,
+  threshold: number,
 ): ChosenPayload<Value> {
   const bytes = textBytesOf(text);
-  if (!keepsOutside || bytes <= mostInlinePayloadBytes || !text.isWellFormed()) {
+  if (!keepsOutside || bytes <= threshold || !text.isWellFormed()) {
     return { payload: { inline: value } };
   }
   const sha256 = sha256Of(text);

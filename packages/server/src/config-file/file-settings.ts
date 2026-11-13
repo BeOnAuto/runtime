@@ -2,17 +2,13 @@ import { fileSetting, type FileSetting } from '@on.auto/config';
 import { connectionsSortsOfCredential, ConnectionsSettingSchema } from '@on.auto/connections';
 import { ApiKeysSchema } from '@on.auto/identity';
 import { entryProse } from '@on.auto/providers';
-import { AllowedModelsSchema, DeclaredModelsSchema, ModelAliasesSchema, ModelGatewaysSchema } from '@on.auto/reasoning';
-import { ToolServersSchema } from '@on.auto/tool-servers';
 import { Schema } from 'effect';
 
 import { extensionsFileSetting } from '../extensions/extension-settings.ts';
 import { licenseFileSetting } from '../licensing/license-settings.ts';
+import { PayloadSizeThresholdBytes } from '../settings/content-settings.ts';
 import { Origin, StudioOrigin } from '../settings/origin.ts';
-
-function asJson(value: unknown): string {
-  return JSON.stringify(value);
-}
+import { asJson, functionFileSettings } from './function-file-settings.ts';
 
 export const fileSettings: readonly FileSetting[] = [
   fileSetting(
@@ -47,54 +43,7 @@ export const fileSettings: readonly FileSetting[] = [
     }),
     (mode) => mode,
   ),
-  fileSetting(
-    'MODEL_GATEWAYS',
-    ModelGatewaysSchema.annotate({
-      description: 'OpenAI-compatible gateways, each a provider prefix of its own. MODEL_GATEWAYS wins over it',
-    }),
-    asJson,
-  ),
-  fileSetting(
-    'MODEL_ALIASES',
-    ModelAliasesSchema.annotate({
-      description:
-        'Model references a reasoning function may give, each sent on as another reference; a trailing * on both sides covers every model of a provider. MODEL_ALIASES wins over it',
-    }),
-    asJson,
-  ),
-  fileSetting(
-    'DECLARED_MODELS',
-    DeclaredModelsSchema.annotate({
-      description:
-        'The models list_models shows for bedrock, bedrock-anthropic, azure, vertex and vertex-anthropic, which do not list their own, and for a gateway whose list cannot be read, keyed by the provider prefix. DECLARED_MODELS wins over it',
-    }),
-    asJson,
-  ),
-  fileSetting(
-    'ALLOWED_MODELS',
-    AllowedModelsSchema.annotate({
-      description:
-        'The only model references a reasoning function may give, by name or through an alias, and list_models shows, each provider/model or provider/* for every model of a provider; every model when left out. ALLOWED_MODELS wins over it',
-    }),
-    asJson,
-  ),
-  fileSetting(
-    'VOICE_MODEL',
-    Schema.String.annotate({
-      description:
-        'The model that writes out what a person says, which Studio offers beside each comment field, as provider/model, its provider openai or the name of an entry of model_gateways, such as openai/whisper-1; none when left out. VOICE_MODEL wins over it',
-    }),
-    (model) => model,
-  ),
-  fileSetting(
-    'TOOL_SERVERS',
-    ToolServersSchema.annotate({
-      description:
-        'The tool servers whose tools a function may name, each bound to an org and optionally its playbooks: url for a remote MCP server, command for an MCP server run as a process, document for an HTTP API described by an OpenAPI document. Secrets are references such as ${GRAPH_API_KEY}. TOOL_SERVERS wins over it',
-    }),
-    asJson,
-    { references: 'kept', judgedByShape: ['placeholders'] },
-  ),
+  ...functionFileSettings,
   fileSetting('CONNECTIONS', ConnectionsSettingSchema, asJson, {
     references: 'kept',
     sortsOfCredential: connectionsSortsOfCredential,
@@ -106,6 +55,22 @@ export const fileSettings: readonly FileSetting[] = [
     Schema.Boolean.annotate({
       description:
         'Whether the runtime sends its anonymous usage ping when it starts: its release, the operating system, the processor, the version of Node.js, how it was installed and a random install id, and nothing of its work. On when left out; DO_NOT_TRACK or SCARF_NO_ANALYTICS in the environment turns it off too. USAGE_PING wins over it',
+    }),
+    String,
+  ),
+  fileSetting(
+    'PAYLOAD_OFFLOADING',
+    Schema.Boolean.annotate({
+      description:
+        "Whether a payload larger than payload_size_threshold_bytes, the input, output or answer of a run, the prompt its record holds, a definition's document or a value a workflow holds, is offloaded: kept once in the content store, the ledger's database or the bucket of CONTENT_STORE_URL, and named in its record by its SHA-256 and its size, as the claim check pattern does. On when left out. Turning it off keeps new payloads in their records and still reads those offloaded before. PAYLOAD_OFFLOADING wins over it",
+    }),
+    String,
+  ),
+  fileSetting(
+    'PAYLOAD_SIZE_THRESHOLD_BYTES',
+    PayloadSizeThresholdBytes.annotate({
+      description:
+        'The size in bytes of UTF-8 past which a payload is offloaded, from 2048 to 65536; 16384 when left out. A change applies to new payloads alone. PAYLOAD_SIZE_THRESHOLD_BYTES wins over it',
     }),
     String,
   ),

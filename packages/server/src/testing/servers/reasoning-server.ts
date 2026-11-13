@@ -7,7 +7,7 @@ import { startServer } from '../../lifecycle/lifecycle.ts';
 import { temporaryLedger, type TemporaryLedger } from '../records/temporary-ledger.ts';
 import { noConsentThroughAuto } from '../settings/no-consent-through-auto.ts';
 import { request, type RequestOptions, type TestResponse } from './http-client.ts';
-import { composedWithTheParts, type ServedParts } from './served-parts.ts';
+import { composedWithTheParts, offloadingSetBy, type ServedParts } from './served-parts.ts';
 import { patientWorkerPool } from './worker-pools.ts';
 
 export interface ReasoningServer {
@@ -33,6 +33,15 @@ type Fetch = typeof globalThis.fetch;
 
 export const noNetwork: Fetch = () => Promise.reject(new TypeError('fetch failed: the tests reach no network'));
 
+async function startedRemovingOnFailure<Started>(start: Promise<Started>, removeOwn: () => void): Promise<Started> {
+  try {
+    return await start;
+  } catch (failure) {
+    removeOwn();
+    throw failure;
+  }
+}
+
 export async function servingReasoning(
   replies: readonly ScriptedReplies[],
   environment: Readonly<Record<string, string>> = {},
@@ -49,6 +58,11 @@ export async function servingReasoning(
   }: ServedParts = {},
 ): Promise<ReasoningServer> {
   const ledger = shared ?? temporaryLedger();
+  const removeOwn = (): void => {
+    if (shared === undefined) {
+      ledger.remove();
+    }
+  };
   const scripted = scriptedLanguageModel(...replies);
   const composition = compositionRootWith(
     (settings) =>
@@ -58,9 +72,12 @@ export async function servingReasoning(
       })),
     { programPoolOf, ...composing },
   );
-  const server = await startServer(
-    { ...loopbackSettingsOver(ledger), ...environment },
-    composedWithTheParts(composition, { ledgerOver, meter, shippedFilesOver, keptOutside }),
+  const server = await startedRemovingOnFailure(
+    startServer(
+      { ...loopbackSettingsOver(ledger), ...offloadingSetBy(keptOutside), ...environment },
+      composedWithTheParts(composition, { ledgerOver, meter, shippedFilesOver }),
+    ),
+    removeOwn,
   );
   return {
     origin: `http://127.0.0.1:${server.port}`,
@@ -69,9 +86,7 @@ export async function servingReasoning(
     modelRunIds: () => scripted.requests().map(({ run_id: runId }) => runId),
     stop: async () => {
       await server.stop();
-      if (shared === undefined) {
-        ledger.remove();
-      }
+      removeOwn();
     },
   };
 }

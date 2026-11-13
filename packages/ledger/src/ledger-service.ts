@@ -111,6 +111,7 @@ export function streamPortsOf(streams: Streams & StreamMessagesStore): StreamRea
 export function ownContentOf(store: LedgerStore): LedgerContent {
   return {
     content: store.content,
+    found: (playbook, sha256) => Effect.map(store.content.getHead(playbook, sha256), (head) => head !== undefined),
     removedKeptBefore: (playbook, sha256, before) =>
       Effect.promise(() => store.unlessHeld(playbook, sha256, store.removalWithin(playbook, sha256, before))),
     eraseExpired: (most) =>

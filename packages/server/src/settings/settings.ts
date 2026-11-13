@@ -16,7 +16,12 @@ import {
   type AccessSettings,
   type CredentialSettings,
 } from './access-settings.ts';
-import { readContentSettings, type ContentSettings } from './content-settings.ts';
+import {
+  readContentSettings,
+  readPayloadSettings,
+  type ContentSettings,
+  type PayloadSettings,
+} from './content-settings.ts';
 import { readLedgerAndSecrets, type LedgerAndSecrets } from './secrets-settings.ts';
 import { readServedSettings, type ServedSettings, type ShippedSettings } from './served-settings.ts';
 
@@ -30,6 +35,7 @@ export interface Settings extends ServedSettings, AccessSettings, CredentialSett
   readonly host: string;
   readonly port: number;
   readonly content: ContentSettings;
+  readonly payloads: PayloadSettings;
   readonly proxy: ProxySettings;
   readonly telemetry: TelemetrySettings | undefined;
   readonly usagePing: UsagePingSettings | undefined;
@@ -49,6 +55,7 @@ export function readSettings(given: Environment, shipped: ShippedSettings): Sett
   const credentials = readCredentialSettings(environment, host);
   const { ledger, secrets, keepers } = Effect.runSync(readLedgerAndSecrets(environment));
   const content = Effect.runSync(readContentSettings(environment));
+  const payloads = Effect.runSync(readPayloadSettings(environment));
   const served = readServedSettings(environment, file, { host, ...credentials }, shipped);
   const telemetry = Effect.runSync(readTelemetrySettings(environment));
   const usagePing = Effect.runSync(readUsagePingSettings(environment));
@@ -61,6 +68,7 @@ export function readSettings(given: Environment, shipped: ShippedSettings): Sett
     secrets,
     keepers,
     content,
+    payloads,
     proxy: proxySettingsOf(environment),
     logFormat,
     logLevel,

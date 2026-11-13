@@ -8,7 +8,7 @@ import {
   type SharedPayloads,
 } from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
-import type { ContentUnavailable, RunPayloads } from '@on.auto/workflow-engine';
+import { mostInlineHeldValueBytes, type ContentUnavailable, type RunPayloads } from '@on.auto/workflow-engine';
 import { Deferred, Effect, Exit, type Schema } from 'effect';
 
 import type { HostNote } from '../host/host-reports.ts';
@@ -83,7 +83,13 @@ export function storeOn(
       }),
   };
   return {
-    payloads: hostRunPayloadsOf({ content, payloadOffloading, shared, note }),
+    payloads: hostRunPayloadsOf({
+      content,
+      payloadOffloading,
+      payloadSizeThreshold: mostInlineHeldValueBytes,
+      shared,
+      note,
+    }),
     content,
     gets: () => gets,
     notes,
@@ -134,6 +140,7 @@ export function streamedIn(toKeep: PayloadToKeep, size: number): Streamed {
   const payloads = hostRunPayloadsOf({
     content,
     payloadOffloading: true,
+    payloadSizeThreshold: mostInlineHeldValueBytes,
     shared: sharedPayloadsWithin(0),
     note: () => Effect.void,
   });

@@ -120,7 +120,7 @@ export function postgresqlStoreOn(
     ...projections.readerOnThePool(pool, formattedFor(query)),
     ...projections.scrubs.storeOver(store, formattedFor(query)),
     ...postgresqlReadsOn(kept, query),
-    unlessHeld: projections.unlessHeldOn(pool),
+    ...projections.holdsOn(pool, formattedFor(query)),
     migrate: async () => {
       await postgresqlLayoutKept(pool, projections.named, kept);
       await store.migrate();

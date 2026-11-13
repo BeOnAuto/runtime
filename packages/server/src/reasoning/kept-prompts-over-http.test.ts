@@ -27,14 +27,23 @@ const reads = [
 
 const text = 't'.repeat(17_000);
 
-const prompt = { instructions: 'Be brief.', message: `Read: ${text}`, truncated: false };
+const shortText = 's'.repeat(3000);
 
-const promptText = JSON.stringify(prompt);
+function promptOf(given: string) {
+  return { instructions: 'Be brief.', message: `Read: ${given}`, truncated: false };
+}
 
-const keptPrompt = {
-  prompt_sha256: createHash('sha256').update(promptText).digest('hex'),
-  prompt_bytes: Buffer.byteLength(promptText, 'utf8'),
-};
+function keptPromptOf(given: string) {
+  const written = JSON.stringify(promptOf(given));
+  return {
+    prompt_sha256: createHash('sha256').update(written).digest('hex'),
+    prompt_bytes: Buffer.byteLength(written, 'utf8'),
+  };
+}
+
+const prompt = promptOf(text);
+
+const keptPrompt = keptPromptOf(text);
 
 async function administer(statement: string): Promise<void> {
   const client = new Client({ connectionString: postgresql });
@@ -86,7 +95,7 @@ function servingOver(
   ledger?: TemporaryLedger,
 ): Promise<ReasoningServer> {
   return servingReasoning([answers(textResult('Read.'))], environment, noNetwork, {
-    ...(keptOutside ? { keptOutside } : {}),
+    keptOutside,
     ...(ledger === undefined ? {} : { ledger }),
   });
 }
@@ -101,9 +110,9 @@ async function serving(environment: Readonly<Record<string, string>>, keptOutsid
   return server;
 }
 
-async function ranAndReadBack(server: ReasoningServer) {
+async function ranAndReadBack(server: ReasoningServer, given = text) {
   const ran = await server.call('POST', `${alpha}/definitions/reasoning/reads/run`, {
-    body: { input: { text }, run_id: runId },
+    body: { input: { text: given }, run_id: runId },
   });
   const read = await server.call('GET', `${alpha}/runs/${runId}`);
   const history = await server.call('GET', `${alpha}/runs/${runId}/history`);
@@ -173,3 +182,26 @@ describe.each(stores)('a reasoning run whose prompt is past 16,384 bytes, on $st
     },
   );
 });
+
+describe.each(stores)(
+  'a reasoning run under the payload size threshold the server is given, on $store',
+  ({ skipped, environment }) => {
+    it.skipIf(skipped)(
+      'keeps the prompt by the server’s payload size threshold, as it keeps an output: inline at 65,536 bytes, and by its digest past 2,048 for a prompt of 3 KB',
+      async () => {
+        const atTheCap = await ranAndReadBack(
+          await serving({ ...(await environment()), PAYLOAD_SIZE_THRESHOLD_BYTES: '65536' }, true),
+        );
+        const atTheFloor = await ranAndReadBack(
+          await serving({ ...(await environment()), PAYLOAD_SIZE_THRESHOLD_BYTES: '2048' }, true),
+          shortText,
+        );
+
+        expect(atTheCap.onAPage).not.toHaveProperty('record.prompt_sha256');
+        expect(atTheCap.whole).toMatchObject({ prompt });
+        expect(atTheFloor.onAPage).toMatchObject({ record: keptPromptOf(shortText) });
+        expect(atTheFloor.read['prompt']).toEqual(promptOf(shortText));
+      },
+    );
+  },
+);

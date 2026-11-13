@@ -10,9 +10,9 @@ head:
 
 By default, the content a playbook keeps is stored in the ledger's database. Set `CONTENT_STORE_URL` to an `s3://bucket/prefix` URL, and the server keeps that content in an S3 bucket instead. Every other record stays in the ledger.
 
-Choose before content builds up. The server moves nothing between the database and the bucket, so content kept before a switch is no longer read; see [Switch a deployment that already has content](#switch-a-deployment-that-already-has-content).
+Choose before the first start. The server moves nothing between the database and the bucket, and a server whose ledger names content that is not where it keeps content does not start; see [A deployment that already has content](#a-deployment-that-already-has-content).
 
-Content is what grows large: a tool's arguments and results.
+Content is what grows large: a tool's arguments and results, and, with [payload offloading](configuration.md#payload-offloading) on, as it is by default, every payload larger than its threshold, such as the input, output or answer of a run.
 
 Moving content out keeps the database small and its backups fast. The server keeps one object for each piece of content, under its playbook and its SHA-256.
 
@@ -83,26 +83,21 @@ Several servers may share a bucket and a prefix, as they share the ledger's data
 - On a bucket with versioning on, every delete keeps a noncurrent version. Give such a bucket a lifecycle rule that expires them.
 - A lifecycle rule is otherwise optional. Every hour, the server deletes what unfinished uploads left under `<prefix>/uploads/`.
 
-## Switch a deployment that already has content
+## A deployment that already has content
 
 The server keeps and reads content in one place: the bucket when `CONTENT_STORE_URL` is set, and the ledger's database otherwise. It never reads the other place, and it copies nothing between them. Auto Runtime has no command that moves content from one to the other.
 
-So when you set `CONTENT_STORE_URL` on a server whose database already holds content:
+So a server whose ledger names content that is not where it keeps content does not start. That happens when you:
 
-- New content goes to the bucket.
-- The content already in the database stays there, unchanged, but the server no longer reads it.
-- Tool calls made before the switch still appear in the history, with their sizes and digests, but without their arguments and results.
+- set `CONTENT_STORE_URL` on a server whose database already holds content;
+- remove `CONTENT_STORE_URL` from a server whose bucket holds content;
+- point `CONTENT_STORE_URL` at another bucket or prefix, or at a bucket that was emptied;
+- restore the database and the bucket from different points in time.
 
-Removing `CONTENT_STORE_URL` has the same effect the other way. The server goes back to the database, and what it kept in the bucket is no longer read.
+The server says where it keeps content, how many of the contents it looked for are kept in the other place or are not there, and what to do; [When the server does not start](configuration.md#when-the-server-does-not-start) shows the message. It never names a digest, a value or a credential.
 
-To switch:
-
-1. Stop every server that shares the database. They must all keep content in the same place, or one cannot read what another kept.
-2. Set `CONTENT_STORE_URL`, with the endpoint, region and credentials the bucket needs, for every server. To switch back, remove it.
-3. Start the servers. Each logs where it keeps content: `Content is kept on object storage, in the bucket <bucket> under <prefix>/, on <host>`, or `Content is kept in the ledger's database`.
-
-To roll back, switch back the same way. The content kept in the old place becomes readable again, and content kept in the new place since the switch is no longer read. Setting the same bucket and prefix again makes the bucket's content readable once more. So keep both the database's content and the bucket until you no longer need to go back.
+To start again, set `CONTENT_STORE_URL`, with the endpoint, region and credentials of its bucket, as it was when that content was kept, or remove it, on every server that shares the database. Each server logs where it keeps content: `Content is kept on object storage, in the bucket <bucket> under <prefix>/, on <host>`, or `Content is kept in the ledger's database`.
 
 ## Back up
 
-Back up the bucket alongside the database, and restore them from the same point in time. The ledger's records name their content by its digest, and that content is only in the bucket. A record whose content the restored bucket lacks reads as one kept before a switch.
+Back up the bucket alongside the database, and restore them from the same point in time. The ledger's records name their content by its digest, and that content is only in the bucket. A server whose restored bucket lacks content its records name does not start where it finds that content missing as it starts, and a record whose content is missing reads as missing.

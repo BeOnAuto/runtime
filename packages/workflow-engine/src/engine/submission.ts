@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 
 import { declinedOfferOf } from '../decider/declined-offers.ts';
 import { outcomeOf, staleReasonOf } from '../machine/admission.ts';
+import { nothingAtHand } from '../machine/held-contents.ts';
 import type { RunInput } from '../machine/run-input.ts';
 import type { MachineOptions } from '../runner/run-descriptors.ts';
 import type { RunDecision } from './decided-append.ts';
@@ -27,7 +28,7 @@ export function submissionWithDeclined(
     return Effect.succeed(submission);
   }
   const { state, contents, format } = decision.loaded;
-  const atHand = { contents, format, payloadOffloading: false };
+  const atHand = { ...nothingAtHand(), contents, format };
   return Effect.map(options.sandbox.reserve, () => {
     const declined = declinedOfferOf(options, input, { state, atHand });
     return declined === undefined ? submission : { ...submission, declined };

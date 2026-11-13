@@ -1,8 +1,9 @@
 import { Redacted } from 'effect';
 import { describe, expect, it } from 'vitest';
 
-import { ledgerOfAnotherVersion, ledgerOfAnotherVersionIn } from './ledger-of-another-version.ts';
+import { ledgerOfAnotherVersion } from './ledger-of-another-version.ts';
 import { ledgerOfUnknownFacts } from './ledger-of-unknown-facts.ts';
+import { ledgerRefusalIn } from './ledger-refusals.ts';
 
 const inPostgreSQL = {
   store: 'postgresql',
@@ -97,10 +98,10 @@ describe('a ledger refused for its facts', () => {
     const anEarlierLedger = ledgerOfAnotherVersion({ found: 1, kept: 3, floor: 2 }, settings);
 
     expect([
-      ledgerOfAnotherVersionIn(new Error('The services could not start', { cause: unknownFacts })),
-      ledgerOfAnotherVersionIn(anEarlierLedger),
-      ledgerOfAnotherVersionIn(new Error('Something else')),
-      ledgerOfAnotherVersionIn('not an error'),
+      ledgerRefusalIn(new Error('The services could not start', { cause: unknownFacts })),
+      ledgerRefusalIn(anEarlierLedger),
+      ledgerRefusalIn(new Error('Something else')),
+      ledgerRefusalIn('not an error'),
     ]).toEqual([unknownFacts, anEarlierLedger, undefined, undefined]);
   });
 });

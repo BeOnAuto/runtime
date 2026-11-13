@@ -17,6 +17,7 @@ import type { Schema } from 'effect';
 import type { RecordedKeys } from './keys/recorded-keys.ts';
 import type { LogPorts } from './log/ledger-log.ts';
 import type { MultiStreamAppends } from './multi-stream/multi-stream-appends.ts';
+import type { HeldHeads } from './references/held-heads.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
 
 export interface EncodedEvent {
@@ -257,11 +258,7 @@ export interface OwnContentStore {
 
 export type UnlessHeld = <A>(playbook: ContentOwner, sha256: string, within: Within<A>) => Promise<A | 'held'>;
 
-interface UnheldRemovalStore {
-  readonly unlessHeld: UnlessHeld;
-}
-
-export type LedgerContent = Pick<KeptOutside, 'content' | 'removedKeptBefore' | 'eraseExpired'>;
+export type LedgerContent = Pick<KeptOutside, 'content' | 'found' | 'removedKeptBefore' | 'eraseExpired'>;
 
 export interface LedgerStore
   extends
@@ -272,8 +269,9 @@ export interface LedgerStore
     RunOutcomesStore,
     ProjectionReader,
     ProjectionAdvancer,
-    OwnContentStore,
-    UnheldRemovalStore {
+    OwnContentStore {
+  readonly unlessHeld: UnlessHeld;
+  readonly heldHeads: HeldHeads;
   readonly log: LogPorts;
 }
 

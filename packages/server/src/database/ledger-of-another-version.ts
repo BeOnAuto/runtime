@@ -3,7 +3,6 @@ import { Data } from 'effect';
 
 import { whereTheLedgerIsKept, type LedgerSettings } from '../settings/ledger-settings.ts';
 import type { Settings } from '../settings/settings.ts';
-import { LedgerOfUnknownFacts } from './ledger-of-unknown-facts.ts';
 import { messageOf, remedyFor, type LedgerRemedy } from './ledger-remedies.ts';
 
 type RefusedLayout = Pick<LedgerLayoutRefused, 'found' | 'kept' | 'floor'>;
@@ -46,11 +45,4 @@ export function ledgerOfAnotherVersion(
     remedy,
     message: messageOf(happened, remedy),
   });
-}
-
-export function ledgerOfAnotherVersionIn(failure: unknown): LedgerOfAnotherVersion | LedgerOfUnknownFacts | undefined {
-  if (failure instanceof LedgerOfAnotherVersion || failure instanceof LedgerOfUnknownFacts) {
-    return failure;
-  }
-  return failure instanceof Error ? ledgerOfAnotherVersionIn(failure.cause) : undefined;
 }

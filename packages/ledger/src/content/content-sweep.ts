@@ -1,11 +1,12 @@
 import { SQL } from '@event-driven-io/dumbo';
 import type { ExpiredErased } from '@on.auto/content';
-import { randomUUIDv7, uuidV7TimeOf } from '@on.auto/operations';
-import { Context, Effect, Schema } from 'effect';
+import { playbookOfStreamPrefix, randomUUIDv7, uuidV7TimeOf } from '@on.auto/operations';
+import { Context, Effect, Option, Schema } from 'effect';
 
-import type { OwnContentStore, StatementExecutor } from '../event-store.ts';
+import type { LedgerContent, OwnContentStore, StatementExecutor } from '../event-store.ts';
 import { inTurn } from '../projections/inline-projection.ts';
-import { dueBy, keptInTheLedger, keptShelf, shelves, type Shelf } from './content-tables.ts';
+import { HeldContentUnchecked, type HeldHead, type HeldHeads } from '../references/held-heads.ts';
+import { dueBy, keptExternally, keptInTheLedger, keptShelf, shelves, type Shelf } from './content-tables.ts';
 
 export const unnamedChunksLastMs = 3_600_000;
 
@@ -16,6 +17,7 @@ export interface ContentSweeping {
 export interface ChorePorts {
   readonly sweepOrphans: (now: number) => Effect.Effect<number>;
   readonly eraseExpired: (most: number) => Effect.Effect<ExpiredErased>;
+  readonly heldContentFound: (most: number) => Effect.Effect<HeldContentFound, HeldContentUnchecked>;
   readonly endWaits: Effect.Effect<void>;
 }
 
@@ -98,4 +100,52 @@ export function ownExpiredErasedOn(execute: StatementExecutor): OwnContentStore[
     });
     return { erased: erasures.reduce((total, erased) => total + erased, 0), more: expired.length === most };
   };
+}
+
+export interface HeldContentFound {
+  readonly checked: number;
+  readonly keptElsewhere: number;
+  readonly missing: number;
+}
+
+type Finding = 'found' | 'kept elsewhere' | 'missing';
+
+interface HeldContentLooking {
+  readonly heldHeads: HeldHeads;
+  readonly kept: Pick<LedgerContent, 'found'>;
+  readonly outside: boolean;
+}
+
+function notFoundAs({ keptIn }: HeldHead, outside: boolean): Finding {
+  const keptHere = outside ? keptExternally : keptInTheLedger;
+  return keptIn === undefined || keptIn === keptHere ? 'missing' : 'kept elsewhere';
+}
+
+function findingOf(
+  { kept, outside }: HeldContentLooking,
+  head: HeldHead,
+): Effect.Effect<Finding, HeldContentUnchecked> {
+  return Option.match(playbookOfStreamPrefix(head.playbookKey), {
+    onNone: () => Effect.succeed<Finding>('missing'),
+    onSome: (playbook) =>
+      kept.found(playbook, head.sha256).pipe(
+        Effect.map((found): Finding => (found ? 'found' : notFoundAs(head, outside))),
+        Effect.catchDefect((failure) => Effect.fail(new HeldContentUnchecked({ failure }))),
+      ),
+  });
+}
+
+export function heldContentFoundBy(
+  looking: HeldContentLooking,
+): (most: number) => Effect.Effect<HeldContentFound, HeldContentUnchecked> {
+  return (most) =>
+    Effect.gen(function* () {
+      const held = yield* Effect.promise(() => looking.heldHeads(most));
+      const findings = yield* Effect.forEach(held, (head) => findingOf(looking, head), { concurrency: 'unbounded' });
+      return {
+        checked: findings.length,
+        keptElsewhere: findings.filter((finding) => finding === 'kept elsewhere').length,
+        missing: findings.filter((finding) => finding === 'missing').length,
+      };
+    });
 }

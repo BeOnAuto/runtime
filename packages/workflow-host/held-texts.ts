@@ -1,5 +1,6 @@
 import { sharedPayloadsWithin } from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
+import { mostInlineHeldValueBytes } from '@on.auto/workflow-engine';
 import { Effect, Schema } from 'effect';
 
 import { hostDatabaseOpenedOn } from './src/ledger-testing/ledger-connections.ts';
@@ -75,6 +76,7 @@ const store = (cacheBytes: number) =>
   hostRunPayloadsOf({
     content,
     payloadOffloading: true,
+    payloadSizeThreshold: mostInlineHeldValueBytes,
     shared: sharedPayloadsWithin(cacheBytes),
     note: () => Effect.void,
   });

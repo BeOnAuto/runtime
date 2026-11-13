@@ -52,7 +52,11 @@ export function eventOf(
     );
     return { event, payloads: [] };
   }
-  const keeping = keepingOf(state, result.state, { outputs, payloadOffloading: atHand.payloadOffloading });
+  const keeping = keepingOf(state, result.state, {
+    outputs,
+    payloadOffloading: atHand.payloadOffloading,
+    payloadSizeThreshold: atHand.payloadSizeThreshold,
+  });
   const event = {
     ...decided,
     format,

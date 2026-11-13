@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { linesLoggedBy } from '../testing/records/logged-lines.ts';
-import { logContentStore } from './logging.ts';
+import { logContentStore, logPayloadOffloading } from './logging.ts';
 
 describe('logContentStore', () => {
   it("says content is kept in the ledger's database when no object store is set", async () => {
@@ -47,6 +47,28 @@ describe('logContentStore', () => {
       expect.stringContaining(
         '{"message":"Content is kept on object storage, in the bucket playbook-content, on the S3 endpoint of its region"',
       ),
+    ]);
+  });
+});
+
+describe('logPayloadOffloading', () => {
+  it('says past what size a payload is kept as content, named in its record, or that every new payload stays in its record', async () => {
+    const lines = [
+      ...(await linesLoggedBy(logPayloadOffloading({ offloading: true, sizeThresholdBytes: 4096 }))),
+      ...(await linesLoggedBy(logPayloadOffloading({ offloading: false, sizeThresholdBytes: 16_384 }))),
+    ];
+
+    expect(lines).toEqual([
+      expect.stringContaining(
+        '{"message":"Payload offloading is on: a payload larger than 4096 bytes is kept as content, and its record names it by its SHA-256 and its size","level":"INFO"',
+      ),
+      expect.stringContaining(
+        '{"message":"Payload offloading is off: a new payload stays inline in its record, whatever its size","level":"INFO"',
+      ),
+    ]);
+    expect(lines).toEqual([
+      expect.stringContaining('"annotations":{"payload_offloading":true,"payload_size_threshold_bytes":4096}'),
+      expect.stringContaining('"annotations":{"payload_offloading":false,"payload_size_threshold_bytes":16384}'),
     ]);
   });
 });

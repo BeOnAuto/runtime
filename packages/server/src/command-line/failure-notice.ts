@@ -1,4 +1,4 @@
-import { ledgerOfAnotherVersionIn, type LedgerOfAnotherVersion } from '../database/ledger-of-another-version.ts';
+import { ledgerRefusalIn, type LedgerRefusal } from '../database/ledger-refusals.ts';
 import { helpOfferedAt } from '../database/ledger-remedies.ts';
 import { colorDepthOf, linkerFor, painterFor, type ColorDepth, type ColorStream } from '../logging/terminal.ts';
 import { discordInvite } from './local-banner.ts';
@@ -21,7 +21,7 @@ function wrapped(text: string, indent: string): readonly string[] {
   return lines.map((line) => `${indent}${line}`);
 }
 
-type Refusal = Pick<LedgerOfAnotherVersion, 'happened' | 'remedy'>;
+type Refusal = Pick<LedgerRefusal, 'happened' | 'remedy'>;
 
 function ledgerNotice(refusal: Refusal, depth: ColorDepth): string {
   const paint = painterFor(depth);
@@ -44,7 +44,7 @@ function ledgerNotice(refusal: Refusal, depth: ColorDepth): string {
 export function startupFailureNoticeFor(stderr: ColorStream): (failure: unknown) => string | undefined {
   const depth = colorDepthOf(stderr);
   return (failure) => {
-    const refusal = ledgerOfAnotherVersionIn(failure);
+    const refusal = ledgerRefusalIn(failure);
     return refusal === undefined ? undefined : ledgerNotice(refusal, depth);
   };
 }

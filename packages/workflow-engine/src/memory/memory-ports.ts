@@ -29,17 +29,22 @@ export interface MemoryPorts extends EnginePorts<ContentUnavailable> {
 
 export type MemoryEngine = WorkflowEngine<ContentUnavailable>;
 
+interface PayloadKeeping {
+  readonly payloadOffloading?: boolean;
+  readonly payloadSizeThreshold?: number;
+}
+
 export function memoryPorts(
   clock: VirtualClock,
   submit: Submit,
   responder: Responder,
-  payloadOffloading = false,
+  { payloadOffloading, payloadSizeThreshold }: PayloadKeeping = {},
 ): MemoryPorts {
   const faults = faultsOf(clock);
   const runStore = memoryRunStore();
   return {
     runStore,
-    payloads: memoryPayloads(payloadOffloading),
+    payloads: memoryPayloads(payloadOffloading, payloadSizeThreshold),
     watermark: memoryWatermark(runStore),
     timers: memoryTimers(clock, submit, faults),
     executor: memoryExecutor(clock, submit, responder, faults),

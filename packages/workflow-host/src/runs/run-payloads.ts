@@ -10,7 +10,12 @@ import {
   type PayloadSource,
   type SharedPayloads,
 } from '@on.auto/operations/payloads';
-import { ContentUnavailable, type HeldContent, type RunPayloads } from '@on.auto/workflow-engine';
+import {
+  ContentUnavailable,
+  mostInlineHeldValueBytes,
+  type HeldContent,
+  type RunPayloads,
+} from '@on.auto/workflow-engine';
 import { Context, Deferred, Effect } from 'effect';
 
 import type { FactPayloads } from '../follower/followed-events.ts';
@@ -23,9 +28,14 @@ type Kept = Parameters<RunPayloads<never>['read']>[1][number];
 
 export const hostPayloadCacheBytes = 64 * 1_048_576;
 
+export const HeldValueSizeThreshold = Context.Reference<number>('@on.auto/workflow-host/HeldValueSizeThreshold', {
+  defaultValue: () => mostInlineHeldValueBytes,
+});
+
 interface HostPayloadParts {
   readonly content: PayloadSource['content'] & Parameters<typeof payloadKept>[0];
   readonly payloadOffloading: boolean;
+  readonly payloadSizeThreshold: number;
   readonly shared: SharedPayloads;
   readonly note: (note: Extract<HostNote, { readonly kind: 'payloads_read' }>) => Effect.Effect<void>;
   readonly readerOf?: (source: PayloadSource) => PayloadReader;
@@ -82,6 +92,7 @@ function textBytesRead(contents: ReadonlyMap<string, HeldContent>, kept: readonl
 export function hostRunPayloadsOf({
   content,
   payloadOffloading,
+  payloadSizeThreshold,
   shared,
   note,
   readerOf = payloadReaderOf,
@@ -95,6 +106,7 @@ export function hostRunPayloadsOf({
     );
   return {
     payloadOffloading,
+    payloadSizeThreshold,
     read: (runKey, kept) => {
       const owner = ownerOf(runKey);
       return Effect.forEach(kept, (each) => Effect.map(readOne(owner, each), (read) => [each.sha256, read] as const), {
@@ -140,9 +152,10 @@ export interface HostPayloads {
 
 export function hostPayloadsOf({ content, context = Context.empty(), note }: ComposedPayloads): HostPayloads {
   const payloadOffloading = Context.get(context, PayloadOffloading);
+  const payloadSizeThreshold = Context.get(context, HeldValueSizeThreshold);
   const shared = Context.get(context, PayloadsShared);
   return {
-    runs: hostRunPayloadsOf({ content, payloadOffloading, shared, note }),
+    runs: hostRunPayloadsOf({ content, payloadOffloading, payloadSizeThreshold, shared, note }),
     factsOf: factPayloadsIn(content, shared),
   };
 }

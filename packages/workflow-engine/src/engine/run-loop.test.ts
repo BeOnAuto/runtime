@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   eventBytesOf,
+  mostInlineHeldValueBytes,
   newRun,
   runLoopOf,
   snapshotOf,
@@ -161,7 +162,12 @@ describe('a decision', () => {
 
 describe('the decider the loop tests use', () => {
   it('decides an input alone as it decides it with nothing at hand, keeping nothing outside', () => {
-    const atHand = { contents: new Map(), format: null, payloadOffloading: false };
+    const atHand = {
+      contents: new Map(),
+      format: null,
+      payloadOffloading: false,
+      payloadSizeThreshold: mostInlineHeldValueBytes,
+    };
 
     expect(Result.getOrThrow(countingDecider.decide(started, newRun))).toEqual(
       countingDecider.decision(started, newRun, atHand).events,

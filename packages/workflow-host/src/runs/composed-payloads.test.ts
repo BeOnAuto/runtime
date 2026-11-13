@@ -1,10 +1,11 @@
 import { PayloadOffloading, PayloadsShared, sharedPayloadsWithin } from '@on.auto/operations/payloads';
+import { mostInlineHeldValueBytes } from '@on.auto/workflow-engine';
 import { Context, Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { keptOf, notesKept, storeOn } from '../payload-testing/kept-payloads.ts';
 import { runKeyOf } from './run-address.ts';
-import { hostPayloadsOf } from './run-payloads.ts';
+import { HeldValueSizeThreshold, hostPayloadsOf } from './run-payloads.ts';
 
 const alpha = { org: 'acme', playbook: 'alpha' };
 
@@ -26,6 +27,19 @@ async function keptAndReadBy(outside: boolean) {
   const read = await Effect.runPromise(payloads.factsOf(alpha).json({ sha256: answer.sha256, bytes: answer.bytes }));
   return { outside: payloads.runs.payloadOffloading, read, gets: store.gets() };
 }
+
+function thresholdComposedFrom(context: Context.Context<never>): number {
+  return hostPayloadsOf({ content: storeOn().content, context, note: notesKept().note }).runs.payloadSizeThreshold;
+}
+
+describe('the threshold past which the host keeps a value its runs hold outside their logs', () => {
+  it('is the one its runtime gives, and the engine’s own where it gives none', () => {
+    expect([
+      thresholdComposedFrom(Context.make(HeldValueSizeThreshold, 4096)),
+      thresholdComposedFrom(Context.empty()),
+    ]).toEqual([4096, mostInlineHeldValueBytes]);
+  });
+});
 
 describe('the payloads the host composes from the context of its runtime', () => {
   it('read a value kept earlier through the set its runtime shares whatever the switch, which decides only whether new values are kept outside', async () => {

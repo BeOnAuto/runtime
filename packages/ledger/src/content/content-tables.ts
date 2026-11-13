@@ -15,6 +15,8 @@ export interface Shelf {
 
 export const keptInTheLedger = 'ledger';
 
+export const keptExternally = 'external';
+
 export const keptShelf: Shelf = {
   chunks: 'recorded_content_chunks',
   heads: 'recorded_content_heads',

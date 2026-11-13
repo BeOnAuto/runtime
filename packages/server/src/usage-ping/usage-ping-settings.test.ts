@@ -91,3 +91,12 @@ describe('the usage ping in the configuration file', () => {
     });
   });
 });
+
+describe('readSettings given the distribution', () => {
+  it('reads where the runtime came from even when the usage ping is turned off', () => {
+    expect(readSettingsOf({ RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' })).toMatchObject({
+      usagePing: undefined,
+      distribution: 'docker',
+    });
+  });
+});

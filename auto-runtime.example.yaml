@@ -185,6 +185,18 @@ allowed_origins:
 # https://on.auto/docs/self-host/configuration#usage-ping
 # usage_ping: false
 
+# Payload offloading: a payload larger than payload_size_threshold_bytes, the
+# input, output or answer of a run, the prompt its record holds, a definition's
+# document or a value a workflow holds, is kept once in the content store, the
+# ledger's database or the bucket of CONTENT_STORE_URL, and its record names it
+# by its SHA-256 and its size, as the claim check pattern does. On when left
+# out. Turning it off keeps new payloads in their records and still reads those
+# offloaded before.
+# The threshold takes 2048 to 65536 bytes and applies to new payloads alone.
+# See https://on.auto/docs/self-host/configuration#payload-offloading
+# payload_offloading: true
+# payload_size_threshold_bytes: 16384
+
 # The license of this runtime, which runs it on its org's credits: without one
 # it runs 100 free runs, then 15 a UTC day and 75 a UTC month. The key Studio
 # gives as the account holder or an organization admin registers the runtime,

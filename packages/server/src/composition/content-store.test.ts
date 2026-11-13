@@ -1,12 +1,10 @@
-import { once } from 'node:events';
-import { createServer } from 'node:http';
-
 import { sha256Of } from '@on.auto/content';
 import { Ledger } from '@on.auto/operations';
-import { Effect, ManagedRuntime, Schema } from 'effect';
+import { Effect, ManagedRuntime } from 'effect';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 
 import { ledgerDatabaseOf } from '../database/ledger-database.ts';
+import { aStoreAnswering } from '../testing/servers/answering-store.ts';
 import { readSettingsOf } from '../testing/settings/shipped-settings.ts';
 import { contentStoreOf } from './content-store.ts';
 import { ledgerLayerFor } from './ledger-store.ts';
@@ -14,24 +12,6 @@ import { ledgerLayerFor } from './ledger-store.ts';
 const alpha = { org: 'acme', playbook: 'alpha' };
 
 const secret = 'a-secret-access-key';
-
-const decodeAddress = Schema.decodeUnknownSync(Schema.Struct({ port: Schema.Number }));
-
-function isOfTheBucketAlone(url = '/'): boolean {
-  return new URL(url, 'http://store').pathname.split('/').filter((segment) => segment !== '').length === 1;
-}
-
-async function aStoreAnswering(status: number): Promise<string> {
-  const server = createServer((request, response) => {
-    response.writeHead(isOfTheBucketAlone(request.url) ? status : 404).end();
-  }).listen(0, '127.0.0.1');
-  await once(server, 'listening');
-  onTestFinished(async () => {
-    server.close();
-    await once(server, 'close');
-  });
-  return `127.0.0.1:${String(decodeAddress(server.address()).port)}`;
-}
 
 async function ledgerOn(host: string): Promise<Ledger['Service']> {
   vi.stubEnv('AWS_ACCESS_KEY_ID', 'an-access-key');

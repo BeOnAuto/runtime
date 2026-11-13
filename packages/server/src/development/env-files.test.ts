@@ -154,6 +154,7 @@ describe('pnpm dev with LOG_FORMAT=pretty in dev.env', () => {
       expect.stringMatching(/^WARN {2}Local mode is on: /u),
       expect.stringMatching(/^INFO {2}The ledger is kept in the file \S+\/ledger\.db ledger_file=\S+\/ledger\.db$/u),
       "INFO  Content is kept in the ledger's database content_store=ledger",
+      'INFO  Payload offloading is on: a payload larger than 16384 bytes is kept as content, and its record names it by its SHA-256 and its size payload_offloading=true payload_size_threshold_bytes=16384',
       expect.stringMatching(
         /^INFO {2}Secrets are kept in the ledger's database, sealed under the key [\da-f]{16} that the file \S+\/secrets\.key holds, and 0 sealed under the previous key were sealed again under it secrets_kid=[\da-f]{16} secrets_resealed=0 secrets_key_from=file$/u,
       ),

@@ -19,6 +19,7 @@ export interface OpenConnection extends OpenLedger {
 export interface OpenChores extends OpenLedger {
   readonly sweptAt: (now: number) => Promise<number>;
   readonly eraseExpired: ChorePorts['eraseExpired'];
+  readonly heldContentFound: ChorePorts['heldContentFound'];
   readonly waitsEnded: () => Promise<void>;
 }
 
@@ -43,6 +44,7 @@ export async function openChoresWith(layer: Layer.Layer<Ledger | LedgerChores>):
     ledger,
     sweptAt: (now) => runtime.runPromise(chores.sweepOrphans(now)),
     eraseExpired: chores.eraseExpired,
+    heldContentFound: chores.heldContentFound,
     waitsEnded: () => runtime.runPromise(chores.endWaits),
     dispose: () => runtime.dispose(),
   };

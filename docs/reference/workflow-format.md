@@ -633,44 +633,44 @@ The rejection gives a `reason`, and a `kind` where it has one:
 
 ## Limits
 
-| Limit                         | Value                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------- |
-| Source document               | 65,536 bytes in UTF-8                                                     |
-| Nested task lists             | 64 levels                                                                 |
-| Reference of a `call` task    | 256 bytes in UTF-8: its JSON Pointer                                      |
-| Nested values                 | 512 levels                                                                |
-| Input schema                  | 65,536 bytes as JSON, 64 nested levels, 1,000 values in an `enum`         |
-| Work of an expression         | 250 checkpoints; 500 for one input's together, in 2 seconds and 64 MiB    |
-| Branches of a fork            | 32                                                                        |
-| Duration of a run             | 30 days; `WORKFLOW_MAX_DURATION` sets 2 hours to 365 days                 |
-| Wait for a call               | Its function's longest run plus a minute, within the run's time left      |
-| Calls above a run             | 8                                                                         |
-| Calls waiting under one run   | 1,000 under the top workflow; `WORKFLOW_MAX_OPEN_CALLS` sets 1 to 9,999   |
-| Input of a run, or of a call  | 256 KiB as JSON                                                           |
-| Output of a run               | 1,048,574 bytes as JSON, which with the run's record makes 1 MiB          |
-| Data a run holds at once      | 4 MiB: its values as JSON, the document, and 4 KiB a task under way       |
-| One value kept across a wait  | 1,572,864 bytes (1.5 MiB) as JSON, less the rest of its recorded change   |
-| Calls started at once         | Their inputs, each counted twice, within that same 1.5 MiB                |
-| Tasks without waiting         | 10,000                                                                    |
-| Inputs a run takes            | 100,000: its start, each answer of a function, each timer and each event  |
-| Recorded history of a run     | 512 MiB as JSON                                                           |
-| An event                      | 256 KiB as JSON; `type`, `id` 256 characters; `source`, `subject` 1,024   |
-| Events waiting to be taken    | 64, or 1 MiB as JSON                                                      |
-| Events over a run's life      | 1,024, or 4 MiB as JSON                                                   |
-| Events a run emits            | 1,024, or 4 MiB as JSON, over its life                                    |
-| An emitted event              | 240 KiB as JSON                                                           |
-| Triggers of a workflow        | 3: one `on`, one `cron` and one `every`                                   |
-| Filters of an event trigger   | 64                                                                        |
-| Workflows with triggers       | 1,024 a playbook, whatever their triggers; one more is refused `conflict` |
-| Tasks listening to a playbook | 4,096 at once; one more hears only events sent to its run                 |
-| Runs an event trigger starts  | 60 a minute a workflow, and 1,000 more waiting                            |
-| Depth of a chain of triggers  | 8                                                                         |
-| `schedule.every`              | At least a minute                                                         |
+| Limit                         | Value                                                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Source document               | 65,536 bytes in UTF-8                                                                                                     |
+| Nested task lists             | 64 levels                                                                                                                 |
+| Reference of a `call` task    | 256 bytes in UTF-8: its JSON Pointer                                                                                      |
+| Nested values                 | 512 levels                                                                                                                |
+| Input schema                  | 65,536 bytes as JSON, 64 nested levels, 1,000 values in an `enum`                                                         |
+| Work of an expression         | 250 checkpoints; 500 for one input's together, in 2 seconds and 64 MiB                                                    |
+| Branches of a fork            | 32                                                                                                                        |
+| Duration of a run             | 30 days; `WORKFLOW_MAX_DURATION` sets 2 hours to 365 days                                                                 |
+| Wait for a call               | Its function's longest run plus a minute, within the run's time left                                                      |
+| Calls above a run             | 8                                                                                                                         |
+| Calls waiting under one run   | 1,000 under the top workflow; `WORKFLOW_MAX_OPEN_CALLS` sets 1 to 9,999                                                   |
+| Input of a run, or of a call  | 256 KiB as JSON                                                                                                           |
+| Output of a run               | 1,048,574 bytes as JSON, which with the run's record makes 1 MiB                                                          |
+| Data a run holds at once      | 4 MiB: its values as JSON, the document, and 4 KiB a task under way                                                       |
+| One value kept across a wait  | 1,572,864 bytes (1.5 MiB) as JSON, less the rest of its recorded change; an offloaded value counts as its digest and size |
+| Calls started at once         | Their inputs, each counted twice, within that same 1.5 MiB; an offloaded input as its digest and size                     |
+| Tasks without waiting         | 10,000                                                                                                                    |
+| Inputs a run takes            | 100,000: its start, each answer of a function, each timer and each event                                                  |
+| Recorded history of a run     | 512 MiB as JSON                                                                                                           |
+| An event                      | 256 KiB as JSON; `type`, `id` 256 characters; `source`, `subject` 1,024                                                   |
+| Events waiting to be taken    | 64, or 1 MiB as JSON                                                                                                      |
+| Events over a run's life      | 1,024, or 4 MiB as JSON                                                                                                   |
+| Events a run emits            | 1,024, or 4 MiB as JSON, over its life                                                                                    |
+| An emitted event              | 240 KiB as JSON                                                                                                           |
+| Triggers of a workflow        | 3: one `on`, one `cron` and one `every`                                                                                   |
+| Filters of an event trigger   | 64                                                                                                                        |
+| Workflows with triggers       | 1,024 a playbook, whatever their triggers; one more is refused `conflict`                                                 |
+| Tasks listening to a playbook | 4,096 at once; one more hears only events sent to its run                                                                 |
+| Runs an event trigger starts  | 60 a minute a workflow, and 1,000 more waiting                                                                            |
+| Depth of a chain of triggers  | 8                                                                                                                         |
+| `schedule.every`              | At least a minute                                                                                                         |
 
 What happens at a limit:
 
 - Some limits end the run at once, rejected as `unavailable` with a `runtime` error of status 500. They are the limits on held data, on a value kept across a wait, on tasks without waiting, on inputs and on history.
-- Calls a step starts at once, such as the branches of a `fork`, record each call's input twice in the one change that starts them, beside the workflow's input when they start the run. Three calls with inputs near 250 KiB started together pass the 1.5 MiB that change may hold, and the run is rejected before any of them is made; the same calls in steps one after another succeed. Start calls with large inputs one after another.
+- Calls a step starts at once, such as the branches of a `fork`, record each call's input twice in the one change that starts them, beside the workflow's input when they start the run. With [payload offloading](../self-host/configuration.md#payload-offloading) on, as it is by default and on Auto Cloud, a value or an input larger than its threshold, 16,384 bytes by default, counts there as its digest and size. Where it is off, three calls with inputs near 250 KiB started together pass the 1.5 MiB that change may hold, and the run is rejected before any of them is made; the same calls in steps one after another succeed. Start calls with large inputs one after another wherever offloading may be off.
 - One event more than the event limits allow ends the run at once, rejected, and later events to it are refused with `not_found`.
 - An emit beyond the limit on emitted events fails its task with a `runtime` error of status 500, which the workflow's `try` can catch. An emitted event larger than 240 KiB fails it with a `validation` error of status 400.
 

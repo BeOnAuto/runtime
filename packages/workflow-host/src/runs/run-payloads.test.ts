@@ -1,4 +1,5 @@
 import { PayloadErased, payloadReaderOf, sharedPayloadsWithin, type PayloadReader } from '@on.auto/operations/payloads';
+import { mostInlineHeldValueBytes } from '@on.auto/workflow-engine';
 import { Effect, Fiber } from 'effect';
 import { describe, expect, it } from 'vitest';
 
@@ -102,6 +103,7 @@ describe('the store of payloads the host composes, when the store fails or answe
     const payloads = hostRunPayloadsOf({
       content,
       payloadOffloading: true,
+      payloadSizeThreshold: mostInlineHeldValueBytes,
       shared: sharedPayloadsWithin(0),
       note: notesKept().note,
       readerOf: (source) => erasing(payloadReaderOf(source)),

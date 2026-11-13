@@ -93,7 +93,7 @@ export async function postsDraftedOnThePage(store: OpenStore, keeping: boolean):
     {
       programPoolOf: patientWorkerPool,
       ...store.served,
-      ...(keeping ? { keptOutside: true } : {}),
+      keptOutside: keeping,
     },
   );
   try {

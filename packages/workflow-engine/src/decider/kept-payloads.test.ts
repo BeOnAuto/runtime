@@ -9,14 +9,37 @@ import { openCall, runningState } from '../testing/runs.ts';
 import { workflow } from '../testing/workflows.ts';
 import { keepingOf } from './kept-payloads.ts';
 
-function holding(length: number) {
+function holding(length: number, payloadSizeThreshold = mostInlineHeldValueBytes) {
   return drivenRun(workflow(`do:\n  - make: { set: '\${ "x".repeat(${length}) }' }\n  - pause: { wait: PT1M }`), {
     payloadOffloading: true,
+    payloadSizeThreshold,
   });
 }
 
 function heldArmsOf(run: ReturnType<typeof drivenRun>): readonly boolean[] {
   return statesAlong(run.events).flatMap((state) => Object.values(state.machine.values).map((held) => isKept(held)));
+}
+
+function keptAt(threshold: number): readonly boolean[] {
+  return [threshold - 2, threshold - 1].map((length) => heldArmsOf(holding(length, threshold)).includes(true));
+}
+
+function keptUnder(threshold: number): readonly boolean[] {
+  return keepingOf(runningState, runningState, {
+    outputs: [startOf(threshold), startOf(threshold + 1)],
+    payloadOffloading: true,
+    payloadSizeThreshold: threshold,
+  }).outputs.map((output) => 'arguments_sha256' in output);
+}
+
+function startOf(bytes: number) {
+  return {
+    kind: 'start_call',
+    key: openCall,
+    function: 'notify',
+    arguments: 'a'.repeat(bytes - 2),
+    longestMs: 1000,
+  } as const;
 }
 
 describe('the arm a held value takes', () => {
@@ -28,6 +51,13 @@ describe('the arm a held value takes', () => {
     expect(heldArmsOf(pastIt).includes(true)).toBe(true);
     expect(pastIt.driver.ports.payloads.keeps().flat()).toEqual([
       sha256Of(JSON.stringify('x'.repeat(mostInlineHeldValueBytes - 1))),
+    ]);
+  });
+
+  it('is inline up to the threshold the engine is given and kept one byte past it, for any threshold', () => {
+    expect([keptAt(2048), keptAt(65_536)]).toEqual([
+      [false, true],
+      [false, true],
     ]);
   });
 
@@ -66,7 +96,11 @@ describe('a start whose arguments pass the threshold', () => {
     const call = { kind: 'start_call', key: openCall, function: 'notify', arguments: given, longestMs: 1000 } as const;
     const digest = sha256Of(JSON.stringify(given));
 
-    const keeping = keepingOf(runningState, runningState, { outputs: [call], payloadOffloading: true });
+    const keeping = keepingOf(runningState, runningState, {
+      outputs: [call],
+      payloadOffloading: true,
+      payloadSizeThreshold: mostInlineHeldValueBytes,
+    });
 
     expect(keeping.kept).toEqual([]);
     expect(keeping.outputs).toEqual([
@@ -80,5 +114,12 @@ describe('a start whose arguments pass the threshold', () => {
       },
     ]);
     expect(keeping.payloads.map(({ sha256 }) => sha256)).toEqual([digest]);
+  });
+
+  it('keeps them by their digest one byte past the threshold it is given, and names them whole at it', () => {
+    expect([keptUnder(4096), keptUnder(65_536)]).toEqual([
+      [false, true],
+      [false, true],
+    ]);
   });
 });

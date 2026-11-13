@@ -4,7 +4,7 @@ import { Context, Effect, Layer, Semaphore } from 'effect';
 
 import { signalledOn, type AppendSignal } from './appends/append-signal.ts';
 import { LedgerConnection, type OpenedConnection } from './connection/ledger-connection.ts';
-import { LedgerChores, orphansSweptOf, type ContentSweeping } from './content/content-sweep.ts';
+import { heldContentFoundBy, LedgerChores, orphansSweptOf, type ContentSweeping } from './content/content-sweep.ts';
 import type { AppendListeners, LedgerContent, LedgerStore } from './event-store.ts';
 import { makeLedger, ownContentOf } from './ledger-service.ts';
 import { LedgerLog } from './log/ledger-log.ts';
@@ -61,6 +61,7 @@ export function ledgerLayerOver(
           sweepOrphans: (now: number) => sweeping.withPermit(orphansSwept(now)),
           eraseExpired: (most: number) =>
             Effect.andThen(requireABatch(most), sweeping.withPermit(kept.eraseExpired(most))),
+          heldContentFound: heldContentFoundBy({ heldHeads: store.heldHeads, kept, outside: content !== undefined }),
           endWaits: Effect.sync(() => {
             store.endWaits();
           }),

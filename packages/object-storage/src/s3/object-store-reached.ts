@@ -9,7 +9,7 @@ export class ObjectStoreUnreachable extends Data.TaggedError('object_store_unrea
   readonly answer: string;
 }> {}
 
-function answerOf(failure: unknown): string {
+export function objectStoreAnswerOf(failure: unknown): string {
   if (failure instanceof S3ServiceException) {
     return `${failure.name} (${String(failure.$metadata.httpStatusCode)})`;
   }
@@ -22,6 +22,6 @@ export function objectStoreReached(
 ): Effect.Effect<void, ObjectStoreUnreachable> {
   return Effect.tryPromise({
     try: () => bucketReached({ client, name: bucket }),
-    catch: (failure) => new ObjectStoreUnreachable({ bucket, answer: answerOf(failure) }),
+    catch: (failure) => new ObjectStoreUnreachable({ bucket, answer: objectStoreAnswerOf(failure) }),
   });
 }

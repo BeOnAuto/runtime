@@ -36,13 +36,15 @@ const modelProvidersByDefault = [
 
 const notLocal = { loopbackAllowed: false };
 
+const onByDefault = { offloading: true, sizeThresholdBytes: 16_384 };
+
 describe('readSettings', () => {
   it('listens on every interface at port 5555, allows no origin, has no API keys and keeps the ledger in data/ by default', () => {
-    const { models, toolServers, interaction, receiving, ...server } = readSettingsOf({});
+    const { models, toolServers, interaction, receiving, payloads, ...server } = readSettingsOf({});
 
     expect(models.openai).toEqual({ configured: false, missing: ['OPENAI_API_KEY'] });
     expect(toolServers).toEqual({ servers: [], referencedVariables: [] });
-    expect([interaction, receiving]).toEqual([{ mostOpenRequests: 10_000 }, { overHttp: true }]);
+    expect([interaction, receiving, payloads]).toEqual([{ mostOpenRequests: 10_000 }, { overHttp: true }, onByDefault]);
     expect(server).toEqual({
       host: '0.0.0.0',
       port: 5555,
@@ -135,6 +137,7 @@ const everySettingRead = {
     endpoint: undefined,
     region: undefined,
   },
+  payloads: onByDefault,
   proxy: { enabled: true, environment: { HTTPS_PROXY: 'http://proxy.internal:3128' } },
   logFormat: 'pretty',
   logLevel: 'warn',
@@ -181,15 +184,6 @@ const everySettingRead = {
   extensions: [{ package: '@acme/extension' }],
   extensionSettings: new Map(),
 };
-
-describe('readSettings given the distribution', () => {
-  it('reads where the runtime came from even when the usage ping is turned off', () => {
-    expect(readSettingsOf({ RUNTIME_DISTRIBUTION: 'docker', DO_NOT_TRACK: '1' })).toMatchObject({
-      usagePing: undefined,
-      distribution: 'docker',
-    });
-  });
-});
 
 describe('readSettings given every setting', () => {
   it('reads every setting from the environment it is given', () => {

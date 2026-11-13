@@ -1,7 +1,7 @@
 import type { SecretStore } from '@on.auto/secrets';
 import { Effect, type Context } from 'effect';
 
-import { logContentStore, logLedger } from '../logging/logging.ts';
+import { logContentStore, logLedger, logPayloadOffloading } from '../logging/logging.ts';
 import { loadAwsAdapters, type AwsAdaptersLoader } from '../secrets/aws-adapters.ts';
 import { keepersOf } from '../secrets/secret-keepers.ts';
 import { secretStoreStarted } from '../secrets/secret-store-start.ts';
@@ -16,16 +16,18 @@ export interface LedgerStores {
   readonly withSecretsClosed: (served: Served) => Served;
 }
 
-type StoresSettings = Pick<Settings, 'ledger' | 'content' | 'secrets' | 'keepers' | 'proxy'>;
+type StoresSettings = Pick<Settings, 'ledger' | 'content' | 'payloads' | 'secrets' | 'keepers' | 'proxy'>;
 
 export async function ledgerStoresOpenedBy(
   context: Context.Context<never>,
-  { ledger, content, secrets, keepers, proxy }: StoresSettings,
+  { ledger, content, payloads, secrets, keepers, proxy }: StoresSettings,
   database: LedgerDatabase,
   loadAws: AwsAdaptersLoader = loadAwsAdapters,
 ): Promise<LedgerStores> {
   const run = Effect.runPromiseWith(context);
-  await run(Effect.andThen(logLedger(ledger), logContentStore(content)));
+  await run(
+    Effect.all([logLedger(ledger), logContentStore(content), logPayloadOffloading(payloads)], { discard: true }),
+  );
   const making = { proxy, loadAws };
   const custodians = secrets === undefined ? undefined : await custodiansOf(secrets, making);
   const kept = await keepersOf(keepers, custodians, making);

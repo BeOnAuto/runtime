@@ -2,6 +2,7 @@ import type { ContentOwner, RecordedContent } from '@on.auto/content';
 import { playbookPayloadKept, type PlaybookContext, type PlaybookWriter, type Unavailable } from '@on.auto/operations';
 import {
   PayloadOffloading,
+  PayloadSizeThreshold,
   jsonPayloadText,
   payloadChosen,
   payloadIfAny,
@@ -58,7 +59,8 @@ function writtenKeeping<Value, Services>(
     if (!(yield* PayloadOffloading)) {
       return inline;
     }
-    const { payload, toKeep } = payloadChosen(value, textOf(value), true);
+    const threshold = yield* PayloadSizeThreshold;
+    const { payload, toKeep } = payloadChosen(value, textOf(value), true, threshold);
     return toKeep === undefined ? { ...inline, payload } : yield* keptOrInline(value, toKeep, keep);
   });
 }

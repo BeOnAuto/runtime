@@ -96,6 +96,7 @@ export function sqliteEventStore<Driver extends AnyDriver>(
     ...projections.scrubs.storeOver(streams, query),
     readRunOutcomes: sqliteRunOutcomesOf(kept.runOutcomes, pool.execute),
     unlessHeld: projections.references.unlessHeldOn(inTransactionOf(pool)),
+    heldHeads: projections.references.heldHeadsOn(query),
     log: sqliteLogOn(pool.execute),
     migrate: async () => {
       await sqliteLayoutKept(pool, projections.named, kept);

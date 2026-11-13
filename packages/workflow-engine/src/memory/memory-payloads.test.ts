@@ -3,6 +3,7 @@ import { jsonPayloadText } from '@on.auto/operations/payloads';
 import { Effect, Exit } from 'effect';
 import { describe, expect, it } from 'vitest';
 
+import { mostInlineHeldValueBytes } from '../machine/limits.ts';
 import { ContentUnavailable } from '../run-log/content-unavailable.ts';
 import { NoPayloadStore, noPayloadStore } from '../run-log/run-payloads.ts';
 import { memoryPayloads } from './memory-payloads.ts';
@@ -67,11 +68,29 @@ describe('the switch of the store of payloads the tests use', () => {
 
     expect([switchedOn, store.payloadOffloading, memoryPayloads(true).payloadOffloading]).toEqual([false, true, true]);
   });
+
+  it('keeps them past the engine’s own threshold unless it is given another, and keeps its threshold as it is switched', () => {
+    const store = memoryPayloads(true, 4096);
+    const given = store.payloadSizeThreshold;
+    store.switchTo(false);
+    const kept = store.payloadSizeThreshold;
+    store.switchTo(true, 65_536);
+
+    expect([memoryPayloads().payloadSizeThreshold, given, kept, store.payloadSizeThreshold]).toEqual([
+      mostInlineHeldValueBytes,
+      4096,
+      4096,
+      65_536,
+    ]);
+  });
 });
 
 describe('the store of an engine composed with none', () => {
   it('keeps nothing outside, and dies if asked to read or keep, since no run of that engine names a payload', () => {
-    expect(noPayloadStore.payloadOffloading).toBe(false);
+    expect([noPayloadStore.payloadOffloading, noPayloadStore.payloadSizeThreshold]).toEqual([
+      false,
+      mostInlineHeldValueBytes,
+    ]);
     expect(Effect.runSyncExit(noPayloadStore.read(runId, [asked]))).toEqual(Exit.die(new NoPayloadStore({ runId })));
     expect(Effect.runSyncExit(noPayloadStore.keep(runId, [payload]))).toEqual(Exit.die(new NoPayloadStore({ runId })));
   });

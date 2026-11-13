@@ -1,5 +1,5 @@
 import { PlaybookContext, playbookLedgerOf } from '@on.auto/operations';
-import { PayloadOffloading } from '@on.auto/operations/payloads';
+import { PayloadOffloading, PayloadSizeThreshold } from '@on.auto/operations/payloads';
 import { memoryLedger } from '@on.auto/operations/testing';
 import { Effect, Logger, type Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
@@ -55,6 +55,24 @@ describe('a value written as a payload', () => {
 
     expect(await outside(written)).toMatchObject({ payload: { kept } });
     expect(await Effect.runPromise(service.content.getHead(alpha, kept.sha256))).toMatchObject({ bytes: kept.bytes });
+  });
+});
+
+describe('a value written as a payload under the threshold the shell gives', () => {
+  it('is kept outside past the threshold the shell gives, and stays in its fact at it', async () => {
+    const { service } = memoryLedger();
+    const written = payloadWrittenIn(service.content, alpha);
+    const atIt = 'a'.repeat(4094);
+    const pastIt = 'p'.repeat(4095);
+    const underAThresholdOf = (threshold: number) =>
+      outside(
+        Effect.all([written({ inline: atIt }), written({ inline: pastIt }), written({ inline: large })]).pipe(
+          Effect.provideService(PayloadSizeThreshold, threshold),
+        ),
+      );
+
+    expect((await underAThresholdOf(4096)).map(({ payload }) => 'kept' in payload)).toEqual([false, true, true]);
+    expect((await underAThresholdOf(65_536)).map(({ payload }) => 'kept' in payload)).toEqual([false, false, false]);
   });
 });
 

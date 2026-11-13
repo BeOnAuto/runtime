@@ -1,7 +1,6 @@
 import { RunMeter, type Meter } from '@on.auto/definitions';
 import type { LicensedFeatures } from '@on.auto/meter';
 import { Ledger } from '@on.auto/operations';
-import { PayloadOffloading } from '@on.auto/operations/payloads';
 import type { LanguageModel } from '@on.auto/reasoning';
 import { Context, Layer } from 'effect';
 
@@ -27,7 +26,7 @@ export interface ServedParts {
   readonly installed?: NonNullable<CompositionParts['installed']>;
   readonly features?: Layer.Layer<LicensedFeatures>;
   readonly shippedFilesOver?: ShippedFilesOver;
-  readonly keptOutside?: true;
+  readonly keptOutside?: boolean;
 }
 
 function composedWithTheLedgerOver(options: ComposedServerOptions, ledgerOver: LedgerOver): ComposedServerOptions {
@@ -56,33 +55,22 @@ function composedWithTheMeter(options: ComposedServerOptions, meter: Meter): Com
   };
 }
 
-function composedWithPayloadOffloading(options: ComposedServerOptions): ComposedServerOptions {
-  return {
-    ...options,
-    composed: async (settings, telemetry, shippedFiles) => {
-      const composed = await options.composed(settings, telemetry, shippedFiles);
-      const services = Layer.flatMap(composed.services, (served) =>
-        Layer.succeedContext(Context.add(served, PayloadOffloading, true)),
-      );
-      return { ...composed, services };
-    },
-  };
-}
-
 interface ComposedParts {
   readonly ledgerOver: LedgerOver | undefined;
   readonly meter: Meter | undefined;
   readonly shippedFilesOver: ShippedFilesOver | undefined;
-  readonly keptOutside: true | undefined;
+}
+
+export function offloadingSetBy(keptOutside: boolean | undefined): Readonly<Record<string, string>> {
+  return keptOutside === undefined ? {} : { PAYLOAD_OFFLOADING: String(keptOutside) };
 }
 
 export function composedWithTheParts(
   options: ComposedServerOptions,
-  { ledgerOver, meter, shippedFilesOver, keptOutside }: ComposedParts,
+  { ledgerOver, meter, shippedFilesOver }: ComposedParts,
 ): ComposedServerOptions {
   const shipped =
     shippedFilesOver === undefined ? options : { ...options, shippedFiles: shippedFilesOver(options.shippedFiles) };
   const metered = meter === undefined ? shipped : composedWithTheMeter(shipped, meter);
-  const keeping = keptOutside === undefined ? metered : composedWithPayloadOffloading(metered);
-  return ledgerOver === undefined ? keeping : composedWithTheLedgerOver(keeping, ledgerOver);
+  return ledgerOver === undefined ? metered : composedWithTheLedgerOver(metered, ledgerOver);
 }
