@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 
 import { mostResultBytes, type Finished } from '@on.auto/definitions';
-import { Conflict } from '@on.auto/operations';
+import { Conflict, type IncompleteDetails } from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import type { ReasoningFunctionDefinitionDocument } from '../definition/reasoning-function-definition.ts';
@@ -11,11 +11,16 @@ import type { StepsAnswer } from '../steps/steps-answer.ts';
 import type { RenderedPrompt } from '../template/compiled-template.ts';
 import { renderedOf } from './definition-request.ts';
 
+export interface AnsweredRun extends StepsAnswer {
+  readonly incomplete_details?: IncompleteDetails;
+}
+
 interface Answered {
   readonly prompt: RenderedPrompt;
   readonly settings: GenerationSettings;
   readonly format: OutputRequest['type'];
   readonly result: ModelResult;
+  readonly incomplete?: IncompleteDetails;
 }
 
 interface RecordFields {
@@ -116,17 +121,23 @@ function finishedWith(output: Schema.Json, answered: Answered): Effect.Effect<Fi
           record: spendingRecord(answered.result.usage, answered.result.duration_ms, answered.result),
         }),
       )
-    : Effect.succeed({ output, record: { ...fields, prompt: promptWithin(answered.prompt, room) } });
+    : Effect.succeed({
+        output,
+        record: { ...fields, prompt: promptWithin(answered.prompt, room) },
+        ...(answered.incomplete === undefined ? {} : { incomplete_details: answered.incomplete }),
+      });
 }
 
 export function finishedOf(
   definition: ReasoningFunctionDefinitionDocument,
-  answered: StepsAnswer,
+  answered: AnsweredRun,
 ): Effect.Effect<Finished, Conflict> {
+  const { incomplete_details: incomplete } = answered;
   return finishedWith(answered.output, {
     prompt: renderedOf(answered.prompt),
     settings: definition.settings,
     format: definition.output.type,
     result: answered.result,
+    ...(incomplete === undefined ? {} : { incomplete }),
   });
 }

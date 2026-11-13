@@ -32,6 +32,11 @@ async function graphServer(): Promise<FakeMcpServer> {
 
 const source = documentOf('model: anthropic/claude-sonnet-4-5\ntools: [graph/*]', 'Summarize acme.');
 
+const answeringAtItsLimit = documentOf(
+  'model: anthropic/claude-sonnet-4-5\ntools: [graph/*]\nexit_behavior: continue',
+  'Summarize acme.',
+);
+
 function toolRun(fake: FakeMcpServer, ...replies: readonly ScriptedReply[]): ReasoningRun {
   const { access } = reportingAccess(
     { graph: { url: fake.url, headers: { Authorization: 'Bearer ${GRAPH_API_KEY}' }, org: 'acme' } },
@@ -88,7 +93,7 @@ describe('a run that called tools and could not answer', () => {
   it('is unavailable as unfinished because the model kept calling tools once they were withheld, and lets its session go', async () => {
     const fake = await graphServer();
 
-    expect(await ending(fake, asking(everyCall), asking(searched))).toEqual(
+    expect(await toolRun(fake, asking(everyCall), asking(searched)).running(answeringAtItsLimit)).toEqual(
       unfinished(
         'no_answer',
         `anthropic kept calling tools in the step that withheld them, instead of answering, ${used}`,

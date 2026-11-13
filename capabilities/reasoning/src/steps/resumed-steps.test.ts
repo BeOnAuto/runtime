@@ -7,7 +7,7 @@ import { RateLimited } from '../failure/rate-limited.ts';
 import type { ToolCallAnswer } from '../jobs/jobs.ts';
 import { textResult, toolCallsResult } from '../testing/model-results.ts';
 import { answers, type ScriptedReply } from '../testing/scripted-language-model.ts';
-import { answeredWith, foundRows, stepsOf, toolOf, type StepsOptions } from '../testing/step-runs.ts';
+import { answeredWith, defaultBounds, foundRows, stepsOf, toolOf, type StepsOptions } from '../testing/step-runs.ts';
 import { noLongerOffered } from './asked-calls.ts';
 
 const search = toolOf('graph', 'search');
@@ -179,10 +179,14 @@ describe('a run that goes on from facts that ended it', () => {
     const attempts = await firstAttempt({
       tools: [search],
       replies: [() => Effect.never],
-      bounds: { runBoundMs: 10, limits: { contextWindow: undefined, mostInputTokens: 2_000_000 } },
+      bounds: { ...defaultBounds, runBoundMs: 10, limits: { contextWindow: undefined, mostInputTokens: 2_000_000 } },
     });
     const again = resumed(attempts, attempts.calls, {
-      bounds: { runBoundMs: 600_000, limits: { contextWindow: undefined, mostInputTokens: 2_000_000 } },
+      bounds: {
+        ...defaultBounds,
+        runBoundMs: 600_000,
+        limits: { contextWindow: undefined, mostInputTokens: 2_000_000 },
+      },
     });
 
     expect(await Effect.runPromise(again.stepping)).toMatchObject({

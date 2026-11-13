@@ -4,7 +4,7 @@ import { Effect } from 'effect';
 import type { FailureIssue } from '../failure/failure-issue.ts';
 import type { AdmissionFailure } from '../failure/request-failure.ts';
 import type { FailedCall } from '../steps/step-decision.ts';
-import { unavailableAfter, unfinishedAfter, type Spent, type ToolUse } from '../tools/tool-endings.ts';
+import { counted, unavailableAfter, unfinishedAfter, type Spent, type ToolUse } from '../tools/tool-endings.ts';
 import type { BeforeTheSteps } from './before-the-steps.ts';
 
 export type DefinitionRejection = InvalidInput | Unavailable | Conflict | RunCancelled;
@@ -33,8 +33,6 @@ export function waitFor(retryAfterMs: number | undefined): string {
   const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000));
   return seconds === 1 ? 'in 1 second' : `in ${seconds} seconds`;
 }
-
-const counted = new Intl.NumberFormat('en');
 
 export function saidBy(providerMessage: string | undefined): string {
   return providerMessage === undefined ? '' : `. The provider said: ${providerMessage}`;

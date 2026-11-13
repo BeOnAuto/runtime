@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { textResult, toolCallsResult } from '../testing/model-results.ts';
 import { answers } from '../testing/scripted-language-model.ts';
-import { stepsOf, toolOf } from '../testing/step-runs.ts';
+import { defaultBounds, stepsOf, toolOf } from '../testing/step-runs.ts';
 
 const search = toolOf('graph', 'search');
 
@@ -19,7 +19,7 @@ describe('the room of a run that calls tools, sent with each model call', () => 
     const steps = stepsOf({
       tools: [search],
       before: { startedAt, modelCallsBefore: 0, calls: [] },
-      bounds: { runBoundMs: 600_000, limits: { contextWindow: 200_000, mostInputTokens: 50_000 } },
+      bounds: { ...defaultBounds, runBoundMs: 600_000, limits: { contextWindow: 200_000, mostInputTokens: 50_000 } },
       replies: [
         answers(toolCallsResult([['graph__search', { query: 'acme' }]], { usage: counted })),
         answers(textResult('Acme has 2 rows.')),
@@ -38,7 +38,7 @@ describe('the room of a run that calls tools, sent with each model call', () => 
   it('is no input tokens at all once the run has spent them', async () => {
     const steps = stepsOf({
       tools: [search],
-      bounds: { runBoundMs: 600_000, limits: { contextWindow: undefined, mostInputTokens: 1000 } },
+      bounds: { ...defaultBounds, runBoundMs: 600_000, limits: { contextWindow: undefined, mostInputTokens: 1000 } },
       replies: [
         answers(toolCallsResult([['graph__search', { query: 'acme' }]], { usage: counted })),
         answers(textResult('Acme has 2 rows.')),

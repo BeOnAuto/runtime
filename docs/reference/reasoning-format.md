@@ -95,6 +95,7 @@ A function document contains instructions, never model credentials. Each change 
 | `output.shape`             | No          | The name of an [output shape](output-shapes.md), `series`, `categories`, `table` or `text`: the answer is JSON of that shape. Not allowed beside `output.schema` or with `text` |
 | `provider_options`         | No          | Options for one provider, under its namespace; see [Provider options](#provider-options)                                                                                        |
 | `tools`                    | No          | The tools a run may call, each `server/tool` or `server/*`; see [Tools](#tools)                                                                                                 |
+| `exit_behavior`            | No          | `error`, the default, or `continue`: how a run ends at its limit of tool calls or of input tokens; see [At a limit](#at-a-limit). Only with `tools`                             |
 | `page`                     | No          | The [page](page-format.md) that presents its runs                                                                                                                               |
 
 Any other key, at any level, is rejected.
@@ -273,7 +274,7 @@ A run checks its tools after it confirms that its model is offered, and before i
 
 The runtime checks each call before it sends it:
 
-- A run makes at most 25 calls; any further call is refused.
+- A run makes at most 25 calls. A step that asks for more ends the run, or has the calls past the 25 refused; see [At a limit](#at-a-limit).
 - A call that sends more than 256 KiB of arguments as JSON is refused, the most a run may take as its input. The model reads how large its arguments were, and is told to send less in one call, in parts where the tool takes them.
 - A third call of the same tool with the same arguments is refused, and the model is pointed to the result of the earlier call.
 
@@ -290,11 +291,18 @@ The model reads each tool result in full. A result is cut, with a note of how mu
 - A cut result stays valid JSON, with a note asking for fewer rows, fields or depth.
 - When the catalog does not know the window, or the provider reports no token counts, each result is read in full.
 
-A run's model calls use at most the input tokens the operator sets with `REASONING_MAX_INPUT_TOKENS`, 2,000,000 by default. Before each step, the runtime estimates that step's input from the step before. When the remaining budget would not cover another step after it, that step is the last, and it is made without tools.
+A run's model calls use at most the input tokens the operator sets with `REASONING_MAX_INPUT_TOKENS`, 2,000,000 by default. Before each step, the runtime estimates that step's input from the step before. When the remaining budget would not cover another step after it, that step is the last the budget covers.
 
-Once the run has used all its calls, or the budget would run out, the model answers from what it has, without tools. That last step gives the model the calls so far as text, so every provider accepts it. The tool results sit in a block fenced by a random marker and labelled as the results of the tools the model called. The label tells the model they are data to answer from, not instructions and not the user's words.
+A run that calls tools costs more. Every step resends the conversation so far, so a long run can use its whole budget, 2,000,000 input tokens by default. Ask a tool for one page of its data when the whole would be more than the model should read. A function whose work grows with what it is given, such as a list to check item by item, runs once for each item, from a workflow's `for`, so each run has its own calls and its own budget.
 
-A run that calls tools costs more. Every step resends the conversation so far, so a long run can use its whole budget, 2,000,000 input tokens by default. Ask a tool for one page of its data when the whole would be more than the model should read.
+#### At a limit
+
+`exit_behavior` sets what a run does at its 25 calls or at the most input tokens it may read:
+
+- `error`, the default: the run stops before it finished. A step that asks for a call past the 25 sends none of its calls. The last step the budget covers is made with the tools: if the model answers, the run succeeds; if it asks for a tool, none is sent. The run ends as `conflict`, kind `unworkable` when every tool it called is marked `reads`, else `effect_unknown`, with `because: "max_tool_calls"` or `"max_input_tokens"`. Its detail names the limit and what to change. A workflow's `catch` can take it by that `because`.
+- `continue`: the model answers from what it has. Calls past the 25 are refused, and the next step, or the last the budget covers, is made without tools. The run succeeds, with `incomplete_details: { "reason": "max_tool_calls" }` or `"max_input_tokens"` beside its output. A workflow's step gets the output alone, so keep the default when the answer must cover everything.
+
+A step without tools gives the model the calls so far as text, so every provider accepts it. The tool results sit in a block fenced by a random marker and labelled as the results of the tools the model called. The label tells the model they are data to answer from, not instructions and not the user's words.
 
 ### Limits on time and failures
 
@@ -377,6 +385,7 @@ Every rejection is a problem document, and is recorded on the run.
 | A JSON answer does not match the schema, when asked for once more too                    | `unavailable`, with the first issues: try again                                                                                                                                 | 503        |
 | A tool cannot be used before the model is called                                         | `unavailable`, kind `tool_not_offered` or `tool_server_failed`                                                                                                                  | 503        |
 | A run that called tools cannot finish                                                    | `unavailable`, kind `tools_unfinished`, or `conflict`, kind `effect_unknown`                                                                                                    | 503 or 409 |
+| A run reaches its 25 calls or its input tokens, and its `exit_behavior` is `error`       | `conflict`, kind `unworkable` or `effect_unknown`, `because: "max_tool_calls"` or `"max_input_tokens"`; see [At a limit](#at-a-limit)                                           | 409        |
 | The run under the `run_id` is still `started`, and its last event is recent              | `conflict`, kind `taken`: the run is still running; see [A run performed again](#a-run-performed-again)                                                                         | 409        |
 | The server restarted before the run finished, and the run kept no content to go on from  | `unavailable`, `because: "restarted_without_content"`; once it called a tool, `unavailable`, kind `tools_unfinished`, or `conflict`, kind `effect_unknown`, with that `because` | 503 or 409 |
 | The server restarted while the run called a tool not marked `reads`                      | `conflict`, kind `effect_unknown`, `because: "call_outcome_unknown"`                                                                                                            | 409        |
@@ -391,7 +400,7 @@ What the rejections say:
 
 More rules:
 
-- A text answer cut off at `max_output_tokens` succeeds, with `finish_reason: "length"` in the record.
+- A text answer cut off at `max_output_tokens` succeeds, with `finish_reason: "length"` in the record and `incomplete_details: { "reason": "max_output_tokens" }` beside the output, as `get_run` and `list_runs` show it.
 - A model call may take 60 seconds plus 25 ms for every token of `max_output_tokens`: 85.6 seconds at the default 1,024. That time includes up to two retries of a call that failed with HTTP 408, 409, 429 or 5xx, or could not connect.
 - When a provider ignores or changes a setting, the record's `warnings` say so.
 - A JSON answer that does not match its schema is asked for once more, with its issues, when the run has room left for it, and the rejection of one that misses it again says `after one correction`: see [An answer that misses its schema](model-settings.md#an-answer-that-misses-its-schema).
@@ -453,7 +462,7 @@ The run goes on from its events and the content it kept, and reads them before i
 
 - The bound of a run that calls tools, 10 minutes, counts from its start.
 - A model call that was answered is not made again. A model call started without an answer ends as `interrupted` and is made again from the same messages, under the next number.
-- When the last model call asked for tool calls, each call that has an answer gives the model that answer again, rebuilt from what the run kept, and a call that failed gives the model its failure. A call without an answer ends as `interrupted`, and is made again when the tool is marked `reads`. Every call counts toward the run's 25, the ones made before included.
+- When the last model call asked for tool calls, each call that has an answer gives the model that answer again, rebuilt from what the run kept, and a call that failed gives the model its failure. A call without an answer ends as `interrupted`, and is made again when the tool is marked `reads`. Every call counts toward the run's 25, the ones made before included, and a step that asked past a limit ends the run as the limit does, calling nothing.
 - A call without an answer of a tool not marked `reads` is not made again, since it may already have changed something outside the playbook, and neither is any other call of the same step without an answer, even one of a tool marked `reads`. Each ends as `interrupted`, and the run ends as `conflict`, kind `effect_unknown`, with `because: "call_outcome_unknown"`.
 - A call of a tool the run no longer offers, because its tool server changed while the run was stopped, is not sent. The model is told so and goes on.
 - A model call that failed ends the run as that failure did, and a run whose cancel was asked ends cancelled, neither calling anything.

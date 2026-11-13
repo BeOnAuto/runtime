@@ -18,12 +18,17 @@ function endingWritten(ending: Ending) {
   if (ending.type !== 'run_succeeded') {
     return Effect.succeed({ ...nothingWritten, ending });
   }
+  const { record, incomplete_details: incomplete } = ending.data;
   return Effect.gen(function* () {
     const [output, prompt] = yield* Effect.all(
-      [payloadWritten(outputPayloadOf(ending)), recordWritten(ending.data.record, payloadWritten)],
+      [payloadWritten(outputPayloadOf(ending)), recordWritten(record, payloadWritten)],
       { concurrency: 'unbounded' },
     );
-    const data = { ...payloadMembers('output', output.payload), record: prompt.record };
+    const data = {
+      ...payloadMembers('output', output.payload),
+      record: prompt.record,
+      ...(incomplete === undefined ? {} : { incomplete_details: incomplete }),
+    };
     return {
       inHand: new Map([...output.inHand, ...prompt.inHand]),
       ending: { type: 'run_succeeded', data } satisfies Ending,

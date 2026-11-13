@@ -113,16 +113,20 @@ async function graphServer(): Promise<FakeMcpServer> {
   return fake;
 }
 
-function textDefinition(model: string): string {
-  return documentOf(`model: ${model}\ntools: [graph/search]`, 'Summarize acme.');
+function textDefinition(model: string, more = ''): string {
+  return documentOf(`model: ${model}\ntools: [graph/search]${more}`, 'Summarize acme.');
 }
 
-function jsonDefinition(model: string): string {
+function jsonDefinition(model: string, more = ''): string {
   return documentOf(
-    `model: ${model}\ntools: [graph/search]\noutput:\n  format: json\n  schema: {type: object, properties: {verdict: {type: string}}, required: [verdict]}`,
+    `model: ${model}\ntools: [graph/search]${more}\noutput:\n  format: json\n  schema: {type: object, properties: {verdict: {type: string}}, required: [verdict]}`,
     'Judge acme.',
   );
 }
+
+const answeringAtItsLimit = '\nexit_behavior: continue';
+
+const answeredFromWhatItRead = { incomplete_details: { reason: 'max_input_tokens' } };
 
 function searchingFor(...queries: readonly string[]) {
   return (_request: unknown, attempt: number) =>
@@ -159,33 +163,33 @@ describe.each(providers)('a run that calls tools with $name', (provider) => {
     expect(second).toContain('Found 2 rows for acme.');
   });
 
-  it('answers in text in its last step from what the tools answered, with the tools withheld and the calls told in words', async () => {
+  it('answers in text in its last step from what the tools answered, with the tools withheld and the calls told in words, when its function says continue', async () => {
     const run = await providerRun({
       setup: provider,
       respond: thenAnswering(provider, provider.text('Acme has 2 rows.')),
       fake: await graphServer(),
-      source: textDefinition(provider.model),
+      source: textDefinition(provider.model, answeringAtItsLimit),
       reading: { mostInputTokens: 30 },
     });
     const last = String(run.bodies.at(-1));
 
-    expect(run.exit).toMatchObject(Exit.succeed({ output: 'Acme has 2 rows.' }));
+    expect(run.exit).toMatchObject(Exit.succeed({ output: 'Acme has 2 rows.', ...answeredFromWhatItRead }));
     expect(transcript.filter((told) => last.includes(told))).toEqual(transcript);
     expect(fencedResults.exec(last)?.groups?.['results']).toBe(`${searchTool} answered: Found 2 rows for acme.`);
     expect(provider.native.filter((marker) => last.includes(marker))).toEqual([]);
   });
 
-  it('answers in JSON in its output mode in its last step, with the tools withheld', async () => {
+  it('answers in JSON in its output mode in its last step, with the tools withheld, when its function says continue', async () => {
     const run = await providerRun({
       setup: provider,
       respond: thenAnswering(provider, provider.json({ verdict: 'approve' })),
       fake: await graphServer(),
-      source: jsonDefinition(provider.model),
+      source: jsonDefinition(provider.model, answeringAtItsLimit),
       reading: { mostInputTokens: 30 },
     });
     const last = String(run.bodies.at(-1));
 
-    expect(run.exit).toMatchObject(Exit.succeed({ output: { verdict: 'approve' } }));
+    expect(run.exit).toMatchObject(Exit.succeed({ output: { verdict: 'approve' }, ...answeredFromWhatItRead }));
     expect(last).toContain(toolsWithdrawn);
     expect(last).not.toContain(`"name":"${searchTool}"`);
   });

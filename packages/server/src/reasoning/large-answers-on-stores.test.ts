@@ -35,7 +35,14 @@ const modelCallsOfTheRun = ['the first, which asks for every call', 'the last, w
 
 const kibibytesOf = (call: number): number => 1000 + call;
 
-const reading = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/large]', '---', 'Read it all.'].join('\n');
+const reading = [
+  '---',
+  'model: anthropic/claude-sonnet-4-5',
+  'tools: [graph/large]',
+  'exit_behavior: continue',
+  '---',
+  'Read it all.',
+].join('\n');
 
 async function administer(statement: string): Promise<void> {
   const client = new Client({ connectionString: postgresql });

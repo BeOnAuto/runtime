@@ -44,7 +44,7 @@ export const unknownWindows: ModelReading = {
 const unbounded = Number.POSITIVE_INFINITY;
 
 export function boundsFor(
-  { settings, model }: ReasoningFunctionDefinitionDocument,
+  { settings, model, exit_behavior: exitBehavior }: ReasoningFunctionDefinitionDocument,
   { mostInputTokens, contextWindowOf }: ModelReading,
   offersTools: boolean,
 ): Effect.Effect<StepBounds> {
@@ -52,8 +52,9 @@ export function boundsFor(
     ? Effect.map(contextWindowOf(model), (contextWindow) => ({
         runBoundMs: runBoundMs(timeoutFor(settings.max_output_tokens)),
         limits: { contextWindow, mostInputTokens },
+        exitBehavior,
       }))
-    : Effect.succeed({ runBoundMs: unbounded, limits: { contextWindow: undefined, mostInputTokens } });
+    : Effect.succeed({ runBoundMs: unbounded, limits: { contextWindow: undefined, mostInputTokens }, exitBehavior });
 }
 
 export function requestBaseOf(

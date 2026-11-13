@@ -19,7 +19,14 @@ const apiKey = 'graph-api-key-4f1d9a7c2b';
 
 const runId = '0199a3c4-7d2e-7c1a-9b3f-2f1e0d9c8b7a';
 
-const source = ['---', 'model: anthropic/claude-sonnet-4-5', 'tools: [graph/*]', '---', 'Summarize acme.'].join('\n');
+const source = [
+  '---',
+  'model: anthropic/claude-sonnet-4-5',
+  'tools: [graph/*]',
+  'exit_behavior: continue',
+  '---',
+  'Summarize acme.',
+].join('\n');
 
 const timedOut: ScriptedReply = () =>
   Effect.fail(

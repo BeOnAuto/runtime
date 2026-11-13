@@ -1,9 +1,10 @@
-import type {
-  CancelledKind,
-  ConflictKind,
-  InvalidInputKind,
-  RejectionBecause,
-  UnavailableKind,
+import {
+  IncompleteDetailsSchema,
+  type CancelledKind,
+  type ConflictKind,
+  type InvalidInputKind,
+  type RejectionBecause,
+  type UnavailableKind,
 } from '@on.auto/operations';
 import { Effect, Schema } from 'effect';
 
@@ -16,11 +17,17 @@ import type { RunRejection } from '../runs/run.ts';
 import { issuesUnder, type Rejection } from './issue-pointers.ts';
 
 const ExecutedSchema = Schema.Union([
-  Schema.Struct({ output: Schema.Json, record: AnsweredRecordSchema }),
+  Schema.Struct({
+    output: Schema.Json,
+    record: AnsweredRecordSchema,
+    incomplete_details: Schema.optionalKey(IncompleteDetailsSchema),
+  }),
   Schema.Struct({ finishesLater: Schema.Literal(true), record: Schema.JsonObject }),
 ]);
 
 type Executed = typeof ExecutedSchema.Type;
+
+type Answered = Exclude<Executed, { readonly finishesLater: true }>;
 
 const decodeExecuted = Schema.decodeUnknownEffect(ExecutedSchema);
 
@@ -30,14 +37,19 @@ export function interruptedAttempt(resumesAfterMs: number): InterruptedAttempt {
   return Number.isFinite(resumesAfterMs) ? { type: 'run_interrupted', resumes: true } : { type: 'run_interrupted' };
 }
 
+function succeededWith({ output, record, incomplete_details: incomplete }: Answered): RunOutcome {
+  return {
+    type: 'run_succeeded',
+    data: { output, record, ...(incomplete === undefined ? {} : { incomplete_details: incomplete }) },
+  };
+}
+
 function recordedOutcome(ran: Executed): Effect.Effect<RunOutcome> {
   return 'finishesLater' in ran
     ? withinResultLimit(ran.record).pipe(
         Effect.map((): RunOutcome => ({ type: 'run_deferred', data: { record: ran.record } })),
       )
-    : withinResultLimit(ran.output, ran.record).pipe(
-        Effect.map((): RunOutcome => ({ type: 'run_succeeded', data: { output: ran.output, record: ran.record } })),
-      );
+    : withinResultLimit(ran.output, ran.record).pipe(Effect.map((): RunOutcome => succeededWith(ran)));
 }
 
 function outcomeOf(ran: CapabilityAnswer): Effect.Effect<RunOutcome> {

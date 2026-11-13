@@ -1,8 +1,9 @@
-import { callsEnded } from '@on.auto/tool-servers/policy';
+import { callsEnded, toolBounds } from '@on.auto/tool-servers/policy';
 import type { Schema } from 'effect';
 
+import type { ExitBehavior } from '../definition/front-matter-schema.ts';
 import { finalStepMessages } from '../tools/final-step.ts';
-import type { ToolsStoppedBecause } from '../tools/tool-endings.ts';
+import type { LimitReached, ToolsStoppedBecause } from '../tools/tool-endings.ts';
 import { leavesNoNextTurn, roomOfEachAnswer, type TurnLimits } from '../tools/turn-meter.ts';
 import { isAnswered, resultsMessage, unsent, type AdmittedCall, type Asking } from './asked-calls.ts';
 import { openModelCallOf, type FactData } from './attempt-facts.ts';
@@ -12,6 +13,7 @@ import type { StepEnding, StepState } from './step-state.ts';
 export interface StepBounds {
   readonly runBoundMs: number;
   readonly limits: TurnLimits;
+  readonly exitBehavior: ExitBehavior;
 }
 
 export interface Deciding {
@@ -50,6 +52,7 @@ export type NextStep =
   | Extract<StepEnding, { readonly type: 'answered' }>
   | { readonly type: 'failed'; readonly data: FailedCall }
   | { readonly type: 'stopped'; readonly because: ToolsStoppedBecause; readonly detail: string }
+  | LimitReached
   | { readonly type: 'outcome_unknown' }
   | { readonly type: 'unreadable' };
 
@@ -63,7 +66,19 @@ function endingOf(ending: Extract<StepEnding, { readonly type: 'failed' }>): Nex
     : { type: 'stopped', because: 'run_bound', detail: ending.data.detail };
 }
 
-type Stop = Extract<NextStep, { readonly type: 'stopped' }>;
+type Stop = Extract<NextStep, { readonly type: 'stopped' }> | LimitReached;
+
+function limitReached(state: StepState, { limits, exitBehavior }: StepBounds): LimitReached | undefined {
+  if (exitBehavior === 'continue' || state.asking.asked.length === 0) {
+    return undefined;
+  }
+  if (state.tally.calls > toolBounds.callsInRun) {
+    return { type: 'limit_reached', because: 'max_tool_calls', limit: toolBounds.callsInRun };
+  }
+  return leavesNoNextTurn(state.meterBeforeLastCall, limits)
+    ? { type: 'limit_reached', because: 'max_input_tokens', limit: limits.mostInputTokens }
+    : undefined;
+}
 
 function stoppedBy(state: StepState, { bounds, elapsedMs, provider }: Deciding): Stop | undefined {
   if (state.asking.final && state.asking.asked.length > 0) {
@@ -74,7 +89,7 @@ function stoppedBy(state: StepState, { bounds, elapsedMs, provider }: Deciding):
     return { type: 'stopped', because: 'run_bound', detail: runBoundWords(bounds.runBoundMs) };
   }
   return state.serversEnded === null
-    ? undefined
+    ? limitReached(state, bounds)
     : { type: 'stopped', because: 'server_failed', detail: 'Its tool servers failed too often' };
 }
 
@@ -84,8 +99,8 @@ function toolCallsOf(state: StepState, asking: Asking, bounds: StepBounds): Next
     : { type: 'outcome_unknown' };
 }
 
-function isFinal(state: StepState, bounds: StepBounds): boolean {
-  return callsEnded(state.tally) || leavesNoNextTurn(state.meter, bounds.limits);
+function isFinal(state: StepState, { limits, exitBehavior }: StepBounds): boolean {
+  return exitBehavior === 'continue' && (callsEnded(state.tally) || leavesNoNextTurn(state.meter, limits));
 }
 
 function nextModelCall(state: StepState, { bounds, fence }: Deciding): ModelCallNext {

@@ -1,5 +1,6 @@
-import { Conflict, Unavailable, type RejectionBecause } from '@on.auto/operations';
+import { Conflict, Unavailable, type IncompleteDetails, type RejectionBecause } from '@on.auto/operations';
 import type { CallsEndedBecause } from '@on.auto/tool-servers';
+import { callsEnded, type CallTally } from '@on.auto/tool-servers/policy';
 import { Effect, type Schema } from 'effect';
 
 type UnfinishedBecause = Extract<
@@ -20,6 +21,14 @@ const serverEndings = {
 
 export type ToolsStoppedBecause = 'server_failed' | 'run_bound' | 'no_answer';
 
+type LimitBecause = Extract<RejectionBecause, 'max_tool_calls' | 'max_input_tokens'>;
+
+export interface LimitReached {
+  readonly type: 'limit_reached';
+  readonly because: LimitBecause;
+  readonly limit: number;
+}
+
 export interface ToolUse {
   readonly calledAny: boolean;
   readonly onlyRead: boolean;
@@ -30,6 +39,8 @@ export interface ToolUse {
 export interface Spent {
   readonly record?: Schema.JsonObject;
 }
+
+export const counted = new Intl.NumberFormat('en');
 
 function unfinished(use: ToolUse, because: UnfinishedBecause, detail: string, spent: Spent): Unavailable | Conflict {
   const ending = { detail: `${detail}, after the run called ${use.inWords}`, because, ...spent };
@@ -84,4 +95,35 @@ export function unfinishedAfter(
   return Effect.fail(
     use.calledAny ? unfinished(use, because, detail, spent) : new Unavailable({ detail, because, ...spent }),
   );
+}
+
+const whatTheRunNeeded: Readonly<Record<LimitBecause, (limit: number) => string>> = {
+  max_tool_calls: (limit) => `The run needed more than the ${counted.format(limit)} tool calls a run may make`,
+  max_input_tokens: (limit) => `The run needed more than the ${counted.format(limit)} input tokens a run may read`,
+};
+
+const whatToChange: Readonly<Record<LimitBecause, string>> = {
+  max_tool_calls: 'Run the function once for each item from a workflow, so each run makes the calls of one item',
+  max_input_tokens:
+    'Ask each tool for less, such as one page of what it holds, or run the function once for each item from a workflow',
+};
+
+const answerFromWhatItHas =
+  'to have it answer from what it has instead, where an answer from part of the work will do, set exit_behavior: continue in the reasoning function definition';
+
+function calledIn({ calledAny, inWords }: ToolUse): string {
+  return calledAny ? `, after the run called ${inWords}` : '';
+}
+
+export function limitEnding(
+  use: ToolUse,
+  { because, limit }: LimitReached,
+  spent: Spent,
+): Effect.Effect<never, Conflict> {
+  const detail = `${whatTheRunNeeded[because](limit)}${calledIn(use)}. ${whatToChange[because]}; ${answerFromWhatItHas}`;
+  return Effect.fail(new Conflict({ detail, kind: use.onlyRead ? 'unworkable' : 'effect_unknown', because, ...spent }));
+}
+
+export function answeredAtALimit(tally: CallTally): IncompleteDetails {
+  return { reason: callsEnded(tally) ? 'max_tool_calls' : 'max_input_tokens' };
 }

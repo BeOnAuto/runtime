@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { OutputInvalid } from '../index.ts';
 import { documentOf } from '../testing/definition-documents.ts';
-import { answers, toolCallsResult, type ScriptedCall, type ScriptedReply } from '../testing/index.ts';
-import { reasoningWithTools } from '../testing/reasoning-runs.ts';
+import { answers, textResult, toolCallsResult, type ScriptedCall, type ScriptedReply } from '../testing/index.ts';
+import { reasoningWith, reasoningWithTools } from '../testing/reasoning-runs.ts';
 
 const apiKey = 'records-api-key-7c2b4f1d9a';
 
@@ -95,5 +95,26 @@ describe('the words of a cut run', () => {
     expect(`${noToolWords}${readingWords}${actingWords}`).not.toMatch(
       /records|ledgerbook|search|list_channels|profile|environment|echo/u,
     );
+  });
+});
+
+const inText = documentOf('model: anthropic/claude-sonnet-4-5\nconfig: {max_output_tokens: 40}', 'Summarize the week.');
+
+describe('a run whose text answer was cut at max_output_tokens', () => {
+  it('succeeds with the text it has, marked max_output_tokens, where one that stopped of itself is not marked', async () => {
+    const cutText = answers(
+      textResult('Profits rose in the', { finish_reason: 'length', raw_finish_reason: 'max_tokens' }),
+    );
+    const whole = await reasoningWith(answers(textResult('Profits rose.'))).running(inText);
+
+    expect(await reasoningWith(cutText).running(inText)).toEqual(
+      Exit.succeed(
+        expect.objectContaining({ output: 'Profits rose in the', incomplete_details: { reason: 'max_output_tokens' } }),
+      ),
+    );
+    expect(whole).toEqual(Exit.succeed(expect.objectContaining({ output: 'Profits rose.' })));
+    const anyLimit: unknown = expect.anything();
+
+    expect(whole).not.toMatchObject(Exit.succeed({ incomplete_details: anyLimit }));
   });
 });

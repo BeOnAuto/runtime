@@ -55,6 +55,7 @@ export interface StepState {
   readonly remaking: boolean;
   readonly asking: Asking;
   readonly meter: Meter;
+  readonly meterBeforeLastCall: Meter;
   readonly tally: CallTally;
   readonly serversEnded: CallsEndedBecause | null;
   readonly answeredBytes: number;
@@ -74,6 +75,7 @@ export function firstState(prompt: Prompt, offered: Offer['offered'], modelCalls
     remaking: false,
     asking: noAsking,
     meter: noTurns,
+    meterBeforeLastCall: noTurns,
     tally: noCalls,
     serversEnded: null,
     answeredBytes: 0,
@@ -101,9 +103,8 @@ function modelCallStarted(
     return opened;
   }
   const final = state.offered.size > 0 && offered === 0;
-  return sent === undefined
-    ? { ...opened, lastFinal: final, unreadable: true }
-    : sentIn({ ...opened, lastSent: sent, lastFinal: final }, sent);
+  const started = { ...opened, lastFinal: final, meterBeforeLastCall: state.meter };
+  return sent === undefined ? { ...started, unreadable: true } : sentIn({ ...started, lastSent: sent }, sent);
 }
 
 function modelCallAnswered(

@@ -1,4 +1,11 @@
-import type { Conflict, InvalidInput, PlaybookAddress, RunCancelled, Unavailable } from '@on.auto/operations';
+import type {
+  Conflict,
+  IncompleteDetails,
+  InvalidInput,
+  PlaybookAddress,
+  RunCancelled,
+  Unavailable,
+} from '@on.auto/operations';
 import type { Noun } from '@on.auto/phrasing';
 import { Effect, type Schema } from 'effect';
 
@@ -33,6 +40,7 @@ export type Standing = (request: StandingRequest) => Effect.Effect<Schema.JsonOb
 export interface Finished {
   readonly output: Schema.Json;
   readonly record: Schema.JsonObject;
+  readonly incomplete_details?: IncompleteDetails;
 }
 
 export interface FinishesLater {

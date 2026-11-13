@@ -102,3 +102,33 @@ describe('the provider options of a definition', () => {
     ]);
   });
 });
+
+describe('how a run of a definition ends at a limit', () => {
+  it('is error unless the function says continue', () => {
+    expect(parsed(documentOf('model: openai/gpt-5\ntools: [graph/search]')).exit_behavior).toBe('error');
+    expect(
+      parsed(documentOf('model: openai/gpt-5\ntools: [graph/search]\nexit_behavior: continue')).exit_behavior,
+    ).toBe('continue');
+    expect(issuesIn(documentOf('model: openai/gpt-5\ntools: [graph/search]\nexit_behavior: end'))).toEqual([
+      'Line 4, /exit_behavior: Expected "error" | "continue"',
+    ]);
+  });
+
+  it('is refused on a function that names no tools, which reaches no limit it sets', () => {
+    const refused =
+      'exit_behavior sets how a run ends at its limit of tool calls or of input tokens across its steps, which only a function that names tools has; leave it out';
+
+    expect(issuesIn(documentOf('model: openai/gpt-5\nexit_behavior: error'))).toEqual([
+      `Line 3, /exit_behavior: ${refused}`,
+    ]);
+    expect(issuesIn(documentOf('model: openai/gpt-5\ntools: []\nexit_behavior: continue'))).toEqual([
+      `Line 4, /exit_behavior: ${refused}`,
+    ]);
+    expect(
+      issuesIn(documentOf('model: openai/gpt-5\ntools: [graph]\nexit_behavior: continue')).map((issue) =>
+        issue.slice(0, issue.indexOf(':')),
+      ),
+    ).toEqual(['Line 3, /tools/0']);
+    expect(parsed(documentOf('model: openai/gpt-5')).exit_behavior).toBe('error');
+  });
+});

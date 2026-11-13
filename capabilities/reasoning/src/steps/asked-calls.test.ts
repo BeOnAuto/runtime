@@ -7,7 +7,7 @@ import { anthropicToolCall } from '../provider-testing/tool-call-replies.ts';
 import { accessFor } from '../testing/adapter-harness.ts';
 import { textResult, toolCallsResult, type ScriptedCall } from '../testing/model-results.ts';
 import { answers } from '../testing/scripted-language-model.ts';
-import { stepsOf, toolOf } from '../testing/step-runs.ts';
+import { defaultBounds, stepsOf, toolOf } from '../testing/step-runs.ts';
 import { notAnObject } from './asked-calls.ts';
 
 const search = toolOf('graph', 'search');
@@ -106,12 +106,13 @@ describe('a call whose arguments are not an object', () => {
 });
 
 describe('the calls a run may make', () => {
-  it('are refused past the twenty-fifth, and once the same arguments were sent twice, in words and unsent', async () => {
+  it('are refused past the twenty-fifth when its function says continue, and once the same arguments were sent twice, in words and unsent', async () => {
     const many = Array.from({ length: 26 }, (_, call): ScriptedCall => ['graph__search', { query: `acme ${call}` }]);
     const repeated: readonly ScriptedCall[] = [1, 2, 3].map(() => ['graph__search', { query: 'acme' }]);
     const tooMany = stepsOf({
       tools: [search],
       replies: [answers(toolCallsResult(many)), answers(textResult('Done.'))],
+      bounds: { ...defaultBounds, exitBehavior: 'continue' },
     });
     const again = stepsOf({
       tools: [search],

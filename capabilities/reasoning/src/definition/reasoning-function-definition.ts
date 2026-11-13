@@ -4,6 +4,7 @@ import type { Schema } from 'effect';
 import type { GenerationSettings, OutputRequest, ProviderOptions } from '../model/model-request.ts';
 import type { AnswerSchema } from '../schema/answer-schema.ts';
 import type { CompiledTemplate } from '../template/compiled-template.ts';
+import type { ExitBehavior } from './front-matter-schema.ts';
 
 export interface InputContract {
   readonly schema?: AnswerSchema;
@@ -18,6 +19,7 @@ export interface ReasoningFunctionDefinitionDocument {
   readonly output: OutputRequest;
   readonly provider_options?: ProviderOptions;
   readonly tools: readonly ToolReference[];
+  readonly exit_behavior: ExitBehavior;
   readonly template: CompiledTemplate;
   readonly warnings: readonly string[];
 }

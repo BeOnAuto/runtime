@@ -10,7 +10,7 @@ import { Option, Result, type Schema } from 'effect';
 
 import type { CompiledTemplate } from '../template/compiled-template.ts';
 import { inputContractOf, outputContractOf } from './definition-schemas.ts';
-import { modelOf, providerOptionsOf, settingsOf, toolsOf } from './definition-settings.ts';
+import { exitBehaviorOf, modelOf, providerOptionsOf, settingsOf, toolsOf } from './definition-settings.ts';
 import { templateOf } from './definition-template.ts';
 import { decodeSection, frontMatterIn } from './front-matter-schema.ts';
 import type { ReasoningFunctionDefinitionDocument } from './reasoning-function-definition.ts';
@@ -38,6 +38,27 @@ function variablesOf(
     : [];
 }
 
+interface ToolUse {
+  readonly tools: ReasoningFunctionDefinitionDocument['tools'];
+  readonly exitBehavior: ReasoningFunctionDefinitionDocument['exit_behavior'];
+}
+
+function toolUseOf({ root, lines }: Pick<ReadFrontMatter, 'root' | 'lines'>): Checked<ToolUse> {
+  const tools = checkedSection(
+    () => decodeSection.tools(root['tools']),
+    (written) => toolsOf(written, lines),
+  );
+  const exitBehavior = checkedSection(
+    () => decodeSection.exit_behavior(root['exit_behavior']),
+    (written) => exitBehaviorOf(written, Result.isFailure(tools) || tools.success.length > 0, lines),
+  );
+  const found = issuesOf(
+    () => tools,
+    () => exitBehavior,
+  );
+  return found.length > 0 ? Result.fail(found) : Result.all({ tools, exitBehavior });
+}
+
 function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () => Checked<CompiledTemplate>) {
   const model = checkedSection(
     () => decodeSection.model(root['model']),
@@ -60,10 +81,7 @@ function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () =
     () => decodeSection.provider_options(root['provider_options']),
     (options) => providerOptionsOf(options, lines),
   );
-  const tools = checkedSection(
-    () => decodeSection.tools(root['tools']),
-    (written) => toolsOf(written, lines),
-  );
+  const toolUse = toolUseOf({ root, lines });
   const found = [
     ...issues,
     ...issuesOf(
@@ -72,14 +90,14 @@ function definitionFrom({ root, lines, issues }: ReadFrontMatter, template: () =
       () => input,
       () => output,
       () => providerOptions,
-      () => tools,
+      () => toolUse,
       () => template(),
     ),
     ...variablesOf(template, Result.isSuccess(input) ? input.success.schema?.document : undefined),
   ];
   return found.length > 0
     ? Result.fail(found)
-    : Result.all({ model, settings, input, output, template: template(), description, providerOptions, tools });
+    : Result.all({ model, settings, input, output, template: template(), description, providerOptions, toolUse });
 }
 
 function definitionOf(parts: DocumentParts): Checked<ReasoningFunctionDefinitionDocument> {
@@ -97,7 +115,8 @@ function definitionOf(parts: DocumentParts): Checked<ReasoningFunctionDefinition
       input: definition.input,
       output: definition.output.output,
       ...(definition.providerOptions === undefined ? {} : { provider_options: definition.providerOptions }),
-      tools: definition.tools,
+      tools: definition.toolUse.tools,
+      exit_behavior: definition.toolUse.exitBehavior,
       template: definition.template,
       warnings: definition.output.warnings,
     }),
