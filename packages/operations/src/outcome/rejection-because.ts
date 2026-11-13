@@ -21,6 +21,8 @@ export const RejectionBecauseSchema = Schema.Literals([
   'definition_refused',
   'run_bound',
   'no_answer',
+  'max_tool_calls',
+  'max_input_tokens',
   'restarted_without_content',
   'input_missing',
   'answer_missing',

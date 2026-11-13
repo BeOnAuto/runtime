@@ -18358,6 +18358,8 @@
                                 "definition_refused",
                                 "run_bound",
                                 "no_answer",
+                                "max_tool_calls",
+                                "max_input_tokens",
                                 "restarted_without_content",
                                 "input_missing",
                                 "answer_missing",
@@ -18444,6 +18446,8 @@
                                 "definition_refused",
                                 "run_bound",
                                 "no_answer",
+                                "max_tool_calls",
+                                "max_input_tokens",
                                 "restarted_without_content",
                                 "input_missing",
                                 "answer_missing",
@@ -18460,7 +18464,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
+                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -18538,6 +18542,9 @@
                         }
                       ],
                       "description": "Why the run was rejected, that it was cancelled, or that nobody answered it"
+                    },
+                    "incomplete_details": {
+                      "$ref": "#/$defs/IncompleteDetails"
                     },
                     "started_at": {
                       "type": "string",
@@ -18695,6 +18702,8 @@
                             "definition_refused",
                             "run_bound",
                             "no_answer",
+                            "max_tool_calls",
+                            "max_input_tokens",
                             "restarted_without_content",
                             "input_missing",
                             "answer_missing",
@@ -18720,6 +18729,25 @@
                       ],
                       "additionalProperties": false,
                       "description": "The step whose work ended a workflow run, and how that work ended, in codes; the rejection's detail says it in words"
+                    },
+                    "IncompleteDetails": {
+                      "type": "object",
+                      "properties": {
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "max_tool_calls",
+                            "max_input_tokens",
+                            "max_output_tokens"
+                          ],
+                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                        }
+                      },
+                      "required": [
+                        "reason"
+                      ],
+                      "additionalProperties": false,
+                      "description": "On a run that succeeded with an answer a limit shaped, which may leave something out: the limit it reached. Left out on a run that answered within its limits"
                     },
                     "RunWithin": {
                       "type": "object",
@@ -18986,6 +19014,8 @@
                                 "definition_refused",
                                 "run_bound",
                                 "no_answer",
+                                "max_tool_calls",
+                                "max_input_tokens",
                                 "restarted_without_content",
                                 "input_missing",
                                 "answer_missing",
@@ -19072,6 +19102,8 @@
                                 "definition_refused",
                                 "run_bound",
                                 "no_answer",
+                                "max_tool_calls",
+                                "max_input_tokens",
                                 "restarted_without_content",
                                 "input_missing",
                                 "answer_missing",
@@ -19088,7 +19120,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
+                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -19166,6 +19198,9 @@
                         }
                       ],
                       "description": "Why the run was rejected, that it was cancelled, or that nobody answered it"
+                    },
+                    "incomplete_details": {
+                      "$ref": "#/$defs/IncompleteDetails"
                     },
                     "started_at": {
                       "type": "string",
@@ -19334,6 +19369,8 @@
                             "definition_refused",
                             "run_bound",
                             "no_answer",
+                            "max_tool_calls",
+                            "max_input_tokens",
                             "restarted_without_content",
                             "input_missing",
                             "answer_missing",
@@ -19359,6 +19396,25 @@
                       ],
                       "additionalProperties": false,
                       "description": "The step whose work ended a workflow run, and how that work ended, in codes; the rejection's detail says it in words"
+                    },
+                    "IncompleteDetails": {
+                      "type": "object",
+                      "properties": {
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "max_tool_calls",
+                            "max_input_tokens",
+                            "max_output_tokens"
+                          ],
+                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                        }
+                      },
+                      "required": [
+                        "reason"
+                      ],
+                      "additionalProperties": false,
+                      "description": "On a run that succeeded with an answer a limit shaped, which may leave something out: the limit it reached. Left out on a run that answered within its limits"
                     },
                     "RunWithin": {
                       "type": "object",
@@ -19640,6 +19696,8 @@
                                 "definition_refused",
                                 "run_bound",
                                 "no_answer",
+                                "max_tool_calls",
+                                "max_input_tokens",
                                 "restarted_without_content",
                                 "input_missing",
                                 "answer_missing",
@@ -19726,6 +19784,8 @@
                                 "definition_refused",
                                 "run_bound",
                                 "no_answer",
+                                "max_tool_calls",
+                                "max_input_tokens",
                                 "restarted_without_content",
                                 "input_missing",
                                 "answer_missing",
@@ -19742,7 +19802,7 @@
                                 "org_deleted",
                                 "org_purged"
                               ],
-                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
+                              "description": "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on"
                             },
                             "cause": {
                               "$ref": "#/$defs/RejectionCause"
@@ -19820,6 +19880,9 @@
                         }
                       ],
                       "description": "Why the run was rejected, that it was cancelled, or that nobody answered it"
+                    },
+                    "incomplete_details": {
+                      "$ref": "#/$defs/IncompleteDetails"
                     },
                     "started_at": {
                       "type": "string",
@@ -19969,6 +20032,8 @@
                             "definition_refused",
                             "run_bound",
                             "no_answer",
+                            "max_tool_calls",
+                            "max_input_tokens",
                             "restarted_without_content",
                             "input_missing",
                             "answer_missing",
@@ -19994,6 +20059,25 @@
                       ],
                       "additionalProperties": false,
                       "description": "The step whose work ended a workflow run, and how that work ended, in codes; the rejection's detail says it in words"
+                    },
+                    "IncompleteDetails": {
+                      "type": "object",
+                      "properties": {
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "max_tool_calls",
+                            "max_input_tokens",
+                            "max_output_tokens"
+                          ],
+                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                        }
+                      },
+                      "required": [
+                        "reason"
+                      ],
+                      "additionalProperties": false,
+                      "description": "On a run that succeeded with an answer a limit shaped, which may leave something out: the limit it reached. Left out on a run that answered within its limits"
                     },
                     "RunWithin": {
                       "type": "object",
@@ -20194,6 +20278,25 @@
                   ],
                   "additionalProperties": false,
                   "$defs": {
+                    "IncompleteDetails": {
+                      "type": "object",
+                      "properties": {
+                        "reason": {
+                          "type": "string",
+                          "enum": [
+                            "max_tool_calls",
+                            "max_input_tokens",
+                            "max_output_tokens"
+                          ],
+                          "description": "The limit it reached: max_tool_calls when it had made all the tool calls it may make, or max_input_tokens when it had read all the input tokens a run may read, and so answered from what it had; max_output_tokens when its answer was cut off at the most output tokens a model call of its definition may write, its config.max_output_tokens"
+                        }
+                      },
+                      "required": [
+                        "reason"
+                      ],
+                      "additionalProperties": false,
+                      "description": "On a run that succeeded with an answer a limit shaped, which may leave something out: the limit it reached. Left out on a run that answered within its limits"
+                    },
                     "RunWithin": {
                       "type": "object",
                       "properties": {
@@ -20314,6 +20417,8 @@
                             "definition_refused",
                             "run_bound",
                             "no_answer",
+                            "max_tool_calls",
+                            "max_input_tokens",
                             "restarted_without_content",
                             "input_missing",
                             "answer_missing",
@@ -20379,6 +20484,9 @@
                             "failed"
                           ],
                           "description": "started while it runs, while work it started finishes later, or when it never finished; then succeeded, rejected or failed"
+                        },
+                        "incomplete_details": {
+                          "$ref": "#/$defs/IncompleteDetails"
                         },
                         "started_at": {
                           "type": "string",
@@ -20493,6 +20601,8 @@
                                 "definition_refused",
                                 "run_bound",
                                 "no_answer",
+                                "max_tool_calls",
+                                "max_input_tokens",
                                 "restarted_without_content",
                                 "input_missing",
                                 "answer_missing",
@@ -26046,6 +26156,8 @@
               "definition_refused",
               "run_bound",
               "no_answer",
+              "max_tool_calls",
+              "max_input_tokens",
               "restarted_without_content",
               "input_missing",
               "answer_missing",

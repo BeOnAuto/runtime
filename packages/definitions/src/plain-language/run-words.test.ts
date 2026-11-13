@@ -106,6 +106,16 @@ const rejections: ReadonlyArray<readonly [string, Readonly<Record<string, unknow
     'it cannot work as it is written. This can be corrected and tried again; the details below say what to change.',
   ],
   [
+    'a run that needed more tool calls than it may make, after it only read',
+    { reason: 'conflict', detail: 'x', kind: 'unworkable', because: 'max_tool_calls' },
+    'it cannot work as it is written, because it needed more tool calls than a run may make. This can be corrected and tried again; the details below say what to change.',
+  ],
+  [
+    'a run that needed to read more than it may, after calling a tool that may change something',
+    { reason: 'conflict', detail: 'x', kind: 'effect_unknown', because: 'max_input_tokens' },
+    'it could not finish after calling a tool that may change something, so whether that happened is not known, because it needed to read more than a run may read. It is not run again by itself: a person decides, or a workflow rule that names this kind; its history shows the call.',
+  ],
+  [
     'a clash that names no kind',
     { reason: 'conflict', detail: 'x' },
     'it clashes with something already there. The details below say what is in the way.',
@@ -177,6 +187,20 @@ describe('the plain language of get_run', () => {
       registrationOf('get_run').plainLanguage?.attempt({ run_id: runId }),
       registrationOf('get_run').plainLanguage?.attempt({}),
     ]).toEqual(['look up the run', 'look up a run']);
+  });
+});
+
+describe('the plain language of a run that answered at a limit', () => {
+  it('says it ran, the limit it answered at, and what came back', () => {
+    expect([
+      ran({ ...run, incomplete_details: { reason: 'max_tool_calls' } }),
+      lookedUp({ ...run, incomplete_details: { reason: 'max_input_tokens' } }),
+      lookedUp({ ...run, incomplete_details: { reason: 'max_output_tokens' } }),
+    ]).toEqual([
+      'Ran the greeting “greet” with an answer from what it had, after it reached its limit of tool calls. It answered with its greeting.',
+      'The run of the greeting “greet” finished with an answer from what it had, after it had read as much as a run may read. It answered with its greeting.',
+      'The run of the greeting “greet” finished with an answer cut off at its length limit. It answered with its greeting.',
+    ]);
   });
 });
 

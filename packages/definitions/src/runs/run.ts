@@ -1,6 +1,7 @@
 import {
   CancelledKindSchema,
   ConflictKindSchema,
+  IncompleteDetailsSchema,
   InvalidInputKindSchema,
   IssueSchema,
   RecordedCallerSchema,
@@ -65,7 +66,7 @@ export const RunRejectionSchema = Schema.Union([
     because: Schema.optionalKey(
       RejectionBecauseSchema.annotate({
         description:
-          "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on",
+          "Why, with effect_unknown: server_failed, tool_error, model_unavailable, definition_refused, run_bound, no_answer, restarted_without_content or call_outcome_unknown. With unworkable or effect_unknown: max_tool_calls when the run needed more tool calls than it may make, or max_input_tokens when it needed to read more input tokens than a run may read, so it stopped before it finished. With no kind: input_missing, answer_missing, workflow_document_missing or function_document_missing for an input, an answer, or the document of its workflow or function, that can no longer be found in the playbook's stored content, so the run could not go on",
       }),
     ),
     ...endedByAStep,
@@ -141,6 +142,7 @@ export const RunSchema = Schema.Struct({
     }),
   ),
   rejection: Schema.optionalKey(RunRejectionSchema),
+  incomplete_details: Schema.optionalKey(IncompleteDetailsSchema),
   started_at: Schema.String.annotate({ description: 'When the run started, in ISO 8601 UTC' }),
   started_by: RecordedCallerSchema.annotate({ description: 'The caller who started the run, by id and name' }),
   acts_for: Schema.optionalKey(

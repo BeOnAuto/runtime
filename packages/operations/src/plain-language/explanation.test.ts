@@ -182,6 +182,30 @@ describe('unsuccessfulWords of a run whose tools only read', () => {
   });
 });
 
+describe('unsuccessfulWords of a run stopped at a limit before it finished', () => {
+  it('says the run needed more tool calls than it may make, and that nothing changed where it only read', () => {
+    expect(
+      unsuccessfulWords('run the reasoning function “summary”', 'command', {
+        ...rejected('conflict', 'x', undefined, 'unworkable'),
+        because: 'max_tool_calls',
+      }),
+    ).toBe(
+      'Could not run the reasoning function “summary”: it cannot work as it is written, because it needed more tool calls than a run may make. Nothing was changed. This can be corrected and tried again; the details below say what to change.',
+    );
+  });
+
+  it('says the run needed to read more than it may, without a count, and never that nothing changed after a tool that may act', () => {
+    expect(
+      unsuccessfulWords('run the reasoning function “summary”', 'command', {
+        ...rejected('conflict', 'x', undefined, 'effect_unknown'),
+        because: 'max_input_tokens',
+      }),
+    ).toBe(
+      'Could not run the reasoning function “summary”: it could not finish after calling a tool that may change something, so whether that happened is not known, because it needed to read more than a run may read. It is not run again by itself: a person decides, or a workflow rule that names this kind; its history shows the call.',
+    );
+  });
+});
+
 describe('unsuccessfulWords of an operation that explains a kind of refusal itself', () => {
   it("says an operation's own why and remedy for a kind of refusal it explains itself", () => {
     expect(

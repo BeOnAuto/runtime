@@ -181,6 +181,8 @@ const explanationByBecause: Readonly<Record<RejectionBecause, string>> = {
   definition_refused: 'because its definition was refused before its model could be called again',
   run_bound: 'because it ran out of time',
   no_answer: 'because the model kept calling tools instead of answering',
+  max_tool_calls: 'because it needed more tool calls than a run may make',
+  max_input_tokens: 'because it needed to read more than a run may read',
   restarted_without_content:
     'because the server restarted before it finished, and the playbook keeps no content of its calls to go on from',
   input_missing: "because the input it was given can't be found in the playbook's stored content",

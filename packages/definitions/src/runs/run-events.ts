@@ -1,5 +1,6 @@
 import {
   ActedOnRunContextSchema,
+  IncompleteDetailsSchema,
   RecordedCallerSchema,
   RunContextSchema,
   factOf,
@@ -66,7 +67,14 @@ export const RunStartedSchema = factOf(
 
 export const RunSucceededSchema = factOf(
   'run_succeeded',
-  withPayloads(Schema.Struct({ ...payloadFields('output', Schema.Json), record: Schema.JsonObject }), ['output']),
+  withPayloads(
+    Schema.Struct({
+      ...payloadFields('output', Schema.Json),
+      record: Schema.JsonObject,
+      incomplete_details: Schema.optionalKey(IncompleteDetailsSchema),
+    }),
+    ['output'],
+  ),
   RunContextSchema,
   { content: { payloads: [payloadPointersOf('output')] } },
 );

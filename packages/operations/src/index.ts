@@ -227,6 +227,12 @@ export type { OperationKind, OperationScope } from './caller/operation-scope.ts'
 export { settle } from './dispatch/settle.ts';
 export { RejectionCauseSchema, RejectionKindSchema, type RejectionCause } from './outcome/rejection-cause.ts';
 export { SettlementSchema, type SettledRejection, type Settlement } from './outcome/settlement.ts';
+export {
+  IncompleteDetailsSchema,
+  IncompleteReasonSchema,
+  type IncompleteDetails,
+  type IncompleteReason,
+} from './outcome/incomplete-details.ts';
 export type {
   PlaybookRecordedReader,
   PlaybookRunOutcomesReader,

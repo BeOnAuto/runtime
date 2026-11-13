@@ -177,6 +177,14 @@ describe('the words of a rejection of a function a workflow called', () => {
       'A function the workflow called did not succeed. It could not finish after calling a tool that may change something, so whether that happened is not known, because a tool server failed.',
     ],
     [
+      rejectedWith('unworkable', 'max_tool_calls'),
+      'A function the workflow called did not succeed. It cannot work as it is written, because it needed more tool calls than a run may make.',
+    ],
+    [
+      rejectedWith('effect_unknown', 'max_input_tokens'),
+      'A function the workflow called did not succeed. It could not finish after calling a tool that may change something, so whether that happened is not known, because it needed to read more than a run may read.',
+    ],
+    [
       rejectedWith('account_closed', 'org_deleted'),
       'A function the workflow called did not succeed. The account it runs under is closed, since its org was deleted.',
     ],

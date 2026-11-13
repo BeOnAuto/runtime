@@ -1,4 +1,4 @@
-import { explanationOf, type StartingTrigger } from '@on.auto/operations';
+import { explanationOf, type IncompleteReason, type StartingTrigger } from '@on.auto/operations';
 import { capitalized, plainNumber, quoted } from '@on.auto/phrasing';
 import { answeredInWords, failedInWords, toolInWords, type CallFailedBecause } from '@on.auto/tool-servers';
 
@@ -7,9 +7,13 @@ import type { ModelCallFailedBecause } from '../run-work/model-call-facts.ts';
 import type { CancelRequestKind } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
 import type { DefinitionWords } from './definition-words.ts';
-import { explainedRejectionOf } from './run-words.ts';
+import { answeredAt, explainedRejectionOf } from './run-words.ts';
 
 export const runFinished = 'A run finished.';
+
+export function runFinishedAt(reason: IncompleteReason): string {
+  return `A run finished ${answeredAt(reason)}.`;
+}
 
 export const runBrokeDown = 'A run broke down because of a problem inside the server.';
 

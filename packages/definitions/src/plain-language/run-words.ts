@@ -1,4 +1,4 @@
-import { explanationOf, type ExplainedRejection, type PlainLanguage } from '@on.auto/operations';
+import { explanationOf, type ExplainedRejection, type IncompleteReason, type PlainLanguage } from '@on.auto/operations';
 import { capitalized } from '@on.auto/phrasing';
 
 import type { Capability } from '../capability/capability.ts';
@@ -7,7 +7,24 @@ import { definitionWordsFor, offeredAttemptFor } from './definition-words.ts';
 
 export type RunMoment = 'just started' | 'looked up';
 
-type DescribedRun = Pick<RunDetail, 'type' | 'name' | 'status' | 'output' | 'rejection' | 'record'>;
+type DescribedRun = Pick<
+  RunDetail,
+  'type' | 'name' | 'status' | 'output' | 'rejection' | 'incomplete_details' | 'record'
+>;
+
+const answeredAtALimit: Readonly<Record<IncompleteReason, string>> = {
+  max_tool_calls: 'with an answer from what it had, after it reached its limit of tool calls',
+  max_input_tokens: 'with an answer from what it had, after it had read as much as a run may read',
+  max_output_tokens: 'with an answer cut off at its length limit',
+};
+
+export function answeredAt(reason: IncompleteReason): string {
+  return answeredAtALimit[reason];
+}
+
+function shapedBy({ incomplete_details: incomplete }: DescribedRun): string {
+  return incomplete === undefined ? '' : ` ${answeredAt(incomplete.reason)}`;
+}
 
 interface RunContext {
   readonly named: string;
@@ -56,7 +73,7 @@ const wordsByStatus: Readonly<Record<RunDetail['status'], (context: RunContext, 
       ? `${capitalized(named)} has started and is still running. It carries on by itself, and how it ends can be looked up later.`
       : `${capitalized(named)} is still running; how it ends can be looked up again later.`,
   succeeded: ({ named, capability, moment }, run) =>
-    `${moment === 'just started' ? `Ran ${named}.` : `The run of ${named} finished.`} ${describedOutput(capability, run)}`,
+    `${moment === 'just started' ? `Ran ${named}${shapedBy(run)}.` : `The run of ${named} finished${shapedBy(run)}.`} ${describedOutput(capability, run)}`,
   rejected: rejectionWords,
   failed: ({ named }) =>
     `The run of ${named} broke down because of a problem inside the server; it was not caused by anything you did.`,

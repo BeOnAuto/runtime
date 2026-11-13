@@ -15,6 +15,7 @@ import {
   requestAnswered,
   runBrokeDown,
   runFinished,
+  runFinishedAt,
   runRejected,
   runStarted,
   toolAnswered,
@@ -161,7 +162,9 @@ function endingFact(
   if (event.type === 'run_succeeded') {
     const { data } = event;
     const shown = { ...data, ...outputShownOf(event, content) };
-    return { type: event.type, summary: runFinished, data: shown };
+    const incomplete = data.incomplete_details;
+    const summary = incomplete === undefined ? runFinished : runFinishedAt(incomplete.reason);
+    return { type: event.type, summary, data: shown };
   }
   if (event.type === 'run_rejected') {
     const { rejection, record } = event.data;

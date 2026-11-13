@@ -137,7 +137,13 @@ function finishedRecord(
     finished_at: at,
   };
   if (result.type === 'run_succeeded') {
-    return { ...attempt, status: 'succeeded', output: outputPayloadOf(result) };
+    const { incomplete_details: incomplete } = result.data;
+    return {
+      ...attempt,
+      status: 'succeeded',
+      output: outputPayloadOf(result),
+      ...(incomplete === undefined ? {} : { incomplete_details: incomplete }),
+    };
   }
   if (result.type === 'run_rejected') {
     return { ...attempt, status: 'rejected', rejection: result.data.rejection };
