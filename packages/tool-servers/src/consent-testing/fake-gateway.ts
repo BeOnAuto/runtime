@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { Option, Schema } from 'effect';
 
-import type { ConnectedAccount } from '../consent-through-a-gateway/gateway-calls.ts';
+import { gatewayPaths, type ConnectedAccount } from '../consent-through-a-gateway/gateway-calls.ts';
 import type { FetchHandler, LoopbackServer } from '../testing/fetch-handler.ts';
 import { serveOnLoopback } from '../testing/loopback-server.ts';
 
@@ -44,6 +44,12 @@ interface Start {
 }
 
 const connectionsPath = '/connections';
+
+const startPath = `${connectionsPath}${gatewayPaths.start}`;
+
+const handoffsUnder = `${connectionsPath}${gatewayPaths.handoff}/`;
+
+const endPath = `${connectionsPath}${gatewayPaths.end}`;
 
 const defaultKeyHeader = 'Connection-Key';
 
@@ -208,13 +214,13 @@ function stepOf(method: string, path: string): GatewayStep | undefined {
   if (method !== 'POST') {
     return undefined;
   }
-  if (path === connectionsPath) {
+  if (path === startPath) {
     return 'start';
   }
-  if (path === `${connectionsPath}/remove`) {
+  if (path === endPath) {
     return 'end';
   }
-  return path.startsWith(`${connectionsPath}/handoffs/`) ? 'handoff' : undefined;
+  return path.startsWith(handoffsUnder) ? 'handoff' : undefined;
 }
 
 function answeredFor(step: GatewayStep, request: Readonly<Request>, body: string, store: GatewayStore): Response {
@@ -223,7 +229,7 @@ function answeredFor(step: GatewayStep, request: Readonly<Request>, body: string
     return store.started(origin, body);
   }
   if (step === 'handoff') {
-    return store.handedOver(decodeURIComponent(pathname.slice(`${connectionsPath}/handoffs/`.length)), body);
+    return store.handedOver(decodeURIComponent(pathname.slice(handoffsUnder.length)), body);
   }
   return step === 'end' ? store.removed(body) : store.called(request);
 }

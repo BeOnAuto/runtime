@@ -69,6 +69,8 @@ export interface GatewayCalls {
   readonly end: (key: Redacted.Redacted) => Effect.Effect<void, RequestRefusal>;
 }
 
+export const gatewayPaths = { start: '', handoff: '/handoffs', end: '/remove' } as const;
+
 interface Answered {
   readonly status: number;
   readonly text: string;
@@ -171,12 +173,12 @@ export function gatewayCallsOf(requesting: GatewayRequesting): GatewayCalls {
   const send = (path: string, body: unknown) => sent(requesting, `${base}${path}`, body);
   return {
     start: ({ challenge, state }) =>
-      Effect.flatMap(send('', { challenge, challenge_method: challengeMethod, state }), started),
+      Effect.flatMap(send(gatewayPaths.start, { challenge, challenge_method: challengeMethod, state }), started),
     takeHandoff: (handle, verifier) =>
       Effect.flatMap(
-        send(`/handoffs/${encodeURIComponent(handle)}`, { verifier: Redacted.value(verifier) }),
+        send(`${gatewayPaths.handoff}/${encodeURIComponent(handle)}`, { verifier: Redacted.value(verifier) }),
         handedOver,
       ),
-    end: (key) => Effect.flatMap(send('/remove', { connection_key: Redacted.value(key) }), ended),
+    end: (key) => Effect.flatMap(send(gatewayPaths.end, { connection_key: Redacted.value(key) }), ended),
   };
 }

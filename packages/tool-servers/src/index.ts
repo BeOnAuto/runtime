@@ -105,6 +105,7 @@ export {
   type WayPkce,
 } from './consent/client-sources.ts';
 export type { AutoClients, ReturnKind } from './consent-through-auto/auto-clients.ts';
+export { gatewayPaths } from './consent-through-a-gateway/gateway-calls.ts';
 export { makeConsentClient } from './consent/consent-making.ts';
 export { callWordsOf } from './consent/call-words.ts';
 export {
