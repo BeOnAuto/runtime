@@ -184,7 +184,7 @@ export const RunDetailSchema = Schema.Struct({
   record: Schema.optionalKey(
     Schema.JsonObject.annotate({
       description:
-        'What the runtime adapter recorded: of the run that succeeded, of what a rejected run did before it was rejected, such as the tokens a model call used, or of the work it started that finishes later',
+        'What the runtime adapter recorded: of the run that succeeded, of what a rejected run did before it was rejected, such as the tokens a model call used, or of the work it started that finishes later. In place of a prompt kept outside the run that cannot be read just now, is missing or is erased: prompt_sha256, the SHA-256 it was kept by, and prompt_bytes, its size in bytes',
     }),
   ),
 }).annotate({

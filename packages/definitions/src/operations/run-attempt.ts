@@ -11,15 +11,18 @@ import type { CapabilityAnswer, CapabilityRejection } from '../capability/capabi
 import { withinResultLimit } from '../runs/recorded-size.ts';
 import type { RunOutcome, RunResult, InterruptedAttempt } from '../runs/run-commands.ts';
 import { runTaken } from '../runs/run-decisions.ts';
+import { AnsweredRecordSchema } from '../runs/run-events.ts';
 import type { RunRejection } from '../runs/run.ts';
 import { issuesUnder, type Rejection } from './issue-pointers.ts';
 
-const decodeExecuted = Schema.decodeUnknownEffect(
-  Schema.Union([
-    Schema.Struct({ output: Schema.Json, record: Schema.JsonObject }),
-    Schema.Struct({ finishesLater: Schema.Literal(true), record: Schema.JsonObject }),
-  ]),
-);
+const ExecutedSchema = Schema.Union([
+  Schema.Struct({ output: Schema.Json, record: AnsweredRecordSchema }),
+  Schema.Struct({ finishesLater: Schema.Literal(true), record: Schema.JsonObject }),
+]);
+
+type Executed = typeof ExecutedSchema.Type;
+
+const decodeExecuted = Schema.decodeUnknownEffect(ExecutedSchema);
 
 export const failedAttempt: RunResult = { type: 'run_failed', data: {} };
 
@@ -27,7 +30,7 @@ export function interruptedAttempt(resumesAfterMs: number): InterruptedAttempt {
   return Number.isFinite(resumesAfterMs) ? { type: 'run_interrupted', resumes: true } : { type: 'run_interrupted' };
 }
 
-function recordedOutcome(ran: CapabilityAnswer): Effect.Effect<RunOutcome> {
+function recordedOutcome(ran: Executed): Effect.Effect<RunOutcome> {
   return 'finishesLater' in ran
     ? withinResultLimit(ran.record).pipe(
         Effect.map((): RunOutcome => ({ type: 'run_deferred', data: { record: ran.record } })),

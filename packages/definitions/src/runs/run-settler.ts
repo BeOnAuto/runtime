@@ -28,7 +28,7 @@ import {
 import { jsonBytesOf, payloadBytesOf, withinResultBytes, withinResultLimit } from './recorded-size.ts';
 import type { RunResult } from './run-commands.ts';
 import { runStreamNameOf, settledOnLatest, settledOnRead, type SettledOn } from './run-decider.ts';
-import type { Settlement } from './run-events.ts';
+import { AnsweredRecordSchema, type Settlement } from './run-events.ts';
 import { runOf } from './run-lookup.ts';
 import { causeOf, type RunRejection, type SettledRun } from './run.ts';
 
@@ -63,7 +63,7 @@ const isWellFormed = Schema.is(
 
 const decodeOutput = Schema.decodeUnknownEffect(Schema.Json);
 
-const decodeRecord = Schema.decodeUnknownEffect(Schema.JsonObject);
+const decodeRecord = Schema.decodeUnknownEffect(AnsweredRecordSchema);
 
 const failure: RunResult = { type: 'run_failed', data: {} };
 

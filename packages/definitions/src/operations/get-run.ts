@@ -4,7 +4,7 @@ import { Effect, Schema } from 'effect';
 import type { Capability } from '../capability/capability.ts';
 import { RunReadSchema } from '../page/page-shown.ts';
 import type { SubjectPages } from '../page/subject-pages-port.ts';
-import { outputOf, withItsOutputShown } from '../payloads/run-payloads.ts';
+import { outputOf, withItsOutputShown, withItsRecordRead } from '../payloads/run-payloads.ts';
 import { runWordsFor } from '../plain-language/run-words.ts';
 import { runDetailOf } from '../runs/run-lookup.ts';
 import { RunIdInputField } from './definition-fields.ts';
@@ -17,7 +17,7 @@ export function foundRun(id: string) {
 const runRead = Effect.fnUntraced(function* (pages: SubjectPages, id: string) {
   const detail = yield* foundRun(id);
   const read = yield* outputOf(detail);
-  const shown = yield* withItsOutputShown(detail, read);
+  const shown = yield* withItsRecordRead(yield* withItsOutputShown(detail, read));
   const over = { run: detail, ...(read === undefined ? {} : { read }) };
   const result = yield* Effect.orDie(pages.resultOf(detail.type, detail.name, over));
   return result === undefined ? shown : { ...shown, page: { result } };

@@ -43,6 +43,18 @@ async function startedAndSucceeded(): Promise<readonly RecordedRunFact[]> {
     .map(({ type, data, context }) => recordedRunFactOf({ type, data, context }));
 }
 
+export const recordHoldingItsPrompt = {
+  model: 'example/model-large',
+  usage: {
+    input: { total: 1200, uncached: 200, cache_read: 1000, cache_write: 0 },
+    output: { total: 300, text: 250, reasoning: 50 },
+    total: 1500,
+  },
+  cost_usd: 0.012,
+  duration_ms: 2100,
+  prompt: { instructions: 'Qualify the lead.', message: 'Lead lead-1 asked for a quote.', truncated: false },
+};
+
 export async function keptFactsWritten(): Promise<readonly RecordedRunFact[]> {
   const { record, recorded, run } = await asked();
   const answered = record(

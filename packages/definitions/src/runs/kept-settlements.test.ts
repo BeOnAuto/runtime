@@ -1,8 +1,9 @@
 import { PayloadOffloading } from '@on.auto/operations/payloads';
-import { Effect, Result } from 'effect';
+import { Effect, Exit, Result } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { comparedWithoutItsValue } from '../payloads/payload-comparisons.ts';
+import { keptArmOf } from '../testing/kept-payloads.ts';
 import { relayedId, settledAt, withHandOn } from '../testing/relaying.ts';
 import { endedWithAnotherResult } from './run-decisions.ts';
 import { runSettler, runSettlerKeepingOutputs, type Settlement } from './run-settler.ts';
@@ -73,5 +74,36 @@ describe('a workflow’s run settled again after it ended with an output its pla
 
     expect(keptByDigest).toBe(true);
     expect(settled).toMatchObject(Result.fail({ _tag: 'unavailable' }));
+  });
+});
+
+const promptKept = keptArmOf({ message: 'm'.repeat(17_000), truncated: false });
+
+async function endedKeeping(settlement: Settlement, keepsOutside: boolean) {
+  const handed = await withHandOn();
+  await handed.running();
+  const settle = runSettlerKeepingOutputs(handed.ledger.service)(relayed, settlement);
+  const settled = await handed.run(
+    Effect.exit(settle.pipe(Effect.provideService(PayloadOffloading, keepsOutside))),
+    settledAt,
+  );
+  const { records } = await Effect.runPromise(
+    handed.ledger.service.readRecorded(relayed, { kind: 'run', run: relayedId }, { order: 'asc', limit: 10 }),
+  );
+  return { settled, ending: records.at(-1) };
+}
+
+describe('a run settled with a record that names its prompt by a digest', () => {
+  it('breaks down where the record names a prompt by a digest, which only the runtime keeps outside a run', async () => {
+    const named: Settlement = {
+      status: 'succeeded',
+      output: { score: 1 },
+      record: { prompt_sha256: promptKept.sha256, prompt_bytes: promptKept.bytes },
+    };
+
+    const { settled, ending } = await endedKeeping(named, true);
+
+    expect(Exit.isFailure(settled)).toBe(true);
+    expect(ending?.type).toBe('run_failed');
   });
 });

@@ -7,7 +7,13 @@ import {
   type Decided,
   type Settlement as SettlementOfAnOperation,
 } from '@on.auto/operations';
-import { payloadFields, payloadPointersOf, withPayloads, type PayloadArm } from '@on.auto/operations/payloads';
+import {
+  payloadFields,
+  payloadIfAny,
+  payloadPointersOf,
+  withPayloads,
+  type PayloadArm,
+} from '@on.auto/operations/payloads';
 import {
   argumentsHeld,
   CallAnsweredSchema,
@@ -65,18 +71,45 @@ export const RunStartedSchema = factOf(
   { content: { payloads: [payloadPointersOf('input')] } },
 );
 
+const PromptMembersSchema = Schema.Struct(payloadFields('prompt', Schema.Json));
+
+export type RecordOfARun = Schema.JsonObject & typeof PromptMembersSchema.Type;
+
+const holdsPromptMembers = Schema.is(PromptMembersSchema);
+
+function holdsItsPromptMembersAsNamed(record: Schema.JsonObject): record is RecordOfARun {
+  return holdsPromptMembers(record);
+}
+
+const RecordOfARunSchema = withPayloads(Schema.JsonObject, [], ['prompt']).pipe(
+  Schema.refine(holdsItsPromptMembersAsNamed, {
+    expected: 'prompt_sha256 a SHA-256 in 64 lowercase hex digits and prompt_bytes a whole number of bytes',
+  }),
+);
+
+function holdsItsPromptIfAny(record: RecordOfARun): boolean {
+  const prompt = payloadIfAny<'prompt', Schema.Json>(record, 'prompt');
+  return prompt === undefined || 'inline' in prompt;
+}
+
+export const AnsweredRecordSchema = RecordOfARunSchema.check(
+  Schema.makeFilter(holdsItsPromptIfAny, {
+    expected: 'a record that holds its prompt, where it has one, since only the runtime keeps a prompt outside a run',
+  }),
+);
+
 export const RunSucceededSchema = factOf(
   'run_succeeded',
   withPayloads(
     Schema.Struct({
       ...payloadFields('output', Schema.Json),
-      record: Schema.JsonObject,
+      record: RecordOfARunSchema,
       incomplete_details: Schema.optionalKey(IncompleteDetailsSchema),
     }),
     ['output'],
   ),
   RunContextSchema,
-  { content: { payloads: [payloadPointersOf('output')] } },
+  { content: { payloads: [payloadPointersOf('output'), payloadPointersOf('prompt', '/record')] } },
 );
 
 export const RunRejectedSchema = factOf(

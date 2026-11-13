@@ -41,6 +41,7 @@ import {
   mostDetailBytes,
   mostNameBytes,
   outputShownOf,
+  recordShownOf,
 } from './event-data.ts';
 import { modelCallFact, type ModelCallShown } from './model-call-facts.ts';
 
@@ -161,7 +162,7 @@ function endingFact(
 ): PresentedFact {
   if (event.type === 'run_succeeded') {
     const { data } = event;
-    const shown = { ...data, ...outputShownOf(event, content) };
+    const shown = { ...data, record: recordShownOf(data.record, content), ...outputShownOf(event, content) };
     const incomplete = data.incomplete_details;
     const summary = incomplete === undefined ? runFinished : runFinishedAt(incomplete.reason);
     return { type: event.type, summary, data: shown };

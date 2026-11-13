@@ -7,6 +7,8 @@ import {
   type PlaybookReader,
 } from '@on.auto/operations';
 import {
+  payloadIfAny,
+  payloadMembers,
   payloadReaderOf,
   type Payload,
   type PayloadNotRead,
@@ -15,6 +17,8 @@ import {
 } from '@on.auto/operations/payloads';
 import { Effect, Struct, type Schema } from 'effect';
 
+import type { RecordOfARun } from '../runs/run-events.ts';
+import type { Run } from '../runs/run.ts';
 import type { ValuesRead } from './payload-comparisons.ts';
 
 export type PayloadUnread = 'unavailable' | 'missing' | 'erased';
@@ -60,9 +64,16 @@ export function inputOf(run: { readonly input: Payload<Schema.Json> }): ReadInTh
   return Effect.flatMap(playbookPayloadReader, (payloads) => payloadAsRead(run.input, payloads));
 }
 
-function inHand(output: Payload<Schema.Json>, written: ValuesRead): PayloadAsRead | undefined {
-  const value = 'kept' in output ? written.get(output.kept.sha256) : undefined;
+function inHand(payload: Payload<Schema.Json>, written: ValuesRead): PayloadAsRead | undefined {
+  const value = 'kept' in payload ? written.get(payload.kept.sha256) : undefined;
   return value === undefined ? undefined : { read: value };
+}
+
+function readUnlessInHand(payload: Payload<Schema.Json>, written: ValuesRead): ReadInTheCall<PayloadAsRead> {
+  const known = inHand(payload, written);
+  return known === undefined
+    ? Effect.flatMap(playbookPayloadReader, (payloads) => payloadAsRead(payload, payloads))
+    : Effect.succeed(known);
 }
 
 export function outputOf(
@@ -70,13 +81,45 @@ export function outputOf(
   written: ValuesRead = new Map(),
 ): ReadInTheCall<PayloadAsRead | undefined> {
   const { output } = run;
-  if (output === undefined) {
-    return Effect.undefined;
+  return output === undefined ? Effect.undefined : readUnlessInHand(output, written);
+}
+
+function recordWithItsPrompt(record: RecordOfARun, prompt: Payload<Schema.Json>): RecordOfARun {
+  return {
+    ...Struct.omit(record, ['prompt', 'prompt_sha256', 'prompt_bytes']),
+    ...payloadMembers('prompt', prompt),
+  };
+}
+
+interface RecordedWithItsRecord {
+  readonly status: Run['status'];
+  readonly record?: RecordOfARun;
+}
+
+interface KeptPrompt {
+  readonly record: RecordOfARun;
+  readonly prompt: Payload<Schema.Json>;
+}
+
+function keptPromptOf({ status, record }: RecordedWithItsRecord): KeptPrompt | undefined {
+  if (status !== 'succeeded' || record === undefined) {
+    return undefined;
   }
-  const known = inHand(output, written);
-  return known === undefined
-    ? Effect.flatMap(playbookPayloadReader, (payloads) => payloadAsRead(output, payloads))
-    : Effect.succeed(known);
+  const prompt = payloadIfAny<'prompt', Schema.Json>(record, 'prompt');
+  return prompt !== undefined && 'kept' in prompt ? { record, prompt } : undefined;
+}
+
+export function withItsRecordRead<Recorded extends RecordedWithItsRecord>(
+  recorded: Recorded,
+  written: ValuesRead = new Map(),
+): ReadInTheCall<Recorded> {
+  const kept = keptPromptOf(recorded);
+  if (kept === undefined) {
+    return Effect.succeed(recorded);
+  }
+  return Effect.map(readUnlessInHand(kept.prompt, written), (read) =>
+    'read' in read ? { ...recorded, record: recordWithItsPrompt(kept.record, { inline: read.read }) } : recorded,
+  );
 }
 
 function notComparable(because: 'is missing from the content of its playbook' | 'was erased'): Conflict {

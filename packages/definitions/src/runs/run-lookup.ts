@@ -11,7 +11,7 @@ import {
 import { Effect } from 'effect';
 
 import type { ValuesRead } from '../payloads/payload-comparisons.ts';
-import { withItsOutputRead } from '../payloads/run-payloads.ts';
+import { withItsOutputRead, withItsRecordRead } from '../payloads/run-payloads.ts';
 import { startedRunOf, type RunStreamState, type RecordedRunState } from './run-state.ts';
 import type { RunAsRecorded, RunDetail, RunDetailAsRecorded, RunRejection, RunWithin } from './run.ts';
 
@@ -83,7 +83,9 @@ function answerWith(
   run: RunDetailAsRecorded,
   written?: ValuesRead,
 ): Effect.Effect<RunDetail, ReplayedRejection, PlaybookReader | PlaybookContext> {
-  return run.rejection === undefined ? withItsOutputRead(run, written) : Effect.fail(replayed(run.rejection));
+  return run.rejection === undefined
+    ? Effect.flatMap(withItsOutputRead(run, written), (shown) => withItsRecordRead(shown, written))
+    : Effect.fail(replayed(run.rejection));
 }
 
 export function runAnswered(

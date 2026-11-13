@@ -31,12 +31,20 @@ const output = { greeting: 'Hi', letter: 'l'.repeat(3000) };
 
 const answer = { approved: true, reason: 'r'.repeat(3000) };
 
-const [inputKept, outputKept, answerKept] = [keptArmOf(input), keptArmOf(output), keptArmOf(answer)];
+const prompt = { message: 'm'.repeat(17_000), truncated: false };
+
+const [inputKept, outputKept, answerKept, promptKept] = [
+  keptArmOf(input),
+  keptArmOf(output),
+  keptArmOf(answer),
+  keptArmOf(prompt),
+];
 
 const texts: Readonly<Record<string, string>> = {
   [inputKept.sha256]: JSON.stringify(input),
   [outputKept.sha256]: JSON.stringify(output),
   [answerKept.sha256]: 'not JSON',
+  [promptKept.sha256]: JSON.stringify(prompt),
 };
 
 const everythingRead: KeptContent = (sha256) => texts[sha256];
@@ -99,6 +107,44 @@ describe('the events of a run whose payloads its playbook keeps outside the run'
       answer_sha256: answerKept.sha256,
       answer_bytes: answerKept.bytes,
       answered_by: recordedAdmin,
+    });
+  });
+});
+
+const promptMembers = { prompt_sha256: promptKept.sha256, prompt_bytes: promptKept.bytes };
+
+const endedWithItsPromptKept: RunEvent = {
+  type: 'run_succeeded',
+  data: { output: { greeting: 'Hi' }, record: { model: 'x', ...promptMembers } },
+};
+
+const endedWithItsPromptHeld: RunEvent = {
+  type: 'run_succeeded',
+  data: { output: { greeting: 'Hi' }, record: { model: 'x', prompt } },
+};
+
+describe('the ending of a run whose prompt its playbook keeps outside the run', () => {
+  it('shows its record on a page as stored, the prompt as its digest and size, as a page reads no payload', () => {
+    expect(presented(endedWithItsPromptKept, nothingRead, 'page')).toEqual({
+      output: { greeting: 'Hi' },
+      record: { model: 'x', ...promptMembers },
+    });
+  });
+
+  it('shows the prompt whole in its record, beside its digest and size, where the prompt was read, and its digest and size alone where it was not', () => {
+    expect([
+      presented(endedWithItsPromptKept, everythingRead, 'whole'),
+      presented(endedWithItsPromptKept, nothingRead, 'whole'),
+    ]).toEqual([
+      { output: { greeting: 'Hi' }, record: { model: 'x', ...promptMembers, prompt } },
+      { output: { greeting: 'Hi' }, record: { model: 'x', ...promptMembers } },
+    ]);
+  });
+
+  it('shows a prompt held in its record as it is, reading nothing', () => {
+    expect(presented(endedWithItsPromptHeld, nothingRead, 'whole')).toEqual({
+      output: { greeting: 'Hi' },
+      record: { model: 'x', prompt },
     });
   });
 });

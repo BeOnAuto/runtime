@@ -1,7 +1,7 @@
 import { recordedFactsBehaviour } from '@on.auto/ledger/testing';
 import { describe } from 'vitest';
 
-import { keptFactsWritten } from '../testing/kept-facts-written.ts';
+import { keptFactsWritten, recordHoldingItsPrompt } from '../testing/kept-facts-written.ts';
 import { RunEventSchema } from './run-events.ts';
 
 const acted = { at: '2026-10-29T10:00:00.000Z', by: 'key_7f3a' };
@@ -277,7 +277,6 @@ const answeredInEachMode: readonly (typeof RunEventSchema.Type)[] = [
 ];
 
 const inAThread = { answer: {}, reply: { id: 'reply-2', sender: 'sender-1', to: 'message-1' }, answered_by: caller };
-
 const answeredAtALimit = { incomplete_details: { reason: 'max_input_tokens' } } as const;
 const stoppedAtALimit = { reason: 'conflict', detail: 'It stopped at a limit', kind: 'effect_unknown' } as const;
 
@@ -288,6 +287,7 @@ const releases: Readonly<Record<string, readonly (typeof RunEventSchema.Type)[]>
   '0.59.0': [
     { type: 'request_answered', data: inAThread, context: onTheRun },
     { type: 'tool_call_answered', data: { ...toolCallAnswered, shown_format: 2 }, context: onTheRun },
+    { type: 'run_succeeded', data: { output: { score: 0.8 }, record: recordHoldingItsPrompt }, context: onTheRun },
   ],
   '0.61.0': [
     { type: 'run_succeeded', data: { output: { score: 0.6 }, record: {}, ...answeredAtALimit }, context: onTheRun },

@@ -1,10 +1,16 @@
 import { Buffer } from 'node:buffer';
 
 import type { KeptContent } from '@on.auto/operations';
-import { answerPayloadOf, inputPayloadOf, outputPayloadOf, type Payload } from '@on.auto/operations/payloads';
+import {
+  answerPayloadOf,
+  inputPayloadOf,
+  outputPayloadOf,
+  payloadIfAny,
+  type Payload,
+} from '@on.auto/operations/payloads';
 import { Option, Schema } from 'effect';
 
-import type { RecordedRunFact } from '../runs/run-events.ts';
+import type { RecordedRunFact, RecordOfARun } from '../runs/run-events.ts';
 
 const mostIssuesShown = 5;
 
@@ -79,4 +85,11 @@ export function outputShownOf(succeeded: FactData<'run_succeeded'>, content: Kep
 
 export function answerShownOf(answered: FactData<'request_answered'>, content: KeptContent): PayloadShown {
   return payloadShownOf('answer', answerPayloadOf(answered), content);
+}
+
+export function recordShownOf(record: RecordOfARun, content: KeptContent): Schema.JsonObject {
+  const prompt = payloadIfAny<'prompt', Schema.Json>(record, 'prompt');
+  return prompt === undefined || 'inline' in prompt
+    ? record
+    : Object.assign({}, record, payloadShownOf('prompt', prompt, content));
 }

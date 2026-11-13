@@ -26,7 +26,7 @@ const documentKept = [
 ];
 
 describe('the facts the server tells the ledger hold content', () => {
-  it('are the saved versions of a definition that may keep its document, overview and diagram outside them, the facts of every call that keeps what it sent and what it was answered, the facts of a run that may keep its input, output or answer outside it, the assets of generation functions, held until they expire, the record of each input a workflow applies, which names the values it keeps outside, and each fact a capability declares on runs that holds content', () => {
+  it('are the saved versions of a definition that may keep its document, overview and diagram outside them, the facts of every call that keeps what it sent and what it was answered, the facts of a run that may keep its input, output, answer or the prompt its record holds outside it, the assets of generation functions, held until they expire, the record of each input a workflow applies, which names the values it keeps outside, and each fact a capability declares on runs that holds content', () => {
     const { factSchemas, holders } = factsKnownWith([forecastChecked, bytesKept]);
 
     expect(factSchemas).toEqual(factSchemasKnownWith([forecastChecked, bytesKept]));
@@ -35,7 +35,12 @@ describe('the facts the server tells the ledger hold content', () => {
       definition_updated: { payloads: documentKept },
       definition_restored: { payloads: documentKept },
       run_started: { payloads: [{ sha256: '/input_sha256', bytes: '/input_bytes' }] },
-      run_succeeded: { payloads: [{ sha256: '/output_sha256', bytes: '/output_bytes' }] },
+      run_succeeded: {
+        payloads: [
+          { sha256: '/output_sha256', bytes: '/output_bytes' },
+          { sha256: '/record/prompt_sha256', bytes: '/record/prompt_bytes' },
+        ],
+      },
       request_answered: { payloads: [{ sha256: '/answer_sha256', bytes: '/answer_bytes' }] },
       tool_call_started: argumentsHeld,
       tool_call_answered: resultHeld,
