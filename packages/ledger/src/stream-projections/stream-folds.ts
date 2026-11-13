@@ -41,27 +41,9 @@ export function foldedIntoItsTables(
 }
 
 interface AppendedToAStream {
+  readonly stream: string;
   readonly place: StreamPlace;
-  readonly messages: readonly StoredMessage[];
-}
-
-async function foldedContiguously(
-  keeping: StreamKeeping,
-  execute: StatementExecutor,
-  { place, messages }: AppendedToAStream,
-): Promise<void> {
-  const { dialect, projection } = keeping;
-  const positions = messages.map(({ position }) => position);
-  const folded = await checkpointLocked(execute, dialect, projection, place);
-  if (folded !== Math.min(...positions) - 1) {
-    return;
-  }
-  await foldedIntoItsTables(
-    keeping,
-    execute,
-    messages.map((message) => ({ ...message, data: dialect.appendedData(message.data) })),
-  );
-  await execute.command(checkpointWritten(projection, place, Math.max(...positions)));
+  readonly positions: readonly number[];
 }
 
 function appendedToItsStreams(
@@ -71,17 +53,53 @@ function appendedToItsStreams(
   return [...Map.groupBy(messages, ({ stream }) => stream)].flatMap(
     ([stream, ofTheStream]: readonly [string, readonly StoredMessage[]]) => {
       const place = placeOfItsStream(projection, stream);
-      return place === undefined ? [] : [{ place, messages: ofTheStream }];
+      return place === undefined ? [] : [{ stream, place, positions: ofTheStream.map(({ position }) => position) }];
     },
+  );
+}
+
+function byStreamName(one: AppendedToAStream, other: AppendedToAStream): number {
+  return Number(one.stream > other.stream) - Number(one.stream < other.stream);
+}
+
+async function contiguousOf(
+  { dialect, projection }: StreamKeeping,
+  execute: StatementExecutor,
+  appended: readonly AppendedToAStream[],
+): Promise<readonly AppendedToAStream[]> {
+  const contiguous: AppendedToAStream[] = [];
+  await inTurn(appended.toSorted(byStreamName), async (ofAStream) => {
+    const folded = await checkpointLocked(execute, dialect, projection, ofAStream.place);
+    if (folded === Math.min(...ofAStream.positions) - 1) {
+      contiguous.push(ofAStream);
+    }
+  });
+  return contiguous;
+}
+
+async function foldedContiguously(
+  keeping: StreamKeeping,
+  execute: StatementExecutor,
+  messages: readonly StoredMessage[],
+): Promise<void> {
+  const { dialect, projection } = keeping;
+  const contiguous = await contiguousOf(keeping, execute, appendedToItsStreams(projection, messages));
+  const folding = new Set(contiguous.map(({ stream }) => stream));
+  await foldedIntoItsTables(
+    keeping,
+    execute,
+    messages.flatMap((message) =>
+      folding.has(message.stream) ? [{ ...message, data: dialect.appendedData(message.data) }] : [],
+    ),
+  );
+  await inTurn(contiguous, ({ place, positions }) =>
+    execute.command(checkpointWritten(projection, place, Math.max(...positions))),
   );
 }
 
 export function contiguousFoldOf(keeping: StreamKeeping): InlineRegistration {
   return inlineRegistrationOf({
     types: typesOf(keeping.projection),
-    handle: (messages, execute) =>
-      inTurn(appendedToItsStreams(keeping.projection, messages), (appended) =>
-        foldedContiguously(keeping, execute, appended),
-      ),
+    handle: (messages, execute) => foldedContiguously(keeping, execute, messages),
   });
 }

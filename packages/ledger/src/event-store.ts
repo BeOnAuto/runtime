@@ -16,6 +16,7 @@ import type { Schema } from 'effect';
 
 import type { RecordedKeys } from './keys/recorded-keys.ts';
 import type { LogPorts } from './log/ledger-log.ts';
+import type { MultiStreamAppends } from './multi-stream/multi-stream-appends.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
 
 export interface EncodedEvent {
@@ -265,6 +266,7 @@ export type LedgerContent = Pick<KeptOutside, 'content' | 'removedKeptBefore' | 
 export interface LedgerStore
   extends
     EventStore,
+    MultiStreamAppends,
     FactScrubStore,
     FactScrubber,
     RunOutcomesStore,
@@ -284,13 +286,11 @@ export interface ReturningExecutor extends StatementExecutor {
   readonly command: StatementExecutor['query'];
 }
 
-interface Transaction {
-  readonly execute: StatementExecutor;
-}
-
 export interface TransactionalPool<Executor extends StatementExecutor = StatementExecutor> {
   readonly execute: Executor;
-  readonly withTransaction: <A>(handle: (transaction: Transaction) => Promise<A>) => Promise<A>;
+  readonly withTransaction: <A>(
+    handle: (transaction: { readonly execute: StatementExecutor }) => Promise<A>,
+  ) => Promise<A>;
 }
 
 export type InTransaction = <A>(work: (execute: StatementExecutor) => Promise<A>) => Promise<A>;

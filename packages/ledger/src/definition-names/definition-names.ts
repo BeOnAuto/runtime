@@ -75,6 +75,11 @@ function isTheSameName(held: DefinitionName | undefined, claimed: DefinitionName
   );
 }
 
+interface ClaimingStream {
+  readonly stream: string;
+  readonly definitionKey: string;
+}
+
 interface NamesKeeping {
   readonly dialect: ProjectionDialect;
   readonly names: DefinitionNames;
@@ -83,7 +88,7 @@ interface NamesKeeping {
 async function nameFreeFor(
   { dialect, names }: NamesKeeping,
   execute: StatementExecutor,
-  definitionKey: string,
+  { stream, definitionKey }: ClaimingStream,
   claimed: DefinitionName,
 ): Promise<void> {
   await inTurn(dialect.keyLocks(definitionNamesTableName, claimed.playbookKey, nameKeyOf(claimed)), (lock) =>
@@ -94,7 +99,7 @@ async function nameFreeFor(
     SQL`playbook_key = ${claimed.playbookKey} AND definition_type = ${claimed.definitionType} AND name = ${claimed.name}`,
   );
   if (holder !== undefined && holder.definitionKey !== definitionKey) {
-    throw appendRefusedAs(names.takenBy(claimed, holder));
+    throw appendRefusedAs(names.takenBy(claimed, holder), stream);
   }
 }
 
@@ -133,7 +138,7 @@ async function nameAfterThe(
     return;
   }
   if (!isTheSameName(held, claimed)) {
-    await nameFreeFor(keeping, execute, definitionKey, claimed);
+    await nameFreeFor(keeping, execute, { stream, definitionKey }, claimed);
   }
   await nameKept(keeping, execute, definitionKey, claimed);
 }

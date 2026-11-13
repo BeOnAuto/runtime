@@ -3,7 +3,7 @@ import { inTurn } from '../projections/inline-projection.ts';
 
 export type Rider = (execute: StatementExecutor) => Promise<void>;
 
-interface CommitContext {
+export interface CommitContext {
   readonly transaction: { readonly execute: StatementExecutor };
 }
 

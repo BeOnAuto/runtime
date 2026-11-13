@@ -46,7 +46,7 @@ type Appending<Event extends Recorded> = (
 
 type EventAsAppended<Event extends Recorded> = (event: Decided<Event>, context: Context) => Effect.Effect<EncodedEvent>;
 
-function eventAsAppendedOf<Event extends Recorded>(
+export function eventAsAppendedOf<Event extends Recorded>(
   eventSchema: Schema.ConstraintCodec<Event, unknown>,
 ): EventAsAppended<Event> {
   const { encode } = eventCodecOf(eventSchema);

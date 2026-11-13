@@ -11,6 +11,7 @@ import {
   definitionNamesBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
+  multiStreamAppendBehaviour,
   factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
@@ -208,6 +209,16 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
   receivedWebhooksBehaviour({
     ...onPostgreSQL,
     receivedWebhooksOn: (database) => postgresqlReceivedWebhooks({ pools: plainPoolsOn(database) }),
+  });
+  multiStreamAppendBehaviour({
+    ...onPostgreSQL,
+    storeKeeping: (database, { projections = [], definitionNames }) =>
+      postgresqlEventStore({
+        pools: plainPoolsOn(database),
+        reportLostConnection,
+        projections,
+        ...(definitionNames === undefined ? {} : { definitionNames }),
+      }),
   });
   definitionNamesBehaviour({
     ...onPostgreSQL,

@@ -16,7 +16,7 @@ import type { HeldTypes, ProjectionDialect, StreamsInOrder } from '../projection
 import { batchesFilledFrom, listingAfter, messagesInABatch, withinBytes } from '../projections/projection-fill.ts';
 import { orderedMessagesIn, sizedPointsIn } from '../projections/projection-statements.ts';
 import {
-  digestsLocked,
+  digestsLockedInOrder,
   digestsWithoutAHead,
   heldDeleted,
   heldInTheStream,
@@ -30,8 +30,6 @@ export interface ReferencesKeeping {
   readonly holders: ContentHolders;
   readonly mostBytes: number;
 }
-
-type Locking = 'locked' | 'unlocked';
 
 interface PlacedFact {
   readonly place: ReferencesPlace;
@@ -61,16 +59,21 @@ function heldBefore(
   return heldOfTheDigests(execute, dialect, place, digests);
 }
 
-async function changesWritten(
+interface HoldsChanged {
+  readonly place: ReferencesPlace;
+  readonly after: HeldDigests;
+  readonly changed: readonly string[];
+}
+
+function holdsChangedFrom(place: ReferencesPlace, before: HeldDigests, after: HeldDigests): HoldsChanged {
+  return { place, after, changed: digestsChanged(before, after) };
+}
+
+async function changeWritten(
   { dialect }: ReferencesKeeping,
   execute: StatementExecutor,
-  place: ReferencesPlace,
-  [before, after, locking]: readonly [HeldDigests, HeldDigests, Locking],
+  { place, after, changed }: HoldsChanged,
 ): Promise<void> {
-  const changed = digestsChanged(before, after);
-  if (locking === 'locked') {
-    await digestsLocked(execute, dialect, place.prefix, changed);
-  }
   const held = changed.flatMap((sha256) => {
     const count = after.get(sha256) ?? 0;
     return count > 0 ? [{ sha256, held: count }] : [];
@@ -83,19 +86,30 @@ async function changesWritten(
   );
 }
 
-async function streamFolded(
-  keeping: ReferencesKeeping,
+function changesLocked(
+  { dialect }: ReferencesKeeping,
   execute: StatementExecutor,
-  place: ReferencesPlace,
-  [facts, locking]: readonly [readonly TypedEvent[], Locking],
+  changes: readonly HoldsChanged[],
 ): Promise<void> {
-  const before = await heldBefore(keeping, execute, place, facts);
-  await changesWritten(keeping, execute, place, [before, heldOver(keeping.holders, facts, before), locking]);
+  return digestsLockedInOrder(
+    execute,
+    dialect,
+    changes.map(({ place, changed }) => ({ prefix: place.prefix, digests: changed })),
+  );
 }
 
 interface FactsOfAStream {
   readonly place: ReferencesPlace;
   readonly facts: readonly TypedEvent[];
+}
+
+async function holdsChangedBy(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  { place, facts }: FactsOfAStream,
+): Promise<HoldsChanged> {
+  const before = await heldBefore(keeping, execute, place, facts);
+  return holdsChangedFrom(place, before, heldOver(keeping.holders, facts, before));
 }
 
 function byStream(placed: readonly PlacedFact[]): readonly FactsOfAStream[] {
@@ -111,9 +125,23 @@ function placedFolded(
   keeping: ReferencesKeeping,
   execute: StatementExecutor,
   placed: readonly PlacedFact[],
-  locking: Locking,
 ): Promise<void> {
-  return inTurn(byStream(placed), ({ place, facts }) => streamFolded(keeping, execute, place, [facts, locking]));
+  return inTurn(byStream(placed), async (ofAStream) =>
+    changeWritten(keeping, execute, await holdsChangedBy(keeping, execute, ofAStream)),
+  );
+}
+
+async function placedKept(
+  keeping: ReferencesKeeping,
+  execute: StatementExecutor,
+  placed: readonly PlacedFact[],
+): Promise<void> {
+  const changes: HoldsChanged[] = [];
+  await inTurn(byStream(placed), async (ofAStream) => {
+    changes.push(await holdsChangedBy(keeping, execute, ofAStream));
+  });
+  await changesLocked(keeping, execute, changes);
+  await inTurn(changes, (change) => changeWritten(keeping, execute, change));
 }
 
 function payloadDigestsOf(
@@ -153,7 +181,7 @@ export function keepingReferences(keeping: ReferencesKeeping): InlineProjection 
         placedOf(stream, { type, data: keeping.dialect.appendedData(data) }),
       );
       await requirePayloadsHeaded(keeping, execute, placed);
-      await placedFolded(keeping, execute, placed, 'locked');
+      await placedKept(keeping, execute, placed);
     },
   };
 }
@@ -230,7 +258,6 @@ export function referencesFilled(keeping: ReferencesKeeping, execute: StatementE
           keeping,
           execute,
           messages.flatMap((message) => placedOf(message.stream, factOf(keeping, message))),
-          'unlocked',
         ),
     },
     firstHeldBatch,
@@ -259,6 +286,11 @@ export async function referencesRefolded(
     },
     firstHeldBatch,
   );
-  const before = await heldInTheStream(execute, keeping.dialect, place);
-  await changesWritten(keeping, execute, place, [before, heldOver(keeping.holders, facts), 'locked']);
+  const changed = holdsChangedFrom(
+    place,
+    await heldInTheStream(execute, keeping.dialect, place),
+    heldOver(keeping.holders, facts),
+  );
+  await changesLocked(keeping, execute, [changed]);
+  await changeWritten(keeping, execute, changed);
 }

@@ -8,6 +8,8 @@ export { measuredRiddenAppendsBehaviour } from '../connection/measured-ridden-ap
 export { keptSecretsBehaviour, type KeptSecretsEntry } from '../secrets/kept-secrets-behaviour.ts';
 export { receivedWebhooksBehaviour } from '../webhooks/received-webhooks-behaviour.ts';
 export { definitionNamesBehaviour, type DefinitionNamesEntry } from '../definition-names/definition-names-behaviour.ts';
+export { multiStreamAppendBehaviour } from '../multi-stream/multi-stream-append-behaviour.ts';
+export type { MultiStreamEntry } from '../multi-stream/multi-stream-cases.ts';
 export { earlierShapesBehaviour } from '../recorded-facts/earlier-shapes-behaviour.ts';
 export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';
 export { ledgerStepsBehaviour } from '../layout/ledger-steps-behaviour.ts';

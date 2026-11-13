@@ -12,6 +12,7 @@ import {
   definitionNamesBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
+  multiStreamAppendBehaviour,
   factScrubOnStoresBehaviour,
   earlierShapesBehaviour,
   keptSecretsBehaviour,
@@ -95,6 +96,12 @@ describe('The ledger on SQLite', () => {
   receivedWebhooksBehaviour({
     ...onSQLite,
     receivedWebhooksOn: (fileName) => receivedWebhooksOfItsOpenLedger(sqliteLedgerFile(fileName)),
+  });
+  multiStreamAppendBehaviour({
+    ...onSQLite,
+    storeKeeping: (fileName, kept) =>
+      sqliteLedgerOpened({ optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName }), inMemory: false }, kept)
+        .store,
   });
   definitionNamesBehaviour({
     ...onSQLite,

@@ -30,7 +30,9 @@ import { appendRiders, type AppendRiders, type Rider } from '../scrub/append-rid
 import { signalOf } from '../signal/append-signal.ts';
 import { VersionConflict } from '../version-conflict.ts';
 
-export interface EmmettStore extends Pick<EmmettEventStore, 'readStream' | 'appendToStream'> {
+export type AppendingStore = Pick<EmmettEventStore, 'appendToStream'>;
+
+export interface EmmettStore extends AppendingStore, Pick<EmmettEventStore, 'readStream'> {
   readonly schema: { readonly migrate: () => Promise<unknown> };
   readonly close: () => Promise<void>;
 }
@@ -117,7 +119,7 @@ interface PlacedMessage<Stored extends Record<string, unknown>> {
   readonly metadata: StoredMetadata;
 }
 
-function messagesOf<Stored extends Record<string, unknown>>(
+export function messagesOf<Stored extends Record<string, unknown>>(
   data: StoredData<Stored>,
   stream: string,
   events: readonly EncodedEvent[],
@@ -150,7 +152,7 @@ function sizesReadWhole<Stored extends Record<string, unknown>>(
   };
 }
 
-function heldAsMeasured(
+export function heldAsMeasured(
   holders: ContentHolders,
   stream: string,
   events: readonly EncodedEvent[],
@@ -165,8 +167,12 @@ function isADeadlock(error: unknown): boolean {
   return DumboError.isInstanceOf(error, { errorType: DeadlockError.ErrorType });
 }
 
-async function appendedTo<Stored extends Record<string, unknown>>(
-  store: EmmettStore,
+export function asAVersionConflict(error: unknown): unknown {
+  return isExpectedVersionConflictError(error) || isADeadlock(error) ? new VersionConflict() : error;
+}
+
+export async function appendedTo<Stored extends Record<string, unknown>>(
+  store: AppendingStore,
   stream: string,
   messages: readonly PlacedMessage<Stored>[],
   { expectedVersion, context, lineage = noLineage }: AppendPlace,
@@ -177,10 +183,7 @@ async function appendedTo<Stored extends Record<string, unknown>>(
       observability: observabilityOf(lineage, context),
     });
   } catch (error) {
-    if (isExpectedVersionConflictError(error) || isADeadlock(error)) {
-      throw new VersionConflict();
-    }
-    throw error;
+    throw asAVersionConflict(error);
   }
 }
 
@@ -249,27 +252,28 @@ function readsOf<Stored extends Record<string, unknown>>(
   };
 }
 
+type Announced = (stream: string, events: readonly EncodedEvent[], place: AppendPlace) => void;
+
+export function announcerOf({ observer, ...listeners }: AppendListeners): Announced {
+  const signal = signalOf(listeners);
+  return (stream, events, { lineage = noLineage, ...place }) => {
+    signal.raise(stream);
+    observer?.appended(stream, events, { ...place, lineage });
+  };
+}
+
 export function emmettEventStore<Stored extends Record<string, unknown>>(
   store: EmmettStore,
   {
     data,
     mostEventsInOneAppend,
     sizesAfter = sizesReadWhole(store, data),
-    observer,
     holders = new Map(),
     riders = appendRiders(),
     ...listeners
   }: EmmettEventStoreOptions<Stored>,
 ): StreamStore & RiddenAppends & StreamMessagesStore {
-  const signal = signalOf(listeners);
-  const announced = (
-    stream: string,
-    events: readonly EncodedEvent[],
-    { lineage = noLineage, ...place }: AppendPlace,
-  ) => {
-    signal.raise(stream);
-    observer?.appended(stream, events, { ...place, lineage });
-  };
+  const announced = announcerOf(listeners);
   return {
     mostEventsInOneAppend,
     ...readsOf(store, data, sizesAfter),

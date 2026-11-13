@@ -119,6 +119,25 @@ export async function digestsLocked(
   );
 }
 
+interface DigestsOfAPlaybook {
+  readonly prefix: string;
+  readonly digests: readonly string[];
+}
+
+function digestsOf(locking: readonly DigestsOfAPlaybook[], playbook: string): readonly string[] {
+  return [...new Set(locking.filter(({ prefix }) => prefix === playbook).flatMap(({ digests }) => digests))].toSorted();
+}
+
+export async function digestsLockedInOrder(
+  execute: StatementExecutor,
+  dialect: ProjectionDialect,
+  locking: readonly DigestsOfAPlaybook[],
+): Promise<void> {
+  await inTurn([...new Set(locking.map(({ prefix }) => prefix))].toSorted(), (prefix) =>
+    digestsLocked(execute, dialect, prefix, digestsOf(locking, prefix)),
+  );
+}
+
 const headsTable = SQL.identifier(keptShelf.heads);
 
 const digestsInAStatement = 500;

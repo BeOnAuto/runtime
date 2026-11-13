@@ -281,6 +281,8 @@ async function preparedProjection(
   }
 }
 
+export type Preparing = (execute: StatementExecutor, inTransaction: InTransaction) => Promise<void>;
+
 export async function preparedProjections(
   keepings: readonly ProjectionKeeping[],
   execute: StatementExecutor,

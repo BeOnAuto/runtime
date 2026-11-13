@@ -1,4 +1,5 @@
 import type { StreamStore } from '../event-store.ts';
+import type { MultiStreamAppends } from '../multi-stream/multi-stream-appends.ts';
 
 export type AppendListener = (playbookKey: string) => void;
 
@@ -36,7 +37,10 @@ export function appendSignal(): AppendSignal {
   };
 }
 
-export function signalledOn<Store extends StreamStore>(store: Store, signal?: AppendSignal): Store {
+export function signalledOn<Store extends StreamStore & MultiStreamAppends>(
+  store: Store,
+  signal?: AppendSignal,
+): Store {
   if (signal === undefined) {
     return store;
   }
@@ -45,6 +49,12 @@ export function signalledOn<Store extends StreamStore>(store: Store, signal?: Ap
     append: async (stream, events, place) => {
       await store.append(stream, events, place);
       signal.raise(stream);
+    },
+    multiStreamAppend: async (requests) => {
+      await store.multiStreamAppend(requests);
+      for (const { stream } of requests) {
+        signal.raise(stream);
+      }
     },
   };
 }

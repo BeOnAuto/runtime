@@ -28,6 +28,18 @@ export { LedgerLog, samePoint, type LoggedEvent, type LogPage, type LogPorts } f
 export { UnreadableEvent } from './log/unreadable-event.ts';
 export { eventAppenderOf, eventAppenderWithOf, type EventAppender, type EventAppenderWith } from './event-appender.ts';
 export { eventCodecOf, type EventCodec } from './event-codec.ts';
+export {
+  mostBytesInAMultiStreamAppend,
+  mostEventsInAMultiStreamAppend,
+  type AppendStreamRequest,
+  type MultiStreamAppends,
+} from './multi-stream/multi-stream-appends.ts';
+export {
+  multiStreamAppenderOf,
+  type DecidedStreamAppend,
+  type MultiStreamAppender,
+} from './multi-stream/multi-stream-appender.ts';
+export { StreamRefused } from './multi-stream/stream-refused.ts';
 export type {
   AppendedStreams,
   AppendObserver,
