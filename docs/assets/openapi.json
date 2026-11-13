@@ -3644,6 +3644,10 @@
                               "tool_count": {
                                 "type": "integer",
                                 "description": "How many of its tools the operator allows that this search considered, after only"
+                              },
+                              "cards": {
+                                "type": "string",
+                                "description": "That a message through it can be a card, how a function writes one and the guide to read first, in words; absent where it renders nothing or cannot be asked"
                               }
                             },
                             "required": [
@@ -3955,6 +3959,10 @@
                     "renders": {
                       "type": "string",
                       "description": "The render target a message through it can be written for, as a card; the guide render-<name> says how; absent where it renders nothing"
+                    },
+                    "cards": {
+                      "type": "string",
+                      "description": "That a message through it can be a card, how a function writes one and the guide to read first, in words; absent where it renders nothing or cannot be asked"
                     },
                     "tools": {
                       "type": "array",
@@ -23781,6 +23789,10 @@
                               "tool_count": {
                                 "type": "integer",
                                 "description": "How many of its tools the operator allows that this search considered, after only"
+                              },
+                              "cards": {
+                                "type": "string",
+                                "description": "That a message through it can be a card, how a function writes one and the guide to read first, in words; absent where it renders nothing or cannot be asked"
                               }
                             },
                             "required": [

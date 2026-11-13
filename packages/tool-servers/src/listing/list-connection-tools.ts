@@ -15,7 +15,7 @@ import { Effect, Option, Order, Schema, Struct } from 'effect';
 import { refusedOutsideTheListing } from '../access/directory-listing.ts';
 import { MarkedBySchema, marksMeant, ToolAnnotationsSchema, ToolMarkSchema } from '../bounds/tool-results.ts';
 import { unavailableOf, unavailableServerOf } from '../tool-reads/tool-refusals.ts';
-import { cardWords, rendersDescription } from './card-words.ts';
+import { cardsDescription, cardsFieldOf, rendersDescription } from './card-words.ts';
 import type { ListingWays } from './listing-ways.ts';
 import type { ServerTool } from './tool-server.ts';
 
@@ -50,6 +50,7 @@ const ConnectionToolsSchema = Schema.Struct({
     description: 'The name of the connection, which a function writes before the slash',
   }),
   renders: Schema.optionalKey(Schema.String.annotate({ description: rendersDescription })),
+  cards: Schema.optionalKey(Schema.String.annotate({ description: cardsDescription })),
   tools: Schema.Array(ConnectionToolSchema).annotate({ description: 'The tools of this page, by name' }),
   ...PagingOutputFields,
 });
@@ -98,10 +99,10 @@ function connectionNotFound(id: string): NotFound {
 
 const toolNoun: Noun = { one: 'tool', other: 'tools' };
 
-function listedInWords({ server, tools, has_more: hasMore, renders }: typeof ConnectionToolsSchema.Type): string {
+function listedInWords({ server, tools, has_more: hasMore, cards }: typeof ConnectionToolsSchema.Type): string {
   const more = hasMore ? ', and more remain' : '';
   const offered = `The connection ${quoted(server)} offers ${counted(tools.length, toolNoun)} on this page${more}.`;
-  return renders === undefined ? offered : `${offered} ${cardWords(server, renders)}`;
+  return cards === undefined ? offered : `${offered} ${cards}`;
 }
 
 export function defineListConnectionTools(tools: Pick<ListingWays, 'listConnection'>) {
@@ -137,6 +138,7 @@ export function defineListConnectionTools(tools: Pick<ListingWays, 'listConnecti
         connection: id,
         server: server.name,
         ...(server.renders === undefined ? {} : { renders: server.renders }),
+        ...cardsFieldOf(server.name, server.renders),
         tools: page.map((tool) => shownOf(tool)),
         has_more: hasMore,
         next_cursor: hasMore ? cursorOfParts([last.name]) : null,

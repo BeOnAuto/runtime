@@ -1,6 +1,5 @@
 import { capitalized, counted, listed, quoted, type Noun } from '@on.auto/phrasing';
 
-import { cardWords } from '../listing/card-words.ts';
 import { inWords, namesListed, toolInWords } from '../names/tool-words.ts';
 import { isUnready } from '../org-servers/connection-source.ts';
 import { everyPlaybook } from '../settings/server-settings.ts';
@@ -112,9 +111,7 @@ function tooManyInWords(spoken: readonly Spoken[], tools: FoundTools): readonly 
 }
 
 function cardsInWords(spoken: readonly Spoken[]): readonly string[] {
-  return spoken.flatMap(({ server }) =>
-    server.renders === undefined || 'unavailable' in server ? [] : [cardWords(server.name, server.renders)],
-  );
+  return spoken.flatMap(({ server }) => ('cards' in server && server.cards !== undefined ? [server.cards] : []));
 }
 
 function answerInWords(spoken: readonly Spoken[], tools: FoundTools, { terms, opening, among }: Telling): string {

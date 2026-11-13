@@ -1,6 +1,7 @@
 import { Order, Predicate } from 'effect';
 
 import { onlyReads } from '../bounds/tool-results.ts';
+import { cardsFieldOf } from '../listing/card-words.ts';
 import type { AvailableServer, ServerTool, ToolServer } from '../listing/tool-server.ts';
 import type { Found, FoundTool, SearchAsked, SearchedServer } from './search-schemas.ts';
 import { bestOf, summaryOf, wholeWithinTheBound, type Searchable } from './search-scoring.ts';
@@ -31,7 +32,7 @@ export function searchedServer(server: ToolServer, asked: SearchAsked): Searched
   };
   return 'unavailable' in server
     ? { ...fields, unavailable: server.unavailable, because: server.because }
-    : { ...fields, tool_count: consideredOn(server, asked).length };
+    : { ...fields, tool_count: consideredOn(server, asked).length, ...cardsFieldOf(name, renders) };
 }
 
 function candidatesOn(server: ToolServer, asked: SearchAsked): readonly Candidate[] {

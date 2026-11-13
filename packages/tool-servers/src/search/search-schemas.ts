@@ -2,7 +2,7 @@ import { PlaybookIdSchema } from '@on.auto/operations';
 import { Schema } from 'effect';
 
 import { marksMeant, ToolMarkSchema } from '../bounds/tool-results.ts';
-import { rendersDescription } from '../listing/card-words.ts';
+import { cardsDescription, rendersDescription } from '../listing/card-words.ts';
 import { UnavailableBecauseSchema } from '../listing/tool-server.ts';
 import { serverNamePattern } from '../names/tool-reference.ts';
 import { searchBounds, termsWithinTheirBound } from './search-terms.ts';
@@ -67,6 +67,7 @@ const searchedFields = {
   tool_count: Schema.Int.annotate({
     description: 'How many of its tools the operator allows that this search considered, after only',
   }),
+  cards: Schema.optionalKey(Schema.String.annotate({ description: cardsDescription })),
 };
 
 const unavailableFields = {

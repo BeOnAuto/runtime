@@ -78,14 +78,14 @@ describe('search, for a server whose provider renders', () => {
     expect(await searched({})).toMatchObject({
       status: 'succeeded',
       output: {
-        servers: [{ name: 'chat', renders: 'cards' }, withoutRenders()],
+        servers: [{ name: 'chat', renders: 'cards', cards: cardWords }, withoutRenders()],
       },
     });
   });
 
   it('says in words that a message through it can be a card, with terms and without', () => {
     const { plainLanguage } = defineSearchInOrg(listing, () => Effect.void).registration;
-    const servers = [{ ...chat({ tool_count: 1 }), playbooks: ['*'] }];
+    const servers = [{ ...chat({ tool_count: 1, cards: cardWords }), playbooks: ['*'] }];
     const tool = { server: 'chat', tool: 'echo', summary: '', mark: 'unmarked' } as const;
 
     expect([
@@ -97,9 +97,9 @@ describe('search, for a server whose provider renders', () => {
   it('says it in the search of a playbook too', () => {
     const { plainLanguage } = defineSearch(listing).registration;
 
-    expect(plainLanguage?.outcome({ servers: [chat({ tool_count: 0 })], tools: [], scopes: ['chat'] }, {})).toContain(
-      cardWords,
-    );
+    expect(
+      plainLanguage?.outcome({ servers: [chat({ tool_count: 0, cards: cardWords })], tools: [], scopes: ['chat'] }, {}),
+    ).toContain(cardWords);
   });
 
   it('says nothing of cards for a server that cannot be asked, or whose provider renders nothing', () => {
@@ -113,13 +113,29 @@ describe('search, for a server whose provider renders', () => {
   });
 });
 
+describe('search, for a server whose provider renders and that cannot be asked', () => {
+  it('leaves the words out of its row', async () => {
+    const connections = fakeConnections();
+    const entry = { url: 'http://127.0.0.1:1/mcp' };
+    connections.connect('acme', { id: 'chat-id', name: 'chat', environment, renders: 'cards', entry });
+    const { access } = reportingAccess({}, { timing: patientTiming, connections });
+    closing.push(access.close);
+    const searched = dispatchedTo(defineSearchInOrg(access, () => Effect.void).registration);
+
+    const found = await searched({});
+
+    expect(found).toMatchObject({ output: { servers: [{ name: 'chat', renders: 'cards', unavailable: anyRenders }] } });
+    expect(found).toMatchObject({ output: { servers: [expect.not.objectContaining({ cards: anyRenders })] } });
+  });
+});
+
 describe('list_connection_tools, for a connection whose provider renders', () => {
   it('shows renders for it, and for no other', async () => {
     const listed = dispatchedTo(defineListConnectionTools(await connectedAccess()).registration);
 
     expect(await listed({ id: 'chat-id' })).toMatchObject({
       status: 'succeeded',
-      output: { server: 'chat', renders: 'cards' },
+      output: { server: 'chat', renders: 'cards', cards: cardWords },
     });
     expect(await listed({ id: 'plain-id' })).toMatchObject({
       status: 'succeeded',
@@ -132,7 +148,7 @@ describe('list_connection_tools, for a connection whose provider renders', () =>
     const page = { connection: 'chat-id', server: 'chat', tools: [], has_more: false, next_cursor: null } as const;
 
     expect([
-      plainLanguage?.outcome({ ...page, renders: 'cards' }, { id: 'chat-id' }),
+      plainLanguage?.outcome({ ...page, renders: 'cards', cards: cardWords }, { id: 'chat-id' }),
       plainLanguage?.outcome(page, { id: 'chat-id' }),
     ]).toEqual([
       `The connection “chat” offers 0 tools on this page. ${cardWords}`,
