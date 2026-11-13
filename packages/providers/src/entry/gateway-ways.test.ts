@@ -8,7 +8,7 @@ const gateway = {
     connections: 'https://gateway.messages.example.com',
     calls: 'https://gateway.messages.example.com/api',
   },
-  claims: ['name', 'playbook_name'],
+  claims: ['name', 'playbook_name', 'takes_answer'],
 };
 
 const throughAGateway = {
@@ -46,7 +46,7 @@ const takenThroughAGateway =
   'an authorization way through a gateway takes issuer, gateway, in, name, scope, says, and permissions';
 
 describe('a way of consent through a gateway', () => {
-  it('takes the gateway, its two audiences, the names its note may carry, the permissions and the security scheme of the key', () => {
+  it('takes the gateway, its two audiences, the names and the mark of a request its note may carry, the permissions and the security scheme of the key', () => {
     const { claims: _claims, ...idsAlone } = gateway;
     const { permissions: _permissions, ...delegated } = throughAGateway;
 
@@ -106,7 +106,7 @@ function problemsOfTheGateway(refused: Readonly<Record<string, unknown>>) {
 }
 
 describe('a gateway of a way of consent', () => {
-  it('is refused where it is no https URL written out, where its two audiences are alike, and where its note carries a name twice', () => {
+  it('is refused where it is no https URL written out, where its two audiences are alike, and where its note carries a claim twice', () => {
     const refusals = [
       problemsOfTheGateway({ ...gateway, url: 'http://gateway.messages.example.com/connections' }),
       problemsOfTheGateway({ ...gateway, url: 'https://{region}.messages.example.com/connections' }),
@@ -115,6 +115,7 @@ describe('a gateway of a way of consent', () => {
         audiences: { connections: gateway.audiences.calls, calls: gateway.audiences.calls },
       }),
       problemsOfTheGateway({ ...gateway, claims: ['name', 'name'] }),
+      problemsOfTheGateway({ ...gateway, claims: ['takes_answer', 'name', 'takes_answer'] }),
     ];
     const unwritten =
       'Expected the https URL of the gateway, or an http URL on a loopback address, with no placeholder';
@@ -129,6 +130,7 @@ describe('a gateway of a way of consent', () => {
         ],
       ],
       [['/credentials/0/gateway/claims/1', 'Expected name once in claims']],
+      [['/credentials/0/gateway/claims/2', 'Expected takes_answer once in claims']],
     ]);
   });
 

@@ -67,3 +67,18 @@ describe('a fetch held within the hosts it may reach', () => {
     expect(sent).toEqual([]);
   });
 });
+
+describe('what travels beside a request through a fetch held within the hosts it may reach', () => {
+  it('hands on what travels beside a request as it came, and nothing beside one that carries nothing', async () => {
+    const beside: (readonly unknown[])[] = [];
+    const within = fetchWithin((_address: string, _init: unknown, ...given: readonly [{ readonly mark: string }?]) => {
+      beside.push(given);
+      return Promise.resolve(new Response('answered'));
+    }, everywhere);
+
+    await within('https://graph.example.com/mcp', {}, { mark: 'kept' });
+    await within('https://graph.example.com/mcp');
+
+    expect(beside).toEqual([[{ mark: 'kept' }], []]);
+  });
+});

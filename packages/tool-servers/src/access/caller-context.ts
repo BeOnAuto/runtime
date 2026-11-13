@@ -1,3 +1,5 @@
+import type { CallMeta } from '@on.auto/operations';
+
 import type { CallJournal } from '../calls/recorded-calls.ts';
 import type { KeepImage } from '../images/answered-images.ts';
 import type { ToolNotOffered } from './tool-not-offered.ts';
@@ -8,7 +10,7 @@ export interface CallerContext {
   readonly org: string;
   readonly playbook: string;
   readonly journal: CallJournal;
-  readonly meta: Readonly<Record<string, string>>;
+  readonly meta: CallMeta;
   readonly keepImage?: KeepImage;
 }
 

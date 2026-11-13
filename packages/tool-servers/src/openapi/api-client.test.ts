@@ -12,6 +12,8 @@ import type { DescribedApiSettings } from './described-api.ts';
 
 const apiKey = 'graph-api-key-4f1d9a7c2b';
 
+const aSignal: unknown = expect.any(AbortSignal);
+
 const closing: (() => Promise<void>)[] = [];
 
 afterEach(async () => {
@@ -111,6 +113,47 @@ describe('the client of an HTTP API', () => {
       message: 'The tool server lists no tool search',
     });
     expect(sent).toEqual([]);
+  });
+});
+
+describe('the metadata of a call of an HTTP API', () => {
+  it('is handed to its fetch beside the request, and is in none of its address, its headers or its body', async () => {
+    const meta = { 'auto.on/run_id': 'run-1', 'auto.on/delivery_id': 'delivery-1', 'auto.on/takes_answer': true };
+    const sent: { readonly url: string; readonly init: unknown; readonly beside: unknown }[] = [];
+    const operation: ApiOperation = { ...searchAt('/search'), method: 'post' };
+    const client = apiClient(
+      { ...settings, api: { ...settings.api, operations: [operation] } },
+      {
+        fetch: (...[url, init, beside]: readonly [unknown, unknown?, unknown?]) => {
+          sent.push({ url: String(url), init, beside });
+          return Promise.resolve(Response.json({ found: [] }));
+        },
+        tokens: undefined,
+        now: Date.now,
+      },
+    );
+
+    await client.call({
+      tool: 'search',
+      input: {},
+      meta,
+      signal: new AbortController().signal,
+      timeoutMs: defaultTiming.callMs,
+    });
+
+    expect(sent).toEqual([
+      {
+        url: 'https://graph.example.com/v1/search',
+        init: {
+          method: 'POST',
+          headers: { accept: 'application/json, */*;q=0.5' },
+          body: null,
+          redirect: 'manual',
+          signal: aSignal,
+        },
+        beside: meta,
+      },
+    ]);
   });
 });
 

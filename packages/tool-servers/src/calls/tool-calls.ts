@@ -4,7 +4,7 @@ import { toolBounds } from '../bounds/call-bounds.ts';
 import { metaValueOf, type ToolAnswer, type ToolResult } from '../bounds/tool-results.ts';
 import { ignored } from '../clients/ignored.ts';
 import type { Observed } from '../clients/observed-requests.ts';
-import { unobserved } from '../clients/server-client.ts';
+import { unobserved, type ToolCalling } from '../clients/server-client.ts';
 import { failureOf, type FailureKind } from '../clients/server-failures.ts';
 import { DocumentTooLarge } from '../openapi/document-too-large.ts';
 import type { SentCallFailedBecause } from './call-facts.ts';
@@ -16,7 +16,7 @@ export interface Forwarding {
   readonly slot: ServerSlot;
   readonly tool: string;
   readonly input: Readonly<Record<string, unknown>>;
-  readonly meta: Readonly<Record<string, string>>;
+  readonly meta: ToolCalling['meta'];
   readonly callMs: number;
   readonly longestRetryWaitMs: number;
   readonly signal: Readonly<AbortSignal>;

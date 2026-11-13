@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 
 const NamedSchema = Schema.String.check(Schema.isMinLength(1));
 
-const gatewayClaims = ['name', 'playbook_name'] as const;
+const gatewayClaims = ['name', 'playbook_name', 'takes_answer'] as const;
 
 export const GatewaySchema = Schema.Struct({
   url: Schema.String.annotate({
@@ -19,7 +19,7 @@ export const GatewaySchema = Schema.Struct({
   claims: Schema.optionalKey(
     Schema.Array(Schema.Literals(gatewayClaims)).annotate({
       description:
-        "The display names the note may carry beside the ids: name, the person's, and playbook_name, the playbook's; ids alone where it is left out",
+        "What the note may carry beside the ids: name and playbook_name, the person's and the playbook's display names, and takes_answer, true on the note of a call that delivers a request, which takes an answer; ids alone where it is left out",
     }),
   ),
 }).annotate({

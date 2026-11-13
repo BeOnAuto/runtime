@@ -1,5 +1,5 @@
-import type { FetchLike } from '@modelcontextprotocol/client';
 import { unreadDocuments, type DocumentReading } from '@on.auto/documents';
+import type { CallMeta, FetchOfACall } from '@on.auto/operations';
 import { Result } from 'effect';
 
 import { unobserved, type CallSettled, type ServedClient } from '../clients/server-client.ts';
@@ -11,7 +11,7 @@ import { ArgumentsRefused } from './arguments-refused.ts';
 import type { DescribedApiSettings } from './described-api.ts';
 
 export interface ApiOpening {
-  readonly fetch: FetchLike;
+  readonly fetch: FetchOfACall;
   readonly tokens: TokenSource | undefined;
   readonly now: () => number;
   readonly documents?: DocumentReading | undefined;
@@ -29,6 +29,7 @@ async function authorizationOf(tokens: TokenSource | undefined): Promise<Readonl
 
 interface Sending {
   readonly endpoint: ApiEndpoint;
+  readonly meta: CallMeta;
   readonly opening: ApiOpening;
   readonly signal: Readonly<AbortSignal>;
   readonly settle: (response: Readonly<Response>) => Promise<CallSettled>;
@@ -39,15 +40,19 @@ function refusesTheCredential(settled: CallSettled): boolean {
 }
 
 async function settledCall(request: ApiRequest, sending: Sending, mintedAgain = false): Promise<CallSettled> {
-  const { endpoint, opening, signal, settle } = sending;
+  const { endpoint, meta, opening, signal, settle } = sending;
   const tokens = request.usesToken ? opening.tokens : undefined;
-  const response = await opening.fetch(request.url, {
-    method: request.method,
-    headers: { ...request.headers, ...(await authorizationOf(tokens)) },
-    body: request.body,
-    redirect: 'manual',
-    signal,
-  });
+  const response = await opening.fetch(
+    request.url,
+    {
+      method: request.method,
+      headers: { ...request.headers, ...(await authorizationOf(tokens)) },
+      body: request.body,
+      redirect: 'manual',
+      signal,
+    },
+    meta,
+  );
   const settled = await settle(response);
   if (tokens === undefined || mintedAgain || !refusesTheCredential(settled)) {
     return settled;
@@ -92,7 +97,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
   const answering = answeringOf(settings, opening);
   const { promise: closed, resolve } = Promise.withResolvers<void>();
   return {
-    call: async ({ tool, input, signal, timeoutMs }) => {
+    call: async ({ tool, input, meta, signal, timeoutMs }) => {
       const started = performance.now();
       const operation = operations.get(tool);
       if (operation === undefined) {
@@ -109,6 +114,7 @@ export function apiClient(settings: DescribedApiSettings, opening: ApiOpening): 
       try {
         return await settledCall(request.success, {
           endpoint,
+          meta,
           opening,
           signal,
           settle: (response) => settledOf(response, answering, operation.answers, file),

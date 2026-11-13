@@ -1,3 +1,5 @@
+import type { CallMeta } from '@on.auto/operations';
+
 import type { ServerMessage } from '../access/caller-context.ts';
 import type { CallsEndedBecause } from '../access/tool-server-failed.ts';
 import {
@@ -41,7 +43,7 @@ export interface CallReply extends ModelWords {
 
 export interface Replying {
   readonly server: string;
-  readonly meta: Readonly<Record<string, string>>;
+  readonly meta: CallMeta;
   readonly scrub: (text: string) => string;
   readonly report: (message: ServerMessage) => void;
 }
@@ -51,6 +53,11 @@ export interface Tallied<A> {
   readonly value: A;
 }
 
+function idIn(meta: CallMeta, key: string): string | null {
+  const id = meta[key];
+  return typeof id === 'string' ? id : null;
+}
+
 export function reportedFailure(done: Forwarded, replying: Replying): boolean {
   if (!countsAgainstTheRun(done.outcome)) {
     return false;
@@ -58,8 +65,8 @@ export function reportedFailure(done: Forwarded, replying: Replying): boolean {
   replying.report({
     server: replying.server,
     message: errorTextForOperator(done.message, replying.scrub),
-    run_id: replying.meta[runIdKey] ?? null,
-    call_id: replying.meta[callIdKey] ?? null,
+    run_id: idIn(replying.meta, runIdKey),
+    call_id: idIn(replying.meta, callIdKey),
   });
   return true;
 }

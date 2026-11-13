@@ -48,7 +48,7 @@ describe('a request delivered through a tool', () => {
         playbook: 'alpha',
         reference: { server: 'chat', tool: 'post_message' },
         input: { channel: '#approvals-ada', text: 'Please review the brief for Spring.' },
-        meta: { 'auto.on/run_id': askedRunId, 'auto.on/delivery_id': anyText },
+        meta: { 'auto.on/run_id': askedRunId, 'auto.on/delivery_id': anyText, 'auto.on/takes_answer': true },
       },
     ]);
     expect(await deliveryFacts(playbook)).toMatchObject([
@@ -67,6 +67,68 @@ describe('a request delivered through a tool', () => {
     ]);
     expect(await playbook.firstOpen()).toMatchObject({ attempts: 1, standing: 'delivered' });
     expect(tools.posted()).toMatchObject([{ channel: '#approvals-ada', text: 'Please review the brief for Spring.' }]);
+  });
+});
+
+const writingTheMark = (written: string) =>
+  replacingText(
+    chatDelivery,
+    "    text: '{{ message }}'",
+    [
+      "    text: '{{ message }}'",
+      `    'auto.on/takes_answer': ${written}`,
+      '    _meta:',
+      `      'auto.on/takes_answer': ${written}`,
+    ].join('\n'),
+  );
+
+describe('the metadata of a delivery', () => {
+  it('marks the delivery of a request, which takes an answer, on every attempt, beside its run and its delivery', async () => {
+    const { playbook, tools, askedAt } = await askedThroughChat();
+    tools.answerNext({
+      outcome: 'timed_out',
+      detail: 'The tool server did not answer within 30000 ms',
+      retryAfterMs: null,
+    });
+
+    await playbook.performDue(askedAt);
+    await playbook.performDue(Date.now() + 61_000);
+    const [first, second] = tools.calls().map(({ meta }) => meta);
+
+    expect(first).toEqual({
+      'auto.on/run_id': askedRunId,
+      'auto.on/delivery_id': anyText,
+      'auto.on/takes_answer': true,
+    });
+    expect(second).toEqual(first);
+  });
+
+  it('leaves the mark off the delivery of a notification, which takes no answer', async () => {
+    const { playbook, tools, askedAt } = await askedThroughChat({ notification: true });
+
+    await playbook.performDue(askedAt);
+
+    expect(tools.calls().map(({ meta }) => meta)).toEqual([
+      { 'auto.on/run_id': askedRunId, 'auto.on/delivery_id': anyText },
+    ]);
+  });
+
+  it('is never what the arguments say, so a notification cannot take the mark nor a request lose it', async () => {
+    const notified = await askedThroughChat({ notification: true, delivery: writingTheMark('true') });
+    const asked = await askedThroughChat({ delivery: writingTheMark('false') });
+
+    await notified.playbook.performDue(notified.askedAt);
+    await asked.playbook.performDue(asked.askedAt);
+    const [notifying] = notified.tools.calls();
+    const [asking] = asked.tools.calls();
+
+    expect(notifying?.meta).toEqual({ 'auto.on/run_id': askedRunId, 'auto.on/delivery_id': anyText });
+    expect(notifying?.input).toMatchObject({
+      'auto.on/takes_answer': true,
+      _meta: { 'auto.on/takes_answer': true },
+    });
+    expect(asking?.meta).toMatchObject({ 'auto.on/takes_answer': true });
+    expect(asking?.input).toMatchObject({ 'auto.on/takes_answer': false });
   });
 });
 

@@ -1,11 +1,11 @@
+import type { CallMeta } from '@on.auto/operations';
 import { Effect } from 'effect';
 
 import { recordingOf, type CallJournal, type KeepIn } from '../calls/recorded-calls.ts';
 import { journalledCall, type CallJournalling } from '../calls/tool-caller.ts';
-import type { ServerLink } from '../clients/server-links.ts';
 import type { Listing } from '../listing/server-listing.ts';
 import type { ToolReference } from '../names/tool-reference.ts';
-import type { OrgServer } from '../org-servers/org-servers.ts';
+import type { Linked, OrgServer } from '../org-servers/org-servers.ts';
 import { openedFor } from './call-opening.ts';
 import { answeredOnce, refusedOnce, tracedOnce, type CalledOnce } from './called-once.ts';
 import { notReadOnlyOnce } from './not-read-only.ts';
@@ -15,7 +15,7 @@ export interface OneCall {
   readonly playbook: string;
   readonly reference: ToolReference;
   readonly input: Readonly<Record<string, unknown>>;
-  readonly meta: Readonly<Record<string, string>>;
+  readonly meta: CallMeta;
   readonly longestRetryWaitMs?: number;
   readonly requiredMark?: 'reads';
 }
@@ -41,7 +41,9 @@ interface Calling {
 
 const notRecorded = 'The start of the call could not be recorded on its run, so the call was not sent';
 
-async function calledOnce(call: OneCall, link: ServerLink, { access, journalling, signal }: Calling) {
+type LinkedServer = Extract<Linked, { readonly link: unknown }>;
+
+async function calledOnce(call: OneCall, { link }: LinkedServer, { access, journalling, signal }: Calling) {
   const opened = await openedFor(call.reference, link, access);
   if ('kind' in opened) {
     return opened;
@@ -68,7 +70,7 @@ async function calledOnce(call: OneCall, link: ServerLink, { access, journalling
 
 async function linkedAndCalled(call: OneCall, server: OrgServer, calling: Calling): Promise<CalledOnce> {
   const linked = await server.linked();
-  return 'refused' in linked ? refusedOnce(linked.refused) : calledOnce(call, linked.link, calling);
+  return 'refused' in linked ? refusedOnce(linked.refused) : calledOnce(call, linked, calling);
 }
 
 type Awaiting = <A>(effect: Effect.Effect<A>) => Promise<A>;

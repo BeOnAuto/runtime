@@ -1,9 +1,9 @@
 import { renderClock, type RenderClock } from '@on.auto/definitions/template';
 import type { OneCall, StartedFields } from '@on.auto/tool-servers';
-import { deliveryIdKey, runIdKey } from '@on.auto/tool-servers/policy';
+import { deliveryIdKey, runIdKey, takesAnswerKey } from '@on.auto/tool-servers/policy';
 import { Effect, Result, type Schema } from 'effect';
 
-import type { DeliveringRecord } from '../run/request-record.ts';
+import { takesAnswer, type DeliveringRecord } from '../run/request-record.ts';
 import type { DeliveryParts, DueRequest } from '../schedule/delivery-parts.ts';
 import { recordedCall } from '../schedule/request-ledger.ts';
 import { deliveryArgumentsOf, undeliverableWords } from '../tool-blocks/delivery-arguments.ts';
@@ -36,14 +36,19 @@ function recordedStart(
   );
 }
 
+function deliveryMetaOf({ address, row }: DueRequest, record: DeliveringRecord): OneCall['meta'] {
+  const delivery = { [runIdKey]: address.id, [deliveryIdKey]: row.request_id };
+  return takesAnswer(record) ? { ...delivery, [takesAnswerKey]: true } : delivery;
+}
+
 function callOf({ request, record }: DeliveryPlan, input: OneCall['input']): OneCall {
-  const { address, row } = request;
+  const { address } = request;
   return {
     org: address.org,
     playbook: address.playbook,
     reference: { server: record.deliver.server, tool: record.deliver.tool },
     input,
-    meta: { [runIdKey]: address.id, [deliveryIdKey]: row.request_id },
+    meta: deliveryMetaOf(request, record),
   };
 }
 

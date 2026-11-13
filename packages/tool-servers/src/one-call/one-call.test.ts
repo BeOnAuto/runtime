@@ -81,6 +81,17 @@ describe('one call of a tool', () => {
   });
 });
 
+describe('the metadata of one call', () => {
+  it('carries the mark of a delivery that takes an answer in the _meta of the call, a boolean beside the ids', async () => {
+    const fake = await oneCallServer();
+    const meta = { ...echoCall.meta, 'auto.on/takes_answer': true };
+
+    await calledOnce(oneCallAccess(fake.url), { meta });
+
+    expect(fake.received()).toEqual([{ tool: 'echo', arguments: echoCall.input, meta }]);
+  });
+});
+
 describe('what one call answers of its tool', () => {
   it('answers the mark of the tool it listed, as its server marks it or as its entry marks it in place of its server', async () => {
     const fake = await oneCallServer();

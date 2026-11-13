@@ -1,10 +1,12 @@
+import type { CallMeta } from '@on.auto/operations';
+
 import type { ListedTool, ServedTool, ToolResult } from '../bounds/tool-results.ts';
 import type { Observed } from './observed-requests.ts';
 
-interface ToolCalling {
+export interface ToolCalling {
   readonly tool: string;
   readonly input: Readonly<Record<string, unknown>>;
-  readonly meta: Readonly<Record<string, string>>;
+  readonly meta: CallMeta;
   readonly signal: Readonly<AbortSignal>;
   readonly timeoutMs: number;
 }

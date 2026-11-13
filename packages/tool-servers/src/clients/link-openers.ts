@@ -1,4 +1,4 @@
-import type { FetchLike } from '@modelcontextprotocol/client';
+import type { FetchOfACall } from '@on.auto/operations';
 
 import type { Timing } from '../bounds/call-bounds.ts';
 import type { Secrets } from '../bounds/secrets.ts';
@@ -19,7 +19,7 @@ import { tokenSource, type ConsentTokenSources, type Discovery, type TokenSource
 
 export interface LinkOptions {
   readonly clientInfo: ClientInfo;
-  readonly fetch: FetchLike;
+  readonly fetch: FetchOfACall;
   readonly consent: ConsentTokenSources;
   readonly secrets: Secrets;
   readonly now: () => number;
