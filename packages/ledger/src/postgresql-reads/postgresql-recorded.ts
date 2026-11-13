@@ -19,13 +19,14 @@ import {
   nowOf,
   pointKey,
   recordOf,
-  recordedReadingOver,
+  recordedReadsOver,
   type ExaminationScope,
   type ExaminedItem,
+  type Keys,
   type RecordedStatements,
   type RecordsSelected,
 } from '../recorded/recorded-statements.ts';
-import { playbookKeyOfStream, correlationOfMessage } from './playbook-indexes.ts';
+import { playbookKeyOfStream, correlationOfMessage, orgOfStream } from './playbook-indexes.ts';
 import { postgresqlDefinitionStreams } from './postgresql-definition-streams.ts';
 import { examineRuns } from './postgresql-runs.ts';
 import {
@@ -38,6 +39,7 @@ import {
   horizonOf,
   lineageColumns,
   matchedThroughItsIndex,
+  ofTheKeys,
   ofTypes,
   PointFields,
   sizedTypesOf,
@@ -76,32 +78,54 @@ interface Keyed {
   readonly value: string;
 }
 
-function recordsWhere(keys: readonly Keyed[], records: RecordsScope): string {
+function recordsWhere(
+  keys: readonly Keyed[],
+  records: RecordsScope,
+  besides: (bind: Bind) => string = () => '',
+): string {
   const matched = keys.map(({ key, value }) => matchedThroughItsIndex(records.bind, key, value)).join(' AND ');
+  const kept = besides(records.bind);
   const ordered = keys.map(({ key }) => `${key} ${direction(records.scope)}`).join(', ');
   return `SELECT transaction_id, global_position, transaction_id::text AS transaction, global_position::text AS position,
       stream_id AS stream, stream_position::int AS version, message_type AS type, ${timeOf('created')} AS recorded,
       ${lineageColumns}, ${records.wanted} AS wanted, message_data
     FROM emt_messages
-    WHERE ${matched} AND partition = ${records.partition}
+    WHERE ${matched}${kept} AND partition = ${records.partition}
       AND is_archived = FALSE${records.horizon}${records.bounded}
     ORDER BY ${ordered}, ${inOrder(records)}
     LIMIT ${records.limit}`;
 }
 
+function mergedInOrder(terms: readonly string[], records: RecordsScope): string {
+  const [only, ...more] = terms;
+  return more.length === 0 && only !== undefined
+    ? only
+    : `${terms.map((term) => `(${term})`).join(' UNION ALL ')} ORDER BY ${inOrder(records)} LIMIT ${records.limit}`;
+}
+
+function ofEachStream(streams: readonly string[], records: RecordsScope): string {
+  return `${streams.map((stream) => `(${recordsWhere([{ key: isAKind(stream) ? playbookKeyOfStream : 'stream_id', value: stream }], records)})`).join(' UNION ALL ')} ORDER BY ${inOrder(records)} LIMIT ${records.limit}`;
+}
+
 function recordsIn(selected: RecordsSelected, records: RecordsScope): string {
-  if (selected.kind === 'playbook') {
-    return recordsWhere([{ key: playbookKeyOfStream, value: selected.playbookKey }], records);
+  if (selected.kind === 'keys') {
+    return mergedInOrder(
+      selected.keys.map((key) => recordsWhere([{ key: playbookKeyOfStream, value: key }], records)),
+      records,
+    );
+  }
+  if (selected.kind === 'run') {
+    return ofEachStream(selected.streams, records);
   }
   if (selected.kind === 'correlated') {
-    const playbook = { key: playbookKeyOfStream, value: selected.playbookKey };
-    return recordsWhere([playbook, { key: correlationOfMessage, value: selected.correlation }], records);
+    const org = { key: orgOfStream, value: selected.org };
+    return recordsWhere(
+      [org, { key: correlationOfMessage, value: selected.correlation }],
+      records,
+      (bind) => ` AND ${ofTheKeys(bind, selected.keys)}`,
+    );
   }
-  const ofEachStream = selected.streams.map(
-    (stream) =>
-      `(${recordsWhere([{ key: isAKind(stream) ? playbookKeyOfStream : 'stream_id', value: stream }], records)})`,
-  );
-  return `${ofEachStream.join(' UNION ALL ')} ORDER BY ${inOrder(records)} LIMIT ${records.limit}`;
+  return ofEachStream(selected.streams, records);
 }
 
 function examineRecords(query: Query): RecordedStatements['examineRecords'] {
@@ -143,15 +167,28 @@ function examineRecords(query: Query): RecordedStatements['examineRecords'] {
   };
 }
 
+function firstSinceOf(bind: Bind, key: string, since: string): string {
+  return `SELECT created, transaction_id, global_position FROM emt_messages
+    WHERE ${playbookKeyOfStream} = ${bind(key)} AND partition = ${bind(defaultPartition)}
+      AND is_archived = FALSE AND created >= ${bind(since)}::timestamptz
+    ORDER BY created, transaction_id, global_position
+    LIMIT 1`;
+}
+
+function firstSinceOfEach(bind: Bind, [only, ...more]: Keys, since: string): string {
+  if (more.length === 0) {
+    return firstSinceOf(bind, only, since);
+  }
+  const terms = [only, ...more].map((key) => `(${firstSinceOf(bind, key, since)})`);
+  return `${terms.join(' UNION ALL ')} ORDER BY created, transaction_id, global_position LIMIT 1`;
+}
+
 function firstPointSince(query: Query): RecordedStatements['firstPointSince'] {
-  return async (playbookKey, since) => {
+  return async (keys, since) => {
     const { values, bind } = binding();
     const rows = await query(
-      `SELECT transaction_id::text AS transaction, global_position::text AS position FROM emt_messages
-        WHERE ${playbookKeyOfStream} = ${bind(playbookKey)} AND partition = ${bind(defaultPartition)}
-          AND is_archived = FALSE AND created >= ${bind(since)}::timestamptz
-        ORDER BY created, transaction_id, global_position
-        LIMIT 1`,
+      `SELECT transaction_id::text AS transaction, global_position::text AS position
+        FROM (${firstSinceOfEach(bind, keys, since)}) AS first`,
       values,
     );
     return Schema.decodeUnknownSync(PointRows)(rows)
@@ -181,19 +218,20 @@ function dataAt(query: Query): RecordedStatements['dataAt'] {
   };
 }
 
-function recordWithId(query: Query): RecordedStore['readRecordedEvent'] {
-  return async (playbookKey, id) => {
+function recordWithId(query: Query): RecordedStore['readRecordedEventOfKeys'] {
+  return async ({ org, keys }, id) => {
     const { values, bind } = binding();
     const rows = await query(
       `WITH found AS MATERIALIZED (
           SELECT * FROM emt_messages
-          WHERE message_id = ${bind(id)} AND partition = ${bind(defaultPartition)} AND is_archived = FALSE
+          WHERE ${orgOfStream} = ${bind(org)} AND message_id = ${bind(id)} AND partition = ${bind(defaultPartition)}
+            AND is_archived = FALSE
         )
         SELECT transaction_id::text AS transaction, global_position::text AS position, stream_id AS stream,
           stream_position::int AS version, message_type AS type, ${timeOf('created')} AS recorded, ${lineageColumns},
           0 AS size, message_data AS data
         FROM found
-        WHERE ${playbookKeyOfStream} = ${bind(playbookKey)}
+        WHERE ${playbookKeyOfStream} = ANY(${bind(keys)}::text[])
         LIMIT 1`,
       values,
     );
@@ -223,8 +261,7 @@ export function postgresqlRecordedStore(
     ...postgresqlDefinitionStreams(query),
     ...appended,
     pointLength: 2,
-    readRecordedEvent: recordWithId(query),
-    readRecorded: recordedReadingOver(statements),
+    ...recordedReadsOver(statements, recordWithId(query)),
     readAppendedFacts: appendedFactsOver(statements, nowOf(appended.readAppended)),
   };
 }

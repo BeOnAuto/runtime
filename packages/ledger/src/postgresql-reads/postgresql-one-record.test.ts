@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { orgOfStream } from './playbook-indexes.ts';
 import { postgresqlRecordedStore, type Query } from './postgresql-recorded.ts';
 
 interface Asked {
@@ -39,7 +40,7 @@ const storedRow = {
 };
 
 describe('one record read by its message id on PostgreSQL', () => {
-  it('reads the record through the index on the message id, within the playbook, with its data and its context', async () => {
+  it('reads the record through the index on the org and the message id, within the playbook, with its data and its context', async () => {
     const { query, asked } = answering([storedRow]);
 
     const record = await postgresqlRecordedStore(query).readRecordedEvent(alpha, 'message-21');
@@ -52,8 +53,9 @@ describe('one record read by its message id on PostgreSQL', () => {
       data: { input: {} },
       metadata: { context },
     });
-    expect(asked[0]?.text).toContain('WHERE message_id = $1');
-    expect(asked[0]?.values).toEqual(['message-21', 'emt:default', alpha]);
+    expect(asked[0]?.text).toContain(`WHERE ${orgOfStream} = $1 AND message_id = $2 AND partition = $3`);
+    expect(asked[0]?.text).toContain("WHERE substring(stream_id FROM '^(?:[^/]*/){3}') = ANY($4::text[])");
+    expect(asked[0]?.values).toEqual(['acme', 'message-21', 'emt:default', [alpha]]);
   });
 
   it('reads nothing for an id the playbook does not hold', async () => {

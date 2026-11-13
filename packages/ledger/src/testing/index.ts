@@ -7,6 +7,7 @@ export { appendsWithStatementsOnStoresBehaviour } from '../connection/appends-wi
 export { measuredRiddenAppendsBehaviour } from '../connection/measured-ridden-appends-behaviour.ts';
 export { keptSecretsBehaviour, type KeptSecretsEntry } from '../secrets/kept-secrets-behaviour.ts';
 export { receivedWebhooksBehaviour } from '../webhooks/received-webhooks-behaviour.ts';
+export { definitionNamesBehaviour, type DefinitionNamesEntry } from '../definition-names/definition-names-behaviour.ts';
 export { earlierShapesBehaviour } from '../recorded-facts/earlier-shapes-behaviour.ts';
 export { knownFactsBehaviour } from '../layout/known-facts-behaviour.ts';
 export { ledgerStepsBehaviour } from '../layout/ledger-steps-behaviour.ts';

@@ -2,7 +2,8 @@ import { SQL } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
 import type { RecordedPoint } from '../event-store.ts';
-import { readMetadataOf, type ExaminationScope, type RecordHead } from './recorded-statements.ts';
+import { readMetadataOf } from './recorded-messages.ts';
+import type { ExaminationScope, Keys, RecordHead } from './recorded-statements.ts';
 
 export const defaultPartition = 'emt:default';
 
@@ -101,6 +102,35 @@ export function bounds(scope: ExaminationScope): SQL {
     scope.from === undefined ? SQL.EMPTY : SQL` AND global_position >= ${positionOf(scope.from)}`,
     scope.to === undefined ? SQL.EMPTY : SQL` AND global_position <= ${positionOf(scope.to)}`,
   );
+}
+
+export function listed(values: readonly string[]): SQL {
+  return SQL`(SELECT value FROM json_each(${JSON.stringify(values)}))`;
+}
+
+type Matched = (each: SQL) => SQL;
+
+export function eachWalkedInTurn(each: Keys, walk: Matched): SQL {
+  return SQL`global_position IN (
+      SELECT walked.global_position FROM json_each(${JSON.stringify(each)}) AS keyed
+      JOIN emt_messages AS walked ON walked.global_position IN (${walk(SQL`keyed.value`)})
+    )`;
+}
+
+export function oneOrEachInTurn(each: Keys, matched: Matched, walk: Matched): SQL {
+  const [only, ...more] = each;
+  return more.length === 0 ? matched(SQL`${only}`) : eachWalkedInTurn(each, (one) => walk(matched(one)));
+}
+
+export function walkedInTheOrderOf(scope: ExaminationScope): Matched {
+  return (matched) => SQL`SELECT global_position FROM emt_messages
+    WHERE ${matched}${keptOf(scope)}
+    ORDER BY global_position ${direction(scope)}
+    LIMIT ${scope.examineAtMost + 1}`;
+}
+
+function keptOf(scope: ExaminationScope): SQL {
+  return SQL` AND partition = ${defaultPartition} AND is_archived = FALSE${bounds(scope)}`;
 }
 
 export function ofTypes(column: string, types: readonly string[] | undefined): SQL {

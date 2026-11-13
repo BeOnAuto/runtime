@@ -8,14 +8,14 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import { sqliteEventStore } from '../sqlite-event-store.ts';
 import { temporaryDatabase } from '../testing/temporary-database.ts';
 import type { IndexExecutor } from './missing-indexes.ts';
-import { createSQLitePlaybookIndexes } from './sqlite-indexes.ts';
+import { createSQLitePlaybookIndexes, orgOfStream } from './sqlite-indexes.ts';
 
 const playbookIndexes = [
   'ledger_definition_streams',
   'ledger_first_messages_by_kind',
-  'ledger_messages_by_id',
+  'ledger_messages_by_org_and_correlation',
+  'ledger_messages_by_org_and_id',
   'ledger_messages_by_playbook',
-  'ledger_messages_by_playbook_and_correlation',
   'ledger_messages_by_playbook_and_time',
   'ledger_messages_by_stream',
 ];
@@ -127,7 +127,7 @@ describe('an event store on SQLite given hooks of its own', () => {
 });
 
 describe('the read of one message by its id on SQLite', () => {
-  it('walks the index on the message id', async () => {
+  it('walks the index on the org and the message id', async () => {
     const fileName = aDatabaseFile();
     await migratedOnce(fileName);
     const database = new DatabaseSync(fileName, { readOnly: true });
@@ -137,11 +137,15 @@ describe('the read of one message by its id on SQLite', () => {
 
     const plan = database
       .prepare(
-        "EXPLAIN QUERY PLAN SELECT global_position FROM emt_messages WHERE message_id = 'id' AND partition = 'emt:default'",
+        SQL.describe(
+          SQL`EXPLAIN QUERY PLAN SELECT global_position FROM emt_messages
+            WHERE ${orgOfStream} = 'acme' AND message_id = 'id' AND partition = 'emt:default'`,
+          sqliteFormatter,
+        ),
       )
       .all()
       .map((row: Readonly<Record<string, unknown>>) => String(row['detail']));
 
-    expect(plan.join(' ')).toContain('USING INDEX ledger_messages_by_id');
+    expect(plan.join(' ')).toContain('USING INDEX ledger_messages_by_org_and_id');
   });
 });

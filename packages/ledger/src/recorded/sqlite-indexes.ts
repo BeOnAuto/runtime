@@ -17,6 +17,14 @@ export const playbookKeyOfStream = SQL.plain(playbookKeyText);
 
 export const kindKeyOfStream = SQL.plain(prefixThroughSlashes(4));
 
+const firstSlash = "instr(stream_id, '/')";
+
+const secondSlashAfterTheFirst = `instr(substr(stream_id, ${firstSlash} + 1), '/')`;
+
+export const orgOfStream = SQL.plain(
+  `CASE WHEN ${firstSlash} > 0 AND ${secondSlashAfterTheFirst} > 0 THEN substr(stream_id, ${firstSlash} + 1, ${secondSlashAfterTheFirst} - 1) END`,
+);
+
 const definitionsKind = 'definitions/';
 
 export const definitionTypeOfStream = SQL.plain(
@@ -60,9 +68,9 @@ const playbookIndexes: readonly PlaybookIndex[] = [
       ON emt_messages (${kindKeyOfStream}, global_position) WHERE stream_position = 1`,
   },
   {
-    name: 'ledger_messages_by_playbook_and_correlation',
-    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_playbook_and_correlation
-      ON emt_messages (${playbookKeyOfStream}, ${correlationOfMessage}, global_position)`,
+    name: 'ledger_messages_by_org_and_correlation',
+    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_correlation
+      ON emt_messages (${orgOfStream}, ${correlationOfMessage}, global_position)`,
   },
   {
     name: 'ledger_definition_streams',
@@ -70,8 +78,9 @@ const playbookIndexes: readonly PlaybookIndex[] = [
       ON emt_streams (${definitionTypeOfStream}) WHERE ${definitionTypeOfStream} IS NOT NULL`,
   },
   {
-    name: 'ledger_messages_by_id',
-    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_id ON emt_messages (message_id)`,
+    name: 'ledger_messages_by_org_and_id',
+    create: () =>
+      SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_id ON emt_messages (${orgOfStream}, message_id)`,
   },
 ];
 

@@ -49,6 +49,7 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
     factSchemas,
     floor,
     mostBytesFilledAtOnce,
+    definitionNames,
     appends,
     content,
   } = options;
@@ -61,6 +62,7 @@ export function sqliteLedgerLayer<Driver extends AnyDriver>(
     factSchemas,
     floor,
     mostBytesFilledAtOnce,
+    definitionNames,
   };
   return Layer.unwrap(
     Effect.map(Effect.context(), (context) => {

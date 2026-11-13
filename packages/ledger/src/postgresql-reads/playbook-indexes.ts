@@ -7,6 +7,9 @@ export const playbookKeyOfStream = "substring(stream_id FROM '^(?:[^/]*/){3}')";
 
 export const kindKeyOfStream = "substring(stream_id FROM '^(?:[^/]*/){4}')";
 
+export const orgOfStream =
+  "CASE WHEN strpos(substr(stream_id, strpos(stream_id, '/') + 1), '/') > 0 THEN split_part(stream_id, '/', 2) END";
+
 export const correlationOfMessage = "(message_metadata ->> 'correlationId')";
 
 export interface MessageColumns {
@@ -54,9 +57,9 @@ const playbookIndexes: readonly PlaybookIndex[] = [
       ON emt_messages ((${SQL.plain(kindKeyOfStream)}), stream_position, transaction_id, global_position)`,
   },
   {
-    name: 'ledger_messages_by_playbook_and_correlation',
-    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_playbook_and_correlation
-      ON emt_messages ((${playbookKey}), ${SQL.plain(correlationOfMessage)}, transaction_id, global_position)`,
+    name: 'ledger_messages_by_org_and_correlation',
+    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_correlation
+      ON emt_messages ((${SQL.plain(orgOfStream)}), ${SQL.plain(correlationOfMessage)}, transaction_id, global_position)`,
   },
   {
     name: 'ledger_definition_streams',
@@ -64,8 +67,9 @@ const playbookIndexes: readonly PlaybookIndex[] = [
       ON emt_streams ((${SQL.plain(definitionTypeOfStream)})) WHERE (${SQL.plain(definitionTypeOfStream)}) IS NOT NULL`,
   },
   {
-    name: 'ledger_messages_by_id',
-    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_id ON emt_messages (message_id)`,
+    name: 'ledger_messages_by_org_and_id',
+    create: () => SQL`CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_id
+      ON emt_messages ((${SQL.plain(orgOfStream)}), message_id)`,
   },
 ];
 

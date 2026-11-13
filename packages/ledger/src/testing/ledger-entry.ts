@@ -47,6 +47,7 @@ export interface LedgerEntry {
   readonly statementPlanOf: (database: string, statement: Parameters<StatementExecutor['query']>[0]) => Promise<string>;
   readonly throughTheKindIndex: string;
   readonly throughTheIdIndex: string;
+  readonly throughTheTreeIndex: string;
   readonly throughTheExpiringIndex: string;
   readonly stepsOfAScanOrASort: readonly string[];
   readonly throughTheUploadIndex: string;

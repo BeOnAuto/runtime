@@ -1,4 +1,11 @@
-import { checkedContext, recordingOf, type Context, type Decided, type Recorded } from '@on.auto/operations';
+import {
+  checkedContext,
+  recordingOf,
+  type Conflict,
+  type Context,
+  type Decided,
+  type Recorded,
+} from '@on.auto/operations';
 import { Effect, type Schema } from 'effect';
 
 import { measuredWhole, payloadsDeclaredBy } from './appends/payloads-declared.ts';
@@ -6,6 +13,7 @@ import type { ConnectionPorts } from './connection/ledger-connection.ts';
 import type { Statement } from './connection/statement.ts';
 import { eventCodecOf } from './event-codec.ts';
 import type { AppendPlace, EncodedEvent, Streams } from './event-store.ts';
+import { conflictOfARefusal } from './refusals/append-refused.ts';
 import { isVersionConflict, VersionConflict } from './version-conflict.ts';
 
 export type EventAppender<Event extends Recorded> = (
@@ -21,6 +29,12 @@ export type EventAppenderWith<Event extends Recorded> = (
   statements: readonly Statement[],
 ) => Effect.Effect<void, VersionConflict>;
 
+type RefusableAppender<Event extends Recorded> = (
+  stream: string,
+  events: readonly Decided<Event>[],
+  place: AppendPlace,
+) => Effect.Effect<void, VersionConflict | Conflict>;
+
 type Appended = (encoded: readonly EncodedEvent[], place: AppendPlace) => Promise<void>;
 
 type Appending<Event extends Recorded> = (
@@ -28,7 +42,7 @@ type Appending<Event extends Recorded> = (
   events: readonly Decided<Event>[],
   place: AppendPlace,
   appended: Appended,
-) => Effect.Effect<void, VersionConflict>;
+) => Effect.Effect<void, VersionConflict | Conflict>;
 
 type EventAsAppended<Event extends Recorded> = (event: Decided<Event>, context: Context) => Effect.Effect<EncodedEvent>;
 
@@ -43,6 +57,14 @@ function eventAsAppendedOf<Event extends Recorded>(
       Effect.flatMap(encode),
       Effect.map((encoded) => measuredWhole(declared, encoded)),
     );
+}
+
+function failedAppendOf(error: unknown): Effect.Effect<never, VersionConflict | Conflict> {
+  if (isVersionConflict(error)) {
+    return Effect.fail(new VersionConflict());
+  }
+  const refused = conflictOfARefusal(error);
+  return refused === undefined ? Effect.die(error) : Effect.fail(refused);
 }
 
 function appendingOf<Event extends Recorded>(
@@ -67,18 +89,26 @@ function appendingOf<Event extends Recorded>(
           ),
         ),
       ),
-      Effect.catch((error) => (isVersionConflict(error) ? Effect.fail(new VersionConflict()) : Effect.die(error))),
+      Effect.catch(failedAppendOf),
     );
   };
+}
+
+export function refusableAppenderOf<Event extends Recorded>(
+  store: Pick<Streams, 'mostEventsInOneAppend' | 'append'>,
+  eventSchema: Schema.ConstraintCodec<Event, unknown>,
+): RefusableAppender<Event> {
+  const appending = appendingOf(store.mostEventsInOneAppend, eventSchema);
+  return (stream, events, place) =>
+    appending(stream, events, place, (encoded, placed) => store.append(stream, encoded, placed));
 }
 
 export function eventAppenderOf<Event extends Recorded>(
   store: Pick<Streams, 'mostEventsInOneAppend' | 'append'>,
   eventSchema: Schema.ConstraintCodec<Event, unknown>,
 ): EventAppender<Event> {
-  const appending = appendingOf(store.mostEventsInOneAppend, eventSchema);
-  return (stream, events, place) =>
-    appending(stream, events, place, (encoded, placed) => store.append(stream, encoded, placed));
+  const append = refusableAppenderOf(store, eventSchema);
+  return (stream, events, place) => append(stream, events, place).pipe(Effect.catchTag('conflict', Effect.die));
 }
 
 export function eventAppenderWithOf<Event extends Recorded>(
@@ -87,5 +117,7 @@ export function eventAppenderWithOf<Event extends Recorded>(
 ): EventAppenderWith<Event> {
   const appending = appendingOf(streams.mostEventsInOneAppend, eventSchema);
   return (stream, events, place, statements) =>
-    appending(stream, events, place, (encoded, placed) => appendWith(stream, encoded, placed, statements));
+    appending(stream, events, place, (encoded, placed) => appendWith(stream, encoded, placed, statements)).pipe(
+      Effect.catchTag('conflict', Effect.die),
+    );
 }

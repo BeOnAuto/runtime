@@ -8,6 +8,7 @@ import { postgresqlRecordedStore } from '../postgresql-reads/postgresql-recorded
 import { databaseStructureBehaviour } from '../structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  definitionNamesBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
   factScrubOnStoresBehaviour,
@@ -136,6 +137,11 @@ function reportLostConnection(error: Readonly<Error>): void {
   lostConnections.push(error);
 }
 
+const theOrgInAPlan =
+  "CASE WHEN (strpos(substr(stream_id, (strpos(stream_id, '/'::text) + 1)), '/'::text) > 0) THEN split_part(stream_id, '/'::text, 2) ELSE NULL::text END";
+
+const throughTheTreeIndex = `Index Cond: ((${theOrgInAPlan} = ANY ('{acme}'::text[])) AND ((message_metadata ->> 'correlationId'::text) = ANY ('{r1}'::text[])))`;
+
 const onPostgreSQL: LedgerEntry = {
   mostEventsInOneAppend: 64,
   afterClosing: 'Cannot use a pool after calling end on the pool',
@@ -162,7 +168,8 @@ const onPostgreSQL: LedgerEntry = {
   planOf,
   statementPlanOf,
   throughTheKindIndex: `Index Cond: (("substring"(stream_id, '^(?:[^/]*/){4}'::text) = ANY`,
-  throughTheIdIndex: 'Index Cond: (message_id = ',
+  throughTheIdIndex: `Index Cond: ((${theOrgInAPlan} = 'acme'::text) AND (message_id = `,
+  throughTheTreeIndex,
   throughTheExpiringIndex: 'recorded_content_heads_expiring',
   stepsOfAScanOrASort: ['Seq Scan', 'Sort'],
   throughTheUploadIndex: 'Index Scan using recorded_content_heads_by_upload',
@@ -202,6 +209,11 @@ describe.skipIf(skipped)(`The ledger on PostgreSQL${notice}`, () => {
     ...onPostgreSQL,
     receivedWebhooksOn: (database) => postgresqlReceivedWebhooks({ pools: plainPoolsOn(database) }),
   });
+  definitionNamesBehaviour({
+    ...onPostgreSQL,
+    storeKeepingNames: (database, definitionNames) =>
+      postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection, definitionNames }).store,
+  });
 });
 
 describe.skipIf(skipped)(`A ledger on PostgreSQL given a floor of its own${notice}`, () => {
@@ -222,5 +234,38 @@ describe.skipIf(skipped)(`A ledger on PostgreSQL given a floor of its own${notic
       found: ledgerLayoutFloor,
       floor: ledgerLayoutFloor + 1,
     });
+  });
+});
+
+const ofTwoKeys = { org: 'acme', keys: ['playbook/acme/alpha/', 'definition/acme/triage/'] } as const;
+
+const throughTheKeyIndex = `Index Cond: ("substring"(stream_id, '^(?:[^/]*/){3}'::text) = ANY`;
+
+const throughTheKindIndex = `Index Cond: (("substring"(stream_id, '^(?:[^/]*/){4}'::text) = ANY`;
+
+function timesIn(plan: string, step: string): number {
+  return plan.split(step).length - 1;
+}
+
+describe.skipIf(skipped)(`The plans of the reads over keys on PostgreSQL${notice}`, () => {
+  it("walk each key asked through the key's index, and the tree of a run through the org's index", async () => {
+    const database = await aDatabase();
+    const { store } = postgresqlLedgerOpened({ pools: plainPoolsOn(database), reportLostConnection });
+    await store.migrate();
+    await store.close();
+
+    const everything = await planOf(database, (read) =>
+      read.readRecordedOfKeys(ofTwoKeys, { kind: 'everything' }, { order: 'desc', limit: 5 }),
+    );
+    const runs = await planOf(database, (read) =>
+      read.readRecordedOfKeys(ofTwoKeys, { kind: 'runs' }, { order: 'desc', limit: 5 }),
+    );
+    const tree = await planOf(database, (read) =>
+      read.readRecordedOfKeys(ofTwoKeys, { kind: 'correlated', correlation: 'r1' }, { order: 'desc', limit: 5 }),
+    );
+
+    expect(timesIn(everything, throughTheKeyIndex)).toBe(2);
+    expect(timesIn(runs, throughTheKindIndex)).toBe(2);
+    expect(tree).toContain(throughTheTreeIndex);
   });
 });

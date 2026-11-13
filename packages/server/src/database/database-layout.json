@@ -1,5 +1,5 @@
 {
-  "layout": 21,
+  "layout": 22,
   "catalog": [
     {
       "name": "activity_1",
@@ -102,6 +102,14 @@
       "sql": "CREATE INDEX conversations_4_due ON conversations_4 (due_at) WHERE due_at IS NOT NULL"
     },
     {
+      "name": "definition_names_1",
+      "sql": "CREATE TABLE definition_names_1 (playbook_key TEXT NOT NULL, definition_type TEXT NOT NULL, name TEXT NOT NULL, definition_key TEXT NOT NULL, status TEXT NOT NULL, has_triggers BOOLEAN NOT NULL, PRIMARY KEY (playbook_key, definition_type, name))"
+    },
+    {
+      "name": "definition_names_1_by_definition",
+      "sql": "CREATE UNIQUE INDEX definition_names_1_by_definition ON definition_names_1 (definition_key)"
+    },
+    {
       "name": "definition_references_1",
       "sql": "CREATE TABLE definition_references_1 (playbook_key TEXT NOT NULL, row_key TEXT NOT NULL, child_key TEXT NOT NULL, user_type TEXT, user_name TEXT, used_type TEXT, used_name TEXT, relation TEXT, places TEXT, PRIMARY KEY (playbook_key, row_key, child_key))"
     },
@@ -154,16 +162,16 @@
       "sql": "CREATE TABLE ledger_layout (one_row BOOLEAN NOT NULL PRIMARY KEY DEFAULT TRUE CHECK (one_row), layout INTEGER NOT NULL)"
     },
     {
-      "name": "ledger_messages_by_id",
-      "sql": "CREATE INDEX ledger_messages_by_id ON emt_messages (message_id)"
+      "name": "ledger_messages_by_org_and_correlation",
+      "sql": "CREATE INDEX ledger_messages_by_org_and_correlation ON emt_messages (CASE WHEN instr(stream_id, '/') > 0 AND instr(substr(stream_id, instr(stream_id, '/') + 1), '/') > 0 THEN substr(stream_id, instr(stream_id, '/') + 1, instr(substr(stream_id, instr(stream_id, '/') + 1), '/') - 1) END, json_extract(message_metadata, '$.correlationId'), global_position)"
+    },
+    {
+      "name": "ledger_messages_by_org_and_id",
+      "sql": "CREATE INDEX ledger_messages_by_org_and_id ON emt_messages (CASE WHEN instr(stream_id, '/') > 0 AND instr(substr(stream_id, instr(stream_id, '/') + 1), '/') > 0 THEN substr(stream_id, instr(stream_id, '/') + 1, instr(substr(stream_id, instr(stream_id, '/') + 1), '/') - 1) END, message_id)"
     },
     {
       "name": "ledger_messages_by_playbook",
       "sql": "CREATE INDEX ledger_messages_by_playbook ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), global_position)"
-    },
-    {
-      "name": "ledger_messages_by_playbook_and_correlation",
-      "sql": "CREATE INDEX ledger_messages_by_playbook_and_correlation ON emt_messages (substr(stream_id, 1, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + instr(substr(stream_id, instr(stream_id, '/') + instr(substr(stream_id, instr(stream_id, '/') + 1), '/') + 1), '/')), json_extract(message_metadata, '$.correlationId'), global_position)"
     },
     {
       "name": "ledger_messages_by_playbook_and_time",

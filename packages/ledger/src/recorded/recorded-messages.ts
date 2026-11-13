@@ -1,5 +1,32 @@
-import type { RecordedMessage } from '../event-store.ts';
-import { readMetadataOf } from './recorded-statements.ts';
+import { contextOf } from '@on.auto/operations';
+import { Schema } from 'effect';
+
+import type { RecordedMessage, StoredMetadata } from '../event-store.ts';
+
+const TraceSchema = Schema.Struct({
+  causationId: Schema.optionalKey(Schema.NullOr(Schema.String)),
+  traceId: Schema.optionalKey(Schema.String),
+  spanId: Schema.optionalKey(Schema.String),
+});
+
+const decodeTrace = Schema.decodeUnknownSync(TraceSchema);
+
+export interface ReadMetadata {
+  readonly causationId: string | null;
+  readonly metadata: StoredMetadata;
+}
+
+export function readMetadataOf(stored: unknown): ReadMetadata {
+  const { causationId = null, traceId, spanId } = decodeTrace(stored);
+  return {
+    causationId,
+    metadata: {
+      context: contextOf(stored),
+      ...(traceId === undefined ? {} : { traceId }),
+      ...(spanId === undefined ? {} : { spanId }),
+    },
+  };
+}
 
 export interface MessageRow {
   readonly type: string;

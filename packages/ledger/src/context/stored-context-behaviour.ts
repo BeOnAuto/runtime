@@ -87,8 +87,8 @@ function thePlaceOfEachRecord(entry: LedgerEntry): void {
 }
 
 function thePlansOfTheReads(entry: LedgerEntry): void {
-  describe('the plans of the reads a definition filter and an event id make', () => {
-    it('walk the index of first messages by kind for the runs of one definition, and the index on the message id for one event', async () => {
+  describe("the plans of the reads a definition filter, an event id and a run's tree make", () => {
+    it("walk the index of first messages by kind for the runs of one definition, the org's index on the message id for one event, and the org's index of the correlation for the tree of a run", async () => {
       const database = await entry.aDatabase();
       await aLedger(entry, database);
       const playbookKey = 'playbook/acme/alpha/';
@@ -104,9 +104,13 @@ function thePlansOfTheReads(entry: LedgerEntry): void {
         ),
       );
       const ofOneEvent = await entry.planOf(database, (store) => store.readRecordedEvent(playbookKey, 'message-1'));
+      const ofOneTree = await entry.planOf(database, (store) =>
+        store.readRecorded(playbookKey, { kind: 'correlated', correlation: 'r1' }, { order: 'desc', limit: 5 }),
+      );
 
       expect(ofOneDefinition).toContain(entry.throughTheKindIndex);
       expect(ofOneEvent).toContain(entry.throughTheIdIndex);
+      expect(ofOneTree).toContain(entry.throughTheTreeIndex);
     });
   });
 }

@@ -6,6 +6,8 @@ export const definitionStreamsPlan = {
   throughTheIndex: `Index Cond: ("substring"(stream_id, '^(?:[^/]*/){3}definitions/([^/]+)$'::text) = `,
 };
 
+const theOrgOfAStream = `(\nCASE\n    WHEN (strpos(substr(stream_id, (strpos(stream_id, '/'::text) + 1)), '/'::text) > 0) THEN split_part(stream_id, '/'::text, 2)\n    ELSE NULL::text\nEND)`;
+
 export const thePlaybookIndexes = [
   {
     indexname: 'ledger_definition_streams',
@@ -16,16 +18,16 @@ export const thePlaybookIndexes = [
     indexdef: `CREATE INDEX ledger_first_messages_by_kind ON ONLY public.emt_messages USING btree ("substring"(stream_id, '^(?:[^/]*/){4}'::text), stream_position, transaction_id, global_position)`,
   },
   {
-    indexname: 'ledger_messages_by_id',
-    indexdef: 'CREATE INDEX ledger_messages_by_id ON ONLY public.emt_messages USING btree (message_id)',
+    indexname: 'ledger_messages_by_org_and_correlation',
+    indexdef: `CREATE INDEX ledger_messages_by_org_and_correlation ON ONLY public.emt_messages USING btree (${theOrgOfAStream}, ((message_metadata ->> 'correlationId'::text)), transaction_id, global_position)`,
+  },
+  {
+    indexname: 'ledger_messages_by_org_and_id',
+    indexdef: `CREATE INDEX ledger_messages_by_org_and_id ON ONLY public.emt_messages USING btree (${theOrgOfAStream}, message_id)`,
   },
   {
     indexname: 'ledger_messages_by_playbook',
     indexdef: `CREATE INDEX ledger_messages_by_playbook ON ONLY public.emt_messages USING btree ("substring"(stream_id, '^(?:[^/]*/){3}'::text), transaction_id, global_position)`,
-  },
-  {
-    indexname: 'ledger_messages_by_playbook_and_correlation',
-    indexdef: `CREATE INDEX ledger_messages_by_playbook_and_correlation ON ONLY public.emt_messages USING btree ("substring"(stream_id, '^(?:[^/]*/){3}'::text), ((message_metadata ->> 'correlationId'::text)), transaction_id, global_position)`,
   },
   {
     indexname: 'ledger_messages_by_playbook_and_time',

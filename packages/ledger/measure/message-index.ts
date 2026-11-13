@@ -21,7 +21,8 @@ function filled({ name }: MeasuredStore): string {
 }
 
 async function measured(measuring: MeasuredStore): Promise<void> {
-  await measuring.statement('DROP INDEX IF EXISTS ledger_messages_by_id');
+  await measuring.statement('DROP INDEX IF EXISTS ledger_messages_by_org_and_id');
+  await measuring.statement('DROP INDEX IF EXISTS ledger_messages_by_org_and_correlation');
   await measuring.statement(filled(measuring));
   await measuring.statement(measuring.name === 'SQLite' ? 'ANALYZE' : 'VACUUM ANALYZE emt_messages');
   const started = performance.now();
@@ -42,6 +43,6 @@ async function measured(measuring: MeasuredStore): Promise<void> {
   );
 }
 
-write('| Store | Messages | The open that builds the index | A read of one event by its id, median |');
+write('| Store | Messages | The open that builds the indexes led by the org | A read of one event by its id, median |');
 write('| --- | --- | --- | --- |');
 await measuredOnEachStore(measured);

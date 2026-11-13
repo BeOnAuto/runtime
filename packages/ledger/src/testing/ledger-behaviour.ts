@@ -1,6 +1,6 @@
 import { contentBehaviour } from '../content/content-behaviour.ts';
 import { storedContextBehaviour } from '../context/stored-context-behaviour.ts';
-import { definitionStreamsBehaviour } from '../definitions/definition-streams-behaviour.ts';
+import { recordedKeysBehaviour } from '../keys/recorded-keys-behaviour.ts';
 import { ledgerLayoutBehaviour } from '../layout/ledger-layout-behaviour.ts';
 import { projectionTableBehaviour } from '../projections/projection-table-behaviour.ts';
 import { commandsBehaviour } from './commands-behaviour.ts';
@@ -14,8 +14,8 @@ export function ledgerBehaviour(entry: LedgerEntry): void {
   eventsBehaviour(entry);
   storeBehaviour(entry);
   ledgerLayoutBehaviour(entry);
-  definitionStreamsBehaviour(entry);
   recordedBehaviour(() => aLedger(entry));
+  recordedKeysBehaviour(entry);
   projectionTableBehaviour(entry);
   storedContextBehaviour(entry);
   contentBehaviour(entry);

@@ -4,7 +4,7 @@ import { Schema } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import { layoutIn } from '../layout/ledger-layout-behaviour.ts';
-import { ledgerLayoutFloor } from '../layout/ledger-layout.ts';
+import { ledgerLayout, ledgerLayoutFloor } from '../layout/ledger-layout.ts';
 import { ledgerLayoutSteps } from '../layout/ledger-steps.ts';
 import { structureIn } from '../structure/database-structure-behaviour.ts';
 import { aLedger, type LedgerEntry } from '../testing/ledger-entry.ts';
@@ -28,6 +28,8 @@ const theIndexOfTheExpiry = 'recorded_content_heads_expiring';
 const everyHead = 'SELECT * FROM recorded_content_heads';
 
 const carryingToTheExpiry = { kept: theLayoutOfTheExpiry, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps };
+
+const carryingOnToTheLayoutKept = { kept: ledgerLayout, floor: ledgerLayoutFloor, steps: ledgerLayoutSteps };
 
 async function headsKeptIn(entry: LedgerEntry, database: string): Promise<void> {
   const ledger = await aLedger(entry, database);
@@ -99,6 +101,7 @@ function expiryBehaviour(entry: LedgerEntry): void {
         layout: (await layoutIn(entry, database)).layout,
         structure: await structureIn(entry, database),
       };
+      await entry.carriedOn(database, carryingOnToTheLayoutKept);
       await aLedger(entry, database);
 
       expect(after).toEqual({ ...before, expires_at: null, erased_at: null });
@@ -119,6 +122,7 @@ function expiryBehaviour(entry: LedgerEntry): void {
 
       await entry.carriedOn(database, carryingToTheExpiry);
       const carriedTo = (await layoutIn(entry, database)).layout;
+      await entry.carriedOn(database, carryingOnToTheLayoutKept);
       await aLedger(entry, database);
 
       expect(carriedTo).toBe(theLayoutOfTheExpiry);

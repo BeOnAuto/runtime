@@ -17,7 +17,7 @@ import {
 import { Clock, Effect, Result } from 'effect';
 
 import { appendedFactsReaderOf } from './appended/appended-reader.ts';
-import { eventAppenderOf } from './event-appender.ts';
+import { refusableAppenderOf } from './event-appender.ts';
 import type { LedgerContent, LedgerStore, StreamMessagesStore, Streams } from './event-store.ts';
 import { foldEvents } from './fold-events.ts';
 import { runOutcomesReaderOf } from './outcomes/run-outcomes-reader.ts';
@@ -37,7 +37,7 @@ export type StreamAppend<Event extends Recorded, Loaded = unknown> = (
   events: readonly Decided<Event>[],
   place: DecidedPlace,
   loaded: Loaded,
-) => Effect.Effect<void, VersionConflict>;
+) => Effect.Effect<void, VersionConflict | Conflict>;
 
 export interface Decision<Loaded, State, Event> extends StreamState<State> {
   readonly loaded: Loaded;
@@ -64,7 +64,7 @@ export function decisionLoop<
   const attempt = (
     stream: string,
     command: Command,
-  ): Effect.Effect<Result.Result<Decision<Loaded, State, Event>, Rejection<R>>, VersionConflict> =>
+  ): Effect.Effect<Result.Result<Decision<Loaded, State, Event>, Rejection<R>>, VersionConflict | Conflict> =>
     Effect.gen(function* () {
       const loaded = yield* load(stream);
       const decided = decider.decide(command, loaded.state);
@@ -97,7 +97,7 @@ export function streamPortsOf(streams: Streams & StreamMessagesStore): StreamRea
       decisionLoop(
         (named: string) => load(named, decider),
         (named, events, place) =>
-          eventAppenderOf(streams, decider.eventSchema)(named, events, {
+          refusableAppenderOf(streams, decider.eventSchema)(named, events, {
             ...place,
             ...(lineage === undefined ? {} : { lineage }),
           }),

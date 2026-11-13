@@ -2,7 +2,8 @@ import { Effect } from 'effect';
 import { describe, expect, it } from 'vitest';
 
 import type { RecordedStore, StoredRecord } from '../event-store.ts';
-import { recordedEventReaderOf } from './recorded-reader.ts';
+import type { RecordedKeys } from '../keys/recorded-keys.ts';
+import { recordedEventReaderOf, recordedReaderOf } from './recorded-reader.ts';
 
 const at = '2026-10-05T09:00:00.000Z';
 
@@ -22,20 +23,52 @@ const untraced: StoredRecord = {
   recordedAt: at,
 };
 
-function storeHolding(record: StoredRecord): RecordedStore {
-  return {
+interface Holding {
+  readonly store: RecordedStore;
+  readonly asked: readonly RecordedKeys[];
+}
+
+function storeHolding(record: StoredRecord): Holding {
+  const asked: RecordedKeys[] = [];
+  const store: RecordedStore = {
     pointLength: 1,
-    readRecorded: () => Promise.resolve({ records: [] }),
+    readRecorded: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
     readAppended: () => Promise.resolve({ streams: [], through: ['21'], more: false }),
     readAppendedFacts: () => Promise.resolve({ held: false }),
-    readRecordedEvent: (_playbookKey, id) => Promise.resolve(id === record.id ? record : undefined),
+    readRecordedEvent: () => Promise.reject(new Error('A read by the text of a key is not asked here')),
+    readRecordedOfKeys: (keys) => {
+      asked.push(keys);
+      return Promise.resolve({ records: [record] });
+    },
+    readRecordedEventOfKeys: (keys, id) => {
+      asked.push(keys);
+      return Promise.resolve(id === record.id ? record : undefined);
+    },
   };
+  return { store, asked };
 }
+
+const alpha = { org: 'acme', playbook: 'alpha' };
+
+const theKeysOfAlpha: RecordedKeys = { org: 'acme', keys: ['playbook/acme/alpha/'] };
+
+describe('the reads of a playbook', () => {
+  it("ask the store for the playbook's key under the org its address names", async () => {
+    const { store, asked } = storeHolding(untraced);
+
+    const page = await Effect.runPromise(
+      recordedReaderOf(store)(alpha, { kind: 'correlated', correlation: 'r1' }, { order: 'desc', limit: 5 }),
+    );
+    await Effect.runPromise(recordedEventReaderOf(store)(alpha, 'message-21'));
+
+    expect(page.records.map(({ id }) => id)).toEqual(['message-21']);
+    expect(asked).toEqual([theKeysOfAlpha, theKeysOfAlpha]);
+  });
+});
 
 describe('one record read by its id', () => {
   it('carries no page cursor, no trace and no span when its store kept none, and is nothing for an id the store does not hold', async () => {
-    const read = recordedEventReaderOf(storeHolding(untraced));
-    const alpha = { org: 'acme', playbook: 'alpha' };
+    const read = recordedEventReaderOf(storeHolding(untraced).store);
 
     const [found, missing] = await Effect.runPromise(
       Effect.all([read(alpha, 'message-21'), read(alpha, 'message-99')]),

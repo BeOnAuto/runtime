@@ -1,6 +1,7 @@
 import type { ContentHolders, KeptProjection, RunOutcomeMapping, StreamProjection } from '@on.auto/operations';
 import { Pool } from 'pg';
 
+import type { DefinitionNames } from '../definition-names/definition-names.ts';
 import type { AppendListeners } from '../event-store.ts';
 import type { LayoutStep } from '../layout/layout-steps.ts';
 import type { FactSchemaRead } from '../layout/ledger-facts-refused.ts';
@@ -25,4 +26,5 @@ export interface PostgreSQLOptions extends AppendListeners {
   readonly layoutSteps?: readonly LayoutStep[];
   readonly factSchemas?: readonly FactSchemaRead[];
   readonly floor?: number;
+  readonly definitionNames?: DefinitionNames;
 }

@@ -22,6 +22,8 @@ export {
 export { chunksWithin, sqliteMostBoundValues } from './connection/bound-values.ts';
 export { StatementsFailed } from './connection/appends-with.ts';
 export { LedgerChores, type ChorePorts } from './content/content-sweep.ts';
+export type { DefinitionName, DefinitionNames } from './definition-names/definition-names.ts';
+export type { RecordedKeys } from './keys/recorded-keys.ts';
 export { LedgerLog, samePoint, type LoggedEvent, type LogPage, type LogPorts } from './log/ledger-log.ts';
 export { UnreadableEvent } from './log/unreadable-event.ts';
 export { eventAppenderOf, eventAppenderWithOf, type EventAppender, type EventAppenderWith } from './event-appender.ts';

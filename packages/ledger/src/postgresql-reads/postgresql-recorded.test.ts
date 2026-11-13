@@ -3,7 +3,7 @@ import { pgFormatter } from '@event-driven-io/dumbo/pg';
 import { describe, expect, it } from 'vitest';
 
 import type { IndexExecutor } from '../recorded/missing-indexes.ts';
-import { createPostgreSQLPlaybookIndexes } from './playbook-indexes.ts';
+import { createPostgreSQLPlaybookIndexes, orgOfStream } from './playbook-indexes.ts';
 import { postgresqlRecordedStore, type Query } from './postgresql-recorded.ts';
 
 interface Asked {
@@ -174,7 +174,7 @@ describe('a read of one run on PostgreSQL, newest first', () => {
 });
 
 describe('a read on PostgreSQL by correlation, from inside a record', () => {
-  it('walks the playbook and the correlation through their index, from that record on, in either order', async () => {
+  it('walks the org and the correlation through their index, keeps the keys asked, from that record on, in either order', async () => {
     const { query, asked } = answering([], [examined('9', '10', true, 1)], [stored('9', '10', 'only')], []);
     const store = postgresqlRecordedStore(query);
 
@@ -191,9 +191,8 @@ describe('a read on PostgreSQL by correlation, from inside a record', () => {
 
     expect(page.records.map(({ id, correlationId }) => [id, correlationId])).toEqual([['message-10', 'r1']]);
     expect(asked[1]?.text).toContain('AND (transaction_id, global_position) >= ($3::xid8, $4::bigint)');
-    expect(asked[1]?.text).toContain(`WHERE ${playbookKey} = ANY($6::text[]) AND ${correlation} = ANY($7::text[])`);
     expect(asked[1]?.text).toContain(
-      `ORDER BY ${playbookKey} ASC, ${correlation} ASC, transaction_id ASC, global_position ASC`,
+      `WHERE ${orgOfStream} = ANY($6::text[]) AND ${correlation} = ANY($7::text[]) AND ${playbookKey} = $8`,
     );
     expect(asked[3]?.text).toContain('AND (transaction_id, global_position) <= ($2::xid8, $3::bigint)');
   });
@@ -255,7 +254,7 @@ function executorFinding(names: readonly string[]): { readonly execute: IndexExe
 }
 
 describe("the playbook's indexes on PostgreSQL", () => {
-  it('index the playbook in order, by time and by correlation, each stream in order, its messages by playbook and kind and by id and its definition streams by type, then analyse', async () => {
+  it('index the playbook in order and by time, each stream in order, the first messages by kind, the org by correlation and by id and the definition streams by type, then analyse', async () => {
     const { execute, commands } = executorFinding([]);
 
     await createPostgreSQLPlaybookIndexes({ execute });
@@ -265,9 +264,9 @@ describe("the playbook's indexes on PostgreSQL", () => {
       "CREATE INDEX IF NOT EXISTS ledger_messages_by_playbook_and_time ON emt_messages ((substring(stream_id FROM '^(?:[^/]*/){3}')), created, transaction_id, global_position)",
       'CREATE INDEX IF NOT EXISTS ledger_messages_by_stream ON emt_messages (stream_id, transaction_id, global_position)',
       "CREATE INDEX IF NOT EXISTS ledger_first_messages_by_kind ON emt_messages ((substring(stream_id FROM '^(?:[^/]*/){4}')), stream_position, transaction_id, global_position)",
-      "CREATE INDEX IF NOT EXISTS ledger_messages_by_playbook_and_correlation ON emt_messages ((substring(stream_id FROM '^(?:[^/]*/){3}')), (message_metadata ->> 'correlationId'), transaction_id, global_position)",
+      `CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_correlation ON emt_messages ((${orgOfStream}), (message_metadata ->> 'correlationId'), transaction_id, global_position)`,
       "CREATE INDEX IF NOT EXISTS ledger_definition_streams ON emt_streams ((substring(stream_id FROM '^(?:[^/]*/){3}definitions/([^/]+)$'))) WHERE (substring(stream_id FROM '^(?:[^/]*/){3}definitions/([^/]+)$')) IS NOT NULL",
-      'CREATE INDEX IF NOT EXISTS ledger_messages_by_id ON emt_messages (message_id)',
+      `CREATE INDEX IF NOT EXISTS ledger_messages_by_org_and_id ON emt_messages ((${orgOfStream}), message_id)`,
       'ANALYZE emt_messages, emt_streams',
     ]);
   });
@@ -278,9 +277,9 @@ describe("the playbook's indexes on PostgreSQL", () => {
       'ledger_messages_by_playbook_and_time',
       'ledger_messages_by_stream',
       'ledger_first_messages_by_kind',
-      'ledger_messages_by_playbook_and_correlation',
+      'ledger_messages_by_org_and_correlation',
       'ledger_definition_streams',
-      'ledger_messages_by_id',
+      'ledger_messages_by_org_and_id',
     ];
     const present = executorFinding(all);
     const oneMissing = executorFinding(all.filter((name) => name !== 'ledger_messages_by_stream'));

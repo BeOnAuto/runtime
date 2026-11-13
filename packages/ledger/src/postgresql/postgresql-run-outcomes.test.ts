@@ -51,13 +51,13 @@ const indexes = [
   'ledger_messages_by_playbook_and_time',
   'ledger_messages_by_stream',
   'ledger_first_messages_by_kind',
-  'ledger_messages_by_playbook_and_correlation',
+  'ledger_messages_by_org_and_correlation',
   'ledger_definition_streams',
-  'ledger_messages_by_id',
+  'ledger_messages_by_org_and_id',
 ].map((name) => ({ name }));
 
 const ownTables =
-  'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until';
+  'recorded_content_heads_by_upload recorded_content_heads_expiring kept_secrets webhooks_received webhooks_received_kept_until definition_names_1 definition_names_1_by_definition';
 
 const contentAndSecrets = [...contentTableNames, ...ownTables.split(' ')].map((name) => ({ name }));
 
@@ -66,7 +66,7 @@ function aLedgerWithOneRun(tables: readonly string[]): Answers {
     if (statement.includes('ledger_messages_by_playbook')) {
       return indexes;
     }
-    if (/recorded_content_chunks|_by_upload|kept_secrets|webhooks_received/u.test(statement)) {
+    if (/recorded_content_chunks|_by_upload|kept_secrets|webhooks_received|definition_names/u.test(statement)) {
       return contentAndSecrets;
     }
     if (statement.includes('pg_class')) {

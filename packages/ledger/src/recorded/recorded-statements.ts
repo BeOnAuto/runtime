@@ -1,12 +1,10 @@
 import {
   boundedPage,
-  contextOf,
   mostExaminedInAPage,
   type Examined,
   type RecordedOrder,
   type RecordedSelection,
 } from '@on.auto/operations';
-import { Schema } from 'effect';
 
 import type {
   AppendedFactsAsked,
@@ -21,6 +19,7 @@ import type {
   StoredPlace,
   StoredRecord,
 } from '../event-store.ts';
+import { keysOfOne, streamsOfTheRun, type RecordedKeys } from '../keys/recorded-keys.ts';
 
 export interface RecordHead extends MessageLineage {
   readonly point: RecordedPoint;
@@ -31,31 +30,6 @@ export interface RecordHead extends MessageLineage {
   readonly metadata: StoredMetadata;
   readonly recordedAt: string;
   readonly size: number;
-}
-
-const TraceSchema = Schema.Struct({
-  causationId: Schema.optionalKey(Schema.NullOr(Schema.String)),
-  traceId: Schema.optionalKey(Schema.String),
-  spanId: Schema.optionalKey(Schema.String),
-});
-
-const decodeTrace = Schema.decodeUnknownSync(TraceSchema);
-
-export interface ReadMetadata {
-  readonly causationId: string | null;
-  readonly metadata: StoredMetadata;
-}
-
-export function readMetadataOf(stored: unknown): ReadMetadata {
-  const { causationId = null, traceId, spanId } = decodeTrace(stored);
-  return {
-    causationId,
-    metadata: {
-      context: contextOf(stored),
-      ...(traceId === undefined ? {} : { traceId }),
-      ...(spanId === undefined ? {} : { spanId }),
-    },
-  };
 }
 
 export interface ExaminedItem extends Examined {
@@ -75,18 +49,22 @@ export interface ExaminationScope {
   readonly to?: RecordedPoint;
 }
 
+export type Keys = RecordedKeys['keys'];
+
 export interface RecordedStatements {
-  readonly firstPointSince: (playbookKey: string, since: string) => Promise<RecordedPoint | undefined>;
+  readonly firstPointSince: (keys: Keys, since: string) => Promise<RecordedPoint | undefined>;
   readonly examineRecords: (records: RecordsSelected, scope: ExaminationScope) => Promise<readonly ExaminedItem[]>;
   readonly examineRuns: (scope: ExaminationScope, runs: RunsSelected) => Promise<readonly ExaminedItem[]>;
   readonly dataAt: (points: readonly RecordedPoint[]) => Promise<ReadonlyMap<string, unknown>>;
 }
 
-export type RunsSelected = Extract<RecordedSelection, { readonly kind: 'runs' }> & { readonly playbookKey: string };
+export type RunsSelected = Extract<RecordedSelection, { readonly kind: 'runs' }> & { readonly keys: Keys };
 
 export type RecordsSelected =
-  | FactScope
-  | { readonly kind: 'correlated'; readonly playbookKey: string; readonly correlation: string };
+  | { readonly kind: 'keys'; readonly keys: Keys }
+  | { readonly kind: 'streams'; readonly streams: readonly string[] }
+  | { readonly kind: 'run'; readonly keys: Keys; readonly streams: Keys }
+  | { readonly kind: 'correlated'; readonly org: string; readonly keys: Keys; readonly correlation: string };
 
 export function pointKey(point: RecordedPoint): string {
   return point.join(':');
@@ -116,28 +94,27 @@ function scopeOf(
 }
 
 function selectedOf(
-  playbookKey: string,
+  { org, keys }: RecordedKeys,
   selection: Exclude<RecordedSelection, { readonly kind: 'runs' }>,
 ): RecordsSelected {
   if (selection.kind === 'run') {
-    return {
-      kind: 'streams',
-      streams: [`${playbookKey}runs/${selection.run}`, `${playbookKey}run-logs/${selection.run}`],
-    };
+    return { kind: 'run', keys, streams: streamsOfTheRun(keys, selection.run) };
   }
-  return selection.kind === 'correlated' ? { ...selection, playbookKey } : { kind: 'playbook', playbookKey };
+  return selection.kind === 'correlated'
+    ? { kind: 'correlated', org, keys, correlation: selection.correlation }
+    : { kind: 'keys', keys };
 }
 
 function examine(
   statements: RecordedStatements,
-  playbookKey: string,
+  keys: RecordedKeys,
   selection: RecordedSelection,
   scope: ExaminationScope,
 ): Promise<readonly ExaminedItem[]> {
   if (selection.kind === 'runs') {
-    return statements.examineRuns(scope, { ...selection, playbookKey });
+    return statements.examineRuns(scope, { ...selection, keys: keys.keys });
   }
-  return statements.examineRecords(selectedOf(playbookKey, selection), scope);
+  return statements.examineRecords(selectedOf(keys, selection), scope);
 }
 
 type Loads = (head: RecordHead) => boolean;
@@ -162,20 +139,18 @@ function placeOf({ point, heads: [first] }: ExaminedItem): StoredPlace {
 }
 
 interface PageAsked {
-  readonly playbookKey: string;
+  readonly keys: RecordedKeys;
   readonly selection: RecordedSelection;
 }
 
 async function pageWithin(
   statements: RecordedStatements,
-  { playbookKey, selection }: PageAsked,
+  { keys, selection }: PageAsked,
   page: Pick<StoredPageRequest, 'limit' | 'dataOf'>,
   scope: ExaminationScope,
 ): Promise<StoredPage> {
   const loads = loadsOf(page.dataOf);
-  const examined = (await examine(statements, playbookKey, selection, scope)).map((item) =>
-    sizedBy(loads, page.dataOf, item),
-  );
+  const examined = (await examine(statements, keys, selection, scope)).map((item) => sizedBy(loads, page.dataOf, item));
   const { delivered, resumeAfter, lastExamined } = boundedPage(examined, page.limit, scope.examineAtMost);
   const heads = delivered.flatMap((item) => item.heads);
   const loaded = heads.filter((head) => loads(head));
@@ -189,14 +164,32 @@ async function pageWithin(
   };
 }
 
-export function recordedReadingOver(statements: RecordedStatements): RecordedStore['readRecorded'] {
-  return async (playbookKey, selection, page) => {
+type RecordedReads = Pick<
+  RecordedStore,
+  'readRecorded' | 'readRecordedOfKeys' | 'readRecordedEvent' | 'readRecordedEventOfKeys'
+>;
+
+export function recordedReadsOver(
+  statements: RecordedStatements,
+  eventOfKeys: RecordedStore['readRecordedEventOfKeys'],
+): RecordedReads {
+  const ofKeys = recordedReadingOver(statements);
+  return {
+    readRecorded: (key, selection, page) => ofKeys(keysOfOne(key), selection, page),
+    readRecordedOfKeys: ofKeys,
+    readRecordedEvent: (key, id) => eventOfKeys(keysOfOne(key), id),
+    readRecordedEventOfKeys: eventOfKeys,
+  };
+}
+
+function recordedReadingOver(statements: RecordedStatements): RecordedStore['readRecordedOfKeys'] {
+  return async (keys, selection, page) => {
     const scope = scopeOf(selection, page);
-    const asked = { playbookKey, selection };
+    const asked = { keys, selection };
     if (page.since === undefined) {
       return pageWithin(statements, asked, page, scope);
     }
-    const from = await statements.firstPointSince(playbookKey, page.since);
+    const from = await statements.firstPointSince(keys.keys, page.since);
     return from === undefined ? { records: [] } : pageWithin(statements, asked, page, { ...scope, from });
   };
 }
@@ -220,7 +213,8 @@ async function headsIn(
   scope: FactScope,
   examined: ExaminationScope,
 ): Promise<readonly RecordHead[]> {
-  const items = await statements.examineRecords(scope, { ...examined, ...measuringNothing });
+  const records: RecordsSelected = scope.kind === 'playbook' ? { kind: 'keys', keys: [scope.playbookKey] } : scope;
+  const items = await statements.examineRecords(records, { ...examined, ...measuringNothing });
   return items.flatMap(({ heads }) => heads);
 }
 

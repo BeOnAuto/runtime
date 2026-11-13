@@ -197,6 +197,8 @@ Pin a full version, such as `docker.on.auto/onauto/runtime:0.9.1`, and upgrade o
 
 Upgrades go forward only. An older release cannot open a ledger upgraded by a newer one. Start the newer release again, or restore the backup taken before the upgrade.
 
+The first start of a new release carries the ledger forward before it answers any request, so it can take longer than usual. The release that brings ledger layout 22 builds two indexes, each over every recorded fact. On one laptop, that took about 1 second per million small facts on SQLite and about 1.7 seconds on PostgreSQL, and 0.15 seconds on SQLite for 10,001 facts holding 598 MB. On PostgreSQL, a server that starts meanwhile waits for it, as [Upgrade several servers](workflows.md#upgrade-several-servers) describes. Once a server of that release has started, no earlier release opens the ledger.
+
 One boundary is Auto's cloud's alone, since only it makes a connection through a gateway: once an org holds such a connection, no release before the one that reads it can be run for that org again. An earlier release cannot read that connection's facts, and since it reads an org's connections together, it fails every connection of that org, not that one alone.
 
 At startup, the server checks the database layout, every recorded fact type, and the newest fact of each type. It refuses a layout older than it can migrate, an unknown fact type, or a fact shape it cannot read. The error identifies the layout or the facts and their positions.

@@ -1,6 +1,7 @@
 import {
   InvalidCursor,
   streamPrefixOfPlaybook,
+  type PlaybookAddress,
   type RecordedEvent,
   type RecordedFact,
   type RecordedPage,
@@ -10,7 +11,12 @@ import {
 import { Effect, Result } from 'effect';
 
 import type { RecordedStore, StoredPage, StoredPageRequest, StoredRecord } from '../event-store.ts';
+import type { RecordedKeys } from '../keys/recorded-keys.ts';
 import { cursorOf, pointOf, type CursorPoint } from './cursor.ts';
+
+function keysOfThePlaybook(playbook: PlaybookAddress, playbookKey: string): RecordedKeys {
+  return { org: playbook.org, keys: [playbookKey] };
+}
 
 function storedRequestOf(
   { cursor, ...page }: RecordedPageRequest,
@@ -75,8 +81,9 @@ function recordedPageOf(playbookKey: string): (stored: StoredPage) => RecordedPa
 export function recordedReaderOf(store: RecordedStore): RecordedReader['readRecorded'] {
   return (playbook, selection, page) => {
     const playbookKey = streamPrefixOfPlaybook(playbook);
+    const keys = keysOfThePlaybook(playbook, playbookKey);
     return storedRequestOf(page, playbookKey, store.pointLength).pipe(
-      Effect.flatMap((request) => Effect.promise(() => store.readRecorded(playbookKey, selection, request))),
+      Effect.flatMap((request) => Effect.promise(() => store.readRecordedOfKeys(keys, selection, request))),
       Effect.map(recordedPageOf(playbookKey)),
     );
   };
@@ -84,8 +91,8 @@ export function recordedReaderOf(store: RecordedStore): RecordedReader['readReco
 
 export function recordedEventReaderOf(store: RecordedStore): RecordedReader['readRecordedEvent'] {
   return (playbook, id) => {
-    const playbookKey = streamPrefixOfPlaybook(playbook);
-    return Effect.promise(() => store.readRecordedEvent(playbookKey, id)).pipe(
+    const keys = keysOfThePlaybook(playbook, streamPrefixOfPlaybook(playbook));
+    return Effect.promise(() => store.readRecordedEventOfKeys(keys, id)).pipe(
       Effect.map((stored) => (stored === undefined ? undefined : recordedFactOf(stored))),
     );
   };

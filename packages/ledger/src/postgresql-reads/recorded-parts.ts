@@ -3,8 +3,9 @@ import { pgFormatter } from '@event-driven-io/dumbo/pg';
 import { Schema } from 'effect';
 
 import type { RecordedPoint } from '../event-store.ts';
-import { readMetadataOf, type ExaminationScope, type RecordHead } from '../recorded/recorded-statements.ts';
-import { dataBytesOf, type MessageColumns } from './playbook-indexes.ts';
+import { readMetadataOf } from '../recorded/recorded-messages.ts';
+import type { ExaminationScope, Keys, RecordHead } from '../recorded/recorded-statements.ts';
+import { dataBytesOf, playbookKeyOfStream, type MessageColumns } from './playbook-indexes.ts';
 
 export type Query = (text: string, values: readonly unknown[]) => Promise<readonly unknown[]>;
 
@@ -111,6 +112,12 @@ export async function horizonOf(query: Query, { order, to }: ExaminationScope): 
 
 export function matchedThroughItsIndex(bind: Bind, key: string, value: string): string {
   return `${key} = ANY(${bind([value])}::text[])`;
+}
+
+export function ofTheKeys(bind: Bind, [only, ...more]: Keys): string {
+  return more.length === 0
+    ? `${playbookKeyOfStream} = ${bind(only)}`
+    : `${playbookKeyOfStream} = ANY(${bind([only, ...more])}::text[])`;
 }
 
 export function orderedThroughItsIndex(key: string, scope: ExaminationScope): string {

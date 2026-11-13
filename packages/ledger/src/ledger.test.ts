@@ -9,6 +9,7 @@ import { ledgerLayer, sqliteLedgerFile } from './sqlite3.ts';
 import { databaseStructureBehaviour } from './structure/database-structure-behaviour.ts';
 import {
   appendedFactsOnStoresBehaviour,
+  definitionNamesBehaviour,
   appendsWithStatementsOnStoresBehaviour,
   measuredRiddenAppendsBehaviour,
   factScrubOnStoresBehaviour,
@@ -62,7 +63,8 @@ const onSQLite: LedgerEntry = {
   planOf,
   statementPlanOf,
   throughTheKindIndex: 'USING INDEX ledger_first_messages_by_kind',
-  throughTheIdIndex: 'USING INDEX ledger_messages_by_id',
+  throughTheIdIndex: 'USING INDEX ledger_messages_by_org_and_id',
+  throughTheTreeIndex: 'USING INDEX ledger_messages_by_org_and_correlation',
   throughTheExpiringIndex:
     'SEARCH recorded_content_heads USING INDEX recorded_content_heads_expiring (expires_at>? AND expires_at<?)',
   stepsOfAScanOrASort: ['SCAN recorded_content_heads', 'TEMP B-TREE'],
@@ -93,6 +95,14 @@ describe('The ledger on SQLite', () => {
   receivedWebhooksBehaviour({
     ...onSQLite,
     receivedWebhooksOn: (fileName) => receivedWebhooksOfItsOpenLedger(sqliteLedgerFile(fileName)),
+  });
+  definitionNamesBehaviour({
+    ...onSQLite,
+    storeKeepingNames: (fileName, definitionNames) =>
+      sqliteLedgerOpened(
+        { optionsOf: () => ({ driver: sqlite3EventStoreDriver, fileName }), inMemory: false },
+        { definitionNames },
+      ).store,
   });
 });
 

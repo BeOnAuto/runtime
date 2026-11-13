@@ -1,9 +1,19 @@
 import { SQL, type SQLExecutor } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
-import type { ExaminationScope, ExaminedItem, RecordedStatements, RunsSelected } from './recorded-statements.ts';
+import type { ExaminationScope, ExaminedItem, Keys, RecordedStatements, RunsSelected } from './recorded-statements.ts';
 import { correlationOfMessage, dataBytesOf, dataBytesOfMessage, kindKeyOfStream } from './sqlite-indexes.ts';
-import { bounds, defaultPartition, direction, HeadFields, headOf, ofTypes, sizeOf } from './sqlite-parts.ts';
+import {
+  bounds,
+  defaultPartition,
+  direction,
+  HeadFields,
+  headOf,
+  ofTypes,
+  oneOrEachInTurn,
+  sizeOf,
+  walkedInTheOrderOf,
+} from './sqlite-parts.ts';
 
 const ExaminedRunRow = Schema.Struct({
   ...HeadFields,
@@ -35,7 +45,12 @@ function ofTheDefinitionAsked({ definitionType, name, called }: RunsSelected): S
   return asked.length === 0 ? SQL`1` : SQL.merge(asked, ' AND ');
 }
 
+function runKindsOf([first, ...more]: Keys): Keys {
+  return [`${first}runs/`, ...more.map((key) => `${key}runs/`)];
+}
+
 function firstMessagesOfRuns(scope: ExaminationScope, runs: RunsSelected): SQL {
+  const walk = walkedInTheOrderOf(scope);
   return SQL`SELECT scanned.*, row_number() OVER (ORDER BY scanned.position ${direction(scope)}) AS examined,
       count(*) OVER () AS scanned_count
     FROM (
@@ -44,7 +59,11 @@ function firstMessagesOfRuns(scope: ExaminationScope, runs: RunsSelected): SQL {
         ${correlationOfMessage} AS correlation, ${dataBytesOfMessage} AS size,
         ${ofTheDefinitionAsked(runs)} AS of_the_definition
       FROM emt_messages
-      WHERE ${kindKeyOfStream} = ${`${runs.playbookKey}runs/`} AND stream_position = 1
+      WHERE ${oneOrEachInTurn(
+        runKindsOf(runs.keys),
+        (kind) => SQL`${kindKeyOfStream} = ${kind}`,
+        (kind) => walk(SQL`${kind} AND stream_position = 1${notOfTypes('message_type', runs.notBeginningWith ?? [])}`),
+      )} AND stream_position = 1
         AND partition = ${defaultPartition} AND is_archived = FALSE${bounds(scope)}${notOfTypes('message_type', runs.notBeginningWith ?? [])}
       ORDER BY global_position ${direction(scope)}
       LIMIT ${scope.examineAtMost + 1}

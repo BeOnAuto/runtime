@@ -60,25 +60,41 @@ interface RunsScan {
   readonly horizon: string;
 }
 
-function firstMessagesOfRuns(
+function firstMessagesOfTheRunsOf(
+  key: string,
   { bind, partition, horizon }: RunsScan,
   scope: ExaminationScope,
   runs: RunsSelected,
 ): string {
-  return `SELECT scanned.*, row_number() OVER (
-      ORDER BY scanned.transaction_id ${direction(scope)}, scanned.global_position ${direction(scope)}
-    ) AS examined, count(*) OVER () AS scanned_count
-    FROM (
-      SELECT transaction_id, global_position, transaction_id::text AS transaction,
+  return `SELECT transaction_id, global_position, transaction_id::text AS transaction,
         global_position::text AS position, stream_id AS stream, stream_position::int AS version,
         message_type AS type, ${timeOf('created')} AS recorded, ${lineageColumns}, message_data,
         ${ofTheDefinitionAsked(bind, runs)} AS of_the_definition
       FROM emt_messages
-      WHERE ${matchedThroughItsIndex(bind, kindKeyOfStream, `${runs.playbookKey}runs/`)} AND stream_position = 1
+      WHERE ${matchedThroughItsIndex(bind, kindKeyOfStream, `${key}runs/`)} AND stream_position = 1
         AND partition = ${partition} AND is_archived = FALSE${notOfTypes(bind, runs.notBeginningWith ?? [])}
         ${horizon}${bounds(bind, scope)}
       ORDER BY ${orderedThroughItsIndex(kindKeyOfStream, scope)}
-      LIMIT ${bind(scope.examineAtMost + 1)}
+      LIMIT ${bind(scope.examineAtMost + 1)}`;
+}
+
+function firstMessagesOfTheRunsOfEach(scan: RunsScan, scope: ExaminationScope, runs: RunsSelected): string {
+  const [only, ...more] = runs.keys;
+  if (more.length === 0) {
+    return firstMessagesOfTheRunsOf(only, scan, scope, runs);
+  }
+  const terms = runs.keys.map((key) => `(${firstMessagesOfTheRunsOf(key, scan, scope, runs)})`);
+  return `${terms.join(' UNION ALL ')}
+    ORDER BY transaction_id ${direction(scope)}, global_position ${direction(scope)}
+    LIMIT ${scan.bind(scope.examineAtMost + 1)}`;
+}
+
+function firstMessagesOfRuns(scan: RunsScan, scope: ExaminationScope, runs: RunsSelected): string {
+  return `SELECT scanned.*, row_number() OVER (
+      ORDER BY scanned.transaction_id ${direction(scope)}, scanned.global_position ${direction(scope)}
+    ) AS examined, count(*) OVER () AS scanned_count
+    FROM (
+      ${firstMessagesOfTheRunsOfEach(scan, scope, runs)}
     ) AS scanned`;
 }
 

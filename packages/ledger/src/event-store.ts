@@ -14,6 +14,7 @@ import type {
 } from '@on.auto/operations';
 import type { Schema } from 'effect';
 
+import type { RecordedKeys } from './keys/recorded-keys.ts';
 import type { LogPorts } from './log/ledger-log.ts';
 import type { StreamSignal } from './signal/append-signal.ts';
 
@@ -158,16 +159,18 @@ export type StoredAppendedFacts =
       readonly more: boolean;
     };
 
+type ReadOf<Scope> = (scope: Scope, selection: RecordedSelection, page: StoredPageRequest) => Promise<StoredPage>;
+
+type EventReadOf<Scope> = (scope: Scope, id: string) => Promise<StoredRecord | undefined>;
+
 export interface RecordedStore {
   readonly pointLength: number;
-  readonly readRecorded: (
-    playbookKey: string,
-    selection: RecordedSelection,
-    page: StoredPageRequest,
-  ) => Promise<StoredPage>;
+  readonly readRecorded: ReadOf<string>;
+  readonly readRecordedOfKeys: ReadOf<RecordedKeys>;
   readonly readAppended: (after: RecordedPoint | undefined, most: number) => Promise<AppendedStreams>;
   readonly readAppendedFacts: (scope: FactScope, asked: AppendedFactsAsked) => Promise<StoredAppendedFacts>;
-  readonly readRecordedEvent: (playbookKey: string, id: string) => Promise<StoredRecord | undefined>;
+  readonly readRecordedEvent: EventReadOf<string>;
+  readonly readRecordedEventOfKeys: EventReadOf<RecordedKeys>;
 }
 
 export interface DefinitionStream {

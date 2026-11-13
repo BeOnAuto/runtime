@@ -13,9 +13,13 @@ const retriesOnVersionConflict = 3;
 
 const changedWhileDeciding = 'The state changed while the command was decided';
 
-export function retriedOnVersionConflict<A>(attempt: Effect.Effect<A, VersionConflict>): Effect.Effect<A, Conflict> {
+export function retriedOnVersionConflict<A>(
+  attempt: Effect.Effect<A, VersionConflict | Conflict>,
+): Effect.Effect<A, Conflict> {
   return attempt.pipe(
-    Effect.retry({ times: retriesOnVersionConflict }),
-    Effect.mapError(() => new Conflict({ detail: changedWhileDeciding, kind: 'concurrent_change' })),
+    Effect.retry({ times: retriesOnVersionConflict, while: isVersionConflict }),
+    Effect.catchTag('version_conflict', () =>
+      Effect.fail(new Conflict({ detail: changedWhileDeciding, kind: 'concurrent_change' })),
+    ),
   );
 }

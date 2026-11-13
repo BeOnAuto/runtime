@@ -49,7 +49,7 @@ const indexes = [
   'ledger_messages_by_playbook_and_time',
   'ledger_messages_by_stream',
   'ledger_first_messages_by_kind',
-  'ledger_messages_by_playbook_and_correlation',
+  'ledger_messages_by_org_and_correlation',
 ];
 
 function write(line: string): void {

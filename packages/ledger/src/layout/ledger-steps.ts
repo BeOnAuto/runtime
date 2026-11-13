@@ -55,4 +55,11 @@ export const ledgerLayoutSteps: readonly LayoutStep[] = [
       statement`ALTER TABLE recorded_content_heads ADD COLUMN erased_at BIGINT`,
     ],
   },
+  {
+    layout: 22,
+    statements: [
+      statement`DROP INDEX IF EXISTS ledger_messages_by_playbook_and_correlation`,
+      statement`DROP INDEX IF EXISTS ledger_messages_by_id`,
+    ],
+  },
 ];

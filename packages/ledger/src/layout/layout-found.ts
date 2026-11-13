@@ -2,6 +2,7 @@ import { SQL } from '@event-driven-io/dumbo';
 import { Schema } from 'effect';
 
 import { contentTableNames, namesFound } from '../content/content-tables.ts';
+import { definitionNamesTableName } from '../definition-names/definition-names-table.ts';
 import type { StatementExecutor } from '../event-store.ts';
 import { versionOfTable, type NamedProjection } from '../projections/projection-fill.ts';
 import { keptSecretsTableName } from '../secrets/kept-secrets.ts';
@@ -20,6 +21,7 @@ const tablesOfTheLayout: ReadonlySet<string> = new Set([
   ...contentTableNames,
   keptSecretsTableName,
   receivedWebhooksTableName,
+  definitionNamesTableName,
 ]);
 
 const prefixesOfTheStore: readonly string[] = ['emt_', 'dmb_'];
